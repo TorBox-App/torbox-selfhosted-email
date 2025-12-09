@@ -32,7 +32,7 @@ export default async function AnalyticsPage({ params }: AnalyticsPageProps) {
   );
 
   if (!orgWithMembership) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   return (

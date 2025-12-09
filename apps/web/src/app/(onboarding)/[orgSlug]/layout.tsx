@@ -31,7 +31,7 @@ export default async function OnboardingOrgLayout({
 
   if (!orgWithMembership) {
     // User doesn't have access to this organization
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Allow onboarding to proceed without checking completion status

@@ -238,7 +238,7 @@ export async function acceptInvitation(
     // Revalidate relevant paths
     revalidatePath(`/${org.slug}`);
     revalidatePath(`/${org.slug}/members`);
-    revalidatePath("/dashboard");
+    revalidatePath("/");
 
     return {
       success: true,

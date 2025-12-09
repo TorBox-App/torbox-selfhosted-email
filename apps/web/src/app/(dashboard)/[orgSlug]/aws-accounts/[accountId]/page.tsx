@@ -33,7 +33,7 @@ export default async function AWSAccountPage({ params }: AWSAccountPageProps) {
   const organization = await getOrganizationBySlug(orgSlug);
 
   if (!organization) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Get AWS account

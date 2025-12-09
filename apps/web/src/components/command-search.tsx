@@ -9,7 +9,6 @@ import {
   CreditCard,
   HelpCircle,
   LayoutDashboard,
-  LayoutPanelLeft,
   Link2,
   type LucideIcon,
   Mail,
@@ -130,18 +129,12 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   const commandRef = React.useRef<HTMLDivElement>(null);
 
   const searchItems: SearchItem[] = [
-    // Dashboards
+    // Home
     {
-      title: "Dashboard 1",
-      url: "/dashboard",
-      group: "Dashboards",
+      title: "Home",
+      url: "/",
+      group: "Navigation",
       icon: LayoutDashboard,
-    },
-    {
-      title: "Dashboard 2",
-      url: "/dashboard-2",
-      group: "Dashboards",
-      icon: LayoutPanelLeft,
     },
 
     // Apps

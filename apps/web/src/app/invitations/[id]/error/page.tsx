@@ -42,7 +42,7 @@ export default async function InvitationErrorPage({
 
           <div className="flex flex-col gap-2">
             <Button asChild>
-              <Link href="/dashboard">Go to Dashboard</Link>
+              <Link href="/">Go to Dashboard</Link>
             </Button>
             <Button asChild variant="outline">
               <Link href="/auth">Sign In</Link>

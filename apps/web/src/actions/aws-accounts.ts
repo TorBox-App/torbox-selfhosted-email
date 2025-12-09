@@ -225,7 +225,7 @@ export async function connectAWSAccountAction(
 
     // 8. Revalidate pages that display AWS accounts
     revalidatePath(`/${validatedData.organizationId}/settings`, "page");
-    revalidatePath(`/dashboard/organizations/${validatedData.organizationId}`);
+    revalidatePath("/");
 
     return {
       success: true,

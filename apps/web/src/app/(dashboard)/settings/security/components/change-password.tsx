@@ -95,7 +95,7 @@ export function ChangePassword() {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
       await authClient.sendVerificationEmail({
         email: session.user.email,
-        callbackURL: `${appUrl}/dashboard`,
+        callbackURL: `${appUrl}/`,
       });
       toast.success("Verification email sent! Check your inbox.");
     } catch (error: any) {

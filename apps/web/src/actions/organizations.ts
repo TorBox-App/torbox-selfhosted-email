@@ -125,7 +125,7 @@ export async function createOrganizationAction(
       .where(eq(sessionTable.userId, session.user.id));
 
     // 8. Revalidate paths
-    revalidatePath("/dashboard");
+    revalidatePath("/");
     revalidatePath(`/${slug}`);
 
     // 9. Return success
@@ -248,7 +248,7 @@ export async function updateOrganizationAction(
     }
 
     // 7. Revalidate paths
-    revalidatePath("/dashboard");
+    revalidatePath("/");
     revalidatePath(`/${orgSlug}`);
     if (newSlug && newSlug !== orgSlug) {
       revalidatePath(`/${newSlug}`);

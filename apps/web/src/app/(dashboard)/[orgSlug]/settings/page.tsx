@@ -27,7 +27,7 @@ export default async function OrganizationSettingsPage({
   );
 
   if (!orgWithMembership) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   return (

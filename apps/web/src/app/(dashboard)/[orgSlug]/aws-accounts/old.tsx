@@ -34,7 +34,7 @@ export default async function AWSAccountsPage({
   );
 
   if (!orgWithMembership) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Get AWS accounts for this organization

@@ -93,10 +93,8 @@ export async function grantAccessAction(_prev: unknown, formData: FormData) {
     });
 
     // 7. Revalidate
-    revalidatePath("/dashboard");
-    revalidatePath(
-      `/dashboard/organizations/${awsAccountRecord.organizationId}`
-    );
+    revalidatePath("/");
+    revalidatePath(`/${awsAccountRecord.organizationId}`);
 
     return { success: true } as const;
   } catch (e) {
@@ -166,10 +164,8 @@ export async function revokeAccessAction(
     });
 
     // 5. Revalidate
-    revalidatePath("/dashboard");
-    revalidatePath(
-      `/dashboard/organizations/${awsAccountRecord.organizationId}`
-    );
+    revalidatePath("/");
+    revalidatePath(`/${awsAccountRecord.organizationId}`);
 
     return { success: true };
   } catch (error) {

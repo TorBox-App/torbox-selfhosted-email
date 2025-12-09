@@ -250,7 +250,7 @@ export default async function EmailDetailPage({
   );
 
   if (!orgWithMembership) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Fetch actual email directly (not via API to avoid auth issues)

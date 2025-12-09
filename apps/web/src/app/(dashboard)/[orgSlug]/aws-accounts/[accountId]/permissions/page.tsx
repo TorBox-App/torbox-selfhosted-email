@@ -43,7 +43,7 @@ export default async function PermissionsPage({
   const organization = await getOrganizationBySlug(orgSlug);
 
   if (!organization) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Get AWS account

@@ -30,7 +30,7 @@ export default function SignInForm({
 } & React.ComponentProps<"div">) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = searchParams.get("redirect") || "/";
   const { isPending } = authClient.useSession();
   const [show2FA, setShow2FA] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");

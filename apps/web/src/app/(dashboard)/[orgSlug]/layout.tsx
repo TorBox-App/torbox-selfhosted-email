@@ -34,7 +34,7 @@ export default async function OrganizationLayout({
 
   if (!orgWithMembership) {
     // User doesn't have access to this organization
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Check if onboarding is completed

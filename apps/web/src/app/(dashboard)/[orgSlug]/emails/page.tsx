@@ -197,7 +197,7 @@ export default async function EmailsPage({
   );
 
   if (!orgWithMembership) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   // Fetch actual emails directly
