@@ -43,6 +43,8 @@ export const auth = betterAuth<BetterAuthOptions>({
           templateData: {
             privacyUrl: "https://wraps.dev/privacy",
             resetPasswordUrl: url,
+            name: user.name,
+            email: user.email,
           },
         });
       } catch (error) {
@@ -58,6 +60,7 @@ export const auth = betterAuth<BetterAuthOptions>({
           template: "Password-Changed",
           templateData: {
             name: user.name,
+            email: user.email,
           },
         });
       } catch (error) {
