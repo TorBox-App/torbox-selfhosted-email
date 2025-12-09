@@ -45,6 +45,39 @@ async function createProductionSESClient(): Promise<SESClient> {
   });
 }
 
+/**
+ * Get a properly configured WrapsEmail client instance
+ *
+ * In development: Uses standard AWS credential chain (env vars, profiles, etc.)
+ * In production: Uses two-step OIDC role assumption for Vercel
+ *
+ * @example
+ * ```ts
+ * const wraps = await getWrapsClient();
+ * await wraps.send({ from, to, subject, html, text });
+ * await wraps.sendTemplate({ from, to, template, templateData });
+ * ```
+ */
+export async function getWrapsClient(): Promise<WrapsEmail> {
+  const region = process.env.AWS_REGION || "us-east-1";
+
+  // Check if we're in production (Vercel) and need two-step role assumption
+  const isProduction =
+    process.env.VERCEL === "1" &&
+    process.env.AWS_ROLE_ARN &&
+    process.env.WRAPS_EMAIL_ROLE_ARN;
+
+  // Create Wraps SDK instance
+  return isProduction
+    ? // Production: Use custom SES client with two-step role assumption
+      new WrapsEmail({ client: await createProductionSESClient() })
+    : // Development: Let SDK handle credentials (env vars, AWS profiles, etc.)
+      new WrapsEmail({
+        region,
+        roleArn: process.env.WRAPS_EMAIL_ROLE_ARN,
+      });
+}
+
 export type SendEmailParams = {
   to: string;
   subject: string;
@@ -70,23 +103,8 @@ export type SendEmailParams = {
  */
 export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
   const from = process.env.EMAIL_FROM || "noreply@wraps.dev";
-  const region = process.env.AWS_REGION || "us-east-1";
 
-  // Check if we're in production (Vercel) and need two-step role assumption
-  const isProduction =
-    process.env.VERCEL === "1" &&
-    process.env.AWS_ROLE_ARN &&
-    process.env.WRAPS_EMAIL_ROLE_ARN;
-
-  // Create Wraps SDK instance
-  const wraps = isProduction
-    ? // Production: Use custom SES client with two-step role assumption
-      new WrapsEmail({ client: await createProductionSESClient() })
-    : // Development: Let SDK handle credentials (env vars, AWS profiles, etc.)
-      new WrapsEmail({
-        region,
-        roleArn: process.env.WRAPS_EMAIL_ROLE_ARN,
-      });
+  const wraps = await getWrapsClient();
 
   // Send email using Wraps SDK
   const result = await wraps.send({

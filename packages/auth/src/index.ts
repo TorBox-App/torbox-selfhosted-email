@@ -1,7 +1,7 @@
 import { stripe } from "@better-auth/stripe";
 import { db } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
-import { WrapsEmail } from "@wraps.dev/email";
+import { getWrapsClient } from "@wraps/email";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
@@ -35,8 +35,8 @@ export const auth = betterAuth<BetterAuthOptions>({
     requireEmailVerification: false, // Disabled for smoother onboarding - enable in production
     sendResetPassword: async ({ user, url }) => {
       try {
-        const email = new WrapsEmail();
-        await email.sendTemplate({
+        const wraps = await getWrapsClient();
+        await wraps.sendTemplate({
           from: "info@wraps.dev",
           to: user.email,
           template: "Password-Reset",
@@ -51,8 +51,8 @@ export const auth = betterAuth<BetterAuthOptions>({
     },
     onPasswordReset: async ({ user }) => {
       try {
-        const email = new WrapsEmail();
-        await email.sendTemplate({
+        const wraps = await getWrapsClient();
+        await wraps.sendTemplate({
           from: "info@wraps.dev",
           to: user.email,
           template: "Password-Changed",
@@ -168,19 +168,21 @@ export const auth = betterAuth<BetterAuthOptions>({
       if (ctx.path === "/change-password") {
         const session = ctx.context.session;
         if (session?.user) {
-          const email = new WrapsEmail();
-          void email
-            .sendTemplate({
-              from: "info@wraps.dev",
-              to: session.user.email,
-              template: "Password-Changed",
-              templateData: {
-                name: session.user.name,
-              },
-            })
-            .catch((error) => {
+          void (async () => {
+            try {
+              const wraps = await getWrapsClient();
+              await wraps.sendTemplate({
+                from: "info@wraps.dev",
+                to: session.user.email,
+                template: "Password-Changed",
+                templateData: {
+                  name: session.user.name,
+                },
+              });
+            } catch (error) {
               console.error("Error sending password changed email:", error);
-            });
+            }
+          })();
         }
       }
     }),
