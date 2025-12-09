@@ -4,6 +4,7 @@ import * as schema from "@wraps/db/schema/auth";
 import { WrapsEmail } from "@wraps.dev/email";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import {
   haveIBeenPwned,
@@ -49,8 +50,10 @@ export const auth = betterAuth<BetterAuthOptions>({
       }
     },
     onPasswordReset: async ({ user }) => {
+      console.log("[onPasswordReset] Hook triggered for user:", user.email);
       try {
         const email = new WrapsEmail();
+        console.log("[onPasswordReset] Sending password changed email...");
         await email.sendTemplate({
           from: "info@wraps.dev",
           to: user.email,
@@ -59,8 +62,12 @@ export const auth = betterAuth<BetterAuthOptions>({
             name: user.name,
           },
         });
+        console.log("[onPasswordReset] Email sent successfully");
       } catch (error) {
-        console.error("Error sending password changed email:", error);
+        console.error(
+          "[onPasswordReset] Error sending password changed email:",
+          error
+        );
       }
     },
   },
@@ -161,6 +168,41 @@ export const auth = betterAuth<BetterAuthOptions>({
         ]
       : []),
   ],
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      // Send "password changed" email after successful password change from settings
+      if (
+        ctx.path === "/change-password" &&
+        ctx.context.returned &&
+        "status" in ctx.context.returned &&
+        ctx.context.returned.status === true
+      ) {
+        const session = ctx.context.session;
+        if (session?.user) {
+          console.log(
+            "[hooks/after] Password changed for user:",
+            session.user.email
+          );
+          const email = new WrapsEmail();
+          void email
+            .sendTemplate({
+              from: "info@wraps.dev",
+              to: session.user.email,
+              template: "Password-Changed",
+              templateData: {
+                name: session.user.name,
+              },
+            })
+            .catch((error) => {
+              console.error(
+                "[hooks/after] Error sending password changed email:",
+                error
+              );
+            });
+        }
+      }
+    }),
+  },
   databaseHooks: {
     session: {
       create: {
