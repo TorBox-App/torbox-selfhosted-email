@@ -170,13 +170,17 @@ export const auth = betterAuth<BetterAuthOptions>({
   ],
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
+      // Debug: log all paths to see what's being hit
+      console.log(
+        "[hooks/after] Path:",
+        ctx.path,
+        "Returned:",
+        ctx.context.returned
+      );
+
       // Send "password changed" email after successful password change from settings
-      if (
-        ctx.path === "/change-password" &&
-        ctx.context.returned &&
-        "status" in ctx.context.returned &&
-        ctx.context.returned.status === true
-      ) {
+      if (ctx.path === "/change-password") {
+        console.log("[hooks/after] Change password endpoint hit");
         const session = ctx.context.session;
         if (session?.user) {
           console.log(
@@ -199,6 +203,8 @@ export const auth = betterAuth<BetterAuthOptions>({
                 error
               );
             });
+        } else {
+          console.log("[hooks/after] No session found");
         }
       }
     }),

@@ -218,7 +218,7 @@ export default function SignInForm({
                         <Label htmlFor={field.name}>Password</Label>
                         <Link
                           className="ml-auto text-sm underline-offset-4 hover:underline"
-                          href="/auth/forgot-password"
+                          href="/forgot-password"
                         >
                           Forgot your password?
                         </Link>
