@@ -102,7 +102,7 @@ export type SendEmailParams = {
  * ```
  */
 export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
-  const from = process.env.EMAIL_FROM || "noreply@wraps.dev";
+  const from = process.env.EMAIL_FROM || "Wraps <info@wraps.dev>";
 
   const wraps = await getWrapsClient();
 
