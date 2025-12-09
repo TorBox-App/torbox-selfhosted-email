@@ -12,6 +12,8 @@ import {
   History,
   Import,
   Italic,
+  Link2,
+  Link2Off,
   List,
   ListOrdered,
   Loader2,
@@ -27,6 +29,7 @@ import {
   Underline,
   Undo2,
 } from "lucide-react";
+import { useCallback, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +39,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -102,6 +111,41 @@ export function TemplateEditorToolbar({
     toggleAIPanel,
     toggleVersionHistory,
   } = useTemplateStore((state) => state.actions);
+
+  // Link popover state
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+
+  const isLinkActive = editor?.isActive("link") ?? false;
+
+  const handleSetLink = useCallback(() => {
+    if (!editor) return;
+
+    if (linkUrl) {
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: linkUrl })
+        .run();
+    }
+    setLinkUrl("");
+    setLinkPopoverOpen(false);
+  }, [editor, linkUrl]);
+
+  const handleRemoveLink = useCallback(() => {
+    if (!editor) return;
+    editor.chain().focus().unsetLink().run();
+    setLinkPopoverOpen(false);
+  }, [editor]);
+
+  const handleOpenLinkPopover = useCallback(() => {
+    if (!editor) return;
+    // Pre-fill with existing link URL if editing
+    const previousUrl = editor.getAttributes("link").href as string;
+    setLinkUrl(previousUrl || "");
+    setLinkPopoverOpen(true);
+  }, [editor]);
 
   if (!editor) {
     return null;
@@ -234,6 +278,67 @@ export function TemplateEditorToolbar({
                   </TooltipTrigger>
                   <TooltipContent>Underline (⌘U)</TooltipContent>
                 </Tooltip>
+
+                {/* Link Button with Popover */}
+                <Popover
+                  onOpenChange={setLinkPopoverOpen}
+                  open={linkPopoverOpen}
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <Button
+                          className="h-8 w-8 p-0"
+                          onClick={handleOpenLinkPopover}
+                          size="sm"
+                          variant={isLinkActive ? "secondary" : "ghost"}
+                        >
+                          <Link2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>Add Link (⌘K)</TooltipContent>
+                  </Tooltip>
+                  <PopoverContent align="start" className="w-80">
+                    <div className="space-y-3">
+                      <div className="font-medium text-sm">
+                        {isLinkActive ? "Edit Link" : "Add Link"}
+                      </div>
+                      <Input
+                        autoFocus
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleSetLink();
+                          }
+                        }}
+                        placeholder="https://example.com"
+                        value={linkUrl}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          className="flex-1"
+                          disabled={!linkUrl}
+                          onClick={handleSetLink}
+                          size="sm"
+                        >
+                          {isLinkActive ? "Update" : "Add"} Link
+                        </Button>
+                        {isLinkActive && (
+                          <Button
+                            onClick={handleRemoveLink}
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Link2Off className="mr-1 h-3.5 w-3.5" />
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
 
                 <Tooltip>
                   <TooltipTrigger asChild>

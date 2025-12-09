@@ -6,6 +6,7 @@ import Blockquote from "@tiptap/extension-blockquote";
 import BulletList from "@tiptap/extension-bullet-list";
 import { Color } from "@tiptap/extension-color";
 import Heading from "@tiptap/extension-heading";
+import Link from "@tiptap/extension-link";
 import OrderedList from "@tiptap/extension-ordered-list";
 import Paragraph from "@tiptap/extension-paragraph";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -133,6 +134,14 @@ export function useTemplateEditor({
       Color,
       TextAlign.configure({
         types: ["heading", "paragraph"],
+      }),
+
+      // Link extension for text links
+      Link.configure({
+        openOnClick: false, // Don't open links in editor
+        HTMLAttributes: {
+          class: "text-primary underline",
+        },
       }),
 
       // React Email nodes

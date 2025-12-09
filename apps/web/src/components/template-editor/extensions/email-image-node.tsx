@@ -6,7 +6,7 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from "@tiptap/react";
-import { Pencil } from "lucide-react";
+import { ExternalLink, Pencil } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ export type EmailImageAttributes = {
   width: number | null;
   height: number | null;
   align: "left" | "center" | "right";
+  href: string | null;
 };
 
 declare module "@tiptap/core" {
@@ -81,6 +82,12 @@ const EmailImageNodeView = ({
               </span>
             </div>
           )}
+          {attrs.href && (
+            <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-primary/90 px-1.5 py-0.5 text-primary-foreground text-xs">
+              <ExternalLink className="h-3 w-3" />
+              <span>Linked</span>
+            </div>
+          )}
         </div>
 
         {/* Drag handle and edit button */}
@@ -114,6 +121,23 @@ const EmailImageNodeView = ({
                     placeholder="Describe the image"
                     value={attrs.alt}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="href">Link URL (optional)</Label>
+                  <Input
+                    id="href"
+                    onChange={(e) =>
+                      updateAttributes({
+                        href: e.target.value || null,
+                      })
+                    }
+                    placeholder="https://example.com"
+                    value={attrs.href || ""}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Make the image clickable
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -190,6 +214,7 @@ export const EmailImageNode = Node.create({
       width: { default: null },
       height: { default: null },
       align: { default: "center" },
+      href: { default: null },
     };
   },
 

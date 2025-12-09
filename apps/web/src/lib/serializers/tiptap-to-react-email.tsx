@@ -252,16 +252,27 @@ function nodeToReactEmail(
       const alignClass = alignMap[align] || "text-center";
       // Use placeholder if src is empty or a variable
       const imgSrc = getImageWithPlaceholder(node.attrs?.src, "generic");
+      const href = node.attrs?.href;
+
+      const imgElement = (
+        <Img
+          alt={node.attrs?.alt || "Image"}
+          className="inline-block h-auto max-w-full"
+          height={node.attrs?.height}
+          src={imgSrc}
+          width={node.attrs?.width}
+        />
+      );
 
       return (
         <div className={alignClass} key={key}>
-          <Img
-            alt={node.attrs?.alt || "Image"}
-            className="inline-block h-auto max-w-full"
-            height={node.attrs?.height}
-            src={imgSrc}
-            width={node.attrs?.width}
-          />
+          {href ? (
+            <Link className="inline-block" href={href}>
+              {imgElement}
+            </Link>
+          ) : (
+            imgElement
+          )}
         </div>
       );
     }
@@ -903,6 +914,7 @@ ${spaces}          </Section>`;
 
       const width = (attrs.width as string) || "100%";
       const height = (attrs.height as string) || "auto";
+      const href = attrs.href as string | undefined;
 
       // Build width/height classes
       let dimensionClasses = "";
@@ -917,12 +929,22 @@ ${spaces}          </Section>`;
         dimensionClasses += "h-auto ";
       }
 
-      return `${spaces}          <div className="${alignClass}">
-${spaces}            <Img
+      const imgCode = `<Img
 ${spaces}              src="${attrs.src || ""}"
 ${spaces}              alt="${attrs.alt || ""}"
 ${spaces}              className="${dimensionClasses.trim()} max-w-full inline-block"
-${spaces}            />
+${spaces}            />`;
+
+      if (href) {
+        return `${spaces}          <div className="${alignClass}">
+${spaces}            <Link href="${href}" className="inline-block">
+${spaces}              ${imgCode}
+${spaces}            </Link>
+${spaces}          </div>`;
+      }
+
+      return `${spaces}          <div className="${alignClass}">
+${spaces}            ${imgCode}
 ${spaces}          </div>`;
     }
 

@@ -413,6 +413,7 @@ function generatePreviewHtml(
     attrs?: Record<string, unknown>;
     content?: unknown[];
     text?: string;
+    marks?: Array<{ type: string; attrs?: Record<string, unknown> }>;
   }): string => {
     if (!node.type) {
       return "";
@@ -471,8 +472,29 @@ function generatePreviewHtml(
         return `<h${level} style="margin: 0 0 16px 0; font-size: ${sizes[level] || "16px"}; font-weight: 600;">${hContent}</h${level}>`;
       }
 
-      case "text":
-        return replaceVariables(node.text || "");
+      case "text": {
+        let text = replaceVariables(node.text || "");
+        // Handle marks (bold, italic, link, etc.)
+        if (node.marks) {
+          for (const mark of node.marks) {
+            switch (mark.type) {
+              case "bold":
+                text = `<strong>${text}</strong>`;
+                break;
+              case "italic":
+                text = `<em>${text}</em>`;
+                break;
+              case "underline":
+                text = `<span style="text-decoration: underline;">${text}</span>`;
+                break;
+              case "link":
+                text = `<a href="${mark.attrs?.href || "#"}" style="color: ${darkMode ? "#818cf8" : "#5046e5"}; text-decoration: underline;">${text}</a>`;
+                break;
+            }
+          }
+        }
+        return text;
+      }
 
       case "variable": {
         const varName = node.attrs?.name as string;
@@ -518,7 +540,13 @@ function generatePreviewHtml(
       case "emailImage": {
         const attrs = node.attrs || {};
         const align = (attrs.align as string) || "center";
-        return `<div style="text-align: ${align};"><img src="${attrs.src || "https://placehold.co/600x200"}" alt="${attrs.alt || ""}" width="${attrs.width || "100%"}" style="display: inline-block; max-width: 100%; height: auto;" /></div>`;
+        const href = attrs.href as string | undefined;
+        const imgHtml = `<img src="${attrs.src || "https://placehold.co/600x200"}" alt="${attrs.alt || ""}" width="${attrs.width || "100%"}" style="display: inline-block; max-width: 100%; height: auto;" />`;
+
+        if (href) {
+          return `<div style="text-align: ${align};"><a href="${href}" style="display: inline-block;">${imgHtml}</a></div>`;
+        }
+        return `<div style="text-align: ${align};">${imgHtml}</div>`;
       }
 
       case "emailDivider": {
