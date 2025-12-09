@@ -643,6 +643,68 @@ function generatePreviewHtml(
         return "";
       }
 
+      case "emailSocialLinks": {
+        const attrs = node.attrs || {};
+        const links = (attrs.links || []) as Array<{
+          platform: string;
+          url: string;
+        }>;
+        const iconSize = (attrs.iconSize as number) || 24;
+        const iconColor = (attrs.iconColor as string) || "#6b7280";
+        const iconSpacing = (attrs.iconSpacing as string) || "16px";
+        const align = (attrs.align as string) || "center";
+        const style = (attrs.style as string) || "icons";
+
+        const platformLabels: Record<string, string> = {
+          twitter: "Twitter",
+          linkedin: "LinkedIn",
+          instagram: "Instagram",
+          facebook: "Facebook",
+          youtube: "YouTube",
+          github: "GitHub",
+        };
+
+        // Platform slugs for Iconify Simple Icons
+        const platformSlugs: Record<string, string> = {
+          twitter: "x",
+          linkedin: "linkedin",
+          instagram: "instagram",
+          facebook: "facebook",
+          youtube: "youtube",
+          github: "github",
+        };
+
+        // Use Iconify API for colored social icons
+        const getIconUrl = (platform: string, color: string): string => {
+          const slug = platformSlugs[platform] || platform.toLowerCase();
+          const encodedColor = encodeURIComponent(color);
+          return `https://api.iconify.design/simple-icons/${slug}.svg?color=${encodedColor}`;
+        };
+
+        if (links.length === 0) {
+          return "";
+        }
+
+        const linksHtml = links
+          .map((link, i) => {
+            const label = platformLabels[link.platform] || link.platform;
+            const marginRight = i < links.length - 1 ? iconSpacing : "0";
+            const showIcon = style === "icons" || style === "both";
+            const showText = style === "text" || style === "both";
+
+            const iconHtml = showIcon
+              ? `<img src="${getIconUrl(link.platform, iconColor)}" width="${iconSize}" height="${iconSize}" alt="${label}" style="display: inline-block; vertical-align: middle;" />`
+              : "";
+            const textHtml = showText ? label : "";
+            const gap = showIcon && showText ? "4px" : "0";
+
+            return `<a href="${link.url || "#"}" style="color: ${iconColor}; font-size: ${iconSize}px; margin-right: ${marginRight}; text-decoration: none; display: inline-flex; align-items: center; gap: ${gap};">${iconHtml}${textHtml}</a>`;
+          })
+          .join("");
+
+        return `<div style="text-align: ${align}; margin: 16px 0;">${linksHtml}</div>`;
+      }
+
       default:
         // For unknown nodes, try to render children
         if (node.content) {

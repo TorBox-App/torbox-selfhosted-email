@@ -368,6 +368,7 @@ function nodeToReactEmail(
       const iconColor = node.attrs?.iconColor || "#6b7280";
       const iconSpacing = node.attrs?.iconSpacing || "16px";
       const align = node.attrs?.align || "center";
+      const style = (node.attrs?.style as string) || "icons";
 
       const alignMap: Record<string, string> = {
         left: "text-left",
@@ -375,7 +376,7 @@ function nodeToReactEmail(
         right: "text-right",
       };
 
-      // Social platform icons as simple text links (email clients have limited SVG support)
+      // Platform labels for text display
       const platformLabels: Record<string, string> = {
         twitter: "Twitter",
         linkedin: "LinkedIn",
@@ -383,6 +384,23 @@ function nodeToReactEmail(
         facebook: "Facebook",
         youtube: "YouTube",
         github: "GitHub",
+      };
+
+      // Platform slugs for Iconify Simple Icons
+      const platformSlugs: Record<string, string> = {
+        twitter: "x",
+        linkedin: "linkedin",
+        instagram: "instagram",
+        facebook: "facebook",
+        youtube: "youtube",
+        github: "github",
+      };
+
+      // Use Iconify API for colored social icons (reliable for email clients)
+      const getIconUrl = (platform: string, color: string): string => {
+        const slug = platformSlugs[platform] || platform.toLowerCase();
+        const encodedColor = encodeURIComponent(color);
+        return `https://api.iconify.design/simple-icons/${slug}.svg?color=${encodedColor}`;
       };
 
       if (links.length === 0) {
@@ -400,9 +418,22 @@ function nodeToReactEmail(
                 fontSize: `${iconSize}px`,
                 marginRight: i < links.length - 1 ? iconSpacing : "0",
                 textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
               }}
             >
-              {platformLabels[link.platform] || link.platform}
+              {(style === "icons" || style === "both") && (
+                <Img
+                  alt={platformLabels[link.platform] || link.platform}
+                  height={iconSize}
+                  src={getIconUrl(link.platform, iconColor)}
+                  style={{ display: "inline-block", verticalAlign: "middle" }}
+                  width={iconSize}
+                />
+              )}
+              {(style === "text" || style === "both") &&
+                (platformLabels[link.platform] || link.platform)}
             </Link>
           ))}
         </div>
@@ -1074,6 +1105,7 @@ ${spaces}          </pre>`;
       const iconSize = (attrs.iconSize as number) || 24;
       const iconSpacing = (attrs.iconSpacing as string) || "16px";
       const align = (attrs.align as string) || "center";
+      const style = (attrs.style as string) || "icons";
 
       const alignClass =
         align === "center"
@@ -1091,6 +1123,23 @@ ${spaces}          </pre>`;
         github: "GitHub",
       };
 
+      // Platform slugs for Iconify Simple Icons
+      const platformSlugs: Record<string, string> = {
+        twitter: "x",
+        linkedin: "linkedin",
+        instagram: "instagram",
+        facebook: "facebook",
+        youtube: "youtube",
+        github: "github",
+      };
+
+      // Use Iconify API for colored social icons
+      const getIconUrl = (platform: string, color: string): string => {
+        const slug = platformSlugs[platform] || platform.toLowerCase();
+        const encodedColor = encodeURIComponent(color);
+        return `https://api.iconify.design/simple-icons/${slug}.svg?color=${encodedColor}`;
+      };
+
       if (links.length === 0) {
         return `${spaces}          {/* Social Links - No links configured */}`;
       }
@@ -1099,6 +1148,10 @@ ${spaces}          </pre>`;
         .map((link, i) => {
           const label = platformLabels[link.platform] || link.platform;
           const marginRight = i < links.length - 1 ? iconSpacing : "0";
+          const iconUrl = getIconUrl(link.platform, iconColor);
+          const showIcon = style === "icons" || style === "both";
+          const showText = style === "text" || style === "both";
+
           return `${spaces}            <Link
 ${spaces}              href="${link.url || "#"}"
 ${spaces}              style={{
@@ -1106,10 +1159,12 @@ ${spaces}                color: "${iconColor}",
 ${spaces}                fontSize: "${iconSize}px",
 ${spaces}                marginRight: "${marginRight}",
 ${spaces}                textDecoration: "none",
+${spaces}                display: "inline-flex",
+${spaces}                alignItems: "center",
+${spaces}                gap: "4px",
 ${spaces}              }}
 ${spaces}            >
-${spaces}              ${label}
-${spaces}            </Link>`;
+${showIcon ? `${spaces}              <Img src="${iconUrl}" width={${iconSize}} height={${iconSize}} alt="${label}" style={{ display: "inline-block", verticalAlign: "middle" }} />\n` : ""}${showText ? `${spaces}              ${label}\n` : ""}${spaces}            </Link>`;
         })
         .join("\n");
 
