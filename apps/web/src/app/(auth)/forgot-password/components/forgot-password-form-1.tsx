@@ -71,7 +71,7 @@ export function ForgotPasswordForm1({
                 </button>
               </p>
               <div className="text-center text-sm">
-                <Link className="underline underline-offset-4" href="/sign-in">
+                <Link className="underline underline-offset-4" href="/auth">
                   Back to sign in
                 </Link>
               </div>
@@ -145,7 +145,7 @@ export function ForgotPasswordForm1({
               </form.Subscribe>
               <div className="text-center text-sm">
                 Remember your password?{" "}
-                <Link className="underline underline-offset-4" href="/sign-in">
+                <Link className="underline underline-offset-4" href="/auth">
                   Back to sign in
                 </Link>
               </div>

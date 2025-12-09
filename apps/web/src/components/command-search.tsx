@@ -146,7 +146,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
     // Auth Pages
     {
       title: "Sign In 1",
-      url: "/sign-in",
+      url: "/auth",
       group: "Auth Pages",
       icon: Shield,
     },

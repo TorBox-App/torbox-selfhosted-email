@@ -83,7 +83,7 @@ export function ResetPasswordForm({
                 </Button>
               </Link>
               <div className="text-center text-sm">
-                <Link className="underline underline-offset-4" href="/sign-in">
+                <Link className="underline underline-offset-4" href="/auth">
                   Back to sign in
                 </Link>
               </div>
@@ -109,7 +109,7 @@ export function ResetPasswordForm({
             <div className="grid gap-4">
               <Button
                 className="w-full cursor-pointer"
-                onClick={() => router.push("/sign-in")}
+                onClick={() => router.push("/auth")}
               >
                 Sign In
               </Button>
@@ -213,7 +213,7 @@ export function ResetPasswordForm({
               </form.Subscribe>
               <div className="text-center text-sm">
                 Remember your password?{" "}
-                <Link className="underline underline-offset-4" href="/sign-in">
+                <Link className="underline underline-offset-4" href="/auth">
                   Back to sign in
                 </Link>
               </div>
