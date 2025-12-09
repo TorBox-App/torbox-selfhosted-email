@@ -33,27 +33,35 @@ export const auth = betterAuth<BetterAuthOptions>({
     enabled: true,
     requireEmailVerification: false, // Disabled for smoother onboarding - enable in production
     sendResetPassword: async ({ user, url }) => {
-      const email = new WrapsEmail();
-      await email.sendTemplate({
-        from: "info@wraps.dev",
-        to: user.email,
-        template: "Password-Reset",
-        templateData: {
-          privacyUrl: "https://wraps.dev/privacy",
-          resetPasswordUrl: url,
-        },
-      });
+      try {
+        const email = new WrapsEmail();
+        await email.sendTemplate({
+          from: "info@wraps.dev",
+          to: user.email,
+          template: "Password-Reset",
+          templateData: {
+            privacyUrl: "https://wraps.dev/privacy",
+            resetPasswordUrl: url,
+          },
+        });
+      } catch (error) {
+        console.error("Error sending password reset email:", error);
+      }
     },
     onPasswordReset: async ({ user }) => {
-      const email = new WrapsEmail();
-      await email.sendTemplate({
-        from: "info@wraps.dev",
-        to: user.email,
-        template: "Password-Changed",
-        templateData: {
-          name: user.name,
-        },
-      });
+      try {
+        const email = new WrapsEmail();
+        await email.sendTemplate({
+          from: "info@wraps.dev",
+          to: user.email,
+          template: "Password-Changed",
+          templateData: {
+            name: user.name,
+          },
+        });
+      } catch (error) {
+        console.error("Error sending password changed email:", error);
+      }
     },
   },
   emailVerification: {
