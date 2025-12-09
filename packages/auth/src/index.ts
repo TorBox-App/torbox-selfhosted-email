@@ -50,10 +50,8 @@ export const auth = betterAuth<BetterAuthOptions>({
       }
     },
     onPasswordReset: async ({ user }) => {
-      console.log("[onPasswordReset] Hook triggered for user:", user.email);
       try {
         const email = new WrapsEmail();
-        console.log("[onPasswordReset] Sending password changed email...");
         await email.sendTemplate({
           from: "info@wraps.dev",
           to: user.email,
@@ -62,12 +60,8 @@ export const auth = betterAuth<BetterAuthOptions>({
             name: user.name,
           },
         });
-        console.log("[onPasswordReset] Email sent successfully");
       } catch (error) {
-        console.error(
-          "[onPasswordReset] Error sending password changed email:",
-          error
-        );
+        console.error("Error sending password changed email:", error);
       }
     },
   },
@@ -170,23 +164,10 @@ export const auth = betterAuth<BetterAuthOptions>({
   ],
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
-      // Debug: log all paths to see what's being hit
-      console.log(
-        "[hooks/after] Path:",
-        ctx.path,
-        "Returned:",
-        ctx.context.returned
-      );
-
       // Send "password changed" email after successful password change from settings
       if (ctx.path === "/change-password") {
-        console.log("[hooks/after] Change password endpoint hit");
         const session = ctx.context.session;
         if (session?.user) {
-          console.log(
-            "[hooks/after] Password changed for user:",
-            session.user.email
-          );
           const email = new WrapsEmail();
           void email
             .sendTemplate({
@@ -198,13 +179,8 @@ export const auth = betterAuth<BetterAuthOptions>({
               },
             })
             .catch((error) => {
-              console.error(
-                "[hooks/after] Error sending password changed email:",
-                error
-              );
+              console.error("Error sending password changed email:", error);
             });
-        } else {
-          console.log("[hooks/after] No session found");
         }
       }
     }),
