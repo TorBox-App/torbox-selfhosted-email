@@ -35,12 +35,23 @@ export const auth = betterAuth<BetterAuthOptions>({
     sendResetPassword: async ({ user, url }) => {
       const email = new WrapsEmail();
       await email.sendTemplate({
-        from: "jarod@wraps.dev",
+        from: "info@wraps.dev",
         to: user.email,
         template: "Password-Reset",
         templateData: {
           privacyUrl: "https://wraps.dev/privacy",
           resetPasswordUrl: url,
+        },
+      });
+    },
+    onPasswordReset: async ({ user }) => {
+      const email = new WrapsEmail();
+      await email.sendTemplate({
+        from: "info@wraps.dev",
+        to: user.email,
+        template: "Password-Changed",
+        templateData: {
+          name: user.name,
         },
       });
     },
@@ -137,43 +148,6 @@ export const auth = betterAuth<BetterAuthOptions>({
                   },
                 },
               ],
-              onSubscriptionComplete: async ({
-                subscription,
-                user,
-              }: {
-                subscription: any;
-                user: any;
-              }) => {
-                console.log(
-                  `Subscription created for user ${user.id}:`,
-                  subscription
-                );
-                // Could send welcome email here
-              },
-              onSubscriptionUpdate: async ({
-                subscription,
-                user,
-              }: {
-                subscription: any;
-                user: any;
-              }) => {
-                console.log(
-                  `Subscription updated for user ${user.id}:`,
-                  subscription
-                );
-              },
-              onSubscriptionCancel: async ({
-                subscription,
-                user,
-              }: {
-                subscription: any;
-                user: any;
-              }) => {
-                console.log(
-                  `Subscription canceled for user ${user.id}:`,
-                  subscription
-                );
-              },
             },
           }),
         ]
