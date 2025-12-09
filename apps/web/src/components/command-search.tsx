@@ -146,37 +146,19 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
     // Auth Pages
     {
       title: "Sign In 1",
-      url: "/auth/sign-in",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Sign In 2",
-      url: "/auth/sign-in-2",
+      url: "/sign-in",
       group: "Auth Pages",
       icon: Shield,
     },
     {
       title: "Sign Up 1",
-      url: "/auth/sign-up",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Sign Up 2",
-      url: "/auth/sign-up-2",
+      url: "/sign-up",
       group: "Auth Pages",
       icon: Shield,
     },
     {
       title: "Forgot Password 1",
-      url: "/auth/forgot-password",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Forgot Password 2",
-      url: "/auth/forgot-password-2",
+      url: "/forgot-password",
       group: "Auth Pages",
       icon: Shield,
     },
