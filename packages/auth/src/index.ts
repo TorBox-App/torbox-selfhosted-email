@@ -31,6 +31,9 @@ export const auth = betterAuth<BetterAuthOptions>({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false, // Disabled for smoother onboarding - enable in production
+    sendResetPassword: async ({ user: _user, url: _url }) => {
+      // TODO: Implement password reset email
+    },
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {

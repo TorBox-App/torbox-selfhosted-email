@@ -3,7 +3,7 @@
 import type { JSONContent } from "@tiptap/core";
 import { EditorContent } from "@tiptap/react";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
@@ -144,6 +144,9 @@ function TemplateEditorContent({
   const publishMutation = usePublishTemplate(orgSlug, templateId);
   const unpublishMutation = useUnpublishTemplate(orgSlug, templateId);
 
+  // Track last saved subject to avoid redundant saves
+  const lastSavedSubjectRef = useRef(template.subject ?? "");
+
   // Handle save
   const handleSave = useCallback(
     async (content: JSONContent) => {
@@ -175,17 +178,28 @@ function TemplateEditorContent({
     if (template.subject !== null && template.subject !== subject) {
       setSubject(template.subject);
     }
-  }, [template.subject, subject]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only sync when template.subject changes from server
+  }, [template.subject]);
 
-  // Handle subject change - save after a delay
-  const handleSubjectChange = useCallback(
-    (newSubject: string) => {
-      setSubject(newSubject);
-      // Save subject to database (debounced via mutation)
-      updateMutation.mutate({ subject: newSubject });
-    },
-    [updateMutation]
-  );
+  // Debounced subject save - waits 1s after last keystroke
+  useEffect(() => {
+    // Don't save if subject hasn't changed from last saved value
+    if (subject === lastSavedSubjectRef.current) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      lastSavedSubjectRef.current = subject;
+      updateMutation.mutate({ subject });
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [subject, updateMutation]);
+
+  // Handle subject change - just update local state, useEffect handles debounced save
+  const handleSubjectChange = useCallback((newSubject: string) => {
+    setSubject(newSubject);
+  }, []);
 
   // Handle publish
   const handlePublish = useCallback(async () => {
@@ -193,6 +207,7 @@ function TemplateEditorContent({
       // Save any pending changes first (including subject)
       await saveNow();
       await updateMutation.mutateAsync({ subject });
+      lastSavedSubjectRef.current = subject;
 
       // Then publish to SES
       const result = await publishMutation.mutateAsync({});
