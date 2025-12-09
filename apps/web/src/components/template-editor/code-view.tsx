@@ -113,7 +113,14 @@ export function CodeView({ editor: tiptapEditor }: CodeViewProps) {
     const generateHtml = async () => {
       try {
         const content = tiptapEditor.getJSON();
-        const html = await renderTipTapToHtml(content);
+        // Use keepVariablesAsPlaceholders to show {{name}} like it will appear in SES
+        const html = await renderTipTapToHtml(
+          content,
+          {},
+          {
+            keepVariablesAsPlaceholders: true,
+          }
+        );
         if (!cancelled) {
           setOriginalCode(html);
           setEditedCode(html);

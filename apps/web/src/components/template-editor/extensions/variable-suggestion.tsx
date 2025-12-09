@@ -156,12 +156,12 @@ SuggestionList.displayName = "SuggestionList";
 
 // Default variables - these can be overridden via extension options
 const defaultVariables: VariableItem[] = [
-  { name: "firstName", label: "First Name", type: "text" },
-  { name: "lastName", label: "Last Name", type: "text" },
+  { name: "name", label: "Name", type: "text" },
   { name: "email", label: "Email Address", type: "email" },
+  { name: "url", label: "Action URL", type: "url" },
   { name: "companyName", label: "Company Name", type: "text" },
   { name: "unsubscribeUrl", label: "Unsubscribe URL", type: "url" },
-  { name: "preferencesUrl", label: "Preferences URL", type: "url" },
+  { name: "privacyUrl", label: "Privacy Policy URL", type: "url" },
 ];
 
 type VariableSuggestionOptions = {

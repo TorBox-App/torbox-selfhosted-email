@@ -57,16 +57,16 @@ function extractVariablesFromDoc(editor: Editor | null): VariableInfo[] {
 // Sample data presets
 const samplePresets = {
   customer: {
-    firstName: "John",
-    lastName: "Doe",
+    name: "John Doe",
     email: "john.doe@example.com",
     companyName: "Acme Inc",
+    url: "https://example.com/action",
   },
   test: {
-    firstName: "Test",
-    lastName: "User",
+    name: "Test User",
     email: "test@test.com",
     companyName: "Test Company",
+    url: "https://example.com/test",
   },
 };
 

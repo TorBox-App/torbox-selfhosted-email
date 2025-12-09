@@ -46,16 +46,24 @@ type BrandKitColors = {
 type SerializerOptions = {
   previewText?: string;
   brandKit?: BrandKitColors;
+  /** When true, variables render as {{name}} for SES substitution. When false, use fallback values. */
+  keepVariablesAsPlaceholders?: boolean;
 };
 
 /**
  * Resolves a variable in the content with test data
+ * @param keepAsPlaceholder - When true, always return {{name}} for SES substitution
  */
 function resolveVariable(
   name: string,
   testData: Record<string, unknown>,
-  fallback?: string
+  fallback?: string,
+  keepAsPlaceholder?: boolean
 ): string {
+  // For SES templates, always keep as placeholder regardless of fallback
+  if (keepAsPlaceholder) {
+    return `{{${name}}}`;
+  }
   const value = testData[name];
   if (value !== undefined && value !== null) {
     return String(value);
@@ -101,7 +109,8 @@ function evaluateCondition(
 function nodeToReactEmail(
   node: JSONContent,
   testData: Record<string, unknown>,
-  index: number
+  index: number,
+  options: { keepVariablesAsPlaceholders?: boolean } = {}
 ): ReactElement | ReactElement[] | string | null {
   const key = `node-${index}`;
 
@@ -110,7 +119,7 @@ function nodeToReactEmail(
       return (
         <>
           {node.content?.map((child, i) =>
-            nodeToReactEmail(child, testData, i)
+            nodeToReactEmail(child, testData, i, options)
           )}
         </>
       );
@@ -119,7 +128,7 @@ function nodeToReactEmail(
       return (
         <Text className="my-4 text-inherit leading-relaxed" key={key}>
           {node.content?.map((child, i) =>
-            nodeToReactEmail(child, testData, i)
+            nodeToReactEmail(child, testData, i, options)
           )}
         </Text>
       );
@@ -184,7 +193,7 @@ function nodeToReactEmail(
           key={key}
         >
           {node.content?.map((child, i) =>
-            nodeToReactEmail(child, testData, i)
+            nodeToReactEmail(child, testData, i, options)
           )}
         </Heading>
       );
@@ -227,7 +236,7 @@ function nodeToReactEmail(
       return (
         <Section className="p-5" key={key}>
           {node.content?.map((child, i) =>
-            nodeToReactEmail(child, testData, i)
+            nodeToReactEmail(child, testData, i, options)
           )}
         </Section>
       );
@@ -400,12 +409,20 @@ function nodeToReactEmail(
       );
     }
 
-    case "variable":
-      return resolveVariable(
+    case "variable": {
+      const variableValue = resolveVariable(
         node.attrs?.name || "",
         testData,
-        node.attrs?.fallback
+        node.attrs?.fallback,
+        options.keepVariablesAsPlaceholders
       );
+      // Wrap in span to prevent React from adding comment markers around text nodes
+      return (
+        <span data-variable={node.attrs?.name} key={key}>
+          {variableValue}
+        </span>
+      );
+    }
 
     case "conditional": {
       const shouldShow = evaluateCondition(
@@ -419,7 +436,7 @@ function nodeToReactEmail(
         return (
           <>
             {node.content?.map((child, i) =>
-              nodeToReactEmail(child, testData, i)
+              nodeToReactEmail(child, testData, i, options)
             )}
           </>
         );
@@ -431,7 +448,7 @@ function nodeToReactEmail(
       return (
         <ul className="my-4 list-disc pl-5" key={key}>
           {node.content?.map((child, i) =>
-            nodeToReactEmail(child, testData, i)
+            nodeToReactEmail(child, testData, i, options)
           )}
         </ul>
       );
@@ -440,7 +457,7 @@ function nodeToReactEmail(
       return (
         <ol className="my-4 list-decimal pl-5" key={key}>
           {node.content?.map((child, i) =>
-            nodeToReactEmail(child, testData, i)
+            nodeToReactEmail(child, testData, i, options)
           )}
         </ol>
       );
@@ -449,7 +466,7 @@ function nodeToReactEmail(
       return (
         <li className="my-1" key={key}>
           {node.content?.map((child, i) =>
-            nodeToReactEmail(child, testData, i)
+            nodeToReactEmail(child, testData, i, options)
           )}
         </li>
       );
@@ -461,7 +478,7 @@ function nodeToReactEmail(
           key={key}
         >
           {node.content?.map((child, i) =>
-            nodeToReactEmail(child, testData, i)
+            nodeToReactEmail(child, testData, i, options)
           )}
         </blockquote>
       );
@@ -474,7 +491,7 @@ function nodeToReactEmail(
         >
           <code>
             {node.content?.map((child, i) =>
-              nodeToReactEmail(child, testData, i)
+              nodeToReactEmail(child, testData, i, options)
             )}
           </code>
         </pre>
@@ -486,7 +503,7 @@ function nodeToReactEmail(
         return (
           <>
             {node.content.map((child, i) =>
-              nodeToReactEmail(child, testData, i)
+              nodeToReactEmail(child, testData, i, options)
             )}
           </>
         );
@@ -552,7 +569,9 @@ export function tiptapToReactEmail(
   testData: Record<string, unknown> = {},
   options: SerializerOptions = {}
 ): ReactElement {
-  const emailContent = nodeToReactEmail(content, testData, 0);
+  const emailContent = nodeToReactEmail(content, testData, 0, {
+    keepVariablesAsPlaceholders: options.keepVariablesAsPlaceholders,
+  });
   const tailwindConfig = createTailwindConfig(options.brandKit);
 
   return (

@@ -29,8 +29,7 @@ import type { VariableItem } from "./extensions/variable-suggestion";
 
 // Default variables for subject line
 const defaultVariables: VariableItem[] = [
-  { name: "firstName", label: "First Name", type: "text" },
-  { name: "lastName", label: "Last Name", type: "text" },
+  { name: "name", label: "Name", type: "text" },
   { name: "email", label: "Email Address", type: "email" },
   { name: "companyName", label: "Company Name", type: "text" },
 ];

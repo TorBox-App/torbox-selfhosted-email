@@ -124,8 +124,9 @@ export async function POST(request: Request, context: RouteContext) {
     // Note: For SES templates, we keep variables as {{variableName}} for SES to substitute
     const emailComponent = tiptapToReactEmail(
       templateData.content as JSONContent,
-      {}, // Empty data - keep variables as placeholders
+      {}, // Empty data - variables will be substituted by SES
       {
+        keepVariablesAsPlaceholders: true, // Always render {{name}} for SES
         brandKit: selectedBrandKit
           ? {
               primaryColor: selectedBrandKit.primaryColor,

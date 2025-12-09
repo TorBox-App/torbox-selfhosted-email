@@ -1,10 +1,12 @@
 "use client";
 
 import type { Template } from "@wraps/db";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { Check, Copy, ExternalLink, Info } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -20,6 +22,14 @@ import {
 } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 type UsagePanelProps = {
@@ -59,6 +69,8 @@ export function UsagePanel({ template, className }: UsagePanelProps) {
   const templateDataIndented = templateDataStr.split("\n").join("\n    ");
 
   const [templateNameCopied, setTemplateNameCopied] = useState(false);
+  const [interfaceCopied, setInterfaceCopied] = useState(false);
+  const [jsonCopied, setJsonCopied] = useState(false);
 
   const copyTemplateName = () => {
     if (template.sesTemplateName) {
@@ -66,6 +78,36 @@ export function UsagePanel({ template, className }: UsagePanelProps) {
       setTemplateNameCopied(true);
       setTimeout(() => setTemplateNameCopied(false), 2000);
     }
+  };
+
+  // Generate TypeScript interface for templateData
+  const templateDataInterface =
+    variables.length > 0
+      ? `type TemplateData = {
+${variables.map((v) => `  ${v}: string;`).join("\n")}
+};`
+      : "";
+
+  // Generate JSON template for templateData
+  const templateDataJson =
+    variables.length > 0
+      ? JSON.stringify(
+          Object.fromEntries(variables.map((v) => [v, `<${v}>`])),
+          null,
+          2
+        )
+      : "";
+
+  const copyInterface = () => {
+    navigator.clipboard.writeText(templateDataInterface);
+    setInterfaceCopied(true);
+    setTimeout(() => setInterfaceCopied(false), 2000);
+  };
+
+  const copyJson = () => {
+    navigator.clipboard.writeText(templateDataJson);
+    setJsonCopied(true);
+    setTimeout(() => setJsonCopied(false), 2000);
   };
 
   // Wraps SDK examples
@@ -227,18 +269,105 @@ print(f"Email sent: {response['MessageId']}")`;
         {variables.length > 0 && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Template Variables</CardTitle>
+              <CardTitle className="text-base">
+                Required Template Variables
+              </CardTitle>
               <CardDescription>
-                Pass these variables in templateData when sending emails.
+                These variables must be provided in <code>templateData</code>{" "}
+                when sending emails. The property names must match exactly.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {variables.map((variable) => (
-                  <Badge key={variable} variant="secondary">
-                    {`{{${variable}}}`}
-                  </Badge>
-                ))}
+            <CardContent className="space-y-4">
+              {/* Info Alert */}
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Variable names are <strong>case-sensitive</strong>. Use the
+                  exact property names shown below in your{" "}
+                  <code>templateData</code> object.
+                </AlertDescription>
+              </Alert>
+
+              {/* Variables Table */}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Variable</TableHead>
+                    <TableHead>Property Name</TableHead>
+                    <TableHead className="text-right">In Template</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {variables.map((variable) => (
+                    <TableRow key={variable}>
+                      <TableCell className="font-medium">{variable}</TableCell>
+                      <TableCell>
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
+                          {variable}
+                        </code>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary">{`{{${variable}}}`}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* TypeScript Interface */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-sm">TypeScript Interface</p>
+                  <Button
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={copyInterface}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    {interfaceCopied ? (
+                      <>
+                        <Check className="h-3 w-3 text-green-500" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-sm">
+                  {templateDataInterface}
+                </pre>
+              </div>
+
+              {/* JSON Template */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-sm">JSON Template</p>
+                  <Button
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={copyJson}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    {jsonCopied ? (
+                      <>
+                        <Check className="h-3 w-3 text-green-500" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-sm">
+                  {templateDataJson}
+                </pre>
               </div>
             </CardContent>
           </Card>
