@@ -1,6 +1,7 @@
 import { stripe } from "@better-auth/stripe";
 import { db } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
+import { WrapsEmail } from "@wraps.dev/email";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
@@ -31,8 +32,17 @@ export const auth = betterAuth<BetterAuthOptions>({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false, // Disabled for smoother onboarding - enable in production
-    sendResetPassword: async ({ user: _user, url: _url }) => {
-      // TODO: Implement password reset email
+    sendResetPassword: async ({ user, url }) => {
+      const email = new WrapsEmail();
+      await email.sendTemplate({
+        from: "jarod@wraps.dev",
+        to: user.email,
+        template: "Password-Reset",
+        templateData: {
+          privacyUrl: "https://wraps.dev/privacy",
+          resetPasswordUrl: url,
+        },
+      });
     },
   },
   emailVerification: {

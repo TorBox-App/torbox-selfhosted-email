@@ -134,6 +134,7 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
   console.log(
     `  ${pc.green("✓")} SES metrics and identity verification (always enabled)`
   );
+  console.log(`  ${pc.green("✓")} SES template management (always enabled)`);
 
   if (sendingEnabled) {
     console.log(`  ${pc.green("✓")} Email sending via SES`);
@@ -189,6 +190,20 @@ function buildConsolePolicyDocument(
       "ses:GetIdentityVerificationAttributes",
       "cloudwatch:GetMetricData",
       "cloudwatch:GetMetricStatistics",
+    ],
+    Resource: "*",
+  });
+
+  // Always allow SES template management (for publishing email templates)
+  statements.push({
+    Effect: "Allow",
+    Action: [
+      "ses:GetTemplate",
+      "ses:ListTemplates",
+      "ses:CreateTemplate",
+      "ses:UpdateTemplate",
+      "ses:DeleteTemplate",
+      "ses:TestRenderTemplate",
     ],
     Resource: "*",
   });

@@ -79,6 +79,18 @@ Resources:
                   - "ses:GetConfigurationSet"
                 Resource: "*"
 
+              # SES - Template Management (for publishing email templates)
+              - Sid: "SESTemplateManagement"
+                Effect: Allow
+                Action:
+                  - "ses:GetTemplate"
+                  - "ses:ListTemplates"
+                  - "ses:CreateTemplate"
+                  - "ses:UpdateTemplate"
+                  - "ses:DeleteTemplate"
+                  - "ses:TestRenderTemplate"
+                Resource: "*"
+
               # SES - Send Access (conditional)
               - !If
                 - EnableSending

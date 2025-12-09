@@ -28,6 +28,7 @@
     "stripe": "catalog:",
     "zod": "catalog:",
     "@wraps/db": "workspace:*",
-    "@wraps/email": "workspace:*"
+    "@wraps/email": "workspace:*",
+    "@wraps.dev/email": "^0.4.0"
   }
 }
