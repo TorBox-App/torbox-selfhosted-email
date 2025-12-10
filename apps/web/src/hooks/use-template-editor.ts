@@ -6,12 +6,14 @@ import Blockquote from "@tiptap/extension-blockquote";
 import BulletList from "@tiptap/extension-bullet-list";
 import { Color } from "@tiptap/extension-color";
 import Heading from "@tiptap/extension-heading";
+import Highlight from "@tiptap/extension-highlight";
 import Link from "@tiptap/extension-link";
 import OrderedList from "@tiptap/extension-ordered-list";
 import Paragraph from "@tiptap/extension-paragraph";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
+import Underline from "@tiptap/extension-underline";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -31,6 +33,7 @@ import {
   EmailSectionNode,
   EmailSocialLinksNode,
   EmailSpacerNode,
+  FontSize,
   KeyboardShortcuts,
   VariableNode,
   VariableSuggestion,
@@ -132,6 +135,11 @@ export function useTemplateEditor({
       // Text styling extensions (required for block examples with colors and alignment)
       TextStyle,
       Color,
+      FontSize,
+      Underline,
+      Highlight.configure({
+        multicolor: true, // Allow multiple highlight colors
+      }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
       }),

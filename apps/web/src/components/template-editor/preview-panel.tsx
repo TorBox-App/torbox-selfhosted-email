@@ -473,27 +473,74 @@ function generatePreviewHtml(
       }
 
       case "text": {
-        let text = replaceVariables(node.text || "");
+        const text = replaceVariables(node.text || "");
         // Handle marks (bold, italic, link, etc.)
-        if (node.marks) {
-          for (const mark of node.marks) {
-            switch (mark.type) {
-              case "bold":
-                text = `<strong>${text}</strong>`;
-                break;
-              case "italic":
-                text = `<em>${text}</em>`;
-                break;
-              case "underline":
-                text = `<span style="text-decoration: underline;">${text}</span>`;
-                break;
-              case "link":
-                text = `<a href="${mark.attrs?.href || "#"}" style="color: ${darkMode ? "#818cf8" : "#5046e5"}; text-decoration: underline;">${text}</a>`;
-                break;
-            }
+        if (!node.marks || node.marks.length === 0) {
+          return text;
+        }
+
+        // Collect all styles
+        const styles: string[] = [];
+        const wrappers: { tag: string; attrs?: string }[] = [];
+        let linkHref: string | null = null;
+
+        for (const mark of node.marks) {
+          switch (mark.type) {
+            case "bold":
+              wrappers.push({ tag: "strong" });
+              break;
+            case "italic":
+              wrappers.push({ tag: "em" });
+              break;
+            case "underline":
+              styles.push("text-decoration: underline");
+              break;
+            case "strike":
+              styles.push("text-decoration: line-through");
+              break;
+            case "link":
+              linkHref = mark.attrs?.href as string;
+              styles.push(
+                `color: ${darkMode ? "#818cf8" : "#5046e5"}`,
+                "text-decoration: underline"
+              );
+              break;
+            case "highlight":
+              if (mark.attrs?.color) {
+                styles.push(`background-color: ${mark.attrs.color}`);
+              }
+              break;
+            case "textStyle":
+              if (mark.attrs?.color) {
+                styles.push(`color: ${mark.attrs.color}`);
+              }
+              if (mark.attrs?.fontSize) {
+                styles.push(`font-size: ${mark.attrs.fontSize}`);
+              }
+              break;
           }
         }
-        return text;
+
+        // Build the result
+        let result = text;
+
+        // Wrap with inline styles first
+        if (styles.length > 0 || linkHref) {
+          const styleAttr =
+            styles.length > 0 ? ` style="${styles.join("; ")}"` : "";
+          if (linkHref) {
+            result = `<a href="${linkHref}"${styleAttr}>${result}</a>`;
+          } else {
+            result = `<span${styleAttr}>${result}</span>`;
+          }
+        }
+
+        // Apply semantic wrappers
+        for (const wrapper of wrappers) {
+          result = `<${wrapper.tag}>${result}</${wrapper.tag}>`;
+        }
+
+        return result;
       }
 
       case "variable": {

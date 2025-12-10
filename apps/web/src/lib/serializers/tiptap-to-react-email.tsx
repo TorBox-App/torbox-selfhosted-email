@@ -136,39 +136,65 @@ function nodeToReactEmail(
     case "text": {
       const text = node.text || "";
 
-      // Apply marks (bold, italic, etc.)
-      if (node.marks) {
+      // Collect all mark styles
+      if (node.marks && node.marks.length > 0) {
+        const classes: string[] = [];
+        const styles: Record<string, string> = {};
+        let linkHref: string | null = null;
+
         for (const mark of node.marks) {
           switch (mark.type) {
             case "bold":
-              return (
-                <strong className="font-bold" key={key}>
-                  {text}
-                </strong>
-              );
+              classes.push("font-bold");
+              break;
             case "italic":
-              return (
-                <em className="italic" key={key}>
-                  {text}
-                </em>
-              );
+              classes.push("italic");
+              break;
             case "underline":
-              return (
-                <span className="underline" key={key}>
-                  {text}
-                </span>
-              );
+              classes.push("underline");
+              break;
+            case "strike":
+              classes.push("line-through");
+              break;
             case "link":
-              return (
-                <Link
-                  className="text-brand-primary underline dark:text-brand-dark-primary"
-                  href={mark.attrs?.href}
-                  key={key}
-                >
-                  {text}
-                </Link>
-              );
+              linkHref = mark.attrs?.href as string;
+              classes.push("underline");
+              break;
+            case "highlight":
+              if (mark.attrs?.color) {
+                styles.backgroundColor = mark.attrs.color as string;
+              }
+              break;
+            case "textStyle":
+              if (mark.attrs?.color) {
+                styles.color = mark.attrs.color as string;
+              }
+              if (mark.attrs?.fontSize) {
+                styles.fontSize = mark.attrs.fontSize as string;
+              }
+              break;
           }
+        }
+
+        const className = classes.length > 0 ? classes.join(" ") : undefined;
+        const style = Object.keys(styles).length > 0 ? styles : undefined;
+
+        // Wrap in link if present
+        if (linkHref) {
+          return (
+            <Link className={className} href={linkHref} key={key} style={style}>
+              {text}
+            </Link>
+          );
+        }
+
+        // Otherwise wrap in span if we have styles
+        if (className || style) {
+          return (
+            <span className={className} key={key} style={style}>
+              {text}
+            </span>
+          );
         }
       }
 
@@ -823,8 +849,82 @@ ${children}
       return `${spaces}          <Heading as="h${level}" className="${headingClasses[level] || headingClasses[1]}">${hContent}</Heading>`;
     }
 
-    case "text":
-      return content.text || "";
+    case "text": {
+      const text = content.text || "";
+      const marks = content.marks as
+        | Array<{ type: string; attrs?: Record<string, unknown> }>
+        | undefined;
+
+      if (!marks || marks.length === 0) {
+        return text;
+      }
+
+      // Collect all mark styles
+      const classes: string[] = [];
+      const styles: string[] = [];
+      let linkHref: string | null = null;
+
+      for (const mark of marks) {
+        switch (mark.type) {
+          case "bold":
+            classes.push("font-bold");
+            break;
+          case "italic":
+            classes.push("italic");
+            break;
+          case "underline":
+            classes.push("underline");
+            break;
+          case "strike":
+            classes.push("line-through");
+            break;
+          case "link":
+            linkHref = mark.attrs?.href as string;
+            classes.push("underline");
+            break;
+          case "highlight":
+            if (mark.attrs?.color) {
+              styles.push(`backgroundColor: "${mark.attrs.color}"`);
+            }
+            break;
+          case "textStyle":
+            if (mark.attrs?.color) {
+              styles.push(`color: "${mark.attrs.color}"`);
+            }
+            if (mark.attrs?.fontSize) {
+              styles.push(`fontSize: "${mark.attrs.fontSize}"`);
+            }
+            break;
+        }
+      }
+
+      const className = classes.length > 0 ? classes.join(" ") : "";
+      const styleStr = styles.length > 0 ? `{{ ${styles.join(", ")} }}` : "";
+
+      // Generate the appropriate wrapper
+      if (linkHref) {
+        const attrs = [
+          `href="${linkHref}"`,
+          className ? `className="${className}"` : "",
+          styleStr ? `style={${styleStr}}` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        return `<Link ${attrs}>${text}</Link>`;
+      }
+
+      if (className || styleStr) {
+        const attrs = [
+          className ? `className="${className}"` : "",
+          styleStr ? `style={${styleStr}}` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        return `<span ${attrs}>${text}</span>`;
+      }
+
+      return text;
+    }
 
     case "emailButton": {
       const attrs = content.attrs || {};

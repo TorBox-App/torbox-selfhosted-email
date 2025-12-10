@@ -36,6 +36,7 @@ export type {
 export { EmailSocialLinksNode } from "./email-social-links-node";
 export type { EmailSpacerAttributes } from "./email-spacer-node";
 export { EmailSpacerNode } from "./email-spacer-node";
+export { FontSize } from "./font-size-extension";
 export { KeyboardShortcuts } from "./keyboard-shortcuts";
 export type {
   VariableAttributes,

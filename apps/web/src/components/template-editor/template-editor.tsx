@@ -17,6 +17,7 @@ import { useTemplateStore } from "@/stores/template-store";
 import { AIChatPanel } from "./ai-chat-panel";
 import { BlockPalette } from "./block-palette";
 import { CodeView } from "./code-view";
+import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { EditorErrorBoundary } from "./editor-error-boundary";
 import { ImportModal } from "./import-modal";
 import { PreviewPanel } from "./preview-panel";
@@ -310,6 +311,8 @@ function TemplateEditorContent({
               <div className="mx-auto max-w-3xl p-6">
                 <div className="min-h-[600px] rounded-lg border bg-white shadow-sm">
                   <EditorContent className="p-6" editor={editor} />
+                  {/* Bubble menu for text formatting */}
+                  <EditorBubbleMenu editor={editor} />
                 </div>
               </div>
             </div>
