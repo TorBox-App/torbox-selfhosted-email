@@ -4,7 +4,6 @@ import * as schema from "@wraps/db/schema/auth";
 import { getWrapsClient } from "@wraps/email";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import {
   haveIBeenPwned,
@@ -32,7 +31,7 @@ export const auth = betterAuth<BetterAuthOptions>({
   trustedOrigins: [process.env.CORS_ORIGIN || ""],
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false, // Disabled for smoother onboarding - enable in production
+    requireEmailVerification: false,
     sendResetPassword: async ({ user, url }) => {
       try {
         const wraps = await getWrapsClient();
@@ -165,31 +164,6 @@ export const auth = betterAuth<BetterAuthOptions>({
         ]
       : []),
   ],
-  hooks: {
-    after: createAuthMiddleware(async (ctx) => {
-      // Send "password changed" email after successful password change from settings
-      if (ctx.path === "/change-password") {
-        const session = ctx.context.session;
-        if (session?.user) {
-          void (async () => {
-            try {
-              const wraps = await getWrapsClient();
-              await wraps.sendTemplate({
-                from: "info@wraps.dev",
-                to: session.user.email,
-                template: "Password-Changed",
-                templateData: {
-                  name: session.user.name,
-                },
-              });
-            } catch (error) {
-              console.error("Error sending password changed email:", error);
-            }
-          })();
-        }
-      }
-    }),
-  },
   databaseHooks: {
     session: {
       create: {

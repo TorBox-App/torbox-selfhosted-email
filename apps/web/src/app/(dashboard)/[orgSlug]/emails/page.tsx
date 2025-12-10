@@ -45,14 +45,10 @@ async function fetchEmails(
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
 
-    console.log("[fetchEmails] Fetching emails for org:", organizationId);
-
     // Get all AWS accounts for this organization
     const accounts = await db.query.awsAccount.findMany({
       where: eq(awsAccount.organizationId, organizationId),
     });
-
-    console.log("[fetchEmails] Found accounts:", accounts.length);
 
     if (accounts.length === 0) {
       return [];
@@ -168,7 +164,6 @@ async function fetchEmails(
       .sort((a, b) => b.sentAt - a.sentAt)
       .slice(0, limit);
 
-    console.log("[fetchEmails] Returning emails:", emails.length);
     return emails;
   } catch (error) {
     console.error("[fetchEmails] Error fetching emails:", error);

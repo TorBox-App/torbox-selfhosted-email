@@ -99,24 +99,7 @@ export async function queryEmailEvents(
   };
 
   try {
-    console.log("[queryEmailEvents] Querying DynamoDB:", {
-      table: queryParams.TableName,
-      index: queryParams.IndexName,
-      accountId: account.accountId,
-      region: account.region,
-      timeRange: {
-        start: new Date(startTime).toISOString(),
-        end: new Date(endTime).toISOString(),
-      },
-    });
-
     const result = await docClient.send(new QueryCommand(queryParams));
-
-    console.log("[queryEmailEvents] Query result:", {
-      count: result.Items?.length || 0,
-      scannedCount: result.ScannedCount,
-      sampleItem: result.Items?.[0],
-    });
 
     // Normalize the recipients field for all events
     const events = (result.Items as EmailEvent[]) || [];
@@ -125,13 +108,6 @@ export async function queryEmailEvents(
       to: normalizeRecipients(event.to),
     }));
   } catch (error) {
-    console.error("[queryEmailEvents] Failed to query email events:", {
-      error,
-      accountId: account.id,
-      awsAccountId: account.accountId,
-      region: account.region,
-      roleArn: account.roleArn,
-    });
     if (error instanceof Error) {
       throw new Error(`Failed to query DynamoDB: ${error.message}`);
     }
