@@ -4,6 +4,10 @@ import { BubbleMenuPlugin } from "@tiptap/extension-bubble-menu";
 import { NodeSelection } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Bold,
   Check,
   ChevronDown,
@@ -173,7 +177,7 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-0.5 rounded-lg border bg-background p-1 shadow-lg",
+        "flex items-center gap-0.5 rounded-lg border bg-card p-1 text-foreground shadow-lg",
         !isVisible && "invisible"
       )}
       ref={menuRef}
@@ -238,6 +242,79 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">Strikethrough</TooltipContent>
+        </Tooltip>
+
+        <div className="mx-1 h-6 w-px bg-border" />
+
+        {/* Text Alignment */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              className="h-8 w-8 p-0"
+              onClick={() => editor.chain().focus().setTextAlign("left").run()}
+              size="sm"
+              variant={
+                editor.isActive({ textAlign: "left" }) ? "secondary" : "ghost"
+              }
+            >
+              <AlignLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Align Left</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              className="h-8 w-8 p-0"
+              onClick={() =>
+                editor.chain().focus().setTextAlign("center").run()
+              }
+              size="sm"
+              variant={
+                editor.isActive({ textAlign: "center" }) ? "secondary" : "ghost"
+              }
+            >
+              <AlignCenter className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Align Center</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              className="h-8 w-8 p-0"
+              onClick={() => editor.chain().focus().setTextAlign("right").run()}
+              size="sm"
+              variant={
+                editor.isActive({ textAlign: "right" }) ? "secondary" : "ghost"
+              }
+            >
+              <AlignRight className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Align Right</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              className="h-8 w-8 p-0"
+              onClick={() =>
+                editor.chain().focus().setTextAlign("justify").run()
+              }
+              size="sm"
+              variant={
+                editor.isActive({ textAlign: "justify" })
+                  ? "secondary"
+                  : "ghost"
+              }
+            >
+              <AlignJustify className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Justify</TooltipContent>
         </Tooltip>
 
         <div className="mx-1 h-6 w-px bg-border" />

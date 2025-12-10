@@ -41,6 +41,7 @@ import {
 
 type CodeViewProps = {
   editor: TiptapEditor | null;
+  previewText?: string;
 };
 
 type CodeFormat = "react-email" | "json" | "html";
@@ -57,7 +58,7 @@ function getMonacoLanguage(format: CodeFormat): "typescript" | "json" | "html" {
   }
 }
 
-export function CodeView({ editor: tiptapEditor }: CodeViewProps) {
+export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
   const [format, setFormat] = useState<CodeFormat>("react-email");
   const [originalCode, setOriginalCode] = useState<string>("");
   const [editedCode, setEditedCode] = useState<string>("");
@@ -78,14 +79,14 @@ export function CodeView({ editor: tiptapEditor }: CodeViewProps) {
 
     switch (format) {
       case "react-email":
-        return generateReactEmailCode(content);
+        return generateReactEmailCode(content, 0, { previewText });
       case "json":
         return JSON.stringify(content, null, 2);
       case "html":
         // HTML is generated asynchronously
         return null;
     }
-  }, [tiptapEditor, format]);
+  }, [tiptapEditor, format, previewText]);
 
   // Update code when editor content or format changes (sync formats)
   useEffect(() => {
@@ -119,6 +120,7 @@ export function CodeView({ editor: tiptapEditor }: CodeViewProps) {
           {},
           {
             keepVariablesAsPlaceholders: true,
+            previewText,
           }
         );
         if (!cancelled) {
@@ -141,7 +143,7 @@ export function CodeView({ editor: tiptapEditor }: CodeViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [tiptapEditor?.state.doc, format, tiptapEditor, isEditing]);
+  }, [tiptapEditor?.state.doc, format, tiptapEditor, isEditing, previewText]);
 
   // Track changes
   useEffect(() => {

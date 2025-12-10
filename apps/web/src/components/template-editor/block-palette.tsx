@@ -6,7 +6,6 @@ import {
   Braces,
   Code,
   Columns,
-  Eye,
   FileText,
   GitBranch,
   Heading1,
@@ -109,13 +108,6 @@ const blocks: BlockItem[] = [
     description: "Vertical spacing",
     icon: <MoveVertical className="h-5 w-5" />,
     action: (editor) => editor.commands.insertEmailSpacer(),
-    category: "email",
-  },
-  {
-    name: "Preview",
-    description: "Inbox preview text",
-    icon: <Eye className="h-5 w-5" />,
-    action: (editor) => editor.commands.insertEmailPreview(),
     category: "email",
   },
   {

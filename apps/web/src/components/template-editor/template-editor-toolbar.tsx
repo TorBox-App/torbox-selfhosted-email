@@ -2,34 +2,29 @@
 
 import type { Editor } from "@tiptap/react";
 import {
-  Bold,
   BookOpen,
   Braces,
   Cloud,
   CloudOff,
   Code2,
+  Copy,
   Eye,
   History,
   Import,
-  Italic,
-  Link2,
-  Link2Off,
-  List,
-  ListOrdered,
+  LayoutGrid,
   Loader2,
   MoreHorizontal,
   Package,
-  PanelLeft,
-  PanelRight,
   Pencil,
   Redo2,
   Save,
   Send,
+  SlidersHorizontal,
   Sparkles,
-  Underline,
+  Trash2,
   Undo2,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,14 +34,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { RainbowButton } from "@/components/ui/rainbow-button";
 import { Separator } from "@/components/ui/separator";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -56,38 +46,53 @@ import {
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { BrandKitSelector } from "./brand-kit-selector";
-import { VariableInput } from "./variable-input";
+import { SubjectEditDialog } from "./subject-edit-dialog";
 
 type TemplateEditorToolbarProps = {
   editor: Editor | null;
   orgSlug: string;
+  templateName?: string;
   isSaving?: boolean;
   isPublishing?: boolean;
   subject?: string | null;
+  previewText?: string | null;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   onImport?: () => void;
   onSave?: () => void;
   onSaveBlock?: () => void;
   onSendTest?: () => void;
-  onSubjectChange?: (subject: string) => void;
+  onSubjectChange?: (subject: string, previewText: string) => void;
   onPublish?: () => void;
   onUnpublish?: () => void;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
 };
 
 type ViewMode = "edit" | "preview" | "code" | "usage";
 
-const statusColors: Record<string, string> = {
-  DRAFT: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-  PUBLISHED: "bg-green-500/10 text-green-600 border-green-500/20",
-  ARCHIVED: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+const statusConfig: Record<string, { label: string; className: string }> = {
+  DRAFT: {
+    label: "Draft",
+    className: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+  },
+  PUBLISHED: {
+    label: "Published",
+    className: "bg-green-500/10 text-green-600 border-green-500/20",
+  },
+  ARCHIVED: {
+    label: "Archived",
+    className: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+  },
 };
 
 export function TemplateEditorToolbar({
   editor,
   orgSlug,
+  templateName,
   isSaving,
   isPublishing,
   subject,
+  previewText,
   status = "DRAFT",
   onImport,
   onSave,
@@ -96,6 +101,8 @@ export function TemplateEditorToolbar({
   onSubjectChange,
   onPublish,
   onUnpublish,
+  onDuplicate,
+  onDelete,
 }: TemplateEditorToolbarProps) {
   const {
     view,
@@ -112,327 +119,77 @@ export function TemplateEditorToolbar({
     toggleVersionHistory,
   } = useTemplateStore((state) => state.actions);
 
-  // Link popover state
-  const [linkUrl, setLinkUrl] = useState("");
-  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
-
-  const isLinkActive = editor?.isActive("link") ?? false;
-
-  const handleSetLink = useCallback(() => {
-    if (!editor) return;
-
-    if (linkUrl) {
-      editor
-        .chain()
-        .focus()
-        .extendMarkRange("link")
-        .setLink({ href: linkUrl })
-        .run();
-    }
-    setLinkUrl("");
-    setLinkPopoverOpen(false);
-  }, [editor, linkUrl]);
-
-  const handleRemoveLink = useCallback(() => {
-    if (!editor) return;
-    editor.chain().focus().unsetLink().run();
-    setLinkPopoverOpen(false);
-  }, [editor]);
-
-  const handleOpenLinkPopover = useCallback(() => {
-    if (!editor) return;
-    // Pre-fill with existing link URL if editing
-    const previousUrl = editor.getAttributes("link").href as string;
-    setLinkUrl(previousUrl || "");
-    setLinkPopoverOpen(true);
-  }, [editor]);
+  const [showSubjectDialog, setShowSubjectDialog] = useState(false);
 
   if (!editor) {
     return null;
   }
 
+  const displaySubject = subject || "No subject";
+  const displayPreviewText = previewText || "Add preview text...";
+
   return (
     <TooltipProvider>
       <div className="border-b">
-        {/* Subject Line Row */}
-        <div className="flex items-center gap-2 border-b bg-muted/20 px-3 py-2">
-          <label
-            className="shrink-0 font-medium text-muted-foreground text-sm"
-            htmlFor="subject"
-          >
-            Subject:
-          </label>
-          <VariableInput
-            className="h-8 bg-background"
-            id="subject"
-            onChange={(value) => onSubjectChange?.(value)}
-            placeholder="Enter email subject line (type {{ for variables)"
-            value={subject ?? ""}
-          />
-          <Badge
-            className={cn("shrink-0 text-xs", statusColors[status])}
-            variant="outline"
-          >
-            {status.toLowerCase()}
-          </Badge>
-        </div>
-
-        {/* Main Toolbar */}
-        <div className="flex items-center gap-1 bg-muted/30 px-2 py-1.5">
-          {/* View Mode Selector - Compact Toggle Group */}
-          <ToggleGroup
-            onValueChange={(value) => value && setView(value as ViewMode)}
-            size="sm"
-            type="single"
-            value={view}
-            variant="outline"
-          >
-            <ToggleGroupItem
-              aria-label="Edit"
-              className="h-8 w-8 p-0"
-              value="edit"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              aria-label="Preview"
-              className="h-8 w-8 p-0"
-              value="preview"
-            >
-              <Eye className="h-3.5 w-3.5" />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              aria-label="Code"
-              className="h-8 w-8 p-0"
-              value="code"
-            >
-              <Code2 className="h-3.5 w-3.5" />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              aria-label="Usage"
-              className="h-8 w-8 p-0"
-              value="usage"
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-            </ToggleGroupItem>
-          </ToggleGroup>
-
-          <Separator className="mx-1 h-6" orientation="vertical" />
-
+        {/* Row 1: Brand Kit + Subject/Preview + Status */}
+        <div className="flex items-center gap-3 border-b px-3 py-2">
           {/* Brand Kit Selector */}
           <BrandKitSelector orgSlug={orgSlug} />
 
-          {/* Text Formatting (only in edit mode) */}
-          {view === "edit" && (
-            <>
-              <Separator className="mx-1 h-6" orientation="vertical" />
+          <Separator className="h-5" orientation="vertical" />
 
-              {/* Formatting buttons - hidden on mobile */}
-              <div className="hidden items-center gap-0.5 sm:flex">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 w-8 p-0"
-                      onClick={() => editor.chain().focus().toggleBold().run()}
-                      size="sm"
-                      variant={editor.isActive("bold") ? "secondary" : "ghost"}
-                    >
-                      <Bold className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Bold (⌘B)</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 w-8 p-0"
-                      onClick={() =>
-                        editor.chain().focus().toggleItalic().run()
-                      }
-                      size="sm"
-                      variant={
-                        editor.isActive("italic") ? "secondary" : "ghost"
-                      }
-                    >
-                      <Italic className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Italic (⌘I)</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 w-8 p-0"
-                      onClick={() =>
-                        editor.chain().focus().toggleUnderline().run()
-                      }
-                      size="sm"
-                      variant={
-                        editor.isActive("underline") ? "secondary" : "ghost"
-                      }
-                    >
-                      <Underline className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Underline (⌘U)</TooltipContent>
-                </Tooltip>
-
-                {/* Link Button with Popover */}
-                <Popover
-                  onOpenChange={setLinkPopoverOpen}
-                  open={linkPopoverOpen}
+          {/* Subject and Preview Display */}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2">
+                <span
+                  className={cn(
+                    "truncate font-medium text-sm",
+                    !subject && "text-muted-foreground italic"
+                  )}
                 >
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <PopoverTrigger asChild>
-                        <Button
-                          className="h-8 w-8 p-0"
-                          onClick={handleOpenLinkPopover}
-                          size="sm"
-                          variant={isLinkActive ? "secondary" : "ghost"}
-                        >
-                          <Link2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </PopoverTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>Add Link (⌘K)</TooltipContent>
-                  </Tooltip>
-                  <PopoverContent align="start" className="w-80">
-                    <div className="space-y-3">
-                      <div className="font-medium text-sm">
-                        {isLinkActive ? "Edit Link" : "Add Link"}
-                      </div>
-                      <Input
-                        autoFocus
-                        onChange={(e) => setLinkUrl(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleSetLink();
-                          }
-                        }}
-                        placeholder="https://example.com"
-                        value={linkUrl}
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          className="flex-1"
-                          disabled={!linkUrl}
-                          onClick={handleSetLink}
-                          size="sm"
-                        >
-                          {isLinkActive ? "Update" : "Add"} Link
-                        </Button>
-                        {isLinkActive && (
-                          <Button
-                            onClick={handleRemoveLink}
-                            size="sm"
-                            variant="outline"
-                          >
-                            <Link2Off className="mr-1 h-3.5 w-3.5" />
-                            Remove
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 w-8 p-0"
-                      onClick={() =>
-                        editor.chain().focus().toggleBulletList().run()
-                      }
-                      size="sm"
-                      variant={
-                        editor.isActive("bulletList") ? "secondary" : "ghost"
-                      }
-                    >
-                      <List className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Bullet List</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 w-8 p-0"
-                      onClick={() =>
-                        editor.chain().focus().toggleOrderedList().run()
-                      }
-                      size="sm"
-                      variant={
-                        editor.isActive("orderedList") ? "secondary" : "ghost"
-                      }
-                    >
-                      <ListOrdered className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Numbered List</TooltipContent>
-                </Tooltip>
-
-                <Separator className="mx-1 h-6" orientation="vertical" />
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 w-8 p-0"
-                      onClick={() => editor.commands.insertContent("{{")}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      <Braces className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Insert Variable (⌘/)</TooltipContent>
-                </Tooltip>
+                  {displaySubject}
+                </span>
               </div>
+              <p
+                className={cn(
+                  "truncate text-muted-foreground text-xs",
+                  !previewText && "italic"
+                )}
+              >
+                {displayPreviewText}
+              </p>
+            </div>
 
-              {/* Undo/Redo - always visible */}
-              <div className="flex items-center gap-0.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 w-8 p-0"
-                      disabled={!editor.can().undo()}
-                      onClick={() => editor.chain().focus().undo().run()}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      <Undo2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Undo (⌘Z)</TooltipContent>
-                </Tooltip>
+            {/* Edit button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-7 w-7 shrink-0 p-0"
+                  onClick={() => setShowSubjectDialog(true)}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit subject & preview</TooltipContent>
+            </Tooltip>
+          </div>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      className="h-8 w-8 p-0"
-                      disabled={!editor.can().redo()}
-                      onClick={() => editor.chain().focus().redo().run()}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      <Redo2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Redo (⌘⇧Z)</TooltipContent>
-                </Tooltip>
-              </div>
-            </>
-          )}
+          {/* Status Badge */}
+          <Badge
+            className={cn("shrink-0", statusConfig[status].className)}
+            variant="outline"
+          >
+            {statusConfig[status].label}
+          </Badge>
+        </div>
 
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Panel Toggles - Compact */}
-          <div className="hidden items-center gap-0.5 md:flex">
+        {/* Row 2: Sidebar Toggles + Edit Controls + View Tabs + Actions */}
+        <div className="flex items-center gap-1 bg-muted/30 px-2 py-1.5">
+          {/* Sidebar Toggles */}
+          <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -441,10 +198,10 @@ export function TemplateEditorToolbar({
                   size="sm"
                   variant={showBlockLibrary ? "secondary" : "ghost"}
                 >
-                  <PanelLeft className="h-3.5 w-3.5" />
+                  <LayoutGrid className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Blocks</TooltipContent>
+              <TooltipContent>Toggle Blocks Panel</TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -455,125 +212,209 @@ export function TemplateEditorToolbar({
                   size="sm"
                   variant={showPropertiesPanel ? "secondary" : "ghost"}
                 >
-                  <PanelRight className="h-3.5 w-3.5" />
+                  <SlidersHorizontal className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Properties</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  className="h-8 w-8 p-0"
-                  onClick={toggleAIPanel}
-                  size="sm"
-                  variant={showAIPanel ? "secondary" : "ghost"}
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>AI Assistant</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  className="h-8 w-8 p-0"
-                  onClick={toggleVersionHistory}
-                  size="sm"
-                  variant={showVersionHistory ? "secondary" : "ghost"}
-                >
-                  <History className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>History</TooltipContent>
+              <TooltipContent>Toggle Properties Panel</TooltipContent>
             </Tooltip>
           </div>
 
-          <Separator
-            className="mx-1 hidden h-6 md:block"
-            orientation="vertical"
-          />
+          <Separator className="mx-1 h-6" orientation="vertical" />
 
-          {/* Actions - Compact */}
-          <div className="flex items-center gap-1">
-            {/* More menu for secondary actions */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="h-8 w-8 p-0" size="sm" variant="ghost">
-                  <MoreHorizontal className="h-3.5 w-3.5" />
+          {/* Undo/Redo */}
+          <div className="flex items-center gap-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-8 w-8 p-0"
+                  disabled={!editor.can().undo()}
+                  onClick={() => editor.chain().focus().undo().run()}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <Undo2 className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {/* Panel toggles for mobile */}
-                <div className="md:hidden">
-                  <DropdownMenuItem onClick={toggleBlockLibrary}>
-                    <PanelLeft className="mr-2 h-4 w-4" />
-                    {showBlockLibrary ? "Hide" : "Show"} Blocks
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={togglePropertiesPanel}>
-                    <PanelRight className="mr-2 h-4 w-4" />
-                    {showPropertiesPanel ? "Hide" : "Show"} Properties
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={toggleAIPanel}>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    {showAIPanel ? "Hide" : "Show"} AI Assistant
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={toggleVersionHistory}>
-                    <History className="mr-2 h-4 w-4" />
-                    {showVersionHistory ? "Hide" : "Show"} History
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </div>
-                {onImport && view === "edit" && (
-                  <DropdownMenuItem onClick={onImport}>
-                    <Import className="mr-2 h-4 w-4" />
-                    Import HTML
-                  </DropdownMenuItem>
-                )}
-                {onSaveBlock && view === "edit" && (
-                  <DropdownMenuItem onClick={onSaveBlock}>
-                    <Package className="mr-2 h-4 w-4" />
-                    Save as Block
-                  </DropdownMenuItem>
-                )}
-                {onSendTest && (
-                  <DropdownMenuItem className="sm:hidden" onClick={onSendTest}>
-                    <Send className="mr-2 h-4 w-4" />
-                    Send Test Email
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </TooltipTrigger>
+              <TooltipContent>Undo (Cmd+Z)</TooltipContent>
+            </Tooltip>
 
-            {/* Send Test - visible on larger screens */}
-            {onSendTest && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-8 w-8 p-0"
+                  disabled={!editor.can().redo()}
+                  onClick={() => editor.chain().focus().redo().run()}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Redo (Cmd+Shift+Z)</TooltipContent>
+            </Tooltip>
+          </div>
+
+          <Separator className="mx-1 h-6" orientation="vertical" />
+
+          {/* Insert Variable */}
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Button
-                className="hidden h-8 gap-1.5 px-2 sm:flex"
-                onClick={onSendTest}
+                className="h-8 w-8 p-0"
+                onClick={() => editor.commands.insertContent("{{")}
                 size="sm"
-                variant="outline"
+                variant="ghost"
               >
-                <Send className="h-3.5 w-3.5" />
-                <span className="text-xs">Test</span>
+                <Braces className="h-4 w-4" />
               </Button>
-            )}
+            </TooltipTrigger>
+            <TooltipContent>Insert Variable</TooltipContent>
+          </Tooltip>
 
-            {/* Save button - always visible */}
-            <Button
-              className="h-8 gap-1.5 px-2"
-              disabled={isSaving}
-              onClick={onSave}
-              size="sm"
-              variant="outline"
-            >
-              {isSaving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Save className="h-3.5 w-3.5" />
+          <Separator className="mx-1 h-6" orientation="vertical" />
+
+          {/* View Mode Tabs */}
+          <Tabs
+            onValueChange={(value) => setView(value as ViewMode)}
+            value={view}
+          >
+            <TabsList className="h-8">
+              <TabsTrigger className="h-7 gap-1.5 px-2.5 text-xs" value="edit">
+                <Pencil className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Edit</span>
+              </TabsTrigger>
+              <TabsTrigger
+                className="h-7 gap-1.5 px-2.5 text-xs"
+                value="preview"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Preview</span>
+              </TabsTrigger>
+              <TabsTrigger className="h-7 gap-1.5 px-2.5 text-xs" value="code">
+                <Code2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Code</span>
+              </TabsTrigger>
+              <TabsTrigger className="h-7 gap-1.5 px-2.5 text-xs" value="usage">
+                <BookOpen className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Usage</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* AI Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <RainbowButton
+                className="h-8 gap-1.5 px-2.5"
+                onClick={toggleAIPanel}
+                size="sm"
+                variant={showAIPanel ? "default" : "outline"}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="hidden text-xs sm:inline">AI</span>
+              </RainbowButton>
+            </TooltipTrigger>
+            <TooltipContent>AI Assistant</TooltipContent>
+          </Tooltip>
+
+          {/* More Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="h-8 w-8 p-0" size="sm" variant="ghost">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={toggleVersionHistory}>
+                <History className="mr-2 h-4 w-4" />
+                Version History
+                {showVersionHistory && (
+                  <span className="ml-auto text-muted-foreground text-xs">
+                    On
+                  </span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {onImport && view === "edit" && (
+                <DropdownMenuItem onClick={onImport}>
+                  <Import className="mr-2 h-4 w-4" />
+                  Import HTML
+                </DropdownMenuItem>
               )}
-              <span className="text-xs">{isSaving ? "Saving" : "Save"}</span>
-            </Button>
+              {onSaveBlock && view === "edit" && (
+                <DropdownMenuItem onClick={onSaveBlock}>
+                  <Package className="mr-2 h-4 w-4" />
+                  Save as Block
+                </DropdownMenuItem>
+              )}
+              {onDuplicate && (
+                <DropdownMenuItem onClick={onDuplicate}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplicate Template
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={onDelete}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Template
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Separator className="mx-1 h-6" orientation="vertical" />
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1">
+            {/* Save button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-8 gap-1.5 px-2"
+                  disabled={isSaving}
+                  onClick={onSave}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
+                  <span className="hidden text-xs sm:inline">
+                    {isSaving ? "Saving" : "Save"}
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Save template (Cmd+S)</TooltipContent>
+            </Tooltip>
+
+            {/* Test button */}
+            {onSendTest && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    className="h-8 gap-1.5 px-2"
+                    onClick={onSendTest}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    <span className="hidden text-xs sm:inline">Test</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Send test email</TooltipContent>
+              </Tooltip>
+            )}
 
             {/* Publish/Update button */}
             <Tooltip>
@@ -631,6 +472,17 @@ export function TemplateEditorToolbar({
           </div>
         </div>
       </div>
+
+      {/* Subject Edit Dialog */}
+      <SubjectEditDialog
+        isOpen={showSubjectDialog}
+        onClose={() => setShowSubjectDialog(false)}
+        onSave={(newSubject, newPreviewText) => {
+          onSubjectChange?.(newSubject, newPreviewText);
+        }}
+        previewText={previewText ?? ""}
+        subject={subject ?? ""}
+      />
     </TooltipProvider>
   );
 }

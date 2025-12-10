@@ -3,10 +3,13 @@
 import type { JSONContent } from "@tiptap/core";
 import { EditorContent } from "@tiptap/react";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
+  useDeleteTemplate,
+  useDuplicateTemplate,
   usePublishTemplate,
   useTemplate,
   useUnpublishTemplate,
@@ -121,10 +124,12 @@ function TemplateEditorContent({
   template,
   className,
 }: TemplateEditorContentProps) {
+  const router = useRouter();
   const [showSendTestModal, setShowSendTestModal] = useState(false);
   const [showSaveBlockModal, setShowSaveBlockModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [subject, setSubject] = useState(template.subject ?? "");
+  const [previewText, setPreviewText] = useState(template.description ?? "");
 
   const {
     view,
@@ -144,6 +149,10 @@ function TemplateEditorContent({
   // Publish/unpublish mutations
   const publishMutation = usePublishTemplate(orgSlug, templateId);
   const unpublishMutation = useUnpublishTemplate(orgSlug, templateId);
+
+  // Delete and duplicate mutations
+  const deleteMutation = useDeleteTemplate(orgSlug);
+  const duplicateMutation = useDuplicateTemplate(orgSlug);
 
   // Track last saved subject to avoid redundant saves
   const lastSavedSubjectRef = useRef(template.subject ?? "");
@@ -197,10 +206,18 @@ function TemplateEditorContent({
     return () => clearTimeout(timeoutId);
   }, [subject, updateMutation]);
 
-  // Handle subject change - just update local state, useEffect handles debounced save
-  const handleSubjectChange = useCallback((newSubject: string) => {
-    setSubject(newSubject);
-  }, []);
+  // Handle subject and preview text change from dialog
+  const handleSubjectChange = useCallback(
+    (newSubject: string, newPreviewText: string) => {
+      setSubject(newSubject);
+      setPreviewText(newPreviewText);
+      // Save description (preview text) immediately
+      if (newPreviewText !== template.description) {
+        updateMutation.mutate({ description: newPreviewText });
+      }
+    },
+    [template.description, updateMutation]
+  );
 
   // Handle publish
   const handlePublish = useCallback(async () => {
@@ -256,6 +273,43 @@ function TemplateEditorContent({
     }
   }, [editor, template?.content]);
 
+  // Handle duplicate
+  const handleDuplicate = useCallback(async () => {
+    try {
+      const duplicatedTemplate =
+        await duplicateMutation.mutateAsync(templateId);
+      toast.success("Template duplicated", {
+        description: `Created "${duplicatedTemplate.name}"`,
+      });
+      router.push(`/${orgSlug}/templates/${duplicatedTemplate.id}`);
+    } catch (error) {
+      toast.error("Failed to duplicate template", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }, [duplicateMutation, templateId, router, orgSlug]);
+
+  // Handle delete
+  const handleDelete = useCallback(async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this template? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteMutation.mutateAsync(templateId);
+      toast.success("Template deleted");
+      router.push(`/${orgSlug}/templates`);
+    } catch (error) {
+      toast.error("Failed to delete template", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }, [deleteMutation, templateId, router, orgSlug]);
+
   // Editor not ready yet
   if (!editor) {
     return (
@@ -285,6 +339,8 @@ function TemplateEditorContent({
             publishMutation.isPending || unpublishMutation.isPending
           }
           isSaving={updateMutation.isPending}
+          onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
           onImport={() => setShowImportModal(true)}
           onPublish={handlePublish}
           onSave={handleManualSave}
@@ -293,8 +349,10 @@ function TemplateEditorContent({
           onSubjectChange={handleSubjectChange}
           onUnpublish={handleUnpublish}
           orgSlug={orgSlug}
+          previewText={previewText}
           status={template.status}
           subject={subject}
+          templateName={template.name}
         />
 
         {/* Main Content Area */}
@@ -309,7 +367,7 @@ function TemplateEditorContent({
             {/* Editor - always mounted, hidden with CSS to prevent flushSync issues */}
             <div className={cn(view !== "edit" && "hidden")}>
               <div className="mx-auto max-w-3xl p-6">
-                <div className="min-h-[600px] rounded-lg border bg-white shadow-sm">
+                <div className="min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm">
                   <EditorContent className="p-6" editor={editor} />
                   {/* Bubble menu for text formatting */}
                   <EditorBubbleMenu editor={editor} />
@@ -319,7 +377,9 @@ function TemplateEditorContent({
 
             {view === "preview" && <PreviewPanel editor={editor} />}
 
-            {view === "code" && <CodeView editor={editor} />}
+            {view === "code" && (
+              <CodeView editor={editor} previewText={previewText} />
+            )}
 
             {view === "usage" && <UsagePanel template={template} />}
           </div>

@@ -124,14 +124,27 @@ function nodeToReactEmail(
         </>
       );
 
-    case "paragraph":
+    case "paragraph": {
+      // Handle text alignment
+      const pAlignMap: Record<string, string> = {
+        left: "text-left",
+        center: "text-center",
+        right: "text-right",
+        justify: "text-justify",
+      };
+      const pAlign = node.attrs?.textAlign || "left";
+      const pAlignClass = pAlignMap[pAlign] || "";
       return (
-        <Text className="my-4 text-inherit leading-relaxed" key={key}>
+        <Text
+          className={`my-4 text-inherit leading-relaxed ${pAlignClass}`.trim()}
+          key={key}
+        >
           {node.content?.map((child, i) =>
             nodeToReactEmail(child, testData, i, options)
           )}
         </Text>
       );
+    }
 
     case "text": {
       const text = node.text || "";
@@ -212,10 +225,19 @@ function nodeToReactEmail(
         h5: "text-base font-semibold my-2",
         h6: "text-sm font-semibold my-2",
       };
+      // Handle text alignment
+      const hAlignMap: Record<string, string> = {
+        left: "text-left",
+        center: "text-center",
+        right: "text-right",
+        justify: "text-justify",
+      };
+      const hAlign = node.attrs?.textAlign || "left";
+      const hAlignClass = hAlignMap[hAlign] || "";
       return (
         <Heading
           as={HeadingTag}
-          className={headingClasses[HeadingTag]}
+          className={`${headingClasses[HeadingTag]} ${hAlignClass}`.trim()}
           key={key}
         >
           {node.content?.map((child, i) =>
@@ -246,13 +268,26 @@ function nodeToReactEmail(
       const align = node.attrs?.align || "left";
       const alignClass = alignMap[align] || "text-left";
 
+      // Get button content from children or fall back to attrs.text
+      const buttonContent =
+        node.content && node.content.length > 0
+          ? node.content.map((child, i) =>
+              nodeToReactEmail(child, testData, i, options)
+            )
+          : node.attrs?.text || "Click here";
+
+      // Get actual colors from attributes
+      const bgColor = (node.attrs?.backgroundColor as string) || "#5046e5";
+      const textColor = (node.attrs?.color as string) || "#ffffff";
+
       return (
         <div className={alignClass} key={key}>
           <Button
-            className={`inline-block bg-brand-primary px-6 py-3 font-semibold text-white no-underline dark:bg-brand-dark-primary ${roundedClass}`}
+            className={`inline-block px-6 py-3 font-semibold no-underline ${roundedClass}`}
             href={node.attrs?.href || "#"}
+            style={{ backgroundColor: bgColor, color: textColor }}
           >
-            {node.attrs?.text || "Click here"}
+            {buttonContent}
           </Button>
         </div>
       );
@@ -599,7 +634,7 @@ function createTailwindConfig(brandKit?: BrandKitColors) {
 
   return {
     presets: [pixelBasedPreset], // Use pixel-based units for email compatibility
-    darkMode: "media" as const, // Use prefers-color-scheme media query
+    darkMode: "class" as const, // Use class-based dark mode (disabled by default since we don't add 'dark' class)
     theme: {
       extend: {
         colors: {
@@ -774,7 +809,8 @@ function getOperatorCodeString(operator: string): string {
  */
 export function generateReactEmailCode(
   content: JSONContent,
-  indent = 0
+  indent = 0,
+  options?: { previewText?: string }
 ): string {
   const spaces = "  ".repeat(indent);
 
@@ -791,15 +827,17 @@ export function generateReactEmailCode(
       );
       const otherNodes = contentNodes.filter((c) => c.type !== "emailPreview");
 
-      // Generate preview text (combine all preview nodes)
-      const previewText = previewNodes
-        .map((p) => (p.attrs?.text as string) || "")
-        .filter(Boolean)
-        .join(" ");
+      // Use provided previewText option, or fall back to preview nodes in content
+      const previewText =
+        options?.previewText ||
+        previewNodes
+          .map((p) => (p.attrs?.text as string) || "")
+          .filter(Boolean)
+          .join(" ");
 
       // Generate children (excluding preview)
       const children = otherNodes
-        .map((c) => generateReactEmailCode(c, indent))
+        .map((c) => generateReactEmailCode(c, indent, options))
         .filter(Boolean)
         .join("\n");
 
@@ -828,15 +866,25 @@ ${children}
 
     case "paragraph": {
       const pContent = (content.content || [])
-        .map((c) => generateReactEmailCode(c, 0))
+        .map((c) => generateReactEmailCode(c, 0, options))
         .join("");
-      return `${spaces}          <Text className="my-4 leading-relaxed">${pContent}</Text>`;
+      // Handle text alignment
+      const pAlignMap: Record<string, string> = {
+        left: "text-left",
+        center: "text-center",
+        right: "text-right",
+        justify: "text-justify",
+      };
+      const pAlign = content.attrs?.textAlign || "left";
+      const pAlignClass = pAlignMap[pAlign] || "";
+      const pClasses = `my-4 leading-relaxed ${pAlignClass}`.trim();
+      return `${spaces}          <Text className="${pClasses}">${pContent}</Text>`;
     }
 
     case "heading": {
       const level = content.attrs?.level || 1;
       const hContent = (content.content || [])
-        .map((c) => generateReactEmailCode(c, 0))
+        .map((c) => generateReactEmailCode(c, 0, options))
         .join("");
       const headingClasses: Record<number, string> = {
         1: "text-3xl font-bold my-4",
@@ -846,7 +894,18 @@ ${children}
         5: "text-base font-semibold my-2",
         6: "text-sm font-semibold my-2",
       };
-      return `${spaces}          <Heading as="h${level}" className="${headingClasses[level] || headingClasses[1]}">${hContent}</Heading>`;
+      // Handle text alignment
+      const hAlignMap: Record<string, string> = {
+        left: "text-left",
+        center: "text-center",
+        right: "text-right",
+        justify: "text-justify",
+      };
+      const hAlign = content.attrs?.textAlign || "left";
+      const hAlignClass = hAlignMap[hAlign] || "";
+      const hClasses =
+        `${headingClasses[level] || headingClasses[1]} ${hAlignClass}`.trim();
+      return `${spaces}          <Heading as="h${level}" className="${hClasses}">${hContent}</Heading>`;
     }
 
     case "text": {
