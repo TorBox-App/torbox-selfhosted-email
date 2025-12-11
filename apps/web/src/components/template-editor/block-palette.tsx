@@ -81,20 +81,41 @@ function insertBlockExample(
   }
 }
 
+/**
+ * Lightens a hex color by mixing it with white
+ */
+function lightenColor(hex: string, amount: number): string {
+  const color = hex.replace("#", "");
+  const r = Number.parseInt(color.substring(0, 2), 16);
+  const g = Number.parseInt(color.substring(2, 4), 16);
+  const b = Number.parseInt(color.substring(4, 6), 16);
+  const newR = Math.round(r + (255 - r) * amount);
+  const newG = Math.round(g + (255 - g) * amount);
+  const newB = Math.round(b + (255 - b) * amount);
+  return `#${newR.toString(16).padStart(2, "0")}${newG.toString(16).padStart(2, "0")}${newB.toString(16).padStart(2, "0")}`;
+}
+
 const blocks: BlockItem[] = [
   // Email components
   {
     name: "Button",
     description: "CTA button with link",
     icon: <MousePointerClick className="h-5 w-5" />,
-    action: (editor) => editor.commands.insertEmailButton(),
+    action: (editor, brandKit) =>
+      editor.commands.insertEmailButton({
+        backgroundColor: brandKit?.primaryColor || "#5046e5",
+        color: "#ffffff",
+      }),
     category: "email",
   },
   {
     name: "Section",
     description: "Container with styling",
     icon: <Square className="h-5 w-5" />,
-    action: (editor) => editor.commands.insertEmailSection(),
+    action: (editor, brandKit) =>
+      editor.commands.insertEmailSection({
+        backgroundColor: brandKit?.backgroundColor || "#ffffff",
+      }),
     category: "email",
   },
   {
@@ -129,7 +150,14 @@ const blocks: BlockItem[] = [
     name: "Icon",
     description: "Icon with background",
     icon: <Circle className="h-5 w-5" />,
-    action: (editor) => editor.commands.insertEmailIcon(),
+    action: (editor, brandKit) => {
+      const primaryColor = brandKit?.primaryColor || "#5046e5";
+      const bgColor = lightenColor(primaryColor, 0.85);
+      return editor.commands.insertEmailIcon({
+        iconColor: primaryColor,
+        backgroundColor: bgColor,
+      });
+    },
     category: "email",
   },
   {

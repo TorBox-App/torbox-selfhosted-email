@@ -638,8 +638,8 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
                   attrs: {
                     icon: "check",
                     size: 48,
-                    iconColor: "#3b82f6",
-                    backgroundColor: "#dbeafe",
+                    iconColor: "#5046e5",
+                    backgroundColor: "#e0e7ff",
                     align: "left",
                   },
                 },
@@ -687,8 +687,8 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
                   attrs: {
                     icon: "sparkles",
                     size: 48,
-                    iconColor: "#3b82f6",
-                    backgroundColor: "#dbeafe",
+                    iconColor: "#5046e5",
+                    backgroundColor: "#e0e7ff",
                     align: "left",
                   },
                 },
@@ -736,8 +736,8 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
                   attrs: {
                     icon: "lightbulb",
                     size: 48,
-                    iconColor: "#3b82f6",
-                    backgroundColor: "#dbeafe",
+                    iconColor: "#5046e5",
+                    backgroundColor: "#e0e7ff",
                     align: "left",
                   },
                 },
