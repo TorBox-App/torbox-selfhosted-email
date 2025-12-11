@@ -25,6 +25,8 @@ export {
   AVAILABLE_ICONS,
   EmailIconNode,
   getIconifyUrl,
+  getIconUrl,
+  ICON_NAME_MAP,
 } from "./email-icon-node";
 export type { EmailImageAttributes } from "./email-image-node";
 export { EmailImageNode } from "./email-image-node";

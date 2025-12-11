@@ -61,11 +61,37 @@ declare module "@tiptap/core" {
   }
 }
 
-// Generate Iconify URL for an icon
+// Map our icon names to Icons8 icon names
+export const ICON_NAME_MAP: Record<string, string> = {
+  check: "checkmark",
+  star: "star",
+  heart: "like",
+  zap: "flash-on",
+  shield: "shield",
+  award: "prize",
+  target: "goal",
+  "trending-up": "graph",
+  "thumbs-up": "thumb-up",
+  gift: "gift",
+  clock: "clock",
+  lock: "lock",
+  globe: "globe",
+  sparkles: "sparkling",
+  rocket: "rocket",
+  lightbulb: "light-on",
+};
+
+// Generate Icons8 PNG URL for an icon
+export function getIconUrl(icon: string, color: string, size = 48): string {
+  const icons8Name = ICON_NAME_MAP[icon] || "checkmark";
+  const colorHex = color.replace("#", "");
+  // Request 2x size for retina displays
+  return `https://img.icons8.com/ios-filled/${size * 2}/${colorHex}/${icons8Name}.png`;
+}
+
+// Keep old function name for backwards compatibility
 export function getIconifyUrl(icon: string, color: string): string {
-  // Remove # from color and encode
-  const encodedColor = encodeURIComponent(color.replace("#", ""));
-  return `https://api.iconify.design/lucide/${icon}.svg?color=%23${encodedColor}`;
+  return getIconUrl(icon, color, 48);
 }
 
 const EmailIconNodeView = ({
@@ -76,10 +102,9 @@ const EmailIconNodeView = ({
   const [isEditing, setIsEditing] = useState(false);
   const attrs = node.attrs as EmailIconAttributes;
 
-  const iconUrl = getIconifyUrl(attrs.icon, attrs.iconColor);
-
-  // Calculate padding based on size (icon takes ~60% of total size)
-  const padding = Math.round(attrs.size * 0.2);
+  // Calculate icon size (icon is smaller than container to leave room for background)
+  const iconImgSize = Math.round(attrs.size * 0.55);
+  const iconUrl = getIconUrl(attrs.icon, attrs.iconColor, iconImgSize);
 
   return (
     <NodeViewWrapper
@@ -92,19 +117,18 @@ const EmailIconNodeView = ({
             width: attrs.size,
             height: attrs.size,
             backgroundColor: attrs.backgroundColor,
-            borderRadius: "9999px",
+            borderRadius: "50%",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            padding,
           }}
         >
           <img
             alt={attrs.icon}
             src={iconUrl}
             style={{
-              width: attrs.size - padding * 2,
-              height: attrs.size - padding * 2,
+              width: iconImgSize,
+              height: iconImgSize,
             }}
           />
         </div>
@@ -137,9 +161,10 @@ const EmailIconNodeView = ({
                         <img
                           alt={label}
                           className="h-5 w-5"
-                          src={getIconifyUrl(
+                          src={getIconUrl(
                             name,
-                            attrs.icon === name ? "#ffffff" : "#000000"
+                            attrs.icon === name ? "ffffff" : "000000",
+                            20
                           )}
                         />
                       </Button>

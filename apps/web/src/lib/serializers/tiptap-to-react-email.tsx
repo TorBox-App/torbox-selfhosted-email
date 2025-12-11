@@ -429,37 +429,82 @@ function nodeToReactEmail(
       const bgColor = node.attrs?.backgroundColor || "#dbeafe";
       const align = node.attrs?.align || "left";
 
-      const alignMap: Record<string, string> = {
-        left: "text-left",
-        center: "text-center",
-        right: "text-right",
+      // Map icon names to Icons8 icon names
+      const iconNameMap: Record<string, string> = {
+        check: "checkmark",
+        star: "star",
+        heart: "like",
+        zap: "flash-on",
+        shield: "shield",
+        award: "prize",
+        target: "goal",
+        "trending-up": "graph",
+        "thumbs-up": "thumb-up",
+        gift: "gift",
+        clock: "clock",
+        lock: "lock",
+        globe: "globe",
+        sparkles: "sparkling",
+        rocket: "rocket",
+        lightbulb: "light-on",
       };
 
-      // Generate Iconify URL
-      const encodedColor = encodeURIComponent(iconColor.replace("#", ""));
-      const iconUrl = `https://api.iconify.design/lucide/${icon}.svg?color=%23${encodedColor}`;
+      const icons8Name = iconNameMap[icon] || "checkmark";
+      // Remove # from color for Icons8 URL
+      const colorHex = iconColor.replace("#", "");
 
-      // Calculate padding (icon takes ~60% of total size)
-      const padding = Math.round(size * 0.2);
-      const iconSize = size - padding * 2;
+      // Calculate icon size (icon is smaller than container to leave room for background)
+      const iconImgSize = Math.round(size * 0.55);
 
+      // Icons8 PNG URL with custom color
+      const iconUrl = `https://img.icons8.com/ios-filled/${iconImgSize * 2}/${colorHex}/${icons8Name}.png`;
+
+      // Use a table with fixed dimensions to ensure perfect circle
+      // The width/height must be set as attributes AND in style for email client compatibility
       return (
-        <div className={alignMap[align] || "text-left"} key={key}>
-          <div
-            style={{
-              width: size,
-              height: size,
-              backgroundColor: bgColor,
-              borderRadius: "9999px",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding,
-            }}
-          >
-            <Img alt={icon} height={iconSize} src={iconUrl} width={iconSize} />
-          </div>
-        </div>
+        <table
+          align={
+            align === "center" ? "center" : align === "right" ? "right" : "left"
+          }
+          border={0}
+          cellPadding={0}
+          cellSpacing={0}
+          key={key}
+          role="presentation"
+          style={{
+            borderCollapse: "collapse",
+            width: size,
+            height: size,
+          }}
+          width={size}
+        >
+          <tbody>
+            <tr>
+              <td
+                align="center"
+                height={size}
+                style={{
+                  width: size,
+                  height: size,
+                  minWidth: size,
+                  maxWidth: size,
+                  backgroundColor: bgColor,
+                  borderRadius: size / 2,
+                  verticalAlign: "middle",
+                }}
+                valign="middle"
+                width={size}
+              >
+                <Img
+                  alt={icon}
+                  height={iconImgSize}
+                  src={iconUrl}
+                  width={iconImgSize}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
       );
     }
 
@@ -1385,30 +1430,69 @@ ${spaces}          </div>`;
       const bgColor = (attrs.backgroundColor as string) || "#dbeafe";
       const align = (attrs.align as string) || "left";
 
-      const alignClass =
-        align === "center"
-          ? "text-center"
-          : align === "right"
-            ? "text-right"
-            : "text-left";
+      // Map icon names to Icons8 icon names
+      const iconNameMap: Record<string, string> = {
+        check: "checkmark",
+        star: "star",
+        heart: "like",
+        zap: "flash-on",
+        shield: "shield",
+        award: "prize",
+        target: "goal",
+        "trending-up": "graph",
+        "thumbs-up": "thumb-up",
+        gift: "gift",
+        clock: "clock",
+        lock: "lock",
+        globe: "globe",
+        sparkles: "sparkling",
+        rocket: "rocket",
+        lightbulb: "light-on",
+      };
 
-      // Generate Iconify URL
-      const encodedColor = encodeURIComponent(iconColor.replace("#", ""));
-      const iconUrl = `https://api.iconify.design/lucide/${icon}.svg?color=%23${encodedColor}`;
+      const icons8Name = iconNameMap[icon] || "checkmark";
+      const colorHex = iconColor.replace("#", "");
+      const iconImgSize = Math.round(size * 0.55);
+      const iconUrl = `https://img.icons8.com/ios-filled/${iconImgSize * 2}/${colorHex}/${icons8Name}.png`;
+      const tableAlign =
+        align === "center" ? "center" : align === "right" ? "right" : "left";
 
-      const padding = Math.round(size * 0.2);
-      const iconSize = size - padding * 2;
-
-      return `${spaces}          <div className="${alignClass}">
-${spaces}            <div style={{ width: ${size}, height: ${size}, backgroundColor: "${bgColor}", borderRadius: "9999px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: ${padding} }}>
-${spaces}              <Img
-${spaces}                src="${iconUrl}"
-${spaces}                alt="${icon}"
-${spaces}                width={${iconSize}}
-${spaces}                height={${iconSize}}
-${spaces}              />
-${spaces}            </div>
-${spaces}          </div>`;
+      return `${spaces}          <table
+${spaces}            align="${tableAlign}"
+${spaces}            border={0}
+${spaces}            cellPadding={0}
+${spaces}            cellSpacing={0}
+${spaces}            role="presentation"
+${spaces}            width={${size}}
+${spaces}            style={{ borderCollapse: "collapse", width: ${size}, height: ${size} }}
+${spaces}          >
+${spaces}            <tbody>
+${spaces}              <tr>
+${spaces}                <td
+${spaces}                  align="center"
+${spaces}                  valign="middle"
+${spaces}                  width={${size}}
+${spaces}                  height={${size}}
+${spaces}                  style={{
+${spaces}                    width: ${size},
+${spaces}                    height: ${size},
+${spaces}                    minWidth: ${size},
+${spaces}                    maxWidth: ${size},
+${spaces}                    backgroundColor: "${bgColor}",
+${spaces}                    borderRadius: ${size / 2},
+${spaces}                    verticalAlign: "middle",
+${spaces}                  }}
+${spaces}                >
+${spaces}                  <Img
+${spaces}                    src="${iconUrl}"
+${spaces}                    alt="${icon}"
+${spaces}                    width={${iconImgSize}}
+${spaces}                    height={${iconImgSize}}
+${spaces}                  />
+${spaces}                </td>
+${spaces}              </tr>
+${spaces}            </tbody>
+${spaces}          </table>`;
     }
 
     case "emailCodeBlock": {
