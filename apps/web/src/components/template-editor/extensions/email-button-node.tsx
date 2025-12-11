@@ -97,8 +97,11 @@ const EmailButtonNodeView = ({
           }}
         />
 
-        {/* Drag handle and edit button */}
-        <div className="-top-2 -right-2 absolute flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        {/* Drag handle and edit button - in separate contentEditable=false container */}
+        <div
+          className="-top-2 -right-2 absolute flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+          contentEditable={false}
+        >
           <DragHandle />
           <Popover onOpenChange={handleOpenChange} open={isEditing}>
             <PopoverTrigger asChild>

@@ -21,6 +21,7 @@ export const DragHandle = forwardRef<HTMLDivElement, DragHandleProps>(
       )}
       contentEditable={false}
       data-drag-handle
+      draggable="true"
       ref={ref}
     >
       <GripVertical className="h-4 w-4" />
