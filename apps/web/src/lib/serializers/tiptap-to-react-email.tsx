@@ -564,9 +564,9 @@ function nodeToReactEmail(
         github: "GitHub",
       };
 
-      // Platform slugs for Iconify Simple Icons
-      const platformSlugs: Record<string, string> = {
-        twitter: "x",
+      // Map social platforms to Icons8 icon names
+      const socialIconMap: Record<string, string> = {
+        twitter: "twitterx",
         linkedin: "linkedin",
         instagram: "instagram",
         facebook: "facebook",
@@ -574,11 +574,16 @@ function nodeToReactEmail(
         github: "github",
       };
 
-      // Use Iconify API for colored social icons (reliable for email clients)
-      const getIconUrl = (platform: string, color: string): string => {
-        const slug = platformSlugs[platform] || platform.toLowerCase();
-        const encodedColor = encodeURIComponent(color);
-        return `https://api.iconify.design/simple-icons/${slug}.svg?color=${encodedColor}`;
+      // Use Icons8 PNG CDN for social icons (using ios-glyphs style)
+      const getIconUrl = (
+        platform: string,
+        color: string,
+        size: number
+      ): string => {
+        const icons8Name = socialIconMap[platform] || platform.toLowerCase();
+        const colorHex = color.replace("#", "");
+        // Request 2x size for retina displays
+        return `https://img.icons8.com/ios-glyphs/${size * 2}/${colorHex}/${icons8Name}.png`;
       };
 
       if (links.length === 0) {
@@ -605,7 +610,7 @@ function nodeToReactEmail(
                 <Img
                   alt={platformLabels[link.platform] || link.platform}
                   height={iconSize}
-                  src={getIconUrl(link.platform, iconColor)}
+                  src={getIconUrl(link.platform, iconColor, iconSize)}
                   style={{ display: "inline-block", verticalAlign: "middle" }}
                   width={iconSize}
                 />
@@ -1553,9 +1558,9 @@ ${spaces}          </pre>`;
         github: "GitHub",
       };
 
-      // Platform slugs for Iconify Simple Icons
-      const platformSlugs: Record<string, string> = {
-        twitter: "x",
+      // Map social platforms to Icons8 icon names
+      const socialIconMap: Record<string, string> = {
+        twitter: "twitterx",
         linkedin: "linkedin",
         instagram: "instagram",
         facebook: "facebook",
@@ -1563,11 +1568,16 @@ ${spaces}          </pre>`;
         github: "github",
       };
 
-      // Use Iconify API for colored social icons
-      const getIconUrl = (platform: string, color: string): string => {
-        const slug = platformSlugs[platform] || platform.toLowerCase();
-        const encodedColor = encodeURIComponent(color);
-        return `https://api.iconify.design/simple-icons/${slug}.svg?color=${encodedColor}`;
+      // Use Icons8 PNG CDN for social icons (using ios-glyphs style)
+      const getIconUrl = (
+        platform: string,
+        color: string,
+        size: number
+      ): string => {
+        const icons8Name = socialIconMap[platform] || platform.toLowerCase();
+        const colorHex = color.replace("#", "");
+        // Request 2x size for retina displays
+        return `https://img.icons8.com/ios-glyphs/${size * 2}/${colorHex}/${icons8Name}.png`;
       };
 
       if (links.length === 0) {
@@ -1578,7 +1588,7 @@ ${spaces}          </pre>`;
         .map((link, i) => {
           const label = platformLabels[link.platform] || link.platform;
           const marginRight = i < links.length - 1 ? iconSpacing : "0";
-          const iconUrl = getIconUrl(link.platform, iconColor);
+          const iconUrl = getIconUrl(link.platform, iconColor, iconSize);
           const showIcon = style === "icons" || style === "both";
           const showText = style === "text" || style === "both";
 

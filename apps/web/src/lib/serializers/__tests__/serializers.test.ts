@@ -2092,7 +2092,7 @@ describe("TipTap to React Email - Extended Coverage", () => {
       const result = generateReactEmailCode(doc);
       expect(result).toContain('href="https://twitter.com/user"');
       expect(result).toContain('href="https://linkedin.com/in/user"');
-      expect(result).toContain("api.iconify.design");
+      expect(result).toContain("img.icons8.com");
     });
 
     it("should generate social links with text only", () => {
@@ -2130,7 +2130,7 @@ describe("TipTap to React Email - Extended Coverage", () => {
       };
       const result = generateReactEmailCode(doc);
       expect(result).toContain("Instagram");
-      expect(result).toContain("api.iconify.design");
+      expect(result).toContain("img.icons8.com");
     });
 
     it("should handle empty social links", () => {

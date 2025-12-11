@@ -6,18 +6,7 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from "@tiptap/react";
-import {
-  Facebook,
-  Github,
-  Instagram,
-  Linkedin,
-  type LucideIcon,
-  Pencil,
-  Plus,
-  Twitter,
-  X,
-  Youtube,
-} from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,37 +62,53 @@ declare module "@tiptap/core" {
   }
 }
 
+// Map social platforms to Icons8 icon names
+const SOCIAL_ICON_MAP: Record<SocialPlatform, string> = {
+  twitter: "twitterx",
+  linkedin: "linkedin",
+  instagram: "instagram",
+  facebook: "facebook",
+  youtube: "youtube",
+  github: "github",
+};
+
+// Generate Icons8 PNG URL for a social icon (using ios-glyphs style)
+export function getSocialIconUrl(
+  platform: SocialPlatform,
+  color: string,
+  size = 24
+): string {
+  const icons8Name = SOCIAL_ICON_MAP[platform] || platform;
+  const colorHex = color.replace("#", "");
+  // Request 2x size for retina displays
+  return `https://img.icons8.com/ios-glyphs/${size * 2}/${colorHex}/${icons8Name}.png`;
+}
+
 const PLATFORM_CONFIG: Record<
   SocialPlatform,
-  { icon: LucideIcon; label: string; placeholder: string }
+  { label: string; placeholder: string }
 > = {
   twitter: {
-    icon: Twitter,
     label: "Twitter / X",
     placeholder: "https://twitter.com/username",
   },
   linkedin: {
-    icon: Linkedin,
     label: "LinkedIn",
     placeholder: "https://linkedin.com/in/username",
   },
   instagram: {
-    icon: Instagram,
     label: "Instagram",
     placeholder: "https://instagram.com/username",
   },
   facebook: {
-    icon: Facebook,
     label: "Facebook",
     placeholder: "https://facebook.com/username",
   },
   youtube: {
-    icon: Youtube,
     label: "YouTube",
     placeholder: "https://youtube.com/@channel",
   },
   github: {
-    icon: Github,
     label: "GitHub",
     placeholder: "https://github.com/username",
   },
@@ -178,7 +183,11 @@ const EmailSocialLinksNodeView = ({
           >
             {links.map((link) => {
               const config = PLATFORM_CONFIG[link.platform];
-              const Icon = config.icon;
+              const iconUrl = getSocialIconUrl(
+                link.platform,
+                attrs.iconColor,
+                attrs.iconSize
+              );
               return (
                 <a
                   className="inline-flex items-center gap-1 no-underline transition-opacity hover:opacity-80"
@@ -186,12 +195,19 @@ const EmailSocialLinksNodeView = ({
                   key={link.platform}
                   style={{ color: attrs.iconColor }}
                 >
-                  <Icon
-                    style={{ width: attrs.iconSize, height: attrs.iconSize }}
-                  />
-                  {attrs.style === "text" || attrs.style === "both" ? (
+                  {(attrs.style === "icons" || attrs.style === "both") && (
+                    <img
+                      alt={config.label}
+                      src={iconUrl}
+                      style={{
+                        width: attrs.iconSize,
+                        height: attrs.iconSize,
+                      }}
+                    />
+                  )}
+                  {(attrs.style === "text" || attrs.style === "both") && (
                     <span className="text-sm">{config.label}</span>
-                  ) : null}
+                  )}
                 </a>
               );
             })}
@@ -221,13 +237,16 @@ const EmailSocialLinksNodeView = ({
                 <div className="space-y-2">
                   {localAttrs.links.map((link, index) => {
                     const config = PLATFORM_CONFIG[link.platform];
-                    const Icon = config.icon;
                     return (
                       <div
                         className="flex items-center gap-2"
                         key={link.platform}
                       >
-                        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <img
+                          alt={config.label}
+                          className="h-4 w-4 shrink-0"
+                          src={getSocialIconUrl(link.platform, "#6b7280", 16)}
+                        />
                         <Input
                           className="flex-1"
                           onChange={(e) => updateLink(index, e.target.value)}
@@ -252,7 +271,6 @@ const EmailSocialLinksNodeView = ({
                   <div className="flex flex-wrap gap-1">
                     {Object.entries(PLATFORM_CONFIG).map(
                       ([platform, config]) => {
-                        const Icon = config.icon;
                         const isAdded = localAttrs.links.some(
                           (l) => l.platform === platform
                         );
@@ -265,7 +283,15 @@ const EmailSocialLinksNodeView = ({
                             size="sm"
                             variant="outline"
                           >
-                            <Icon className="h-3 w-3" />
+                            <img
+                              alt={config.label}
+                              className="h-3 w-3"
+                              src={getSocialIconUrl(
+                                platform as SocialPlatform,
+                                "#000000",
+                                12
+                              )}
+                            />
                             <Plus className="h-3 w-3" />
                           </Button>
                         );
