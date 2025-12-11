@@ -601,36 +601,58 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
       type: "emailSection",
       attrs: {
         padding: "40px 24px",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#f9fafb",
+        borderRadius: "8px",
       },
       content: [
         {
           type: "heading",
           attrs: { level: 2, textAlign: "center" },
-          content: [{ type: "text", text: "What You'll Get" }],
+          content: [{ type: "text", text: "Functional Style" }],
         },
-        { type: "emailSpacer", attrs: { height: 32 } },
+        {
+          type: "paragraph",
+          attrs: { textAlign: "center" },
+          content: [
+            {
+              type: "text",
+              marks: [{ type: "textStyle", attrs: { color: "#6b7280" } }],
+              text: "Combine practicality and style effortlessly with our furniture, offering functional designs that enhance your living space.",
+            },
+          ],
+        },
+        { type: "emailSpacer", attrs: { height: 24 } },
         {
           type: "emailRow",
           content: [
             {
               type: "emailColumn",
-              attrs: { width: "15%" },
+              attrs: {
+                width: "64px",
+                padding: "0 16px 0 0",
+                verticalAlign: "top",
+              },
               content: [
                 {
-                  type: "paragraph",
-                  content: [{ type: "text", text: "✓" }],
+                  type: "emailIcon",
+                  attrs: {
+                    icon: "check",
+                    size: 48,
+                    iconColor: "#3b82f6",
+                    backgroundColor: "#dbeafe",
+                    align: "left",
+                  },
                 },
               ],
             },
             {
               type: "emailColumn",
-              attrs: { width: "85%" },
+              attrs: { padding: "0", verticalAlign: "top" },
               content: [
                 {
                   type: "heading",
                   attrs: { level: 3 },
-                  content: [{ type: "text", text: "Feature One" }],
+                  content: [{ type: "text", text: "Versatile Comfort" }],
                 },
                 {
                   type: "paragraph",
@@ -640,7 +662,7 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
                       marks: [
                         { type: "textStyle", attrs: { color: "#6b7280" } },
                       ],
-                      text: "Description of the first feature and why it matters to the user.",
+                      text: "Experience ultimate comfort and versatility with our furniture collection, designed to adapt to your ever-changing needs.",
                     },
                   ],
                 },
@@ -654,22 +676,32 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
           content: [
             {
               type: "emailColumn",
-              attrs: { width: "15%" },
+              attrs: {
+                width: "64px",
+                padding: "0 16px 0 0",
+                verticalAlign: "top",
+              },
               content: [
                 {
-                  type: "paragraph",
-                  content: [{ type: "text", text: "✓" }],
+                  type: "emailIcon",
+                  attrs: {
+                    icon: "sparkles",
+                    size: 48,
+                    iconColor: "#3b82f6",
+                    backgroundColor: "#dbeafe",
+                    align: "left",
+                  },
                 },
               ],
             },
             {
               type: "emailColumn",
-              attrs: { width: "85%" },
+              attrs: { padding: "0", verticalAlign: "top" },
               content: [
                 {
                   type: "heading",
                   attrs: { level: 3 },
-                  content: [{ type: "text", text: "Feature Two" }],
+                  content: [{ type: "text", text: "Luxurious Retreat" }],
                 },
                 {
                   type: "paragraph",
@@ -679,7 +711,7 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
                       marks: [
                         { type: "textStyle", attrs: { color: "#6b7280" } },
                       ],
-                      text: "Description of the second feature and its benefits.",
+                      text: "Transform your space into a haven of relaxation with our indulgent furniture collection.",
                     },
                   ],
                 },
@@ -693,22 +725,32 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
           content: [
             {
               type: "emailColumn",
-              attrs: { width: "15%" },
+              attrs: {
+                width: "64px",
+                padding: "0 16px 0 0",
+                verticalAlign: "top",
+              },
               content: [
                 {
-                  type: "paragraph",
-                  content: [{ type: "text", text: "✓" }],
+                  type: "emailIcon",
+                  attrs: {
+                    icon: "lightbulb",
+                    size: 48,
+                    iconColor: "#3b82f6",
+                    backgroundColor: "#dbeafe",
+                    align: "left",
+                  },
                 },
               ],
             },
             {
               type: "emailColumn",
-              attrs: { width: "85%" },
+              attrs: { padding: "0", verticalAlign: "top" },
               content: [
                 {
                   type: "heading",
                   attrs: { level: 3 },
-                  content: [{ type: "text", text: "Feature Three" }],
+                  content: [{ type: "text", text: "Unleash Creativity" }],
                 },
                 {
                   type: "paragraph",
@@ -718,7 +760,7 @@ export const FEATURE_EXAMPLES: BlockExample[] = [
                       marks: [
                         { type: "textStyle", attrs: { color: "#6b7280" } },
                       ],
-                      text: "Description of the third feature and what makes it special.",
+                      text: "Unleash your inner designer with our customizable furniture options, allowing you to create a space that reflects your unique vision.",
                     },
                   ],
                 },
