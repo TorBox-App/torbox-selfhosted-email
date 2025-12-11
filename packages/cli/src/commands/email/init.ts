@@ -13,6 +13,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { errors } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -262,14 +263,9 @@ export async function init(options: InitOptions): Promise<void> {
       }
     );
   } catch (error: any) {
-    clack.log.error("Infrastructure deployment failed");
-
     // Check if it's a lock file error
     if (error.message?.includes("stack is currently locked")) {
-      clack.log.warn("\nThe Pulumi stack is locked from a previous run.");
-      clack.log.info("To fix this, run:");
-      clack.log.info(`  ${pc.cyan("rm -rf ~/.wraps/pulumi/.pulumi/locks")}`);
-      clack.log.info("\nThen try running wraps email init again.");
+      throw errors.stackLocked();
     }
 
     throw new Error(`Pulumi deployment failed: ${error.message}`);

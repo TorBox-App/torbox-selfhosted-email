@@ -5,7 +5,10 @@ import { createDynamoDBTables } from "./resources/dynamodb.js";
 import { createEventBridgeResources } from "./resources/eventbridge.js";
 import { createIAMRole } from "./resources/iam.js";
 import { deployLambdaFunctions } from "./resources/lambda.js";
-import { createSESResources } from "./resources/ses.js";
+import {
+  createSESResources,
+  eventDestinationExists,
+} from "./resources/ses.js";
 import { createSQSResources } from "./resources/sqs.js";
 import { createVercelOIDC } from "./vercel-oidc.js";
 
@@ -87,6 +90,16 @@ export async function deployEmailStack(
   // 4. SES resources (if tracking or event tracking enabled)
   let sesResources;
   if (emailConfig.tracking?.enabled || emailConfig.eventTracking?.enabled) {
+    // Check if the event destination already exists in AWS but not in Pulumi state
+    // This can happen if resources were created outside Pulumi or state got out of sync
+    const shouldImportEventDest =
+      emailConfig.eventTracking?.enabled &&
+      (await eventDestinationExists(
+        "wraps-email-tracking",
+        "wraps-email-eventbridge",
+        config.region
+      ));
+
     sesResources = await createSESResources({
       domain: emailConfig.domain,
       mailFromDomain: emailConfig.mailFromDomain,
@@ -95,6 +108,7 @@ export async function deployEmailStack(
       eventTypes: emailConfig.eventTracking?.events,
       eventTrackingEnabled: emailConfig.eventTracking?.enabled, // Pass flag to create EventBridge destination
       tlsRequired: emailConfig.tlsRequired, // Require TLS encryption for all emails
+      importExistingEventDestination: shouldImportEventDest, // Import if exists to avoid AlreadyExistsException
     });
   }
 

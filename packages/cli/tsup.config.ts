@@ -10,7 +10,7 @@ export default defineConfig({
   bundle: true,
   minify: false, // Keep readable for debugging
   sourcemap: true,
-  target: "node20",
+  target: "node24",
   outDir: "dist",
   onSuccess: async () => {
     // Make CLI executable

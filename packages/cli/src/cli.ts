@@ -73,7 +73,9 @@ function showHelp() {
     `  ${pc.cyan("email connect")}        Connect to existing AWS SES`
   );
   console.log(`  ${pc.cyan("email domains verify")} Verify domain DNS records`);
-  console.log(`  ${pc.cyan("email config")}         Update infrastructure`);
+  console.log(
+    `  ${pc.cyan("email sync")}           Apply CLI updates to infrastructure`
+  );
   console.log(`  ${pc.cyan("email upgrade")}        Add features`);
   console.log(
     `  ${pc.cyan("email restore")}        Restore original configuration\n`
@@ -302,6 +304,7 @@ async function run() {
           break;
 
         case "config":
+        case "sync":
           await config({
             region: flags.region,
             yes: flags.yes,

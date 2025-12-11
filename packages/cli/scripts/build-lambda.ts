@@ -28,7 +28,7 @@ async function bundleLambda(name: string, entryPoint: string) {
     entryPoints: [entryPoint],
     bundle: true,
     platform: "node",
-    target: "node20",
+    target: "node24",
     format: "esm",
     outfile: join(outdir, "index.mjs"),
     external: ["@aws-sdk/*"], // AWS SDK v3 is included in Lambda runtime

@@ -824,9 +824,6 @@ describe("upgrade command", () => {
       vi.mocked(prompts.confirm).mockResolvedValue(true as never);
 
       await expect(upgrade({})).rejects.toThrow(/locked/);
-      expect(prompts.log.warn).toHaveBeenCalledWith(
-        expect.stringContaining("stack is locked")
-      );
     });
 
     it("should handle user cancellation", async () => {

@@ -104,4 +104,12 @@ export const errors = {
       "Install Pulumi:\n  macOS: brew install pulumi/tap/pulumi\n  Linux: curl -fsSL https://get.pulumi.com | sh\n  Windows: choco install pulumi\n\nOr download from: https://www.pulumi.com/docs/install/",
       "https://www.pulumi.com/docs/install/"
     ),
+
+  stackLocked: () =>
+    new WrapsError(
+      "The Pulumi stack is locked from a previous run",
+      "STACK_LOCKED",
+      "This happens when a previous deployment was interrupted.\n\nTo unlock, run:\n  rm -rf ~/.wraps/pulumi/.pulumi/locks\n\nThen try your command again.",
+      "https://wraps.dev/docs/troubleshooting"
+    ),
 };

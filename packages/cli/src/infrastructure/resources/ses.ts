@@ -18,6 +18,7 @@ export type SESResourcesConfig = {
   eventTypes?: SESEventType[];
   eventTrackingEnabled?: boolean; // NEW: Whether to create EventBridge event destination
   tlsRequired?: boolean; // Require TLS encryption for all emails
+  importExistingEventDestination?: boolean; // Import existing event destination if it exists
 };
 
 /**
@@ -42,6 +43,41 @@ async function configurationSetExists(
       return false;
     }
     console.error("Error checking for existing configuration set:", error);
+    return false;
+  }
+}
+
+/**
+ * Check if event destination exists for a configuration set
+ */
+export async function eventDestinationExists(
+  configSetName: string,
+  eventDestName: string,
+  region: string
+): Promise<boolean> {
+  try {
+    const {
+      SESv2Client,
+      GetConfigurationSetEventDestinationsCommand,
+    } = await import("@aws-sdk/client-sesv2");
+    const ses = new SESv2Client({ region });
+
+    const response = await ses.send(
+      new GetConfigurationSetEventDestinationsCommand({
+        ConfigurationSetName: configSetName,
+      })
+    );
+
+    return (
+      response.EventDestinations?.some(
+        (dest) => dest.Name === eventDestName
+      ) ?? false
+    );
+  } catch (error: any) {
+    if (error.name === "NotFoundException") {
+      return false;
+    }
+    // Silently return false on other errors - we'll try to create and handle errors there
     return false;
   }
 }
@@ -146,29 +182,39 @@ export async function createSESResources(
   if (config.eventTrackingEnabled) {
     const eventDestName = "wraps-email-eventbridge";
 
-    new aws.sesv2.ConfigurationSetEventDestination("wraps-email-all-events", {
-      configurationSetName: configSet.configurationSetName,
-      eventDestinationName: eventDestName,
-      eventDestination: {
-        enabled: true,
-        matchingEventTypes: [
-          "SEND",
-          "DELIVERY",
-          "OPEN",
-          "CLICK",
-          "BOUNCE",
-          "COMPLAINT",
-          "REJECT",
-          "RENDERING_FAILURE",
-          "DELIVERY_DELAY",
-          "SUBSCRIPTION",
-        ],
-        eventBridgeDestination: {
-          // SES requires default bus - cannot use custom bus
-          eventBusArn: defaultEventBus.arn,
+    new aws.sesv2.ConfigurationSetEventDestination(
+      "wraps-email-all-events",
+      {
+        configurationSetName: configSet.configurationSetName,
+        eventDestinationName: eventDestName,
+        eventDestination: {
+          enabled: true,
+          matchingEventTypes: [
+            "SEND",
+            "DELIVERY",
+            "OPEN",
+            "CLICK",
+            "BOUNCE",
+            "COMPLAINT",
+            "REJECT",
+            "RENDERING_FAILURE",
+            "DELIVERY_DELAY",
+            "SUBSCRIPTION",
+          ],
+          eventBridgeDestination: {
+            // SES requires default bus - cannot use custom bus
+            eventBusArn: defaultEventBus.arn,
+          },
         },
       },
-    });
+      {
+        // Import existing resource if it already exists in AWS
+        // This prevents AlreadyExistsException when the resource exists but isn't in Pulumi state
+        import: config.importExistingEventDestination
+          ? `wraps-email-tracking|${eventDestName}`
+          : undefined,
+      }
+    );
   }
 
   // Optional: Verify domain if provided

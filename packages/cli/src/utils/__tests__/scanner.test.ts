@@ -502,7 +502,7 @@ describe("AWS Resource Scanner", () => {
             FunctionName: "wraps-email-processor",
             FunctionArn:
               "arn:aws:lambda:us-east-1:123456789012:function:wraps-email-processor",
-            Runtime: "nodejs20.x",
+            Runtime: "nodejs24.x",
             Handler: "index.handler",
           },
         ],
@@ -515,7 +515,7 @@ describe("AWS Resource Scanner", () => {
       expect(functions[0].arn).toBe(
         "arn:aws:lambda:us-east-1:123456789012:function:wraps-email-processor"
       );
-      expect(functions[0].runtime).toBe("nodejs20.x");
+      expect(functions[0].runtime).toBe("nodejs24.x");
       expect(functions[0].handler).toBe("index.handler");
     });
 

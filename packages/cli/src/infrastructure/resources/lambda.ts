@@ -148,7 +148,7 @@ async function getLambdaCode(functionName: string): Promise<string> {
     entryPoints: [sourcePath],
     bundle: true,
     platform: "node",
-    target: "node20",
+    target: "node24",
     format: "esm",
     outfile: join(outdir, "index.mjs"),
     external: ["@aws-sdk/*"], // AWS SDK v3 is included in Lambda runtime
@@ -247,7 +247,7 @@ export async function deployLambdaFunctions(
         functionName,
         {
           name: functionName,
-          runtime: aws.lambda.Runtime.NodeJS20dX,
+          runtime: "nodejs24.x",
           handler: "index.handler",
           role: lambdaRole.arn,
           code: new pulumi.asset.FileArchive(eventProcessorCode),
@@ -271,7 +271,7 @@ export async function deployLambdaFunctions(
       )
     : new aws.lambda.Function(functionName, {
         name: functionName,
-        runtime: aws.lambda.Runtime.NodeJS20dX,
+        runtime: "nodejs24.x",
         handler: "index.handler",
         role: lambdaRole.arn,
         code: new pulumi.asset.FileArchive(eventProcessorCode),

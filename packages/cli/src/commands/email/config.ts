@@ -10,6 +10,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { errors } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -206,6 +207,9 @@ export async function config(options: EmailConfigOptions): Promise<void> {
         );
         await stack.setConfig("aws:region", { value: region });
 
+        // Refresh state to sync with actual AWS resources (prevents AlreadyExists errors)
+        await stack.refresh({ onOutput: () => {} });
+
         // Pulumi will automatically detect changes and only update what's needed
         const upResult = await stack.up({ onOutput: () => {} });
         const pulumiOutputs = upResult.outputs;
@@ -229,14 +233,9 @@ export async function config(options: EmailConfigOptions): Promise<void> {
       }
     );
   } catch (error: any) {
-    clack.log.error("Infrastructure update failed");
-
     // Check if it's a lock file error
     if (error.message?.includes("stack is currently locked")) {
-      clack.log.warn("\nThe Pulumi stack is locked from a previous run.");
-      clack.log.info("To fix this, run:");
-      clack.log.info(`  ${pc.cyan("rm -rf ~/.wraps/pulumi/.pulumi/locks")}`);
-      clack.log.info("\nThen try running wraps update again.");
+      throw errors.stackLocked();
     }
 
     throw new Error(`Pulumi update failed: ${error.message}`);
