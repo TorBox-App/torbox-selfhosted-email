@@ -1,5 +1,6 @@
 "use client";
 
+import { useDraggable } from "@dnd-kit/core";
 import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
 import {
@@ -8,6 +9,7 @@ import {
   Columns,
   FileText,
   GitBranch,
+  GripVertical,
   Heading1,
   Heading2,
   Image,
@@ -27,7 +29,6 @@ import {
   User,
 } from "lucide-react";
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -48,7 +49,7 @@ type BlockPaletteProps = {
   orgSlug: string;
 };
 
-type BlockItem = {
+export type BlockItem = {
   name: string;
   description: string;
   icon: React.ReactNode;
@@ -69,7 +70,13 @@ function insertBlockExample(
     if (brandKit) {
       content = applyBrandKitToContent(content, brandKit);
     }
-    editor.commands.insertContent(content);
+    // If the content is a doc wrapper, extract the content array
+    // This allows templates to define multiple top-level nodes
+    if (content.type === "doc" && content.content) {
+      editor.commands.insertContent(content.content);
+    } else {
+      editor.commands.insertContent(content);
+    }
   }
 }
 
@@ -301,6 +308,14 @@ const blocks: BlockItem[] = [
     category: "templates",
   },
   {
+    name: "Product Showcase",
+    description: "Hero + 2 products",
+    icon: <ShoppingCart className="h-5 w-5" />,
+    action: (editor, brandKit) =>
+      insertBlockExample(editor, "product-showcase", brandKit),
+    category: "templates",
+  },
+  {
     name: "Product Card",
     description: "E-commerce product",
     icon: <ShoppingCart className="h-5 w-5" />,
@@ -341,6 +356,68 @@ const categoryOrder: BlockItem["category"][] = [
   "text",
   "dynamic",
 ];
+
+// Draggable block item component
+type DraggableBlockItemProps = {
+  block: BlockItem;
+  editor: Editor;
+  brandKit: BrandKitValues | null;
+};
+
+function DraggableBlockItem({
+  block,
+  editor,
+  brandKit,
+}: DraggableBlockItemProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `block-${block.name}`,
+    data: { block },
+  });
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className={`group flex h-auto w-full cursor-grab items-center gap-1 rounded-md px-1 py-2 hover:bg-accent ${isDragging ? "opacity-50" : ""}`}
+          ref={setNodeRef}
+          {...listeners}
+          {...attributes}
+          onClick={() => {
+            block.action(editor, brandKit);
+            editor.commands.focus();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              block.action(editor, brandKit);
+              editor.commands.focus();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="flex-shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+            <GripVertical className="h-4 w-4" />
+          </div>
+          <div className="flex flex-1 items-center gap-3">
+            <div className="flex-shrink-0 text-muted-foreground">
+              {block.icon}
+            </div>
+            <div className="text-left">
+              <div className="font-medium text-sm">{block.name}</div>
+              <div className="text-muted-foreground text-xs">
+                {block.description}
+              </div>
+            </div>
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        <p>{block.description}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function BlockPalette({ editor, orgSlug }: BlockPaletteProps) {
   const { selectedBrandKitId } = useTemplateStore((state) => state.localState);
@@ -387,35 +464,12 @@ export function BlockPalette({ editor, orgSlug }: BlockPaletteProps) {
                 </h4>
                 <div className="space-y-1">
                   {blocks.map((block) => (
-                    <Tooltip key={block.name}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          className="h-auto w-full justify-start px-3 py-2"
-                          onClick={() => {
-                            block.action(editor, brandKit);
-                            editor.commands.focus();
-                          }}
-                          variant="ghost"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex-shrink-0 text-muted-foreground">
-                              {block.icon}
-                            </div>
-                            <div className="text-left">
-                              <div className="font-medium text-sm">
-                                {block.name}
-                              </div>
-                              <div className="text-muted-foreground text-xs">
-                                {block.description}
-                              </div>
-                            </div>
-                          </div>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p>{block.description}</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <DraggableBlockItem
+                      block={block}
+                      brandKit={brandKit}
+                      editor={editor}
+                      key={block.name}
+                    />
                   ))}
                 </div>
               </div>

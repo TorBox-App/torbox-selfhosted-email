@@ -19,12 +19,14 @@ import {
 import {
   PresetSelector,
   paddingPresets,
+  TailwindColorPicker,
 } from "@/components/ui/tailwind-color-picker";
 
 export type EmailColumnAttributes = {
   width: string;
   padding: string;
   verticalAlign: "top" | "middle" | "bottom";
+  backgroundColor: string;
 };
 
 declare module "@tiptap/core" {
@@ -53,6 +55,10 @@ const EmailColumnNodeView = ({
         width: attrs.width,
         flex: attrs.width === "auto" ? 1 : "none",
         padding: attrs.padding,
+        backgroundColor:
+          attrs.backgroundColor !== "transparent"
+            ? attrs.backgroundColor
+            : undefined,
       }}
     >
       <div
@@ -125,6 +131,12 @@ const EmailColumnNodeView = ({
                 ))}
               </div>
             </div>
+
+            <TailwindColorPicker
+              label="Background Color"
+              onChange={(v) => updateAttributes({ backgroundColor: v })}
+              value={attrs.backgroundColor}
+            />
           </div>
         </PopoverContent>
       </Popover>
@@ -144,6 +156,7 @@ export const EmailColumnNode = Node.create({
       width: { default: "50%" },
       padding: { default: "0px" },
       verticalAlign: { default: "top" },
+      backgroundColor: { default: "transparent" },
     };
   },
 

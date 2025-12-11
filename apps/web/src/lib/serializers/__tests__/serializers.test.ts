@@ -963,7 +963,7 @@ describe("TipTap to React Email Conversion", () => {
       const result = generateReactEmailCode(doc);
 
       expect(result).toContain(
-        'import { Html, Head, Body, Container, Text, Button, Section, Img, Hr, Heading, Link, Preview, Tailwind, pixelBasedPreset } from "@react-email/components"'
+        'import { Html, Head, Body, Container, Text, Button, Section, Row, Column, Img, Hr, Heading, Link, Preview, Tailwind, pixelBasedPreset } from "@react-email/components"'
       );
       expect(result).toContain("export default function EmailTemplate()");
       expect(result).toContain("<Html>");
@@ -1347,8 +1347,8 @@ describe("TipTap to React Email Conversion", () => {
       };
       const result = generateReactEmailCode(doc);
 
-      expect(result).toContain("flex");
-      expect(result).toContain("gap-4");
+      expect(result).toContain("<Row>");
+      expect(result).toContain("<Column>");
       expect(result).toContain("Left");
       expect(result).toContain("Right");
     });

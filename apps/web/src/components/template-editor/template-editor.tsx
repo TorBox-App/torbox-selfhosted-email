@@ -4,8 +4,9 @@ import type { JSONContent } from "@tiptap/core";
 import { EditorContent } from "@tiptap/react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
   useDeleteTemplate,
@@ -20,6 +21,7 @@ import { useTemplateStore } from "@/stores/template-store";
 import { AIChatPanel } from "./ai-chat-panel";
 import { BlockPalette } from "./block-palette";
 import { CodeView } from "./code-view";
+import { EditorDndProvider } from "./dnd-context";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { EditorErrorBoundary } from "./editor-error-boundary";
 import { ImportModal } from "./import-modal";
@@ -138,6 +140,7 @@ function TemplateEditorContent({
     showAIPanel,
     showTestDataPanel,
     showVersionHistory,
+    selectedBrandKitId,
   } = useTemplateStore((state) => state.localState);
   const { setDocument, updateTemplate: updateTemplateStore } = useTemplateStore(
     (state) => state.actions
@@ -172,6 +175,18 @@ function TemplateEditorContent({
     onSave: handleSave,
     onUpdate: setDocument,
   });
+
+  // Fetch brand kits for DnD context
+  const { data: brandKits } = useBrandKits(orgSlug);
+  const brandKit = useMemo(() => {
+    if (!brandKits?.length) {
+      return null;
+    }
+    if (selectedBrandKitId) {
+      return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
+    }
+    return brandKits.find((kit) => kit.isDefault) ?? brandKits[0] ?? null;
+  }, [brandKits, selectedBrandKitId]);
 
   // Update store with template metadata
   useEffect(() => {
@@ -326,118 +341,120 @@ function TemplateEditorContent({
 
   return (
     <EditorErrorBoundary onReset={handleEditorReset}>
-      <div
-        className={cn(
-          "flex h-[calc(100dvh-var(--header-height)-1rem)] flex-col bg-background md:h-[calc(100dvh-var(--header-height)-1.5rem)]",
-          className
-        )}
-      >
-        {/* Toolbar */}
-        <TemplateEditorToolbar
-          editor={editor}
-          isPublishing={
-            publishMutation.isPending || unpublishMutation.isPending
-          }
-          isSaving={updateMutation.isPending}
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
-          onImport={() => setShowImportModal(true)}
-          onPublish={handlePublish}
-          onSave={handleManualSave}
-          onSaveBlock={() => setShowSaveBlockModal(true)}
-          onSendTest={() => setShowSendTestModal(true)}
-          onSubjectChange={handleSubjectChange}
-          onUnpublish={handleUnpublish}
-          orgSlug={orgSlug}
-          previewText={previewText}
-          status={template.status}
-          subject={subject}
-          templateName={template.name}
-        />
-
-        {/* Main Content Area */}
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          {/* Left Panel - Block Library */}
-          {showBlockLibrary && view === "edit" && (
-            <BlockPalette editor={editor} orgSlug={orgSlug} />
+      <EditorDndProvider brandKit={brandKit} editor={editor}>
+        <div
+          className={cn(
+            "flex h-[calc(100dvh-var(--header-height)-1rem)] flex-col bg-background md:h-[calc(100dvh-var(--header-height)-1.5rem)]",
+            className
           )}
+        >
+          {/* Toolbar */}
+          <TemplateEditorToolbar
+            editor={editor}
+            isPublishing={
+              publishMutation.isPending || unpublishMutation.isPending
+            }
+            isSaving={updateMutation.isPending}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            onImport={() => setShowImportModal(true)}
+            onPublish={handlePublish}
+            onSave={handleManualSave}
+            onSaveBlock={() => setShowSaveBlockModal(true)}
+            onSendTest={() => setShowSendTestModal(true)}
+            onSubjectChange={handleSubjectChange}
+            onUnpublish={handleUnpublish}
+            orgSlug={orgSlug}
+            previewText={previewText}
+            status={template.status}
+            subject={subject}
+            templateName={template.name}
+          />
 
-          {/* Center - Editor/Preview/Code/Usage */}
-          <div className={cn("flex-1 overflow-auto")}>
-            {/* Editor - always mounted, hidden with CSS to prevent flushSync issues */}
-            <div className={cn(view !== "edit" && "hidden")}>
-              <div className="mx-auto max-w-3xl p-6">
-                <div className="min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm">
-                  <EditorContent className="p-6" editor={editor} />
-                  {/* Bubble menu for text formatting */}
-                  <EditorBubbleMenu editor={editor} />
-                </div>
-              </div>
-            </div>
-
-            {view === "preview" && <PreviewPanel editor={editor} />}
-
-            {view === "code" && (
-              <CodeView editor={editor} previewText={previewText} />
+          {/* Main Content Area */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {/* Left Panel - Block Library */}
+            {showBlockLibrary && view === "edit" && (
+              <BlockPalette editor={editor} orgSlug={orgSlug} />
             )}
 
-            {view === "usage" && <UsagePanel template={template} />}
+            {/* Center - Editor/Preview/Code/Usage */}
+            <div className={cn("flex-1 overflow-auto")}>
+              {/* Editor - always mounted, hidden with CSS to prevent flushSync issues */}
+              <div className={cn(view !== "edit" && "hidden")}>
+                <div className="mx-auto max-w-3xl p-6">
+                  <div className="min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm">
+                    <EditorContent className="p-6" editor={editor} />
+                    {/* Bubble menu for text formatting */}
+                    <EditorBubbleMenu editor={editor} />
+                  </div>
+                </div>
+              </div>
+
+              {view === "preview" && <PreviewPanel editor={editor} />}
+
+              {view === "code" && (
+                <CodeView editor={editor} previewText={previewText} />
+              )}
+
+              {view === "usage" && <UsagePanel template={template} />}
+            </div>
+
+            {/* Right Panel - Properties */}
+            {showPropertiesPanel && view === "edit" && (
+              <PropertiesPanel editor={editor} />
+            )}
+
+            {/* Right Panel - AI Assistant (shown in edit mode when toggled) */}
+            {showAIPanel && view === "edit" && (
+              <AIChatPanel
+                asSidePanel
+                editor={editor}
+                orgSlug={orgSlug}
+                templateId={templateId}
+              />
+            )}
+
+            {/* Right Panel - Test Data (shown when toggled) */}
+            {showTestDataPanel && (view === "edit" || view === "preview") && (
+              <TestDataPanel editor={editor} />
+            )}
+
+            {/* Right Panel - Version History (shown when toggled) */}
+            {showVersionHistory && (
+              <VersionHistoryPanel
+                editor={editor}
+                orgSlug={orgSlug}
+                templateId={templateId}
+              />
+            )}
           </div>
 
-          {/* Right Panel - Properties */}
-          {showPropertiesPanel && view === "edit" && (
-            <PropertiesPanel editor={editor} />
-          )}
+          {/* Send Test Modal */}
+          <SendTestModal
+            editor={editor}
+            isOpen={showSendTestModal}
+            onClose={() => setShowSendTestModal(false)}
+            orgSlug={orgSlug}
+            templateId={templateId}
+          />
 
-          {/* Right Panel - AI Assistant (shown in edit mode when toggled) */}
-          {showAIPanel && view === "edit" && (
-            <AIChatPanel
-              asSidePanel
-              editor={editor}
-              orgSlug={orgSlug}
-              templateId={templateId}
-            />
-          )}
+          {/* Save Block Modal */}
+          <SaveBlockModal
+            editor={editor}
+            isOpen={showSaveBlockModal}
+            onClose={() => setShowSaveBlockModal(false)}
+            orgSlug={orgSlug}
+          />
 
-          {/* Right Panel - Test Data (shown when toggled) */}
-          {showTestDataPanel && (view === "edit" || view === "preview") && (
-            <TestDataPanel editor={editor} />
-          )}
-
-          {/* Right Panel - Version History (shown when toggled) */}
-          {showVersionHistory && (
-            <VersionHistoryPanel
-              editor={editor}
-              orgSlug={orgSlug}
-              templateId={templateId}
-            />
-          )}
+          {/* Import Modal */}
+          <ImportModal
+            editor={editor}
+            isOpen={showImportModal}
+            onClose={() => setShowImportModal(false)}
+          />
         </div>
-
-        {/* Send Test Modal */}
-        <SendTestModal
-          editor={editor}
-          isOpen={showSendTestModal}
-          onClose={() => setShowSendTestModal(false)}
-          orgSlug={orgSlug}
-          templateId={templateId}
-        />
-
-        {/* Save Block Modal */}
-        <SaveBlockModal
-          editor={editor}
-          isOpen={showSaveBlockModal}
-          onClose={() => setShowSaveBlockModal(false)}
-          orgSlug={orgSlug}
-        />
-
-        {/* Import Modal */}
-        <ImportModal
-          editor={editor}
-          isOpen={showImportModal}
-          onClose={() => setShowImportModal(false)}
-        />
-      </div>
+      </EditorDndProvider>
     </EditorErrorBoundary>
   );
 }

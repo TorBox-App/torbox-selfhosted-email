@@ -10,6 +10,7 @@
 import {
   Body,
   Button,
+  Column,
   Container,
   Head,
   Heading,
@@ -19,6 +20,7 @@ import {
   Link,
   Preview,
   pixelBasedPreset,
+  Row,
   Section,
   Tailwind,
   Text,
@@ -293,14 +295,24 @@ function nodeToReactEmail(
       );
     }
 
-    case "emailSection":
+    case "emailSection": {
+      const sectionAttrs = node.attrs || {};
+      const sectionStyle: React.CSSProperties = {
+        backgroundColor: (sectionAttrs.backgroundColor as string) || "#ffffff",
+        padding: (sectionAttrs.padding as string) || "32px 24px",
+        borderRadius: (sectionAttrs.borderRadius as string) || "0px",
+        maxWidth: (sectionAttrs.maxWidth as string) || "600px",
+        margin: "0 auto",
+      };
+
       return (
-        <Section className="p-5" key={key}>
+        <Section key={key} style={sectionStyle}>
           {node.content?.map((child, i) =>
             nodeToReactEmail(child, testData, i, options)
           )}
         </Section>
       );
+    }
 
     case "emailImage": {
       // Map alignment to Tailwind classes
@@ -314,6 +326,13 @@ function nodeToReactEmail(
       // Use placeholder if src is empty or a variable
       const imgSrc = getImageWithPlaceholder(node.attrs?.src, "generic");
       const href = node.attrs?.href;
+      const borderRadius = node.attrs?.borderRadius || "0px";
+      const objectFit = node.attrs?.objectFit || "contain";
+
+      const imgStyle: React.CSSProperties = {
+        borderRadius: borderRadius !== "0px" ? borderRadius : undefined,
+        objectFit: objectFit !== "contain" ? objectFit : undefined,
+      };
 
       const imgElement = (
         <Img
@@ -321,6 +340,7 @@ function nodeToReactEmail(
           className="inline-block h-auto max-w-full"
           height={node.attrs?.height}
           src={imgSrc}
+          style={imgStyle}
           width={node.attrs?.width}
         />
       );
@@ -600,6 +620,49 @@ function nodeToReactEmail(
         </pre>
       );
 
+    case "emailRow": {
+      const rowAttrs = node.attrs || {};
+
+      return (
+        <Row key={key}>
+          {node.content?.map((child, i) =>
+            nodeToReactEmail(child, testData, i, options)
+          )}
+        </Row>
+      );
+    }
+
+    case "emailColumn": {
+      const colAttrs = node.attrs || {};
+      const padding = (colAttrs.padding as string) || "0px";
+      const colVerticalAlign = (colAttrs.verticalAlign as string) || "top";
+      const colBgColor = (colAttrs.backgroundColor as string) || "transparent";
+
+      // Map verticalAlign to style
+      const verticalAlignStyle =
+        colVerticalAlign === "middle"
+          ? "middle"
+          : colVerticalAlign === "bottom"
+            ? "bottom"
+            : "top";
+
+      return (
+        <Column
+          key={key}
+          style={{
+            padding,
+            verticalAlign: verticalAlignStyle,
+            backgroundColor:
+              colBgColor !== "transparent" ? colBgColor : undefined,
+          }}
+        >
+          {node.content?.map((child, i) =>
+            nodeToReactEmail(child, testData, i, options)
+          )}
+        </Column>
+      );
+    }
+
     default:
       // For unknown nodes, try to render children
       if (node.content) {
@@ -846,7 +909,7 @@ export function generateReactEmailCode(
         ? `\n        <Preview>${previewText}</Preview>`
         : "";
 
-      return `import { Html, Head, Body, Container, Text, Button, Section, Img, Hr, Heading, Link, Preview, Tailwind, pixelBasedPreset } from "@react-email/components";
+      return `import { Html, Head, Body, Container, Text, Button, Section, Row, Column, Img, Hr, Heading, Link, Preview, Tailwind, pixelBasedPreset } from "@react-email/components";
 
 export default function EmailTemplate() {
   return (
@@ -1088,10 +1151,26 @@ ${spaces}          </Section>`;
         dimensionClasses += "h-auto ";
       }
 
+      const borderRadius = (attrs.borderRadius as string) || "0px";
+      const objectFit = (attrs.objectFit as string) || "contain";
+
+      // Build style object for borderRadius and objectFit
+      const styleProps = [];
+      if (borderRadius !== "0px") {
+        styleProps.push(`borderRadius: "${borderRadius}"`);
+      }
+      if (objectFit !== "contain") {
+        styleProps.push(`objectFit: "${objectFit}"`);
+      }
+      const styleAttr =
+        styleProps.length > 0
+          ? `\n${spaces}              style={{ ${styleProps.join(", ")} }}`
+          : "";
+
       const imgCode = `<Img
 ${spaces}              src="${attrs.src || ""}"
 ${spaces}              alt="${attrs.alt || ""}"
-${spaces}              className="${dimensionClasses.trim()} max-w-full inline-block"
+${spaces}              className="${dimensionClasses.trim()} max-w-full inline-block"${styleAttr}
 ${spaces}            />`;
 
       if (href) {
@@ -1179,33 +1258,44 @@ ${spaces}          )}`;
     }
 
     case "emailRow": {
-      const attrs = content.attrs || {};
-      const gap = (attrs.gap as string) || "16px";
-      const gapClass = gap === "16px" ? "gap-4" : `gap-[${gap}]`;
-
       const rowChildren = (content.content || [])
         .map((c) => generateReactEmailCode(c, indent + 1))
         .filter(Boolean)
         .join("\n");
 
-      return `${spaces}          <div className="flex ${gapClass}">
+      return `${spaces}          <Row>
 ${rowChildren}
-${spaces}          </div>`;
+${spaces}          </Row>`;
     }
 
     case "emailColumn": {
       const attrs = content.attrs || {};
-      const width = (attrs.width as string) || "auto";
-      const widthClass = width === "auto" ? "flex-1" : `w-[${width}]`;
+      const padding = (attrs.padding as string) || "0px";
+      const verticalAlign = (attrs.verticalAlign as string) || "top";
+      const bgColor = (attrs.backgroundColor as string) || "transparent";
 
       const colChildren = (content.content || [])
         .map((c) => generateReactEmailCode(c, indent + 1))
         .filter(Boolean)
         .join("\n");
 
-      return `${spaces}            <div className="${widthClass}">
+      // Build style object
+      const styleProps = [];
+      if (padding !== "0px") {
+        styleProps.push(`padding: "${padding}"`);
+      }
+      if (verticalAlign !== "top") {
+        styleProps.push(`verticalAlign: "${verticalAlign}"`);
+      }
+      if (bgColor !== "transparent") {
+        styleProps.push(`backgroundColor: "${bgColor}"`);
+      }
+      const styleAttr =
+        styleProps.length > 0 ? ` style={{ ${styleProps.join(", ")} }}` : "";
+
+      return `${spaces}            <Column${styleAttr}>
 ${colChildren}
-${spaces}            </div>`;
+${spaces}            </Column>`;
     }
 
     case "emailPreview": {

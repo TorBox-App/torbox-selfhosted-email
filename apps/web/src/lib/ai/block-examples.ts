@@ -1466,6 +1466,199 @@ export const PRICING_EXAMPLES: BlockExample[] = [
 
 export const PRODUCT_EXAMPLES: BlockExample[] = [
   {
+    id: "product-showcase",
+    name: "Product Showcase",
+    category: "product",
+    description:
+      "Hero section with dark background, text, and image, plus two product cards below",
+    tags: [
+      "product",
+      "showcase",
+      "hero",
+      "featured",
+      "two-column",
+      "ecommerce",
+    ],
+    tiptapJson: {
+      type: "doc",
+      content: [
+        // Hero section with dark background
+        {
+          type: "emailSection",
+          attrs: {
+            padding: "0",
+            backgroundColor: "#292524",
+            borderRadius: "8px",
+          },
+          content: [
+            {
+              type: "emailRow",
+              content: [
+                {
+                  type: "emailColumn",
+                  attrs: { width: "55%", padding: "32px 24px" },
+                  content: [
+                    {
+                      type: "heading",
+                      attrs: { level: 1 },
+                      content: [
+                        {
+                          type: "text",
+                          marks: [
+                            { type: "textStyle", attrs: { color: "#ffffff" } },
+                          ],
+                          text: "Coffee Storage",
+                        },
+                      ],
+                    },
+                    { type: "emailSpacer", attrs: { height: 12 } },
+                    {
+                      type: "paragraph",
+                      content: [
+                        {
+                          type: "text",
+                          marks: [
+                            {
+                              type: "textStyle",
+                              attrs: { color: "rgba(255,255,255,0.6)" },
+                            },
+                          ],
+                          text: "Keep your coffee fresher for longer with innovative technology.",
+                        },
+                      ],
+                    },
+                    { type: "emailSpacer", attrs: { height: 16 } },
+                    {
+                      type: "paragraph",
+                      content: [
+                        {
+                          type: "text",
+                          marks: [
+                            { type: "bold" },
+                            { type: "link", attrs: { href: "{{shopUrl}}" } },
+                            {
+                              type: "textStyle",
+                              attrs: { color: "rgba(255,255,255,0.8)" },
+                            },
+                          ],
+                          text: "Shop now →",
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  type: "emailColumn",
+                  attrs: {
+                    width: "45%",
+                    padding: "0",
+                    verticalAlign: "middle",
+                  },
+                  content: [
+                    {
+                      type: "emailImage",
+                      attrs: {
+                        src: "{{heroImageUrl}}",
+                        alt: "{{heroImageAlt}}",
+                        align: "right",
+                        borderRadius: "4px",
+                        objectFit: "cover",
+                        height: 250,
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        // Spacer between sections
+        { type: "emailSpacer", attrs: { height: 32 } },
+        // Two product cards section
+        {
+          type: "emailSection",
+          attrs: {
+            padding: "0",
+            backgroundColor: "#ffffff",
+          },
+          content: [
+            {
+              type: "emailRow",
+              content: [
+                {
+                  type: "emailColumn",
+                  attrs: { width: "50%", padding: "0 12px 0 0" },
+                  content: [
+                    {
+                      type: "emailImage",
+                      attrs: {
+                        src: "{{product1ImageUrl}}",
+                        alt: "{{product1Name}}",
+                        align: "center",
+                        borderRadius: "4px",
+                      },
+                    },
+                    { type: "emailSpacer", attrs: { height: 16 } },
+                    {
+                      type: "heading",
+                      attrs: { level: 3 },
+                      content: [{ type: "text", text: "{{product1Name}}" }],
+                    },
+                    {
+                      type: "paragraph",
+                      content: [
+                        {
+                          type: "text",
+                          marks: [
+                            { type: "textStyle", attrs: { color: "#6b7280" } },
+                          ],
+                          text: "{{product1Description}}",
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  type: "emailColumn",
+                  attrs: { width: "50%", padding: "0 0 0 12px" },
+                  content: [
+                    {
+                      type: "emailImage",
+                      attrs: {
+                        src: "{{product2ImageUrl}}",
+                        alt: "{{product2Name}}",
+                        align: "center",
+                        borderRadius: "4px",
+                      },
+                    },
+                    { type: "emailSpacer", attrs: { height: 16 } },
+                    {
+                      type: "heading",
+                      attrs: { level: 3 },
+                      content: [{ type: "text", text: "{{product2Name}}" }],
+                    },
+                    {
+                      type: "paragraph",
+                      content: [
+                        {
+                          type: "text",
+                          marks: [
+                            { type: "textStyle", attrs: { color: "#6b7280" } },
+                          ],
+                          text: "{{product2Description}}",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     id: "product-card",
     name: "Product Card",
     category: "product",

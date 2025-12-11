@@ -29,6 +29,8 @@ export type EmailImageAttributes = {
   height: number | null;
   align: "left" | "center" | "right";
   href: string | null;
+  borderRadius: string;
+  objectFit: "contain" | "cover" | "fill" | "none" | "scale-down";
 };
 
 declare module "@tiptap/core" {
@@ -69,10 +71,15 @@ const EmailImageNodeView = ({
         <div className="relative">
           <img
             alt={attrs.alt || "Image placeholder"}
-            className={`h-auto max-w-full ${isUsingPlaceholder ? "opacity-75" : ""}`}
+            className={`max-w-full ${isUsingPlaceholder ? "opacity-75" : ""}`}
             height={attrs.height || undefined}
             src={displaySrc}
-            style={{ maxWidth: "100%" }}
+            style={{
+              maxWidth: "100%",
+              borderRadius: attrs.borderRadius || "0px",
+              objectFit: attrs.objectFit || "contain",
+              height: attrs.height ? `${attrs.height}px` : "auto",
+            }}
             width={attrs.width || undefined}
           />
           {isUsingPlaceholder && (
@@ -192,6 +199,49 @@ const EmailImageNodeView = ({
                     ))}
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="borderRadius">Border Radius</Label>
+                  <div className="flex gap-2">
+                    {["0px", "4px", "8px", "12px", "9999px"].map((radius) => (
+                      <Button
+                        className="flex-1"
+                        key={radius}
+                        onClick={() =>
+                          updateAttributes({ borderRadius: radius })
+                        }
+                        size="sm"
+                        variant={
+                          attrs.borderRadius === radius ? "default" : "outline"
+                        }
+                      >
+                        {radius === "9999px" ? "Full" : radius}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Object Fit</Label>
+                  <div className="flex gap-2">
+                    {(["contain", "cover", "fill"] as const).map((fit) => (
+                      <Button
+                        className="flex-1 capitalize"
+                        key={fit}
+                        onClick={() => updateAttributes({ objectFit: fit })}
+                        size="sm"
+                        variant={
+                          attrs.objectFit === fit ? "default" : "outline"
+                        }
+                      >
+                        {fit}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    How the image fills its container
+                  </p>
+                </div>
               </div>
             </PopoverContent>
           </Popover>
@@ -215,6 +265,8 @@ export const EmailImageNode = Node.create({
       height: { default: null },
       align: { default: "center" },
       href: { default: null },
+      borderRadius: { default: "0px" },
+      objectFit: { default: "contain" },
     };
   },
 
