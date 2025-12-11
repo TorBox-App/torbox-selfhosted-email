@@ -27,6 +27,7 @@ import {
   EmailCodeInlineMark,
   EmailColumnNode,
   EmailDividerNode,
+  EmailIconNode,
   EmailImageNode,
   EmailPreviewNode,
   EmailRowNode,
@@ -162,6 +163,7 @@ export function useTemplateEditor({
       EmailColumnNode,
       EmailPreviewNode,
       EmailAvatarNode,
+      EmailIconNode,
       EmailCodeBlockNode,
       EmailSocialLinksNode,
 

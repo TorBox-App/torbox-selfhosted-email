@@ -422,6 +422,47 @@ function nodeToReactEmail(
       );
     }
 
+    case "emailIcon": {
+      const icon = node.attrs?.icon || "check";
+      const size = node.attrs?.size || 48;
+      const iconColor = node.attrs?.iconColor || "#3b82f6";
+      const bgColor = node.attrs?.backgroundColor || "#dbeafe";
+      const align = node.attrs?.align || "left";
+
+      const alignMap: Record<string, string> = {
+        left: "text-left",
+        center: "text-center",
+        right: "text-right",
+      };
+
+      // Generate Iconify URL
+      const encodedColor = encodeURIComponent(iconColor.replace("#", ""));
+      const iconUrl = `https://api.iconify.design/lucide/${icon}.svg?color=%23${encodedColor}`;
+
+      // Calculate padding (icon takes ~60% of total size)
+      const padding = Math.round(size * 0.2);
+      const iconSize = size - padding * 2;
+
+      return (
+        <div className={alignMap[align] || "text-left"} key={key}>
+          <div
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: bgColor,
+              borderRadius: "9999px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding,
+            }}
+          >
+            <Img alt={icon} height={iconSize} src={iconUrl} width={iconSize} />
+          </div>
+        </div>
+      );
+    }
+
     case "emailCodeBlock": {
       const code = node.attrs?.code || "";
       const bgColor = node.attrs?.backgroundColor || "#1e1e1e";
@@ -1333,6 +1374,40 @@ ${spaces}              height={${size}}
 ${spaces}              className="inline-block"
 ${spaces}              style={{ borderRadius: "${borderRadius}", objectFit: "cover" }}
 ${spaces}            />
+${spaces}          </div>`;
+    }
+
+    case "emailIcon": {
+      const attrs = content.attrs || {};
+      const icon = (attrs.icon as string) || "check";
+      const size = (attrs.size as number) || 48;
+      const iconColor = (attrs.iconColor as string) || "#3b82f6";
+      const bgColor = (attrs.backgroundColor as string) || "#dbeafe";
+      const align = (attrs.align as string) || "left";
+
+      const alignClass =
+        align === "center"
+          ? "text-center"
+          : align === "right"
+            ? "text-right"
+            : "text-left";
+
+      // Generate Iconify URL
+      const encodedColor = encodeURIComponent(iconColor.replace("#", ""));
+      const iconUrl = `https://api.iconify.design/lucide/${icon}.svg?color=%23${encodedColor}`;
+
+      const padding = Math.round(size * 0.2);
+      const iconSize = size - padding * 2;
+
+      return `${spaces}          <div className="${alignClass}">
+${spaces}            <div style={{ width: ${size}, height: ${size}, backgroundColor: "${bgColor}", borderRadius: "9999px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: ${padding} }}>
+${spaces}              <Img
+${spaces}                src="${iconUrl}"
+${spaces}                alt="${icon}"
+${spaces}                width={${iconSize}}
+${spaces}                height={${iconSize}}
+${spaces}              />
+${spaces}            </div>
 ${spaces}          </div>`;
     }
 

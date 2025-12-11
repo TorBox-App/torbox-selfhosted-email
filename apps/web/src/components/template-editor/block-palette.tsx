@@ -5,6 +5,7 @@ import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
 import {
   Braces,
+  Circle,
   Code,
   Columns,
   FileText,
@@ -122,6 +123,13 @@ const blocks: BlockItem[] = [
     description: "Circular profile image",
     icon: <User className="h-5 w-5" />,
     action: (editor) => editor.commands.insertEmailAvatar(),
+    category: "email",
+  },
+  {
+    name: "Icon",
+    description: "Icon with background",
+    icon: <Circle className="h-5 w-5" />,
+    action: (editor) => editor.commands.insertEmailIcon(),
     category: "email",
   },
   {

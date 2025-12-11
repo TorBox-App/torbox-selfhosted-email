@@ -20,6 +20,12 @@ export type { EmailColumnAttributes } from "./email-column-node";
 export { EmailColumnNode } from "./email-column-node";
 export type { EmailDividerAttributes } from "./email-divider-node";
 export { EmailDividerNode } from "./email-divider-node";
+export type { EmailIconAttributes, IconName } from "./email-icon-node";
+export {
+  AVAILABLE_ICONS,
+  EmailIconNode,
+  getIconifyUrl,
+} from "./email-icon-node";
 export type { EmailImageAttributes } from "./email-image-node";
 export { EmailImageNode } from "./email-image-node";
 export type { EmailPreviewAttributes } from "./email-preview-node";
