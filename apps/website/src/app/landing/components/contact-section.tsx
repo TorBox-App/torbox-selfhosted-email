@@ -122,7 +122,7 @@ export function ContactSection() {
                   variant="outline"
                 >
                   <a
-                    href="https://github.com/silicondeck/shadcn-dashboard-landing-template/issues"
+                    href="https://github.com/wraps-team/wraps/issues"
                     rel="noopener noreferrer"
                     target="_blank"
                   >

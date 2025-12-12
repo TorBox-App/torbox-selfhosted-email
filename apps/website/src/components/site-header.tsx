@@ -74,7 +74,7 @@ export function SiteHeader() {
             >
               <a
                 className="dark:text-foreground"
-                href="https://github.com/silicondeck/shadcn-dashboard-landing-template"
+                href="https://github.com/wraps-team/wraps"
                 rel="noopener noreferrer"
                 target="_blank"
               >

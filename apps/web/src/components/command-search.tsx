@@ -2,32 +2,36 @@
 
 import { Command as CommandPrimitive } from "cmdk";
 import {
-  AlertTriangle,
-  Bell,
-  Calendar,
-  CheckSquare,
+  BarChart3,
+  Building2,
+  Cloud,
   CreditCard,
-  HelpCircle,
-  LayoutDashboard,
-  Link2,
+  FileText,
   type LucideIcon,
   Mail,
-  MessageCircle,
   Palette,
   Search,
   Settings,
   Shield,
-  User,
+  Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import * as React from "react";
+import {
+  type ComponentPropsWithoutRef,
+  type ElementRef,
+  forwardRef,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useActiveOrganization } from "@/contexts/organization-context";
 import { cn } from "@/lib/utils";
 
-const Command = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive>
+const Command = forwardRef<
+  ElementRef<typeof CommandPrimitive>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive>
 >(({ className, ...props }, ref) => (
   <CommandPrimitive
     className={cn(
@@ -40,9 +44,9 @@ const Command = React.forwardRef<
 ));
 Command.displayName = CommandPrimitive.displayName;
 
-const CommandInput = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Input>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
+const CommandInput = forwardRef<
+  ElementRef<typeof CommandPrimitive.Input>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Input
     className={cn(
@@ -55,9 +59,9 @@ const CommandInput = React.forwardRef<
 ));
 CommandInput.displayName = CommandPrimitive.Input.displayName;
 
-const CommandList = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
+const CommandList = forwardRef<
+  ElementRef<typeof CommandPrimitive.List>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive.List>
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     className={cn(
@@ -70,9 +74,9 @@ const CommandList = React.forwardRef<
 ));
 CommandList.displayName = CommandPrimitive.List.displayName;
 
-const CommandEmpty = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Empty>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
+const CommandEmpty = forwardRef<
+  ElementRef<typeof CommandPrimitive.Empty>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
 >((props, ref) => (
   <CommandPrimitive.Empty
     className="flex h-12 items-center justify-center text-sm text-zinc-500 dark:text-zinc-400"
@@ -82,9 +86,9 @@ const CommandEmpty = React.forwardRef<
 ));
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
 
-const CommandGroup = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Group>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
+const CommandGroup = forwardRef<
+  ElementRef<typeof CommandPrimitive.Group>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Group
     className={cn(
@@ -97,10 +101,12 @@ const CommandGroup = React.forwardRef<
 ));
 CommandGroup.displayName = CommandPrimitive.Group.displayName;
 
-const CommandItem = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
->(({ className, ...props }, ref) => (
+const CommandItem = forwardRef<
+  ElementRef<typeof CommandPrimitive.Item>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {
+    shortcut?: string;
+  }
+>(({ className, shortcut, children, ...props }, ref) => (
   <CommandPrimitive.Item
     className={cn(
       "relative flex h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-4 text-sm text-zinc-700 outline-none transition-colors data-[disabled=true]:pointer-events-none data-[selected=true]:bg-zinc-100 data-[selected=true]:text-zinc-900 data-[disabled=true]:opacity-50 dark:text-zinc-300 dark:data-[selected=true]:bg-zinc-800 dark:data-[selected=true]:text-zinc-100 [&+[cmdk-item]]:mt-1",
@@ -108,7 +114,14 @@ const CommandItem = React.forwardRef<
     )}
     ref={ref}
     {...props}
-  />
+  >
+    {children}
+    {shortcut && (
+      <kbd className="pointer-events-none ml-auto hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:flex">
+        {shortcut}
+      </kbd>
+    )}
+  </CommandPrimitive.Item>
 ));
 CommandItem.displayName = CommandPrimitive.Item.displayName;
 
@@ -117,6 +130,8 @@ type SearchItem = {
   url: string;
   group: string;
   icon?: LucideIcon;
+  shortcut?: string;
+  keywords?: string[];
 };
 
 type CommandSearchProps = {
@@ -126,117 +141,107 @@ type CommandSearchProps = {
 
 export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   const router = useRouter();
-  const commandRef = React.useRef<HTMLDivElement>(null);
+  const commandRef = useRef<HTMLDivElement>(null);
+  const { activeOrganization } = useActiveOrganization();
 
-  const searchItems: SearchItem[] = [
-    // Home
-    {
-      title: "Home",
-      url: "/",
-      group: "Navigation",
-      icon: LayoutDashboard,
-    },
+  const orgSlug = activeOrganization?.slug;
 
-    // Apps
-    { title: "Mail", url: "/mail", group: "Apps", icon: Mail },
-    { title: "Tasks", url: "/tasks", group: "Apps", icon: CheckSquare },
-    { title: "Chat", url: "/chat", group: "Apps", icon: MessageCircle },
-    { title: "Calendar", url: "/calendar", group: "Apps", icon: Calendar },
+  // Build search items with org-aware URLs
+  const searchItems: SearchItem[] = useMemo(() => {
+    const items: SearchItem[] = [];
 
-    // Auth Pages
-    {
-      title: "Sign In 1",
-      url: "/auth",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Sign Up 1",
-      url: "/sign-up",
-      group: "Auth Pages",
-      icon: Shield,
-    },
-    {
-      title: "Forgot Password 1",
-      url: "/forgot-password",
-      group: "Auth Pages",
-      icon: Shield,
-    },
+    // Organization Navigation (only if org is selected)
+    if (orgSlug) {
+      items.push(
+        {
+          title: "Emails",
+          url: `/${orgSlug}/emails`,
+          group: "Navigation",
+          icon: Mail,
+          shortcut: "G E",
+          keywords: ["inbox", "sent", "messages"],
+        },
+        {
+          title: "Templates",
+          url: `/${orgSlug}/templates`,
+          group: "Navigation",
+          icon: FileText,
+          shortcut: "G T",
+          keywords: ["email templates", "editor"],
+        },
+        {
+          title: "Analytics",
+          url: `/${orgSlug}/analytics`,
+          group: "Navigation",
+          icon: BarChart3,
+          shortcut: "G A",
+          keywords: ["metrics", "stats", "dashboard", "reports"],
+        }
+      );
+    }
 
-    // Errors
-    {
-      title: "Unauthorized",
-      url: "/errors/unauthorized",
-      group: "Errors",
-      icon: AlertTriangle,
-    },
-    {
-      title: "Forbidden",
-      url: "/errors/forbidden",
-      group: "Errors",
-      icon: AlertTriangle,
-    },
-    {
-      title: "Not Found",
-      url: "/errors/not-found",
-      group: "Errors",
-      icon: AlertTriangle,
-    },
-    {
-      title: "Internal Server Error",
-      url: "/errors/internal-server-error",
-      group: "Errors",
-      icon: AlertTriangle,
-    },
-    {
-      title: "Under Maintenance",
-      url: "/errors/under-maintenance",
-      group: "Errors",
-      icon: AlertTriangle,
-    },
+    // Organization Settings (only if org is selected)
+    if (orgSlug) {
+      items.push(
+        {
+          title: "Organization Settings",
+          url: `/${orgSlug}/settings`,
+          group: "Organization",
+          icon: Building2,
+          shortcut: "G S",
+          keywords: ["org", "workspace"],
+        },
+        {
+          title: "Brand Kits",
+          url: `/${orgSlug}/settings?tab=brand-kits`,
+          group: "Organization",
+          icon: Palette,
+          keywords: ["branding", "colors", "fonts", "logo"],
+        },
+        {
+          title: "AWS Accounts",
+          url: `/${orgSlug}/settings?tab=aws-accounts`,
+          group: "Organization",
+          icon: Cloud,
+          keywords: ["amazon", "ses", "infrastructure", "connect"],
+        },
+        {
+          title: "Team Members",
+          url: `/${orgSlug}/settings?tab=members`,
+          group: "Organization",
+          icon: Users,
+          keywords: ["invite", "permissions", "roles"],
+        },
+        {
+          title: "Organization Billing",
+          url: `/${orgSlug}/settings?tab=billing`,
+          group: "Organization",
+          icon: CreditCard,
+          keywords: ["subscription", "plan", "payment"],
+        }
+      );
+    }
 
-    // Settings
-    {
-      title: "User Settings",
-      url: "/settings/user",
-      group: "Settings",
-      icon: User,
-    },
-    {
-      title: "Account Settings",
-      url: "/settings/account",
-      group: "Settings",
-      icon: Settings,
-    },
-    {
-      title: "Plans & Billing",
-      url: "/settings/billing",
-      group: "Settings",
-      icon: CreditCard,
-    },
-    {
-      title: "Appearance",
-      url: "/settings/appearance",
-      group: "Settings",
-      icon: Palette,
-    },
-    {
-      title: "Notifications",
-      url: "/settings/notifications",
-      group: "Settings",
-      icon: Bell,
-    },
-    {
-      title: "Connections",
-      url: "/settings/connections",
-      group: "Settings",
-      icon: Link2,
-    },
+    // User Account Settings (always available)
+    items.push(
+      {
+        title: "Security",
+        url: "/settings/security",
+        group: "Account",
+        icon: Shield,
+        keywords: ["password", "2fa", "passkey", "sessions"],
+      },
+      {
+        title: "Account Settings",
+        url: "/settings/account",
+        group: "Account",
+        icon: Settings,
+        keywords: ["delete", "preferences"],
+      }
+    );
 
-    // Pages
-    { title: "FAQs", url: "/faqs", group: "Pages", icon: HelpCircle },
-    { title: "Pricing", url: "/pricing", group: "Pages", icon: CreditCard },
-  ];
+    return items;
+  }, [orgSlug]);
 
   const groupedItems = searchItems.reduce(
     (acc, item) => {
@@ -249,19 +254,22 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
     {} as Record<string, SearchItem[]>
   );
 
-  const handleSelect = (url: string) => {
-    router.push(url);
-    onOpenChange(false);
-    // Bounce effect like Vercel
-    if (commandRef.current) {
-      commandRef.current.style.transform = "scale(0.96)";
-      setTimeout(() => {
-        if (commandRef.current) {
-          commandRef.current.style.transform = "";
-        }
-      }, 100);
-    }
-  };
+  const handleSelect = useCallback(
+    (url: string) => {
+      router.push(url);
+      onOpenChange(false);
+      // Bounce effect like Vercel
+      if (commandRef.current) {
+        commandRef.current.style.transform = "scale(0.96)";
+        setTimeout(() => {
+          if (commandRef.current) {
+            commandRef.current.style.transform = "";
+          }
+        }, 100);
+      }
+    },
+    [router, onOpenChange]
+  );
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -271,7 +279,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
           className="transition-transform duration-100 ease-out"
           ref={commandRef}
         >
-          <CommandInput autoFocus placeholder="What do you need?" />
+          <CommandInput autoFocus placeholder="Where do you want to go?" />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             {Object.entries(groupedItems).map(([group, items]) => (
@@ -281,7 +289,9 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
                   return (
                     <CommandItem
                       key={item.url}
+                      keywords={item.keywords}
                       onSelect={() => handleSelect(item.url)}
+                      shortcut={item.shortcut}
                       value={item.title}
                     >
                       {Icon && <Icon className="mr-2 h-4 w-4" />}
@@ -303,6 +313,7 @@ export function SearchTrigger({ onClick }: { onClick: () => void }) {
     <button
       className="relative inline-flex h-8 w-full items-center justify-start gap-2 whitespace-nowrap rounded-md border border-input bg-background px-3 py-1 font-medium text-muted-foreground text-sm shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 sm:pr-12 md:w-36 lg:w-56"
       onClick={onClick}
+      type="button"
     >
       <Search className="mr-2 h-3.5 w-3.5" />
       <span className="hidden lg:inline-flex">Search...</span>

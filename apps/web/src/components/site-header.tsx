@@ -1,16 +1,53 @@
 "use client";
 
-import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { CommandSearch, SearchTrigger } from "@/components/command-search";
 import { ModeToggle } from "@/components/mode-toggle";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useActiveOrganization } from "@/contexts/organization-context";
+
+/**
+ * Check if the event target is an input element
+ */
+function isInputElement(target: EventTarget | null): boolean {
+  if (!target) {
+    return false;
+  }
+  if (target instanceof HTMLInputElement) {
+    return true;
+  }
+  if (target instanceof HTMLTextAreaElement) {
+    return true;
+  }
+  if ((target as HTMLElement)?.isContentEditable) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Get the navigation URL for a G-prefix shortcut key
+ */
+function getShortcutUrl(key: string, orgSlug: string): string | null {
+  const shortcuts: Record<string, string> = {
+    E: `/${orgSlug}/emails`,
+    T: `/${orgSlug}/templates`,
+    A: `/${orgSlug}/analytics`,
+    S: `/${orgSlug}/settings`,
+  };
+  return shortcuts[key] ?? null;
+}
 
 export function SiteHeader() {
-  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const router = useRouter();
+  const { activeOrganization } = useActiveOrganization();
+  const orgSlug = activeOrganization?.slug;
 
-  React.useEffect(() => {
+  // ⌘K to open command menu
+  useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -21,6 +58,55 @@ export function SiteHeader() {
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, []);
+
+  // G-prefix shortcuts (work when menu is closed)
+  useEffect(() => {
+    if (searchOpen || !orgSlug) {
+      return;
+    }
+
+    let pendingKey: string | null = null;
+    let pendingTimeout: NodeJS.Timeout | null = null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isInputElement(e.target)) {
+        return;
+      }
+
+      const key = e.key.toUpperCase();
+
+      // Handle "G" prefix shortcuts
+      if (pendingKey === "G") {
+        if (pendingTimeout) {
+          clearTimeout(pendingTimeout);
+        }
+        pendingKey = null;
+
+        const url = getShortcutUrl(key, orgSlug);
+        if (url) {
+          e.preventDefault();
+          router.push(url);
+        }
+        return;
+      }
+
+      // Start "G" prefix sequence
+      if (key === "G") {
+        pendingKey = "G";
+        pendingTimeout = setTimeout(() => {
+          pendingKey = null;
+        }, 500);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      if (pendingTimeout) {
+        clearTimeout(pendingTimeout);
+      }
+    };
+  }, [searchOpen, orgSlug, router]);
 
   return (
     <>
@@ -35,21 +121,6 @@ export function SiteHeader() {
             <SearchTrigger onClick={() => setSearchOpen(true)} />
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              asChild
-              className="hidden sm:flex"
-              size="sm"
-              variant="ghost"
-            >
-              <a
-                className="dark:text-foreground"
-                href="https://github.com/silicondeck/shadcn-dashboard-landing-template"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                GitHub
-              </a>
-            </Button>
             <ModeToggle />
           </div>
         </div>
