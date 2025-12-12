@@ -5,7 +5,8 @@ import { GetConfigurationSetCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { createServerValidate } from "@tanstack/react-form/nextjs";
 import { auth } from "@wraps/auth";
 import { awsAccount, db } from "@wraps/db";
-import { eq } from "drizzle-orm";
+import { subscription } from "@wraps/db/schema/auth";
+import { and, eq, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getCredentials } from "@/lib/aws/assume-role";
@@ -16,6 +17,7 @@ import {
   connectAWSAccountSchema,
 } from "@/lib/forms/connect-aws-account";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
+import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 
 // Create server validator
 const serverValidate = createServerValidate({
@@ -164,10 +166,35 @@ export async function connectAWSAccountAction(
       return { error: "Insufficient permissions" };
     }
 
-    // 4. Use the external ID provided from the form (generated on client and used in CloudFormation)
+    // 4. Check AWS account limit based on subscription plan
+    const activeSubscription = await db.query.subscription.findFirst({
+      where: and(
+        eq(subscription.referenceId, validatedData.organizationId),
+        or(
+          eq(subscription.status, "active"),
+          eq(subscription.status, "trialing")
+        )
+      ),
+    });
+
+    const existingAccounts = await db.query.awsAccount.findMany({
+      where: (table, { eq }) =>
+        eq(table.organizationId, validatedData.organizationId),
+    });
+
+    const planId = activeSubscription?.plan || "starter";
+    if (!canAddAwsAccount(planId, existingAccounts.length)) {
+      return {
+        error: "AWS account limit reached",
+        message: getAwsAccountLimitMessage(planId),
+        limitReached: true,
+      };
+    }
+
+    // 5. Use the external ID provided from the form (generated on client and used in CloudFormation)
     const externalId = validatedData.externalId;
 
-    // 5. Test connection by attempting to get credentials (may assume role or use dev mode)
+    // 6. Test connection by attempting to get credentials (may assume role or use dev mode)
     try {
       await getCredentials({
         roleArn: validatedData.roleArn,

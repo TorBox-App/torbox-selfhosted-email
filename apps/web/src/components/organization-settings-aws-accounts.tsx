@@ -45,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { canAddAwsAccount, getAwsAccountLimit, type PlanId } from "@/lib/plans";
 
 type OrganizationSettingsAwsAccountsProps = {
   organization: {
@@ -52,11 +53,13 @@ type OrganizationSettingsAwsAccountsProps = {
     name: string;
   };
   userRole: "owner" | "admin" | "member";
+  planId?: PlanId | string;
 };
 
 export function OrganizationSettingsAwsAccounts({
   organization,
   userRole,
+  planId = "starter",
 }: OrganizationSettingsAwsAccountsProps) {
   const params = useParams();
   const orgSlug = params.orgSlug as string;
@@ -70,6 +73,9 @@ export function OrganizationSettingsAwsAccounts({
   const [_refreshKey, setRefreshKey] = useState(0);
 
   const canEdit = userRole === "owner" || userRole === "admin";
+  const accountLimit = getAwsAccountLimit(planId);
+  const canAddMore = canAddAwsAccount(planId, accounts.length);
+  const isAtLimit = !canAddMore && accountLimit !== -1;
 
   // Trigger a refresh
   const refreshData = () => setRefreshKey((prev) => prev + 1);
@@ -203,13 +209,40 @@ export function OrganizationSettingsAwsAccounts({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>AWS Accounts</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                AWS Accounts
+                {accountLimit !== -1 && (
+                  <Badge className="font-normal" variant="outline">
+                    {accounts.length} / {accountLimit}
+                  </Badge>
+                )}
+              </CardTitle>
               <CardDescription>
                 Manage AWS accounts connected to your organization.
+                {isAtLimit && (
+                  <span className="mt-1 block text-amber-600 dark:text-amber-400">
+                    You've reached your plan's AWS account limit.{" "}
+                    <Link
+                      className="underline hover:no-underline"
+                      href={`/${orgSlug}/settings?tab=billing`}
+                    >
+                      Upgrade your plan
+                    </Link>{" "}
+                    for more.
+                  </span>
+                )}
               </CardDescription>
             </div>
             {canEdit && (
-              <Button onClick={() => setConnectDialogOpen(true)}>
+              <Button
+                disabled={isAtLimit}
+                onClick={() => setConnectDialogOpen(true)}
+                title={
+                  isAtLimit
+                    ? "Upgrade your plan to add more AWS accounts"
+                    : undefined
+                }
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Connect Account
               </Button>

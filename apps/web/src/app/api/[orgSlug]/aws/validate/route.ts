@@ -2,9 +2,11 @@ import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
+import { subscription } from "@wraps/db/schema/auth";
+import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 
 type RouteContext = {
   params: Promise<{
@@ -97,6 +99,34 @@ export async function POST(request: Request, context: RouteContext) {
           })
           .where(eq(awsAccount.id, existingAccount.id));
       } else {
+        // Check AWS account limit before creating a new account
+        const activeSubscription = await db.query.subscription.findFirst({
+          where: and(
+            eq(subscription.referenceId, orgWithMembership.id),
+            or(
+              eq(subscription.status, "active"),
+              eq(subscription.status, "trialing")
+            )
+          ),
+        });
+
+        const existingAccountCount = await db.query.awsAccount.findMany({
+          where: (table, { eq }) =>
+            eq(table.organizationId, orgWithMembership.id),
+        });
+
+        const planId = activeSubscription?.plan || "starter";
+        if (!canAddAwsAccount(planId, existingAccountCount.length)) {
+          return NextResponse.json(
+            {
+              error: "AWS account limit reached",
+              message: getAwsAccountLimitMessage(planId),
+              limitReached: true,
+            },
+            { status: 403 }
+          );
+        }
+
         // Create new account
         await db.insert(awsAccount).values({
           organizationId: orgWithMembership.id,
