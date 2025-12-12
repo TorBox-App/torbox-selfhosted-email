@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CreateOrganizationForm } from "@/components/forms/create-organization-form";
 import Loader from "@/components/loader";
 import {
@@ -14,6 +14,8 @@ import { authClient } from "@/lib/auth-client";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const plan = searchParams.get("plan");
   const { data: session, isPending } = authClient.useSession();
 
   // Redirect to auth if not logged in
@@ -26,6 +28,15 @@ export default function OnboardingPage() {
     return <Loader fullScreen />;
   }
 
+  // Handle successful org creation - pass plan param to org onboarding
+  const handleSuccess = (orgSlug: string) => {
+    const url = plan
+      ? `/${orgSlug}/onboarding?plan=${plan}`
+      : `/${orgSlug}/onboarding`;
+    router.push(url);
+    router.refresh();
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -37,7 +48,7 @@ export default function OnboardingPage() {
         </CardHeader>
 
         <CardContent>
-          <CreateOrganizationForm />
+          <CreateOrganizationForm onSuccess={handleSuccess} />
         </CardContent>
       </Card>
     </div>
