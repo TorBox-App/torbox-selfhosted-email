@@ -32,7 +32,7 @@ const plans = [
     description: "Full hosted dashboard access",
     highlight: true,
     cta: "Subscribe",
-    ctaLink: "https://app.wraps.dev/auth?plan=starter",
+    ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=starter",
     features: [
       "Everything in CLI & SDK",
       "Hosted dashboard at wraps.dev",
