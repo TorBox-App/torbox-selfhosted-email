@@ -60,21 +60,19 @@ describe("Better-Auth Stripe Plugin - Plan Configuration", () => {
     expect(proPlan).toBeDefined();
     expect(proPlan.name).toBe("pro");
     expect(proPlan.limits).toBeDefined();
-    expect(proPlan.freeTrial).toBeDefined();
-    expect(proPlan.freeTrial.days).toBe(14);
   });
 
-  it("should have Enterprise plan configured", () => {
+  it("should have Growth plan configured", () => {
     const stripePlugin = auth.options.plugins?.find(
       (plugin: any) => plugin?.id === "stripe" || plugin?.$id === "stripe"
     );
 
     const plans = (stripePlugin as any).plans;
-    const enterprisePlan = plans.find((p: any) => p.name === "enterprise");
+    const growthPlan = plans.find((p: any) => p.name === "growth");
 
-    expect(enterprisePlan).toBeDefined();
-    expect(enterprisePlan.name).toBe("enterprise");
-    expect(enterprisePlan.limits).toBeDefined();
+    expect(growthPlan).toBeDefined();
+    expect(growthPlan.name).toBe("growth");
+    expect(growthPlan.limits).toBeDefined();
   });
 
   it("should have Pro plan with correct limits", () => {
@@ -85,22 +83,26 @@ describe("Better-Auth Stripe Plugin - Plan Configuration", () => {
     const plans = (stripePlugin as any).plans;
     const proPlan = plans.find((p: any) => p.name === "pro");
 
-    expect(proPlan.limits.emails).toBe(100_000);
+    expect(proPlan.limits.emails).toBe(-1); // Unlimited (they pay AWS)
     expect(proPlan.limits.awsAccounts).toBe(3);
-    expect(proPlan.limits.members).toBe(10);
+    expect(proPlan.limits.aiMessages).toBe(250);
+    expect(proPlan.limits.bulkBatchSize).toBe(1000);
+    expect(proPlan.limits.members).toBe(-1); // Unlimited (we don't gate on team size)
   });
 
-  it("should have Enterprise plan with unlimited limits", () => {
+  it("should have Growth plan with unlimited limits", () => {
     const stripePlugin = auth.options.plugins?.find(
       (plugin: any) => plugin?.id === "stripe" || plugin?.$id === "stripe"
     );
 
     const plans = (stripePlugin as any).plans;
-    const enterprisePlan = plans.find((p: any) => p.name === "enterprise");
+    const growthPlan = plans.find((p: any) => p.name === "growth");
 
-    expect(enterprisePlan.limits.emails).toBe(-1); // Unlimited
-    expect(enterprisePlan.limits.awsAccounts).toBe(-1); // Unlimited
-    expect(enterprisePlan.limits.members).toBe(-1); // Unlimited
+    expect(growthPlan.limits.emails).toBe(-1); // Unlimited
+    expect(growthPlan.limits.awsAccounts).toBe(-1); // Unlimited
+    expect(growthPlan.limits.aiMessages).toBe(1000);
+    expect(growthPlan.limits.bulkBatchSize).toBe(10_000);
+    expect(growthPlan.limits.members).toBe(-1); // Unlimited
   });
 
   it("should have lifecycle hooks configured", () => {

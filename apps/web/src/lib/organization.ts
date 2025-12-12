@@ -1,6 +1,6 @@
 import { db } from "@wraps/db";
-import { organization } from "@wraps/db/schema/auth";
-import { eq } from "drizzle-orm";
+import { organization, subscription } from "@wraps/db/schema/auth";
+import { and, eq, or } from "drizzle-orm";
 import { cache } from "react";
 
 /**
@@ -55,6 +55,35 @@ export async function checkOrganizationAccess(
   const orgWithMembership = await getOrganizationWithMembership(slug, userId);
   return orgWithMembership !== null;
 }
+
+/**
+ * Get active subscription for an organization (cached for request)
+ */
+export const getOrganizationSubscription = cache(
+  async (organizationId: string) => {
+    const activeSubscription = await db.query.subscription.findFirst({
+      where: and(
+        eq(subscription.referenceId, organizationId),
+        or(
+          eq(subscription.status, "active"),
+          eq(subscription.status, "trialing")
+        )
+      ),
+    });
+
+    return activeSubscription ?? null;
+  }
+);
+
+/**
+ * Get the plan ID for an organization (defaults to "starter")
+ */
+export const getOrganizationPlanId = cache(
+  async (organizationId: string): Promise<string> => {
+    const sub = await getOrganizationSubscription(organizationId);
+    return sub?.plan || "starter";
+  }
+);
 
 // Re-export slug utility for server-side use
 export { generateSlug } from "@/lib/utils/slug";
