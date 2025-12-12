@@ -1,45 +1,48 @@
 "use client";
 
-import { Check, Sparkles } from "lucide-react";
+import { Check, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-const currentPlan = {
-  name: "Open Source & Free",
-  description:
-    "Deploy production-ready email infrastructure to your AWS account",
-  features: [
-    "One-command infrastructure deployment",
-    "TypeScript SDK (@wraps.dev/email)",
-    "Local console dashboard",
-    "All AWS SES features (sending, tracking, analytics)",
-    "Event tracking via EventBridge & DynamoDB",
-    "Bounce & complaint handling",
-    "Real-time email analytics",
-    "Template management",
-    "Domain verification tools",
-    "Community support on GitHub",
-    "Forever free, no credit card required",
-  ],
-};
-
-const comingSoonFeatures = [
+const plans = [
   {
-    title: "Hosted Dashboard",
-    description:
-      "Access your email analytics from anywhere without running the local console",
+    name: "CLI & SDK",
+    price: "$0",
+    period: "forever",
+    description: "Deploy and send emails with the command line",
+    highlight: false,
+    cta: "Get Started",
+    ctaLink: "/docs/quickstart",
     features: [
-      "Cloud-hosted web interface",
-      "Team collaboration",
-      "Shared access across devices",
+      "One-command infrastructure deployment",
+      "TypeScript SDK (@wraps.dev/email)",
+      "Local console dashboard",
+      "All AWS SES features",
+      "Event tracking via EventBridge & DynamoDB",
+      "Bounce & complaint handling",
+      "Domain verification tools",
+      "Community support on GitHub",
     ],
   },
   {
-    title: "Advanced Features",
-    description:
-      "Email templates, A/B testing, and advanced analytics for growing teams",
-    features: ["Template library", "A/B testing", "Advanced reporting"],
+    name: "Starter",
+    price: "$10",
+    period: "/month",
+    description: "Full hosted dashboard access",
+    highlight: true,
+    cta: "Subscribe",
+    ctaLink: "https://app.wraps.dev/auth?plan=starter",
+    features: [
+      "Everything in CLI & SDK",
+      "Hosted dashboard at wraps.dev",
+      "Email analytics and history",
+      "Unlimited templates",
+      "50 AI messages per month",
+      "Unlimited team members",
+      "Bulk sending (100/batch)",
+      "Email support (48hr)",
+    ],
   },
 ];
 
@@ -53,107 +56,87 @@ export function PricingSection() {
             Pricing
           </Badge>
           <h2 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-            Free & Open Source
+            Simple, Transparent Pricing
           </h2>
           <p className="text-lg text-muted-foreground">
-            Deploy production-ready email infrastructure to your AWS account. No
-            subscriptions, no per-email fees. You only pay AWS directly for what
-            you use.
+            Use the CLI and SDK free forever. Add the hosted dashboard for
+            $10/month.
           </p>
         </div>
 
-        {/* Current Free Offering */}
-        <div className="mx-auto mb-16 max-w-3xl">
-          <Card className="border-2 shadow-lg">
-            <CardContent className="p-8 md:p-12">
-              <div className="mb-8 text-center">
-                <h3 className="mb-2 font-bold text-2xl">{currentPlan.name}</h3>
-                <p className="mb-6 text-muted-foreground">
-                  {currentPlan.description}
-                </p>
+        {/* Pricing Cards */}
+        <div className="mx-auto mb-16 grid max-w-5xl gap-8 md:grid-cols-2">
+          {plans.map((plan) => (
+            <Card
+              className={`${plan.highlight ? "border-2 border-primary shadow-lg" : "border"}`}
+              key={plan.name}
+            >
+              <CardContent className="p-8">
                 <div className="mb-6">
-                  <div className="mb-1 font-bold text-5xl">$0</div>
-                  <div className="text-muted-foreground">Forever free</div>
+                  <div className="mb-2 flex items-center gap-2">
+                    {!plan.highlight && (
+                      <Terminal className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <h3 className="font-bold text-xl">{plan.name}</h3>
+                  </div>
+                  <p className="text-muted-foreground text-sm">
+                    {plan.description}
+                  </p>
                 </div>
-                <Button asChild className="cursor-pointer" size="lg">
-                  <a href="/docs/quickstart">Get Started Now</a>
-                </Button>
-              </div>
 
-              <div className="border-t pt-8">
-                <h4 className="mb-4 font-semibold">Everything you need:</h4>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {currentPlan.features.map((feature) => (
-                    <div className="flex items-start gap-3" key={feature}>
+                <div className="mb-6">
+                  <span className="font-bold text-4xl">{plan.price}</span>
+                  <span className="text-muted-foreground">{plan.period}</span>
+                </div>
+
+                <Button
+                  asChild
+                  className="mb-8 w-full cursor-pointer"
+                  size="lg"
+                  variant={plan.highlight ? "default" : "outline"}
+                >
+                  <a href={plan.ctaLink}>{plan.cta}</a>
+                </Button>
+
+                <ul className="space-y-3">
+                  {plan.features.map((feature) => (
+                    <li className="flex items-start gap-3" key={feature}>
                       <Check
-                        className="mt-0.5 size-5 shrink-0 text-primary"
+                        className={`mt-0.5 size-5 shrink-0 ${plan.highlight ? "text-primary" : "text-muted-foreground"}`}
                         strokeWidth={2.5}
                       />
                       <span className="text-sm">{feature}</span>
-                    </div>
+                    </li>
                   ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </ul>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Coming Soon Section */}
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-8 text-center">
-            <Badge className="mb-3" variant="secondary">
-              <Sparkles className="mr-1 h-3 w-3" />
-              Coming Soon
-            </Badge>
-            <h3 className="mb-2 font-bold text-2xl">Hosted Options</h3>
-            <p className="text-muted-foreground">
-              Optional paid plans for teams who want cloud-hosted dashboards and
-              advanced features
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {comingSoonFeatures.map((feature) => (
-              <Card className="border-dashed opacity-75" key={feature.title}>
-                <CardContent className="p-6">
-                  <h4 className="mb-2 font-semibold text-lg">
-                    {feature.title}
-                  </h4>
-                  <p className="mb-4 text-muted-foreground text-sm">
-                    {feature.description}
-                  </p>
-                  <ul className="space-y-2">
-                    {feature.features.map((item) => (
-                      <li
-                        className="flex items-center gap-2 text-sm"
-                        key={item}
-                      >
-                        <Check className="size-4 text-muted-foreground" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        {/* Future Tiers */}
+        <div className="mx-auto mb-16 max-w-2xl text-center">
+          <p className="text-muted-foreground text-sm">
+            Need more? <strong className="text-foreground">Pro ($49/mo)</strong>{" "}
+            and <strong className="text-foreground">Growth ($99/mo)</strong>{" "}
+            tiers coming soon with more AI messages, higher bulk limits, and
+            multiple AWS accounts.
+          </p>
         </div>
 
         {/* AWS Cost Note */}
-        <div className="mx-auto mt-16 max-w-2xl rounded-lg border bg-muted/50 p-6 text-center">
+        <div className="mx-auto max-w-2xl rounded-lg border bg-muted/50 p-6 text-center">
           <p className="mb-2 font-semibold text-foreground">
-            Pay AWS directly for infrastructure
+            AWS costs are separate
           </p>
           <p className="mb-4 text-muted-foreground text-sm">
-            With AWS SES pricing at{" "}
-            <strong className="text-foreground">$0.10 per 1,000 emails</strong>,
-            most apps pay{" "}
-            <strong className="text-foreground">$5-50/month to AWS</strong>{" "}
-            directly. You own the infrastructure and have zero vendor lock-in.
-            Scale affordably as you grow.
+            You pay AWS directly for email sending at{" "}
+            <strong className="text-foreground">$0.10 per 1,000 emails</strong>{" "}
+            plus infrastructure (~$2-5/mo). You own everything, zero vendor
+            lock-in.
           </p>
           <Button asChild className="cursor-pointer" variant="outline">
-            <a href="/calculator">Calculate Your Costs →</a>
+            <a href="/calculator">Calculate Your Costs</a>
           </Button>
         </div>
       </div>

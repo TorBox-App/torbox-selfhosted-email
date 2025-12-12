@@ -29,6 +29,7 @@ export default function SignUpForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const _redirectTo = searchParams.get("redirect") || "/dashboard";
+  const plan = searchParams.get("plan");
   const { isPending } = authClient.useSession();
 
   const form = useForm({
@@ -66,7 +67,8 @@ export default function SignUpForm({
 
       // Step 3: Redirect to onboarding to create organization
       toast.success("Account created successfully!");
-      router.push("/onboarding");
+      const onboardingUrl = plan ? `/onboarding?plan=${plan}` : "/onboarding";
+      router.push(onboardingUrl);
     },
     validators: {
       onSubmit: z.object({
