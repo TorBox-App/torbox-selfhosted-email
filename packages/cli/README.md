@@ -5,6 +5,7 @@
 ## Features
 
 - **Zero Configuration**: One command deploys everything you need
+- **Preview Mode**: See what changes would be made before deploying with `--preview`
 - **OIDC Support**: Vercel integration with no AWS credentials needed
 - **Non-Destructive**: Never modifies existing resources
 - **Beautiful UX**: Built with Bomb.sh stack (@clack/prompts) - beautiful interactive prompts and spinners
@@ -97,6 +98,55 @@ Shows:
 - Deployed resources
 - Links to dashboard
 
+## Global Options
+
+These options work across all deployment commands:
+
+| Option | Description |
+|--------|-------------|
+| `-p, --provider` | Hosting provider (vercel, aws, railway, other) |
+| `-r, --region` | AWS region |
+| `-d, --domain` | Domain name |
+| `--preset` | Configuration preset |
+| `-y, --yes` | Skip confirmation prompts |
+| `-f, --force` | Force destructive operations |
+| `--preview` | Preview changes without deploying |
+
+### Preview Mode
+
+Use `--preview` to see what infrastructure changes would be made without actually deploying. This is useful for:
+
+- **Reviewing changes** before applying them
+- **Cost estimation** - see estimated monthly costs
+- **CI/CD pipelines** - validate deployments in dry-run mode
+
+```bash
+# Preview new deployment
+wraps email init --preview
+
+# Preview upgrade changes
+wraps email upgrade --preview
+
+# Preview what would be destroyed
+wraps destroy --preview
+```
+
+**Example output:**
+
+```
+--- PREVIEW MODE (no changes will be made) ---
+
+Resource Changes:
+  + 8 to create
+
+Estimated Monthly Cost:
+  ~$2.50/mo (based on 10,000 emails/month)
+
+--- END PREVIEW (no changes were made) ---
+
+Preview complete. Run without --preview to deploy.
+```
+
 ## Commands
 
 ### Email Commands
@@ -111,12 +161,16 @@ Deploy new email infrastructure to your AWS account.
 - `-d, --domain <domain>` - Domain to verify (optional)
 - `--preset <preset>` - Configuration preset (starter, production, enterprise, custom)
 - `-y, --yes` - Skip confirmation prompts
+- `--preview` - Preview changes without deploying
 
 **Examples:**
 
 ```bash
 # Interactive mode (recommended)
 wraps email init
+
+# Preview what would be deployed (no changes made)
+wraps email init --preview
 
 # With flags
 wraps email init --provider vercel --region us-east-1 --domain myapp.com --preset production
@@ -207,11 +261,15 @@ Add features to existing infrastructure incrementally without redeployment.
 **Options:**
 - `-r, --region <region>` - AWS region (uses saved connection if not specified)
 - `-y, --yes` - Skip confirmation prompts
+- `--preview` - Preview changes without deploying
 
 **Example:**
 
 ```bash
 wraps email upgrade
+
+# Preview upgrade changes before applying
+wraps email upgrade --preview
 ```
 
 Interactive wizard allows you to add:
@@ -255,11 +313,13 @@ Restore infrastructure from saved metadata.
 **Options:**
 - `-r, --region <region>` - AWS region to restore from
 - `-f, --force` - Force restore without confirmation (destructive)
+- `--preview` - Preview what would be removed without making changes
 
 **Example:**
 
 ```bash
 wraps email restore
+wraps email restore --preview  # Preview what would be removed
 wraps email restore --region us-west-2 --force  # Skip confirmation
 ```
 
@@ -312,11 +372,13 @@ Remove all deployed infrastructure across all services.
 
 **Options:**
 - `-f, --force` - Force destroy without confirmation (destructive)
+- `--preview` - Preview what would be destroyed without making changes
 
 **Example:**
 
 ```bash
 wraps destroy
+wraps destroy --preview  # Preview what would be destroyed
 wraps destroy --force  # Skip confirmation
 ```
 
@@ -561,6 +623,7 @@ wraps init
 - [ ] `wraps sms init` - Deploy SMS infrastructure
 
 ### Features ✅
+- [x] Preview mode (`--preview`) for all deployment commands
 - [x] Feature-based configuration presets (Starter, Production, Enterprise, Custom)
 - [x] Transparent cost estimation with monthly projections
 - [x] MAIL FROM domain configuration for DMARC alignment
