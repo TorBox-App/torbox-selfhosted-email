@@ -39,9 +39,7 @@ export function getAiMessageLimit(planId: PlanId | string): number {
  * Get current AI usage for an organization in the current calendar month
  * This is the fast path - single indexed query
  */
-export async function getAiUsageCount(
-  organizationId: string
-): Promise<number> {
+export async function getAiUsageCount(organizationId: string): Promise<number> {
   const periodKey = getAiUsagePeriodKey();
 
   const usage = await db.query.aiUsageMonthly.findFirst({
@@ -221,9 +219,11 @@ function formatNextMonthReset(): string {
 
   if (diffDays <= 0) {
     return "soon";
-  } else if (diffDays === 1) {
+  }
+  if (diffDays === 1) {
     return "tomorrow";
-  } else if (diffDays <= 7) {
+  }
+  if (diffDays <= 7) {
     return `in ${diffDays} days`;
   }
 

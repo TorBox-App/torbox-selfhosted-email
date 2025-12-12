@@ -5,10 +5,7 @@ import { createDynamoDBTables } from "./resources/dynamodb.js";
 import { createEventBridgeResources } from "./resources/eventbridge.js";
 import { createIAMRole } from "./resources/iam.js";
 import { deployLambdaFunctions } from "./resources/lambda.js";
-import {
-  createSESResources,
-  eventDestinationExists,
-} from "./resources/ses.js";
+import { createSESResources, eventDestinationExists } from "./resources/ses.js";
 import { createSQSResources } from "./resources/sqs.js";
 import { createVercelOIDC } from "./vercel-oidc.js";
 

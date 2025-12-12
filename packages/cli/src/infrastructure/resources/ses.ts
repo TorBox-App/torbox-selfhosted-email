@@ -56,10 +56,8 @@ export async function eventDestinationExists(
   region: string
 ): Promise<boolean> {
   try {
-    const {
-      SESv2Client,
-      GetConfigurationSetEventDestinationsCommand,
-    } = await import("@aws-sdk/client-sesv2");
+    const { SESv2Client, GetConfigurationSetEventDestinationsCommand } =
+      await import("@aws-sdk/client-sesv2");
     const ses = new SESv2Client({ region });
 
     const response = await ses.send(
@@ -69,9 +67,8 @@ export async function eventDestinationExists(
     );
 
     return (
-      response.EventDestinations?.some(
-        (dest) => dest.Name === eventDestName
-      ) ?? false
+      response.EventDestinations?.some((dest) => dest.Name === eventDestName) ??
+      false
     );
   } catch (error: any) {
     if (error.name === "NotFoundException") {

@@ -284,8 +284,8 @@ export function AIChatPanel({
                 Monthly Limit Reached
               </h4>
               <p className="mb-4 max-w-[200px] text-muted-foreground text-xs">
-                You've used all {aiUsage.limit} AI messages this month.
-                Upgrade your plan for more AI assistance.
+                You've used all {aiUsage.limit} AI messages this month. Upgrade
+                your plan for more AI assistance.
               </p>
               <Button asChild className="h-8 text-xs" size="sm">
                 <a href={`/${orgSlug}/settings?tab=billing`}>Upgrade Plan</a>
