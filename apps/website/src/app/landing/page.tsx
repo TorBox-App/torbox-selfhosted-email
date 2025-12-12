@@ -8,6 +8,7 @@ import { LandingNavbar } from "./components/navbar";
 import { PricingSection } from "./components/pricing-section";
 import { QuickStartSection } from "./components/quick-start-section";
 import { StatsSection } from "./components/stats-section";
+import { TemplateEditorSection } from "./components/template-editor-section";
 import { TrustedBySection } from "./components/trusted-by-section";
 
 export default function LandingPage() {
@@ -24,6 +25,7 @@ export default function LandingPage() {
         <CodeExamplesSection />
         <StatsSection />
         <FeaturesSection />
+        <TemplateEditorSection />
         {/* <TechStackSection /> */}
         <PricingSection />
         <FaqSection />

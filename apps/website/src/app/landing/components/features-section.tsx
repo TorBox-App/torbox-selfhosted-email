@@ -56,7 +56,7 @@ const secondaryFeatures = [
     icon: Shield,
     title: "Production-Ready Configs",
     description:
-      "Choose Starter ($0.05/mo), Production ($2-5/mo), or Enterprise ($50-100/mo) presets.",
+      "Pre-configured infrastructure presets for different needs: minimal tracking, full analytics, or high-volume sending.",
   },
   {
     icon: Terminal,

@@ -40,7 +40,6 @@ const plans = [
       "Unlimited templates",
       "50 AI messages per month",
       "Unlimited team members",
-      "Bulk sending (100/batch)",
       "Email support (48hr)",
     ],
   },
@@ -119,8 +118,7 @@ export function PricingSection() {
           <p className="text-muted-foreground text-sm">
             Need more? <strong className="text-foreground">Pro ($49/mo)</strong>{" "}
             and <strong className="text-foreground">Growth ($99/mo)</strong>{" "}
-            tiers coming soon with more AI messages, higher bulk limits, and
-            multiple AWS accounts.
+            tiers coming soon with more AI messages and multiple AWS accounts.
           </p>
         </div>
 

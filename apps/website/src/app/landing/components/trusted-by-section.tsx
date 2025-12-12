@@ -7,11 +7,13 @@ const projects = [
     name: "Lilikoi",
     logo: "/lilikoi.png",
     website: "https://lilikoi.io",
+    invertInDark: false,
   },
   {
     name: "Passel",
     logo: "/passel.webp",
     website: "https://passel.email",
+    invertInDark: true, // Black logo needs invert in dark mode
   },
 ];
 
@@ -47,7 +49,9 @@ export function TrustedBySection() {
               <div className="flex h-16 items-center sm:h-20">
                 <img
                   alt={`${project.name} logo`}
-                  className="h-full w-auto max-w-[120px] object-contain grayscale transition-all group-hover:grayscale-0 sm:max-w-[160px]"
+                  className={`h-full w-auto max-w-[120px] object-contain grayscale transition-all group-hover:grayscale-0 sm:max-w-[160px] ${
+                    project.invertInDark ? "dark:invert" : ""
+                  }`}
                   src={project.logo}
                 />
               </div>

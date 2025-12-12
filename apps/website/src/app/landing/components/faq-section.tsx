@@ -27,7 +27,7 @@ const faqItems: FaqItem[] = [
     value: "item-2",
     question: "What are the costs for running Wraps?",
     answer:
-      "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs $5 to AWS. If you choose the optional hosted dashboard (coming soon), there will be a small monthly fee ($10-49). The infrastructure is yours forever—no vendor lock-in, no surprise bills.",
+      "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs ~$5 to AWS. The CLI and SDK are free forever. The hosted dashboard with template editor starts at $10/month. The infrastructure is yours forever—no vendor lock-in, no surprise bills.",
   },
   {
     value: "item-3",
@@ -45,7 +45,7 @@ const faqItems: FaqItem[] = [
     value: "item-5",
     question: "Can I customize the infrastructure deployment?",
     answer:
-      "Yes! Choose between Starter ($0.05/month), Production ($2-5/month), or Enterprise ($50-100/month) presets based on features you need. You can also use 'npx @wraps.dev/cli email upgrade' to add features incrementally. For full customization, all infrastructure is deployed as open-source Pulumi code you can fork and modify.",
+      "Yes! The CLI offers infrastructure presets for different needs—from minimal tracking to full analytics with dedicated IPs. You can also use 'npx @wraps.dev/cli email upgrade' to add features incrementally. For full customization, all infrastructure is deployed as open-source Pulumi code you can fork and modify.",
   },
   {
     value: "item-6",
