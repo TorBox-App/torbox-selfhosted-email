@@ -1,0 +1,446 @@
+import { aiUsageLog, aiUsageMonthly, db } from "@wraps/db";
+import { eq } from "drizzle-orm";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { testOrganization, testUser } from "@/app/api/__tests__/setup";
+import {
+  checkAiUsageLimit,
+  getAiMessageLimit,
+  getAiUsageCount,
+  getCurrentPeriodKey,
+  getUsageSummary,
+  getUsageWarning,
+  incrementAiUsage,
+  logAiUsage,
+  trackAiRequest,
+} from "../ai-usage";
+
+// Mock the organization helper to return specific plans
+const mockGetOrganizationPlanId = vi.fn();
+vi.mock("@/lib/organization", () => ({
+  getOrganizationPlanId: (...args: any[]) => mockGetOrganizationPlanId(...args),
+}));
+
+describe("AI Usage Functions", () => {
+  beforeAll(() => {
+    // Default mock: return starter plan
+    mockGetOrganizationPlanId.mockResolvedValue("starter");
+  });
+
+  afterEach(async () => {
+    // Clean up test data after each test
+    await db
+      .delete(aiUsageLog)
+      .where(eq(aiUsageLog.organizationId, testOrganization.id));
+    await db
+      .delete(aiUsageMonthly)
+      .where(eq(aiUsageMonthly.organizationId, testOrganization.id));
+
+    // Reset mock to default
+    mockGetOrganizationPlanId.mockResolvedValue("starter");
+  });
+
+  describe("getCurrentPeriodKey", () => {
+    it("should return current month in YYYY-MM format", () => {
+      const key = getCurrentPeriodKey();
+      expect(key).toMatch(/^\d{4}-\d{2}$/);
+
+      const now = new Date();
+      const expectedYear = now.getUTCFullYear();
+      const expectedMonth = String(now.getUTCMonth() + 1).padStart(2, "0");
+      expect(key).toBe(`${expectedYear}-${expectedMonth}`);
+    });
+  });
+
+  describe("getAiMessageLimit", () => {
+    it("should return 50 for starter plan", () => {
+      expect(getAiMessageLimit("starter")).toBe(50);
+    });
+
+    it("should return 250 for pro plan", () => {
+      expect(getAiMessageLimit("pro")).toBe(250);
+    });
+
+    it("should return 1000 for growth plan", () => {
+      expect(getAiMessageLimit("growth")).toBe(1000);
+    });
+
+    it("should return default (50) for unknown plan", () => {
+      expect(getAiMessageLimit("unknown-plan")).toBe(50);
+    });
+  });
+
+  describe("getAiUsageCount", () => {
+    it("should return 0 when no usage exists", async () => {
+      const count = await getAiUsageCount(testOrganization.id);
+      expect(count).toBe(0);
+    });
+
+    it("should return current message count", async () => {
+      const periodKey = getCurrentPeriodKey();
+
+      // Insert test data
+      await db.insert(aiUsageMonthly).values({
+        organizationId: testOrganization.id,
+        periodKey,
+        messageCount: 25,
+      });
+
+      const count = await getAiUsageCount(testOrganization.id);
+      expect(count).toBe(25);
+    });
+
+    it("should not count messages from different periods", async () => {
+      const currentPeriod = getCurrentPeriodKey();
+      const lastMonth = "2024-01"; // A past period
+
+      // Insert data for current and past periods
+      await db.insert(aiUsageMonthly).values([
+        {
+          organizationId: testOrganization.id,
+          periodKey: currentPeriod,
+          messageCount: 10,
+        },
+        {
+          organizationId: testOrganization.id,
+          periodKey: lastMonth,
+          messageCount: 100,
+        },
+      ]);
+
+      const count = await getAiUsageCount(testOrganization.id);
+      expect(count).toBe(10); // Only current period
+    });
+  });
+
+  describe("incrementAiUsage", () => {
+    it("should create new record when none exists", async () => {
+      const newCount = await incrementAiUsage(testOrganization.id);
+      expect(newCount).toBe(1);
+
+      // Verify in database
+      const count = await getAiUsageCount(testOrganization.id);
+      expect(count).toBe(1);
+    });
+
+    it("should increment existing count", async () => {
+      const periodKey = getCurrentPeriodKey();
+
+      // Insert initial data
+      await db.insert(aiUsageMonthly).values({
+        organizationId: testOrganization.id,
+        periodKey,
+        messageCount: 5,
+      });
+
+      const newCount = await incrementAiUsage(testOrganization.id);
+      expect(newCount).toBe(6);
+    });
+
+    it("should handle concurrent increments correctly", async () => {
+      // Run multiple increments concurrently
+      const results = await Promise.all([
+        incrementAiUsage(testOrganization.id),
+        incrementAiUsage(testOrganization.id),
+        incrementAiUsage(testOrganization.id),
+      ]);
+
+      // All should complete, final count should be 3
+      const finalCount = await getAiUsageCount(testOrganization.id);
+      expect(finalCount).toBe(3);
+
+      // Results should be unique incrementing values
+      const sortedResults = results.sort((a, b) => a - b);
+      expect(sortedResults).toEqual([1, 2, 3]);
+    });
+  });
+
+  describe("logAiUsage", () => {
+    it("should log usage with all fields", async () => {
+      await logAiUsage({
+        organizationId: testOrganization.id,
+        userId: testUser.id,
+        featureType: "ai_chat",
+        templateId: "template-123",
+        inputTokens: 100,
+        outputTokens: 200,
+        totalTokens: 300,
+        model: "grok-1",
+        durationMs: 1500,
+      });
+
+      const logs = await db.query.aiUsageLog.findMany({
+        where: eq(aiUsageLog.organizationId, testOrganization.id),
+      });
+
+      expect(logs).toHaveLength(1);
+      expect(logs[0]).toMatchObject({
+        organizationId: testOrganization.id,
+        userId: testUser.id,
+        featureType: "ai_chat",
+        templateId: "template-123",
+        inputTokens: 100,
+        outputTokens: 200,
+        totalTokens: 300,
+        model: "grok-1",
+        durationMs: 1500,
+      });
+    });
+
+    it("should use default feature type", async () => {
+      await logAiUsage({
+        organizationId: testOrganization.id,
+        userId: testUser.id,
+      });
+
+      const logs = await db.query.aiUsageLog.findMany({
+        where: eq(aiUsageLog.organizationId, testOrganization.id),
+      });
+
+      expect(logs[0].featureType).toBe("ai_chat");
+    });
+
+    it("should include period key for filtering", async () => {
+      await logAiUsage({
+        organizationId: testOrganization.id,
+        userId: testUser.id,
+      });
+
+      const logs = await db.query.aiUsageLog.findMany({
+        where: eq(aiUsageLog.organizationId, testOrganization.id),
+      });
+
+      expect(logs[0].periodKey).toBe(getCurrentPeriodKey());
+    });
+  });
+
+  describe("checkAiUsageLimit", () => {
+    it("should allow usage when under limit", async () => {
+      mockGetOrganizationPlanId.mockResolvedValueOnce("starter");
+
+      const result = await checkAiUsageLimit(testOrganization.id);
+      expect(result.allowed).toBe(true);
+      expect(result.current).toBe(0);
+      expect(result.limit).toBe(50);
+      expect(result.planId).toBe("starter");
+    });
+
+    it("should deny usage when at limit", async () => {
+      const periodKey = getCurrentPeriodKey();
+      mockGetOrganizationPlanId.mockResolvedValueOnce("starter");
+
+      // Set usage at limit
+      await db.insert(aiUsageMonthly).values({
+        organizationId: testOrganization.id,
+        periodKey,
+        messageCount: 50,
+      });
+
+      const result = await checkAiUsageLimit(testOrganization.id);
+      expect(result.allowed).toBe(false);
+      expect(result.current).toBe(50);
+      expect(result.limit).toBe(50);
+    });
+
+    it("should deny usage when over limit", async () => {
+      const periodKey = getCurrentPeriodKey();
+      mockGetOrganizationPlanId.mockResolvedValueOnce("starter");
+
+      await db.insert(aiUsageMonthly).values({
+        organizationId: testOrganization.id,
+        periodKey,
+        messageCount: 55,
+      });
+
+      const result = await checkAiUsageLimit(testOrganization.id);
+      expect(result.allowed).toBe(false);
+      expect(result.current).toBe(55);
+    });
+
+    it("should respect different plan limits", async () => {
+      const periodKey = getCurrentPeriodKey();
+      mockGetOrganizationPlanId.mockResolvedValueOnce("pro");
+
+      // 100 messages - under pro limit (250) but over starter (50)
+      await db.insert(aiUsageMonthly).values({
+        organizationId: testOrganization.id,
+        periodKey,
+        messageCount: 100,
+      });
+
+      const proResult = await checkAiUsageLimit(testOrganization.id);
+      expect(proResult.allowed).toBe(true);
+      expect(proResult.limit).toBe(250);
+    });
+
+    it("should allow high usage for growth plan", async () => {
+      const periodKey = getCurrentPeriodKey();
+      mockGetOrganizationPlanId.mockResolvedValueOnce("growth");
+
+      // 500 messages - under growth limit (1000)
+      await db.insert(aiUsageMonthly).values({
+        organizationId: testOrganization.id,
+        periodKey,
+        messageCount: 500,
+      });
+
+      const result = await checkAiUsageLimit(testOrganization.id);
+      expect(result.allowed).toBe(true);
+      expect(result.limit).toBe(1000);
+    });
+  });
+
+  describe("trackAiRequest", () => {
+    it("should increment usage and log request", async () => {
+      const newCount = await trackAiRequest({
+        organizationId: testOrganization.id,
+        userId: testUser.id,
+        featureType: "ai_chat",
+        inputTokens: 50,
+        outputTokens: 100,
+      });
+
+      expect(newCount).toBe(1);
+
+      // Verify usage was incremented
+      const usageCount = await getAiUsageCount(testOrganization.id);
+      expect(usageCount).toBe(1);
+
+      // Verify log was created
+      const logs = await db.query.aiUsageLog.findMany({
+        where: eq(aiUsageLog.organizationId, testOrganization.id),
+      });
+      expect(logs).toHaveLength(1);
+      expect(logs[0].inputTokens).toBe(50);
+      expect(logs[0].outputTokens).toBe(100);
+    });
+  });
+
+  describe("getUsageWarning", () => {
+    it("should not warn when under 90% usage", () => {
+      const result = getUsageWarning(40, 50); // 80%
+      expect(result.shouldWarn).toBe(false);
+      expect(result.remaining).toBe(10);
+      expect(result.percentUsed).toBe(80);
+      expect(result.message).toBeUndefined();
+    });
+
+    it("should warn when at 90% usage", () => {
+      const result = getUsageWarning(45, 50); // 90%
+      expect(result.shouldWarn).toBe(true);
+      expect(result.remaining).toBe(5);
+      expect(result.percentUsed).toBe(90);
+      expect(result.message).toContain("5 AI messages remaining");
+    });
+
+    it("should warn when over 90% usage", () => {
+      const result = getUsageWarning(48, 50); // 96%
+      expect(result.shouldWarn).toBe(true);
+      expect(result.remaining).toBe(2);
+      expect(result.percentUsed).toBe(96);
+    });
+
+    it("should show specific message for last 3 messages", () => {
+      const result = getUsageWarning(47, 50); // 3 remaining
+      expect(result.message).toContain("Only 3 AI messages remaining");
+      expect(result.message).toContain("Resets");
+    });
+
+    it("should show specific message for last message", () => {
+      const result = getUsageWarning(49, 50); // 1 remaining
+      expect(result.message).toContain("Only 1 AI message remaining");
+      expect(result.message).toContain("Resets");
+    });
+
+    it("should show limit reached message when at 0 remaining", () => {
+      const result = getUsageWarning(50, 50);
+      expect(result.shouldWarn).toBe(true);
+      expect(result.remaining).toBe(0);
+      expect(result.percentUsed).toBe(100);
+      expect(result.message).toContain("You've reached your AI message limit");
+      expect(result.message).toContain("Resets");
+    });
+
+    it("should handle over limit (negative remaining)", () => {
+      const result = getUsageWarning(55, 50);
+      expect(result.remaining).toBe(0); // Clamped to 0
+      expect(result.percentUsed).toBe(110);
+    });
+
+    it("should not warn for unlimited plans", () => {
+      const result = getUsageWarning(1000, -1);
+      expect(result.shouldWarn).toBe(false);
+      expect(result.remaining).toBe(-1);
+      expect(result.percentUsed).toBe(0);
+      expect(result.message).toBeUndefined();
+    });
+
+    it("should handle zero usage", () => {
+      const result = getUsageWarning(0, 50);
+      expect(result.shouldWarn).toBe(false);
+      expect(result.remaining).toBe(50);
+      expect(result.percentUsed).toBe(0);
+    });
+  });
+
+  describe("getUsageSummary", () => {
+    it("should return usage summary for current period", async () => {
+      const periodKey = getCurrentPeriodKey();
+      mockGetOrganizationPlanId.mockResolvedValueOnce("pro");
+
+      await db.insert(aiUsageMonthly).values({
+        organizationId: testOrganization.id,
+        periodKey,
+        messageCount: 75,
+      });
+
+      const summary = await getUsageSummary(testOrganization.id);
+      expect(summary).toEqual({
+        periodKey,
+        messageCount: 75,
+        limit: 250,
+        planId: "pro",
+      });
+    });
+
+    it("should return zero count when no usage", async () => {
+      mockGetOrganizationPlanId.mockResolvedValueOnce("starter");
+
+      const summary = await getUsageSummary(testOrganization.id);
+      expect(summary.messageCount).toBe(0);
+      expect(summary.limit).toBe(50);
+    });
+
+    it("should allow querying specific period", async () => {
+      const lastMonth = "2024-06";
+      mockGetOrganizationPlanId.mockResolvedValueOnce("starter");
+
+      await db.insert(aiUsageMonthly).values({
+        organizationId: testOrganization.id,
+        periodKey: lastMonth,
+        messageCount: 30,
+      });
+
+      const summary = await getUsageSummary(testOrganization.id, lastMonth);
+      expect(summary.periodKey).toBe(lastMonth);
+      expect(summary.messageCount).toBe(30);
+    });
+  });
+});
+
+// Clean up any leftover historical period data
+afterAll(async () => {
+  await db
+    .delete(aiUsageMonthly)
+    .where(eq(aiUsageMonthly.periodKey, "2024-01"));
+  await db
+    .delete(aiUsageMonthly)
+    .where(eq(aiUsageMonthly.periodKey, "2024-06"));
+});

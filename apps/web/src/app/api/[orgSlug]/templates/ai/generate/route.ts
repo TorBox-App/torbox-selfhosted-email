@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { extractTipTapJson, validateTipTapJson } from "@/lib/ai/validator";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";
 
 type RouteContext = {
   params: Promise<{
@@ -38,6 +39,21 @@ export async function POST(request: Request, context: RouteContext) {
 
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Check AI usage limit before processing
+    const usageCheck = await checkAiUsageLimit(orgWithMembership.id);
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "AI message limit reached",
+          message: `You've used ${usageCheck.current} of ${usageCheck.limit} AI messages this month. Upgrade your plan for more.`,
+          limitReached: true,
+          current: usageCheck.current,
+          limit: usageCheck.limit,
+        },
+        { status: 429 }
+      );
     }
 
     const {
@@ -106,7 +122,7 @@ export async function POST(request: Request, context: RouteContext) {
       messages: modelMessages,
       maxOutputTokens: 4096,
       temperature: 0.7,
-      onFinish: async ({ text }) => {
+      onFinish: async ({ text, usage }) => {
         // Validate final output
         const json = extractTipTapJson(text);
         if (json) {
@@ -115,6 +131,18 @@ export async function POST(request: Request, context: RouteContext) {
             console.warn("AI output validation issues:", validation.errors);
           }
         }
+
+        // Track usage for billing/limits (async)
+        trackAiRequest({
+          organizationId: orgWithMembership.id,
+          userId: session.user.id,
+          featureType: "ai_chat",
+          templateId,
+          inputTokens: usage?.inputTokens,
+          outputTokens: usage?.outputTokens,
+          totalTokens: usage?.totalTokens,
+          model: "xai/grok-code-fast-1",
+        }).catch(console.error);
 
         // Track conversation in database (async)
         trackConversation({

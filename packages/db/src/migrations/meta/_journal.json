@@ -57,6 +57,13 @@
       "when": 1765236904110,
       "tag": "0007_dazzling_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1765513596840,
+      "tag": "0008_broad_hannibal_king",
+      "breakpoints": true
     }
   ]
 }

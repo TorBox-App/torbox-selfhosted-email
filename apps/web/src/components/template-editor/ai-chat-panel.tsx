@@ -2,10 +2,12 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useThrottler } from "@tanstack/react-pacer";
+import { useQueryClient } from "@tanstack/react-query";
 import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
 import { DefaultChatTransport } from "ai";
 import {
+  AlertTriangle,
   Bot,
   Check,
   Loader2,
@@ -23,6 +25,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { extractTipTapJson } from "@/lib/ai/validator";
 import { cn } from "@/lib/utils";
@@ -62,8 +65,13 @@ export function AIChatPanel({
   const [pendingContent, setPendingContent] = useState<JSONContent | null>(
     null
   );
+  const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const queryClient = useQueryClient();
+
+  // Fetch AI usage to show warnings
+  const { data: aiUsage, refetch: refetchUsage } = useAiUsage(orgSlug);
 
   const { selectedBrandKitId } = useTemplateStore((state) => state.localState);
   const { setIsGenerating, setLastGeneratedContent } = useTemplateStore(
@@ -97,9 +105,22 @@ export function AIChatPanel({
     }),
     onError: (error) => {
       setIsGenerating(false);
-      toast.error("Failed to generate content", {
-        description: error.message,
-      });
+      // Check if this is a rate limit error
+      if (error.message?.includes("limit reached")) {
+        toast.error("AI message limit reached", {
+          description: "Upgrade your plan for more AI messages.",
+        });
+        // Refetch usage to update the UI
+        refetchUsage();
+      } else {
+        toast.error("Failed to generate content", {
+          description: error.message,
+        });
+      }
+    },
+    onFinish: () => {
+      // Refetch usage after successful request to update warning state
+      queryClient.invalidateQueries({ queryKey: getAiUsageQueryKey(orgSlug) });
     },
   });
 
@@ -121,6 +142,17 @@ export function AIChatPanel({
   useEffect(() => {
     setIsGenerating(isLoading);
   }, [isLoading, setIsGenerating]);
+
+  // Show warning toast when approaching limit (only once per session)
+  useEffect(() => {
+    if (aiUsage?.warning && !hasShownWarningToast) {
+      toast.warning("AI Usage Warning", {
+        description: aiUsage.warning,
+        duration: 6000,
+      });
+      setHasShownWarningToast(true);
+    }
+  }, [aiUsage?.warning, hasShownWarningToast]);
 
   // Extract TipTap JSON from the latest assistant message
   useEffect(() => {
@@ -212,6 +244,11 @@ export function AIChatPanel({
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <Sparkles className="h-4 w-4 text-primary" />
           <span className="font-medium">AI Assistant</span>
+          {aiUsage && aiUsage.limit !== -1 && (
+            <span className="text-muted-foreground text-xs">
+              ({aiUsage.current}/{aiUsage.limit})
+            </span>
+          )}
         </div>
         {isLoading && (
           <Button
@@ -226,10 +263,38 @@ export function AIChatPanel({
         )}
       </div>
 
+      {/* Usage Warning Banner */}
+      {aiUsage?.warning && (
+        <div className="flex items-center gap-2 border-b bg-amber-50 px-3 py-2 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <p className="text-xs">{aiUsage.warning}</p>
+        </div>
+      )}
+
       {/* Messages */}
       <ScrollArea className="min-h-0 flex-1" ref={scrollAreaRef}>
         <div className="p-3">
-          {messages.length === 0 ? (
+          {/* Show limit reached state when no messages remaining */}
+          {aiUsage && aiUsage.remaining === 0 && messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
+                <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h4 className="mb-1 font-medium text-sm">
+                Monthly Limit Reached
+              </h4>
+              <p className="mb-4 max-w-[200px] text-muted-foreground text-xs">
+                You've used all {aiUsage.limit} AI messages this month.
+                Upgrade your plan for more AI assistance.
+              </p>
+              <Button asChild className="h-8 text-xs" size="sm">
+                <a href={`/${orgSlug}/settings?tab=billing`}>Upgrade Plan</a>
+              </Button>
+              <p className="mt-3 text-muted-foreground text-xs">
+                Resets on the 1st of next month.
+              </p>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="space-y-3">
               {/* Compact welcome - hidden on very small screens when as side panel */}
               <div className="py-4 text-center">
@@ -377,10 +442,14 @@ export function AIChatPanel({
         <div className="flex gap-1.5">
           <Textarea
             className="min-h-[44px] flex-1 resize-none text-xs"
-            disabled={isLoading}
+            disabled={isLoading || aiUsage?.remaining === 0}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe your email..."
+            placeholder={
+              aiUsage?.remaining === 0
+                ? "Message limit reached"
+                : "Describe your email..."
+            }
             ref={textareaRef}
             rows={2}
             value={input}
@@ -388,7 +457,7 @@ export function AIChatPanel({
           <div className="flex flex-col gap-1">
             <Button
               className="h-8 w-8"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || aiUsage?.remaining === 0}
               size="icon"
               type="submit"
             >
@@ -401,6 +470,7 @@ export function AIChatPanel({
             {messages.length > 0 && !isLoading && (
               <Button
                 className="h-8 w-8"
+                disabled={aiUsage?.remaining === 0}
                 onClick={() => regenerate()}
                 size="icon"
                 type="button"
