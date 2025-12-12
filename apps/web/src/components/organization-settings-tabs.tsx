@@ -16,11 +16,13 @@ type OrganizationSettingsTabsProps = {
     logo: string | null;
   };
   userRole: "owner" | "admin" | "member";
+  planId?: string;
 };
 
 export function OrganizationSettingsTabs({
   organization,
   userRole,
+  planId,
 }: OrganizationSettingsTabsProps) {
   const [activeTab, setActiveTab] = useQueryState("tab", {
     defaultValue: "general",
@@ -50,6 +52,7 @@ export function OrganizationSettingsTabs({
       <TabsContent className="mt-6" value="aws-accounts">
         <OrganizationSettingsAwsAccounts
           organization={organization}
+          planId={planId}
           userRole={userRole}
         />
       </TabsContent>

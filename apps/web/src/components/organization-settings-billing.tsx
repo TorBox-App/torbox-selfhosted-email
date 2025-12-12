@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowDownIcon,
   ArrowUpIcon,
   CheckCircle2Icon,
   CreditCardIcon,
@@ -29,30 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
-
-const PLAN_FEATURES = {
-  free: [
-    "Pay only AWS costs ($0.10/1,000 emails)",
-    "Basic email tracking",
-    "Community support",
-    "Unlimited domains",
-  ],
-  pro: [
-    "Everything in Free",
-    "Advanced analytics dashboard",
-    "90-day email history",
-    "Real-time event tracking",
-    "Priority support",
-  ],
-  enterprise: [
-    "Everything in Pro",
-    "Dedicated IP addresses",
-    "1-year email retention",
-    "Custom integrations",
-    "SLA guarantee",
-    "Dedicated support",
-  ],
-};
+import { PLANS, type PlanId } from "@/lib/plans";
 
 type OrganizationSettingsBillingProps = {
   organization: {
@@ -127,28 +103,12 @@ export function OrganizationSettingsBilling({
     },
   });
 
-  if (loadingSubscriptions) {
-    return <Loader />;
-  }
-
-  const activeSubscription = (subscriptions as any)?.data?.[0];
-  const currentPlan = activeSubscription?.plan || "free";
-  const isTrialing = activeSubscription?.status === "trialing";
-  const isCancelled = activeSubscription?.cancelAtPeriodEnd === true;
-  const trialEndsAt = activeSubscription?.trialEnd
-    ? new Date(activeSubscription.trialEnd)
-    : null;
-
-  const _handleUpgrade = async () => {
-    if (!canManageBilling) {
-      toast.error("Only organization owners and admins can manage billing");
-      return;
-    }
-
-    try {
-      // Include subscriptionId if switching plans (not creating new subscription)
+  // Upgrade subscription mutation
+  const upgradeMutation = useMutation({
+    mutationFn: async (plan: string) => {
+      const activeSubscription = (subscriptions as any)?.data?.[0];
       const upgradeParams: any = {
-        plan: "pro",
+        plan,
         referenceId: organization.id,
         successUrl: `${window.location.origin}/${organization.slug}/settings?tab=billing&subscribed=true`,
         cancelUrl: `${window.location.origin}/${organization.slug}/settings?tab=billing`,
@@ -159,13 +119,25 @@ export function OrganizationSettingsBilling({
         upgradeParams.subscriptionId = activeSubscription.id;
       }
 
-      await authClient.subscription.upgrade(upgradeParams);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to start upgrade"
-      );
-    }
-  };
+      return authClient.subscription.upgrade(upgradeParams);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to upgrade subscription");
+    },
+  });
+
+  if (loadingSubscriptions) {
+    return <Loader />;
+  }
+
+  const activeSubscription = (subscriptions as any)?.data?.[0];
+  const currentPlan = (activeSubscription?.plan || "starter") as PlanId;
+  const planConfig = PLANS[currentPlan] || PLANS.starter;
+  const isTrialing = activeSubscription?.status === "trialing";
+  const isCancelled = activeSubscription?.cancelAtPeriodEnd === true;
+  const trialEndsAt = activeSubscription?.trialEnd
+    ? new Date(activeSubscription.trialEnd)
+    : null;
 
   const handleCancelClick = () => {
     if (!canManageBilling) {
@@ -228,6 +200,15 @@ export function OrganizationSettingsBilling({
     restoreMutation.mutate(activeSubscription.id);
   };
 
+  const handleUpgrade = (plan: string) => {
+    if (!canManageBilling) {
+      toast.error("Only organization owners and admins can manage billing");
+      return;
+    }
+
+    upgradeMutation.mutate(plan);
+  };
+
   return (
     <div className="space-y-6">
       {/* Current Plan */}
@@ -243,10 +224,11 @@ export function OrganizationSettingsBilling({
             <div className="flex items-center gap-2">
               <Badge
                 className="capitalize"
-                variant={currentPlan === "pro" ? "default" : "secondary"}
+                variant={currentPlan === "starter" ? "default" : "secondary"}
               >
-                {currentPlan}
+                {planConfig.name}
               </Badge>
+              {isTrialing && <Badge variant="secondary">Trial</Badge>}
               {isCancelled && <Badge variant="destructive">Cancelling</Badge>}
             </div>
           </div>
@@ -255,24 +237,27 @@ export function OrganizationSettingsBilling({
           {isTrialing && trialEndsAt && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
               <p className="text-blue-900 text-sm dark:text-blue-100">
-                <strong>Trial Period:</strong> Your 14-day free trial ends on{" "}
+                <strong>Trial Period:</strong> Your trial ends on{" "}
                 {trialEndsAt.toLocaleDateString()}. You won't be charged until
                 then.
               </p>
             </div>
           )}
 
+          <div className="flex items-baseline gap-2">
+            <span className="font-bold text-3xl">${planConfig.price}</span>
+            <span className="text-muted-foreground">{planConfig.period}</span>
+          </div>
+
           <div>
             <h3 className="mb-3 font-semibold">Plan Benefits</h3>
             <ul className="space-y-2">
-              {PLAN_FEATURES[currentPlan as keyof typeof PLAN_FEATURES]?.map(
-                (feature) => (
-                  <li className="flex items-start gap-2 text-sm" key={feature}>
-                    <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-primary" />
-                    <span>{feature}</span>
-                  </li>
-                )
-              )}
+              {planConfig.features.map((feature) => (
+                <li className="flex items-start gap-2 text-sm" key={feature}>
+                  <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-primary" />
+                  <span>{feature}</span>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -304,7 +289,7 @@ export function OrganizationSettingsBilling({
           )}
 
           {/* Billing Portal Button */}
-          {currentPlan !== "free" && (
+          {activeSubscription && (
             <div className="border-t pt-4">
               <Button
                 className="w-full"
@@ -326,7 +311,7 @@ export function OrganizationSettingsBilling({
       </Card>
 
       {/* Restore Subscription Card */}
-      {isCancelled && currentPlan === "pro" && (
+      {isCancelled && (
         <Card className="border-primary">
           <CardHeader>
             <CardTitle>Restore Your Subscription</CardTitle>
@@ -342,7 +327,7 @@ export function OrganizationSettingsBilling({
                 new Date(
                   activeSubscription.currentPeriodEnd
                 ).toLocaleDateString()}
-              . Click below to restore access and continue your Pro plan.
+              . Click below to restore access and continue your plan.
             </p>
             <Button
               className="w-full"
@@ -357,54 +342,8 @@ export function OrganizationSettingsBilling({
         </Card>
       )}
 
-      {/* Upgrade Option - Free to Pro */}
-      {currentPlan === "free" && (
-        <Card className="border-primary opacity-60">
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <ArrowUpIcon className="size-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="flex items-center gap-2">
-                  Upgrade to Pro
-                  <Badge variant="secondary">Coming Soon</Badge>
-                </CardTitle>
-                <CardDescription>
-                  Unlock advanced features and priority support
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline gap-1">
-              <span className="font-bold text-3xl">$29</span>
-              <span className="text-muted-foreground">/month</span>
-            </div>
-
-            <ul className="space-y-2">
-              {PLAN_FEATURES.pro.map((feature) => (
-                <li className="flex items-start gap-2 text-sm" key={feature}>
-                  <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-primary" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Button className="w-full" disabled size="lg">
-              <CreditCardIcon className="mr-2 size-4" />
-              Coming Soon
-            </Button>
-
-            <p className="text-center text-muted-foreground text-xs">
-              Pro plan is not available yet. Stay tuned!
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Upgrade Option - Pro to Enterprise */}
-      {currentPlan === "pro" && (
+      {/* Upgrade Option - Starter to Pro */}
+      {currentPlan === "starter" && !isCancelled && (
         <Card className="border-primary">
           <CardHeader>
             <div className="flex items-start gap-3">
@@ -412,10 +351,55 @@ export function OrganizationSettingsBilling({
                 <ArrowUpIcon className="size-5 text-primary" />
               </div>
               <div className="flex-1">
-                <CardTitle>Upgrade to Enterprise</CardTitle>
-                <CardDescription>
-                  For high-volume senders with custom needs
-                </CardDescription>
+                <CardTitle>Upgrade to Pro</CardTitle>
+                <CardDescription>{PLANS.pro.description}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-baseline gap-1">
+              <span className="font-bold text-3xl">${PLANS.pro.price}</span>
+              <span className="text-muted-foreground">{PLANS.pro.period}</span>
+            </div>
+
+            <ul className="space-y-2">
+              {PLANS.pro.features.map((feature) => (
+                <li className="flex items-start gap-2 text-sm" key={feature}>
+                  <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-primary" />
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+
+            <Button
+              className="w-full"
+              disabled={!canManageBilling || upgradeMutation.isPending}
+              onClick={() => handleUpgrade("pro")}
+              size="lg"
+            >
+              {upgradeMutation.isPending ? "Upgrading..." : "Upgrade to Pro"}
+            </Button>
+
+            {!canManageBilling && (
+              <p className="text-center text-muted-foreground text-xs">
+                Only organization owners and admins can manage billing
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Upgrade Option - Pro/Starter to Growth */}
+      {(currentPlan === "starter" || currentPlan === "pro") && !isCancelled && (
+        <Card className="border-muted">
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+                <ArrowUpIcon className="size-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1">
+                <CardTitle>{PLANS.growth.name}</CardTitle>
+                <CardDescription>{PLANS.growth.description}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -426,7 +410,7 @@ export function OrganizationSettingsBilling({
             </div>
 
             <ul className="space-y-2">
-              {PLAN_FEATURES.enterprise.map((feature) => (
+              {PLANS.growth.features.map((feature) => (
                 <li className="flex items-start gap-2 text-sm" key={feature}>
                   <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-primary" />
                   <span>{feature}</span>
@@ -439,43 +423,33 @@ export function OrganizationSettingsBilling({
               disabled={!canManageBilling}
               onClick={() =>
                 window.open(
-                  "mailto:sales@wraps.dev?subject=Enterprise Plan Inquiry",
+                  "mailto:sales@wraps.dev?subject=Growth Plan Inquiry",
                   "_blank"
                 )
               }
               size="lg"
+              variant="outline"
             >
               Contact Sales
             </Button>
-
-            {!canManageBilling && (
-              <p className="text-center text-muted-foreground text-xs">
-                Only organization owners and admins can manage billing
-              </p>
-            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Downgrade Option */}
-      {currentPlan === "pro" && !isCancelled && (
+      {/* Cancel Subscription Option */}
+      {activeSubscription && !isCancelled && (
         <Card className="border-muted">
           <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                <ArrowDownIcon className="size-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-muted-foreground">
-                  Downgrade to Free
-                </CardTitle>
-                <CardDescription>Switch back to the free plan</CardDescription>
-              </div>
-            </div>
+            <CardTitle className="text-muted-foreground">
+              Cancel Subscription
+            </CardTitle>
+            <CardDescription>
+              Cancel your subscription and lose dashboard access
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground text-sm">
-              Downgrading will remove access to Pro features at the end of your
+              Cancelling will remove access to the dashboard at the end of your
               current billing period. You'll still have access until{" "}
               {activeSubscription?.currentPeriodEnd &&
                 new Date(
@@ -508,8 +482,8 @@ export function OrganizationSettingsBilling({
           <DialogHeader>
             <DialogTitle>Cancel Subscription?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel your Pro subscription? You'll lose
-              access to Pro features at the end of your current billing period
+              Are you sure you want to cancel your subscription? You'll lose
+              access to the dashboard at the end of your current billing period
               {activeSubscription?.currentPeriodEnd && (
                 <>
                   {" "}
@@ -519,7 +493,7 @@ export function OrganizationSettingsBilling({
                   ).toLocaleDateString()}
                 </>
               )}
-              .
+              . You can still use the CLI and SDK for free.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

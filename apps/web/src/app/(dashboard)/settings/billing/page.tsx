@@ -20,30 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
-
-const PLAN_FEATURES = {
-  free: [
-    "Pay only AWS costs ($0.10/1,000 emails)",
-    "Basic email tracking",
-    "Community support",
-    "Unlimited domains",
-  ],
-  pro: [
-    "Everything in Free",
-    "Advanced analytics dashboard",
-    "90-day email history",
-    "Real-time event tracking",
-    "Priority support",
-  ],
-  enterprise: [
-    "Everything in Pro",
-    "Dedicated IP addresses",
-    "1-year email retention",
-    "Custom integrations",
-    "SLA guarantee",
-    "Dedicated support",
-  ],
-};
+import { PLANS } from "@/lib/plans";
 
 export default function BillingSettings() {
   const params = useParams();
@@ -135,7 +112,8 @@ export default function BillingSettings() {
     return <Loader />;
   }
 
-  const currentPlan = activeSubscription?.plan || "free";
+  const currentPlan = activeSubscription?.plan || "starter";
+  const planConfig = PLANS[currentPlan as keyof typeof PLANS] || PLANS.starter;
   const isTrialing = activeSubscription?.status === "trialing";
   const trialEndsAt = activeSubscription?.trialEnd
     ? new Date(activeSubscription.trialEnd)
@@ -185,23 +163,22 @@ export default function BillingSettings() {
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-baseline gap-2">
-              <span className="font-bold text-4xl capitalize">
-                {currentPlan}
-              </span>
-              {currentPlan !== "free" && currentPlan !== "enterprise" && (
-                <span className="text-muted-foreground">$29/month</span>
+              <span className="font-bold text-4xl">{planConfig.name}</span>
+              {planConfig.price !== null && planConfig.price > 0 && (
+                <span className="text-muted-foreground">
+                  ${planConfig.price}
+                  {planConfig.period}
+                </span>
               )}
             </div>
 
             <ul className="space-y-2">
-              {PLAN_FEATURES[currentPlan as keyof typeof PLAN_FEATURES]?.map(
-                (feature) => (
-                  <li className="flex items-start gap-2 text-sm" key={feature}>
-                    <CheckCircle2Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
-                    <span>{feature}</span>
-                  </li>
-                )
-              )}
+              {planConfig.features.map((feature) => (
+                <li className="flex items-start gap-2 text-sm" key={feature}>
+                  <CheckCircle2Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                  <span>{feature}</span>
+                </li>
+              ))}
             </ul>
 
             {activeSubscription?.cancelAtPeriodEnd && (
@@ -243,30 +220,33 @@ export default function BillingSettings() {
         </CardContent>
       </Card>
 
-      {/* Available Plans */}
-      {currentPlan === "free" && (
+      {/* Upgrade Options - Show if on Starter */}
+      {currentPlan === "starter" && (
         <Card>
           <CardHeader>
             <CardTitle>Upgrade Your Plan</CardTitle>
             <CardDescription>
-              Get access to advanced features and priority support
+              Need more features? Upgrade to Pro or Enterprise.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
+            {/* Pro Plan */}
             <div className="space-y-4 rounded-lg border bg-card p-6">
               <div>
-                <h3 className="font-semibold text-lg">Pro</h3>
+                <h3 className="font-semibold text-lg">{PLANS.pro.name}</h3>
                 <div className="mt-2 flex items-baseline gap-1">
-                  <span className="font-bold text-3xl">$29</span>
-                  <span className="text-muted-foreground text-sm">/month</span>
+                  <span className="font-bold text-3xl">${PLANS.pro.price}</span>
+                  <span className="text-muted-foreground text-sm">
+                    {PLANS.pro.period}
+                  </span>
                 </div>
                 <p className="mt-1 text-muted-foreground text-sm">
-                  Perfect for growing teams
+                  {PLANS.pro.description}
                 </p>
               </div>
 
               <ul className="space-y-2">
-                {PLAN_FEATURES.pro.map((feature) => (
+                {PLANS.pro.features.map((feature) => (
                   <li className="flex items-start gap-2 text-sm" key={feature}>
                     <CheckCircle2Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                     <span>{feature}</span>
@@ -279,23 +259,24 @@ export default function BillingSettings() {
                 loading={upgradeMutation.isPending}
                 onClick={() => upgradeMutation.mutate("pro")}
               >
-                Start 14-Day Free Trial
+                Upgrade to Pro
               </Button>
             </div>
 
+            {/* Growth Plan */}
             <div className="space-y-4 rounded-lg border bg-card p-6">
               <div>
-                <h3 className="font-semibold text-lg">Enterprise</h3>
+                <h3 className="font-semibold text-lg">{PLANS.growth.name}</h3>
                 <div className="mt-2 flex items-baseline gap-1">
                   <span className="font-bold text-3xl">Custom</span>
                 </div>
                 <p className="mt-1 text-muted-foreground text-sm">
-                  For high-volume senders
+                  {PLANS.growth.description}
                 </p>
               </div>
 
               <ul className="space-y-2">
-                {PLAN_FEATURES.enterprise.map((feature) => (
+                {PLANS.growth.features.map((feature) => (
                   <li className="flex items-start gap-2 text-sm" key={feature}>
                     <CheckCircle2Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                     <span>{feature}</span>
@@ -304,7 +285,7 @@ export default function BillingSettings() {
               </ul>
 
               <Button asChild className="w-full" variant="outline">
-                <a href="mailto:sales@wraps.dev?subject=Enterprise Plan Inquiry">
+                <a href="mailto:sales@wraps.dev?subject=Growth Plan Inquiry">
                   Contact Sales
                 </a>
               </Button>

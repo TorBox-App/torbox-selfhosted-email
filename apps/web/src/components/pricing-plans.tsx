@@ -61,8 +61,8 @@ const defaultPlans: PricingPlan[] = [
     popular: true,
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
+    id: "growth",
+    name: "Growth",
     description: "For high-volume stores",
     price: "$199",
     frequency: "/month",

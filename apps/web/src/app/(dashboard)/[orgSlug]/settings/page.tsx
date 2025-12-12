@@ -1,7 +1,10 @@
 import { auth } from "@wraps/auth";
 import { redirect } from "next/navigation";
 import { OrganizationSettingsTabs } from "@/components/organization-settings-tabs";
-import { getOrganizationWithMembership } from "@/lib/organization";
+import {
+  getOrganizationPlanId,
+  getOrganizationWithMembership,
+} from "@/lib/organization";
 
 type OrganizationSettingsPageProps = {
   params: Promise<{
@@ -30,6 +33,8 @@ export default async function OrganizationSettingsPage({
     redirect("/");
   }
 
+  const planId = await getOrganizationPlanId(orgWithMembership.id);
+
   return (
     <div className="space-y-6 px-4 lg:px-6">
       <div>
@@ -41,6 +46,7 @@ export default async function OrganizationSettingsPage({
 
       <OrganizationSettingsTabs
         organization={orgWithMembership}
+        planId={planId}
         userRole={orgWithMembership.userRole}
       />
     </div>
