@@ -21,7 +21,7 @@ const faqItems: FaqItem[] = [
     value: "item-1",
     question: "How is this different from using AWS SES directly?",
     answer:
-      "Wraps deploys all the infrastructure AWS SES needs (IAM roles, EventBridge, DynamoDB, Lambda, SQS) in one command instead of 2+ hours of manual setup. You get event tracking, analytics, webhooks, and a beautiful dashboard out of the box. Plus our TypeScript SDK gives you a clean, intuitive API that makes sending emails delightful.",
+      "Wraps deploys all the infrastructure AWS SES needs (IAM roles, EventBridge, DynamoDB, Lambda, SQS) in one command instead of 2+ hours of manual setup. You get event tracking, analytics, and a dashboard out of the box. The TypeScript SDK is just `wraps.emails.send()` - no boilerplate.",
   },
   {
     value: "item-2",

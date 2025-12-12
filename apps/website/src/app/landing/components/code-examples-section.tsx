@@ -291,9 +291,8 @@ export function CodeExamplesSection() {
               Works with Your Favorite Framework
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              The @wraps.dev/email SDK integrates seamlessly with any JavaScript
-              or TypeScript framework. Choose your stack and start sending
-              emails in minutes.
+              The @wraps.dev/email SDK works with any JavaScript or TypeScript
+              framework. Here's how to send your first email.
             </p>
           </div>
 

@@ -24,16 +24,16 @@ const mainFeatures = [
   },
   {
     icon: Mail,
-    title: "Beautiful Developer Experience",
+    title: "TypeScript-First SDK",
     description:
-      "TypeScript-first SDK (@wraps.dev/email) with a clean, intuitive API that makes sending emails delightful.",
+      "Clean API with full type safety. Just `wraps.emails.send()` - no boilerplate, no callbacks.",
     status: "Available",
   },
   {
     icon: Gauge,
     title: "Event Tracking & Analytics",
     description:
-      "Real-time delivery, open, click tracking with DynamoDB storage and beautiful dashboards.",
+      "Delivery, open, and click tracking stored in DynamoDB. View metrics in the dashboard or query directly.",
     status: "Available",
   },
   {
@@ -82,12 +82,11 @@ export function FeaturesSection() {
             How It Works
           </Badge>
           <h2 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-            Enterprise Email Infrastructure, Zero Hassle
+            Your Infrastructure, Our DX
           </h2>
           <p className="text-lg text-muted-foreground">
-            Deploy production-grade AWS SES infrastructure with event tracking,
-            analytics, and beautiful dashboards in one command. No AWS expertise
-            required.
+            Deploy AWS SES with event tracking, analytics, and a web dashboard
+            in one command. No AWS expertise required.
           </p>
         </div>
 
@@ -107,10 +106,9 @@ export function FeaturesSection() {
                 Everything You Need, Nothing You Don't
               </h3>
               <p className="text-pretty text-base text-muted-foreground">
-                Wraps deploys AWS SES, DynamoDB, Lambda, EventBridge, and IAM
-                roles to your AWS account in one command. You get event
-                tracking, analytics, and a beautiful dashboard while paying AWS
-                directly at their rates.
+                Wraps deploys SES, DynamoDB, Lambda, EventBridge, and IAM roles
+                to your AWS account in one command. You get event tracking,
+                analytics, and a dashboard while paying AWS directly.
               </p>
             </div>
 
@@ -179,12 +177,12 @@ export function FeaturesSection() {
           <div className="order-2 space-y-6 lg:order-1">
             <div className="space-y-4">
               <h3 className="text-balance font-semibold text-2xl tracking-tight sm:text-3xl">
-                Email Superpowers for Your Team
+                Send, Track, Iterate
               </h3>
               <p className="text-pretty text-base text-muted-foreground">
-                Use our TypeScript SDK with a clean, intuitive API. Track opens,
-                clicks, bounces, and complaints in real-time. View analytics in
-                a beautiful dashboard. All running in your own AWS account.
+                Use the TypeScript SDK to send emails. Track opens, clicks,
+                bounces, and complaints in real-time. Query the data directly
+                from DynamoDB or view it in the dashboard. All in your AWS account.
               </p>
             </div>
 
