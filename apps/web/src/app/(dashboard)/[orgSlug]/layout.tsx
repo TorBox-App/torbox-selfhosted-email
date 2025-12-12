@@ -1,7 +1,8 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { organizationExtension } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
+import { subscription } from "@wraps/db/schema/auth";
+import { and, eq, or } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -43,14 +44,22 @@ export default async function OrganizationLayout({
   });
 
   // Redirect to onboarding if not completed
-  // Allow certain paths to bypass onboarding check (like settings)
-  const _bypassPaths = ["/settings", "/onboarding"];
-  const _currentPath = ""; // We don't have access to pathname in server component
-
-  // Simple check: if extension doesn't exist or onboarding not completed, redirect
-  // But skip redirect if already on onboarding or certain settings pages
   if (!extension?.onboardingCompleted) {
     redirect(`/${orgSlug}/onboarding`);
+  }
+
+  // Verify user has an active subscription (required for dashboard access)
+  // Users must subscribe during onboarding to access the dashboard
+  const activeSubscription = await db.query.subscription.findFirst({
+    where: and(
+      eq(subscription.referenceId, orgWithMembership.id),
+      or(eq(subscription.status, "active"), eq(subscription.status, "trialing"))
+    ),
+  });
+
+  // If subscription is cancelled/expired, redirect to upgrade page
+  if (!activeSubscription) {
+    redirect(`/${orgSlug}/upgrade`);
   }
 
   return <>{children}</>;
