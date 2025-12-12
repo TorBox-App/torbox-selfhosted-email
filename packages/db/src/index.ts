@@ -13,3 +13,6 @@ export const db = drizzle(sql, { schema });
 
 // Re-export all schemas for use elsewhere
 export * from "./schema";
+
+// Re-export commonly used drizzle-orm operators
+export { eq, and, or, sql as sqlExpr } from "drizzle-orm";

@@ -1,5 +1,5 @@
 import { stripe } from "@better-auth/stripe";
-import { db } from "@wraps/db";
+import { db, eq } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import { getWrapsClient } from "@wraps/email";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
@@ -103,6 +103,112 @@ export const auth = betterAuth<BetterAuthOptions>({
           stripe({
             stripeClient,
             stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+            onEvent: async (event) => {
+              // Handle payment failed events
+              if (event.type === "invoice.payment_failed") {
+                try {
+                  const invoice = event.data.object as Stripe.Invoice;
+                  const customerId =
+                    typeof invoice.customer === "string"
+                      ? invoice.customer
+                      : invoice.customer?.id;
+
+                  if (!customerId) {
+                    console.error(
+                      "Payment failed webhook: No customer ID found"
+                    );
+                    return;
+                  }
+
+                  // Find subscription by Stripe customer ID
+                  const sub = await db.query.subscription.findFirst({
+                    where: eq(schema.subscription.stripeCustomerId, customerId),
+                  });
+
+                  if (!sub) {
+                    console.error(
+                      `Payment failed webhook: No subscription found for customer ${customerId}`
+                    );
+                    return;
+                  }
+
+                  // Get organization details
+                  const org = await db.query.organization.findFirst({
+                    where: eq(schema.organization.id, sub.referenceId),
+                  });
+
+                  if (!org) {
+                    console.error(
+                      `Payment failed webhook: No organization found for ${sub.referenceId}`
+                    );
+                    return;
+                  }
+
+                  // Get owner/admin members to notify
+                  const members = await db.query.member.findMany({
+                    where: eq(schema.member.organizationId, org.id),
+                    with: {
+                      user: true,
+                    },
+                  });
+
+                  const adminsToNotify = members.filter(
+                    (m) => m.role === "owner" || m.role === "admin"
+                  );
+
+                  if (adminsToNotify.length === 0) {
+                    console.error(
+                      `Payment failed webhook: No admins found for org ${org.id}`
+                    );
+                    return;
+                  }
+
+                  // Format amount
+                  const amount = (invoice.amount_due / 100).toFixed(2);
+                  const currency = invoice.currency.toUpperCase();
+
+                  // Build billing URL
+                  const appUrl =
+                    process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev";
+                  const billingUrl = `${appUrl}/${org.slug}/settings?tab=billing`;
+
+                  // Send payment failed email to all admins
+                  const wraps = await getWrapsClient();
+                  for (const admin of adminsToNotify) {
+                    if (!admin.user?.email) continue;
+
+                    try {
+                      await wraps.sendTemplate({
+                        from: "Wraps <billing@wraps.dev>",
+                        to: admin.user.email,
+                        template: "Payment-Failure",
+                        templateData: {
+                          name: admin.user.name || "there",
+                          amount: `${currency} ${amount}`,
+                          organizationName: org.name,
+                          billingUrl,
+                          invoiceUrl: invoice.hosted_invoice_url || undefined,
+                        },
+                      });
+                    } catch (emailError) {
+                      console.error(
+                        `Failed to send payment failed email to ${admin.user.email}:`,
+                        emailError
+                      );
+                    }
+                  }
+
+                  console.log(
+                    `Payment failed notification sent for org ${org.id} (${org.name})`
+                  );
+                } catch (error) {
+                  console.error(
+                    "Error handling payment failed webhook:",
+                    error
+                  );
+                }
+              }
+            },
             subscription: {
               enabled: true,
               authorizeReference: async ({ user, referenceId }) => {
@@ -135,26 +241,40 @@ export const auth = betterAuth<BetterAuthOptions>({
               },
               plans: [
                 {
+                  name: "starter",
+                  priceId: process.env.STRIPE_STARTER_PRICE_ID || "",
+                  annualDiscountPriceId:
+                    process.env.STRIPE_STARTER_ANNUAL_PRICE_ID,
+                  limits: {
+                    emails: -1, // Unlimited (they pay AWS)
+                    awsAccounts: 1,
+                    aiMessages: 50,
+                    bulkBatchSize: 100,
+                    members: -1, // Unlimited (we don't gate on team size)
+                  },
+                },
+                {
                   name: "pro",
                   priceId: process.env.STRIPE_PRO_PRICE_ID || "",
                   annualDiscountPriceId: process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
                   limits: {
-                    emails: 100_000, // 100k emails/month
+                    emails: -1, // Unlimited (they pay AWS)
                     awsAccounts: 3,
-                    members: 10,
-                  },
-                  freeTrial: {
-                    days: 14,
+                    aiMessages: 250,
+                    bulkBatchSize: 1000,
+                    members: -1, // Unlimited (we don't gate on team size)
                   },
                 },
                 {
-                  name: "enterprise",
-                  priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID || "",
+                  name: "growth",
+                  priceId: process.env.STRIPE_GROWTH_PRICE_ID || "",
                   annualDiscountPriceId:
-                    process.env.STRIPE_ENTERPRISE_ANNUAL_PRICE_ID,
+                    process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID,
                   limits: {
                     emails: -1, // Unlimited
                     awsAccounts: -1, // Unlimited
+                    aiMessages: 1000,
+                    bulkBatchSize: 10_000,
                     members: -1, // Unlimited
                   },
                 },
