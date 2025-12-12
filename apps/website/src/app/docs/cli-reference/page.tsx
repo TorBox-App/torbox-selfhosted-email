@@ -61,6 +61,27 @@ export default function CLIReferencePage() {
                   Display the CLI version
                 </p>
               </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--preview</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Preview infrastructure changes without deploying. Shows what
+                  resources would be created, updated, or deleted along with
+                  cost estimates. Available on all deployment commands (init,
+                  connect, upgrade, restore, destroy).
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">-y, --yes</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Skip confirmation prompts for non-destructive operations
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">-f, --force</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Force destructive operations without confirmation
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -127,6 +148,12 @@ export default function CLIReferencePage() {
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Hosting provider: vercel, lambda, ecs, or ec2
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--preview</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Preview infrastructure changes without deploying
                 </p>
               </div>
             </div>
@@ -600,6 +627,12 @@ export default function CLIReferencePage() {
                   AWS region to scan for existing resources
                 </p>
               </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--preview</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Preview infrastructure changes without deploying
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -645,6 +678,30 @@ export default function CLIReferencePage() {
                 npx @wraps.dev/cli email upgrade [options]
               </code>
             </pre>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --region &lt;region&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  AWS region where infrastructure is deployed
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--preview</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Preview infrastructure changes without deploying
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -789,6 +846,12 @@ export default function CLIReferencePage() {
                   AWS region where infrastructure was deployed
                 </p>
               </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--preview</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Preview infrastructure changes without deploying
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -843,6 +906,12 @@ export default function CLIReferencePage() {
                 <code className="rounded bg-muted px-2 py-1">-f, --force</code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Skip confirmation prompt (use with caution)
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--preview</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Preview what would be destroyed without making changes
                 </p>
               </div>
             </div>
