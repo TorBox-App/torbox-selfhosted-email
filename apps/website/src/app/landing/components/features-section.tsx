@@ -182,7 +182,8 @@ export function FeaturesSection() {
               <p className="text-pretty text-base text-muted-foreground">
                 Use the TypeScript SDK to send emails. Track opens, clicks,
                 bounces, and complaints in real-time. Query the data directly
-                from DynamoDB or view it in the dashboard. All in your AWS account.
+                from DynamoDB or view it in the dashboard. All in your AWS
+                account.
               </p>
             </div>
 

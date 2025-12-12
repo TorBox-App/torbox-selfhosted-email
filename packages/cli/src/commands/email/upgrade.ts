@@ -26,6 +26,7 @@ import {
 } from "../../utils/shared/metadata.js";
 import {
   DeploymentProgress,
+  displayPreview,
   displaySuccess,
 } from "../../utils/shared/output.js";
 import { promptVercelConfig } from "../../utils/shared/prompts.js";
@@ -35,7 +36,13 @@ import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
  * Upgrade command - Enhance existing Wraps infrastructure
  */
 export async function upgrade(options: UpgradeOptions): Promise<void> {
-  clack.intro(pc.bold("Wraps Upgrade - Enhance Your Email Infrastructure"));
+  clack.intro(
+    pc.bold(
+      options.preview
+        ? "Wraps Upgrade Preview"
+        : "Wraps Upgrade - Enhance Your Email Infrastructure"
+    )
+  );
 
   const progress = new DeploymentProgress();
 
@@ -778,8 +785,8 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   }
   console.log("");
 
-  // 9. Confirm upgrade
-  if (!options.yes) {
+  // 9. Confirm upgrade (skip if --yes or --preview)
+  if (!(options.yes || options.preview)) {
     const confirmed = await clack.confirm({
       message: "Proceed with upgrade?",
       initialValue: true,
@@ -807,7 +814,95 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     emailConfig: updatedConfig,
   };
 
-  // 12. Update Pulumi stack (incremental update)
+  // 12. Preview or Update Pulumi stack
+  if (options.preview) {
+    // PREVIEW MODE - show what would be changed without deploying
+    try {
+      const previewResult = await progress.execute(
+        "Generating upgrade preview",
+        async () => {
+          await ensurePulumiWorkDir();
+
+          const stack =
+            await pulumi.automation.LocalWorkspace.createOrSelectStack(
+              {
+                stackName:
+                  metadata.services.email?.pulumiStackName ||
+                  `wraps-${identity.accountId}-${region}`,
+                projectName: "wraps-email",
+                program: async () => {
+                  const result = await deployEmailStack(stackConfig);
+                  return {
+                    roleArn: result.roleArn,
+                    configSetName: result.configSetName,
+                    tableName: result.tableName,
+                    region: result.region,
+                    lambdaFunctions: result.lambdaFunctions,
+                    domain: result.domain,
+                    dkimTokens: result.dkimTokens,
+                    customTrackingDomain: result.customTrackingDomain,
+                    httpsTrackingEnabled: result.httpsTrackingEnabled,
+                    cloudFrontDomain: result.cloudFrontDomain,
+                    acmCertificateValidationRecords:
+                      result.acmCertificateValidationRecords,
+                    archiveArn: result.archiveArn,
+                    archivingEnabled: result.archivingEnabled,
+                    archiveRetention: result.archiveRetention,
+                  };
+                },
+              },
+              {
+                workDir: getPulumiWorkDir(),
+                envVars: {
+                  PULUMI_CONFIG_PASSPHRASE: "",
+                  AWS_REGION: region,
+                },
+                secretsProvider: "passphrase",
+              }
+            );
+
+          await stack.setConfig("aws:region", { value: region });
+
+          // Refresh state to sync with AWS before previewing
+          await stack.refresh({ onOutput: () => {} });
+
+          // Run preview instead of deployment
+          const result = await stack.preview({ diff: true });
+          return result;
+        }
+      );
+
+      // Build cost comparison string
+      const costComparison = [
+        `Current: ${formatCost(currentCostData.total.monthly)}/mo`,
+        `After upgrade: ${formatCost(newCostData.total.monthly)}/mo`,
+        costDiff > 0
+          ? `Change: +${formatCost(costDiff)}/mo`
+          : costDiff < 0
+            ? `Change: -${formatCost(Math.abs(costDiff))}/mo`
+            : "Change: No cost difference",
+      ].join("\n");
+
+      // Display preview results
+      displayPreview({
+        changeSummary: previewResult.changeSummary,
+        costEstimate: costComparison,
+        commandName: "wraps email upgrade",
+      });
+
+      clack.outro(
+        pc.green("Preview complete. Run without --preview to upgrade.")
+      );
+      return;
+    } catch (error: any) {
+      if (error.message?.includes("stack is currently locked")) {
+        throw errors.stackLocked();
+      }
+      throw new Error(`Preview failed: ${error.message}`);
+    }
+  }
+
+  // DEPLOY MODE - actually update infrastructure
   let outputs;
   try {
     outputs = await progress.execute(

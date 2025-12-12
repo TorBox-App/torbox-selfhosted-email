@@ -20,6 +20,7 @@ import {
 } from "../../utils/shared/metadata.js";
 import {
   DeploymentProgress,
+  displayPreview,
   displaySuccess,
 } from "../../utils/shared/output.js";
 import {
@@ -37,7 +38,13 @@ import { scanAWSResources } from "../../utils/shared/scanner.js";
  * Connect command - Connect to existing AWS SES infrastructure
  */
 export async function connect(options: ConnectOptions): Promise<void> {
-  clack.intro(pc.bold("Wraps Connect - Link Existing Infrastructure"));
+  clack.intro(
+    pc.bold(
+      options.preview
+        ? "Wraps Connect Preview"
+        : "Wraps Connect - Link Existing Infrastructure"
+    )
+  );
 
   const progress = new DeploymentProgress();
 
@@ -150,8 +157,8 @@ export async function connect(options: ConnectOptions): Promise<void> {
     emailConfig.domain = domainIdentities[0];
   }
 
-  // 9. Confirm deployment
-  if (!options.yes) {
+  // 9. Confirm deployment (skip if --yes or --preview)
+  if (!(options.yes || options.preview)) {
     const confirmed = await confirmConnect();
     if (!confirmed) {
       clack.cancel("Connection cancelled.");
@@ -167,7 +174,71 @@ export async function connect(options: ConnectOptions): Promise<void> {
     emailConfig,
   };
 
-  // 11. Deploy infrastructure using Pulumi
+  // 11. Preview or Deploy infrastructure using Pulumi
+  if (options.preview) {
+    // PREVIEW MODE - show what would be created without deploying
+    try {
+      const previewResult = await progress.execute(
+        "Generating infrastructure preview",
+        async () => {
+          await ensurePulumiWorkDir();
+
+          const stack =
+            await pulumi.automation.LocalWorkspace.createOrSelectStack(
+              {
+                stackName: `wraps-${identity.accountId}-${region}`,
+                projectName: "wraps-email",
+                program: async () => {
+                  const result = await deployEmailStack(stackConfig);
+                  return {
+                    roleArn: result.roleArn,
+                    configSetName: result.configSetName,
+                    tableName: result.tableName,
+                    region: result.region,
+                    lambdaFunctions: result.lambdaFunctions,
+                    domain: result.domain,
+                    dkimTokens: result.dkimTokens,
+                    customTrackingDomain: result.customTrackingDomain,
+                  };
+                },
+              },
+              {
+                workDir: getPulumiWorkDir(),
+                envVars: {
+                  PULUMI_CONFIG_PASSPHRASE: "",
+                  AWS_REGION: region,
+                },
+                secretsProvider: "passphrase",
+              }
+            );
+
+          await stack.setConfig("aws:region", { value: region });
+
+          // Run preview instead of deployment
+          const result = await stack.preview({ diff: true });
+          return result;
+        }
+      );
+
+      // Display preview results
+      displayPreview({
+        changeSummary: previewResult.changeSummary,
+        commandName: "wraps email connect",
+      });
+
+      clack.outro(
+        pc.green("Preview complete. Run without --preview to connect.")
+      );
+      return;
+    } catch (error: any) {
+      if (error.message?.includes("stack is currently locked")) {
+        throw errors.stackLocked();
+      }
+      throw new Error(`Preview failed: ${error.message}`);
+    }
+  }
+
+  // DEPLOY MODE - actually create infrastructure
   let outputs;
   try {
     outputs = await progress.execute(

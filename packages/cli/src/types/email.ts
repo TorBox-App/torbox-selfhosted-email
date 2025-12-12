@@ -145,6 +145,7 @@ export type EmailInitOptions = {
   domain?: string;
   preset?: EmailConfigPreset;
   yes?: boolean;
+  preview?: boolean;
 };
 
 /**
@@ -176,6 +177,7 @@ export type EmailConnectOptions = {
   provider?: Provider;
   region?: string;
   yes?: boolean;
+  preview?: boolean;
 };
 
 /**
@@ -191,6 +193,7 @@ export type EmailVerifyOptions = {
 export type EmailUpgradeOptions = {
   region?: string;
   yes?: boolean;
+  preview?: boolean;
 };
 
 /**
@@ -202,6 +205,7 @@ export type EmailUpgradeOptions = {
 export type EmailConfigOptions = {
   region?: string;
   yes?: boolean;
+  preview?: boolean;
 };
 
 /** @deprecated Use EmailConfigOptions instead */
@@ -213,4 +217,5 @@ export type EmailUpdateOptions = EmailConfigOptions;
 export type EmailRestoreOptions = {
   region?: string;
   force?: boolean; // Destructive operation - restores previous configuration
+  preview?: boolean;
 };

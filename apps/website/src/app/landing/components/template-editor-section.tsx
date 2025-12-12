@@ -58,7 +58,7 @@ function PlaceholderImage({
 }) {
   return (
     <div
-      className={`relative aspect-video w-full overflow-hidden rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-muted/50 ${className}`}
+      className={`relative aspect-video w-full overflow-hidden rounded-2xl border-2 border-muted-foreground/25 border-dashed bg-muted/50 ${className}`}
     >
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
@@ -66,7 +66,9 @@ function PlaceholderImage({
         </div>
         <div>
           <p className="font-semibold text-foreground">{alt}</p>
-          <p className="text-muted-foreground text-sm">Screenshot coming soon</p>
+          <p className="text-muted-foreground text-sm">
+            Screenshot coming soon
+          </p>
         </div>
       </div>
     </div>
@@ -135,7 +137,6 @@ export function TemplateEditorSection() {
               <img
                 alt="Template Editor - Light Mode"
                 className="block w-full rounded-xl object-cover dark:hidden"
-                src={assetUrl("template-editor-full-light.webp")}
                 onError={(e) => {
                   // Fallback to placeholder
                   e.currentTarget.style.display = "none";
@@ -143,6 +144,7 @@ export function TemplateEditorSection() {
                     "hidden"
                   );
                 }}
+                src={assetUrl("template-editor-full-light.webp")}
               />
               <div className="hidden dark:hidden">
                 <PlaceholderImage alt="Template Editor Preview" />
@@ -152,7 +154,6 @@ export function TemplateEditorSection() {
               <img
                 alt="Template Editor - Dark Mode"
                 className="hidden w-full rounded-xl object-cover dark:block"
-                src={assetUrl("template-editor-full-dark.webp")}
                 onError={(e) => {
                   // Fallback to placeholder
                   e.currentTarget.style.display = "none";
@@ -160,6 +161,7 @@ export function TemplateEditorSection() {
                     "!hidden"
                   );
                 }}
+                src={assetUrl("template-editor-full-dark.webp")}
               />
               <div className="!hidden dark:!hidden">
                 <PlaceholderImage alt="Template Editor Preview" />
@@ -183,7 +185,9 @@ export function TemplateEditorSection() {
                   <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                     <feature.icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h3 className="mb-2 font-semibold text-lg">{feature.title}</h3>
+                  <h3 className="mb-2 font-semibold text-lg">
+                    {feature.title}
+                  </h3>
                   <p className="text-muted-foreground text-sm">
                     {feature.description}
                   </p>
@@ -203,7 +207,9 @@ export function TemplateEditorSection() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                     <Sparkles className="h-4 w-4 text-primary" />
                   </div>
-                  <h3 className="font-semibold text-xl">AI Content Assistant</h3>
+                  <h3 className="font-semibold text-xl">
+                    AI Content Assistant
+                  </h3>
                 </div>
                 <p className="text-muted-foreground">
                   Generate entire email templates from a simple prompt, or

@@ -11,7 +11,10 @@ import {
   deleteConnectionMetadata,
   loadConnectionMetadata,
 } from "../../utils/shared/metadata.js";
-import { DeploymentProgress } from "../../utils/shared/output.js";
+import {
+  DeploymentProgress,
+  displayPreview,
+} from "../../utils/shared/output.js";
 
 /**
  * Restore command - Remove Wraps infrastructure (alias for destroy)
@@ -21,7 +24,13 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
  * existing infrastructure, there's nothing to "restore" - only to remove.
  */
 export async function restore(options: EmailRestoreOptions): Promise<void> {
-  clack.intro(pc.bold("Wraps Restore - Remove Wraps Infrastructure"));
+  clack.intro(
+    pc.bold(
+      options.preview
+        ? "Wraps Restore Preview"
+        : "Wraps Restore - Remove Wraps Infrastructure"
+    )
+  );
 
   clack.log.info(
     `${pc.yellow("Note:")} This will remove all Wraps-managed infrastructure.`
@@ -81,8 +90,8 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
   console.log(`  ${pc.cyan("✓")} IAM Role (wraps-email-role)`);
   console.log("");
 
-  // 5. Confirm removal
-  if (!options.force) {
+  // 5. Confirm removal (skip if --force or --preview)
+  if (!(options.force || options.preview)) {
     const confirmed = await clack.confirm({
       message: "Proceed with removal? This cannot be undone.",
       initialValue: false,
@@ -94,7 +103,57 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
     }
   }
 
-  // 6. Destroy Pulumi stack
+  // 6. Preview or Destroy Pulumi stack
+  if (options.preview) {
+    // PREVIEW MODE - show what would be destroyed without actually destroying
+    if (metadata.services.email?.pulumiStackName) {
+      try {
+        const previewResult = await progress.execute(
+          "Generating removal preview",
+          async () => {
+            const stack = await pulumi.automation.LocalWorkspace.selectStack(
+              {
+                stackName: metadata.services.email!.pulumiStackName!,
+                projectName: "wraps-email",
+                program: async () => {}, // Empty program for destroy
+              },
+              {
+                workDir: getPulumiWorkDir(),
+                envVars: {
+                  PULUMI_CONFIG_PASSPHRASE: "",
+                  AWS_REGION: region,
+                },
+                secretsProvider: "passphrase",
+              }
+            );
+
+            // Run preview to see what would be destroyed
+            const result = await stack.preview({ diff: true });
+            return result;
+          }
+        );
+
+        // Display preview results
+        displayPreview({
+          changeSummary: previewResult.changeSummary,
+          costEstimate: "Monthly cost after removal: $0.00",
+          commandName: "wraps email restore",
+        });
+
+        clack.outro(
+          pc.green(
+            "Preview complete. Run without --preview to remove infrastructure."
+          )
+        );
+        return;
+      } catch (error: any) {
+        throw new Error(`Preview failed: ${error.message}`);
+      }
+    }
+    return;
+  }
+
+  // DESTROY MODE - actually remove infrastructure
   if (metadata.services.email?.pulumiStackName) {
     await progress.execute("Removing Wraps infrastructure", async () => {
       try {

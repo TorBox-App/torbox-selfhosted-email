@@ -25,6 +25,7 @@ import {
 } from "../../utils/shared/metadata.js";
 import {
   DeploymentProgress,
+  displayPreview,
   displaySuccess,
 } from "../../utils/shared/output.js";
 import {
@@ -43,7 +44,13 @@ import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
  * Init command - Deploy new email infrastructure
  */
 export async function init(options: InitOptions): Promise<void> {
-  clack.intro(pc.bold("Wraps Email Infrastructure Setup"));
+  clack.intro(
+    pc.bold(
+      options.preview
+        ? "Wraps Email Infrastructure Preview"
+        : "Wraps Email Infrastructure Setup"
+    )
+  );
 
   const progress = new DeploymentProgress();
 
@@ -157,8 +164,8 @@ export async function init(options: InitOptions): Promise<void> {
     metadata.vercel = vercelConfig;
   }
 
-  // Confirm deployment (skip if --yes flag)
-  if (!options.yes) {
+  // Confirm deployment (skip if --yes flag or --preview flag)
+  if (!(options.yes || options.preview)) {
     const confirmed = await confirmDeploy();
     if (!confirmed) {
       clack.cancel("Deployment cancelled.");
@@ -174,7 +181,76 @@ export async function init(options: InitOptions): Promise<void> {
     emailConfig,
   };
 
-  // 8. Deploy infrastructure using Pulumi
+  // 8. Preview or Deploy infrastructure using Pulumi
+  if (options.preview) {
+    // PREVIEW MODE - show what would be created without deploying
+    try {
+      const previewResult = await progress.execute(
+        "Generating infrastructure preview",
+        async () => {
+          await ensurePulumiWorkDir();
+
+          const stack =
+            await pulumi.automation.LocalWorkspace.createOrSelectStack(
+              {
+                stackName: `wraps-${identity.accountId}-${region}`,
+                projectName: "wraps-email",
+                program: async () => {
+                  const result = await deployEmailStack(stackConfig);
+                  return {
+                    roleArn: result.roleArn,
+                    configSetName: result.configSetName,
+                    tableName: result.tableName,
+                    region: result.region,
+                    lambdaFunctions: result.lambdaFunctions,
+                    domain: result.domain,
+                    dkimTokens: result.dkimTokens,
+                    customTrackingDomain: result.customTrackingDomain,
+                    mailFromDomain: result.mailFromDomain,
+                    archiveArn: result.archiveArn,
+                    archivingEnabled: result.archivingEnabled,
+                    archiveRetention: result.archiveRetention,
+                  };
+                },
+              },
+              {
+                workDir: getPulumiWorkDir(),
+                envVars: {
+                  PULUMI_CONFIG_PASSPHRASE: "",
+                  AWS_REGION: region,
+                },
+                secretsProvider: "passphrase",
+              }
+            );
+
+          await stack.setConfig("aws:region", { value: region });
+
+          // Run preview instead of deployment
+          const result = await stack.preview({ diff: true });
+          return result;
+        }
+      );
+
+      // Display preview results
+      displayPreview({
+        changeSummary: previewResult.changeSummary,
+        costEstimate: costSummary,
+        commandName: "wraps email init",
+      });
+
+      clack.outro(
+        pc.green("Preview complete. Run without --preview to deploy.")
+      );
+      return;
+    } catch (error: any) {
+      if (error.message?.includes("stack is currently locked")) {
+        throw errors.stackLocked();
+      }
+      throw new Error(`Preview failed: ${error.message}`);
+    }
+  }
+
+  // DEPLOY MODE - actually create infrastructure
   let outputs;
   try {
     outputs = await progress.execute(

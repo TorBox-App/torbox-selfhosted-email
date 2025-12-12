@@ -11,13 +11,22 @@ import {
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
 import { deleteConnectionMetadata } from "../../utils/shared/metadata.js";
-import { DeploymentProgress } from "../../utils/shared/output.js";
+import {
+  DeploymentProgress,
+  displayPreview,
+} from "../../utils/shared/output.js";
 
 /**
  * Destroy command - Remove all deployed infrastructure
  */
 export async function destroy(options: DestroyOptions): Promise<void> {
-  clack.intro(pc.bold("Wraps Email Infrastructure Teardown"));
+  clack.intro(
+    pc.bold(
+      options.preview
+        ? "Wraps Destruction Preview"
+        : "Wraps Email Infrastructure Teardown"
+    )
+  );
 
   const progress = new DeploymentProgress();
 
@@ -30,8 +39,8 @@ export async function destroy(options: DestroyOptions): Promise<void> {
   // 2. Get region
   const region = await getAWSRegion();
 
-  // 3. Confirm destruction
-  if (!options.force) {
+  // 3. Confirm destruction (skip if --force or --preview)
+  if (!(options.force || options.preview)) {
     const confirmed = await clack.confirm({
       message: pc.red(
         "Are you sure you want to destroy all Wraps infrastructure?"
@@ -45,7 +54,56 @@ export async function destroy(options: DestroyOptions): Promise<void> {
     }
   }
 
-  // 4. Destroy infrastructure using Pulumi
+  // 4. Preview or Destroy infrastructure using Pulumi
+  if (options.preview) {
+    // PREVIEW MODE - show what would be destroyed without actually destroying
+    try {
+      const previewResult = await progress.execute(
+        "Generating destruction preview",
+        async () => {
+          await ensurePulumiWorkDir();
+
+          const stackName = `wraps-${identity.accountId}-${region}`;
+
+          // Try to select the stack
+          let stack;
+          try {
+            stack = await pulumi.automation.LocalWorkspace.selectStack({
+              stackName,
+              workDir: getPulumiWorkDir(),
+            });
+          } catch (_error) {
+            throw new Error("No Wraps infrastructure found to preview");
+          }
+
+          // Run preview to see what would be destroyed
+          const result = await stack.preview({ diff: true });
+          return result;
+        }
+      );
+
+      // Display preview results
+      displayPreview({
+        changeSummary: previewResult.changeSummary,
+        costEstimate: "Monthly cost after destruction: $0.00",
+        commandName: "wraps destroy",
+      });
+
+      clack.outro(
+        pc.green("Preview complete. Run without --preview to destroy.")
+      );
+      return;
+    } catch (error: any) {
+      progress.stop();
+      if (error.message.includes("No Wraps infrastructure found")) {
+        clack.log.warn("No Wraps infrastructure found to preview");
+        process.exit(0);
+      }
+      throw new Error(`Preview failed: ${error.message}`);
+    }
+  }
+
+  // DESTROY MODE - actually remove infrastructure
   try {
     await progress.execute(
       "Destroying infrastructure (this may take 2-3 minutes)",

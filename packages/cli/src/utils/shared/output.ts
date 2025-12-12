@@ -511,3 +511,58 @@ export function displayStatus(status: StatusOutputs) {
   console.log(`\n${pc.bold("Dashboard:")} ${pc.blue("https://app.wraps.dev")}`);
   console.log(`${pc.bold("Docs:")} ${pc.blue("https://wraps.dev/docs")}\n`);
 }
+
+/**
+ * Preview output configuration
+ */
+export type PreviewOutputs = {
+  changeSummary: {
+    create?: number;
+    update?: number;
+    delete?: number;
+    same?: number;
+    replace?: number;
+  };
+  costEstimate?: string;
+  commandName: string;
+};
+
+/**
+ * Display preview results with resource changes and cost estimate
+ */
+export function displayPreview(outputs: PreviewOutputs): void {
+  console.log(pc.yellow("\n--- PREVIEW MODE (no changes will be made) ---\n"));
+
+  // Display change summary
+  const changes = outputs.changeSummary;
+  const summaryLines: string[] = [];
+
+  if (changes.create && changes.create > 0) {
+    summaryLines.push(`  ${pc.green("+")} ${changes.create} to create`);
+  }
+  if (changes.update && changes.update > 0) {
+    summaryLines.push(`  ${pc.yellow("~")} ${changes.update} to update`);
+  }
+  if (changes.delete && changes.delete > 0) {
+    summaryLines.push(`  ${pc.red("-")} ${changes.delete} to destroy`);
+  }
+  if (changes.same && changes.same > 0) {
+    summaryLines.push(`  ${pc.dim("=")} ${changes.same} unchanged`);
+  }
+  if (changes.replace && changes.replace > 0) {
+    summaryLines.push(`  ${pc.magenta("+-")} ${changes.replace} to replace`);
+  }
+
+  if (summaryLines.length > 0) {
+    clack.note(summaryLines.join("\n"), "Resource Changes");
+  } else {
+    clack.note("No changes detected", "Resource Changes");
+  }
+
+  // Display cost estimate
+  if (outputs.costEstimate) {
+    clack.note(outputs.costEstimate, "Estimated Monthly Cost");
+  }
+
+  console.log(pc.yellow("\n--- END PREVIEW (no changes were made) ---\n"));
+}

@@ -102,6 +102,9 @@ function showHelp() {
   console.log(`  ${pc.dim("--preset")}         Configuration preset`);
   console.log(`  ${pc.dim("-y, --yes")}        Skip confirmation prompts`);
   console.log(`  ${pc.dim("-f, --force")}      Force destructive operations`);
+  console.log(
+    `  ${pc.dim("--preview")}        Preview changes without deploying`
+  );
   console.log(`  ${pc.dim("-v, --version")}    Show version number\n`);
   console.log(
     `Run ${pc.cyan("wraps <service> <command> --help")} for more information.\n`
@@ -166,6 +169,11 @@ args.options([
   {
     name: "noOpen",
     description: "Don't open browser automatically",
+    defaultValue: false,
+  },
+  {
+    name: "preview",
+    description: "Preview changes without deploying",
     defaultValue: false,
   },
 ]);
@@ -239,12 +247,14 @@ if (!primaryCommand) {
         domain: flags.domain,
         preset: flags.preset,
         yes: flags.yes,
+        preview: flags.preview,
       });
     } else {
       await connect({
         provider: flags.provider,
         region: flags.region,
         yes: flags.yes,
+        preview: flags.preview,
       });
     }
   }
@@ -292,6 +302,7 @@ async function run() {
             domain: flags.domain,
             preset: flags.preset,
             yes: flags.yes,
+            preview: flags.preview,
           });
           break;
 
@@ -300,6 +311,7 @@ async function run() {
             provider: flags.provider,
             region: flags.region,
             yes: flags.yes,
+            preview: flags.preview,
           });
           break;
 
@@ -308,6 +320,7 @@ async function run() {
           await config({
             region: flags.region,
             yes: flags.yes,
+            preview: flags.preview,
           });
           break;
 
@@ -315,6 +328,7 @@ async function run() {
           await upgrade({
             region: flags.region,
             yes: flags.yes,
+            preview: flags.preview,
           });
           break;
 
@@ -322,6 +336,7 @@ async function run() {
           await restore({
             region: flags.region,
             force: flags.force,
+            preview: flags.preview,
           });
           break;
 
@@ -467,6 +482,7 @@ async function run() {
       case "destroy":
         await destroy({
           force: flags.force,
+          preview: flags.preview,
         });
         break;
 
