@@ -1,5 +1,6 @@
 import { CodeExamplesSection } from "./components/code-examples-section";
 import { CTASection } from "./components/cta-section";
+import { ExistingSesSection } from "./components/existing-ses-section";
 import { FaqSection } from "./components/faq-section";
 import { FeaturesSection } from "./components/features-section";
 import { LandingFooter } from "./components/footer";
@@ -22,6 +23,7 @@ export default function LandingPage() {
         <HeroSection />
         <TrustedBySection />
         <QuickStartSection />
+        <ExistingSesSection />
         <CodeExamplesSection />
         <StatsSection />
         <FeaturesSection />

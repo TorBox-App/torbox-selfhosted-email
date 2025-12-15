@@ -1,10 +1,54 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, Terminal } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  CodeBlock,
+  CodeBlockBody,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockFilename,
+  CodeBlockFiles,
+  CodeBlockHeader,
+  CodeBlockItem,
+} from "@/components/ui/shadcn-io/code-block";
+import {
+  Snippet,
+  SnippetCopyButton,
+  SnippetHeader,
+  SnippetTabsContent,
+  SnippetTabsList,
+  SnippetTabsTrigger,
+} from "@/components/ui/shadcn-io/snippet";
+
+const installCommands = {
+  npm: "npm install @wraps.dev/email",
+  pnpm: "pnpm add @wraps.dev/email",
+  yarn: "yarn add @wraps.dev/email",
+  bun: "bun add @wraps.dev/email",
+};
+
+const sendEmailCode = `import { Wraps } from '@wraps.dev/email';
+
+// Initialize the client
+const wraps = new Wraps();
+
+// Send an email
+const result = await wraps.emails.send({
+  from: 'hello@yourdomain.com',
+  to: 'user@example.com',
+  subject: 'Welcome to Wraps!',
+  html: '<h1>Hello from Wraps!</h1><p>This email was sent using AWS SES.</p>',
+});
+
+if (result.success) {
+  console.log('Email sent:', result.data.messageId);
+} else {
+  console.error('Failed to send email:', result.error);
+}`;
 
 export default function QuickstartPage() {
   return (
@@ -57,17 +101,41 @@ export default function QuickstartPage() {
         <p className="mb-4 text-muted-foreground">
           Run the Wraps CLI to deploy email infrastructure to your AWS account:
         </p>
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-2 flex items-center gap-2 text-muted-foreground text-sm">
-              <Terminal className="h-4 w-4" />
-              Terminal
-            </div>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">npx @wraps.dev/cli email init</code>
-            </pre>
-          </CardContent>
-        </Card>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "bash",
+              filename: "terminal.sh",
+              code: "npx @wraps.dev/cli email init",
+            },
+          ]}
+          defaultValue="bash"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
         <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">What happens during deployment?</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
@@ -101,17 +169,22 @@ export default function QuickstartPage() {
           </code>{" "}
           package:
         </p>
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-2 flex items-center gap-2 text-muted-foreground text-sm">
-              <Terminal className="h-4 w-4" />
-              npm
-            </div>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">npm install @wraps.dev/email</code>
-            </pre>
-          </CardContent>
-        </Card>
+        <Snippet defaultValue="npm">
+          <SnippetHeader>
+            <SnippetTabsList>
+              <SnippetTabsTrigger value="npm">npm</SnippetTabsTrigger>
+              <SnippetTabsTrigger value="pnpm">pnpm</SnippetTabsTrigger>
+              <SnippetTabsTrigger value="yarn">yarn</SnippetTabsTrigger>
+              <SnippetTabsTrigger value="bun">bun</SnippetTabsTrigger>
+            </SnippetTabsList>
+            <SnippetCopyButton value={installCommands.npm} />
+          </SnippetHeader>
+          {Object.entries(installCommands).map(([key, command]) => (
+            <SnippetTabsContent key={key} value={key}>
+              {command}
+            </SnippetTabsContent>
+          ))}
+        </Snippet>
       </section>
 
       {/* Step 3: Send Your First Email */}
@@ -125,34 +198,41 @@ export default function QuickstartPage() {
         <p className="mb-4 text-muted-foreground">
           Create a new file and send an email using the SDK:
         </p>
-        <Card className="mb-4">
-          <CardContent className="p-6">
-            <div className="mb-2 flex items-center gap-2 text-muted-foreground text-sm">
-              <Terminal className="h-4 w-4" />
-              TypeScript / JavaScript
-            </div>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">{`import { Wraps } from '@wraps.dev/email';
-
-// Initialize the client
-const wraps = new Wraps();
-
-// Send an email
-const result = await wraps.emails.send({
-  from: 'hello@yourdomain.com',
-  to: 'user@example.com',
-  subject: 'Welcome to Wraps!',
-  html: '<h1>Hello from Wraps!</h1><p>This email was sent using AWS SES.</p>',
-});
-
-if (result.success) {
-  console.log('Email sent:', result.data.messageId);
-} else {
-  console.error('Failed to send email:', result.error);
-}`}</code>
-            </pre>
-          </CardContent>
-        </Card>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "send-email.ts",
+              code: sendEmailCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">Note: Domain Verification</p>
           <p className="mt-2 text-muted-foreground text-sm">
@@ -177,17 +257,41 @@ if (result.success) {
         <p className="mb-4 text-muted-foreground">
           Run the local dashboard to view email analytics and event tracking:
         </p>
-        <Card className="mb-4">
-          <CardContent className="p-6">
-            <div className="mb-2 flex items-center gap-2 text-muted-foreground text-sm">
-              <Terminal className="h-4 w-4" />
-              Terminal
-            </div>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">npx @wraps.dev/cli dashboard</code>
-            </pre>
-          </CardContent>
-        </Card>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "bash",
+              filename: "terminal.sh",
+              code: "npx @wraps.dev/cli dashboard",
+            },
+          ]}
+          defaultValue="bash"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
         <p className="text-muted-foreground text-sm">
           The dashboard will open at{" "}
           <code className="rounded bg-muted px-1.5 py-0.5">

@@ -79,14 +79,15 @@ export function FeaturesSection() {
         {/* Section Header */}
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <Badge className="mb-4" variant="outline">
-            How It Works
+            Best of Both Worlds
           </Badge>
           <h2 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-            Your Infrastructure, Our DX
+            SES Pricing. Modern DX.
           </h2>
           <p className="text-lg text-muted-foreground">
-            Deploy AWS SES with event tracking, analytics, and a web dashboard
-            in one command. No AWS expertise required.
+            You shouldn't have to choose between cost and developer experience.
+            Get the SDK, tracking, and dashboard you actually want—at AWS
+            prices.
           </p>
         </div>
 

@@ -5,6 +5,51 @@ import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  CodeBlock,
+  CodeBlockBody,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockFilename,
+  CodeBlockFiles,
+  CodeBlockHeader,
+  CodeBlockItem,
+} from "@/components/ui/shadcn-io/code-block";
+
+// Helper component for CLI command blocks
+function CLICommand({ command }: { command: string }) {
+  return (
+    <CodeBlock
+      className="h-auto"
+      data={[{ language: "bash", filename: "terminal.sh", code: command }]}
+      defaultValue="bash"
+    >
+      <CodeBlockHeader>
+        <CodeBlockFiles>
+          {(item) => (
+            <CodeBlockFilename key={item.language} value={item.language}>
+              {item.filename}
+            </CodeBlockFilename>
+          )}
+        </CodeBlockFiles>
+        <CodeBlockCopyButton />
+      </CodeBlockHeader>
+      <CodeBlockBody>
+        {(item) => (
+          <CodeBlockItem
+            key={item.language}
+            lineNumbers={false}
+            value={item.language}
+          >
+            <CodeBlockContent language={item.language}>
+              {item.code}
+            </CodeBlockContent>
+          </CodeBlockItem>
+        )}
+      </CodeBlockBody>
+    </CodeBlock>
+  );
+}
 
 export default function CLIReferencePage() {
   return (
@@ -103,11 +148,7 @@ export default function CLIReferencePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">
-                npx @wraps.dev/cli email init [options]
-              </code>
-            </pre>
+            <CLICommand command="npx @wraps.dev/cli email init [options]" />
           </CardContent>
         </Card>
 
@@ -196,20 +237,13 @@ export default function CLIReferencePage() {
               <p className="mb-2 text-muted-foreground text-sm">
                 Interactive setup (recommended for first time):
               </p>
-              <pre className="overflow-x-auto rounded bg-muted p-3">
-                <code className="text-sm">npx @wraps.dev/cli email init</code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email init" />
             </div>
-            <div>
+            <div className="mt-4">
               <p className="mb-2 text-muted-foreground text-sm">
                 Non-interactive with all options:
               </p>
-              <pre className="overflow-x-auto rounded bg-muted p-3">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email init --domain yourdomain.com --region
-                  us-west-2 --preset production --provider vercel
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email init --domain yourdomain.com --region us-west-2 --preset production --provider vercel" />
             </div>
           </CardContent>
         </Card>
@@ -233,9 +267,7 @@ export default function CLIReferencePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">npx @wraps.dev/cli status</code>
-            </pre>
+            <CLICommand command="npx @wraps.dev/cli status" />
           </CardContent>
         </Card>
 
@@ -284,11 +316,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Usage</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains add -d &lt;domain&gt;
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains add -d <domain>" />
             </CardContent>
           </Card>
 
@@ -323,11 +351,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Example</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains add -d yourdomain.com
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains add -d yourdomain.com" />
             </CardContent>
           </Card>
         </div>
@@ -347,11 +371,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Usage</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains list
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains list" />
             </CardContent>
           </Card>
 
@@ -388,11 +408,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Usage</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains get-dkim -d &lt;domain&gt;
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains get-dkim -d <domain>" />
             </CardContent>
           </Card>
 
@@ -427,11 +443,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Example</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains get-dkim -d yourdomain.com
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains get-dkim -d yourdomain.com" />
             </CardContent>
           </Card>
         </div>
@@ -452,11 +464,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Usage</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains verify -d &lt;domain&gt;
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains verify -d <domain>" />
             </CardContent>
           </Card>
 
@@ -509,11 +517,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Example</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains verify -d yourdomain.com
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains verify -d yourdomain.com" />
             </CardContent>
           </Card>
         </div>
@@ -532,11 +536,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Usage</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains remove -d &lt;domain&gt;
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains remove -d <domain>" />
             </CardContent>
           </Card>
 
@@ -579,11 +579,7 @@ export default function CLIReferencePage() {
               <CardTitle className="text-lg">Example</CardTitle>
             </CardHeader>
             <CardContent>
-              <pre className="overflow-x-auto rounded bg-muted p-4">
-                <code className="text-sm">
-                  npx @wraps.dev/cli email domains remove -d yourdomain.com -f
-                </code>
-              </pre>
+              <CLICommand command="npx @wraps.dev/cli email domains remove -d yourdomain.com -f" />
             </CardContent>
           </Card>
         </div>
@@ -605,11 +601,7 @@ export default function CLIReferencePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">
-                npx @wraps.dev/cli email connect [options]
-              </code>
-            </pre>
+            <CLICommand command="npx @wraps.dev/cli email connect [options]" />
           </CardContent>
         </Card>
 
@@ -673,11 +665,7 @@ export default function CLIReferencePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">
-                npx @wraps.dev/cli email upgrade [options]
-              </code>
-            </pre>
+            <CLICommand command="npx @wraps.dev/cli email upgrade [options]" />
           </CardContent>
         </Card>
 
@@ -761,9 +749,7 @@ export default function CLIReferencePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">npx @wraps.dev/cli console</code>
-            </pre>
+            <CLICommand command="npx @wraps.dev/cli console" />
           </CardContent>
         </Card>
 
@@ -824,11 +810,7 @@ export default function CLIReferencePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">
-                npx @wraps.dev/cli email restore [options]
-              </code>
-            </pre>
+            <CLICommand command="npx @wraps.dev/cli email restore [options]" />
           </CardContent>
         </Card>
 
@@ -888,11 +870,7 @@ export default function CLIReferencePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="overflow-x-auto rounded bg-muted p-4">
-              <code className="text-sm">
-                npx @wraps.dev/cli destroy [options]
-              </code>
-            </pre>
+            <CLICommand command="npx @wraps.dev/cli destroy [options]" />
           </CardContent>
         </Card>
 

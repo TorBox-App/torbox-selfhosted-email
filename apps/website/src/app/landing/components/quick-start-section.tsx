@@ -4,6 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  CodeBlock,
+  CodeBlockBody,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockFilename,
+  CodeBlockFiles,
+  CodeBlockHeader,
+  CodeBlockItem,
+} from "@/components/ui/shadcn-io/code-block";
+import {
   Snippet,
   SnippetCopyButton,
   SnippetHeader,
@@ -50,16 +60,16 @@ export function QuickStartSection() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           {/* Section Header */}
-          <div className="mb-12 text-center">
+          <div className="mb-12 text-center" id="quickstart">
             <Badge className="mb-4" variant="outline">
               Quick Start
             </Badge>
             <h2 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-              Get started in minutes
+              Skip the AWS Console
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              Deploy email infrastructure and send your first email in just a
-              few commands. No AWS expertise required.
+              No clicking through IAM, no manual DNS, no SES configuration. One
+              command handles everything.
             </p>
           </div>
 
@@ -82,19 +92,37 @@ export function QuickStartSection() {
                     to your account.
                   </p>
                 </div>
-                <div className="group relative">
-                  <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 text-sm">
-                    <code className="text-foreground">{cliExample}</code>
-                  </pre>
-                  <Button
-                    className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={() => navigator.clipboard.writeText(cliExample)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    Copy
-                  </Button>
-                </div>
+                <CodeBlock
+                  className="h-auto"
+                  data={[
+                    { language: "bash", filename: "terminal.sh", code: cliExample },
+                  ]}
+                  defaultValue="bash"
+                >
+                  <CodeBlockHeader>
+                    <CodeBlockFiles>
+                      {(item) => (
+                        <CodeBlockFilename key={item.language} value={item.language}>
+                          {item.filename}
+                        </CodeBlockFilename>
+                      )}
+                    </CodeBlockFiles>
+                    <CodeBlockCopyButton />
+                  </CodeBlockHeader>
+                  <CodeBlockBody>
+                    {(item) => (
+                      <CodeBlockItem
+                        key={item.language}
+                        lineNumbers={false}
+                        value={item.language}
+                      >
+                        <CodeBlockContent language={item.language}>
+                          {item.code}
+                        </CodeBlockContent>
+                      </CodeBlockItem>
+                    )}
+                  </CodeBlockBody>
+                </CodeBlock>
                 <div className="mt-4 rounded-lg bg-muted/50 p-4">
                   <p className="font-medium text-sm">
                     ✨ Takes less than 2 minutes
@@ -155,19 +183,41 @@ export function QuickStartSection() {
                 <p className="mb-2 font-medium text-sm">
                   Send your first email:
                 </p>
-                <div className="group relative">
-                  <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 text-sm">
-                    <code className="text-foreground">{sdkExample}</code>
-                  </pre>
-                  <Button
-                    className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={() => navigator.clipboard.writeText(sdkExample)}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    Copy
-                  </Button>
-                </div>
+                <CodeBlock
+                  className="h-auto"
+                  data={[
+                    {
+                      language: "typescript",
+                      filename: "send-email.ts",
+                      code: sdkExample,
+                    },
+                  ]}
+                  defaultValue="typescript"
+                >
+                  <CodeBlockHeader>
+                    <CodeBlockFiles>
+                      {(item) => (
+                        <CodeBlockFilename key={item.language} value={item.language}>
+                          {item.filename}
+                        </CodeBlockFilename>
+                      )}
+                    </CodeBlockFiles>
+                    <CodeBlockCopyButton />
+                  </CodeBlockHeader>
+                  <CodeBlockBody>
+                    {(item) => (
+                      <CodeBlockItem
+                        key={item.language}
+                        lineNumbers={false}
+                        value={item.language}
+                      >
+                        <CodeBlockContent language={item.language}>
+                          {item.code}
+                        </CodeBlockContent>
+                      </CodeBlockItem>
+                    )}
+                  </CodeBlockBody>
+                </CodeBlock>
               </CardContent>
             </Card>
           </div>

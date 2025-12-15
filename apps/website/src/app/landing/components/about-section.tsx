@@ -17,7 +17,7 @@ const values = [
     icon: Lock,
     title: "Zero Lock-In",
     description:
-      "Infrastructure stays in your AWS account. Stop paying us, keep using AWS. Your choice, always.",
+      "Infrastructure stays in your AWS account. Cancel anytime—your infrastructure keeps running. Your choice, always.",
   },
   {
     icon: Cloud,

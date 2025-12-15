@@ -21,25 +21,22 @@ export function CTASection() {
 
               {/* Main Content */}
               <div className="space-y-6">
-                <h1 className="text-balance font-bold text-4xl tracking-tight sm:text-5xl lg:text-6xl">
-                  Own your email
-                  <span className="flex justify-center sm:inline-flex">
+                <h1 className="font-bold text-4xl tracking-tight sm:text-5xl lg:text-6xl">
+                  AWS pricing.
+                  <br />
+                  <span className="inline-flex">
                     <span className="relative mx-2">
                       <span className="bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                        infrastructure
+                        Modern DX.
                       </span>
                       <div className="-bottom-2 absolute start-0 h-1 w-full bg-linear-to-r from-primary/30 to-primary/10" />
                     </span>
                   </span>
-                  <span className="flex justify-center sm:inline-flex">
-                    today
-                  </span>
                 </h1>
 
                 <p className="mx-auto max-w-2xl text-balance text-muted-foreground lg:text-xl">
-                  Deploy production-ready AWS SES infrastructure in one command.
-                  Pay AWS directly, own your infrastructure, and keep full
-                  control.
+                  Get AWS pricing with the developer experience you deserve.
+                  Deploy in one command, own your infrastructure forever.
                 </p>
               </div>
 

@@ -4,6 +4,7 @@ import { lazy } from "react";
 const Landing = lazy(() => import("@/app/landing/page"));
 const SimpleLanding = lazy(() => import("@/app/simple-landing/page"));
 const Calculator = lazy(() => import("@/app/calculator/page"));
+const WhyWraps = lazy(() => import("@/app/why-wraps/page"));
 const Docs = lazy(() => import("@/app/docs/page"));
 const QuickstartDocs = lazy(() => import("@/app/docs/quickstart/page"));
 const SDKReferenceDocs = lazy(() => import("@/app/docs/sdk-reference/page"));
@@ -35,6 +36,12 @@ export const routes: RouteConfig[] = [
   {
     path: "/calculator",
     element: <Calculator />,
+  },
+
+  // Why Wraps (for internal champions)
+  {
+    path: "/why-wraps",
+    element: <WhyWraps />,
   },
 
   // Documentation

@@ -10,6 +10,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  CodeBlock,
+  CodeBlockBody,
+  CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockFilename,
+  CodeBlockFiles,
+  CodeBlockHeader,
+  CodeBlockItem,
+} from "@/components/ui/shadcn-io/code-block";
+
+const quickStartCode = `# Deploy infrastructure to AWS
+npx @wraps.dev/cli init
+
+# Install SDK
+npm install @wraps.dev/email
+
+# Send your first email
+import { Wraps } from '@wraps.dev/email'
+const wraps = new Wraps()
+await wraps.emails.send({ ... })`;
 
 const quickLinks = [
   {
@@ -75,24 +96,45 @@ export default function DocsPage() {
             </p>
 
             {/* Quick Start Code Example */}
-            <div className="mb-8 rounded-lg border bg-card p-6 text-left">
+            <div className="mb-8 text-left">
               <div className="mb-2 text-muted-foreground text-sm">
                 Get started in 3 commands:
               </div>
-              <pre className="overflow-x-auto text-sm">
-                <code className="text-foreground">
-                  {`# Deploy infrastructure to AWS
-npx @wraps.dev/cli init
-
-# Install SDK
-npm install @wraps.dev/email
-
-# Send your first email
-import { Wraps } from '@wraps.dev/email'
-const wraps = new Wraps()
-await wraps.emails.send({ ... })`}
-                </code>
-              </pre>
+              <CodeBlock
+                className="h-auto"
+                data={[
+                  {
+                    language: "bash",
+                    filename: "terminal.sh",
+                    code: quickStartCode,
+                  },
+                ]}
+                defaultValue="bash"
+              >
+                <CodeBlockHeader>
+                  <CodeBlockFiles>
+                    {(item) => (
+                      <CodeBlockFilename key={item.language} value={item.language}>
+                        {item.filename}
+                      </CodeBlockFilename>
+                    )}
+                  </CodeBlockFiles>
+                  <CodeBlockCopyButton />
+                </CodeBlockHeader>
+                <CodeBlockBody>
+                  {(item) => (
+                    <CodeBlockItem
+                      key={item.language}
+                      lineNumbers={false}
+                      value={item.language}
+                    >
+                      <CodeBlockContent language={item.language}>
+                        {item.code}
+                      </CodeBlockContent>
+                    </CodeBlockItem>
+                  )}
+                </CodeBlockBody>
+              </CodeBlock>
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">

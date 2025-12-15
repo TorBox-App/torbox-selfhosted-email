@@ -18,6 +18,18 @@ type FaqItem = {
 
 const faqItems: FaqItem[] = [
   {
+    value: "item-0a",
+    question: "Why is email SaaS so expensive?",
+    answer:
+      "Email providers like Postmark, Mailgun, and others charge $2-4+ per 1,000 emails because they're running infrastructure for you. AWS SES charges $0.10/1K because you're running it yourself. Wraps bridges this gap—you get AWS pricing with modern DX.",
+  },
+  {
+    value: "item-0b",
+    question: "Why is AWS SES so hard to set up?",
+    answer:
+      "SES requires configuring IAM roles, EventBridge rules, DynamoDB tables, Lambda functions, and SQS queues for proper email tracking. That's 2+ hours of clicking through the AWS Console. Wraps does this in one command.",
+  },
+  {
     value: "item-1",
     question: "How is this different from using AWS SES directly?",
     answer:
