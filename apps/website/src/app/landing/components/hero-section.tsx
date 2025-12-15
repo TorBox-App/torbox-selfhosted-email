@@ -21,26 +21,19 @@ export function HeroSection() {
           {/* Announcement Badge */}
           <div className="mb-8 flex justify-center">
             <Badge className="border-foreground px-4 py-2" variant="outline">
-              <Star className="mr-2 h-3 w-3 fill-current" />
-              Open Source • Zero Stored Credentials
-              <ArrowRight className="ml-2 h-3 w-3" />
+              CLI · Templates · Workflows · Campaigns
             </Badge>
           </div>
 
           {/* Main Headline */}
           <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-6xl lg:text-7xl">
-            Production-ready Email.
-            <br />
-            <span className="bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              One command.
-            </span>
+            AWS email, simplified.
           </h1>
 
           {/* Subheading */}
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-            AWS SES configuration, domain verification, bounce and complaint
-            tracking — deployed to your account in 30 seconds. Your
-            infrastructure, your data, our tooling.
+          <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
+            Deploy in 30 seconds. Pay AWS directly. Scale with pro features when
+            you're ready.
           </p>
 
           {/* CTA */}

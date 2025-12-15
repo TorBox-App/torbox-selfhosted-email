@@ -21,19 +21,24 @@ export function Image3D({
 
   return (
     <div className={cn("group relative aspect-4/3 w-full", className)}>
-      <div className="perspective-distant transform-3d">
+      <div className="perspective-distant transform-3d size-full">
         {/* Animated background glow */}
-        <div className="sm:-inset-8 absolute rounded-3xl bg-linear-to-r from-primary/10 via-blue-500/10 to-purple-500/10 opacity-0 blur-2xl transition-all duration-1000 group-hover:opacity-100" />
+        <div className="sm:-inset-8 absolute rounded-3xl bg-linear-to-r from-primary/10 via-primary/5 to-primary/10 opacity-0 blur-2xl transition-all duration-1000 group-hover:opacity-100" />
 
         {/* Main 3D container */}
-        <div className="transform-3d group-hover:translate-z-16 relative size-full transition-all duration-700 ease-out group-hover:rotate-x-8 group-hover:rotate-y-12">
+        <div
+          className={cn(
+            "transform-3d group-hover:translate-z-16 relative size-full transition-all duration-700 ease-out group-hover:rotate-x-8",
+            isRight ? "group-hover:-rotate-y-12" : "group-hover:rotate-y-12"
+          )}
+        >
           {/* Depth layers for 3D effect */}
-          <div className="-translate-z-8 absolute inset-0 translate-x-2 translate-y-4 rounded-2xl">
-            <div className="size-full rounded-2xl border border-primary/30 bg-linear-to-br from-primary/10 via-background/40 to-secondary/10 shadow-xl" />
+          <div className="-translate-z-8 -top-5 -bottom-5 -right-4 -left-7 absolute translate-x-2 translate-y-0 rounded-3xl">
+            <div className="size-full rounded-3xl border border-primary/30 bg-linear-to-br from-primary/10 via-background/40 to-secondary/10 shadow-xl" />
           </div>
 
           {/* Main image container */}
-          <div className="relative z-10 size-full overflow-hidden rounded-2xl shadow-2xl shadow-primary/20">
+          <div className="relative z-10 size-full overflow-hidden rounded-2xl shadow-primary/20 shadow-xl">
             {/* Shimmer effect */}
             <div
               className={cn(
@@ -41,16 +46,6 @@ export function Image3D({
                 isRight
                   ? "group-hover:-translate-x-full translate-x-full"
                   : "-translate-x-full group-hover:translate-x-full"
-              )}
-            />
-
-            {/* Content fade mask */}
-            <div
-              className={cn(
-                "pointer-events-none absolute inset-0 z-15",
-                isRight
-                  ? "bg-linear-to-l from-0% from-background via-15% via-background/85 to-40% to-transparent"
-                  : "bg-linear-to-r from-0% from-background via-15% via-background/85 to-40% to-transparent"
               )}
             />
 

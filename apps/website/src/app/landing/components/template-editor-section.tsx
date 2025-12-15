@@ -120,9 +120,8 @@ export function TemplateEditorSection() {
           </h2>
           <p className="text-lg text-muted-foreground">
             A professional-grade email builder with drag-and-drop components, AI
-            content generation, real-time preview, and one-click publishing to
-            your AWS account. Create unlimited templates with the hosted
-            dashboard.
+            generation, real-time preview, and one-click publishing to your AWS
+            account. Create unlimited templates with the hosted dashboard.
           </p>
         </div>
 

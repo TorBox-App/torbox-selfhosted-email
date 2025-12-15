@@ -1,4 +1,3 @@
-import { CodeExamplesSection } from "./components/code-examples-section";
 import { CTASection } from "./components/cta-section";
 import { ExistingSesSection } from "./components/existing-ses-section";
 import { FaqSection } from "./components/faq-section";
@@ -24,7 +23,7 @@ export default function LandingPage() {
         <TrustedBySection />
         <QuickStartSection />
         <ExistingSesSection />
-        <CodeExamplesSection />
+        {/*<CodeExamplesSection />*/}
         <StatsSection />
         <FeaturesSection />
         <TemplateEditorSection />
