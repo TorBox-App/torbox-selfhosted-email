@@ -4,6 +4,7 @@ import getPort from "get-port";
 import open from "open";
 import pc from "picocolors";
 import { startConsoleServer } from "../../console/server.js";
+import { trackCommand } from "../../telemetry/events.js";
 import type { DashboardOptions } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -87,6 +88,13 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
   if (!options.noOpen) {
     await open(url);
   }
+
+  // 7. Track console launch
+  trackCommand("console", {
+    success: true,
+    port,
+    no_open: options.noOpen ?? false,
+  });
 
   // Keep process alive
   await new Promise(() => {});

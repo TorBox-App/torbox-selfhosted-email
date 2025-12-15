@@ -1,6 +1,10 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
+import {
+  trackError,
+  trackServiceRemoved,
+} from "../../telemetry/events.js";
 import type { DestroyOptions } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -20,6 +24,8 @@ import {
  * Destroy command - Remove all deployed infrastructure
  */
 export async function destroy(options: DestroyOptions): Promise<void> {
+  const startTime = Date.now();
+
   clack.intro(
     pc.bold(
       options.preview
@@ -92,6 +98,12 @@ export async function destroy(options: DestroyOptions): Promise<void> {
       clack.outro(
         pc.green("Preview complete. Run without --preview to destroy.")
       );
+
+      // Track preview completion
+      trackServiceRemoved("email", {
+        preview: true,
+        duration_ms: Date.now() - startTime,
+      });
       return;
     } catch (error: any) {
       progress.stop();
@@ -99,6 +111,7 @@ export async function destroy(options: DestroyOptions): Promise<void> {
         clack.log.warn("No Wraps infrastructure found to preview");
         process.exit(0);
       }
+      trackError("PREVIEW_FAILED", "destroy", { step: "preview" });
       throw new Error(`Preview failed: ${error.message}`);
     }
   }
@@ -139,6 +152,7 @@ export async function destroy(options: DestroyOptions): Promise<void> {
       await deleteConnectionMetadata(identity.accountId, region);
       process.exit(0);
     }
+    trackError("DESTROY_FAILED", "destroy", { step: "destroy" });
     clack.log.error("Infrastructure destruction failed");
     throw error;
   }
@@ -152,4 +166,10 @@ export async function destroy(options: DestroyOptions): Promise<void> {
   console.log(
     `\nRun ${pc.cyan("wraps email init")} to deploy infrastructure again.\n`
   );
+
+  // 7. Track successful destruction
+  trackServiceRemoved("email", {
+    reason: "user_initiated",
+    duration_ms: Date.now() - startTime,
+  });
 }

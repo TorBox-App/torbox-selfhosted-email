@@ -2,6 +2,11 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
+import {
+  trackError,
+  trackServiceDeployed,
+  trackServiceInit,
+} from "../../telemetry/events.js";
 import type { ConnectOptions, EmailStackConfig } from "../../types/index.js";
 import { getPreset } from "../../utils/email/presets.js";
 import {
@@ -38,6 +43,8 @@ import { scanAWSResources } from "../../utils/shared/scanner.js";
  * Connect command - Connect to existing AWS SES infrastructure
  */
 export async function connect(options: ConnectOptions): Promise<void> {
+  const startTime = Date.now();
+
   clack.intro(
     pc.bold(
       options.preview
@@ -229,8 +236,18 @@ export async function connect(options: ConnectOptions): Promise<void> {
       clack.outro(
         pc.green("Preview complete. Run without --preview to connect.")
       );
+
+      // Track preview completion
+      trackServiceInit("email", true, {
+        preset,
+        provider,
+        preview: true,
+        duration_ms: Date.now() - startTime,
+        existing_identities: selectedIdentities.length,
+      });
       return;
     } catch (error: any) {
+      trackError("PREVIEW_FAILED", "email:connect", { step: "preview" });
       if (error.message?.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
@@ -303,11 +320,20 @@ export async function connect(options: ConnectOptions): Promise<void> {
       }
     );
   } catch (error: any) {
+    // Track deployment failure
+    trackServiceInit("email", false, {
+      preset,
+      provider,
+      duration_ms: Date.now() - startTime,
+    });
+
     // Check if it's a lock file error
     if (error.message?.includes("stack is currently locked")) {
+      trackError("STACK_LOCKED", "email:connect", { step: "deploy" });
       throw errors.stackLocked();
     }
 
+    trackError("DEPLOYMENT_FAILED", "email:connect", { step: "deploy" });
     throw new Error(`Pulumi deployment failed: ${error.message}`);
   }
 
@@ -387,4 +413,29 @@ export async function connect(options: ConnectOptions): Promise<void> {
     );
     console.log("");
   }
+
+  // 15. Track successful connection
+  const duration = Date.now() - startTime;
+  const enabledFeatures: string[] = [];
+  if (emailConfig.tracking?.enabled) enabledFeatures.push("tracking");
+  if (emailConfig.suppressionList?.enabled)
+    enabledFeatures.push("suppression_list");
+  if (emailConfig.eventTracking?.enabled)
+    enabledFeatures.push("event_tracking");
+  if (emailConfig.eventTracking?.dynamoDBHistory)
+    enabledFeatures.push("dynamodb_history");
+
+  trackServiceInit("email", true, {
+    preset,
+    provider,
+    features: enabledFeatures,
+    duration_ms: duration,
+    existing_identities: selectedIdentities.length,
+  });
+
+  trackServiceDeployed("email", {
+    duration_ms: duration,
+    features: enabledFeatures,
+    preset,
+  });
 }

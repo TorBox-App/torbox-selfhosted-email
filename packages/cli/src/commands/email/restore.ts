@@ -1,6 +1,10 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
+import {
+  trackError,
+  trackServiceRemoved,
+} from "../../telemetry/events.js";
 import type { EmailRestoreOptions } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -24,6 +28,8 @@ import {
  * existing infrastructure, there's nothing to "restore" - only to remove.
  */
 export async function restore(options: EmailRestoreOptions): Promise<void> {
+  const startTime = Date.now();
+
   clack.intro(
     pc.bold(
       options.preview
@@ -145,8 +151,15 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
             "Preview complete. Run without --preview to remove infrastructure."
           )
         );
+
+        // Track preview completion
+        trackServiceRemoved("email", {
+          preview: true,
+          duration_ms: Date.now() - startTime,
+        });
         return;
       } catch (error: any) {
+        trackError("PREVIEW_FAILED", "email:restore", { step: "preview" });
         throw new Error(`Preview failed: ${error.message}`);
       }
     }
@@ -185,6 +198,7 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
           metadata.services.email.pulumiStackName
         );
       } catch (error: any) {
+        trackError("DESTROY_FAILED", "email:restore", { step: "destroy" });
         throw new Error(`Failed to destroy Pulumi stack: ${error.message}`);
       }
     });
@@ -203,4 +217,10 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
     `${pc.dim("All Wraps resources have been deleted from your AWS account.")}`
   );
   console.log(`${pc.dim("Your original AWS resources remain unchanged.")}\n`);
+
+  // 9. Track successful removal
+  trackServiceRemoved("email", {
+    reason: "user_initiated",
+    duration_ms: Date.now() - startTime,
+  });
 }

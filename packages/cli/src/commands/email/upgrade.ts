@@ -2,6 +2,10 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
+import {
+  trackError,
+  trackServiceUpgrade,
+} from "../../telemetry/events.js";
 import type {
   EmailStackConfig,
   UpgradeOptions,
@@ -36,6 +40,9 @@ import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
  * Upgrade command - Enhance existing Wraps infrastructure
  */
 export async function upgrade(options: UpgradeOptions): Promise<void> {
+  const startTime = Date.now();
+  let upgradeAction: string | symbol = "";
+
   clack.intro(
     pc.bold(
       options.preview
@@ -172,7 +179,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   console.log("");
 
   // 6. Prompt for upgrade action
-  const upgradeAction = await clack.select({
+  upgradeAction = await clack.select({
     message: "What would you like to do?",
     options: [
       {
@@ -893,8 +900,18 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       clack.outro(
         pc.green("Preview complete. Run without --preview to upgrade.")
       );
+
+      // Track preview completion
+      trackServiceUpgrade("email", {
+        from_preset: metadata.services.email?.preset,
+        to_preset: newPreset,
+        preview: true,
+        action: typeof upgradeAction === "string" ? upgradeAction : undefined,
+        duration_ms: Date.now() - startTime,
+      });
       return;
     } catch (error: any) {
+      trackError("PREVIEW_FAILED", "email:upgrade", { step: "preview" });
       if (error.message?.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
@@ -999,11 +1016,21 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       }
     );
   } catch (error: any) {
+    // Track upgrade failure
+    trackServiceUpgrade("email", {
+      from_preset: metadata.services.email?.preset,
+      to_preset: newPreset,
+      action: typeof upgradeAction === "string" ? upgradeAction : undefined,
+      duration_ms: Date.now() - startTime,
+    });
+
     // Check if it's a lock file error
     if (error.message?.includes("stack is currently locked")) {
+      trackError("STACK_LOCKED", "email:upgrade", { step: "deploy" });
       throw errors.stackLocked();
     }
 
+    trackError("UPGRADE_FAILED", "email:upgrade", { step: "deploy" });
     throw new Error(`Pulumi upgrade failed: ${error.message}`);
   }
 
@@ -1142,4 +1169,25 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         pc.bold("HTTPS tracking is fully configured and ready to use!\n")
     );
   }
+
+  // 16. Track successful upgrade
+  const enabledFeatures: string[] = [];
+  if (updatedConfig.tracking?.enabled) enabledFeatures.push("tracking");
+  if (updatedConfig.suppressionList?.enabled)
+    enabledFeatures.push("suppression_list");
+  if (updatedConfig.eventTracking?.enabled)
+    enabledFeatures.push("event_tracking");
+  if (updatedConfig.eventTracking?.dynamoDBHistory)
+    enabledFeatures.push("dynamodb_history");
+  if (updatedConfig.dedicatedIp) enabledFeatures.push("dedicated_ip");
+  if (updatedConfig.emailArchiving?.enabled)
+    enabledFeatures.push("email_archiving");
+
+  trackServiceUpgrade("email", {
+    from_preset: metadata.services.email?.preset,
+    to_preset: newPreset,
+    added_features: enabledFeatures,
+    action: typeof upgradeAction === "string" ? upgradeAction : undefined,
+    duration_ms: Date.now() - startTime,
+  });
 }

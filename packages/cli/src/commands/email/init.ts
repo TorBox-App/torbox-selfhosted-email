@@ -2,6 +2,11 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
+import {
+  trackError,
+  trackServiceDeployed,
+  trackServiceInit,
+} from "../../telemetry/events.js";
 import type {
   EmailStackConfig,
   InitOptions,
@@ -44,6 +49,8 @@ import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
  * Init command - Deploy new email infrastructure
  */
 export async function init(options: InitOptions): Promise<void> {
+  const startTime = Date.now();
+
   clack.intro(
     pc.bold(
       options.preview
@@ -241,8 +248,17 @@ export async function init(options: InitOptions): Promise<void> {
       clack.outro(
         pc.green("Preview complete. Run without --preview to deploy.")
       );
+
+      // Track preview completion
+      trackServiceInit("email", true, {
+        preset,
+        provider,
+        preview: true,
+        duration_ms: Date.now() - startTime,
+      });
       return;
     } catch (error: any) {
+      trackError("PREVIEW_FAILED", "email:init", { step: "preview" });
       if (error.message?.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
@@ -339,11 +355,20 @@ export async function init(options: InitOptions): Promise<void> {
       }
     );
   } catch (error: any) {
+    // Track deployment failure
+    trackServiceInit("email", false, {
+      preset,
+      provider,
+      duration_ms: Date.now() - startTime,
+    });
+
     // Check if it's a lock file error
     if (error.message?.includes("stack is currently locked")) {
+      trackError("STACK_LOCKED", "email:init", { step: "deploy" });
       throw errors.stackLocked();
     }
 
+    trackError("DEPLOYMENT_FAILED", "email:init", { step: "deploy" });
     throw new Error(`Pulumi deployment failed: ${error.message}`);
   }
 
@@ -411,5 +436,32 @@ export async function init(options: InitOptions): Promise<void> {
     dnsAutoCreated,
     domain: outputs.domain,
     mailFromDomain: outputs.mailFromDomain,
+  });
+
+  // 13. Track successful deployment
+  const duration = Date.now() - startTime;
+  const enabledFeatures: string[] = [];
+  if (emailConfig.tracking?.enabled) enabledFeatures.push("tracking");
+  if (emailConfig.suppressionList?.enabled)
+    enabledFeatures.push("suppression_list");
+  if (emailConfig.eventTracking?.enabled)
+    enabledFeatures.push("event_tracking");
+  if (emailConfig.eventTracking?.dynamoDBHistory)
+    enabledFeatures.push("dynamodb_history");
+  if (emailConfig.dedicatedIp) enabledFeatures.push("dedicated_ip");
+  if (emailConfig.emailArchiving?.enabled)
+    enabledFeatures.push("email_archiving");
+
+  trackServiceInit("email", true, {
+    preset,
+    provider,
+    features: enabledFeatures,
+    duration_ms: duration,
+  });
+
+  trackServiceDeployed("email", {
+    duration_ms: duration,
+    features: enabledFeatures,
+    preset,
   });
 }

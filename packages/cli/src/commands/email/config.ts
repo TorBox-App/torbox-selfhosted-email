@@ -2,6 +2,7 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
+import { trackCommand, trackError } from "../../telemetry/events.js";
 import type {
   EmailConfigOptions,
   EmailStackConfig,
@@ -32,6 +33,8 @@ import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
  * without requiring configuration changes from the user.
  */
 export async function config(options: EmailConfigOptions): Promise<void> {
+  const startTime = Date.now();
+
   clack.intro(
     pc.bold(
       options.preview
@@ -228,8 +231,16 @@ export async function config(options: EmailConfigOptions): Promise<void> {
       clack.outro(
         pc.green("Preview complete. Run without --preview to update.")
       );
+
+      // Track preview completion
+      trackCommand("email:config", {
+        success: true,
+        preview: true,
+        duration_ms: Date.now() - startTime,
+      });
       return;
     } catch (error: any) {
+      trackError("PREVIEW_FAILED", "email:config", { step: "preview" });
       if (error.message?.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
@@ -309,11 +320,19 @@ export async function config(options: EmailConfigOptions): Promise<void> {
       }
     );
   } catch (error: any) {
+    // Track update failure
+    trackCommand("email:config", {
+      success: false,
+      duration_ms: Date.now() - startTime,
+    });
+
     // Check if it's a lock file error
     if (error.message?.includes("stack is currently locked")) {
+      trackError("STACK_LOCKED", "email:config", { step: "update" });
       throw errors.stackLocked();
     }
 
+    trackError("UPDATE_FAILED", "email:config", { step: "update" });
     throw new Error(`Pulumi update failed: ${error.message}`);
   }
 
@@ -347,4 +366,10 @@ export async function config(options: EmailConfigOptions): Promise<void> {
   console.log(
     `  ${pc.cyan("3.")} View analytics at ${pc.cyan("wraps console")}\n`
   );
+
+  // 13. Track successful update
+  trackCommand("email:config", {
+    success: true,
+    duration_ms: Date.now() - startTime,
+  });
 }

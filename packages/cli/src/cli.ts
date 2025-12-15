@@ -419,6 +419,14 @@ async function run() {
           );
           process.exit(1);
       }
+      // Track email commands (they return early, so track here)
+      const emailDuration = Date.now() - startTime;
+      const emailCommandName = `email:${subCommand}`;
+      trackCommand(emailCommandName, {
+        success: true,
+        duration_ms: emailDuration,
+        service: "email",
+      });
       return;
     }
 
@@ -438,6 +446,13 @@ async function run() {
           console.log(`Run ${pc.cyan("wraps --help")} for more information.\n`);
           process.exit(1);
       }
+      // Track dashboard commands (they return early, so track here)
+      const dashboardDuration = Date.now() - startTime;
+      const dashboardCommandName = `dashboard:${subCommand}`;
+      trackCommand(dashboardCommandName, {
+        success: true,
+        duration_ms: dashboardDuration,
+      });
       return;
     }
 

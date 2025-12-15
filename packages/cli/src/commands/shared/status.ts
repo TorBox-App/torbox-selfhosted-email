@@ -1,6 +1,7 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
+import { trackCommand } from "../../telemetry/events.js";
 import type { StatusOptions } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -20,6 +21,7 @@ import {
  * Status command - Show current infrastructure setup
  */
 export async function status(_options: StatusOptions): Promise<void> {
+  const startTime = Date.now();
   const progress = new DeploymentProgress();
 
   // 1. Validate AWS credentials
@@ -114,5 +116,13 @@ export async function status(_options: StatusOptions): Promise<void> {
           cloudFrontDomain: stackOutputs.cloudFrontDomain?.value,
         }
       : undefined,
+  });
+
+  // 7. Track status command
+  trackCommand("status", {
+    success: true,
+    domain_count: domainsWithTokens.length,
+    integration_level: integrationLevel,
+    duration_ms: Date.now() - startTime,
   });
 }

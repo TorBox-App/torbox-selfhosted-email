@@ -2,6 +2,7 @@ import { Resolver } from "node:dns/promises";
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand, trackFeature } from "../../telemetry/events.js";
 import type { EmailVerifyOptions } from "../../types/index.js";
 import { getAWSRegion } from "../../utils/shared/aws.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
@@ -232,6 +233,7 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
     clack.outro(
       pc.green("✓ Domain is fully verified and ready to send emails!")
     );
+    trackFeature("domain_verified", { dns_auto_detected: true });
   } else if (someIncorrect) {
     clack.outro(
       pc.red("✗ Some DNS records are incorrect. Please update them.")
@@ -248,6 +250,13 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
       "SES verification usually completes within 72 hours after DNS propagation.\n"
     );
   }
+
+  // Track verify command
+  trackCommand("email:domains:verify", {
+    success: true,
+    verified: verificationStatus === "verified" && allVerified,
+    dkim_status: dkimStatus,
+  });
 }
 
 /**
@@ -319,8 +328,17 @@ export async function addDomain(options: { domain: string }): Promise<void> {
       `2. Verify DNS propagation: ${pc.cyan(`wraps email domains verify --domain ${options.domain}`)}`
     );
     console.log(`3. Check status: ${pc.cyan("wraps email status")}\n`);
+
+    // Track add domain success
+    trackCommand("email:domains:add", {
+      success: true,
+    });
+    trackFeature("domain_added", {});
   } catch (error: any) {
     progress.stop();
+    trackCommand("email:domains:add", {
+      success: false,
+    });
     throw error;
   }
 }
@@ -408,8 +426,15 @@ export async function listDomains(): Promise<void> {
         `Run ${pc.cyan("wraps email domains verify --domain <domain>")} for details`
       )
     );
+
+    // Track list domains success
+    trackCommand("email:domains:list", {
+      success: true,
+      domain_count: domains.length,
+    });
   } catch (error: any) {
     progress.stop();
+    trackCommand("email:domains:list", { success: false });
     throw error;
   }
 }
@@ -466,8 +491,15 @@ export async function getDkim(options: { domain: string }): Promise<void> {
         `${pc.dim("After adding these records, run:")} ${pc.cyan(`wraps email domains verify --domain ${options.domain}`)}\n`
       );
     }
+
+    // Track get-dkim success
+    trackCommand("email:domains:get-dkim", {
+      success: true,
+      dkim_status: dkimStatus,
+    });
   } catch (error: any) {
     progress.stop();
+    trackCommand("email:domains:get-dkim", { success: false });
     if (error.name === "NotFoundException") {
       clack.log.error(`Domain ${options.domain} not found in SES`);
       console.log(
@@ -530,8 +562,15 @@ export async function removeDomain(options: {
 
     progress.stop();
     clack.outro(pc.green(`✓ Domain ${options.domain} removed successfully`));
+
+    // Track remove domain success
+    trackCommand("email:domains:remove", {
+      success: true,
+    });
+    trackFeature("domain_removed", {});
   } catch (error: any) {
     progress.stop();
+    trackCommand("email:domains:remove", { success: false });
     if (error.name === "NotFoundException") {
       clack.log.error(`Domain ${options.domain} not found in SES`);
       process.exit(1);
