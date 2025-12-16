@@ -297,7 +297,16 @@ export function LandingNavbar() {
                 {/* Primary Actions */}
                 <div className="space-y-3">
                   <Button asChild className="w-full cursor-pointer" size="lg">
-                    <a href="#pricing">Get Started</a>
+                    <a
+                      href="#pricing"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsOpen(false);
+                        setTimeout(() => smoothScrollTo("#pricing"), 100);
+                      }}
+                    >
+                      Get Started
+                    </a>
                   </Button>
 
                   <Button

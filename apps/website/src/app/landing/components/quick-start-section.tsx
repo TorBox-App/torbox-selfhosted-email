@@ -78,7 +78,7 @@ export function QuickStartSection() {
 
   return (
     <SectionWrapper
-      badge="Quick Start"
+      badge="Free · CLI + SDK"
       description="No clicking through IAM, no manual DNS, no SES configuration. Two steps to production-ready email."
       id="quickstart"
       title="Skip the AWS Console"

@@ -17,7 +17,7 @@ const plans = [
       "One-command infrastructure deployment",
       "TypeScript SDK (@wraps.dev/email)",
       "Local console dashboard",
-      "All AWS SES features",
+      "Email analytics & history",
       "Event tracking via EventBridge & DynamoDB",
       "Bounce & complaint handling",
       "Domain verification tools",
@@ -35,11 +35,10 @@ const plans = [
     features: [
       "Everything in CLI & SDK",
       "Hosted dashboard at wraps.dev",
-      "Email analytics and history",
       "Unlimited templates",
-      "50 AI messages per month",
+      "50 AI generations/month",
       "Unlimited team members",
-      "Email support (48hr)",
+      "Email support (48hr response)",
     ],
   },
 ];

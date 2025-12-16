@@ -21,7 +21,7 @@ export function HeroSection() {
           {/* Announcement Badge */}
           <div className="mb-8 flex justify-center">
             <Badge className="border-foreground px-4 py-2" variant="outline">
-              CLI · Dashboard · Templates
+              Free CLI + SDK · Hosted Dashboard $10/mo
             </Badge>
           </div>
 
@@ -32,8 +32,8 @@ export function HeroSection() {
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            Deploy in less than two minutes. Pay AWS directly. Scale with pro
-            features when you're ready.
+            Start free with our CLI and SDK. Upgrade to the hosted dashboard
+            when you're ready.
           </p>
 
           {/* CTA */}
@@ -48,7 +48,7 @@ export function HeroSection() {
                 size="lg"
               >
                 <a href="/docs/quickstart">
-                  Get Started
+                  Get Started Free
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>

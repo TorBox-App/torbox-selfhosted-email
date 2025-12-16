@@ -75,7 +75,7 @@ const secondaryFeatures = [
 export function FeaturesSection() {
   return (
     <SectionWrapper
-      badge="Best of Both Worlds"
+      badge="Free · Open Source"
       description="You shouldn't have to choose between cost and developer experience. Get the SDK, tracking, and dashboard you actually want—at AWS prices."
       id="features"
       title="SES Pricing. Modern DX."

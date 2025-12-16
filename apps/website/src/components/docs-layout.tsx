@@ -7,9 +7,10 @@ import { DocsNav } from "./docs-nav";
 
 type DocsLayoutProps = {
   children: React.ReactNode;
+  headerActions?: React.ReactNode;
 };
 
-export function DocsLayout({ children }: DocsLayoutProps) {
+export function DocsLayout({ children, headerActions }: DocsLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -39,6 +40,7 @@ export function DocsLayout({ children }: DocsLayoutProps) {
 
           {/* Navigation */}
           <div className="ml-auto flex items-center gap-2">
+            {headerActions}
             <Button asChild variant="ghost">
               <a href="/docs">Docs</a>
             </Button>

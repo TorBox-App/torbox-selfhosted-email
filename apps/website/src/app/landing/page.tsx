@@ -11,6 +11,10 @@ import { QuickStartSection } from "./components/quick-start-section";
 import { StatsSection } from "./components/stats-section";
 import { TemplateEditorSection } from "./components/template-editor-section";
 import { TrustedBySection } from "./components/trusted-by-section";
+import {
+  UpgradeSection,
+  premiumBgClass,
+} from "./components/upgrade-section";
 
 export default function LandingPage() {
   return (
@@ -20,17 +24,27 @@ export default function LandingPage() {
 
       {/* Main Content */}
       <main>
+        {/* Hero & Social Proof */}
         <HeroSection />
         <TrustedBySection />
-        <ArchitectureSection />
-        <QuickStartSection />
-        <ExistingSesSection />
         <StatsSection />
+
+        {/* Free Tier - CLI + SDK + Local Console */}
+        <QuickStartSection />
+        <ArchitectureSection />
         <FeaturesSection />
-        <TemplateEditorSection />
-        <PricingSection />
-        <FaqSection />
-        <CTASection />
+        <ExistingSesSection />
+
+        {/* Transition to Premium (slant happens midway through this section) */}
+        <UpgradeSection />
+
+        {/* Premium Tier - Hosted Dashboard (continues the premium background) */}
+        <div className={premiumBgClass}>
+          <TemplateEditorSection />
+          <PricingSection />
+          <FaqSection />
+          <CTASection />
+        </div>
       </main>
 
       {/* Footer */}
