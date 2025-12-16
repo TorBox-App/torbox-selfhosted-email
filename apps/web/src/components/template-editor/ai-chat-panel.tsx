@@ -23,9 +23,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ui/reasoning";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
+import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { extractTipTapJson } from "@/lib/ai/validator";
 import { cn } from "@/lib/utils";
@@ -66,8 +72,12 @@ export function AIChatPanel({
     null
   );
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { textareaRef, adjustHeight } = useAutoResizeTextarea({
+    minHeight: 44,
+    maxHeight: 360,
+  });
   const queryClient = useQueryClient();
 
   // Fetch AI usage to show warnings
@@ -207,8 +217,9 @@ export function AIChatPanel({
       }
       sendMessageThrottler.maybeExecute(text.trim());
       setInput("");
+      adjustHeight(true);
     },
-    [isLoading, sendMessageThrottler]
+    [isLoading, sendMessageThrottler, adjustHeight]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -359,20 +370,48 @@ export function AIChatPanel({
                       message.role === "user" && "text-right"
                     )}
                   >
-                    <div
-                      className={cn(
-                        "inline-block max-w-full rounded-lg px-2.5 py-1.5 text-xs",
-                        message.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      )}
-                    >
-                      {message.role === "assistant" ? (
-                        <AssistantMessage content={getMessageText(message)} />
-                      ) : (
-                        getMessageText(message)
-                      )}
-                    </div>
+                    {message.role === "assistant" ? (
+                      <div className="space-y-2">
+                        {message.parts.map((part, partIndex) => {
+                          const isLastPart =
+                            partIndex === message.parts.length - 1;
+                          const isLastMessage =
+                            message.id === messages.at(-1)?.id;
+                          const isStreamingPart =
+                            isLoading && isLastPart && isLastMessage;
+
+                          if (part.type === "reasoning") {
+                            return (
+                              <Reasoning
+                                defaultOpen={isStreamingPart}
+                                isStreaming={isStreamingPart}
+                                key={`${message.id}-${partIndex}`}
+                              >
+                                <ReasoningTrigger />
+                                <ReasoningContent>{part.text}</ReasoningContent>
+                              </Reasoning>
+                            );
+                          }
+
+                          if (part.type === "text") {
+                            return (
+                              <div
+                                className="inline-block max-w-full rounded-lg bg-muted px-2.5 py-1.5 text-xs"
+                                key={`${message.id}-${partIndex}`}
+                              >
+                                <AssistantMessage content={part.text} />
+                              </div>
+                            );
+                          }
+
+                          return null;
+                        })}
+                      </div>
+                    ) : (
+                      <div className="inline-block max-w-full rounded-lg bg-primary px-2.5 py-1.5 text-primary-foreground text-xs">
+                        {getMessageText(message)}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -438,47 +477,72 @@ export function AIChatPanel({
       )}
 
       {/* Input */}
-      <form className="border-t px-3 py-2" onSubmit={handleSubmit}>
-        <div className="flex gap-1.5">
-          <Textarea
-            className="min-h-[44px] flex-1 resize-none text-xs"
-            disabled={isLoading || aiUsage?.remaining === 0}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              aiUsage?.remaining === 0
-                ? "Message limit reached"
-                : "Describe your email..."
-            }
-            ref={textareaRef}
-            rows={2}
-            value={input}
-          />
-          <div className="flex flex-col gap-1">
-            <Button
-              className="h-8 w-8"
-              disabled={!input.trim() || isLoading || aiUsage?.remaining === 0}
-              size="icon"
-              type="submit"
-            >
-              {isLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
+      <form className="border-t p-3" onSubmit={handleSubmit}>
+        <div
+          className={cn(
+            "relative flex flex-col rounded-xl transition-all duration-200",
+            "ring-1 ring-black/10 dark:ring-white/10",
+            isFocused && "ring-black/20 dark:ring-white/20"
+          )}
+        >
+          <div>
+            <Textarea
+              className="w-full resize-none overflow-y-auto rounded-xl rounded-b-none border-none bg-black/5 px-3 py-2.5 text-xs leading-relaxed [field-sizing:normal] placeholder:text-muted-foreground focus-visible:ring-0 dark:bg-white/5"
+              disabled={isLoading || aiUsage?.remaining === 0}
+              onBlur={() => setIsFocused(false)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                adjustHeight();
+              }}
+              onFocus={() => setIsFocused(true)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                aiUsage?.remaining === 0
+                  ? "Message limit reached"
+                  : "Describe your email..."
+              }
+              ref={textareaRef}
+              value={input}
+            />
+          </div>
+
+          <div className="h-10 rounded-b-xl bg-black/5 dark:bg-white/5">
+            <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5">
+              {messages.length > 0 && !isLoading && (
+                <Button
+                  className="h-7 w-7"
+                  disabled={aiUsage?.remaining === 0}
+                  onClick={() => regenerate()}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
               )}
-            </Button>
-            {messages.length > 0 && !isLoading && (
+            </div>
+            <div className="absolute right-2.5 bottom-2.5">
               <Button
-                className="h-8 w-8"
-                disabled={aiUsage?.remaining === 0}
-                onClick={() => regenerate()}
+                className={cn(
+                  "h-7 w-7 transition-colors",
+                  input.trim() && !isLoading
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : ""
+                )}
+                disabled={
+                  !input.trim() || isLoading || aiUsage?.remaining === 0
+                }
                 size="icon"
-                type="button"
-                variant="outline"
+                type="submit"
+                variant={input.trim() && !isLoading ? "default" : "ghost"}
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                {isLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
               </Button>
-            )}
+            </div>
           </div>
         </div>
       </form>

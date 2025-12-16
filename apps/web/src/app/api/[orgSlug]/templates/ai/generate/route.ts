@@ -115,13 +115,19 @@ export async function POST(request: Request, context: RouteContext) {
         : undefined,
     });
 
-    // Stream the response
+    // Stream the response with Claude and extended thinking via AI Gateway
+    const MODEL_ID = "xai/grok-code-fast-1";
+
     const result = streamText({
-      model: gateway("xai/grok-code-fast-1"),
+      model: gateway(MODEL_ID),
       system: systemPrompt,
       messages: modelMessages,
-      maxOutputTokens: 4096,
-      temperature: 0.7,
+      maxOutputTokens: 16_000,
+      providerOptions: {
+        anthropic: {
+          thinking: { type: "enabled", budgetTokens: 10_000 },
+        },
+      },
       onFinish: async ({ text, usage }) => {
         // Validate final output
         const json = extractTipTapJson(text);
@@ -141,7 +147,7 @@ export async function POST(request: Request, context: RouteContext) {
           inputTokens: usage?.inputTokens,
           outputTokens: usage?.outputTokens,
           totalTokens: usage?.totalTokens,
-          model: "xai/grok-code-fast-1",
+          model: MODEL_ID,
         }).catch(console.error);
 
         // Track conversation in database (async)
@@ -154,7 +160,10 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    // Stream with reasoning parts included
+    return result.toUIMessageStreamResponse({
+      sendReasoning: true,
+    });
   } catch (error) {
     console.error("Error generating AI content:", error);
     return NextResponse.json(
