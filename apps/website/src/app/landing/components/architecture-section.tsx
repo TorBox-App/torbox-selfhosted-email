@@ -1,24 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import {
-  Terminal,
-  Code2,
-  Mail,
-  Database,
-  Zap,
-  Users,
-  BarChart3,
-  Server,
-  Inbox,
-  MousePointerClick,
-  Eye,
   AlertTriangle,
-  Clock,
-  Shield,
   ArrowRight,
+  Code2,
+  Database,
+  Eye,
+  Mail,
+  MousePointerClick,
+  Radio,
+  Terminal,
+  Users,
+  Zap,
 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 type TabKey = "send" | "track" | "deploy";
 
@@ -40,14 +36,14 @@ const tabContent: Record<TabKey, TabContent> = {
   track: {
     title: "Track Events",
     description:
-      "Automatically capture delivery, open, click, bounce, and complaint events. All data stored in DynamoDB in your AWS account for complete data ownership.",
+      "When recipients open, click, or bounce emails, SES captures these events. Wraps infrastructure routes them through EventBridge and SQS to Lambda, storing everything in DynamoDB.",
     ctaText: "Learn More",
     ctaLink: "/docs/quickstart",
   },
   deploy: {
     title: "Deploy Infrastructure",
     description:
-      "One CLI command deploys production-ready email infrastructure to your AWS account. SES, DynamoDB, Lambda, EventBridge, and IAM roles - all configured automatically.",
+      "One CLI command deploys production-ready email infrastructure to your AWS account. SES, DynamoDB, Lambda, EventBridge, SQS, and IAM roles - all configured automatically.",
     ctaText: "Get Started",
     ctaLink: "/docs/cli-reference",
   },
@@ -57,47 +53,58 @@ const tabContent: Record<TabKey, TabContent> = {
 function IconBox({
   icon: Icon,
   highlighted = false,
+  label,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   highlighted?: boolean;
+  label?: string;
 }) {
   return (
-    <div
-      className={`flex aspect-square size-11 items-center justify-center rounded-full border-2 bg-background transition-all ${
-        highlighted
-          ? "border-orange-500 bg-orange-500/5 text-orange-500"
-          : "border-border text-muted-foreground"
-      }`}
-    >
-      <Icon className="size-5" />
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className={`flex aspect-square size-10 items-center justify-center rounded-full border-2 bg-background transition-all ${
+          highlighted
+            ? "border-orange-500 bg-orange-500/5 text-orange-500"
+            : "border-border text-muted-foreground"
+        }`}
+      >
+        <Icon className="size-4" />
+      </div>
+      {label && (
+        <span
+          className={`text-[10px] ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
+        >
+          {label}
+        </span>
+      )}
     </div>
   );
 }
 
-// Node group component with ref forwarding
-interface NodeGroupProps {
+// Simple node component for external entities (Your App, Recipients)
+interface SimpleNodeProps {
   label: string;
-  icons: React.ComponentType<{ className?: string }>[];
+  icon: React.ComponentType<{ className?: string }>;
   highlighted?: boolean;
-  cols?: number;
   nodeRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-function NodeGroup({
+function SimpleNode({
   label,
-  icons,
+  icon: Icon,
   highlighted = false,
-  cols = 2,
   nodeRef,
-}: NodeGroupProps) {
+}: SimpleNodeProps) {
   return (
-    <div ref={nodeRef} className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2" ref={nodeRef}>
       <div
-        className={`grid gap-2 ${cols === 3 ? "grid-cols-3" : cols === 4 ? "grid-cols-4" : "grid-cols-2"}`}
+        className={`flex aspect-square size-14 items-center justify-center rounded-full border-2 bg-background transition-all ${
+          highlighted
+            ? "border-orange-500 bg-orange-500/5 text-orange-500"
+            : "border-border text-muted-foreground"
+        }`}
       >
-        {icons.map((Icon, i) => (
-          <IconBox highlighted={highlighted} icon={Icon} key={i} />
-        ))}
+        <Icon className="size-6" />
       </div>
       <span
         className={`font-medium text-xs ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
@@ -108,22 +115,133 @@ function NodeGroup({
   );
 }
 
-// Central hub component with ref
-interface CentralHubProps {
-  hubRef?: React.RefObject<HTMLDivElement | null>;
+// AWS Account container with SES and Wraps infrastructure boxes
+interface AWSAccountBoxProps {
+  activeTab: TabKey;
+  sesRef?: React.RefObject<HTMLDivElement | null>;
+  wrapsRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-function CentralHub({ hubRef }: CentralHubProps) {
+function AWSAccountBox({ activeTab, sesRef, wrapsRef }: AWSAccountBoxProps) {
+  const sesHighlighted =
+    activeTab === "send" || activeTab === "deploy" || activeTab === "track";
+  const wrapsHighlighted = activeTab === "track" || activeTab === "deploy";
+
   return (
-    <div ref={hubRef} className="relative">
-      <div className="flex h-24 w-20 flex-col items-center justify-center rounded-xl border-2 border-orange-500 bg-gradient-to-b from-orange-500/10 to-orange-500/5">
-        <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500 text-white">
-          <Server className="h-5 w-5" />
+    <div className="flex flex-col items-center gap-2">
+      <div className="rounded-lg bg-muted/50 px-3 py-1 text-muted-foreground text-xs">
+        Your AWS Account
+      </div>
+      <div className="flex flex-col gap-4 rounded-xl border-2 border-muted-foreground/30 border-dashed bg-muted/10 p-4">
+        {/* SES Box - Top Row */}
+        <div className="flex flex-col items-center gap-2" ref={sesRef}>
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-lg border-2 transition-all ${
+              sesHighlighted
+                ? "border-orange-500 bg-orange-500/5 text-orange-500"
+                : "border-border bg-background text-muted-foreground"
+            }`}
+          >
+            <Mail className="h-6 w-6" />
+          </div>
+          <span
+            className={`font-medium text-xs ${
+              sesHighlighted ? "text-orange-500" : "text-muted-foreground"
+            }`}
+          >
+            SES
+          </span>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <div className="h-1 w-6 rounded-full bg-orange-500/40" />
-          <div className="h-1 w-6 rounded-full bg-orange-500/40" />
+
+        {/* Wraps Infrastructure Box - Bottom Row */}
+        <div className="flex flex-col items-center gap-2" ref={wrapsRef}>
+          <div
+            className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all ${
+              wrapsHighlighted
+                ? "border-orange-500 bg-orange-500/5"
+                : "border-border bg-background"
+            }`}
+          >
+            <IconBox highlighted={wrapsHighlighted} icon={Zap} label="EB" />
+            <IconBox highlighted={wrapsHighlighted} icon={Radio} label="SQS" />
+            <IconBox highlighted={wrapsHighlighted} icon={Code2} label="λ" />
+            <IconBox
+              highlighted={wrapsHighlighted}
+              icon={Database}
+              label="DB"
+            />
+          </div>
+          <span
+            className={`font-medium text-xs ${
+              wrapsHighlighted ? "text-orange-500" : "text-muted-foreground"
+            }`}
+          >
+            Wraps
+          </span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Mobile node component
+function MobileNode({
+  icon: Icon,
+  label,
+  highlighted,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  highlighted: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className={`flex aspect-square size-12 items-center justify-center rounded-full border-2 ${
+          highlighted
+            ? "border-orange-500 bg-orange-500/5 text-orange-500"
+            : "border-border bg-background text-muted-foreground"
+        }`}
+      >
+        <Icon className="h-5 w-5" />
+      </div>
+      <span
+        className={`text-xs ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// Mobile AWS Account box component
+function MobileAWSBox({
+  showSES = true,
+  showWraps = true,
+  sesHighlighted = false,
+  wrapsHighlighted = false,
+}: {
+  showSES?: boolean;
+  showWraps?: boolean;
+  sesHighlighted?: boolean;
+  wrapsHighlighted?: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <span className="text-[10px] text-muted-foreground">
+        Your AWS Account
+      </span>
+      <div className="flex items-center gap-3 rounded-xl border-2 border-muted-foreground/30 border-dashed bg-muted/10 px-4 py-3">
+        {showSES && (
+          <MobileNode highlighted={sesHighlighted} icon={Mail} label="SES" />
+        )}
+        {showWraps && (
+          <MobileNode
+            highlighted={wrapsHighlighted}
+            icon={Database}
+            label="Wraps"
+          />
+        )}
       </div>
     </div>
   );
@@ -131,63 +249,54 @@ function CentralHub({ hubRef }: CentralHubProps) {
 
 // Mobile simplified flow component
 function MobileFlow({ activeTab }: { activeTab: TabKey }) {
-  const flows = {
-    send: [
-      { icon: Code2, label: "Your App", highlighted: true },
-      { icon: ArrowRight, label: "", isArrow: true },
-      { icon: Server, label: "Wraps (AWS)", highlighted: true },
-      { icon: ArrowRight, label: "", isArrow: true },
-      { icon: Mail, label: "SES", highlighted: true },
-      { icon: ArrowRight, label: "", isArrow: true },
-      { icon: Users, label: "Recipients", highlighted: false },
-    ],
-    track: [
-      { icon: Mail, label: "SES Events", highlighted: false },
-      { icon: ArrowRight, label: "", isArrow: true },
-      { icon: Server, label: "Wraps (AWS)", highlighted: true },
-      { icon: ArrowRight, label: "", isArrow: true },
-      { icon: Database, label: "DynamoDB", highlighted: true },
-      { icon: ArrowRight, label: "", isArrow: true },
-      { icon: BarChart3, label: "Metrics", highlighted: true },
-    ],
-    deploy: [
-      { icon: Terminal, label: "Wraps CLI", highlighted: true },
-      { icon: ArrowRight, label: "", isArrow: true },
-      { icon: Server, label: "Your AWS", highlighted: true },
-      { icon: ArrowRight, label: "", isArrow: true },
-      { icon: Mail, label: "SES + Events", highlighted: true },
-    ],
-  };
+  // Shared offset to align external nodes with AWS box content (accounting for "Your AWS Account" label)
+  const nodeOffset = "mb-5";
+  const arrowOffset = "mb-12";
 
-  const currentFlow = flows[activeTab];
+  if (activeTab === "send") {
+    return (
+      <div className="flex flex-wrap items-end justify-center gap-3 pb-1">
+        <div className={nodeOffset}>
+          <MobileNode highlighted icon={Code2} label="Your App" />
+        </div>
+        <ArrowRight
+          className={`h-4 w-4 shrink-0 text-orange-500 ${arrowOffset}`}
+        />
+        <MobileAWSBox sesHighlighted showWraps={false} />
+        <ArrowRight
+          className={`h-4 w-4 shrink-0 text-orange-500 ${arrowOffset}`}
+        />
+        <div className={nodeOffset}>
+          <MobileNode highlighted icon={Users} label="Recipients" />
+        </div>
+      </div>
+    );
+  }
 
+  if (activeTab === "track") {
+    return (
+      <div className="flex flex-wrap items-end justify-center gap-3 pb-1">
+        <div className={nodeOffset}>
+          <MobileNode highlighted icon={Users} label="Recipients" />
+        </div>
+        <ArrowRight
+          className={`h-4 w-4 shrink-0 text-orange-500 ${arrowOffset}`}
+        />
+        <MobileAWSBox sesHighlighted wrapsHighlighted />
+      </div>
+    );
+  }
+
+  // Deploy tab
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3">
-      {currentFlow.map((item, i) =>
-        item.isArrow ? (
-          <ArrowRight
-            key={i}
-            className="h-4 w-4 shrink-0 text-orange-500"
-          />
-        ) : (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <div
-              className={`flex aspect-square size-12 items-center justify-center rounded-full border-2 ${
-                item.highlighted
-                  ? "border-orange-500 bg-orange-500/5 text-orange-500"
-                  : "border-border bg-background text-muted-foreground"
-              }`}
-            >
-              <item.icon className="h-5 w-5" />
-            </div>
-            <span
-              className={`text-xs ${item.highlighted ? "text-orange-500" : "text-muted-foreground"}`}
-            >
-              {item.label}
-            </span>
-          </div>
-        )
-      )}
+    <div className="flex flex-wrap items-end justify-center gap-3 pb-1">
+      <div className={nodeOffset}>
+        <MobileNode highlighted icon={Terminal} label="CLI" />
+      </div>
+      <ArrowRight
+        className={`h-4 w-4 shrink-0 text-orange-500 ${arrowOffset}`}
+      />
+      <MobileAWSBox sesHighlighted wrapsHighlighted />
     </div>
   );
 }
@@ -200,19 +309,13 @@ interface Point {
 interface NodePositions {
   yourApp: Point;
   cli: Point;
-  hub: Point;
   ses: Point;
+  wraps: Point;
   recipients: Point;
-  eventTypes: Point;
-  metrics: Point;
 }
 
 // Generate curved path between two points
-function createCurvedPath(
-  from: Point,
-  to: Point,
-  curvature: number = 0.5
-): string {
+function createCurvedPath(from: Point, to: Point, curvature = 0.5): string {
   const dx = to.x - from.x;
 
   // Control points for smooth curve
@@ -234,7 +337,7 @@ function ConnectionLines({
 }) {
   if (!positions) return null;
 
-  const { yourApp, cli, hub, ses, recipients, eventTypes, metrics } = positions;
+  const { yourApp, cli, ses, wraps, recipients } = positions;
 
   return (
     <svg
@@ -245,25 +348,22 @@ function ConnectionLines({
         <marker
           id="arrowhead"
           markerHeight="8"
+          markerUnits="strokeWidth"
           markerWidth="8"
           orient="auto"
           refX="8"
           refY="4"
-          markerUnits="strokeWidth"
         >
-          <path
-            d="M 0 0 L 8 4 L 0 8 Z"
-            fill="hsl(var(--muted-foreground))"
-          />
+          <path d="M 0 0 L 8 4 L 0 8 Z" fill="hsl(var(--muted-foreground))" />
         </marker>
         <marker
           id="arrowhead-orange"
           markerHeight="8"
+          markerUnits="strokeWidth"
           markerWidth="8"
           orient="auto"
           refX="8"
           refY="4"
-          markerUnits="strokeWidth"
         >
           <path d="M 0 0 L 8 4 L 0 8 Z" fill="#ff6b00" />
         </marker>
@@ -272,25 +372,12 @@ function ConnectionLines({
       {/* Send tab connections */}
       {activeTab === "send" && (
         <>
-          {/* Your App to Hub */}
+          {/* Your App to SES */}
           <path
             className="animate-dash"
             d={createCurvedPath(
-              { x: yourApp.x + 55, y: yourApp.y },
-              { x: hub.x - 55, y: hub.y }
-            )}
-            fill="none"
-            markerEnd="url(#arrowhead-orange)"
-            stroke="#ff6b00"
-            strokeDasharray="8 6"
-            strokeWidth="2"
-          />
-          {/* Hub to SES */}
-          <path
-            className="animate-dash"
-            d={createCurvedPath(
-              { x: hub.x + 45, y: hub.y },
-              { x: ses.x - 90, y: ses.y }
+              { x: yourApp.x + 35, y: yourApp.y - 12 },
+              { x: ses.x - 35, y: ses.y - 12 }
             )}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
@@ -300,11 +387,16 @@ function ConnectionLines({
           />
           {/* SES to Recipients */}
           <path
-            d={`M ${ses.x} ${ses.y + 35} L ${recipients.x} ${recipients.y - 40}`}
+            className="animate-dash"
+            d={createCurvedPath(
+              { x: ses.x + 35, y: ses.y - 12 },
+              { x: recipients.x - 35, y: recipients.y - 12 }
+            )}
             fill="none"
-            markerEnd="url(#arrowhead)"
-            stroke="hsl(var(--muted-foreground))"
-            strokeWidth="1.5"
+            markerEnd="url(#arrowhead-orange)"
+            stroke="#ff6b00"
+            strokeDasharray="8 6"
+            strokeWidth="2"
           />
         </>
       )}
@@ -312,54 +404,42 @@ function ConnectionLines({
       {/* Track tab connections */}
       {activeTab === "track" && (
         <>
-          {/* SES sends events to Hub */}
+          {/* Recipients to SES (events coming back) */}
           <path
+            className="animate-dash"
             d={createCurvedPath(
-              { x: ses.x - 90, y: ses.y + 10 },
-              { x: hub.x + 55, y: hub.y - 10 },
+              { x: recipients.x - 35, y: recipients.y - 12 },
+              { x: ses.x + 35, y: ses.y - 12 },
               0.4
             )}
             fill="none"
-            markerEnd="url(#arrowhead)"
-            stroke="hsl(var(--muted-foreground))"
-            strokeWidth="1.5"
+            markerEnd="url(#arrowhead-orange)"
+            stroke="#ff6b00"
+            strokeDasharray="8 6"
+            strokeWidth="2"
           />
-          {/* Hub to Event Types - only render if positions are valid */}
-          {eventTypes.x > 0 && (
-            <path
-              className="animate-dash"
-              d={`M ${hub.x} ${hub.y + 55} C ${hub.x - 60} ${hub.y + 120}, ${eventTypes.x} ${eventTypes.y - 80}, ${eventTypes.x} ${eventTypes.y - 35}`}
-              fill="none"
-              markerEnd="url(#arrowhead-orange)"
-              stroke="#ff6b00"
-              strokeDasharray="8 6"
-              strokeWidth="2"
-            />
-          )}
-          {/* Hub to Metrics & Storage - only render if positions are valid */}
-          {metrics.x > 0 && (
-            <path
-              className="animate-dash"
-              d={`M ${hub.x} ${hub.y + 55} C ${hub.x + 60} ${hub.y + 120}, ${metrics.x} ${metrics.y - 80}, ${metrics.x} ${metrics.y - 35}`}
-              fill="none"
-              markerEnd="url(#arrowhead-orange)"
-              stroke="#ff6b00"
-              strokeDasharray="8 6"
-              strokeWidth="2"
-            />
-          )}
+          {/* SES to Wraps - curve from left side of SES down to EB icon */}
+          <path
+            className="animate-dash"
+            d={`M ${ses.x - 35} ${ses.y - 12} C ${ses.x - 65} ${ses.y - 12}, ${wraps.x - 75} ${ses.y + 20}, ${wraps.x - 75} ${wraps.y - 58}`}
+            fill="none"
+            markerEnd="url(#arrowhead-orange)"
+            stroke="#ff6b00"
+            strokeDasharray="8 6"
+            strokeWidth="2"
+          />
         </>
       )}
 
       {/* Deploy tab connections */}
       {activeTab === "deploy" && (
         <>
-          {/* CLI to Hub */}
+          {/* CLI to SES */}
           <path
             className="animate-dash"
             d={createCurvedPath(
-              { x: cli.x + 55, y: cli.y },
-              { x: hub.x - 55, y: hub.y + 20 },
+              { x: cli.x + 35, y: cli.y - 12 },
+              { x: ses.x - 35, y: ses.y - 12 },
               0.5
             )}
             fill="none"
@@ -368,26 +448,12 @@ function ConnectionLines({
             strokeDasharray="8 6"
             strokeWidth="2"
           />
-          {/* Hub to SES+Events */}
+          {/* CLI to Wraps */}
           <path
             className="animate-dash"
             d={createCurvedPath(
-              { x: hub.x + 45, y: hub.y - 20 },
-              { x: ses.x - 90, y: ses.y },
-              0.5
-            )}
-            fill="none"
-            markerEnd="url(#arrowhead-orange)"
-            stroke="#ff6b00"
-            strokeDasharray="8 6"
-            strokeWidth="2"
-          />
-          {/* Hub to Recipients */}
-          <path
-            className="animate-dash"
-            d={createCurvedPath(
-              { x: hub.x + 45, y: hub.y + 20 },
-              { x: recipients.x - 90, y: recipients.y },
+              { x: cli.x + 35, y: cli.y + 12 },
+              { x: wraps.x - 120, y: wraps.y - 12 },
               0.5
             )}
             fill="none"
@@ -410,11 +476,9 @@ export function ArchitectureSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const yourAppRef = useRef<HTMLDivElement>(null);
   const cliRef = useRef<HTMLDivElement>(null);
-  const hubRef = useRef<HTMLDivElement>(null);
   const sesRef = useRef<HTMLDivElement>(null);
+  const wrapsRef = useRef<HTMLDivElement>(null);
   const recipientsRef = useRef<HTMLDivElement>(null);
-  const eventTypesRef = useRef<HTMLDivElement>(null);
-  const metricsRef = useRef<HTMLDivElement>(null);
 
   // Calculate positions relative to container
   const updatePositions = useCallback(() => {
@@ -434,11 +498,9 @@ export function ArchitectureSection() {
     setPositions({
       yourApp: getCenter(yourAppRef),
       cli: getCenter(cliRef),
-      hub: getCenter(hubRef),
       ses: getCenter(sesRef),
+      wraps: getCenter(wrapsRef),
       recipients: getCenter(recipientsRef),
-      eventTypes: getCenter(eventTypesRef),
-      metrics: getCenter(metricsRef),
     });
   }, []);
 
@@ -504,84 +566,66 @@ export function ArchitectureSection() {
 
           {/* Desktop: Full diagram */}
           <div
+            className="relative hidden min-h-[380px] p-8 md:block"
             ref={containerRef}
-            className="relative hidden min-h-[450px] p-8 md:block"
           >
             {/* Connection lines SVG */}
             <ConnectionLines activeTab={activeTab} positions={positions} />
 
-            {/* Node layout */}
-            <div className="relative z-10 flex items-start justify-center gap-24 md:gap-32 lg:gap-40">
-              {/* Left side */}
-              <div className="flex flex-col gap-12">
-                {/* Your App / SDK */}
-                <NodeGroup
-                  nodeRef={yourAppRef}
+            {/* Node layout - horizontal flow */}
+            <div className="relative z-10 flex items-center justify-center gap-12 lg:gap-16">
+              {/* Left side - Your App / CLI */}
+              <div className="flex flex-col gap-6">
+                <SimpleNode
                   highlighted={activeTab === "send"}
-                  icons={[Code2, Terminal, Inbox, Mail]}
+                  icon={Code2}
                   label="Your App"
+                  nodeRef={yourAppRef}
                 />
-
-                {/* CLI */}
-                <NodeGroup
-                  nodeRef={cliRef}
+                <SimpleNode
                   highlighted={activeTab === "deploy"}
-                  icons={[Terminal, Shield]}
+                  icon={Terminal}
                   label="Wraps CLI"
+                  nodeRef={cliRef}
                 />
               </div>
 
-              {/* Center - Hub */}
-              <div className="flex flex-col items-center pt-16">
-                <div className="mb-2 rounded-lg bg-muted/50 px-3 py-1 text-muted-foreground text-xs">
-                  Your AWS Account
-                </div>
-                <CentralHub hubRef={hubRef} />
-                <span className="mt-2 font-mono font-semibold text-orange-500 text-sm">
-                  wraps
-                </span>
-              </div>
+              {/* Center - AWS Account with SES and Wraps boxes */}
+              <AWSAccountBox
+                activeTab={activeTab}
+                sesRef={sesRef}
+                wrapsRef={wrapsRef}
+              />
 
-              {/* Right side */}
-              <div className="flex flex-col gap-8">
-                {/* AWS Services */}
-                <NodeGroup
-                  nodeRef={sesRef}
-                  highlighted={activeTab === "send" || activeTab === "deploy"}
-                  icons={[Mail, Zap, Database]}
-                  label="SES + Events"
-                  cols={3}
-                />
-
-                {/* Recipients */}
-                <NodeGroup
-                  nodeRef={recipientsRef}
-                  highlighted={activeTab === "send"}
-                  icons={[Users, Users, Users]}
+              {/* Right side - Recipients */}
+              <div className="flex flex-col items-center gap-4">
+                <SimpleNode
+                  highlighted={activeTab === "send" || activeTab === "track"}
+                  icon={Users}
                   label="Recipients"
-                  cols={3}
+                  nodeRef={recipientsRef}
                 />
+                {/* Event types shown below recipients for track tab */}
+                {activeTab === "track" && (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                        <Eye className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                        <MousePointerClick className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-orange-500">
+                      opens · clicks · bounces
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Bottom row - Event types (for track tab) */}
-            {activeTab === "track" && (
-              <div className="mt-8 flex justify-center gap-6">
-                <NodeGroup
-                  nodeRef={eventTypesRef}
-                  cols={4}
-                  highlighted
-                  icons={[Eye, MousePointerClick, AlertTriangle, Clock]}
-                  label="Event Types"
-                />
-                <NodeGroup
-                  nodeRef={metricsRef}
-                  highlighted
-                  icons={[BarChart3, Database]}
-                  label="Metrics & Storage"
-                />
-              </div>
-            )}
           </div>
 
           {/* Bottom description bar */}
@@ -618,7 +662,7 @@ export function ArchitectureSection() {
             <span>Infrastructure</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-0.5 w-6 border-t-2 border-dashed border-orange-500" />
+            <div className="h-0.5 w-6 border-orange-500 border-t-2 border-dashed" />
             <span>Data Path</span>
           </div>
         </div>
