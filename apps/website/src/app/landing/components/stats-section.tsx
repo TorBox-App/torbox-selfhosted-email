@@ -1,8 +1,6 @@
 "use client";
 
 import { Clock, Github, ShieldCheck, Zap } from "lucide-react";
-import { DotPattern } from "@/components/dot-pattern";
-import { Card, CardContent } from "@/components/ui/card";
 
 const stats = [
   {
@@ -34,42 +32,30 @@ const stats = [
 
 export function StatsSection() {
   return (
-    <section className="relative py-12 sm:py-16">
-      {/* Background with transparency */}
-      <div className="absolute inset-0 bg-linear-to-r from-primary/8 via-transparent to-secondary/20" />
-      <DotPattern className="opacity-75" fadeStyle="circle" size="md" />
-
-      <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-6 md:gap-8 lg:grid-cols-4">
+    <section className="py-12 sm:py-16">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
           {stats.map((stat) => {
             const cardContent = (
-              <Card
-                className="border-border/50 bg-background/60 py-0 text-center backdrop-blur-sm"
-              >
-                <CardContent className="p-6">
-                  <div className="mb-4 flex justify-center">
-                    <div className="rounded-xl bg-primary/10 p-3">
-                      <stat.icon className="h-6 w-6 text-primary" />
-                    </div>
+              <div className="rounded-xl border bg-background p-6 text-center transition-all hover:border-orange-500/50">
+                <div className="mb-3 flex justify-center">
+                  <div className="flex aspect-square size-12 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5">
+                    <stat.icon className="size-6 text-orange-500" />
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-2xl text-foreground sm:text-3xl">
-                      {stat.value}
-                    </h3>
-                    <p className="font-semibold text-foreground">{stat.label}</p>
-                    <p className="text-muted-foreground text-sm">
-                      {stat.description}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <h3 className="font-bold text-2xl text-foreground sm:text-3xl">
+                  {stat.value}
+                </h3>
+                <p className="font-medium text-foreground">{stat.label}</p>
+                <p className="mt-1 text-muted-foreground text-sm">
+                  {stat.description}
+                </p>
+              </div>
             );
 
             if (stat.href) {
               return (
                 <a
-                  className="transition-transform hover:scale-105"
                   href={stat.href}
                   key={stat.label}
                   rel="noopener noreferrer"

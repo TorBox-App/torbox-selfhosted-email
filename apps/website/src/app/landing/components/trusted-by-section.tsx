@@ -21,7 +21,7 @@ export function TrustedBySection() {
   return (
     <section className="relative py-12 sm:py-16">
       {/* Background with transparency */}
-      <div className="absolute inset-0 bg-linear-to-r from-secondary/10 via-transparent to-primary/10" />
+      <div className="absolute inset-0 bg-linear-to-r from-orange-500/5 via-transparent to-orange-500/5" />
       <DotPattern className="opacity-60" fadeStyle="circle" size="sm" />
 
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">

@@ -1,8 +1,7 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { Terminal, Code2, Check } from "lucide-react";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -21,6 +20,7 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
+import { SectionWrapper, SectionCard, TabBar, IconBox } from "./section-card";
 
 const installCommands = {
   npm: "npm install @wraps.dev/email",
@@ -54,185 +54,201 @@ if (result.success) {
   console.log('Email sent:', result.data.messageId);
 }`;
 
+type TabKey = "deploy" | "send";
+
+const tabContent = {
+  deploy: {
+    title: "Deploy in Under 2 Minutes",
+    description:
+      "One command deploys SES, DynamoDB, Lambda, EventBridge, and IAM roles. Zero clicking through the AWS Console.",
+    ctaText: "View CLI Reference",
+    ctaLink: "/docs/cli-reference",
+  },
+  send: {
+    title: "TypeScript-First SDK",
+    description:
+      "Clean API with full type safety. Automatic credential handling via OIDC. Just wraps.emails.send() - no boilerplate.",
+    ctaText: "View SDK Reference",
+    ctaLink: "/docs/sdk-reference",
+  },
+};
+
 export function QuickStartSection() {
+  const [activeTab, setActiveTab] = useState<TabKey>("deploy");
+
   return (
-    <section className="border-y bg-gradient-to-b from-background via-muted/20 to-background py-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          {/* Section Header */}
-          <div className="mb-12 text-center" id="quickstart">
-            <Badge className="mb-4" variant="outline">
-              Quick Start
-            </Badge>
-            <h2 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-              Skip the AWS Console
-            </h2>
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              No clicking through IAM, no manual DNS, no SES configuration. One
-              command handles everything.
-            </p>
-          </div>
-
-          {/* Two Column Layout */}
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* CLI Setup */}
-            <Card className="border-2">
-              <CardContent className="p-6">
-                <div className="mb-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
-                      1
-                    </div>
-                    <h3 className="font-semibold text-xl">
-                      Deploy Infrastructure
-                    </h3>
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    One command deploys AWS SES, DynamoDB, Lambda, and IAM roles
-                    to your account.
-                  </p>
-                </div>
-                <CodeBlock
-                  className="h-auto"
-                  data={[
-                    { language: "bash", filename: "terminal.sh", code: cliExample },
-                  ]}
-                  defaultValue="bash"
-                >
-                  <CodeBlockHeader>
-                    <CodeBlockFiles>
-                      {(item) => (
-                        <CodeBlockFilename key={item.language} value={item.language}>
-                          {item.filename}
-                        </CodeBlockFilename>
-                      )}
-                    </CodeBlockFiles>
-                    <CodeBlockCopyButton />
-                  </CodeBlockHeader>
-                  <CodeBlockBody>
-                    {(item) => (
-                      <CodeBlockItem
-                        key={item.language}
-                        lineNumbers={false}
-                        value={item.language}
-                      >
-                        <CodeBlockContent language={item.language}>
-                          {item.code}
-                        </CodeBlockContent>
-                      </CodeBlockItem>
-                    )}
-                  </CodeBlockBody>
-                </CodeBlock>
-                <div className="mt-4 rounded-lg bg-muted/50 p-4">
-                  <p className="font-medium text-sm">
-                    ✨ Takes less than 2 minutes
-                  </p>
-                  <ul className="mt-2 space-y-1 text-muted-foreground text-xs">
-                    <li>• Validates AWS credentials</li>
-                    <li>• Shows cost estimates</li>
-                    <li>• Deploys all resources</li>
-                    <li>• Zero stored credentials</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* SDK Usage */}
-            <Card className="border-2">
-              <CardContent className="p-6">
-                <div className="mb-4">
-                  <div className="mb-2 flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
-                      2
-                    </div>
-                    <h3 className="font-semibold text-xl">
-                      Install SDK & Send Emails
-                    </h3>
-                  </div>
-                  <p className="mb-4 text-muted-foreground text-sm">
-                    Install the TypeScript SDK and start sending emails with an
-                    intuitive API.
-                  </p>
-
-                  {/* Package Manager Tabs */}
-                  <Snippet className="mb-4" defaultValue="npm">
-                    <SnippetHeader>
-                      <SnippetTabsList>
-                        <SnippetTabsTrigger value="npm">npm</SnippetTabsTrigger>
-                        <SnippetTabsTrigger value="pnpm">
-                          pnpm
-                        </SnippetTabsTrigger>
-                        <SnippetTabsTrigger value="yarn">
-                          yarn
-                        </SnippetTabsTrigger>
-                        <SnippetTabsTrigger value="bun">bun</SnippetTabsTrigger>
-                      </SnippetTabsList>
-                      <SnippetCopyButton
-                        className="opacity-100"
-                        value={installCommands.npm}
-                      />
-                    </SnippetHeader>
-                    {Object.entries(installCommands).map(([key, command]) => (
-                      <SnippetTabsContent key={key} value={key}>
-                        {command}
-                      </SnippetTabsContent>
-                    ))}
-                  </Snippet>
-                </div>
-
-                <p className="mb-2 font-medium text-sm">
-                  Send your first email:
+    <SectionWrapper
+      badge="Quick Start"
+      description="No clicking through IAM, no manual DNS, no SES configuration. Two steps to production-ready email."
+      id="quickstart"
+      title="Skip the AWS Console"
+    >
+      <SectionCard
+        footer={tabContent[activeTab]}
+        header={
+          <TabBar
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab as TabKey)}
+            tabs={[
+              { key: "deploy", label: "1. Deploy" },
+              { key: "send", label: "2. Send" },
+            ]}
+          />
+        }
+      >
+        {activeTab === "deploy" ? (
+          <div className="space-y-6">
+            {/* Step indicator */}
+            <div className="flex items-center gap-3">
+              <IconBox highlighted icon={Terminal} />
+              <div>
+                <h3 className="font-semibold text-orange-500">
+                  Deploy Infrastructure
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  Run these commands in your terminal
                 </p>
-                <CodeBlock
-                  className="h-auto"
-                  data={[
-                    {
-                      language: "typescript",
-                      filename: "send-email.ts",
-                      code: sdkExample,
-                    },
-                  ]}
-                  defaultValue="typescript"
-                >
-                  <CodeBlockHeader>
-                    <CodeBlockFiles>
-                      {(item) => (
-                        <CodeBlockFilename key={item.language} value={item.language}>
-                          {item.filename}
-                        </CodeBlockFilename>
-                      )}
-                    </CodeBlockFiles>
-                    <CodeBlockCopyButton />
-                  </CodeBlockHeader>
-                  <CodeBlockBody>
-                    {(item) => (
-                      <CodeBlockItem
-                        key={item.language}
-                        lineNumbers={false}
-                        value={item.language}
-                      >
-                        <CodeBlockContent language={item.language}>
-                          {item.code}
-                        </CodeBlockContent>
-                      </CodeBlockItem>
-                    )}
-                  </CodeBlockBody>
-                </CodeBlock>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </div>
 
-          {/* Next Steps */}
-          <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button asChild size="lg">
-              <a href="/docs/quickstart">View Full Quickstart Guide</a>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <a href="/docs/sdk-reference">Explore SDK Reference</a>
-            </Button>
+            {/* CLI Code Block */}
+            <CodeBlock
+              className="h-auto"
+              data={[
+                { language: "bash", filename: "terminal", code: cliExample },
+              ]}
+              defaultValue="bash"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename key={item.language} value={item.language}>
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+
+            {/* Benefits list */}
+            <div className="grid gap-3 rounded-lg bg-background p-4 sm:grid-cols-2">
+              {[
+                "Validates AWS credentials",
+                "Shows cost estimates upfront",
+                "Deploys all resources automatically",
+                "Zero stored credentials (OIDC)",
+              ].map((item) => (
+                <div className="flex items-center gap-2" key={item}>
+                  <Check className="size-4 text-orange-500" />
+                  <span className="text-sm">{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
-    </section>
+        ) : (
+          <div className="space-y-6">
+            {/* Step indicator */}
+            <div className="flex items-center gap-3">
+              <IconBox highlighted icon={Code2} />
+              <div>
+                <h3 className="font-semibold text-orange-500">
+                  Install SDK & Send Emails
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  Add the package and start sending
+                </p>
+              </div>
+            </div>
+
+            {/* Package Manager Tabs */}
+            <Snippet className="mb-4" defaultValue="npm">
+              <SnippetHeader>
+                <SnippetTabsList>
+                  <SnippetTabsTrigger value="npm">npm</SnippetTabsTrigger>
+                  <SnippetTabsTrigger value="pnpm">pnpm</SnippetTabsTrigger>
+                  <SnippetTabsTrigger value="yarn">yarn</SnippetTabsTrigger>
+                  <SnippetTabsTrigger value="bun">bun</SnippetTabsTrigger>
+                </SnippetTabsList>
+                <SnippetCopyButton
+                  className="opacity-100"
+                  value={installCommands.npm}
+                />
+              </SnippetHeader>
+              {Object.entries(installCommands).map(([key, command]) => (
+                <SnippetTabsContent key={key} value={key}>
+                  {command}
+                </SnippetTabsContent>
+              ))}
+            </Snippet>
+
+            {/* SDK Code Block */}
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "send-email.ts",
+                  code: sdkExample,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename key={item.language} value={item.language}>
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+
+            {/* Benefits list */}
+            <div className="grid gap-3 rounded-lg bg-background p-4 sm:grid-cols-2">
+              {[
+                "Full TypeScript support",
+                "Automatic OIDC credentials",
+                "Simple, intuitive API",
+                "Detailed error messages",
+              ].map((item) => (
+                <div className="flex items-center gap-2" key={item}>
+                  <Check className="size-4 text-orange-500" />
+                  <span className="text-sm">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </SectionCard>
+    </SectionWrapper>
   );
 }

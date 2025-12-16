@@ -1,3 +1,4 @@
+import { ArchitectureSection } from "./components/architecture-section";
 import { CTASection } from "./components/cta-section";
 import { ExistingSesSection } from "./components/existing-ses-section";
 import { FaqSection } from "./components/faq-section";
@@ -21,13 +22,12 @@ export default function LandingPage() {
       <main>
         <HeroSection />
         <TrustedBySection />
+        <ArchitectureSection />
         <QuickStartSection />
         <ExistingSesSection />
-        {/*<CodeExamplesSection />*/}
         <StatsSection />
         <FeaturesSection />
         <TemplateEditorSection />
-        {/* <TechStackSection /> */}
         <PricingSection />
         <FaqSection />
         <CTASection />

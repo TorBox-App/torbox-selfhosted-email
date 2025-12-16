@@ -1,9 +1,8 @@
 "use client";
 
 import { Check, Terminal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionWrapper } from "./section-card";
 
 const plans = [
   {
@@ -47,97 +46,89 @@ const plans = [
 
 export function PricingSection() {
   return (
-    <section className="bg-muted/40 py-24 sm:py-32" id="pricing">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="mx-auto mb-16 max-w-2xl text-center">
-          <Badge className="mb-4" variant="outline">
-            Pricing
-          </Badge>
-          <h2 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-            Simple, Transparent Pricing
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Use the CLI and SDK free forever. Add the hosted dashboard for
-            $10/month.
-          </p>
-        </div>
-
-        {/* Pricing Cards */}
-        <div className="mx-auto mb-16 grid max-w-5xl gap-8 md:grid-cols-2">
-          {plans.map((plan) => (
-            <Card
-              className={`${plan.highlight ? "border-2 border-primary shadow-lg" : "border"}`}
-              key={plan.name}
-            >
-              <CardContent className="p-8">
-                <div className="mb-6">
-                  <div className="mb-2 flex items-center gap-2">
-                    {!plan.highlight && (
-                      <Terminal className="h-5 w-5 text-muted-foreground" />
-                    )}
-                    <h3 className="font-bold text-xl">{plan.name}</h3>
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    {plan.description}
-                  </p>
+    <SectionWrapper
+      badge="Pricing"
+      description="Use the CLI and SDK free forever. Add the hosted dashboard for $10/month."
+      id="pricing"
+      title="Simple, Transparent Pricing"
+    >
+      {/* Pricing Cards */}
+      <div className="mb-12 grid gap-8 md:grid-cols-2">
+        {plans.map((plan) => (
+          <div
+            className={`overflow-hidden rounded-2xl border bg-background ${plan.highlight ? "border-2 border-orange-500" : ""}`}
+            key={plan.name}
+          >
+            <div className="p-8">
+              <div className="mb-6">
+                <div className="mb-2 flex items-center gap-2">
+                  {!plan.highlight && (
+                    <Terminal className="h-5 w-5 text-muted-foreground" />
+                  )}
+                  <h3 className="font-bold text-xl">{plan.name}</h3>
+                  {plan.highlight && (
+                    <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-orange-500 text-xs">
+                      Popular
+                    </span>
+                  )}
                 </div>
+                <p className="text-muted-foreground text-sm">
+                  {plan.description}
+                </p>
+              </div>
 
-                <div className="mb-6">
-                  <span className="font-bold text-4xl">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
-                </div>
+              <div className="mb-6">
+                <span className="font-bold text-4xl">{plan.price}</span>
+                <span className="text-muted-foreground">{plan.period}</span>
+              </div>
 
-                <Button
-                  asChild
-                  className="mb-8 w-full cursor-pointer"
-                  size="lg"
-                  variant={plan.highlight ? "default" : "outline"}
-                >
-                  <a href={plan.ctaLink}>{plan.cta}</a>
-                </Button>
+              <Button
+                asChild
+                className={`mb-8 w-full cursor-pointer ${plan.highlight ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                size="lg"
+                variant={plan.highlight ? "default" : "outline"}
+              >
+                <a href={plan.ctaLink}>{plan.cta}</a>
+              </Button>
 
-                <ul className="space-y-3">
-                  {plan.features.map((feature) => (
-                    <li className="flex items-start gap-3" key={feature}>
-                      <Check
-                        className={`mt-0.5 size-5 shrink-0 ${plan.highlight ? "text-primary" : "text-muted-foreground"}`}
-                        strokeWidth={2.5}
-                      />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Future Tiers */}
-        <div className="mx-auto mb-16 max-w-2xl text-center">
-          <p className="text-muted-foreground text-sm">
-            Need more? <strong className="text-foreground">Pro ($49/mo)</strong>{" "}
-            and <strong className="text-foreground">Growth ($99/mo)</strong>{" "}
-            tiers coming soon with more AI messages and multiple AWS accounts.
-          </p>
-        </div>
-
-        {/* AWS Cost Note */}
-        <div className="mx-auto max-w-2xl rounded-lg border bg-muted/50 p-6 text-center">
-          <p className="mb-2 font-semibold text-foreground">
-            AWS costs are separate
-          </p>
-          <p className="mb-4 text-muted-foreground text-sm">
-            You pay AWS directly for email sending at{" "}
-            <strong className="text-foreground">$0.10 per 1,000 emails</strong>{" "}
-            plus infrastructure (~$2-5/mo). You own everything, zero vendor
-            lock-in.
-          </p>
-          <Button asChild className="cursor-pointer" variant="outline">
-            <a href="/calculator">Calculate Your Costs</a>
-          </Button>
-        </div>
+              <ul className="space-y-3">
+                {plan.features.map((feature) => (
+                  <li className="flex items-start gap-3" key={feature}>
+                    <Check
+                      className={`mt-0.5 size-5 shrink-0 ${plan.highlight ? "text-orange-500" : "text-muted-foreground"}`}
+                      strokeWidth={2.5}
+                    />
+                    <span className="text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))}
       </div>
-    </section>
+
+      {/* Future Tiers */}
+      <p className="mb-8 text-center text-muted-foreground text-sm">
+        Need more? <strong className="text-foreground">Pro ($49/mo)</strong> and{" "}
+        <strong className="text-foreground">Growth ($99/mo)</strong> tiers
+        coming soon with more AI messages and multiple AWS accounts.
+      </p>
+
+      {/* AWS Cost Note */}
+      <div className="rounded-xl border bg-muted/30 p-6 text-center">
+        <p className="mb-2 font-semibold text-foreground">
+          AWS costs are separate
+        </p>
+        <p className="mb-4 text-muted-foreground text-sm">
+          You pay AWS directly for email sending at{" "}
+          <strong className="text-foreground">$0.10 per 1,000 emails</strong>{" "}
+          plus infrastructure (~$2-5/mo). You own everything, zero vendor
+          lock-in.
+        </p>
+        <Button asChild className="cursor-pointer" variant="outline">
+          <a href="/calculator">Calculate Your Costs</a>
+        </Button>
+      </div>
+    </SectionWrapper>
   );
 }

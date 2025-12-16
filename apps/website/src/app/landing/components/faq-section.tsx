@@ -7,8 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { SectionWrapper, SectionCard } from "./section-card";
 
 type FaqItem = {
   value: string;
@@ -69,64 +68,44 @@ const faqItems: FaqItem[] = [
 
 const FaqSection = () => {
   return (
-    <section className="py-24 sm:py-32" id="faq">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="mx-auto mb-16 max-w-2xl text-center">
-          <Badge className="mb-4" variant="outline">
-            FAQ
-          </Badge>
-          <h2 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-            Frequently Asked Questions
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Everything you need to know about Wraps, pricing, security, and
-            deployment. Still have questions? We're here to help!
-          </p>
-        </div>
-
-        {/* FAQ Content */}
-        <div className="mx-auto max-w-4xl">
-          <div className="bg-transparent">
-            <div className="p-0">
-              <Accordion className="space-y-5" collapsible type="single">
-                {faqItems.map((item) => (
-                  <AccordionItem
-                    className="border! rounded-md bg-transparent"
-                    key={item.value}
-                    value={item.value}
-                  >
-                    <AccordionTrigger className="cursor-pointer items-center gap-4 rounded-none bg-transparent py-2 ps-3 pe-4 hover:no-underline data-[state=open]:border-b">
-                      <div className="flex items-center gap-4">
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <CircleHelp className="size-5" />
-                        </div>
-                        <span className="text-start font-semibold">
-                          {item.question}
-                        </span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="bg-transparent p-4">
-                      {item.answer}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          </div>
-
-          {/* Contact Support CTA */}
-          <div className="mt-12 text-center">
-            <p className="mb-4 text-muted-foreground">
-              Still have questions? We're here to help.
-            </p>
-            <Button asChild className="cursor-pointer">
-              <a href="#contact">Contact Support</a>
-            </Button>
-          </div>
-        </div>
-      </div>
-    </section>
+    <SectionWrapper
+      badge="FAQ"
+      description="Everything you need to know about Wraps, pricing, security, and deployment."
+      id="faq"
+      title="Frequently Asked Questions"
+    >
+      <SectionCard
+        footer={{
+          title: "Still have questions?",
+          description:
+            "We're here to help. Reach out and we'll get back to you as soon as possible.",
+          ctaText: "Contact Support",
+          ctaLink: "mailto:support@wraps.dev",
+        }}
+      >
+        <Accordion className="space-y-3" collapsible type="single">
+          {faqItems.map((item) => (
+            <AccordionItem
+              className="rounded-lg border bg-background px-4"
+              key={item.value}
+              value={item.value}
+            >
+              <AccordionTrigger className="cursor-pointer gap-4 py-4 hover:no-underline">
+                <div className="flex items-center gap-3 text-left">
+                  <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5 text-orange-500">
+                    <CircleHelp className="size-4" />
+                  </div>
+                  <span className="font-medium">{item.question}</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 pl-11 text-muted-foreground">
+                {item.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </SectionCard>
+    </SectionWrapper>
   );
 };
 

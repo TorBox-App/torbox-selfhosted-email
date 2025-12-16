@@ -42,7 +42,7 @@ export function HeroSection() {
               npx @wraps.dev/cli email init
             </code>
             <div className="flex gap-4">
-              <Button asChild className="cursor-pointer text-base" size="lg">
+              <Button asChild className="cursor-pointer bg-orange-500 text-base hover:bg-orange-600" size="lg">
                 <a href="/docs/quickstart">
                   Get Started
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -71,7 +71,7 @@ export function HeroSection() {
         <div className="mx-auto mt-16 max-w-4xl">
           <div className="group relative">
             {/* Top background glow effect */}
-            <div className="-translate-x-1/2 absolute top-0 left-1/2 mx-auto h-32 w-[80%] transform rounded-full bg-primary/30 blur-3xl lg:h-48" />
+            <div className="-translate-x-1/2 absolute top-0 left-1/2 mx-auto h-32 w-[80%] transform rounded-full bg-orange-500/20 blur-3xl lg:h-48" />
 
             {/* Terminal */}
             <div className="relative overflow-hidden rounded-xl border-2 shadow-2xl">
