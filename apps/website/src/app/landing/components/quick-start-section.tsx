@@ -37,7 +37,7 @@ npx @wraps.dev/cli email domains add -d yourdomain.com
 npx @wraps.dev/cli email domains verify -d yourdomain.com
 
 # View deployment status
-npx @wraps.dev/cli status`;
+npx @wraps.dev/cli email status`;
 
 const sdkExample = `import { Wraps } from '@wraps.dev/email';
 

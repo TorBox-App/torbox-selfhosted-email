@@ -21,7 +21,7 @@ export function HeroSection() {
           {/* Announcement Badge */}
           <div className="mb-8 flex justify-center">
             <Badge className="border-foreground px-4 py-2" variant="outline">
-              CLI · Templates · Workflows · Campaigns
+              CLI · Dashboard · Templates
             </Badge>
           </div>
 
@@ -32,8 +32,8 @@ export function HeroSection() {
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            Deploy in 30 seconds. Pay AWS directly. Scale with pro features when
-            you're ready.
+            Deploy in less than two minutes. Pay AWS directly. Scale with pro
+            features when you're ready.
           </p>
 
           {/* CTA */}
@@ -42,7 +42,11 @@ export function HeroSection() {
               npx @wraps.dev/cli email init
             </code>
             <div className="flex gap-4">
-              <Button asChild className="cursor-pointer bg-orange-500 text-base hover:bg-orange-600" size="lg">
+              <Button
+                asChild
+                className="cursor-pointer bg-orange-500 text-base hover:bg-orange-600"
+                size="lg"
+              >
                 <a href="/docs/quickstart">
                   Get Started
                   <ArrowRight className="ml-2 h-4 w-4" />

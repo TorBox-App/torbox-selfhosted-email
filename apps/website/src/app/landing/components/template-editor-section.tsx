@@ -203,7 +203,7 @@ export function TemplateEditorSection() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                50 to 1,000 AI messages/month by plan
+                50 AI messages/month (more coming soon)
               </li>
             </ul>
           </div>
