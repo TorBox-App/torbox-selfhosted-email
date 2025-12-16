@@ -71,7 +71,7 @@ export function HeroSection() {
         <div className="mx-auto mt-16 max-w-4xl">
           <div className="group relative">
             {/* Top background glow effect */}
-            <div className="-translate-x-1/2 absolute top-0 left-1/2 mx-auto h-32 w-[80%] transform rounded-full bg-orange-500/20 blur-3xl lg:h-48" />
+            <div className="-translate-x-1/2 absolute top-0 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
 
             {/* Terminal */}
             <div className="relative overflow-hidden rounded-xl border-2 shadow-2xl">

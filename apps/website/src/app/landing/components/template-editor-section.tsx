@@ -112,7 +112,7 @@ export function TemplateEditorSection() {
       <div className="mb-16">
         <div className="group relative">
           {/* Background glow */}
-          <div className="lg:-top-8 -translate-x-1/2 absolute top-2 left-1/2 mx-auto h-24 w-[90%] transform rounded-full bg-orange-500/20 blur-3xl lg:h-60" />
+          <div className="lg:-top-4 -translate-x-1/2 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
 
           <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
             {/* Light mode image */}
