@@ -1,7 +1,7 @@
 "use client";
 
+import { Check, Code2, Terminal } from "lucide-react";
 import { useState } from "react";
-import { Terminal, Code2, Check } from "lucide-react";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -20,7 +20,7 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
-import { SectionWrapper, SectionCard, TabBar, IconBox } from "./section-card";
+import { IconBox, SectionCard, SectionWrapper, TabBar } from "./section-card";
 
 const installCommands = {
   npm: "npm install @wraps.dev/email",
@@ -122,7 +122,10 @@ export function QuickStartSection() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}
@@ -210,7 +213,10 @@ export function QuickStartSection() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}

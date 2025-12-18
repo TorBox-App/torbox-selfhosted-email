@@ -112,7 +112,7 @@ export function TemplateEditorSection() {
       <div className="mb-16">
         <div className="group relative">
           {/* Background glow */}
-          <div className="lg:-top-4 -translate-x-1/2 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
+          <div className="absolute top-2 left-1/2 mx-auto h-16 w-[70%] -translate-x-1/2 transform rounded-full bg-orange-500/10 blur-2xl lg:-top-4 lg:h-32" />
 
           <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
             {/* Light mode image */}
@@ -265,12 +265,7 @@ export function TemplateEditorSection() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </a>
         </Button>
-        <Button
-          asChild
-          className="cursor-pointer"
-          size="lg"
-          variant="outline"
-        >
+        <Button asChild className="cursor-pointer" size="lg" variant="outline">
           <a href="#pricing">View Pricing</a>
         </Button>
       </div>

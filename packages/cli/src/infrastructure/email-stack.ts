@@ -99,7 +99,11 @@ export async function deployEmailStack(
 
     // Compute mailFromDomain from mailFromSubdomain if provided
     let mailFromDomain = emailConfig.mailFromDomain;
-    if (!mailFromDomain && emailConfig.mailFromSubdomain && emailConfig.domain) {
+    if (
+      !mailFromDomain &&
+      emailConfig.mailFromSubdomain &&
+      emailConfig.domain
+    ) {
       mailFromDomain = `${emailConfig.mailFromSubdomain}.${emailConfig.domain}`;
     }
 

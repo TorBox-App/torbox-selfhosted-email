@@ -87,15 +87,11 @@ export async function status(_options: StatusOptions): Promise<void> {
   if (hasDeployedServices) {
     console.log(`\n${pc.bold("Details:")}`);
     if (services.find((s) => s.name === "Email")?.status === "deployed") {
-      console.log(
-        `  ${pc.dim("Email:")} ${pc.cyan("wraps email status")}`
-      );
+      console.log(`  ${pc.dim("Email:")} ${pc.cyan("wraps email status")}`);
     }
   } else {
     console.log(`\n${pc.bold("Get started:")}`);
-    console.log(
-      `  ${pc.dim("Deploy email:")} ${pc.cyan("wraps email init")}`
-    );
+    console.log(`  ${pc.dim("Deploy email:")} ${pc.cyan("wraps email init")}`);
   }
 
   console.log(`\n${pc.bold("Dashboard:")} ${pc.blue("https://app.wraps.dev")}`);

@@ -48,8 +48,8 @@ export default async function TopicsPage({ params }: TopicsPageProps) {
       {/* Topics Table */}
       <div className="@container/main px-4 lg:px-6">
         <TopicsTable
-          orgSlug={orgSlug}
           organizationId={orgWithMembership.id}
+          orgSlug={orgSlug}
           topics={topics}
           userRole={orgWithMembership.userRole}
         />

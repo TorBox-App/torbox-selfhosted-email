@@ -601,8 +601,7 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
           hint: "Higher storage cost",
         },
       ],
-      initialValue:
-        existingConfig?.eventTracking?.archiveRetention || "90days",
+      initialValue: existingConfig?.eventTracking?.archiveRetention || "90days",
     });
 
     if (clack.isCancel(archiveRetention)) {
@@ -639,8 +638,7 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
     mailFromSubdomain = await clack.text({
       message: "MAIL FROM subdomain:",
       placeholder: "mail",
-      initialValue:
-        existingConfig?.mailFromDomain?.split(".")[0] || "mail",
+      initialValue: existingConfig?.mailFromDomain?.split(".")[0] || "mail",
       validate: (value) => {
         if (!value || value.trim() === "") {
           return "Subdomain is required";
@@ -648,7 +646,7 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
         if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(value)) {
           return "Invalid subdomain format";
         }
-        return undefined;
+        return;
       },
     });
 
@@ -658,9 +656,7 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
     }
 
     clack.log.info(
-      pc.dim(
-        `MAIL FROM will be set to ${mailFromSubdomain}.yourdomain.com`
-      )
+      pc.dim(`MAIL FROM will be set to ${mailFromSubdomain}.yourdomain.com`)
     );
   }
 

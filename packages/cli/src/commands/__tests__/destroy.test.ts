@@ -22,10 +22,10 @@ vi.mock("../../utils/route53.js");
 vi.mock("@aws-sdk/client-sesv2");
 
 import * as prompts from "@clack/prompts";
+import * as route53 from "../../utils/route53.js";
 import * as aws from "../../utils/shared/aws.js";
 import * as fsUtils from "../../utils/shared/fs.js";
 import * as metadata from "../../utils/shared/metadata.js";
-import * as route53 from "../../utils/route53.js";
 // Import after mocks
 import { emailDestroy } from "../email/destroy.js";
 import { destroy } from "../shared/destroy.js";

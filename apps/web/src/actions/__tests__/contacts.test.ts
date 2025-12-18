@@ -1,13 +1,5 @@
-import {
-  contact,
-  contactTopic,
-  db,
-  member,
-  organization,
-  topic,
-  user,
-} from "@wraps/db";
-import { and, eq } from "drizzle-orm";
+import { contact, db, member, organization, topic, user } from "@wraps/db";
+import { eq } from "drizzle-orm";
 import {
   afterAll,
   beforeAll,
@@ -141,7 +133,9 @@ beforeAll(async () => {
 
 // Clean up contacts before each test
 beforeEach(async () => {
-  await db.delete(contact).where(eq(contact.organizationId, testOrganization.id));
+  await db
+    .delete(contact)
+    .where(eq(contact.organizationId, testOrganization.id));
   // Reset topic subscriber count
   await db
     .update(topic)
@@ -151,7 +145,9 @@ beforeEach(async () => {
 
 // Clean up after all tests
 afterAll(async () => {
-  await db.delete(contact).where(eq(contact.organizationId, testOrganization.id));
+  await db
+    .delete(contact)
+    .where(eq(contact.organizationId, testOrganization.id));
   await db.delete(topic).where(eq(topic.organizationId, testOrganization.id));
   await db.delete(member).where(eq(member.id, testMember.id));
   await db.delete(organization).where(eq(organization.id, testOrganization.id));
@@ -214,7 +210,9 @@ describe("Contacts Server Actions", () => {
     });
 
     it("should reject duplicate email", async () => {
-      await createContact(testOrganization.id, { email: "duplicate@example.com" });
+      await createContact(testOrganization.id, {
+        email: "duplicate@example.com",
+      });
       const result = await createContact(testOrganization.id, {
         email: "duplicate@example.com",
       });
@@ -335,9 +333,14 @@ describe("Contacts Server Actions", () => {
       });
 
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
-      const result = await getContact(createResult.contact.id, testOrganization.id);
+      const result = await getContact(
+        createResult.contact.id,
+        testOrganization.id
+      );
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -361,7 +364,9 @@ describe("Contacts Server Actions", () => {
         email: "old@example.com",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateContact(
         createResult.contact.id,
@@ -381,7 +386,9 @@ describe("Contacts Server Actions", () => {
         status: "active",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateContact(
         createResult.contact.id,
@@ -402,7 +409,9 @@ describe("Contacts Server Actions", () => {
         properties: { firstName: "John" },
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateContact(
         createResult.contact.id,
@@ -420,12 +429,16 @@ describe("Contacts Server Actions", () => {
     });
 
     it("should reject duplicate email on update", async () => {
-      await createContact(testOrganization.id, { email: "existing@example.com" });
+      await createContact(testOrganization.id, {
+        email: "existing@example.com",
+      });
       const createResult = await createContact(testOrganization.id, {
         email: "tochange@example.com",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateContact(
         createResult.contact.id,
@@ -446,14 +459,22 @@ describe("Contacts Server Actions", () => {
         email: "delete@example.com",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
-      const result = await deleteContact(createResult.contact.id, testOrganization.id);
+      const result = await deleteContact(
+        createResult.contact.id,
+        testOrganization.id
+      );
 
       expect(result.success).toBe(true);
 
       // Verify contact is deleted
-      const getResult = await getContact(createResult.contact.id, testOrganization.id);
+      const getResult = await getContact(
+        createResult.contact.id,
+        testOrganization.id
+      );
       expect(getResult.success).toBe(false);
     });
 
@@ -463,7 +484,9 @@ describe("Contacts Server Actions", () => {
         topicIds: [testTopic.id],
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Verify subscriber count is 1
       let topicData = await db.query.topic.findFirst({
@@ -482,7 +505,10 @@ describe("Contacts Server Actions", () => {
     });
 
     it("should return error for non-existent contact", async () => {
-      const result = await deleteContact("non-existent-id", testOrganization.id);
+      const result = await deleteContact(
+        "non-existent-id",
+        testOrganization.id
+      );
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -497,7 +523,9 @@ describe("Contacts Server Actions", () => {
         email: "subscribe@example.com",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await subscribeContactToTopics(
         createResult.contact.id,
@@ -508,7 +536,10 @@ describe("Contacts Server Actions", () => {
       expect(result.success).toBe(true);
 
       // Verify subscription
-      const getResult = await getContact(createResult.contact.id, testOrganization.id);
+      const getResult = await getContact(
+        createResult.contact.id,
+        testOrganization.id
+      );
       expect(getResult.success).toBe(true);
       if (getResult.success) {
         expect(getResult.contact.topics).toHaveLength(1);
@@ -522,7 +553,9 @@ describe("Contacts Server Actions", () => {
         topicIds: [testTopic.id],
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Unsubscribe
       await unsubscribeContactFromTopics(
@@ -541,7 +574,10 @@ describe("Contacts Server Actions", () => {
       expect(result.success).toBe(true);
 
       // Verify resubscription
-      const getResult = await getContact(createResult.contact.id, testOrganization.id);
+      const getResult = await getContact(
+        createResult.contact.id,
+        testOrganization.id
+      );
       expect(getResult.success).toBe(true);
       if (getResult.success) {
         expect(getResult.contact.topics?.[0].status).toBe("subscribed");
@@ -556,7 +592,9 @@ describe("Contacts Server Actions", () => {
         topicIds: [testTopic.id],
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await unsubscribeContactFromTopics(
         createResult.contact.id,

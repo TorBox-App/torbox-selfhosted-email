@@ -83,7 +83,7 @@ export function UpgradeToProButton() {
                   <LayoutDashboard size={16} />
                   Pro Dashboards
                 </Button>
-                <span className="-top-5 -right-1 absolute">
+                <span className="absolute -top-5 -right-1">
                   <Badge
                     className="rounded-full border-yellow-400 bg-yellow-400 px-2 py-0.5 text-xs text-yellow-900 shadow"
                     variant="outline"

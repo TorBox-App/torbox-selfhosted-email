@@ -1,11 +1,9 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
-import {
-  trackError,
-  trackServiceRemoved,
-} from "../../telemetry/events.js";
+import { trackError, trackServiceRemoved } from "../../telemetry/events.js";
 import type { DestroyOptions } from "../../types/index.js";
+import { deleteDNSRecords, findHostedZone } from "../../utils/route53.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -23,7 +21,6 @@ import {
   DeploymentProgress,
   displayPreview,
 } from "../../utils/shared/output.js";
-import { deleteDNSRecords, findHostedZone } from "../../utils/route53.js";
 
 /**
  * Get DKIM tokens and MAIL FROM domain for a domain from SES
@@ -117,7 +114,9 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         mailFromDomain = identityInfo.mailFromDomain;
       }
 
-      if (!options.force) {
+      if (options.force) {
+        shouldCleanDNS = true; // Auto-clean with --force
+      } else {
         const cleanDNS = await clack.confirm({
           message: `Found Route53 hosted zone for ${pc.cyan(domain)}. Delete DNS records (DKIM, DMARC, MAIL FROM)?`,
           initialValue: true,
@@ -129,8 +128,6 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         }
 
         shouldCleanDNS = cleanDNS;
-      } else {
-        shouldCleanDNS = true; // Auto-clean with --force
       }
     }
   }
@@ -208,19 +205,16 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
   // 7. Clean up DNS records first (before destroying SES identity)
   if (shouldCleanDNS && hostedZone && domain && dkimTokens.length > 0) {
     try {
-      await progress.execute(
-        `Deleting DNS records for ${domain}`,
-        async () => {
-          await deleteDNSRecords(
-            hostedZone.id,
-            domain,
-            dkimTokens,
-            region,
-            emailConfig?.tracking?.customRedirectDomain,
-            mailFromDomain
-          );
-        }
-      );
+      await progress.execute(`Deleting DNS records for ${domain}`, async () => {
+        await deleteDNSRecords(
+          hostedZone.id,
+          domain,
+          dkimTokens,
+          region,
+          emailConfig?.tracking?.customRedirectDomain,
+          mailFromDomain
+        );
+      });
     } catch (error: any) {
       clack.log.warn(`Could not delete DNS records: ${error.message}`);
       clack.log.info("You may need to delete them manually from Route53");
@@ -286,7 +280,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
     deletedItems.push("Route53 DNS records");
   }
 
-  clack.outro(pc.green(`Email infrastructure has been removed`));
+  clack.outro(pc.green("Email infrastructure has been removed"));
 
   if (domain) {
     console.log(`\n${pc.bold("Cleaned up:")}`);

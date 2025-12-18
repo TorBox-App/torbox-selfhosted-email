@@ -59,7 +59,7 @@ const EmailDividerNodeView = ({
       />
 
       {/* Drag handle and settings button */}
-      <div className="-translate-y-1/2 absolute top-1/2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="absolute top-1/2 right-2 flex -translate-y-1/2 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <DragHandle />
         <Popover onOpenChange={setIsEditing} open={isEditing}>
           <PopoverTrigger asChild>

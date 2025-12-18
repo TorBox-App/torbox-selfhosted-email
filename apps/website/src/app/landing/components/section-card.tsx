@@ -22,7 +22,9 @@ export function SectionCard({
   className = "",
 }: SectionCardProps) {
   return (
-    <div className={`overflow-hidden rounded-2xl border bg-muted/20 ${className}`}>
+    <div
+      className={`overflow-hidden rounded-2xl border bg-muted/20 ${className}`}
+    >
       {/* Optional header */}
       {header && (
         <div className="border-b bg-background/50 px-6 py-4">{header}</div>

@@ -14,7 +14,12 @@ import {
 import { Plus, Search, Upload } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { createContact, deleteContact, updateContact } from "@/actions/contacts";
+import { toast } from "sonner";
+import {
+  createContact,
+  deleteContact,
+  updateContact,
+} from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,13 +39,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   Table,
   TableBody,
   TableCell,
@@ -48,7 +46,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toast } from "sonner";
 import {
   CONTACT_STATUS_LABELS,
   CONTACT_STATUSES,
@@ -91,14 +88,17 @@ export function ContactsTable({
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [globalFilter, setGlobalFilter] = useState(searchParams.get("search") || "");
+  const [globalFilter, setGlobalFilter] = useState(
+    searchParams.get("search") || ""
+  );
 
   // Dialog/sheet state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
-  const [selectedContact, setSelectedContact] = useState<ContactWithMeta | null>(null);
+  const [selectedContact, setSelectedContact] =
+    useState<ContactWithMeta | null>(null);
 
   // Navigation helpers
   const updateSearchParams = useCallback(
@@ -210,7 +210,11 @@ export function ContactsTable({
     if (!selectedContact) return;
 
     startTransition(async () => {
-      const result = await updateContact(selectedContact.id, organizationId, data);
+      const result = await updateContact(
+        selectedContact.id,
+        organizationId,
+        data
+      );
       if (result.success) {
         toast.success("Contact updated", {
           description: "The contact has been updated.",
@@ -256,7 +260,7 @@ export function ContactsTable({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center space-x-2">
           <div className="relative max-w-sm flex-1">
-            <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9"
               onChange={(event) => handleSearch(event.target.value)}

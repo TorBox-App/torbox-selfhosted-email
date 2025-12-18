@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowRight, Check, Copy } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const command = "npx @wraps.dev/cli email connect";

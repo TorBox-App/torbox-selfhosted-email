@@ -167,13 +167,17 @@ beforeAll(async () => {
 // Clean up topics before each test and reset mock user
 beforeEach(async () => {
   currentMockUserId = testUser.id; // Reset to owner
-  await db.delete(contact).where(eq(contact.organizationId, testOrganization.id));
+  await db
+    .delete(contact)
+    .where(eq(contact.organizationId, testOrganization.id));
   await db.delete(topic).where(eq(topic.organizationId, testOrganization.id));
 });
 
 // Clean up after all tests
 afterAll(async () => {
-  await db.delete(contact).where(eq(contact.organizationId, testOrganization.id));
+  await db
+    .delete(contact)
+    .where(eq(contact.organizationId, testOrganization.id));
   await db.delete(topic).where(eq(topic.organizationId, testOrganization.id));
   await db.delete(member).where(eq(member.id, testOwnerMember.id));
   await db.delete(member).where(eq(member.id, testRegularMember.id));
@@ -194,7 +198,9 @@ describe("Topics Server Actions", () => {
       if (result.success) {
         expect(result.topic.name).toBe("Product Updates");
         expect(result.topic.slug).toBe("product-updates");
-        expect(result.topic.description).toBe("Get notified about new features");
+        expect(result.topic.description).toBe(
+          "Get notified about new features"
+        );
         expect(result.topic.public).toBe(true);
         expect(result.topic.doubleOptIn).toBe(false);
         expect(result.topic.subscriberCount).toBe(0);
@@ -279,7 +285,10 @@ describe("Topics Server Actions", () => {
     beforeEach(async () => {
       await createTopic(testOrganization.id, { name: "Newsletter" });
       await createTopic(testOrganization.id, { name: "Product Updates" });
-      await createTopic(testOrganization.id, { name: "Marketing", public: false });
+      await createTopic(testOrganization.id, {
+        name: "Marketing",
+        public: false,
+      });
     });
 
     it("should list all topics", async () => {
@@ -322,7 +331,9 @@ describe("Topics Server Actions", () => {
         name: "Get Topic Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await getTopic(createResult.topic.id, testOrganization.id);
 
@@ -348,7 +359,9 @@ describe("Topics Server Actions", () => {
         name: "Old Name",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateTopic(
         createResult.topic.id,
@@ -367,7 +380,9 @@ describe("Topics Server Actions", () => {
         name: "Slug Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateTopic(
         createResult.topic.id,
@@ -388,7 +403,9 @@ describe("Topics Server Actions", () => {
         doubleOptIn: false,
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateTopic(
         createResult.topic.id,
@@ -409,7 +426,9 @@ describe("Topics Server Actions", () => {
         name: "To Change",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateTopic(
         createResult.topic.id,
@@ -428,7 +447,9 @@ describe("Topics Server Actions", () => {
         name: "Protected Topic",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       currentMockUserId = testMemberUser.id;
 
@@ -451,14 +472,22 @@ describe("Topics Server Actions", () => {
         name: "To Delete",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
-      const result = await deleteTopic(createResult.topic.id, testOrganization.id);
+      const result = await deleteTopic(
+        createResult.topic.id,
+        testOrganization.id
+      );
 
       expect(result.success).toBe(true);
 
       // Verify topic is deleted
-      const getResult = await getTopic(createResult.topic.id, testOrganization.id);
+      const getResult = await getTopic(
+        createResult.topic.id,
+        testOrganization.id
+      );
       expect(getResult.success).toBe(false);
     });
 
@@ -467,7 +496,9 @@ describe("Topics Server Actions", () => {
         name: "Topic With Subscribers",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Create a contact subscribed to this topic
       await db.insert(contact).values({
@@ -491,7 +522,10 @@ describe("Topics Server Actions", () => {
       });
 
       // Delete topic
-      const result = await deleteTopic(createResult.topic.id, testOrganization.id);
+      const result = await deleteTopic(
+        createResult.topic.id,
+        testOrganization.id
+      );
       expect(result.success).toBe(true);
 
       // Verify subscription is deleted (contact should have no topics)
@@ -509,11 +543,16 @@ describe("Topics Server Actions", () => {
         name: "Protected Topic",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       currentMockUserId = testMemberUser.id;
 
-      const result = await deleteTopic(createResult.topic.id, testOrganization.id);
+      const result = await deleteTopic(
+        createResult.topic.id,
+        testOrganization.id
+      );
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -537,7 +576,9 @@ describe("Topics Server Actions", () => {
         name: "Empty Topic",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await getTopicSubscribers(
         createResult.topic.id,
@@ -556,7 +597,9 @@ describe("Topics Server Actions", () => {
         name: "Topic With Subscribers",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Create contacts subscribed to this topic
       for (let i = 0; i < 3; i++) {
@@ -603,7 +646,9 @@ describe("Topics Server Actions", () => {
         name: "Paginated Topic",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Create 5 contacts
       for (let i = 0; i < 5; i++) {
@@ -644,7 +689,9 @@ describe("Topics Server Actions", () => {
 
       // Clean up
       for (let i = 0; i < 5; i++) {
-        await db.delete(contact).where(eq(contact.id, `test-page-contact-${i}`));
+        await db
+          .delete(contact)
+          .where(eq(contact.id, `test-page-contact-${i}`));
       }
     });
 

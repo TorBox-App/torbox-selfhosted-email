@@ -1,19 +1,18 @@
 "use server";
 
+import crypto from "node:crypto";
 import { auth } from "@wraps/auth";
 import { contact, contactTopic, db, topic } from "@wraps/db";
 import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import crypto from "node:crypto";
-import {
-  type ContactStatus,
-  type ContactWithMeta,
-  type CreateContactResult,
-  type DeleteContactResult,
-  type GetContactResult,
-  type ListContactsResult,
-  type UpdateContactResult,
+import type {
+  ContactStatus,
+  CreateContactResult,
+  DeleteContactResult,
+  GetContactResult,
+  ListContactsResult,
+  UpdateContactResult,
 } from "@/lib/contacts";
 
 // Re-export types for convenience
@@ -100,7 +99,7 @@ export async function listContacts(
     }
 
     // If filtering by topic, we need a subquery
-    let topicFilter = undefined;
+    let topicFilter;
     if (topicId) {
       const subscribedContactIds = db
         .select({ contactId: contactTopic.contactId })
@@ -118,7 +117,9 @@ export async function listContacts(
     const [totalResult] = await db
       .select({ count: count() })
       .from(contact)
-      .where(topicFilter ? and(...conditions, topicFilter) : and(...conditions));
+      .where(
+        topicFilter ? and(...conditions, topicFilter) : and(...conditions)
+      );
 
     const total = totalResult?.count ?? 0;
 
@@ -205,7 +206,10 @@ export async function getContact(
 
     const c = await db.query.contact.findFirst({
       where: (contact, { and, eq }) =>
-        and(eq(contact.id, contactId), eq(contact.organizationId, organizationId)),
+        and(
+          eq(contact.id, contactId),
+          eq(contact.organizationId, organizationId)
+        ),
       with: {
         createdByUser: {
           columns: {
@@ -289,7 +293,7 @@ export async function createContact(
 
     // Validate email
     const email = data.email.toLowerCase().trim();
-    if (!email || !email.includes("@")) {
+    if (!email?.includes("@")) {
       return { success: false, error: "Invalid email address" };
     }
 
@@ -302,7 +306,10 @@ export async function createContact(
     });
 
     if (existing) {
-      return { success: false, error: "A contact with this email already exists" };
+      return {
+        success: false,
+        error: "A contact with this email already exists",
+      };
     }
 
     // Create contact
@@ -345,7 +352,7 @@ export async function createContact(
     }
 
     // Revalidate
-    revalidatePath(`/[orgSlug]/contacts`, "page");
+    revalidatePath("/[orgSlug]/contacts", "page");
 
     // Return the created contact
     return await getContact(newContact.id, organizationId);
@@ -393,7 +400,7 @@ export async function updateContact(
 
     if (data.email !== undefined) {
       const email = data.email.toLowerCase().trim();
-      if (!email || !email.includes("@")) {
+      if (!email?.includes("@")) {
         return { success: false, error: "Invalid email address" };
       }
 
@@ -443,10 +450,15 @@ export async function updateContact(
     await db
       .update(contact)
       .set(updateData)
-      .where(and(eq(contact.id, contactId), eq(contact.organizationId, organizationId)));
+      .where(
+        and(
+          eq(contact.id, contactId),
+          eq(contact.organizationId, organizationId)
+        )
+      );
 
     // Revalidate
-    revalidatePath(`/[orgSlug]/contacts`, "page");
+    revalidatePath("/[orgSlug]/contacts", "page");
 
     // Return updated contact
     return await getContact(contactId, organizationId);
@@ -504,10 +516,15 @@ export async function deleteContact(
     // Delete contact (cascades to contact_topic)
     await db
       .delete(contact)
-      .where(and(eq(contact.id, contactId), eq(contact.organizationId, organizationId)));
+      .where(
+        and(
+          eq(contact.id, contactId),
+          eq(contact.organizationId, organizationId)
+        )
+      );
 
     // Revalidate
-    revalidatePath(`/[orgSlug]/contacts`, "page");
+    revalidatePath("/[orgSlug]/contacts", "page");
 
     return { success: true };
   } catch (error) {
@@ -548,7 +565,9 @@ export async function subscribeContactToTopics(
 
     // Get current subscriptions
     const currentTopicIds = new Set(
-      existing.topics.filter((t) => t.status === "subscribed").map((t) => t.topicId)
+      existing.topics
+        .filter((t) => t.status === "subscribed")
+        .map((t) => t.topicId)
     );
 
     // Filter to only new subscriptions
@@ -560,7 +579,9 @@ export async function subscribeContactToTopics(
 
     // Check if any are resubscriptions (previously unsubscribed)
     const previousSubscriptions = existing.topics
-      .filter((t) => t.status === "unsubscribed" && newTopicIds.includes(t.topicId))
+      .filter(
+        (t) => t.status === "unsubscribed" && newTopicIds.includes(t.topicId)
+      )
       .map((t) => t.topicId);
 
     // Update resubscriptions
@@ -575,7 +596,9 @@ export async function subscribeContactToTopics(
         .where(
           and(
             eq(contactTopic.contactId, contactId),
-            or(...previousSubscriptions.map((id) => eq(contactTopic.topicId, id)))
+            or(
+              ...previousSubscriptions.map((id) => eq(contactTopic.topicId, id))
+            )
           )
         );
     }
@@ -605,7 +628,7 @@ export async function subscribeContactToTopics(
     }
 
     // Revalidate
-    revalidatePath(`/[orgSlug]/contacts`, "page");
+    revalidatePath("/[orgSlug]/contacts", "page");
 
     return { success: true };
   } catch (error) {
@@ -667,7 +690,7 @@ export async function unsubscribeContactFromTopics(
     }
 
     // Revalidate
-    revalidatePath(`/[orgSlug]/contacts`, "page");
+    revalidatePath("/[orgSlug]/contacts", "page");
 
     return { success: true };
   } catch (error) {

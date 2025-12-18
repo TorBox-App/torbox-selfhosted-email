@@ -2,10 +2,7 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
-import {
-  trackError,
-  trackServiceUpgrade,
-} from "../../telemetry/events.js";
+import { trackError, trackServiceUpgrade } from "../../telemetry/events.js";
 import type {
   EmailStackConfig,
   UpgradeOptions,

@@ -119,7 +119,7 @@ export function MegaMenu() {
             <div className="space-y-3 lg:space-y-4">
               {section.items.map((item) => (
                 <a
-                  className="group -mx-2 lg:-mx-3 my-0 block space-y-1 rounded-md p-2 transition-colors hover:bg-accent lg:space-y-2 lg:p-3"
+                  className="group -mx-2 my-0 block space-y-1 rounded-md p-2 transition-colors hover:bg-accent lg:-mx-3 lg:space-y-2 lg:p-3"
                   href={item.href}
                   key={item.title}
                 >

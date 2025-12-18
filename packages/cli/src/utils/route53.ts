@@ -28,11 +28,10 @@ async function getExistingTXTRecords(
     // Find TXT records for the exact domain
     const txtRecordSet = response.ResourceRecordSets?.find(
       (rs) =>
-        rs.Type === "TXT" &&
-        (rs.Name === domain || rs.Name === `${domain}.`)
+        rs.Type === "TXT" && (rs.Name === domain || rs.Name === `${domain}.`)
     );
 
-    if (!txtRecordSet || !txtRecordSet.ResourceRecords) {
+    if (!(txtRecordSet && txtRecordSet.ResourceRecords)) {
       return { allValues: [], spfValue: null, ttl: 1800 };
     }
 
@@ -193,7 +192,9 @@ export async function createDNSRecords(
       Type: "TXT",
       TTL: 1800,
       ResourceRecords: [
-        { Value: `"v=DMARC1; p=quarantine; rua=mailto:postmaster@${dmarcRuaDomain}"` },
+        {
+          Value: `"v=DMARC1; p=quarantine; rua=mailto:postmaster@${dmarcRuaDomain}"`,
+        },
       ],
     },
   });

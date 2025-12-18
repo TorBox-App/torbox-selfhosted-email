@@ -7,7 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { SectionWrapper, SectionCard } from "./section-card";
+import { SectionCard, SectionWrapper } from "./section-card";
 
 type FaqItem = {
   value: string;
@@ -66,47 +66,45 @@ const faqItems: FaqItem[] = [
   },
 ];
 
-const FaqSection = () => {
-  return (
-    <SectionWrapper
-      badge="FAQ"
-      description="Everything you need to know about Wraps, pricing, security, and deployment."
-      id="faq"
-      title="Frequently Asked Questions"
+const FaqSection = () => (
+  <SectionWrapper
+    badge="FAQ"
+    description="Everything you need to know about Wraps, pricing, security, and deployment."
+    id="faq"
+    title="Frequently Asked Questions"
+  >
+    <SectionCard
+      footer={{
+        title: "Still have questions?",
+        description:
+          "We're here to help. Reach out and we'll get back to you as soon as possible.",
+        ctaText: "Contact Support",
+        ctaLink: "mailto:support@wraps.dev",
+      }}
     >
-      <SectionCard
-        footer={{
-          title: "Still have questions?",
-          description:
-            "We're here to help. Reach out and we'll get back to you as soon as possible.",
-          ctaText: "Contact Support",
-          ctaLink: "mailto:support@wraps.dev",
-        }}
-      >
-        <Accordion className="space-y-3" collapsible type="single">
-          {faqItems.map((item) => (
-            <AccordionItem
-              className="rounded-lg border bg-background px-4"
-              key={item.value}
-              value={item.value}
-            >
-              <AccordionTrigger className="cursor-pointer gap-4 py-4 hover:no-underline">
-                <div className="flex items-center gap-3 text-left">
-                  <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5 text-orange-500">
-                    <CircleHelp className="size-4" />
-                  </div>
-                  <span className="font-medium">{item.question}</span>
+      <Accordion className="space-y-3" collapsible type="single">
+        {faqItems.map((item) => (
+          <AccordionItem
+            className="rounded-lg border bg-background px-4"
+            key={item.value}
+            value={item.value}
+          >
+            <AccordionTrigger className="cursor-pointer gap-4 py-4 hover:no-underline">
+              <div className="flex items-center gap-3 text-left">
+                <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5 text-orange-500">
+                  <CircleHelp className="size-4" />
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-4 pl-11 text-muted-foreground">
-                {item.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </SectionCard>
-    </SectionWrapper>
-  );
-};
+                <span className="font-medium">{item.question}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 pl-11 text-muted-foreground">
+              {item.answer}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </SectionCard>
+  </SectionWrapper>
+);
 
 export { FaqSection };

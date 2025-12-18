@@ -126,7 +126,9 @@ export function TopicSubscribersSheet({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {subscriber.subscribedAt
-                          ? new Date(subscriber.subscribedAt).toLocaleDateString()
+                          ? new Date(
+                              subscriber.subscribedAt
+                            ).toLocaleDateString()
                           : "—"}
                       </TableCell>
                     </TableRow>

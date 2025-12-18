@@ -161,7 +161,9 @@ export function displaySuccess(outputs: SuccessOutputs) {
         "",
         pc.bold("SPF Record (TXT):"),
         `  ${pc.cyan(domain)} ${pc.dim("TXT")} "v=spf1 include:amazonses.com ~all"`,
-        pc.dim("  Note: If you have an existing SPF record, add 'include:amazonses.com' to it"),
+        pc.dim(
+          "  Note: If you have an existing SPF record, add 'include:amazonses.com' to it"
+        ),
         "",
         pc.bold("DMARC Record (TXT):"),
         `  ${pc.cyan(`_dmarc.${domain}`)} ${pc.dim("TXT")} "v=DMARC1; p=quarantine; rua=mailto:postmaster@${dmarcRuaDomain}"`
@@ -481,7 +483,9 @@ export function displayStatus(status: StatusOutputs) {
           "",
           pc.bold("SPF Record (TXT):"),
           `  ${pc.cyan(domain.domain)} ${pc.dim("TXT")} "v=spf1 include:amazonses.com ~all"`,
-          pc.dim("  Note: If you have an existing SPF record, add 'include:amazonses.com' to it"),
+          pc.dim(
+            "  Note: If you have an existing SPF record, add 'include:amazonses.com' to it"
+          ),
           "",
           pc.bold("DMARC Record (TXT):"),
           `  ${pc.cyan(`_dmarc.${domain.domain}`)} ${pc.dim("TXT")} "v=DMARC1; p=quarantine; rua=mailto:postmaster@${dmarcRuaDomain}"`

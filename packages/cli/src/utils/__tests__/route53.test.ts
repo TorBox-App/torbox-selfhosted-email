@@ -391,9 +391,9 @@ describe("createDNSRecords", () => {
     );
 
     expect(spfRecord).toBeDefined();
-    expect(
-      spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value
-    ).toBe('"v=spf1 include:amazonses.com ~all"');
+    expect(spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value).toBe(
+      '"v=spf1 include:amazonses.com ~all"'
+    );
   });
 
   it("should merge into existing SPF record", async () => {
@@ -404,9 +404,7 @@ describe("createDNSRecords", () => {
           Name: "example.com.",
           Type: "TXT",
           TTL: 300,
-          ResourceRecords: [
-            { Value: '"v=spf1 include:mailchimp.com ~all"' },
-          ],
+          ResourceRecords: [{ Value: '"v=spf1 include:mailchimp.com ~all"' }],
         },
       ],
     });
@@ -431,12 +429,12 @@ describe("createDNSRecords", () => {
 
     expect(spfRecord).toBeDefined();
     // Should contain both includes
-    expect(
-      spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value
-    ).toContain("include:mailchimp.com");
-    expect(
-      spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value
-    ).toContain("include:amazonses.com");
+    expect(spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value).toContain(
+      "include:mailchimp.com"
+    );
+    expect(spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value).toContain(
+      "include:amazonses.com"
+    );
   });
 
   it("should not duplicate amazonses.com in existing SPF record", async () => {
@@ -447,9 +445,7 @@ describe("createDNSRecords", () => {
           Name: "example.com.",
           Type: "TXT",
           TTL: 300,
-          ResourceRecords: [
-            { Value: '"v=spf1 include:amazonses.com ~all"' },
-          ],
+          ResourceRecords: [{ Value: '"v=spf1 include:amazonses.com ~all"' }],
         },
       ],
     });

@@ -96,7 +96,9 @@ export function ContactDetailsSheet({
                 </div>
               </div>
               <div className="rounded-lg border p-3 text-center">
-                <div className="font-bold text-2xl">{contact.emailsClicked}</div>
+                <div className="font-bold text-2xl">
+                  {contact.emailsClicked}
+                </div>
                 <div className="text-muted-foreground text-xs">
                   Clicks ({clickRate}%)
                 </div>
@@ -192,7 +194,9 @@ export function ContactDetailsSheet({
               {contact.createdBy && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Created by</span>
-                  <span>{contact.createdBy.name || contact.createdBy.email}</span>
+                  <span>
+                    {contact.createdBy.name || contact.createdBy.email}
+                  </span>
                 </div>
               )}
             </div>
@@ -217,7 +221,9 @@ export function ContactDetailsSheet({
                   )}
                   {contact.unsubscribedAt && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Unsubscribed</span>
+                      <span className="text-muted-foreground">
+                        Unsubscribed
+                      </span>
                       <span>
                         {new Date(contact.unsubscribedAt).toLocaleDateString()}
                       </span>

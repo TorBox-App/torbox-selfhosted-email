@@ -82,10 +82,11 @@ export async function destroy(options: DestroyOptions): Promise<void> {
   }
 
   // 6. Route to appropriate destroy command
-  if (serviceToDestroy === "email" || serviceToDestroy === "all") {
-    if (deployedServices.includes("email")) {
-      await emailDestroy(options);
-    }
+  if (
+    (serviceToDestroy === "email" || serviceToDestroy === "all") &&
+    deployedServices.includes("email")
+  ) {
+    await emailDestroy(options);
   }
 
   if (serviceToDestroy === "all") {

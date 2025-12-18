@@ -90,9 +90,13 @@ export function TopicFormDialog({
       onSubmit({
         name: name !== topic?.name ? name : undefined,
         slug: slug !== topic?.slug ? slug : undefined,
-        description: description !== (topic?.description || "") ? description || null : undefined,
+        description:
+          description !== (topic?.description || "")
+            ? description || null
+            : undefined,
         public: isPublic !== topic?.public ? isPublic : undefined,
-        doubleOptIn: doubleOptIn !== topic?.doubleOptIn ? doubleOptIn : undefined,
+        doubleOptIn:
+          doubleOptIn !== topic?.doubleOptIn ? doubleOptIn : undefined,
       });
     }
   };
@@ -133,7 +137,9 @@ export function TopicFormDialog({
                 <Input
                   id="slug"
                   onChange={(e) => {
-                    setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+                    setSlug(
+                      e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+                    );
                     setSlugManuallyEdited(true);
                   }}
                   placeholder="product-updates"
@@ -170,11 +176,15 @@ export function TopicFormDialog({
                   onCheckedChange={(checked) => setIsPublic(checked === true)}
                 />
                 <div className="space-y-1">
-                  <Label className="cursor-pointer font-normal" htmlFor="public">
+                  <Label
+                    className="cursor-pointer font-normal"
+                    htmlFor="public"
+                  >
                     Public topic
                   </Label>
                   <p className="text-muted-foreground text-xs">
-                    Visible in the preference center for contacts to subscribe/unsubscribe
+                    Visible in the preference center for contacts to
+                    subscribe/unsubscribe
                   </p>
                 </div>
               </div>
@@ -183,10 +193,15 @@ export function TopicFormDialog({
                 <Checkbox
                   checked={doubleOptIn}
                   id="doubleOptIn"
-                  onCheckedChange={(checked) => setDoubleOptIn(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setDoubleOptIn(checked === true)
+                  }
                 />
                 <div className="space-y-1">
-                  <Label className="cursor-pointer font-normal" htmlFor="doubleOptIn">
+                  <Label
+                    className="cursor-pointer font-normal"
+                    htmlFor="doubleOptIn"
+                  >
                     Require double opt-in
                   </Label>
                   <p className="text-muted-foreground text-xs">

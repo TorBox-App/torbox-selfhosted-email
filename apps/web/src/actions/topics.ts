@@ -9,10 +9,9 @@ import {
   type CreateTopicResult,
   type DeleteTopicResult,
   type GetTopicResult,
-  type ListTopicsResult,
-  type TopicWithMeta,
-  type UpdateTopicResult,
   generateSlug,
+  type ListTopicsResult,
+  type UpdateTopicResult,
 } from "@/lib/topics";
 
 // Re-export types for convenience
@@ -192,7 +191,9 @@ export async function createTopic(
     }
 
     // Generate or validate slug
-    const slug = data.slug ? data.slug.toLowerCase().trim() : generateSlug(data.name);
+    const slug = data.slug
+      ? data.slug.toLowerCase().trim()
+      : generateSlug(data.name);
 
     if (!slug || slug.length < 1) {
       return { success: false, error: "Invalid topic slug" };
@@ -227,7 +228,7 @@ export async function createTopic(
     }
 
     // Revalidate
-    revalidatePath(`/[orgSlug]/topics`, "page");
+    revalidatePath("/[orgSlug]/topics", "page");
 
     // Return the created topic
     return await getTopic(newTopic.id, organizationId);
@@ -332,10 +333,12 @@ export async function updateTopic(
     await db
       .update(topic)
       .set(updateData)
-      .where(and(eq(topic.id, topicId), eq(topic.organizationId, organizationId)));
+      .where(
+        and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+      );
 
     // Revalidate
-    revalidatePath(`/[orgSlug]/topics`, "page");
+    revalidatePath("/[orgSlug]/topics", "page");
 
     // Return updated topic
     return await getTopic(topicId, organizationId);
@@ -382,10 +385,12 @@ export async function deleteTopic(
     // Delete topic (cascades to contact_topic)
     await db
       .delete(topic)
-      .where(and(eq(topic.id, topicId), eq(topic.organizationId, organizationId)));
+      .where(
+        and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+      );
 
     // Revalidate
-    revalidatePath(`/[orgSlug]/topics`, "page");
+    revalidatePath("/[orgSlug]/topics", "page");
 
     return { success: true };
   } catch (error) {

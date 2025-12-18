@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Image3D } from "@/components/image-3d";
 import { Button } from "@/components/ui/button";
-import { SectionWrapper, IconBox } from "./section-card";
+import { IconBox, SectionWrapper } from "./section-card";
 
 const mainFeatures = [
   {
@@ -96,8 +96,8 @@ export function FeaturesSection() {
               Everything You Need, Nothing You Don't
             </h3>
             <p className="text-pretty text-base text-muted-foreground">
-              Wraps deploys SES, DynamoDB, Lambda, EventBridge, and IAM roles
-              to your AWS account in one command. You get event tracking,
+              Wraps deploys SES, DynamoDB, Lambda, EventBridge, and IAM roles to
+              your AWS account in one command. You get event tracking,
               analytics, and a dashboard while paying AWS directly.
             </p>
           </div>
@@ -137,7 +137,10 @@ export function FeaturesSection() {
           </ul>
 
           <div className="flex flex-col gap-4 pe-4 pt-2 sm:flex-row">
-            <Button className="cursor-pointer bg-orange-500 hover:bg-orange-600" size="lg">
+            <Button
+              className="cursor-pointer bg-orange-500 hover:bg-orange-600"
+              size="lg"
+            >
               <a className="flex items-center" href="#pricing">
                 Get Started Free
                 <ArrowRight aria-hidden="true" className="ms-2 size-4" />
@@ -166,9 +169,8 @@ export function FeaturesSection() {
             </h3>
             <p className="text-pretty text-base text-muted-foreground">
               Use the TypeScript SDK to send emails. Track opens, clicks,
-              bounces, and complaints in real-time. Query the data directly
-              from DynamoDB or view it in the dashboard. All in your AWS
-              account.
+              bounces, and complaints in real-time. Query the data directly from
+              DynamoDB or view it in the dashboard. All in your AWS account.
             </p>
           </div>
 
@@ -192,7 +194,10 @@ export function FeaturesSection() {
           </ul>
 
           <div className="flex flex-col gap-4 pe-4 pt-2 sm:flex-row">
-            <Button className="cursor-pointer bg-orange-500 hover:bg-orange-600" size="lg">
+            <Button
+              className="cursor-pointer bg-orange-500 hover:bg-orange-600"
+              size="lg"
+            >
               <a className="flex items-center" href="/docs">
                 Read the Docs
                 <ArrowRight aria-hidden="true" className="ms-2 size-4" />

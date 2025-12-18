@@ -65,7 +65,9 @@ export function TopicsTable({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [subscribersSheetOpen, setSubscribersSheetOpen] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState<TopicWithMeta | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<TopicWithMeta | null>(
+    null
+  );
 
   const canEdit = userRole === "owner" || userRole === "admin";
 

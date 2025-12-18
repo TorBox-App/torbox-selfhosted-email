@@ -71,7 +71,9 @@ function showHelp() {
   console.log(
     `  ${pc.cyan("email connect")}        Connect to existing AWS SES`
   );
-  console.log(`  ${pc.cyan("email status")}         Show email infrastructure details`);
+  console.log(
+    `  ${pc.cyan("email status")}         Show email infrastructure details`
+  );
   console.log(`  ${pc.cyan("email verify")}         Verify domain DNS records`);
   console.log(
     `  ${pc.cyan("email sync")}           Apply CLI updates to infrastructure`
@@ -192,7 +194,9 @@ const [primaryCommand, subCommand] = args.sub;
 if (!primaryCommand) {
   async function selectService() {
     clack.intro(pc.bold(`WRAPS CLI v${VERSION}`));
-    console.log("Welcome! Let's get started deploying your email infrastructure.\n");
+    console.log(
+      "Welcome! Let's get started deploying your email infrastructure.\n"
+    );
 
     // Ask what action they want to take
     const action = await clack.select({

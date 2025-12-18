@@ -20,11 +20,6 @@ import {
   listApiKeys,
   updateApiKey,
 } from "@/actions/api-keys";
-import {
-  API_KEY_PERMISSIONS,
-  type ApiKeyPermission,
-  type ApiKeyWithMeta,
-} from "@/lib/api-keys";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +55,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  API_KEY_PERMISSIONS,
+  type ApiKeyPermission,
+  type ApiKeyWithMeta,
+} from "@/lib/api-keys";
 
 type OrganizationSettingsApiKeysProps = {
   organization: {
@@ -121,7 +121,8 @@ export function OrganizationSettingsApiKeys({
   const [createCustomPermissions, setCreateCustomPermissions] = useState<
     ApiKeyPermission[]
   >([...API_KEY_PERMISSIONS]);
-  const [createExpiresInDays, setCreateExpiresInDays] = useState<string>("never");
+  const [createExpiresInDays, setCreateExpiresInDays] =
+    useState<string>("never");
   const [createSubmitting, setCreateSubmitting] = useState(false);
 
   // Secret key display state
@@ -177,9 +178,10 @@ export function OrganizationSettingsApiKeys({
       name: createName.trim(),
       type: createType,
       permissions,
-      expiresInDays: createExpiresInDays !== "never"
-        ? Number.parseInt(createExpiresInDays)
-        : undefined,
+      expiresInDays:
+        createExpiresInDays !== "never"
+          ? Number.parseInt(createExpiresInDays)
+          : undefined,
     });
 
     setCreateSubmitting(false);
@@ -343,10 +345,7 @@ export function OrganizationSettingsApiKeys({
                     <p className="mb-1 font-medium text-sm">{category.name}</p>
                     <div className="space-y-1">
                       {category.permissions.map((perm) => (
-                        <div
-                          className="flex items-center space-x-2"
-                          key={perm}
-                        >
+                        <div className="flex items-center space-x-2" key={perm}>
                           <Checkbox
                             checked={createCustomPermissions.includes(perm)}
                             id={`create-${perm}`}
@@ -505,10 +504,7 @@ export function OrganizationSettingsApiKeys({
                     <p className="mb-1 font-medium text-sm">{category.name}</p>
                     <div className="space-y-1">
                       {category.permissions.map((perm) => (
-                        <div
-                          className="flex items-center space-x-2"
-                          key={perm}
-                        >
+                        <div className="flex items-center space-x-2" key={perm}>
                           <Checkbox
                             checked={editPermissions.includes(perm)}
                             id={`edit-${perm}`}
@@ -603,9 +599,10 @@ export function OrganizationSettingsApiKeys({
                         <Badge variant="secondary">
                           {key.prefix.includes("live") ? "Live" : "Test"}
                         </Badge>
-                        {key.expiresAt && new Date(key.expiresAt) < new Date() && (
-                          <Badge variant="destructive">Expired</Badge>
-                        )}
+                        {key.expiresAt &&
+                          new Date(key.expiresAt) < new Date() && (
+                            <Badge variant="destructive">Expired</Badge>
+                          )}
                       </div>
                       <p className="font-mono text-muted-foreground text-sm">
                         {key.prefix}
@@ -667,7 +664,9 @@ export function OrganizationSettingsApiKeys({
       <Card>
         <CardHeader>
           <CardTitle>Using API Keys</CardTitle>
-          <CardDescription>How to authenticate with the Wraps API.</CardDescription>
+          <CardDescription>
+            How to authenticate with the Wraps API.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -679,7 +678,7 @@ export function OrganizationSettingsApiKeys({
           <div>
             <h4 className="mb-2 font-medium">SDK Usage</h4>
             <pre className="overflow-x-auto rounded-lg bg-muted p-3 font-mono text-sm">
-{`import { Wraps } from '@wraps.dev/email';
+              {`import { Wraps } from '@wraps.dev/email';
 
 const wraps = new Wraps({
   apiKey: process.env.WRAPS_API_KEY,

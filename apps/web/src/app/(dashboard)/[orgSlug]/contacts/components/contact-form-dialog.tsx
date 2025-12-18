@@ -30,6 +30,7 @@ import {
 import type { TopicWithMeta } from "@/lib/topics";
 
 type PropertyEntry = {
+  id: string;
   key: string;
   value: string;
 };
@@ -70,11 +71,14 @@ export function ContactFormDialog({
         setEmail(contact.email);
         setStatus(contact.status);
         setSelectedTopicIds(
-          contact.topics?.filter((t) => t.status === "subscribed").map((t) => t.topicId) || []
+          contact.topics
+            ?.filter((t) => t.status === "subscribed")
+            .map((t) => t.topicId) || []
         );
         // Convert properties object to array
         setProperties(
           Object.entries(contact.properties || {}).map(([key, value]) => ({
+            id: crypto.randomUUID(),
             key,
             value: String(value),
           }))
@@ -106,7 +110,8 @@ export function ContactFormDialog({
       onSubmit({
         email,
         status,
-        properties: Object.keys(propertiesObj).length > 0 ? propertiesObj : undefined,
+        properties:
+          Object.keys(propertiesObj).length > 0 ? propertiesObj : undefined,
         topicIds: selectedTopicIds,
       });
     } else {
@@ -132,16 +137,25 @@ export function ContactFormDialog({
   };
 
   const addProperty = () => {
-    setProperties((prev) => [...prev, { key: "", value: "" }]);
+    setProperties((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), key: "", value: "" },
+    ]);
   };
 
   const removeProperty = (index: number) => {
     setProperties((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateProperty = (index: number, field: "key" | "value", newValue: string) => {
+  const updateProperty = (
+    index: number,
+    field: "key" | "value",
+    newValue: string
+  ) => {
     setProperties((prev) =>
-      prev.map((prop, i) => (i === index ? { ...prop, [field]: newValue } : prop))
+      prev.map((prop, i) =>
+        i === index ? { ...prop, [field]: newValue } : prop
+      )
     );
   };
 
@@ -241,16 +255,20 @@ export function ContactFormDialog({
               {properties.length > 0 ? (
                 <div className="max-h-[150px] space-y-2 overflow-y-auto rounded-md border p-3">
                   {properties.map((prop, index) => (
-                    <div className="flex items-center gap-2" key={index}>
+                    <div className="flex items-center gap-2" key={prop.id}>
                       <Input
                         className="h-8 flex-1"
-                        onChange={(e) => updateProperty(index, "key", e.target.value)}
+                        onChange={(e) =>
+                          updateProperty(index, "key", e.target.value)
+                        }
                         placeholder="key"
                         value={prop.key}
                       />
                       <Input
                         className="h-8 flex-1"
-                        onChange={(e) => updateProperty(index, "value", e.target.value)}
+                        onChange={(e) =>
+                          updateProperty(index, "value", e.target.value)
+                        }
                         placeholder="value"
                         value={prop.value}
                       />
@@ -267,7 +285,8 @@ export function ContactFormDialog({
                 </div>
               ) : (
                 <p className="text-muted-foreground text-xs">
-                  No custom properties. Add key-value pairs like firstName, company, plan, etc.
+                  No custom properties. Add key-value pairs like firstName,
+                  company, plan, etc.
                 </p>
               )}
             </div>

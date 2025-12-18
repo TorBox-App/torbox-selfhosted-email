@@ -54,7 +54,13 @@ export default async function ContactsPage({
       page: Number.parseInt(page, 10),
       pageSize: Number.parseInt(pageSize, 10),
       search,
-      status: status as "pending_confirmation" | "active" | "unsubscribed" | "bounced" | "complained" | undefined,
+      status: status as
+        | "pending_confirmation"
+        | "active"
+        | "unsubscribed"
+        | "bounced"
+        | "complained"
+        | undefined,
       topicId,
     }),
     listTopics(orgWithMembership.id),
@@ -80,8 +86,8 @@ export default async function ContactsPage({
       <div className="@container/main px-4 lg:px-6">
         <ContactsTable
           contacts={contacts}
-          orgSlug={orgSlug}
           organizationId={orgWithMembership.id}
+          orgSlug={orgSlug}
           page={Number.parseInt(page, 10)}
           pageSize={Number.parseInt(pageSize, 10)}
           topics={topics}

@@ -380,7 +380,10 @@ export async function init(options: InitOptions): Promise<void> {
     if (outputs.mailFromDomain) {
       metadata.services.email.config.mailFromDomain = outputs.mailFromDomain;
     }
-    if (outputs.customTrackingDomain && metadata.services.email.config.tracking) {
+    if (
+      outputs.customTrackingDomain &&
+      metadata.services.email.config.tracking
+    ) {
       metadata.services.email.config.tracking.customRedirectDomain =
         outputs.customTrackingDomain;
     }

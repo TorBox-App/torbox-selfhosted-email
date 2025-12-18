@@ -40,7 +40,9 @@ export function printCompletionScript() {
   console.log("#   wraps completion");
   console.log("#   wraps telemetry [enable|disable|status]\n");
   console.log("# Dashboard Commands:");
-  console.log("#   wraps dashboard update-role [--region <region>] [--force]\n");
+  console.log(
+    "#   wraps dashboard update-role [--region <region>] [--force]\n"
+  );
   console.log("# Flags:");
   console.log("#   -p, --provider  : vercel, aws, railway, other");
   console.log(

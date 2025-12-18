@@ -50,7 +50,7 @@ export function AsciinemaPlayer({
       // Dynamically import to avoid SSR issues
       const AsciinemaPlayerLib = await import("asciinema-player");
 
-      if (!mounted || !containerRef.current) return;
+      if (!(mounted && containerRef.current)) return;
 
       // Clean up existing player
       if (playerRef.current) {

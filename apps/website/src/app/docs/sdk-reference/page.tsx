@@ -1,9 +1,9 @@
 "use client";
 
 import { ArrowRight, Code2 } from "lucide-react";
-import { DocsLayout } from "@/components/docs-layout";
 import { CopyForAIButton } from "@/components/docs/copy-for-ai-button";
 import { SectionHeading } from "@/components/docs/section-heading";
+import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -413,10 +413,10 @@ export default function SDKReferencePage() {
       {/* Installation */}
       <section className="mb-12">
         <SectionHeading
-          id="installation"
-          title="Installation"
-          markdown={SECTION_MD.installation}
           className="mb-4"
+          id="installation"
+          markdown={SECTION_MD.installation}
+          title="Installation"
         />
         <Snippet defaultValue="npm">
           <SnippetHeader>
@@ -439,10 +439,10 @@ export default function SDKReferencePage() {
       {/* Quick Start */}
       <section className="mb-12">
         <SectionHeading
-          id="quick-start"
-          title="Quick Start"
-          markdown={SECTION_MD.quickStart}
           className="mb-4"
+          id="quick-start"
+          markdown={SECTION_MD.quickStart}
+          title="Quick Start"
         />
         <CodeBlock
           className="h-auto"
@@ -484,10 +484,10 @@ export default function SDKReferencePage() {
       {/* Initialization */}
       <section className="mb-12">
         <SectionHeading
-          id="initialization"
-          title="Initialization"
-          markdown={SECTION_MD.initialization}
           className="mb-4"
+          id="initialization"
+          markdown={SECTION_MD.initialization}
+          title="Initialization"
         />
         <p className="mb-4 text-muted-foreground">
           Create a new Wraps client. The SDK automatically detects AWS
@@ -546,7 +546,10 @@ export default function SDKReferencePage() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}
@@ -574,10 +577,10 @@ export default function SDKReferencePage() {
       {/* Send Email */}
       <section className="mb-12">
         <SectionHeading
-          id="send-email"
-          title="Send Email"
-          markdown={SECTION_MD.sendEmail}
           className="mb-4"
+          id="send-email"
+          markdown={SECTION_MD.sendEmail}
+          title="Send Email"
         />
         <p className="mb-4 text-muted-foreground">
           Send an email using AWS SES through your Wraps infrastructure.
@@ -591,7 +594,9 @@ export default function SDKReferencePage() {
           </CardHeader>
           <CardContent>
             <code className="block rounded bg-muted p-4 font-mono text-sm">
-              {"wraps.emails.send(params: SendEmailParams): Promise<SendEmailResult>"}
+              {
+                "wraps.emails.send(params: SendEmailParams): Promise<SendEmailResult>"
+              }
             </code>
           </CardContent>
         </Card>
@@ -697,7 +702,10 @@ export default function SDKReferencePage() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}
@@ -736,7 +744,10 @@ export default function SDKReferencePage() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}
@@ -775,7 +786,10 @@ export default function SDKReferencePage() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}
@@ -803,10 +817,10 @@ export default function SDKReferencePage() {
       {/* Send Template */}
       <section className="mb-12">
         <SectionHeading
-          id="send-template"
-          title="Send Template"
-          markdown={SECTION_MD.sendTemplate}
           className="mb-4"
+          id="send-template"
+          markdown={SECTION_MD.sendTemplate}
+          title="Send Template"
         />
         <p className="mb-4 text-muted-foreground">
           Send an email using a pre-defined SES template. Templates support
@@ -821,7 +835,9 @@ export default function SDKReferencePage() {
           </CardHeader>
           <CardContent>
             <code className="block rounded bg-muted p-4 font-mono text-sm">
-              {"email.sendTemplate(params: SendTemplateParams): Promise<SendEmailResult>"}
+              {
+                "email.sendTemplate(params: SendTemplateParams): Promise<SendEmailResult>"
+              }
             </code>
           </CardContent>
         </Card>
@@ -959,10 +975,10 @@ export default function SDKReferencePage() {
       {/* Send Bulk Template */}
       <section className="mb-12">
         <SectionHeading
-          id="send-bulk-template"
-          title="Send Bulk Template"
-          markdown={SECTION_MD.sendBulkTemplate}
           className="mb-4"
+          id="send-bulk-template"
+          markdown={SECTION_MD.sendBulkTemplate}
+          title="Send Bulk Template"
         />
         <p className="mb-4 text-muted-foreground">
           Send personalized templated emails to multiple recipients (up to 50
@@ -978,7 +994,9 @@ export default function SDKReferencePage() {
           </CardHeader>
           <CardContent>
             <code className="block rounded bg-muted p-4 font-mono text-sm">
-              {"email.sendBulkTemplate(params: SendBulkTemplateParams): Promise<SendBulkTemplateResult>"}
+              {
+                "email.sendBulkTemplate(params: SendBulkTemplateParams): Promise<SendBulkTemplateResult>"
+              }
             </code>
           </CardContent>
         </Card>
@@ -1115,10 +1133,10 @@ export default function SDKReferencePage() {
       {/* Response */}
       <section className="mb-12">
         <SectionHeading
-          id="response"
-          title="Response"
-          markdown={SECTION_MD.response}
           className="mb-4"
+          id="response"
+          markdown={SECTION_MD.response}
+          title="Response"
         />
         <p className="mb-4 text-muted-foreground">
           All SDK methods return a result object with type-safe success/error
@@ -1164,10 +1182,10 @@ export default function SDKReferencePage() {
       {/* Error Handling */}
       <section className="mb-12">
         <SectionHeading
-          id="error-handling"
-          title="Error Handling"
-          markdown={SECTION_MD.errorHandling}
           className="mb-4"
+          id="error-handling"
+          markdown={SECTION_MD.errorHandling}
+          title="Error Handling"
         />
         <p className="mb-4 text-muted-foreground">
           The SDK uses a type-safe result pattern instead of throwing errors.
@@ -1212,10 +1230,10 @@ export default function SDKReferencePage() {
       {/* TypeScript Support */}
       <section className="mb-12">
         <SectionHeading
-          id="typescript-support"
-          title="TypeScript Support"
-          markdown={SECTION_MD.typescript}
           className="mb-4"
+          id="typescript-support"
+          markdown={SECTION_MD.typescript}
+          title="TypeScript Support"
         />
         <p className="mb-4 text-muted-foreground">
           The SDK is written in TypeScript and provides full type safety out of

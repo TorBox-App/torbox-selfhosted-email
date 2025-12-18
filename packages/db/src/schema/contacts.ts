@@ -132,7 +132,10 @@ export const contactTopic = pgTable(
   (table) => ({
     pk: primaryKey({ columns: [table.contactId, table.topicId] }),
     topicIdx: index("contact_topic_topic_idx").on(table.topicId),
-    statusIdx: index("contact_topic_status_idx").on(table.topicId, table.status),
+    statusIdx: index("contact_topic_status_idx").on(
+      table.topicId,
+      table.status
+    ),
   })
 );
 

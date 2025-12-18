@@ -254,7 +254,7 @@ export default function SignInForm({
                       Login
                       {lastMethod === "email" && (
                         <Badge
-                          className="-translate-y-1/2 absolute top-1/2 right-2 ml-auto"
+                          className="absolute top-1/2 right-2 ml-auto -translate-y-1/2"
                           variant="secondary"
                         >
                           Last used
@@ -321,7 +321,7 @@ export default function SignInForm({
                 Sign in with Passkey
                 {lastMethod === "passkey" && !isPasskeyLoading && (
                   <Badge
-                    className="-translate-y-1/2 absolute top-1/2 right-2 ml-auto"
+                    className="absolute top-1/2 right-2 ml-auto -translate-y-1/2"
                     variant="secondary"
                   >
                     Last used

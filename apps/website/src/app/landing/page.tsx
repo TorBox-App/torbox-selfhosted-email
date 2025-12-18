@@ -11,10 +11,7 @@ import { QuickStartSection } from "./components/quick-start-section";
 import { StatsSection } from "./components/stats-section";
 import { TemplateEditorSection } from "./components/template-editor-section";
 import { TrustedBySection } from "./components/trusted-by-section";
-import {
-  UpgradeSection,
-  premiumBgClass,
-} from "./components/upgrade-section";
+import { premiumBgClass, UpgradeSection } from "./components/upgrade-section";
 
 export default function LandingPage() {
   return (

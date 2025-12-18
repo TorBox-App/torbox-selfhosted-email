@@ -1,21 +1,20 @@
 "use server";
 
+import crypto from "node:crypto";
 import { auth } from "@wraps/auth";
 import { apiKey, db } from "@wraps/db";
-import { eq, and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import crypto from "node:crypto";
 import {
   API_KEY_PREFIXES,
-  FULL_ACCESS_PERMISSIONS,
-  READ_ONLY_PERMISSIONS,
   type ApiKeyPermission,
   type ApiKeyType,
-  type ApiKeyWithMeta,
-  type ListApiKeysResult,
   type CreateApiKeyResult,
   type DeleteApiKeyResult,
+  FULL_ACCESS_PERMISSIONS,
+  type ListApiKeysResult,
+  READ_ONLY_PERMISSIONS,
   type UpdateApiKeyResult,
 } from "@/lib/api-keys";
 
@@ -23,9 +22,9 @@ import {
 export type {
   ApiKeyPermission,
   ApiKeyWithMeta,
-  ListApiKeysResult,
   CreateApiKeyResult,
   DeleteApiKeyResult,
+  ListApiKeysResult,
   UpdateApiKeyResult,
 } from "@/lib/api-keys";
 
@@ -89,7 +88,10 @@ export async function listApiKeys(
     });
 
     if (!membership) {
-      return { success: false, error: "You don't have access to this organization" };
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
     }
 
     // Fetch all API keys for this organization
@@ -156,8 +158,11 @@ export async function createApiKey(
         ),
     });
 
-    if (!membership || !["owner", "admin"].includes(membership.role)) {
-      return { success: false, error: "Only owners and admins can create API keys" };
+    if (!(membership && ["owner", "admin"].includes(membership.role))) {
+      return {
+        success: false,
+        error: "Only owners and admins can create API keys",
+      };
     }
 
     // Validate name
@@ -208,7 +213,7 @@ export async function createApiKey(
     }
 
     // Revalidate settings page
-    revalidatePath(`/[orgSlug]/settings`, "page");
+    revalidatePath("/[orgSlug]/settings", "page");
 
     return {
       success: true,
@@ -216,7 +221,7 @@ export async function createApiKey(
         id: newKey.id,
         name: newKey.name,
         prefix: newKey.prefix,
-        permissions: permissions,
+        permissions,
         lastUsedAt: null,
         expiresAt: newKey.expiresAt,
         createdAt: newKey.createdAt,
@@ -264,8 +269,11 @@ export async function updateApiKey(
         ),
     });
 
-    if (!membership || !["owner", "admin"].includes(membership.role)) {
-      return { success: false, error: "Only owners and admins can update API keys" };
+    if (!(membership && ["owner", "admin"].includes(membership.role))) {
+      return {
+        success: false,
+        error: "Only owners and admins can update API keys",
+      };
     }
 
     // Verify API key belongs to this organization
@@ -304,7 +312,9 @@ export async function updateApiKey(
     const [updatedKey] = await db
       .update(apiKey)
       .set(updateData)
-      .where(and(eq(apiKey.id, apiKeyId), eq(apiKey.organizationId, organizationId)))
+      .where(
+        and(eq(apiKey.id, apiKeyId), eq(apiKey.organizationId, organizationId))
+      )
       .returning();
 
     if (!updatedKey) {
@@ -312,7 +322,7 @@ export async function updateApiKey(
     }
 
     // Revalidate settings page
-    revalidatePath(`/[orgSlug]/settings`, "page");
+    revalidatePath("/[orgSlug]/settings", "page");
 
     return {
       success: true,
@@ -358,8 +368,11 @@ export async function deleteApiKey(
         ),
     });
 
-    if (!membership || !["owner", "admin"].includes(membership.role)) {
-      return { success: false, error: "Only owners and admins can delete API keys" };
+    if (!(membership && ["owner", "admin"].includes(membership.role))) {
+      return {
+        success: false,
+        error: "Only owners and admins can delete API keys",
+      };
     }
 
     // Verify API key belongs to this organization
@@ -375,10 +388,12 @@ export async function deleteApiKey(
     // Delete from database
     await db
       .delete(apiKey)
-      .where(and(eq(apiKey.id, apiKeyId), eq(apiKey.organizationId, organizationId)));
+      .where(
+        and(eq(apiKey.id, apiKeyId), eq(apiKey.organizationId, organizationId))
+      );
 
     // Revalidate settings page
-    revalidatePath(`/[orgSlug]/settings`, "page");
+    revalidatePath("/[orgSlug]/settings", "page");
 
     return { success: true };
   } catch (error) {

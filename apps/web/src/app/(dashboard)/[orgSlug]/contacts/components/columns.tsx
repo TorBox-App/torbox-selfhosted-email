@@ -24,22 +24,22 @@ type ColumnActions = {
   onViewDetails: (contact: ContactWithMeta) => void;
 };
 
-export function createColumns(actions: ColumnActions): ColumnDef<ContactWithMeta>[] {
+export function createColumns(
+  actions: ColumnActions
+): ColumnDef<ContactWithMeta>[] {
   return [
     {
       accessorKey: "email",
-      header: ({ column }) => {
-        return (
-          <Button
-            className="-ml-4"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            variant="ghost"
-          >
-            Email
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        );
-      },
+      header: ({ column }) => (
+        <Button
+          className="-ml-4"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant="ghost"
+        >
+          Email
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => (
         <div className="font-medium">{row.getValue("email")}</div>
       ),
@@ -55,16 +55,17 @@ export function createColumns(actions: ColumnActions): ColumnDef<ContactWithMeta
           </Badge>
         );
       },
-      filterFn: (row, _id, value: string[]) => {
-        return value.includes(row.getValue("status"));
-      },
+      filterFn: (row, _id, value: string[]) =>
+        value.includes(row.getValue("status")),
     },
     {
       accessorKey: "topics",
       header: "Topics",
       cell: ({ row }) => {
         const topics = row.original.topics || [];
-        const subscribedTopics = topics.filter((t) => t.status === "subscribed");
+        const subscribedTopics = topics.filter(
+          (t) => t.status === "subscribed"
+        );
 
         if (subscribedTopics.length === 0) {
           return <span className="text-muted-foreground">None</span>;
@@ -86,18 +87,16 @@ export function createColumns(actions: ColumnActions): ColumnDef<ContactWithMeta
     },
     {
       accessorKey: "emailsSent",
-      header: ({ column }) => {
-        return (
-          <Button
-            className="-ml-4"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            variant="ghost"
-          >
-            Sent
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        );
-      },
+      header: ({ column }) => (
+        <Button
+          className="-ml-4"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant="ghost"
+        >
+          Sent
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => (
         <div className="text-center">{row.getValue("emailsSent")}</div>
       ),
@@ -111,7 +110,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<ContactWithMeta
         const rate = sent > 0 ? ((opened / sent) * 100).toFixed(1) : "0";
         return (
           <div className="text-center">
-            {opened} <span className="text-muted-foreground text-xs">({rate}%)</span>
+            {opened}{" "}
+            <span className="text-muted-foreground text-xs">({rate}%)</span>
           </div>
         );
       },
@@ -125,25 +125,24 @@ export function createColumns(actions: ColumnActions): ColumnDef<ContactWithMeta
         const rate = sent > 0 ? ((clicked / sent) * 100).toFixed(1) : "0";
         return (
           <div className="text-center">
-            {clicked} <span className="text-muted-foreground text-xs">({rate}%)</span>
+            {clicked}{" "}
+            <span className="text-muted-foreground text-xs">({rate}%)</span>
           </div>
         );
       },
     },
     {
       accessorKey: "createdAt",
-      header: ({ column }) => {
-        return (
-          <Button
-            className="-ml-4"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            variant="ghost"
-          >
-            Created
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        );
-      },
+      header: ({ column }) => (
+        <Button
+          className="-ml-4"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant="ghost"
+        >
+          Created
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => {
         const date = new Date(row.getValue("createdAt"));
         return (

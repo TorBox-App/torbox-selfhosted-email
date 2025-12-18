@@ -815,7 +815,9 @@ export default function CLIReferencePage() {
                 Detects differences between local config and deployed
                 infrastructure
               </li>
-              <li>Applies CLI updates (bug fixes, new features) to resources</li>
+              <li>
+                Applies CLI updates (bug fixes, new features) to resources
+              </li>
               <li>Updates Lambda functions and IAM policies</li>
               <li>Does not change your configuration preset or features</li>
             </ul>

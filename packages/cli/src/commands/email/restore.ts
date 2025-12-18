@@ -1,10 +1,7 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
-import {
-  trackError,
-  trackServiceRemoved,
-} from "../../telemetry/events.js";
+import { trackError, trackServiceRemoved } from "../../telemetry/events.js";
 import type { EmailRestoreOptions } from "../../types/index.js";
 import {
   getAWSRegion,
