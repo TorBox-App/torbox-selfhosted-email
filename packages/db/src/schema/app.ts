@@ -9,6 +9,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { member, organization, user } from "./auth";
+import { contact, topic } from "./contacts";
 
 // Organization billing/plan info
 export const organizationExtension = pgTable("organization_extension", {
@@ -211,6 +212,8 @@ export const organizationRelations = relations(
     emailTemplates: many(emailTemplate),
     apiKeys: many(apiKey),
     auditLogs: many(auditLog),
+    contacts: many(contact),
+    topics: many(topic),
   })
 );
 

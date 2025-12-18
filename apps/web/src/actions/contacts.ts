@@ -1,0 +1,677 @@
+"use server";
+
+import { auth } from "@wraps/auth";
+import { contact, contactTopic, db, topic } from "@wraps/db";
+import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import crypto from "node:crypto";
+import {
+  type ContactStatus,
+  type ContactWithMeta,
+  type CreateContactResult,
+  type DeleteContactResult,
+  type GetContactResult,
+  type ListContactsResult,
+  type UpdateContactResult,
+} from "@/lib/contacts";
+
+// Re-export types for convenience
+export type {
+  ContactStatus,
+  ContactWithMeta,
+  CreateContactResult,
+  DeleteContactResult,
+  GetContactResult,
+  ListContactsResult,
+  UpdateContactResult,
+} from "@/lib/contacts";
+
+/**
+ * Hash email for deduplication
+ */
+function hashEmail(email: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(email.toLowerCase().trim())
+    .digest("hex");
+}
+
+/**
+ * Verify user has access to organization
+ */
+async function verifyOrgAccess(
+  organizationId: string
+): Promise<{ userId: string; role: string } | null> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user) {
+    return null;
+  }
+
+  const membership = await db.query.member.findFirst({
+    where: (m, { and, eq }) =>
+      and(eq(m.organizationId, organizationId), eq(m.userId, session.user.id)),
+  });
+
+  if (!membership) {
+    return null;
+  }
+
+  return { userId: session.user.id, role: membership.role };
+}
+
+/**
+ * List contacts for an organization with pagination and search
+ */
+export async function listContacts(
+  organizationId: string,
+  options: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    status?: ContactStatus;
+    topicId?: string;
+  } = {}
+): Promise<ListContactsResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    const { page = 1, pageSize = 50, search, status, topicId } = options;
+    const offset = (page - 1) * pageSize;
+
+    // Build where conditions
+    const conditions = [eq(contact.organizationId, organizationId)];
+
+    if (search) {
+      conditions.push(ilike(contact.email, `%${search}%`));
+    }
+
+    if (status) {
+      conditions.push(eq(contact.status, status));
+    }
+
+    // If filtering by topic, we need a subquery
+    let topicFilter = undefined;
+    if (topicId) {
+      const subscribedContactIds = db
+        .select({ contactId: contactTopic.contactId })
+        .from(contactTopic)
+        .where(
+          and(
+            eq(contactTopic.topicId, topicId),
+            eq(contactTopic.status, "subscribed")
+          )
+        );
+      topicFilter = sql`${contact.id} IN (${subscribedContactIds})`;
+    }
+
+    // Get total count
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(contact)
+      .where(topicFilter ? and(...conditions, topicFilter) : and(...conditions));
+
+    const total = totalResult?.count ?? 0;
+
+    // Get contacts with pagination
+    const contacts = await db.query.contact.findMany({
+      where: topicFilter ? and(...conditions, topicFilter) : and(...conditions),
+      with: {
+        createdByUser: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        topics: {
+          with: {
+            topic: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [desc(contact.createdAt)],
+      limit: pageSize,
+      offset,
+    });
+
+    return {
+      success: true,
+      contacts: contacts.map((c) => ({
+        id: c.id,
+        email: c.email,
+        status: c.status as ContactStatus,
+        properties: (c.properties as Record<string, unknown>) || {},
+        lastActivityAt: c.lastActivityAt,
+        lastEmailSentAt: c.lastEmailSentAt,
+        lastEmailOpenedAt: c.lastEmailOpenedAt,
+        lastEmailClickedAt: c.lastEmailClickedAt,
+        emailsSent: c.emailsSent,
+        emailsOpened: c.emailsOpened,
+        emailsClicked: c.emailsClicked,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        confirmedAt: c.confirmedAt,
+        unsubscribedAt: c.unsubscribedAt,
+        bouncedAt: c.bouncedAt,
+        complainedAt: c.complainedAt,
+        createdBy: c.createdByUser,
+        topics: c.topics.map((ct) => ({
+          topicId: ct.topic.id,
+          topicName: ct.topic.name,
+          status: ct.status,
+          subscribedAt: ct.subscribedAt,
+        })),
+      })),
+      total,
+      page,
+      pageSize,
+    };
+  } catch (error) {
+    console.error("Error listing contacts:", error);
+    return { success: false, error: "Failed to fetch contacts" };
+  }
+}
+
+/**
+ * Get a single contact by ID
+ */
+export async function getContact(
+  contactId: string,
+  organizationId: string
+): Promise<GetContactResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    const c = await db.query.contact.findFirst({
+      where: (contact, { and, eq }) =>
+        and(eq(contact.id, contactId), eq(contact.organizationId, organizationId)),
+      with: {
+        createdByUser: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        topics: {
+          with: {
+            topic: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!c) {
+      return { success: false, error: "Contact not found" };
+    }
+
+    return {
+      success: true,
+      contact: {
+        id: c.id,
+        email: c.email,
+        status: c.status as ContactStatus,
+        properties: (c.properties as Record<string, unknown>) || {},
+        lastActivityAt: c.lastActivityAt,
+        lastEmailSentAt: c.lastEmailSentAt,
+        lastEmailOpenedAt: c.lastEmailOpenedAt,
+        lastEmailClickedAt: c.lastEmailClickedAt,
+        emailsSent: c.emailsSent,
+        emailsOpened: c.emailsOpened,
+        emailsClicked: c.emailsClicked,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        confirmedAt: c.confirmedAt,
+        unsubscribedAt: c.unsubscribedAt,
+        bouncedAt: c.bouncedAt,
+        complainedAt: c.complainedAt,
+        createdBy: c.createdByUser,
+        topics: c.topics.map((ct) => ({
+          topicId: ct.topic.id,
+          topicName: ct.topic.name,
+          status: ct.status,
+          subscribedAt: ct.subscribedAt,
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("Error getting contact:", error);
+    return { success: false, error: "Failed to fetch contact" };
+  }
+}
+
+/**
+ * Create a new contact
+ */
+export async function createContact(
+  organizationId: string,
+  data: {
+    email: string;
+    status?: ContactStatus;
+    properties?: Record<string, unknown>;
+    topicIds?: string[];
+  }
+): Promise<CreateContactResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // Validate email
+    const email = data.email.toLowerCase().trim();
+    if (!email || !email.includes("@")) {
+      return { success: false, error: "Invalid email address" };
+    }
+
+    const emailHash = hashEmail(email);
+
+    // Check for duplicate
+    const existing = await db.query.contact.findFirst({
+      where: (c, { and, eq }) =>
+        and(eq(c.organizationId, organizationId), eq(c.emailHash, emailHash)),
+    });
+
+    if (existing) {
+      return { success: false, error: "A contact with this email already exists" };
+    }
+
+    // Create contact
+    const [newContact] = await db
+      .insert(contact)
+      .values({
+        organizationId,
+        email,
+        emailHash,
+        status: data.status || "active",
+        properties: data.properties || {},
+        createdBy: access.userId,
+        confirmedAt: data.status === "active" ? new Date() : null,
+      })
+      .returning();
+
+    if (!newContact) {
+      return { success: false, error: "Failed to create contact" };
+    }
+
+    // Subscribe to topics if provided
+    if (data.topicIds && data.topicIds.length > 0) {
+      await db.insert(contactTopic).values(
+        data.topicIds.map((topicId) => ({
+          contactId: newContact.id,
+          topicId,
+          status: "subscribed",
+        }))
+      );
+
+      // Update topic subscriber counts
+      for (const topicId of data.topicIds) {
+        await db
+          .update(topic)
+          .set({
+            subscriberCount: sql`${topic.subscriberCount} + 1`,
+          })
+          .where(eq(topic.id, topicId));
+      }
+    }
+
+    // Revalidate
+    revalidatePath(`/[orgSlug]/contacts`, "page");
+
+    // Return the created contact
+    return await getContact(newContact.id, organizationId);
+  } catch (error) {
+    console.error("Error creating contact:", error);
+    return { success: false, error: "Failed to create contact" };
+  }
+}
+
+/**
+ * Update a contact
+ */
+export async function updateContact(
+  contactId: string,
+  organizationId: string,
+  data: {
+    email?: string;
+    status?: ContactStatus;
+    properties?: Record<string, unknown>;
+  }
+): Promise<UpdateContactResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // Verify contact exists
+    const existing = await db.query.contact.findFirst({
+      where: (c, { and, eq }) =>
+        and(eq(c.id, contactId), eq(c.organizationId, organizationId)),
+    });
+
+    if (!existing) {
+      return { success: false, error: "Contact not found" };
+    }
+
+    // Build update data
+    const updateData: Partial<typeof contact.$inferInsert> = {
+      updatedAt: new Date(),
+    };
+
+    if (data.email !== undefined) {
+      const email = data.email.toLowerCase().trim();
+      if (!email || !email.includes("@")) {
+        return { success: false, error: "Invalid email address" };
+      }
+
+      const emailHash = hashEmail(email);
+
+      // Check for duplicate (excluding current contact)
+      const duplicate = await db.query.contact.findFirst({
+        where: (c, { and, eq, ne }) =>
+          and(
+            eq(c.organizationId, organizationId),
+            eq(c.emailHash, emailHash),
+            ne(c.id, contactId)
+          ),
+      });
+
+      if (duplicate) {
+        return {
+          success: false,
+          error: "A contact with this email already exists",
+        };
+      }
+
+      updateData.email = email;
+      updateData.emailHash = emailHash;
+    }
+
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+
+      // Update status timestamps
+      if (data.status === "active" && existing.status !== "active") {
+        updateData.confirmedAt = new Date();
+      } else if (data.status === "unsubscribed") {
+        updateData.unsubscribedAt = new Date();
+      } else if (data.status === "bounced") {
+        updateData.bouncedAt = new Date();
+      } else if (data.status === "complained") {
+        updateData.complainedAt = new Date();
+      }
+    }
+
+    if (data.properties !== undefined) {
+      updateData.properties = data.properties;
+    }
+
+    // Update contact
+    await db
+      .update(contact)
+      .set(updateData)
+      .where(and(eq(contact.id, contactId), eq(contact.organizationId, organizationId)));
+
+    // Revalidate
+    revalidatePath(`/[orgSlug]/contacts`, "page");
+
+    // Return updated contact
+    return await getContact(contactId, organizationId);
+  } catch (error) {
+    console.error("Error updating contact:", error);
+    return { success: false, error: "Failed to update contact" };
+  }
+}
+
+/**
+ * Delete a contact
+ */
+export async function deleteContact(
+  contactId: string,
+  organizationId: string
+): Promise<DeleteContactResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // Verify contact exists
+    const existing = await db.query.contact.findFirst({
+      where: (c, { and, eq }) =>
+        and(eq(c.id, contactId), eq(c.organizationId, organizationId)),
+      with: {
+        topics: true,
+      },
+    });
+
+    if (!existing) {
+      return { success: false, error: "Contact not found" };
+    }
+
+    // Decrement topic subscriber counts for subscribed topics
+    const subscribedTopicIds = existing.topics
+      .filter((t) => t.status === "subscribed")
+      .map((t) => t.topicId);
+
+    if (subscribedTopicIds.length > 0) {
+      for (const topicId of subscribedTopicIds) {
+        await db
+          .update(topic)
+          .set({
+            subscriberCount: sql`GREATEST(${topic.subscriberCount} - 1, 0)`,
+          })
+          .where(eq(topic.id, topicId));
+      }
+    }
+
+    // Delete contact (cascades to contact_topic)
+    await db
+      .delete(contact)
+      .where(and(eq(contact.id, contactId), eq(contact.organizationId, organizationId)));
+
+    // Revalidate
+    revalidatePath(`/[orgSlug]/contacts`, "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting contact:", error);
+    return { success: false, error: "Failed to delete contact" };
+  }
+}
+
+/**
+ * Subscribe a contact to topics
+ */
+export async function subscribeContactToTopics(
+  contactId: string,
+  organizationId: string,
+  topicIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // Verify contact exists
+    const existing = await db.query.contact.findFirst({
+      where: (c, { and, eq }) =>
+        and(eq(c.id, contactId), eq(c.organizationId, organizationId)),
+      with: {
+        topics: true,
+      },
+    });
+
+    if (!existing) {
+      return { success: false, error: "Contact not found" };
+    }
+
+    // Get current subscriptions
+    const currentTopicIds = new Set(
+      existing.topics.filter((t) => t.status === "subscribed").map((t) => t.topicId)
+    );
+
+    // Filter to only new subscriptions
+    const newTopicIds = topicIds.filter((id) => !currentTopicIds.has(id));
+
+    if (newTopicIds.length === 0) {
+      return { success: true };
+    }
+
+    // Check if any are resubscriptions (previously unsubscribed)
+    const previousSubscriptions = existing.topics
+      .filter((t) => t.status === "unsubscribed" && newTopicIds.includes(t.topicId))
+      .map((t) => t.topicId);
+
+    // Update resubscriptions
+    if (previousSubscriptions.length > 0) {
+      await db
+        .update(contactTopic)
+        .set({
+          status: "subscribed",
+          subscribedAt: new Date(),
+          unsubscribedAt: null,
+        })
+        .where(
+          and(
+            eq(contactTopic.contactId, contactId),
+            or(...previousSubscriptions.map((id) => eq(contactTopic.topicId, id)))
+          )
+        );
+    }
+
+    // Insert new subscriptions
+    const trulyNewTopicIds = newTopicIds.filter(
+      (id) => !previousSubscriptions.includes(id)
+    );
+    if (trulyNewTopicIds.length > 0) {
+      await db.insert(contactTopic).values(
+        trulyNewTopicIds.map((topicId) => ({
+          contactId,
+          topicId,
+          status: "subscribed",
+        }))
+      );
+    }
+
+    // Update topic subscriber counts
+    for (const topicId of newTopicIds) {
+      await db
+        .update(topic)
+        .set({
+          subscriberCount: sql`${topic.subscriberCount} + 1`,
+        })
+        .where(eq(topic.id, topicId));
+    }
+
+    // Revalidate
+    revalidatePath(`/[orgSlug]/contacts`, "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error subscribing contact to topics:", error);
+    return { success: false, error: "Failed to subscribe to topics" };
+  }
+}
+
+/**
+ * Unsubscribe a contact from topics
+ */
+export async function unsubscribeContactFromTopics(
+  contactId: string,
+  organizationId: string,
+  topicIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // Verify contact exists
+    const existing = await db.query.contact.findFirst({
+      where: (c, { and, eq }) =>
+        and(eq(c.id, contactId), eq(c.organizationId, organizationId)),
+    });
+
+    if (!existing) {
+      return { success: false, error: "Contact not found" };
+    }
+
+    // Update subscriptions to unsubscribed
+    await db
+      .update(contactTopic)
+      .set({
+        status: "unsubscribed",
+        unsubscribedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(contactTopic.contactId, contactId),
+          eq(contactTopic.status, "subscribed"),
+          or(...topicIds.map((id) => eq(contactTopic.topicId, id)))
+        )
+      );
+
+    // Decrement topic subscriber counts
+    for (const topicId of topicIds) {
+      await db
+        .update(topic)
+        .set({
+          subscriberCount: sql`GREATEST(${topic.subscriberCount} - 1, 0)`,
+        })
+        .where(eq(topic.id, topicId));
+    }
+
+    // Revalidate
+    revalidatePath(`/[orgSlug]/contacts`, "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error unsubscribing contact from topics:", error);
+    return { success: false, error: "Failed to unsubscribe from topics" };
+  }
+}
