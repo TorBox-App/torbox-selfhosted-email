@@ -5,24 +5,22 @@ import { trackCommand } from "../../telemetry/events.js";
 import type { StatusOptions } from "../../types/index.js";
 import {
   getAWSRegion,
-  listSESDomains,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
-import {
-  DeploymentProgress,
-  displayStatus,
-} from "../../utils/shared/output.js";
+import { DeploymentProgress } from "../../utils/shared/output.js";
 
 /**
- * Status command - Show current infrastructure setup
+ * Global Status command - Show overview of all deployed infrastructure
  */
 export async function status(_options: StatusOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
+
+  clack.intro(pc.bold("Wraps Infrastructure Status"));
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -30,99 +28,83 @@ export async function status(_options: StatusOptions): Promise<void> {
     async () => validateAWSCredentials()
   );
 
+  progress.info(`AWS Account: ${pc.cyan(identity.accountId)}`);
+
   // 2. Get region
   const region = await getAWSRegion();
+  progress.info(`Region: ${pc.cyan(region)}`);
 
-  // 3. Try to load Pulumi stack
-  let stackOutputs: any = {};
+  // 3. Check for deployed services
+  const services: Array<{
+    name: string;
+    status: "deployed" | "not_deployed";
+    details?: string;
+  }> = [];
+
+  // Check Email infrastructure
   try {
-    // Ensure Pulumi workspace is configured (sets backend URL)
     await ensurePulumiWorkDir();
-
     const stack = await pulumi.automation.LocalWorkspace.selectStack({
       stackName: `wraps-${identity.accountId}-${region}`,
       workDir: getPulumiWorkDir(),
     });
+    const outputs = await stack.outputs();
 
-    stackOutputs = await stack.outputs();
-  } catch (_error: any) {
-    progress.stop();
-    clack.log.error("No Wraps infrastructure found");
-    console.log(
-      `\nRun ${pc.cyan("wraps email init")} to deploy infrastructure.\n`
-    );
-    process.exit(1);
+    if (outputs.roleArn?.value) {
+      const domainCount = outputs.domains?.value?.length || 0;
+      services.push({
+        name: "Email",
+        status: "deployed",
+        details: domainCount > 0 ? `${domainCount} domain(s)` : undefined,
+      });
+    } else {
+      services.push({ name: "Email", status: "not_deployed" });
+    }
+  } catch (_error) {
+    services.push({ name: "Email", status: "not_deployed" });
   }
 
-  // 4. Get SES domains with DKIM tokens
-  const domains = await listSESDomains(region);
-
-  // 4a. Fetch DKIM tokens for each domain
-  const { SESv2Client, GetEmailIdentityCommand } = await import(
-    "@aws-sdk/client-sesv2"
-  );
-  const sesv2Client = new SESv2Client({ region });
-
-  const domainsWithTokens = await Promise.all(
-    domains.map(async (d) => {
-      try {
-        const identity = await sesv2Client.send(
-          new GetEmailIdentityCommand({ EmailIdentity: d.domain })
-        );
-        return {
-          domain: d.domain,
-          status: d.verified ? ("verified" as const) : ("pending" as const),
-          dkimTokens: identity.DkimAttributes?.Tokens || [],
-          mailFromDomain: identity.MailFromAttributes?.MailFromDomain,
-          mailFromStatus: identity.MailFromAttributes?.MailFromDomainStatus,
-        };
-      } catch (_error) {
-        return {
-          domain: d.domain,
-          status: d.verified ? ("verified" as const) : ("pending" as const),
-          dkimTokens: undefined,
-          mailFromDomain: undefined,
-          mailFromStatus: undefined,
-        };
-      }
-    })
-  );
-
-  // 5. Determine integration level
-  const integrationLevel = stackOutputs.configSetName
-    ? "enhanced"
-    : "dashboard-only";
-
-  // 6. Display status
   progress.stop();
-  displayStatus({
-    integrationLevel: integrationLevel as "dashboard-only" | "enhanced",
-    region,
-    domains: domainsWithTokens,
-    resources: {
-      roleArn: stackOutputs.roleArn?.value,
-      configSetName: stackOutputs.configSetName?.value,
-      tableName: stackOutputs.tableName?.value,
-      lambdaFunctions: stackOutputs.lambdaFunctions?.value?.length || 0,
-      snsTopics: integrationLevel === "enhanced" ? 1 : 0,
-      archiveArn: stackOutputs.archiveArn?.value,
-      archivingEnabled: stackOutputs.archivingEnabled?.value,
-      archiveRetention: stackOutputs.archiveRetention?.value,
-    },
-    tracking: stackOutputs.customTrackingDomain?.value
-      ? {
-          customTrackingDomain: stackOutputs.customTrackingDomain?.value,
-          httpsEnabled: stackOutputs.httpsTrackingEnabled?.value,
-          cloudFrontDomain: stackOutputs.cloudFrontDomain?.value,
-        }
-      : undefined,
-  });
 
-  // 7. Track status command
+  // 4. Display services overview
+  console.log();
+  clack.note(
+    services
+      .map((s) => {
+        if (s.status === "deployed") {
+          const details = s.details ? pc.dim(` (${s.details})`) : "";
+          return `  ${pc.green("✓")} ${s.name}${details}`;
+        }
+        return `  ${pc.dim("○")} ${s.name} ${pc.dim("(not deployed)")}`;
+      })
+      .join("\n"),
+    "Services"
+  );
+
+  // 5. Show next steps
+  const hasDeployedServices = services.some((s) => s.status === "deployed");
+
+  if (hasDeployedServices) {
+    console.log(`\n${pc.bold("Details:")}`);
+    if (services.find((s) => s.name === "Email")?.status === "deployed") {
+      console.log(
+        `  ${pc.dim("Email:")} ${pc.cyan("wraps email status")}`
+      );
+    }
+  } else {
+    console.log(`\n${pc.bold("Get started:")}`);
+    console.log(
+      `  ${pc.dim("Deploy email:")} ${pc.cyan("wraps email init")}`
+    );
+  }
+
+  console.log(`\n${pc.bold("Dashboard:")} ${pc.blue("https://app.wraps.dev")}`);
+  console.log(`${pc.bold("Docs:")} ${pc.blue("https://wraps.dev/docs")}\n`);
+
+  // 6. Track status command
   trackCommand("status", {
     success: true,
-    domain_count: domainsWithTokens.length,
-    integration_level: integrationLevel,
+    services_deployed: services.filter((s) => s.status === "deployed").length,
     duration_ms: Date.now() - startTime,
   });
 }

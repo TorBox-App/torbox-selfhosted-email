@@ -6,8 +6,8 @@ import {
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { mockClient } from "aws-sdk-client-mock";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { status } from "../shared/status.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { emailStatus } from "../email/status.js";
 
 const stsMock = mockClient(STSClient);
 const sesMock = mockClient(SESClient);
@@ -57,7 +57,7 @@ vi.mock("../../utils/shared/fs.js", () => ({
   ensurePulumiWorkDir: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe("status command", () => {
+describe("email status command", () => {
   let exitSpy: any;
   let consoleLogSpy: any;
 
@@ -81,7 +81,7 @@ describe("status command", () => {
       .on(GetCallerIdentityCommand)
       .rejects(new Error("Invalid credentials"));
 
-    await expect(status({})).rejects.toThrow();
+    await expect(emailStatus({})).rejects.toThrow();
   });
 
   it("should exit when no Pulumi stack is found", async () => {
@@ -98,12 +98,12 @@ describe("status command", () => {
 
     sesMock.on(ListIdentitiesCommand).resolves({ Identities: [] });
 
-    await status({});
+    await emailStatus({});
 
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
-  it("should display status when stack exists with dashboard-only integration", async () => {
+  it("should display email status when stack exists with dashboard-only integration", async () => {
     stsMock.on(GetCallerIdentityCommand).resolves({
       Account: "123456789012",
       UserId: "AIDAI123456789",
@@ -137,7 +137,7 @@ describe("status command", () => {
 
     const { displayStatus } = await import("../../utils/shared/output.js");
 
-    await status({});
+    await emailStatus({});
 
     expect(displayStatus).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -147,7 +147,7 @@ describe("status command", () => {
     );
   });
 
-  it("should display status with enhanced integration when configSet exists", async () => {
+  it("should display email status with enhanced integration when configSet exists", async () => {
     stsMock.on(GetCallerIdentityCommand).resolves({
       Account: "123456789012",
       UserId: "AIDAI123456789",
@@ -180,7 +180,7 @@ describe("status command", () => {
 
     const { displayStatus } = await import("../../utils/shared/output.js");
 
-    await status({});
+    await emailStatus({});
 
     expect(displayStatus).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -193,7 +193,7 @@ describe("status command", () => {
     );
   });
 
-  it("should handle multiple domains with different verification statuses", async () => {
+  it("should handle multiple domains with different verification email statuses", async () => {
     stsMock.on(GetCallerIdentityCommand).resolves({
       Account: "123456789012",
       UserId: "AIDAI123456789",
@@ -237,7 +237,7 @@ describe("status command", () => {
 
     const { displayStatus } = await import("../../utils/shared/output.js");
 
-    await status({});
+    await emailStatus({});
 
     expect(displayStatus).toHaveBeenCalledWith(
       expect.objectContaining({

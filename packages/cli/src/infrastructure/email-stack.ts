@@ -97,9 +97,15 @@ export async function deployEmailStack(
         config.region
       ));
 
+    // Compute mailFromDomain from mailFromSubdomain if provided
+    let mailFromDomain = emailConfig.mailFromDomain;
+    if (!mailFromDomain && emailConfig.mailFromSubdomain && emailConfig.domain) {
+      mailFromDomain = `${emailConfig.mailFromSubdomain}.${emailConfig.domain}`;
+    }
+
     sesResources = await createSESResources({
       domain: emailConfig.domain,
-      mailFromDomain: emailConfig.mailFromDomain,
+      mailFromDomain,
       region: config.region,
       trackingConfig: emailConfig.tracking,
       eventTypes: emailConfig.eventTracking?.events,

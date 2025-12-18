@@ -15,14 +15,14 @@ export async function promptProvider(): Promise<Provider> {
     message: "Where is your app hosted?",
     options: [
       {
-        value: "vercel",
-        label: "Vercel",
-        hint: "Uses OIDC (no AWS credentials needed)",
-      },
-      {
         value: "aws",
         label: "AWS (Lambda/ECS/EC2)",
         hint: "Uses IAM roles automatically",
+      },
+      {
+        value: "vercel",
+        label: "Vercel",
+        hint: "Uses OIDC (no AWS credentials needed)",
       },
       {
         value: "railway",
@@ -548,6 +548,17 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
   clack.log.info("Custom configuration builder");
   clack.log.info("Configure each feature individually");
 
+  // Reputation tracking (first, as it's recommended)
+  const reputationMetrics = await clack.confirm({
+    message: "Enable reputation tracking (recommended)?",
+    initialValue: existingConfig?.reputationMetrics ?? true,
+  });
+
+  if (clack.isCancel(reputationMetrics)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
   // Tracking
   const trackingEnabled = await clack.confirm({
     message: "Enable open & click tracking?",
@@ -559,9 +570,9 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
     process.exit(0);
   }
 
-  // Event tracking
+  // Event tracking (combined - EventBridge + DynamoDB)
   const eventTrackingEnabled = await clack.confirm({
-    message: "Enable real-time event tracking (EventBridge)?",
+    message: "Store email events in DynamoDB?",
     initialValue: existingConfig?.eventTracking?.enabled ?? true,
   });
 
@@ -570,46 +581,33 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
     process.exit(0);
   }
 
-  let dynamoDBHistory: boolean | symbol = false;
   let archiveRetention: string | symbol = "90days";
 
   if (eventTrackingEnabled) {
-    dynamoDBHistory = await clack.confirm({
-      message: "Store email history in DynamoDB?",
-      initialValue: existingConfig?.eventTracking?.dynamoDBHistory ?? true,
+    archiveRetention = await clack.select({
+      message: "Event history retention period:",
+      options: [
+        { value: "7days", label: "7 days", hint: "Minimal storage cost" },
+        { value: "30days", label: "30 days", hint: "Development/testing" },
+        {
+          value: "90days",
+          label: "90 days (recommended)",
+          hint: "Standard retention",
+        },
+        { value: "1year", label: "1 year", hint: "Compliance requirements" },
+        {
+          value: "indefinite",
+          label: "Indefinite",
+          hint: "Higher storage cost",
+        },
+      ],
+      initialValue:
+        existingConfig?.eventTracking?.archiveRetention || "90days",
     });
 
-    if (clack.isCancel(dynamoDBHistory)) {
+    if (clack.isCancel(archiveRetention)) {
       clack.cancel("Operation cancelled.");
       process.exit(0);
-    }
-
-    if (dynamoDBHistory) {
-      archiveRetention = await clack.select({
-        message: "Email history retention period:",
-        options: [
-          { value: "7days", label: "7 days", hint: "Minimal storage cost" },
-          { value: "30days", label: "30 days", hint: "Development/testing" },
-          {
-            value: "90days",
-            label: "90 days (recommended)",
-            hint: "Standard retention",
-          },
-          { value: "1year", label: "1 year", hint: "Compliance requirements" },
-          {
-            value: "indefinite",
-            label: "Indefinite",
-            hint: "Higher storage cost",
-          },
-        ],
-        initialValue:
-          existingConfig?.eventTracking?.archiveRetention || "90days",
-      });
-
-      if (clack.isCancel(archiveRetention)) {
-        clack.cancel("Operation cancelled.");
-        process.exit(0);
-      }
     }
   }
 
@@ -624,15 +622,46 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
     process.exit(0);
   }
 
-  // Reputation metrics
-  const reputationMetrics = await clack.confirm({
-    message: "Enable reputation metrics dashboard?",
-    initialValue: existingConfig?.reputationMetrics ?? true,
+  // Custom MAIL FROM domain (for DMARC alignment)
+  const customMailFrom = await clack.confirm({
+    message: "Configure custom MAIL FROM domain? (improves DMARC alignment)",
+    initialValue: existingConfig?.mailFromDomain !== undefined,
   });
 
-  if (clack.isCancel(reputationMetrics)) {
+  if (clack.isCancel(customMailFrom)) {
     clack.cancel("Operation cancelled.");
     process.exit(0);
+  }
+
+  let mailFromSubdomain: string | symbol = "mail";
+
+  if (customMailFrom) {
+    mailFromSubdomain = await clack.text({
+      message: "MAIL FROM subdomain:",
+      placeholder: "mail",
+      initialValue:
+        existingConfig?.mailFromDomain?.split(".")[0] || "mail",
+      validate: (value) => {
+        if (!value || value.trim() === "") {
+          return "Subdomain is required";
+        }
+        if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(value)) {
+          return "Invalid subdomain format";
+        }
+        return undefined;
+      },
+    });
+
+    if (clack.isCancel(mailFromSubdomain)) {
+      clack.cancel("Operation cancelled.");
+      process.exit(0);
+    }
+
+    clack.log.info(
+      pc.dim(
+        `MAIL FROM will be set to ${mailFromSubdomain}.yourdomain.com`
+      )
+    );
   }
 
   // Dedicated IP
@@ -711,6 +740,11 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
       : { enabled: false },
     tlsRequired,
     reputationMetrics,
+    mailFromSubdomain: customMailFrom
+      ? typeof mailFromSubdomain === "string"
+        ? mailFromSubdomain
+        : "mail"
+      : undefined,
     suppressionList: {
       enabled: true,
       reasons: ["BOUNCE", "COMPLAINT"],
@@ -729,7 +763,7 @@ export async function promptCustomConfig(existingConfig?: any): Promise<any> {
             "REJECT",
             "RENDERING_FAILURE",
           ],
-          dynamoDBHistory: Boolean(dynamoDBHistory),
+          dynamoDBHistory: true,
           archiveRetention:
             typeof archiveRetention === "string" ? archiveRetention : "90days",
         }

@@ -10,6 +10,7 @@ import { updateRole } from "./commands/dashboard/update-role.js";
 import { config } from "./commands/email/config.js";
 // Email commands
 import { connect } from "./commands/email/connect.js";
+import { emailDestroy } from "./commands/email/destroy.js";
 import {
   addDomain,
   getDkim,
@@ -19,6 +20,7 @@ import {
 } from "./commands/email/domains.js";
 import { init } from "./commands/email/init.js";
 import { restore } from "./commands/email/restore.js";
+import { emailStatus } from "./commands/email/status.js";
 import { upgrade } from "./commands/email/upgrade.js";
 // Shared commands
 import { dashboard } from "./commands/shared/dashboard.js";
@@ -61,10 +63,7 @@ function showHelp() {
   console.log("Deploy AWS infrastructure to your account\n");
   console.log("Usage: wraps [service] <command> [options]\n");
   console.log("Services:");
-  console.log(`  ${pc.cyan("email")}       Email infrastructure (AWS SES)`);
-  console.log(
-    `  ${pc.cyan("sms")}         SMS infrastructure (AWS End User Messaging) ${pc.dim("[coming soon]")}\n`
-  );
+  console.log(`  ${pc.cyan("email")}       Email infrastructure (AWS SES)\n`);
   console.log("Email Commands:");
   console.log(
     `  ${pc.cyan("email init")}           Deploy new email infrastructure`
@@ -72,21 +71,28 @@ function showHelp() {
   console.log(
     `  ${pc.cyan("email connect")}        Connect to existing AWS SES`
   );
-  console.log(`  ${pc.cyan("email domains verify")} Verify domain DNS records`);
+  console.log(`  ${pc.cyan("email status")}         Show email infrastructure details`);
+  console.log(`  ${pc.cyan("email verify")}         Verify domain DNS records`);
   console.log(
     `  ${pc.cyan("email sync")}           Apply CLI updates to infrastructure`
   );
   console.log(`  ${pc.cyan("email upgrade")}        Add features`);
   console.log(
-    `  ${pc.cyan("email restore")}        Restore original configuration\n`
+    `  ${pc.cyan("email restore")}        Restore original configuration`
   );
+  console.log(
+    `  ${pc.cyan("email destroy")}        Remove email infrastructure`
+  );
+  console.log(`  ${pc.cyan("email domains add")}    Add a domain to SES`);
+  console.log(`  ${pc.cyan("email domains list")}   List all domains`);
+  console.log(`  ${pc.cyan("email domains remove")} Remove a domain\n`);
   console.log("Console & Dashboard:");
   console.log(`  ${pc.cyan("console")}               Start local web console`);
   console.log(
     `  ${pc.cyan("dashboard update-role")} Update hosted dashboard IAM permissions\n`
   );
   console.log("Global Commands:");
-  console.log(`  ${pc.cyan("status")}       Show all infrastructure status`);
+  console.log(`  ${pc.cyan("status")}       Show overview of all services`);
   console.log(`  ${pc.cyan("destroy")}      Remove deployed infrastructure`);
   console.log(`  ${pc.cyan("completion")}   Generate shell completion script`);
   console.log(
@@ -186,38 +192,9 @@ const [primaryCommand, subCommand] = args.sub;
 if (!primaryCommand) {
   async function selectService() {
     clack.intro(pc.bold(`WRAPS CLI v${VERSION}`));
-    console.log("Welcome! Let's get started deploying your infrastructure.\n");
+    console.log("Welcome! Let's get started deploying your email infrastructure.\n");
 
-    const service = await clack.select({
-      message: "Which service would you like to set up?",
-      options: [
-        {
-          value: "email",
-          label: "Email",
-          hint: "AWS SES email infrastructure",
-        },
-        {
-          value: "sms",
-          label: "SMS",
-          hint: "Coming soon - AWS End User Messaging",
-        },
-      ],
-    });
-
-    if (clack.isCancel(service)) {
-      clack.cancel("Operation cancelled.");
-      process.exit(0);
-    }
-
-    if (service === "sms") {
-      clack.log.warn("SMS infrastructure is coming soon!");
-      console.log(
-        `\nCheck back soon or follow our progress at ${pc.cyan("https://github.com/wraps-team/wraps")}\n`
-      );
-      process.exit(0);
-    }
-
-    // For email service, ask if they want to init or connect
+    // Ask what action they want to take
     const action = await clack.select({
       message: "What would you like to do?",
       options: [
@@ -340,6 +317,24 @@ async function run() {
           });
           break;
 
+        case "status":
+          await emailStatus({
+            account: flags.account,
+          });
+          break;
+
+        case "verify": {
+          if (!flags.domain) {
+            clack.log.error("--domain flag is required");
+            console.log(
+              `\nUsage: ${pc.cyan("wraps email verify --domain yourapp.com")}\n`
+            );
+            process.exit(1);
+          }
+          await verifyDomain({ domain: flags.domain });
+          break;
+        }
+
         case "domains": {
           // Handle domains subcommands
           const domainsSubCommand = args.sub[2];
@@ -412,6 +407,13 @@ async function run() {
           break;
         }
 
+        case "destroy":
+          await emailDestroy({
+            force: flags.force,
+            preview: flags.preview,
+          });
+          break;
+
         default:
           clack.log.error(`Unknown email command: ${subCommand}`);
           console.log(
@@ -454,15 +456,6 @@ async function run() {
         duration_ms: dashboardDuration,
       });
       return;
-    }
-
-    // Handle SMS subcommands (coming soon)
-    if (primaryCommand === "sms" && subCommand) {
-      clack.log.warn("SMS infrastructure is coming soon!");
-      console.log(
-        `\nCheck back soon or follow our progress at ${pc.cyan("https://github.com/wraps-team/wraps")}\n`
-      );
-      process.exit(0);
     }
 
     // Handle global commands
@@ -533,7 +526,6 @@ async function run() {
 
       // Show help for service without subcommand
       case "email":
-      case "sms":
         console.log(
           `\nPlease specify a command for ${primaryCommand} service.\n`
         );

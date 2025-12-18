@@ -484,7 +484,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           "You must verify your sending domain before adding a custom tracking domain."
         );
         clack.log.info(
-          `Use ${pc.cyan("wraps verify")} to check DNS records and complete verification.`
+          `Use ${pc.cyan("wraps email verify")} to check DNS records and complete verification.`
         );
         process.exit(1);
       }

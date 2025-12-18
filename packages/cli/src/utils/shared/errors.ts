@@ -69,7 +69,7 @@ export const errors = {
     new WrapsError(
       `Stack "${stackName}" already exists`,
       "STACK_EXISTS",
-      `To update: wraps upgrade\nTo remove: wraps destroy --stack ${stackName}`,
+      `To update: wraps email upgrade\nTo remove: wraps destroy --stack ${stackName}`,
       "https://wraps.dev/docs/cli/upgrade"
     ),
 

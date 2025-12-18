@@ -155,13 +155,16 @@ export function displaySuccess(outputs: SuccessOutputs) {
     ];
 
     if (domain) {
+      // Use MAIL FROM domain for DMARC rua if configured, otherwise use main domain
+      const dmarcRuaDomain = outputs.mailFromDomain || domain;
       dnsLines.push(
         "",
         pc.bold("SPF Record (TXT):"),
         `  ${pc.cyan(domain)} ${pc.dim("TXT")} "v=spf1 include:amazonses.com ~all"`,
+        pc.dim("  Note: If you have an existing SPF record, add 'include:amazonses.com' to it"),
         "",
         pc.bold("DMARC Record (TXT):"),
-        `  ${pc.cyan(`_dmarc.${domain}`)} ${pc.dim("TXT")} "v=DMARC1; p=quarantine; rua=mailto:postmaster@${domain}"`
+        `  ${pc.cyan(`_dmarc.${domain}`)} ${pc.dim("TXT")} "v=DMARC1; p=quarantine; rua=mailto:postmaster@${dmarcRuaDomain}"`
       );
 
       // Add MAIL FROM domain DNS records if configured
@@ -234,7 +237,7 @@ export function displaySuccess(outputs: SuccessOutputs) {
 
     if (outputs.customTrackingDomain) {
       console.log(
-        `\n${pc.dim("Run:")} ${pc.yellow(`wraps verify --domain ${outputs.customTrackingDomain}`)} ${pc.dim(
+        `\n${pc.dim("Run:")} ${pc.yellow(`wraps email verify --domain ${outputs.customTrackingDomain}`)} ${pc.dim(
           "(after DNS propagates)"
         )}\n`
       );
@@ -344,7 +347,7 @@ export function displayStatus(status: StatusOutputs) {
     );
   } else {
     featureLines.push(
-      `  ${pc.dim("○")} Email Tracking ${pc.dim("(run 'wraps upgrade' to enable)")}`
+      `  ${pc.dim("○")} Email Tracking ${pc.dim("(run 'wraps email upgrade' to enable)")}`
     );
   }
 
@@ -357,7 +360,7 @@ export function displayStatus(status: StatusOutputs) {
     );
   } else {
     featureLines.push(
-      `  ${pc.dim("○")} Bounce/Complaint Handling ${pc.dim("(run 'wraps upgrade' to enable)")}`
+      `  ${pc.dim("○")} Bounce/Complaint Handling ${pc.dim("(run 'wraps email upgrade' to enable)")}`
     );
   }
 
@@ -377,7 +380,7 @@ export function displayStatus(status: StatusOutputs) {
     );
   } else {
     featureLines.push(
-      `  ${pc.dim("○")} Email Archiving ${pc.dim("(run 'wraps upgrade' to enable)")}`
+      `  ${pc.dim("○")} Email Archiving ${pc.dim("(run 'wraps email upgrade' to enable)")}`
     );
   }
 
@@ -398,7 +401,7 @@ export function displayStatus(status: StatusOutputs) {
     featureLines.push(`      ${pc.cyan(status.tracking.customTrackingDomain)}`);
   } else {
     featureLines.push(
-      `  ${pc.dim("○")} Custom Tracking Domain ${pc.dim("(run 'wraps upgrade' to enable)")}`
+      `  ${pc.dim("○")} Custom Tracking Domain ${pc.dim("(run 'wraps email upgrade' to enable)")}`
     );
   }
 
@@ -467,6 +470,8 @@ export function displayStatus(status: StatusOutputs) {
         domain.dkimTokens &&
         domain.dkimTokens.length > 0
       ) {
+        // Use MAIL FROM domain for DMARC rua if configured, otherwise use main domain
+        const dmarcRuaDomain = domain.mailFromDomain || domain.domain;
         dnsLines.push(
           pc.bold("DKIM Records (CNAME):"),
           ...domain.dkimTokens.map(
@@ -476,9 +481,10 @@ export function displayStatus(status: StatusOutputs) {
           "",
           pc.bold("SPF Record (TXT):"),
           `  ${pc.cyan(domain.domain)} ${pc.dim("TXT")} "v=spf1 include:amazonses.com ~all"`,
+          pc.dim("  Note: If you have an existing SPF record, add 'include:amazonses.com' to it"),
           "",
           pc.bold("DMARC Record (TXT):"),
-          `  ${pc.cyan(`_dmarc.${domain.domain}`)} ${pc.dim("TXT")} "v=DMARC1; p=quarantine; rua=mailto:postmaster@${domain.domain}"`
+          `  ${pc.cyan(`_dmarc.${domain.domain}`)} ${pc.dim("TXT")} "v=DMARC1; p=quarantine; rua=mailto:postmaster@${dmarcRuaDomain}"`
         );
       }
 
@@ -502,7 +508,7 @@ export function displayStatus(status: StatusOutputs) {
     // Show verify command with first domain needing DNS as example
     const exampleDomain = domainsNeedingDNS[0].domain;
     console.log(
-      `\n${pc.dim("Run:")} ${pc.yellow(`wraps verify --domain ${exampleDomain}`)} ${pc.dim(
+      `\n${pc.dim("Run:")} ${pc.yellow(`wraps email verify --domain ${exampleDomain}`)} ${pc.dim(
         "(after DNS propagates)"
       )}\n`
     );

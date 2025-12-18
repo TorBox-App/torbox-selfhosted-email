@@ -195,7 +195,7 @@ export function getPresetInfo(preset: ConfigPreset): PresetInfo {
       volume: "10k-500k emails/month",
       features: [
         "Everything in Starter",
-        "Reputation metrics dashboard",
+        "Reputation tracking",
         "Real-time event tracking (EventBridge)",
         "3-month email history storage",
         "Optional: Email archiving with rendered viewer",

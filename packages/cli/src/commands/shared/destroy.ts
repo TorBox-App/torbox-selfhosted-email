@@ -1,175 +1,94 @@
 import * as clack from "@clack/prompts";
-import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
-import {
-  trackError,
-  trackServiceRemoved,
-} from "../../telemetry/events.js";
 import type { DestroyOptions } from "../../types/index.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import {
-  ensurePulumiWorkDir,
-  getPulumiWorkDir,
-} from "../../utils/shared/fs.js";
-import { deleteConnectionMetadata } from "../../utils/shared/metadata.js";
-import {
-  DeploymentProgress,
-  displayPreview,
-} from "../../utils/shared/output.js";
+import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
+import { emailDestroy } from "../email/destroy.js";
 
 /**
- * Destroy command - Remove all deployed infrastructure
+ * Global Destroy command - Show services and route to service-specific destroy
  */
 export async function destroy(options: DestroyOptions): Promise<void> {
-  const startTime = Date.now();
-
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Wraps Destruction Preview"
-        : "Wraps Email Infrastructure Teardown"
-    )
-  );
-
-  const progress = new DeploymentProgress();
+  clack.intro(pc.bold("Wraps Infrastructure Teardown"));
 
   // 1. Validate AWS credentials
-  const identity = await progress.execute(
-    "Validating AWS credentials",
-    async () => validateAWSCredentials()
-  );
+  const spinner = clack.spinner();
+  spinner.start("Validating AWS credentials");
+
+  let identity;
+  try {
+    identity = await validateAWSCredentials();
+    spinner.stop("AWS credentials validated");
+  } catch (error: any) {
+    spinner.stop("AWS credentials validation failed");
+    throw error;
+  }
 
   // 2. Get region
   const region = await getAWSRegion();
 
-  // 3. Confirm destruction (skip if --force or --preview)
-  if (!(options.force || options.preview)) {
-    const confirmed = await clack.confirm({
-      message: pc.red(
-        "Are you sure you want to destroy all Wraps infrastructure?"
-      ),
-      initialValue: false,
-    });
+  // 3. Load connection metadata to see what services are deployed
+  const metadata = await loadConnectionMetadata(identity.accountId, region);
 
-    if (clack.isCancel(confirmed) || !confirmed) {
-      clack.cancel("Destruction cancelled.");
-      process.exit(0);
-    }
+  const deployedServices: string[] = [];
+
+  if (metadata?.services?.email) {
+    deployedServices.push("email");
   }
 
-  // 4. Preview or Destroy infrastructure using Pulumi
-  if (options.preview) {
-    // PREVIEW MODE - show what would be destroyed without actually destroying
-    try {
-      const previewResult = await progress.execute(
-        "Generating destruction preview",
-        async () => {
-          await ensurePulumiWorkDir();
-
-          const stackName = `wraps-${identity.accountId}-${region}`;
-
-          // Try to select the stack
-          let stack;
-          try {
-            stack = await pulumi.automation.LocalWorkspace.selectStack({
-              stackName,
-              workDir: getPulumiWorkDir(),
-            });
-          } catch (_error) {
-            throw new Error("No Wraps infrastructure found to preview");
-          }
-
-          // Run preview to see what would be destroyed
-          const result = await stack.preview({ diff: true });
-          return result;
-        }
-      );
-
-      // Display preview results
-      displayPreview({
-        changeSummary: previewResult.changeSummary,
-        costEstimate: "Monthly cost after destruction: $0.00",
-        commandName: "wraps destroy",
-      });
-
-      clack.outro(
-        pc.green("Preview complete. Run without --preview to destroy.")
-      );
-
-      // Track preview completion
-      trackServiceRemoved("email", {
-        preview: true,
-        duration_ms: Date.now() - startTime,
-      });
-      return;
-    } catch (error: any) {
-      progress.stop();
-      if (error.message.includes("No Wraps infrastructure found")) {
-        clack.log.warn("No Wraps infrastructure found to preview");
-        process.exit(0);
-      }
-      trackError("PREVIEW_FAILED", "destroy", { step: "preview" });
-      throw new Error(`Preview failed: ${error.message}`);
-    }
-  }
-
-  // DESTROY MODE - actually remove infrastructure
-  try {
-    await progress.execute(
-      "Destroying infrastructure (this may take 2-3 minutes)",
-      async () => {
-        // Ensure Pulumi workspace directory exists
-        await ensurePulumiWorkDir();
-
-        const stackName = `wraps-${identity.accountId}-${region}`;
-
-        // Try to select the stack
-        let stack;
-        try {
-          stack = await pulumi.automation.LocalWorkspace.selectStack({
-            stackName,
-            workDir: getPulumiWorkDir(),
-          });
-        } catch (_error) {
-          throw new Error("No Wraps infrastructure found to destroy");
-        }
-
-        // Run destroy
-        await stack.destroy({ onOutput: () => {} }); // Suppress Pulumi output
-
-        // Remove the stack from workspace
-        await stack.workspace.removeStack(stackName);
-      }
+  if (deployedServices.length === 0) {
+    clack.log.warn("No Wraps services found in this region");
+    console.log(
+      `\nRun ${pc.cyan("wraps email init")} to deploy infrastructure.\n`
     );
-  } catch (error: any) {
-    progress.stop();
-    if (error.message.includes("No Wraps infrastructure found")) {
-      clack.log.warn("No Wraps infrastructure found");
-      // Still delete metadata if it exists
-      await deleteConnectionMetadata(identity.accountId, region);
-      process.exit(0);
-    }
-    trackError("DESTROY_FAILED", "destroy", { step: "destroy" });
-    clack.log.error("Infrastructure destruction failed");
-    throw error;
+    process.exit(0);
   }
 
-  // 5. Delete connection metadata
-  await deleteConnectionMetadata(identity.accountId, region);
+  // 4. If only one service, destroy it directly
+  if (deployedServices.length === 1) {
+    const service = deployedServices[0];
+    clack.log.info(`Found ${pc.cyan(service)} service deployed`);
 
-  // 6. Display success message
-  progress.stop();
-  clack.outro(pc.green("All Wraps infrastructure has been removed"));
-  console.log(
-    `\nRun ${pc.cyan("wraps email init")} to deploy infrastructure again.\n`
-  );
+    if (service === "email") {
+      // Pass through to email destroy
+      await emailDestroy(options);
+      return;
+    }
+  }
 
-  // 7. Track successful destruction
-  trackServiceRemoved("email", {
-    reason: "user_initiated",
-    duration_ms: Date.now() - startTime,
+  // 5. Multiple services - ask which to destroy
+  const serviceToDestroy = await clack.select({
+    message: "Which service would you like to destroy?",
+    options: [
+      ...deployedServices.map((s) => ({
+        value: s,
+        label: s.charAt(0).toUpperCase() + s.slice(1),
+        hint: s === "email" ? "AWS SES email infrastructure" : undefined,
+      })),
+      {
+        value: "all",
+        label: "All services",
+        hint: "Destroy all Wraps infrastructure",
+      },
+    ],
   });
+
+  if (clack.isCancel(serviceToDestroy)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  // 6. Route to appropriate destroy command
+  if (serviceToDestroy === "email" || serviceToDestroy === "all") {
+    if (deployedServices.includes("email")) {
+      await emailDestroy(options);
+    }
+  }
+
+  if (serviceToDestroy === "all") {
+    clack.outro(pc.green("All Wraps infrastructure has been removed"));
+  }
 }

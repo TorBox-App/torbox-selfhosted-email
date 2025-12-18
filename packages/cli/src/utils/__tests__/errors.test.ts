@@ -173,7 +173,7 @@ describe("error factory functions", () => {
       expect(error).toBeInstanceOf(WrapsError);
       expect(error.message).toContain("wraps-123456789-us-east-1");
       expect(error.code).toBe("STACK_EXISTS");
-      expect(error.suggestion).toContain("wraps upgrade");
+      expect(error.suggestion).toContain("wraps email upgrade");
       expect(error.suggestion).toContain(
         "wraps destroy --stack wraps-123456789-us-east-1"
       );

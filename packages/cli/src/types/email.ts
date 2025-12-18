@@ -31,6 +31,7 @@ export type WrapsEmailConfig = {
   // Domain configuration
   domain?: string;
   mailFromDomain?: string;
+  mailFromSubdomain?: string; // Subdomain for MAIL FROM (e.g., "mail" -> mail.domain.com)
 
   // Tracking configuration
   tracking?: {

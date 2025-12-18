@@ -260,23 +260,24 @@ export async function createSESResources(
       (attrs) => attrs?.tokens || []
     ) as any;
 
-    // Configure MAIL FROM domain for better DMARC alignment
-    // Uses subdomain convention (mail.example.com) to avoid DNS conflicts
-    mailFromDomain = config.mailFromDomain || `mail.${config.domain}`;
+    // Configure MAIL FROM domain for better DMARC alignment (only if explicitly configured)
+    if (config.mailFromDomain) {
+      mailFromDomain = config.mailFromDomain;
 
-    // Always create/update MAIL FROM attributes
-    // Note: This resource doesn't support import, but it will update existing config
-    new aws.sesv2.EmailIdentityMailFromAttributes(
-      "wraps-email-mail-from",
-      {
-        emailIdentity: config.domain,
-        mailFromDomain,
-        behaviorOnMxFailure: "USE_DEFAULT_VALUE", // Fallback to amazonses.com if MX record fails
-      },
-      {
-        dependsOn: [domainIdentity], // Ensure domain identity exists first
-      }
-    );
+      // Create/update MAIL FROM attributes
+      // Note: This resource doesn't support import, but it will update existing config
+      new aws.sesv2.EmailIdentityMailFromAttributes(
+        "wraps-email-mail-from",
+        {
+          emailIdentity: config.domain,
+          mailFromDomain,
+          behaviorOnMxFailure: "USE_DEFAULT_VALUE", // Fallback to amazonses.com if MX record fails
+        },
+        {
+          dependsOn: [domainIdentity], // Ensure domain identity exists first
+        }
+      );
+    }
   }
 
   return {

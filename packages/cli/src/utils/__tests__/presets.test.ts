@@ -187,7 +187,7 @@ describe("Preset Configurations", () => {
         const info = getPresetInfo("production");
 
         expect(info.features).toContain("Everything in Starter");
-        expect(info.features).toContain("Reputation metrics dashboard");
+        expect(info.features).toContain("Reputation tracking");
         expect(info.features).toContain(
           "Real-time event tracking (EventBridge)"
         );

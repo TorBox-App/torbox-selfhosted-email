@@ -1,6 +1,7 @@
 import {
   ChangeResourceRecordSetsCommand,
   ListHostedZonesByNameCommand,
+  ListResourceRecordSetsCommand,
   Route53Client,
 } from "@aws-sdk/client-route-53";
 import { mockClient } from "aws-sdk-client-mock";
@@ -330,5 +331,150 @@ describe("createDNSRecords", () => {
     const changes = call.args[0].input.ChangeBatch?.Changes;
 
     expect(changes?.every((c) => c.ResourceRecordSet?.TTL === 1800)).toBe(true);
+  });
+
+  it("should use mailFromDomain for DMARC rua when provided", async () => {
+    route53Mock.on(ChangeResourceRecordSetsCommand).resolves({
+      ChangeInfo: {
+        Id: "change-1",
+        Status: "PENDING",
+        SubmittedAt: new Date(),
+      },
+    });
+
+    await createDNSRecords(
+      "Z123",
+      "example.com",
+      ["token1"],
+      "us-east-1",
+      undefined,
+      "mail.example.com"
+    );
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+
+    const dmarcRecord = changes?.find(
+      (c) =>
+        c.ResourceRecordSet?.Type === "TXT" &&
+        c.ResourceRecordSet?.Name === "_dmarc.example.com"
+    );
+
+    expect(dmarcRecord).toBeDefined();
+    expect(
+      dmarcRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value
+    ).toContain("rua=mailto:postmaster@mail.example.com");
+  });
+
+  it("should create new SPF record when none exists", async () => {
+    // No existing TXT records
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [],
+    });
+    route53Mock.on(ChangeResourceRecordSetsCommand).resolves({
+      ChangeInfo: {
+        Id: "change-1",
+        Status: "PENDING",
+        SubmittedAt: new Date(),
+      },
+    });
+
+    await createDNSRecords("Z123", "example.com", ["token1"], "us-east-1");
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+
+    const spfRecord = changes?.find(
+      (c) =>
+        c.ResourceRecordSet?.Type === "TXT" &&
+        c.ResourceRecordSet?.Name === "example.com"
+    );
+
+    expect(spfRecord).toBeDefined();
+    expect(
+      spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value
+    ).toBe('"v=spf1 include:amazonses.com ~all"');
+  });
+
+  it("should merge into existing SPF record", async () => {
+    // Existing SPF record from another provider
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [
+        {
+          Name: "example.com.",
+          Type: "TXT",
+          TTL: 300,
+          ResourceRecords: [
+            { Value: '"v=spf1 include:mailchimp.com ~all"' },
+          ],
+        },
+      ],
+    });
+    route53Mock.on(ChangeResourceRecordSetsCommand).resolves({
+      ChangeInfo: {
+        Id: "change-1",
+        Status: "PENDING",
+        SubmittedAt: new Date(),
+      },
+    });
+
+    await createDNSRecords("Z123", "example.com", ["token1"], "us-east-1");
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+
+    const spfRecord = changes?.find(
+      (c) =>
+        c.ResourceRecordSet?.Type === "TXT" &&
+        c.ResourceRecordSet?.Name === "example.com"
+    );
+
+    expect(spfRecord).toBeDefined();
+    // Should contain both includes
+    expect(
+      spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value
+    ).toContain("include:mailchimp.com");
+    expect(
+      spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value
+    ).toContain("include:amazonses.com");
+  });
+
+  it("should not duplicate amazonses.com in existing SPF record", async () => {
+    // Existing SPF record that already has amazonses.com
+    route53Mock.on(ListResourceRecordSetsCommand).resolves({
+      ResourceRecordSets: [
+        {
+          Name: "example.com.",
+          Type: "TXT",
+          TTL: 300,
+          ResourceRecords: [
+            { Value: '"v=spf1 include:amazonses.com ~all"' },
+          ],
+        },
+      ],
+    });
+    route53Mock.on(ChangeResourceRecordSetsCommand).resolves({
+      ChangeInfo: {
+        Id: "change-1",
+        Status: "PENDING",
+        SubmittedAt: new Date(),
+      },
+    });
+
+    await createDNSRecords("Z123", "example.com", ["token1"], "us-east-1");
+
+    const call = route53Mock.commandCalls(ChangeResourceRecordSetsCommand)[0];
+    const changes = call.args[0].input.ChangeBatch?.Changes;
+
+    const spfRecord = changes?.find(
+      (c) =>
+        c.ResourceRecordSet?.Type === "TXT" &&
+        c.ResourceRecordSet?.Name === "example.com"
+    );
+
+    expect(spfRecord).toBeDefined();
+    const spfValue = spfRecord?.ResourceRecordSet?.ResourceRecords?.[0].Value;
+    // Should only have one amazonses.com include
+    expect(spfValue?.match(/include:amazonses\.com/g)?.length).toBe(1);
   });
 });

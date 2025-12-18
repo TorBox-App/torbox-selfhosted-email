@@ -52,8 +52,8 @@ describe("Prompts", () => {
       expect(clack.select).toHaveBeenCalledWith({
         message: "Where is your app hosted?",
         options: expect.arrayContaining([
-          expect.objectContaining({ value: "vercel" }),
           expect.objectContaining({ value: "aws" }),
+          expect.objectContaining({ value: "vercel" }),
           expect.objectContaining({ value: "railway" }),
           expect.objectContaining({ value: "other" }),
         ]),
@@ -637,11 +637,11 @@ describe("Prompts", () => {
   describe("promptCustomConfig", () => {
     it("should return custom configuration with all options enabled", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(true) // reputation metrics (first)
         .mockResolvedValueOnce(true) // tracking
-        .mockResolvedValueOnce(true) // event tracking
-        .mockResolvedValueOnce(true) // dynamoDB history
+        .mockResolvedValueOnce(true) // event tracking (stores in DynamoDB)
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(true) // reputation metrics
+        .mockResolvedValueOnce(false) // custom MAIL FROM
         .mockResolvedValueOnce(false) // dedicated IP
         .mockResolvedValueOnce(false); // email archiving
 
@@ -659,11 +659,13 @@ describe("Prompts", () => {
 
     it("should return configuration with minimal options", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics (first)
         .mockResolvedValueOnce(false) // tracking
         .mockResolvedValueOnce(false) // event tracking
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(false) // reputation metrics
-        .mockResolvedValueOnce(false); // dedicated IP
+        .mockResolvedValueOnce(false) // custom MAIL FROM
+        .mockResolvedValueOnce(false) // dedicated IP
+        .mockResolvedValueOnce(false); // email archiving
 
       const result = await promptCustomConfig();
 
@@ -674,13 +676,13 @@ describe("Prompts", () => {
       expect(result.dedicatedIp).toBe(false);
     });
 
-    it("should prompt for retention when history is enabled", async () => {
+    it("should prompt for retention when event tracking is enabled", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(true) // reputation metrics (first)
         .mockResolvedValueOnce(true) // tracking
-        .mockResolvedValueOnce(true) // event tracking
-        .mockResolvedValueOnce(true) // dynamoDB history
+        .mockResolvedValueOnce(true) // event tracking (stores in DynamoDB)
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(true) // reputation metrics
+        .mockResolvedValueOnce(false) // custom MAIL FROM
         .mockResolvedValueOnce(false) // dedicated IP
         .mockResolvedValueOnce(false); // email archiving
 
@@ -692,29 +694,29 @@ describe("Prompts", () => {
       expect(clack.select).toHaveBeenCalled();
     });
 
-    it("should skip retention prompt when history is disabled", async () => {
+    it("should skip retention prompt when event tracking is disabled", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(true) // reputation metrics (first)
         .mockResolvedValueOnce(true) // tracking
-        .mockResolvedValueOnce(true) // event tracking
-        .mockResolvedValueOnce(false) // dynamoDB history - DISABLED
+        .mockResolvedValueOnce(false) // event tracking - DISABLED
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(true) // reputation metrics
+        .mockResolvedValueOnce(false) // custom MAIL FROM
         .mockResolvedValueOnce(false) // dedicated IP
         .mockResolvedValueOnce(false); // email archiving - DISABLED
 
       await promptCustomConfig();
 
-      // select should not be called for retention (neither history nor archiving)
+      // select should not be called for retention (neither event tracking nor archiving)
       expect(clack.select).not.toHaveBeenCalled();
     });
 
     it("should include all event types when event tracking is enabled", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(true) // reputation metrics (first)
         .mockResolvedValueOnce(true) // tracking
-        .mockResolvedValueOnce(true) // event tracking
-        .mockResolvedValueOnce(true) // dynamoDB history
+        .mockResolvedValueOnce(true) // event tracking (stores in DynamoDB)
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(true) // reputation metrics
+        .mockResolvedValueOnce(false) // custom MAIL FROM
         .mockResolvedValueOnce(false) // dedicated IP
         .mockResolvedValueOnce(false); // email archiving
 
@@ -731,11 +733,13 @@ describe("Prompts", () => {
 
     it("should always enable suppression list", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics (first)
         .mockResolvedValueOnce(false) // tracking
         .mockResolvedValueOnce(false) // event tracking
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(false) // reputation metrics
-        .mockResolvedValueOnce(false); // dedicated IP
+        .mockResolvedValueOnce(false) // custom MAIL FROM
+        .mockResolvedValueOnce(false) // dedicated IP
+        .mockResolvedValueOnce(false); // email archiving
 
       const result = await promptCustomConfig();
 
@@ -745,11 +749,13 @@ describe("Prompts", () => {
 
     it("should always enable sending", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics (first)
         .mockResolvedValueOnce(false) // tracking
         .mockResolvedValueOnce(false) // event tracking
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(false) // reputation metrics
-        .mockResolvedValueOnce(false); // dedicated IP
+        .mockResolvedValueOnce(false) // custom MAIL FROM
+        .mockResolvedValueOnce(false) // dedicated IP
+        .mockResolvedValueOnce(false); // email archiving
 
       const result = await promptCustomConfig();
 
@@ -758,10 +764,11 @@ describe("Prompts", () => {
 
     it("should include email archiving when enabled", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics (first)
         .mockResolvedValueOnce(false) // tracking
         .mockResolvedValueOnce(false) // event tracking
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(false) // reputation metrics
+        .mockResolvedValueOnce(false) // custom MAIL FROM
         .mockResolvedValueOnce(false) // dedicated IP
         .mockResolvedValueOnce(true); // email archiving
 
@@ -775,10 +782,11 @@ describe("Prompts", () => {
 
     it("should not include email archiving when disabled", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics (first)
         .mockResolvedValueOnce(false) // tracking
         .mockResolvedValueOnce(false) // event tracking
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(false) // reputation metrics
+        .mockResolvedValueOnce(false) // custom MAIL FROM
         .mockResolvedValueOnce(false) // dedicated IP
         .mockResolvedValueOnce(false); // email archiving
 
@@ -792,10 +800,11 @@ describe("Prompts", () => {
 
     it("should prompt for retention period when email archiving is enabled", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics (first)
         .mockResolvedValueOnce(false) // tracking
         .mockResolvedValueOnce(false) // event tracking
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(false) // reputation metrics
+        .mockResolvedValueOnce(false) // custom MAIL FROM
         .mockResolvedValueOnce(false) // dedicated IP
         .mockResolvedValueOnce(true); // email archiving
 
@@ -821,10 +830,11 @@ describe("Prompts", () => {
 
     it("should support all retention period options for email archiving", async () => {
       vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics (first)
         .mockResolvedValueOnce(false) // tracking
         .mockResolvedValueOnce(false) // event tracking
         .mockResolvedValueOnce(true) // TLS
-        .mockResolvedValueOnce(false) // reputation metrics
+        .mockResolvedValueOnce(false) // custom MAIL FROM
         .mockResolvedValueOnce(false) // dedicated IP
         .mockResolvedValueOnce(true); // email archiving
 
@@ -833,6 +843,38 @@ describe("Prompts", () => {
       const result = await promptCustomConfig();
 
       expect(result.emailArchiving?.retention).toBe("18months");
+    });
+
+    it("should include mailFromSubdomain when custom MAIL FROM is enabled", async () => {
+      vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics
+        .mockResolvedValueOnce(false) // tracking
+        .mockResolvedValueOnce(false) // event tracking
+        .mockResolvedValueOnce(true) // TLS
+        .mockResolvedValueOnce(true) // custom MAIL FROM - ENABLED
+        .mockResolvedValueOnce(false) // dedicated IP
+        .mockResolvedValueOnce(false); // email archiving
+
+      vi.mocked(clack.text).mockResolvedValue("bounce");
+
+      const result = await promptCustomConfig();
+
+      expect(result.mailFromSubdomain).toBe("bounce");
+    });
+
+    it("should not include mailFromSubdomain when custom MAIL FROM is disabled", async () => {
+      vi.mocked(clack.confirm)
+        .mockResolvedValueOnce(false) // reputation metrics
+        .mockResolvedValueOnce(false) // tracking
+        .mockResolvedValueOnce(false) // event tracking
+        .mockResolvedValueOnce(true) // TLS
+        .mockResolvedValueOnce(false) // custom MAIL FROM - DISABLED
+        .mockResolvedValueOnce(false) // dedicated IP
+        .mockResolvedValueOnce(false); // email archiving
+
+      const result = await promptCustomConfig();
+
+      expect(result.mailFromSubdomain).toBeUndefined();
     });
   });
 });
