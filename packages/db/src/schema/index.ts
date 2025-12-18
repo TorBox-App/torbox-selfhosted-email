@@ -4,3 +4,4 @@ export * from "./auth";
 export * from "./contacts";
 export * from "./templates";
 export * from "./usage";
+export * from "./waitlist";

@@ -4,6 +4,7 @@ import { lazy } from "react";
 const Landing = lazy(() => import("@/app/landing/page"));
 const Calculator = lazy(() => import("@/app/calculator/page"));
 const WhyWraps = lazy(() => import("@/app/why-wraps/page"));
+const Sms = lazy(() => import("@/app/sms/page"));
 const Docs = lazy(() => import("@/app/docs/page"));
 const QuickstartDocs = lazy(() => import("@/app/docs/quickstart/page"));
 const SDKReferenceDocs = lazy(() => import("@/app/docs/sdk-reference/page"));
@@ -35,6 +36,12 @@ export const routes: RouteConfig[] = [
   {
     path: "/why-wraps",
     element: <WhyWraps />,
+  },
+
+  // SMS Coming Soon
+  {
+    path: "/sms",
+    element: <Sms />,
   },
 
   // Documentation
