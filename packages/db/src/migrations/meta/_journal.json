@@ -71,6 +71,13 @@
       "when": 1766077541798,
       "tag": "0009_bouncy_mystique",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1766084811588,
+      "tag": "0010_cheerful_valeria_richards",
+      "breakpoints": true
     }
   ]
 }
