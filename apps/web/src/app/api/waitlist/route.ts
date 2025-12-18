@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { NextResponse } from "next/server";
 import { db, waitlist } from "@wraps/db";
+import { NextResponse } from "next/server";
 
 /**
  * Hash email with SHA-256 for deduplication
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     };
 
     // Validate email
-    if (!email || !isValidEmail(email)) {
+    if (!(email && isValidEmail(email))) {
       return NextResponse.json(
         { error: "Valid email required" },
         { status: 400, headers: corsHeaders }
@@ -54,9 +54,11 @@ export async function POST(request: Request) {
     }
 
     // Validate product
-    if (!product || !isValidProduct(product)) {
+    if (!(product && isValidProduct(product))) {
       return NextResponse.json(
-        { error: `Valid product required. Options: ${VALID_PRODUCTS.join(", ")}` },
+        {
+          error: `Valid product required. Options: ${VALID_PRODUCTS.join(", ")}`,
+        },
         { status: 400, headers: corsHeaders }
       );
     }
