@@ -32,6 +32,7 @@ const navigationItems = [
   { name: "Docs", href: "/docs", hasSubmenu: true },
   { name: "Pricing", href: "#pricing" },
   { name: "FAQ", href: "#faq" },
+  { name: "SMS", href: "/sms", badge: "Soon" },
 ];
 
 // Docs menu items for mobile
@@ -135,7 +136,14 @@ export function LandingNavbar() {
                       }
                     }}
                   >
-                    {item.name}
+                    <span className="inline-flex items-center gap-1.5">
+                      {item.name}
+                      {item.badge && (
+                        <span className="rounded-full bg-orange-500/10 px-1.5 py-0.5 font-medium text-orange-600 text-[10px] dark:text-orange-400">
+                          {item.badge}
+                        </span>
+                      )}
+                    </span>
                   </NavigationMenuLink>
                 )}
               </NavigationMenuItem>
@@ -274,7 +282,7 @@ export function LandingNavbar() {
                         </Collapsible>
                       ) : (
                         <a
-                          className="flex cursor-pointer items-center rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground"
+                          className="flex cursor-pointer items-center gap-2 rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground"
                           href={item.href}
                           onClick={(e) => {
                             setIsOpen(false);
@@ -285,6 +293,11 @@ export function LandingNavbar() {
                           }}
                         >
                           {item.name}
+                          {item.badge && (
+                            <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-medium text-orange-600 text-xs dark:text-orange-400">
+                              {item.badge}
+                            </span>
+                          )}
                         </a>
                       )}
                     </div>

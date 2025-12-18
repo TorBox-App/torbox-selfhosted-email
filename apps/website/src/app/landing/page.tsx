@@ -8,6 +8,7 @@ import { HeroSection } from "./components/hero-section";
 import { LandingNavbar } from "./components/navbar";
 import { PricingSection } from "./components/pricing-section";
 import { QuickStartSection } from "./components/quick-start-section";
+import { SmsTeaserSection } from "./components/sms-teaser-section";
 import { StatsSection } from "./components/stats-section";
 import { TemplateEditorSection } from "./components/template-editor-section";
 import { TrustedBySection } from "./components/trusted-by-section";
@@ -25,6 +26,9 @@ export default function LandingPage() {
         <HeroSection />
         <TrustedBySection />
         <StatsSection />
+
+        {/* SMS Coming Soon Teaser */}
+        <SmsTeaserSection />
 
         {/* Free Tier - CLI + SDK + Local Console */}
         <QuickStartSection />
