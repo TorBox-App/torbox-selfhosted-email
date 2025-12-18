@@ -46,7 +46,7 @@ export function WaitlistForm({
         if (!isValidEmail(value.email)) {
           return { fields: { email: "Please enter a valid email" } };
         }
-        return undefined;
+        return;
       },
     },
     onSubmit: async ({ value }) => {
@@ -61,7 +61,8 @@ export function WaitlistForm({
             email: value.email,
             product,
             source,
-            referrer: typeof document !== "undefined" ? document.referrer : null,
+            referrer:
+              typeof document !== "undefined" ? document.referrer : null,
           }),
         });
 
@@ -88,7 +89,7 @@ export function WaitlistForm({
         )}
       >
         <CheckCircle className="size-5 shrink-0" />
-        <span className="text-sm font-medium">
+        <span className="font-medium text-sm">
           You're on the list! We'll notify you when SMS launches.
         </span>
       </div>
@@ -97,16 +98,16 @@ export function WaitlistForm({
 
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        form.handleSubmit();
-      }}
       className={cn(
         "w-full",
         variant === "inline" && "flex gap-2",
         variant === "stacked" && "flex flex-col gap-3",
         className
       )}
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.handleSubmit();
+      }}
     >
       <form.Field name="email">
         {(field) => {
@@ -118,20 +119,20 @@ export function WaitlistForm({
           return (
             <div className={cn("flex-1", variant === "stacked" && "w-full")}>
               <Input
-                type="email"
-                placeholder="you@company.com"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
                 aria-invalid={hasError}
                 className={cn(
                   variant === "inline" && "max-w-xs",
                   variant === "stacked" && "w-full"
                 )}
                 disabled={status === "loading"}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="you@company.com"
+                type="email"
+                value={field.state.value}
               />
               {hasError && (
-                <p className="mt-1 text-sm text-destructive">
+                <p className="mt-1 text-destructive text-sm">
                   {String(field.state.meta.errors[0])}
                 </p>
               )}
@@ -148,9 +149,9 @@ export function WaitlistForm({
       >
         {({ isSubmitting }) => (
           <Button
-            type="submit"
-            disabled={status === "loading" || isSubmitting}
             className="bg-orange-500 hover:bg-orange-600"
+            disabled={status === "loading" || isSubmitting}
+            type="submit"
           >
             {status === "loading" || isSubmitting ? (
               <>
@@ -168,7 +169,7 @@ export function WaitlistForm({
       </form.Subscribe>
 
       {status === "error" && errorMessage && (
-        <p className="text-sm text-destructive">{errorMessage}</p>
+        <p className="text-destructive text-sm">{errorMessage}</p>
       )}
     </form>
   );

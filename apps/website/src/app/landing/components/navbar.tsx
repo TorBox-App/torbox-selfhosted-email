@@ -139,7 +139,7 @@ export function LandingNavbar() {
                     <span className="inline-flex items-center gap-1.5">
                       {item.name}
                       {item.badge && (
-                        <span className="rounded-full bg-orange-500/10 px-1.5 py-0.5 font-medium text-orange-600 text-[10px] dark:text-orange-400">
+                        <span className="rounded-full bg-orange-500/10 px-1.5 py-0.5 font-medium text-[10px] text-orange-600 dark:text-orange-400">
                           {item.badge}
                         </span>
                       )}

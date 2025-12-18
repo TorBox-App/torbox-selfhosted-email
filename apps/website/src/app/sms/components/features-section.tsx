@@ -8,7 +8,10 @@ import {
   MessageSquareMore,
   ShieldCheck,
 } from "lucide-react";
-import { FeatureItem, SectionWrapper } from "@/app/landing/components/section-card";
+import {
+  FeatureItem,
+  SectionWrapper,
+} from "@/app/landing/components/section-card";
 
 const features = [
   {

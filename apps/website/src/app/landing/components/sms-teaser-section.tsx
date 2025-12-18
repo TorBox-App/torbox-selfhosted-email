@@ -14,15 +14,14 @@ export function SmsTeaserSection() {
           <div className="flex-1">
             <div className="mb-1 flex items-center justify-center gap-2 md:justify-start">
               <p className="font-medium text-orange-500 text-sm">Coming Soon</p>
-              <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-medium text-orange-600 text-[10px] dark:text-orange-400">
+              <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-medium text-[10px] text-orange-600 dark:text-orange-400">
                 SMS
               </span>
             </div>
-            <h2 className="mb-1 font-semibold text-xl">
-              AWS SMS, simplified.
-            </h2>
+            <h2 className="mb-1 font-semibold text-xl">AWS SMS, simplified.</h2>
             <p className="text-muted-foreground text-sm">
-              Self-hosted SMS infrastructure with toll-free first strategy, TypeScript SDK, and AWS pricing.
+              Self-hosted SMS infrastructure with toll-free first strategy,
+              TypeScript SDK, and AWS pricing.
             </p>
           </div>
           <div className="flex flex-col items-center gap-2 md:items-end">

@@ -33,13 +33,13 @@ export function SmsHeroSection() {
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            Deploy self-hosted SMS infrastructure to your AWS account.
-            Toll-free first, TypeScript SDK, zero vendor lock-in.
+            Deploy self-hosted SMS infrastructure to your AWS account. Toll-free
+            first, TypeScript SDK, zero vendor lock-in.
           </p>
 
           {/* Waitlist Form */}
           <div className="mx-auto mb-12 max-w-md">
-            <p className="mb-3 text-sm text-muted-foreground">
+            <p className="mb-3 text-muted-foreground text-sm">
               Join the waitlist to get early access
             </p>
             <WaitlistForm source="sms-hero" />
@@ -68,10 +68,7 @@ export function SmsHeroSection() {
                     <span className="text-blue-400">Wraps</span>
                     <span className="text-gray-300">{" }"} </span>
                     <span className="text-purple-400">from</span>
-                    <span className="text-green-400">
-                      {" "}
-                      '@wraps.dev/sms'
-                    </span>
+                    <span className="text-green-400"> '@wraps.dev/sms'</span>
                     <span className="text-gray-300">;</span>
                     {"\n\n"}
                     <span className="text-purple-400">const</span>
@@ -87,12 +84,12 @@ export function SmsHeroSection() {
                     <span className="text-yellow-300">send</span>
                     <span className="text-gray-300">({"{"}</span>
                     {"\n"}
-                    <span className="text-blue-300">  to</span>
+                    <span className="text-blue-300"> to</span>
                     <span className="text-gray-300">: </span>
                     <span className="text-green-400">'+14155551234'</span>
                     <span className="text-gray-300">,</span>
                     {"\n"}
-                    <span className="text-blue-300">  message</span>
+                    <span className="text-blue-300"> message</span>
                     <span className="text-gray-300">: </span>
                     <span className="text-green-400">
                       'Your code is 123456'
