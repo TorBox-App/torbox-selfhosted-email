@@ -10,6 +10,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { errors } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -25,12 +26,12 @@ import {
 import { deleteDNSRecords, findHostedZone } from "../../utils/route53.js";
 
 /**
- * Get DKIM tokens for a domain from SES
+ * Get DKIM tokens and MAIL FROM domain for a domain from SES
  */
-async function getDkimTokensFromSES(
+async function getEmailIdentityInfo(
   domain: string,
   region: string
-): Promise<string[]> {
+): Promise<{ dkimTokens: string[]; mailFromDomain?: string }> {
   try {
     const { SESv2Client, GetEmailIdentityCommand } = await import(
       "@aws-sdk/client-sesv2"
@@ -41,9 +42,12 @@ async function getDkimTokensFromSES(
       new GetEmailIdentityCommand({ EmailIdentity: domain })
     );
 
-    return response.DkimAttributes?.Tokens || [];
+    return {
+      dkimTokens: response.DkimAttributes?.Tokens || [],
+      mailFromDomain: response.MailFromAttributes?.MailFromDomain,
+    };
   } catch (_error) {
-    return [];
+    return { dkimTokens: [] };
   }
 }
 
@@ -98,13 +102,20 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
   let shouldCleanDNS = false;
   let hostedZone: { id: string; name: string } | null = null;
   let dkimTokens: string[] = [];
+  // Get mailFromDomain from metadata, or fall back to querying SES
+  let mailFromDomain = emailConfig?.mailFromDomain;
 
   if (domain && !options.preview) {
     hostedZone = await findHostedZone(domain, region);
 
     if (hostedZone) {
-      // Get DKIM tokens from SES before we destroy
-      dkimTokens = await getDkimTokensFromSES(domain, region);
+      // Get DKIM tokens and MAIL FROM domain from SES before we destroy
+      const identityInfo = await getEmailIdentityInfo(domain, region);
+      dkimTokens = identityInfo.dkimTokens;
+      // Use MAIL FROM from SES if not in metadata (handles legacy deployments)
+      if (!mailFromDomain && identityInfo.mailFromDomain) {
+        mailFromDomain = identityInfo.mailFromDomain;
+      }
 
       if (!options.force) {
         const cleanDNS = await clack.confirm({
@@ -206,7 +217,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
             dkimTokens,
             region,
             emailConfig?.tracking?.customRedirectDomain,
-            emailConfig?.mailFromDomain
+            mailFromDomain
           );
         }
       );
@@ -253,6 +264,11 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       // Still delete metadata if it exists
       await deleteConnectionMetadata(identity.accountId, region);
       process.exit(0);
+    }
+    // Check if it's a lock file error
+    if (error.message?.includes("stack is currently locked")) {
+      trackError("STACK_LOCKED", "email destroy", { step: "destroy" });
+      throw errors.stackLocked();
     }
     trackError("DESTROY_FAILED", "email destroy", { step: "destroy" });
     clack.log.error("Email infrastructure destruction failed");

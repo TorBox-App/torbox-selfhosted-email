@@ -375,6 +375,15 @@ export async function init(options: InitOptions): Promise<void> {
   // 9. Save metadata for future upgrades and restore
   if (metadata.services.email) {
     metadata.services.email.pulumiStackName = `wraps-${identity.accountId}-${region}`;
+    // Save computed values from Pulumi outputs back to config
+    // These may have been computed during deployment (e.g., mailFromDomain from mailFromSubdomain)
+    if (outputs.mailFromDomain) {
+      metadata.services.email.config.mailFromDomain = outputs.mailFromDomain;
+    }
+    if (outputs.customTrackingDomain && metadata.services.email.config.tracking) {
+      metadata.services.email.config.tracking.customRedirectDomain =
+        outputs.customTrackingDomain;
+    }
   }
   await saveConnectionMetadata(metadata);
 
