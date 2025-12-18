@@ -2,6 +2,7 @@
 export * from "./app";
 export * from "./auth";
 export * from "./contacts";
+export * from "./segments";
 export * from "./templates";
 export * from "./usage";
 export * from "./waitlist";

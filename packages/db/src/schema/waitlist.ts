@@ -1,4 +1,10 @@
-import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 /**
  * Waitlist table for collecting email signups for upcoming products
@@ -27,7 +33,10 @@ export const waitlist = pgTable(
   },
   (table) => [
     // Ensure one signup per email per product
-    uniqueIndex("waitlist_email_product_idx").on(table.emailHash, table.product),
+    uniqueIndex("waitlist_email_product_idx").on(
+      table.emailHash,
+      table.product
+    ),
     // Query by product
     index("waitlist_product_idx").on(table.product),
     // Query by date
