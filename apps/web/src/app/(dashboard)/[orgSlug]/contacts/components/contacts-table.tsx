@@ -7,20 +7,26 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type RowSelectionState,
   type SortingState,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { Plus, Search, Upload } from "lucide-react";
+import { Plus, Search, Tags, Upload } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  bulkSubscribeContactsToTopics,
+  bulkUnsubscribeContactsFromTopics,
   createContact,
   deleteContact,
+  subscribeContactToTopics,
+  unsubscribeContactFromTopics,
   updateContact,
 } from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +35,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -88,6 +100,7 @@ export function ContactsTable({
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [globalFilter, setGlobalFilter] = useState(
     searchParams.get("search") || ""
   );
@@ -97,6 +110,10 @@ export function ContactsTable({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
+  const [bulkSubscribeDialogOpen, setBulkSubscribeDialogOpen] = useState(false);
+  const [bulkUnsubscribeDialogOpen, setBulkUnsubscribeDialogOpen] =
+    useState(false);
+  const [selectedTopicId, setSelectedTopicId] = useState<string>("");
   const [selectedContact, setSelectedContact] =
     useState<ContactWithMeta | null>(null);
 
@@ -143,13 +160,61 @@ export function ContactsTable({
     []
   );
 
-  const columns = useMemo(() => createColumns(columnActions), [columnActions]);
+  const baseColumns = useMemo(
+    () => createColumns(columnActions),
+    [columnActions]
+  );
+
+  // Add selection column at the start
+  const columns = useMemo(
+    () => [
+      {
+        id: "select",
+        header: ({
+          table,
+        }: {
+          table: ReturnType<typeof useReactTable<ContactWithMeta>>;
+        }) => (
+          <Checkbox
+            aria-label="Select all"
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+          />
+        ),
+        cell: ({
+          row,
+        }: {
+          row: {
+            getIsSelected: () => boolean;
+            toggleSelected: (value?: boolean) => void;
+          };
+        }) => (
+          <Checkbox
+            aria-label="Select row"
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
+      ...baseColumns,
+    ],
+    [baseColumns]
+  );
 
   const table = useReactTable({
     data: contacts,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -161,13 +226,21 @@ export function ContactsTable({
       sorting,
       columnFilters,
       columnVisibility,
+      rowSelection,
       globalFilter,
       pagination: {
         pageIndex: page - 1,
         pageSize,
       },
     },
+    getRowId: (row) => row.id,
   });
+
+  // Get selected contact IDs
+  const selectedContactIds = useMemo(
+    () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
+    [rowSelection]
+  );
 
   // Handlers
   const handleCreateContact = async (data: {
@@ -206,27 +279,78 @@ export function ContactsTable({
     email?: string;
     status?: ContactStatus;
     properties?: Record<string, unknown>;
+    topicIds?: string[];
   }) => {
     if (!selectedContact) return;
 
     startTransition(async () => {
-      const result = await updateContact(
-        selectedContact.id,
-        organizationId,
-        data
-      );
-      if (result.success) {
-        toast.success("Contact updated", {
-          description: "The contact has been updated.",
-        });
-        setEditDialogOpen(false);
-        setSelectedContact(null);
-        router.refresh();
-      } else {
-        toast.error("Error", {
-          description: result.error,
-        });
+      // Update contact fields (email, status, properties)
+      const { topicIds, ...contactData } = data;
+      const hasContactChanges =
+        contactData.email !== undefined ||
+        contactData.status !== undefined ||
+        contactData.properties !== undefined;
+
+      if (hasContactChanges) {
+        const result = await updateContact(
+          selectedContact.id,
+          organizationId,
+          contactData
+        );
+        if (!result.success) {
+          toast.error("Error", { description: result.error });
+          return;
+        }
       }
+
+      // Handle topic subscription changes
+      if (topicIds !== undefined) {
+        const currentTopicIds = new Set(
+          selectedContact.topics
+            ?.filter((t) => t.status === "subscribed")
+            .map((t) => t.topicId) || []
+        );
+        const newTopicIds = new Set(topicIds);
+
+        // Find topics to subscribe to (in new but not in current)
+        const toSubscribe = topicIds.filter((id) => !currentTopicIds.has(id));
+
+        // Find topics to unsubscribe from (in current but not in new)
+        const toUnsubscribe = [...currentTopicIds].filter(
+          (id) => !newTopicIds.has(id)
+        );
+
+        if (toSubscribe.length > 0) {
+          const subResult = await subscribeContactToTopics(
+            selectedContact.id,
+            organizationId,
+            toSubscribe
+          );
+          if (!subResult.success) {
+            toast.error("Error", { description: subResult.error });
+            return;
+          }
+        }
+
+        if (toUnsubscribe.length > 0) {
+          const unsubResult = await unsubscribeContactFromTopics(
+            selectedContact.id,
+            organizationId,
+            toUnsubscribe
+          );
+          if (!unsubResult.success) {
+            toast.error("Error", { description: unsubResult.error });
+            return;
+          }
+        }
+      }
+
+      toast.success("Contact updated", {
+        description: "The contact has been updated.",
+      });
+      setEditDialogOpen(false);
+      setSelectedContact(null);
+      router.refresh();
     });
   };
 
@@ -246,6 +370,53 @@ export function ContactsTable({
         toast.error("Error", {
           description: result.error,
         });
+      }
+    });
+  };
+
+  // Bulk action handlers
+  const handleBulkSubscribe = async () => {
+    if (selectedContactIds.length === 0 || !selectedTopicId) return;
+
+    startTransition(async () => {
+      const result = await bulkSubscribeContactsToTopics(
+        organizationId,
+        selectedContactIds,
+        [selectedTopicId]
+      );
+      if (result.success) {
+        toast.success("Contacts subscribed", {
+          description: `${result.count} contacts subscribed to topic.`,
+        });
+        setBulkSubscribeDialogOpen(false);
+        setSelectedTopicId("");
+        setRowSelection({});
+        router.refresh();
+      } else {
+        toast.error("Error", { description: result.error });
+      }
+    });
+  };
+
+  const handleBulkUnsubscribe = async () => {
+    if (selectedContactIds.length === 0 || !selectedTopicId) return;
+
+    startTransition(async () => {
+      const result = await bulkUnsubscribeContactsFromTopics(
+        organizationId,
+        selectedContactIds,
+        [selectedTopicId]
+      );
+      if (result.success) {
+        toast.success("Contacts unsubscribed", {
+          description: `${result.count} contacts unsubscribed from topic.`,
+        });
+        setBulkUnsubscribeDialogOpen(false);
+        setSelectedTopicId("");
+        setRowSelection({});
+        router.refresh();
+      } else {
+        toast.error("Error", { description: result.error });
       }
     });
   };
@@ -316,6 +487,30 @@ export function ContactsTable({
                 ))}
               </SelectContent>
             </Select>
+          )}
+
+          {/* Bulk Actions - shown when contacts are selected */}
+          {canEdit && selectedContactIds.length > 0 && topics.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Tags className="mr-2 h-4 w-4" />
+                  Actions ({selectedContactIds.length})
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => setBulkSubscribeDialogOpen(true)}
+                >
+                  Subscribe to topic
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setBulkUnsubscribeDialogOpen(true)}
+                >
+                  Unsubscribe from topic
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {/* Import Button - placeholder */}
@@ -519,6 +714,109 @@ export function ContactsTable({
         open={detailsSheetOpen}
         userRole={userRole}
       />
+
+      {/* Bulk Subscribe Dialog */}
+      <Dialog
+        onOpenChange={(open) => {
+          setBulkSubscribeDialogOpen(open);
+          if (!open) setSelectedTopicId("");
+        }}
+        open={bulkSubscribeDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Subscribe to Topic</DialogTitle>
+            <DialogDescription>
+              Subscribe {selectedContactIds.length} selected contact
+              {selectedContactIds.length === 1 ? "" : "s"} to a topic.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="bulk-subscribe-topic">Select topic</Label>
+            <Select onValueChange={setSelectedTopicId} value={selectedTopicId}>
+              <SelectTrigger className="mt-2" id="bulk-subscribe-topic">
+                <SelectValue placeholder="Choose a topic" />
+              </SelectTrigger>
+              <SelectContent>
+                {topics.map((topic) => (
+                  <SelectItem key={topic.id} value={topic.id}>
+                    {topic.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setBulkSubscribeDialogOpen(false);
+                setSelectedTopicId("");
+              }}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={isPending || !selectedTopicId}
+              onClick={handleBulkSubscribe}
+            >
+              {isPending ? "Subscribing..." : "Subscribe"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Unsubscribe Dialog */}
+      <Dialog
+        onOpenChange={(open) => {
+          setBulkUnsubscribeDialogOpen(open);
+          if (!open) setSelectedTopicId("");
+        }}
+        open={bulkUnsubscribeDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsubscribe from Topic</DialogTitle>
+            <DialogDescription>
+              Unsubscribe {selectedContactIds.length} selected contact
+              {selectedContactIds.length === 1 ? "" : "s"} from a topic.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="bulk-unsubscribe-topic">Select topic</Label>
+            <Select onValueChange={setSelectedTopicId} value={selectedTopicId}>
+              <SelectTrigger className="mt-2" id="bulk-unsubscribe-topic">
+                <SelectValue placeholder="Choose a topic" />
+              </SelectTrigger>
+              <SelectContent>
+                {topics.map((topic) => (
+                  <SelectItem key={topic.id} value={topic.id}>
+                    {topic.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setBulkUnsubscribeDialogOpen(false);
+                setSelectedTopicId("");
+              }}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={isPending || !selectedTopicId}
+              onClick={handleBulkUnsubscribe}
+              variant="destructive"
+            >
+              {isPending ? "Unsubscribing..." : "Unsubscribe"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

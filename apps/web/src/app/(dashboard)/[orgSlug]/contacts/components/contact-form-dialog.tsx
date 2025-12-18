@@ -120,10 +120,22 @@ export function ContactFormDialog({
       const newPropertiesStr = JSON.stringify(propertiesObj);
       const propertiesChanged = oldPropertiesStr !== newPropertiesStr;
 
+      // Check if topic subscriptions changed
+      const currentTopicIds = new Set(
+        contact?.topics
+          ?.filter((t) => t.status === "subscribed")
+          .map((t) => t.topicId) || []
+      );
+      const newTopicIds = new Set(selectedTopicIds);
+      const topicsChanged =
+        currentTopicIds.size !== newTopicIds.size ||
+        [...currentTopicIds].some((id) => !newTopicIds.has(id));
+
       onSubmit({
         email: email !== contact?.email ? email : undefined,
         status: status !== contact?.status ? status : undefined,
         properties: propertiesChanged ? propertiesObj : undefined,
+        topicIds: topicsChanged ? selectedTopicIds : undefined,
       });
     }
   };
@@ -208,10 +220,14 @@ export function ContactFormDialog({
               </Select>
             </div>
 
-            {/* Topics (only for create mode) */}
-            {mode === "create" && topics.length > 0 && (
+            {/* Topics */}
+            {topics.length > 0 && (
               <div className="grid gap-2">
-                <Label>Subscribe to topics</Label>
+                <Label>
+                  {mode === "create"
+                    ? "Subscribe to topics"
+                    : "Topic subscriptions"}
+                </Label>
                 <div className="max-h-[150px] space-y-2 overflow-y-auto rounded-md border p-3">
                   {topics.map((topic) => (
                     <div className="flex items-center space-x-2" key={topic.id}>

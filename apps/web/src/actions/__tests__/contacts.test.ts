@@ -10,6 +10,8 @@ import {
   vi,
 } from "vitest";
 import {
+  bulkSubscribeContactsToTopics,
+  bulkUnsubscribeContactsFromTopics,
   createContact,
   deleteContact,
   getContact,
@@ -55,6 +57,20 @@ const testTopic = {
   name: "Newsletter",
   slug: "newsletter",
   description: "Weekly newsletter",
+  public: true,
+  doubleOptIn: false,
+  subscriberCount: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: testUser.id,
+};
+
+const testTopic2 = {
+  id: "test-contacts-topic-2",
+  organizationId: testOrganization.id,
+  name: "Product Updates",
+  slug: "product-updates",
+  description: "Product release notes",
   public: true,
   doubleOptIn: false,
   subscriberCount: 0,
@@ -121,13 +137,21 @@ beforeAll(async () => {
       set: { role: testMember.role },
     });
 
-  // Insert test topic
+  // Insert test topics
   await db
     .insert(topic)
     .values(testTopic)
     .onConflictDoUpdate({
       target: topic.id,
       set: { name: testTopic.name },
+    });
+
+  await db
+    .insert(topic)
+    .values(testTopic2)
+    .onConflictDoUpdate({
+      target: topic.id,
+      set: { name: testTopic2.name },
     });
 });
 
@@ -136,11 +160,15 @@ beforeEach(async () => {
   await db
     .delete(contact)
     .where(eq(contact.organizationId, testOrganization.id));
-  // Reset topic subscriber count
+  // Reset topic subscriber counts
   await db
     .update(topic)
     .set({ subscriberCount: 0 })
     .where(eq(topic.id, testTopic.id));
+  await db
+    .update(topic)
+    .set({ subscriberCount: 0 })
+    .where(eq(topic.id, testTopic2.id));
 });
 
 // Clean up after all tests
@@ -609,6 +637,251 @@ describe("Contacts Server Actions", () => {
         where: eq(topic.id, testTopic.id),
       });
       expect(topicData?.subscriberCount).toBe(0);
+    });
+  });
+
+  describe("bulkSubscribeContactsToTopics", () => {
+    it("should subscribe multiple contacts to a topic", async () => {
+      // Create test contacts
+      const contact1 = await createContact(testOrganization.id, {
+        email: "bulk1@example.com",
+      });
+      const contact2 = await createContact(testOrganization.id, {
+        email: "bulk2@example.com",
+      });
+      const contact3 = await createContact(testOrganization.id, {
+        email: "bulk3@example.com",
+      });
+      expect(contact1.success && contact2.success && contact3.success).toBe(
+        true
+      );
+      if (
+        !contact1.success ||
+        !contact2.success ||
+        !contact3.success
+      ) {
+        return;
+      }
+
+      const contactIds = [
+        contact1.contact.id,
+        contact2.contact.id,
+        contact3.contact.id,
+      ];
+
+      const result = await bulkSubscribeContactsToTopics(
+        testOrganization.id,
+        contactIds,
+        [testTopic.id]
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.count).toBe(3);
+
+      // Verify topic subscriber count
+      const topicData = await db.query.topic.findFirst({
+        where: eq(topic.id, testTopic.id),
+      });
+      expect(topicData?.subscriberCount).toBe(3);
+
+      // Verify each contact is subscribed
+      for (const id of contactIds) {
+        const contactResult = await getContact(id, testOrganization.id);
+        expect(contactResult.success).toBe(true);
+        if (contactResult.success) {
+          expect(contactResult.contact.topics).toHaveLength(1);
+          expect(contactResult.contact.topics?.[0].status).toBe("subscribed");
+        }
+      }
+    });
+
+    it("should skip contacts already subscribed to topic", async () => {
+      // Create contacts - one already subscribed
+      const contact1 = await createContact(testOrganization.id, {
+        email: "already-sub@example.com",
+        topicIds: [testTopic.id],
+      });
+      const contact2 = await createContact(testOrganization.id, {
+        email: "new-sub@example.com",
+      });
+      expect(contact1.success && contact2.success).toBe(true);
+      if (!contact1.success || !contact2.success) {
+        return;
+      }
+
+      const result = await bulkSubscribeContactsToTopics(
+        testOrganization.id,
+        [contact1.contact.id, contact2.contact.id],
+        [testTopic.id]
+      );
+
+      expect(result.success).toBe(true);
+      // Only 1 new subscription (contact2)
+      expect(result.count).toBe(1);
+
+      // Topic count should be 2 (1 from creation + 1 from bulk)
+      const topicData = await db.query.topic.findFirst({
+        where: eq(topic.id, testTopic.id),
+      });
+      expect(topicData?.subscriberCount).toBe(2);
+    });
+
+    it("should subscribe contacts to multiple topics", async () => {
+      const contact1 = await createContact(testOrganization.id, {
+        email: "multi-topic@example.com",
+      });
+      expect(contact1.success).toBe(true);
+      if (!contact1.success) {
+        return;
+      }
+
+      const result = await bulkSubscribeContactsToTopics(
+        testOrganization.id,
+        [contact1.contact.id],
+        [testTopic.id, testTopic2.id]
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.count).toBe(1);
+
+      // Verify contact has both subscriptions
+      const contactResult = await getContact(
+        contact1.contact.id,
+        testOrganization.id
+      );
+      expect(contactResult.success).toBe(true);
+      if (contactResult.success) {
+        expect(contactResult.contact.topics).toHaveLength(2);
+      }
+
+      // Verify both topic counts
+      const topic1Data = await db.query.topic.findFirst({
+        where: eq(topic.id, testTopic.id),
+      });
+      const topic2Data = await db.query.topic.findFirst({
+        where: eq(topic.id, testTopic2.id),
+      });
+      expect(topic1Data?.subscriberCount).toBe(1);
+      expect(topic2Data?.subscriberCount).toBe(1);
+    });
+  });
+
+  describe("bulkUnsubscribeContactsFromTopics", () => {
+    it("should unsubscribe multiple contacts from a topic", async () => {
+      // Create test contacts subscribed to topic
+      const contact1 = await createContact(testOrganization.id, {
+        email: "unsub1@example.com",
+        topicIds: [testTopic.id],
+      });
+      const contact2 = await createContact(testOrganization.id, {
+        email: "unsub2@example.com",
+        topicIds: [testTopic.id],
+      });
+      expect(contact1.success && contact2.success).toBe(true);
+      if (!contact1.success || !contact2.success) {
+        return;
+      }
+
+      // Verify initial count
+      let topicData = await db.query.topic.findFirst({
+        where: eq(topic.id, testTopic.id),
+      });
+      expect(topicData?.subscriberCount).toBe(2);
+
+      const result = await bulkUnsubscribeContactsFromTopics(
+        testOrganization.id,
+        [contact1.contact.id, contact2.contact.id],
+        [testTopic.id]
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.count).toBe(2);
+
+      // Verify topic subscriber count is 0
+      topicData = await db.query.topic.findFirst({
+        where: eq(topic.id, testTopic.id),
+      });
+      expect(topicData?.subscriberCount).toBe(0);
+
+      // Verify contacts are unsubscribed
+      const contact1Result = await getContact(
+        contact1.contact.id,
+        testOrganization.id
+      );
+      expect(contact1Result.success).toBe(true);
+      if (contact1Result.success) {
+        expect(contact1Result.contact.topics?.[0].status).toBe("unsubscribed");
+      }
+    });
+
+    it("should only unsubscribe from specified topic", async () => {
+      // Create contact subscribed to both topics
+      const contact1 = await createContact(testOrganization.id, {
+        email: "multi-unsub@example.com",
+        topicIds: [testTopic.id, testTopic2.id],
+      });
+      expect(contact1.success).toBe(true);
+      if (!contact1.success) {
+        return;
+      }
+
+      // Unsubscribe only from first topic
+      const result = await bulkUnsubscribeContactsFromTopics(
+        testOrganization.id,
+        [contact1.contact.id],
+        [testTopic.id]
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.count).toBe(1);
+
+      // Verify contact is still subscribed to second topic
+      const contactResult = await getContact(
+        contact1.contact.id,
+        testOrganization.id
+      );
+      expect(contactResult.success).toBe(true);
+      if (contactResult.success) {
+        const topic1Sub = contactResult.contact.topics?.find(
+          (t) => t.topicId === testTopic.id
+        );
+        const topic2Sub = contactResult.contact.topics?.find(
+          (t) => t.topicId === testTopic2.id
+        );
+        expect(topic1Sub?.status).toBe("unsubscribed");
+        expect(topic2Sub?.status).toBe("subscribed");
+      }
+
+      // Verify topic counts
+      const topic1Data = await db.query.topic.findFirst({
+        where: eq(topic.id, testTopic.id),
+      });
+      const topic2Data = await db.query.topic.findFirst({
+        where: eq(topic.id, testTopic2.id),
+      });
+      expect(topic1Data?.subscriberCount).toBe(0);
+      expect(topic2Data?.subscriberCount).toBe(1);
+    });
+
+    it("should handle unsubscribing contacts not subscribed to topic", async () => {
+      // Create contact not subscribed to any topic
+      const contact1 = await createContact(testOrganization.id, {
+        email: "not-subscribed@example.com",
+      });
+      expect(contact1.success).toBe(true);
+      if (!contact1.success) {
+        return;
+      }
+
+      const result = await bulkUnsubscribeContactsFromTopics(
+        testOrganization.id,
+        [contact1.contact.id],
+        [testTopic.id]
+      );
+
+      // Should succeed but with 0 count
+      expect(result.success).toBe(true);
+      expect(result.count).toBe(0);
     });
   });
 });

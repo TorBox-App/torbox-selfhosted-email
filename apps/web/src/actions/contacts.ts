@@ -638,6 +638,186 @@ export async function subscribeContactToTopics(
 }
 
 /**
+ * Bulk subscribe multiple contacts to topics
+ */
+export async function bulkSubscribeContactsToTopics(
+  organizationId: string,
+  contactIds: string[],
+  topicIds: string[]
+): Promise<{ success: boolean; error?: string; count?: number }> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    if (!["owner", "admin"].includes(access.role)) {
+      return {
+        success: false,
+        error: "Only owners and admins can bulk subscribe contacts",
+      };
+    }
+
+    let subscribed = 0;
+
+    for (const contactId of contactIds) {
+      // Get current subscriptions for this contact
+      const existing = await db.query.contact.findFirst({
+        where: (c, { and, eq }) =>
+          and(eq(c.id, contactId), eq(c.organizationId, organizationId)),
+        with: { topics: true },
+      });
+
+      if (!existing) continue;
+
+      const currentTopicIds = new Set(
+        existing.topics
+          .filter((t) => t.status === "subscribed")
+          .map((t) => t.topicId)
+      );
+
+      const newTopicIds = topicIds.filter((id) => !currentTopicIds.has(id));
+      if (newTopicIds.length === 0) continue;
+
+      // Check for resubscriptions
+      const previousSubs = existing.topics
+        .filter(
+          (t) => t.status === "unsubscribed" && newTopicIds.includes(t.topicId)
+        )
+        .map((t) => t.topicId);
+
+      if (previousSubs.length > 0) {
+        await db
+          .update(contactTopic)
+          .set({
+            status: "subscribed",
+            subscribedAt: new Date(),
+            unsubscribedAt: null,
+          })
+          .where(
+            and(
+              eq(contactTopic.contactId, contactId),
+              or(...previousSubs.map((id) => eq(contactTopic.topicId, id)))
+            )
+          );
+      }
+
+      // Insert truly new subscriptions
+      const trulyNew = newTopicIds.filter((id) => !previousSubs.includes(id));
+      if (trulyNew.length > 0) {
+        await db.insert(contactTopic).values(
+          trulyNew.map((topicId) => ({
+            contactId,
+            topicId,
+            status: "subscribed",
+          }))
+        );
+      }
+
+      // Update topic counts
+      for (const topicId of newTopicIds) {
+        await db
+          .update(topic)
+          .set({ subscriberCount: sql`${topic.subscriberCount} + 1` })
+          .where(eq(topic.id, topicId));
+      }
+
+      subscribed++;
+    }
+
+    revalidatePath("/[orgSlug]/contacts", "page");
+    return { success: true, count: subscribed };
+  } catch (error) {
+    console.error("Error bulk subscribing contacts:", error);
+    return { success: false, error: "Failed to subscribe contacts" };
+  }
+}
+
+/**
+ * Bulk unsubscribe multiple contacts from topics
+ */
+export async function bulkUnsubscribeContactsFromTopics(
+  organizationId: string,
+  contactIds: string[],
+  topicIds: string[]
+): Promise<{ success: boolean; error?: string; count?: number }> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    if (!["owner", "admin"].includes(access.role)) {
+      return {
+        success: false,
+        error: "Only owners and admins can bulk unsubscribe contacts",
+      };
+    }
+
+    // Count how many subscriptions exist before updating
+    const existingSubscriptions = await db
+      .selectDistinct({ contactId: contactTopic.contactId })
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.status, "subscribed"),
+          or(...contactIds.map((id) => eq(contactTopic.contactId, id))),
+          or(...topicIds.map((id) => eq(contactTopic.topicId, id)))
+        )
+      );
+
+    const unsubscribedCount = existingSubscriptions.length;
+
+    // Update all subscriptions at once
+    if (unsubscribedCount > 0) {
+      await db
+        .update(contactTopic)
+        .set({
+          status: "unsubscribed",
+          unsubscribedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(contactTopic.status, "subscribed"),
+            or(...contactIds.map((id) => eq(contactTopic.contactId, id))),
+            or(...topicIds.map((id) => eq(contactTopic.topicId, id)))
+          )
+        );
+
+      // Update topic counts (decrement for each contact-topic pair)
+      for (const topicId of topicIds) {
+        const countResult = await db
+          .select({ count: count() })
+          .from(contactTopic)
+          .where(
+            and(
+              eq(contactTopic.topicId, topicId),
+              eq(contactTopic.status, "subscribed")
+            )
+          );
+
+        await db
+          .update(topic)
+          .set({ subscriberCount: countResult[0]?.count ?? 0 })
+          .where(eq(topic.id, topicId));
+      }
+    }
+
+    revalidatePath("/[orgSlug]/contacts", "page");
+    return { success: true, count: unsubscribedCount };
+  } catch (error) {
+    console.error("Error bulk unsubscribing contacts:", error);
+    return { success: false, error: "Failed to unsubscribe contacts" };
+  }
+}
+
+/**
  * Unsubscribe a contact from topics
  */
 export async function unsubscribeContactFromTopics(
