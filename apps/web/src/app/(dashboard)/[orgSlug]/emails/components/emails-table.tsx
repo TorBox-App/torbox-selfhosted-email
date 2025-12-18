@@ -38,9 +38,10 @@ import { columns } from "./columns";
 type EmailsTableProps = {
   data: EmailListItem[];
   orgSlug: string;
+  days: number;
 };
 
-export function EmailsTable({ data, orgSlug }: EmailsTableProps) {
+export function EmailsTable({ data, orgSlug, days }: EmailsTableProps) {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([
     { id: "sentAt", desc: true },
@@ -104,22 +105,36 @@ export function EmailsTable({ data, orgSlug }: EmailsTableProps) {
     <div className="w-full space-y-4">
       {/* Filters Bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center space-x-2">
+        <div className="flex flex-1 items-center gap-3">
           <div className="relative max-w-sm flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9"
               onChange={(event) => setGlobalFilter(String(event.target.value))}
-              placeholder="Search recipients, subject, or sender..."
+              placeholder="Search emails..."
               value={globalFilter ?? ""}
             />
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-[200px]">
-            <Label className="sr-only" htmlFor="status-filter">
-              Status Filter
-            </Label>
+        <div className="flex items-center gap-2">
+          {/* Button Group: Time Range | Status */}
+          <div className="flex">
+            <Select
+              onValueChange={(value) => {
+                router.push(`/${orgSlug}/emails?days=${value}`);
+              }}
+              value={String(days)}
+            >
+              <SelectTrigger className="w-[150px] rounded-r-none border-r-0 focus:z-10">
+                <SelectValue placeholder="Time range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Last 24 hours</SelectItem>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+              </SelectContent>
+            </Select>
             <Select
               onValueChange={(value) => {
                 const column = table.getColumn("status");
@@ -135,21 +150,21 @@ export function EmailsTable({ data, orgSlug }: EmailsTableProps) {
                   : "all"
               }
             >
-              <SelectTrigger id="status-filter">
-                <SelectValue placeholder="All Statuses" />
+              <SelectTrigger className="w-[140px] rounded-l-none focus:z-10">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="clicked">Clicked</SelectItem>
-                <SelectItem value="opened">Opened</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="opened">Opened</SelectItem>
+                <SelectItem value="clicked">Clicked</SelectItem>
                 <SelectItem value="bounced">Bounced</SelectItem>
                 <SelectItem value="complained">Complained</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
           <Button size="icon" variant="outline">
             <Download className="h-4 w-4" />
             <span className="sr-only">Export</span>

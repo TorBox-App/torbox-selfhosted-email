@@ -655,11 +655,7 @@ describe("Contacts Server Actions", () => {
       expect(contact1.success && contact2.success && contact3.success).toBe(
         true
       );
-      if (
-        !contact1.success ||
-        !contact2.success ||
-        !contact3.success
-      ) {
+      if (!(contact1.success && contact2.success && contact3.success)) {
         return;
       }
 
@@ -705,7 +701,7 @@ describe("Contacts Server Actions", () => {
         email: "new-sub@example.com",
       });
       expect(contact1.success && contact2.success).toBe(true);
-      if (!contact1.success || !contact2.success) {
+      if (!(contact1.success && contact2.success)) {
         return;
       }
 
@@ -778,7 +774,7 @@ describe("Contacts Server Actions", () => {
         topicIds: [testTopic.id],
       });
       expect(contact1.success && contact2.success).toBe(true);
-      if (!contact1.success || !contact2.success) {
+      if (!(contact1.success && contact2.success)) {
         return;
       }
 

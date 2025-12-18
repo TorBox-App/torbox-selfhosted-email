@@ -65,9 +65,17 @@ async function fetchEmails(
             limit: 500, // Get more to aggregate by message
           });
         } catch (error) {
+          // Log detailed error for debugging role assumption issues
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           console.error(
-            `[fetchEmails] Failed to fetch emails for account ${account.id}:`,
-            error
+            `[fetchEmails] Failed to fetch emails for account ${account.id} (${account.accountId}):`,
+            {
+              error: errorMessage,
+              roleArn: account.roleArn,
+              region: account.region,
+              hasExternalId: !!account.externalId,
+            }
           );
           return [];
         }
@@ -216,7 +224,11 @@ export default async function EmailsPage({
 
       {/* Emails Table */}
       <div className="@container/main px-4 lg:px-6">
-        <EmailsTable data={emails} orgSlug={orgSlug} />
+        <EmailsTable
+          data={emails}
+          days={Number.parseInt(days, 10)}
+          orgSlug={orgSlug}
+        />
       </div>
     </>
   );

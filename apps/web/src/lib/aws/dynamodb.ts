@@ -108,6 +108,14 @@ export async function queryEmailEvents(
       to: normalizeRecipients(event.to),
     }));
   } catch (error) {
+    // Handle case where DynamoDB table doesn't exist (user hasn't deployed history tracking)
+    if (
+      error instanceof Error &&
+      (error.name === "ResourceNotFoundException" ||
+        error.message.includes("Requested resource not found"))
+    ) {
+      return [];
+    }
     if (error instanceof Error) {
       throw new Error(`Failed to query DynamoDB: ${error.message}`);
     }
