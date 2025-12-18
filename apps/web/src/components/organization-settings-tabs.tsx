@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryState } from "nuqs";
+import { OrganizationSettingsApiKeys } from "@/components/organization-settings-api-keys";
 import { OrganizationSettingsAwsAccounts } from "@/components/organization-settings-aws-accounts";
 import { OrganizationSettingsBilling } from "@/components/organization-settings-billing";
 import { OrganizationSettingsBrandKits } from "@/components/organization-settings-brand-kits";
@@ -30,10 +31,11 @@ export function OrganizationSettingsTabs({
 
   return (
     <Tabs onValueChange={setActiveTab} value={activeTab}>
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="general">General</TabsTrigger>
         <TabsTrigger value="brand-kits">Brand Kits</TabsTrigger>
         <TabsTrigger value="aws-accounts">AWS Accounts</TabsTrigger>
+        <TabsTrigger value="api-keys">API Keys</TabsTrigger>
         <TabsTrigger value="members">Members</TabsTrigger>
         <TabsTrigger value="billing">Billing</TabsTrigger>
       </TabsList>
@@ -53,6 +55,12 @@ export function OrganizationSettingsTabs({
         <OrganizationSettingsAwsAccounts
           organization={organization}
           planId={planId}
+          userRole={userRole}
+        />
+      </TabsContent>
+      <TabsContent className="mt-6" value="api-keys">
+        <OrganizationSettingsApiKeys
+          organization={organization}
           userRole={userRole}
         />
       </TabsContent>
