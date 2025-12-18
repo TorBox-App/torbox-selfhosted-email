@@ -160,7 +160,7 @@ export default function CLIReferencePage() {
             <div className="space-y-4">
               <div>
                 <code className="rounded bg-muted px-2 py-1">
-                  --domain &lt;domain&gt;
+                  -d, --domain &lt;domain&gt;
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Domain to configure for sending emails (e.g., yourdomain.com)
@@ -168,7 +168,7 @@ export default function CLIReferencePage() {
               </div>
               <div>
                 <code className="rounded bg-muted px-2 py-1">
-                  --region &lt;region&gt;
+                  -r, --region &lt;region&gt;
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   AWS region to deploy infrastructure (default: us-east-1)
@@ -185,7 +185,7 @@ export default function CLIReferencePage() {
               </div>
               <div>
                 <code className="rounded bg-muted px-2 py-1">
-                  --provider &lt;provider&gt;
+                  -p, --provider &lt;provider&gt;
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Hosting provider: vercel, lambda, ecs, or ec2
@@ -273,6 +273,24 @@ export default function CLIReferencePage() {
 
         <Card className="mb-4">
           <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --account &lt;account&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  AWS account ID or alias to check status for
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
             <CardTitle className="text-lg">What It Displays</CardTitle>
           </CardHeader>
           <CardContent>
@@ -286,6 +304,60 @@ export default function CLIReferencePage() {
               </li>
               <li>DKIM tokens for DNS configuration</li>
               <li>Links to local console and documentation</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* wraps email status */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email status
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Display detailed status for email infrastructure specifically,
+          including SES domains, verification status, and configuration details.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli email status" />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --account &lt;account&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  AWS account ID or alias to check status for
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">What It Displays</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>SES domain verification and DKIM status</li>
+              <li>MAIL FROM domain configuration</li>
+              <li>Active features and preset</li>
+              <li>Deployed AWS resources</li>
+              <li>DNS records that need configuration</li>
             </ul>
           </CardContent>
         </Card>
@@ -334,14 +406,6 @@ export default function CLIReferencePage() {
                     (required) Domain name to add
                   </span>
                 </li>
-                <li>
-                  <code className="rounded bg-muted px-2 py-1">
-                    -r, --region &lt;region&gt;
-                  </code>{" "}
-                  <span className="text-muted-foreground">
-                    AWS region (uses saved connection region if not specified)
-                  </span>
-                </li>
               </ul>
             </CardContent>
           </Card>
@@ -372,24 +436,6 @@ export default function CLIReferencePage() {
             </CardHeader>
             <CardContent>
               <CLICommand command="npx @wraps.dev/cli email domains list" />
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle className="text-lg">Options</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <code className="rounded bg-muted px-2 py-1">
-                    -r, --region &lt;region&gt;
-                  </code>{" "}
-                  <span className="text-muted-foreground">
-                    AWS region (uses saved connection region if not specified)
-                  </span>
-                </li>
-              </ul>
             </CardContent>
           </Card>
         </div>
@@ -424,14 +470,6 @@ export default function CLIReferencePage() {
                   </code>{" "}
                   <span className="text-muted-foreground">
                     (required) Domain name to get DKIM tokens for
-                  </span>
-                </li>
-                <li>
-                  <code className="rounded bg-muted px-2 py-1">
-                    -r, --region &lt;region&gt;
-                  </code>{" "}
-                  <span className="text-muted-foreground">
-                    AWS region (uses saved connection region if not specified)
                   </span>
                 </li>
               </ul>
@@ -480,14 +518,6 @@ export default function CLIReferencePage() {
                   </code>{" "}
                   <span className="text-muted-foreground">
                     (required) Domain name to verify
-                  </span>
-                </li>
-                <li>
-                  <code className="rounded bg-muted px-2 py-1">
-                    -r, --region &lt;region&gt;
-                  </code>{" "}
-                  <span className="text-muted-foreground">
-                    AWS region (uses saved connection region if not specified)
                   </span>
                 </li>
               </ul>
@@ -560,14 +590,6 @@ export default function CLIReferencePage() {
                   </code>{" "}
                   <span className="text-muted-foreground">
                     Skip confirmation prompt (use with caution)
-                  </span>
-                </li>
-                <li>
-                  <code className="rounded bg-muted px-2 py-1">
-                    -r, --region &lt;region&gt;
-                  </code>{" "}
-                  <span className="text-muted-foreground">
-                    AWS region (uses saved connection region if not specified)
                   </span>
                 </li>
               </ul>
@@ -732,6 +754,75 @@ export default function CLIReferencePage() {
         </Card>
       </section>
 
+      {/* wraps email sync */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email sync
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Synchronize your local configuration with deployed infrastructure.
+          Useful after CLI updates to apply new features or fixes to existing
+          deployments.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli email sync [options]" />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  -r, --region &lt;region&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  AWS region where infrastructure is deployed
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">-y, --yes</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Skip confirmation prompts
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--preview</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Preview changes without applying them
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">What It Does</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>
+                Detects differences between local config and deployed
+                infrastructure
+              </li>
+              <li>Applies CLI updates (bug fixes, new features) to resources</li>
+              <li>Updates Lambda functions and IAM policies</li>
+              <li>Does not change your configuration preset or features</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* wraps console */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
@@ -853,6 +944,65 @@ export default function CLIReferencePage() {
         </Card>
       </section>
 
+      {/* wraps email destroy */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email destroy
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Remove email infrastructure specifically. Use this when you want to
+          remove only the email service while keeping other services intact.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli email destroy [options]" />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">-f, --force</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Skip confirmation prompt (use with caution)
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--preview</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Preview what would be destroyed without making changes
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">What It Removes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>Email-specific IAM roles and policies</li>
+              <li>DynamoDB tables (email history will be lost)</li>
+              <li>Lambda functions for event processing</li>
+              <li>EventBridge rules and SQS queues</li>
+              <li>Route53 DNS records (DKIM, DMARC, MAIL FROM) if confirmed</li>
+              <li>Local metadata for email service</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* wraps destroy */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
@@ -936,6 +1086,141 @@ export default function CLIReferencePage() {
         </Card>
       </section>
 
+      {/* wraps telemetry */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps telemetry
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Manage anonymous telemetry settings. Wraps collects anonymous usage
+          data to improve the CLI. No personal information, domains, or AWS
+          credentials are ever collected.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <CLICommand command="npx @wraps.dev/cli telemetry         # Show current status" />
+            <CLICommand command="npx @wraps.dev/cli telemetry enable  # Enable telemetry" />
+            <CLICommand command="npx @wraps.dev/cli telemetry disable # Disable telemetry" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">What We Collect</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>Command names and success/failure status</li>
+              <li>CLI version and operating system</li>
+              <li>
+                <strong>Never collected:</strong> domains, AWS credentials,
+                email content, or any PII
+              </li>
+            </ul>
+            <p className="mt-4 text-muted-foreground text-sm">
+              You can also disable telemetry by setting the environment variable{" "}
+              <code className="rounded bg-muted px-1 py-0.5">
+                WRAPS_TELEMETRY_DISABLED=1
+              </code>
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* wraps completion */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps completion
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Generate shell completion scripts for bash, zsh, or fish. Enables
+          tab-completion for all Wraps commands and options.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli completion" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Setup</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-muted-foreground text-sm">
+              Add the output to your shell configuration file:
+            </p>
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-sm">
+                <strong>Bash:</strong> Add to ~/.bashrc
+              </p>
+              <p className="text-muted-foreground text-sm">
+                <strong>Zsh:</strong> Add to ~/.zshrc
+              </p>
+              <p className="text-muted-foreground text-sm">
+                <strong>Fish:</strong> Add to ~/.config/fish/config.fish
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* wraps dashboard update-role */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps dashboard update-role
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Update IAM role permissions for the hosted Wraps dashboard. Use this
+          after upgrading your deployment to ensure the dashboard has access to
+          new features.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli dashboard update-role [options]" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  -r, --region &lt;region&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  AWS region where infrastructure is deployed
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">-f, --force</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Skip confirmation prompt
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Configuration Files */}
       <section className="mb-12">
         <h2 className="mb-6 font-bold text-2xl">Configuration Files</h2>
@@ -951,7 +1236,7 @@ export default function CLIReferencePage() {
               </div>
               <div>
                 <code className="rounded bg-muted px-2 py-1">
-                  ~/.wraps/metadata/
+                  ~/.wraps/connections/
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Deployment metadata files (one per AWS account/region
@@ -960,7 +1245,7 @@ export default function CLIReferencePage() {
               </div>
               <div>
                 <code className="rounded bg-muted px-2 py-1">
-                  ~/.wraps/stacks/
+                  ~/.wraps/pulumi/
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
                   Pulumi stack state files for infrastructure management
