@@ -299,14 +299,20 @@ function MotionHighlight<T extends string>({
         ? controlledItems
           ? render(children)
           : render(
-              React.Children.map(children, (child, index) => (
-                <MotionHighlightItem
-                  className={props?.itemsClassName}
-                  key={index}
-                >
-                  {child}
-                </MotionHighlightItem>
-              ))
+              React.Children.map(children, (child, idx) => {
+                const childKey =
+                  React.isValidElement(child) && child.key != null
+                    ? child.key
+                    : `${id}-item-${idx}`;
+                return (
+                  <MotionHighlightItem
+                    className={props?.itemsClassName}
+                    key={childKey}
+                  >
+                    {child}
+                  </MotionHighlightItem>
+                );
+              })
             )
         : children}
     </MotionHighlightContext.Provider>

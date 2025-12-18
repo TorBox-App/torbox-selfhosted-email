@@ -180,7 +180,7 @@ export function OrganizationSettingsApiKeys({
       permissions,
       expiresInDays:
         createExpiresInDays !== "never"
-          ? Number.parseInt(createExpiresInDays)
+          ? Number.parseInt(createExpiresInDays, 10)
           : undefined,
     });
 

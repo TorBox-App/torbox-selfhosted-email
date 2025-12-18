@@ -3,7 +3,7 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface SectionCardProps {
+type SectionCardProps = {
   children: React.ReactNode;
   header?: React.ReactNode;
   footer?: {
@@ -13,7 +13,7 @@ interface SectionCardProps {
     ctaLink: string;
   };
   className?: string;
-}
+};
 
 export function SectionCard({
   children,
@@ -58,7 +58,7 @@ export function SectionCard({
   );
 }
 
-interface SectionWrapperProps {
+type SectionWrapperProps = {
   children: React.ReactNode;
   title: string;
   description?: string;
@@ -66,7 +66,7 @@ interface SectionWrapperProps {
   premium?: boolean;
   id?: string;
   className?: string;
-}
+};
 
 export function SectionWrapper({
   children,
@@ -109,11 +109,11 @@ export function SectionWrapper({
   );
 }
 
-interface IconBoxProps {
+type IconBoxProps = {
   icon: React.ComponentType<{ className?: string }>;
   highlighted?: boolean;
   size?: "sm" | "md" | "lg";
-}
+};
 
 export function IconBox({
   icon: Icon,
@@ -145,12 +145,12 @@ export function IconBox({
   );
 }
 
-interface FeatureItemProps {
+type FeatureItemProps = {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
   highlighted?: boolean;
-}
+};
 
 export function FeatureItem({
   icon: Icon,
@@ -173,11 +173,11 @@ export function FeatureItem({
   );
 }
 
-interface TabBarProps {
+type TabBarProps = {
   tabs: { key: string; label: string }[];
   activeTab: string;
   onTabChange: (tab: string) => void;
-}
+};
 
 export function TabBar({ tabs, activeTab, onTabChange }: TabBarProps) {
   return (

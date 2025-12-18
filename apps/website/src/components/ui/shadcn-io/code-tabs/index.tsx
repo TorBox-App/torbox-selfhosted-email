@@ -48,7 +48,7 @@ type CodeTabsProps = {
   };
   copyButton?: boolean;
   /** Called when copy is attempted. Return false to prevent copy action. */
-  onCopy?: (content: string) => void | boolean;
+  onCopy?: (content: string) => boolean | undefined;
 } & Omit<TabsProps, "children">;
 
 function CodeTabsContent({
@@ -65,7 +65,7 @@ function CodeTabsContent({
   lang?: string;
   themes?: { light: string; dark: string };
   copyButton?: boolean;
-  onCopy?: (content: string) => void | boolean;
+  onCopy?: (content: string) => boolean | undefined;
 }) {
   const resolvedTheme = useResolvedTheme();
   const { activeValue } = useTabs();

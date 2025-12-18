@@ -31,7 +31,7 @@ async function getExistingTXTRecords(
         rs.Type === "TXT" && (rs.Name === domain || rs.Name === `${domain}.`)
     );
 
-    if (!(txtRecordSet && txtRecordSet.ResourceRecords)) {
+    if (!txtRecordSet?.ResourceRecords) {
       return { allValues: [], spfValue: null, ttl: 1800 };
     }
 
@@ -283,7 +283,7 @@ export async function deleteDNSRecords(
     const record = recordSets.find(
       (rs) => rs.Name === normalizedName && rs.Type === type
     );
-    if (record && record.ResourceRecords) {
+    if (record?.ResourceRecords) {
       changes.push({
         Action: "DELETE",
         ResourceRecordSet: record,

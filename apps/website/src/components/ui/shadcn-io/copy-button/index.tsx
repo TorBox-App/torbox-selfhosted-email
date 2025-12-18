@@ -43,7 +43,7 @@ type CopyButtonProps = Omit<HTMLMotionProps<"button">, "children" | "onCopy"> &
     content?: string;
     delay?: number;
     /** Called after successful copy. Return false to prevent copy action. */
-    onCopy?: (content: string) => void | boolean;
+    onCopy?: (content: string) => boolean | undefined;
     isCopied?: boolean;
     onCopyChange?: (isCopied: boolean) => void;
   };

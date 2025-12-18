@@ -217,6 +217,7 @@ function TabsContents({
   ...props
 }: TabsContentsProps) {
   const { activeValue } = useTabs();
+  const id = React.useId();
   const childrenArray = React.Children.toArray(children);
   const activeIndex = childrenArray.findIndex(
     (child): child is React.ReactElement<{ value: string }> =>
@@ -234,15 +235,21 @@ function TabsContents({
       {...(props as any)}
     >
       <motion.div
-        animate={{ x: activeIndex * -100 + "%" }}
+        animate={{ x: `${activeIndex * -100}%` }}
         className="-mx-2 flex"
         transition={transition}
       >
-        {childrenArray.map((child, index) => (
-          <div className="w-full shrink-0 px-2" key={index}>
-            {child}
-          </div>
-        ))}
+        {childrenArray.map((child, idx) => {
+          const childKey =
+            React.isValidElement(child) && child.key != null
+              ? child.key
+              : `${id}-tab-${idx}`;
+          return (
+            <div className="w-full shrink-0 px-2" key={childKey}>
+              {child}
+            </div>
+          );
+        })}
       </motion.div>
     </div>
   );

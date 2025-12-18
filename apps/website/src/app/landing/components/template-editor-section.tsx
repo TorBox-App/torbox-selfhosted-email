@@ -4,7 +4,7 @@ import {
   ArrowRight,
   Code,
   Eye,
-  Infinity,
+  Infinity as InfinityIcon,
   LayoutGrid,
   Palette,
   Sparkles,
@@ -27,7 +27,7 @@ const features = [
     description: "Buttons, images, sections, layouts, and pre-built templates",
   },
   {
-    icon: Infinity,
+    icon: InfinityIcon,
     title: "Unlimited Templates",
     description:
       "Create as many templates as you need. No limits or per-template fees",

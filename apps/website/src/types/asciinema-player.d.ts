@@ -1,5 +1,5 @@
 declare module "asciinema-player" {
-  export interface AsciinemaPlayerOptions {
+  export type AsciinemaPlayerOptions = {
     cols?: number;
     rows?: number;
     autoPlay?: boolean;
@@ -14,16 +14,16 @@ declare module "asciinema-player" {
     terminalFontSize?: string;
     terminalFontFamily?: string;
     terminalLineHeight?: number;
-  }
+  };
 
-  export interface AsciinemaPlayerInstance {
+  export type AsciinemaPlayerInstance = {
     play(): void;
     pause(): void;
     seek(location: number | string): void;
     getCurrentTime(): number;
     getDuration(): number;
     dispose(): void;
-  }
+  };
 
   export function create(
     src: string,

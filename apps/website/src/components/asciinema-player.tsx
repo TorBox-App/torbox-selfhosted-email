@@ -3,7 +3,7 @@
 import "asciinema-player/dist/bundle/asciinema-player.css";
 import { useEffect, useRef } from "react";
 
-interface AsciinemaPlayerProps {
+type AsciinemaPlayerProps = {
   src: string;
   cols?: number;
   rows?: number;
@@ -20,7 +20,7 @@ interface AsciinemaPlayerProps {
   terminalFontFamily?: string;
   terminalLineHeight?: number;
   className?: string;
-}
+};
 
 export function AsciinemaPlayer({
   src,

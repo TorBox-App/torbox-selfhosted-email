@@ -18,12 +18,12 @@ import { Button } from "@/components/ui/button";
 
 type TabKey = "send" | "track" | "deploy";
 
-interface TabContent {
+type TabContent = {
   title: string;
   description: string;
   ctaText: string;
   ctaLink: string;
-}
+};
 
 const tabContent: Record<TabKey, TabContent> = {
   send: {
@@ -82,12 +82,12 @@ function IconBox({
 }
 
 // Simple node component for external entities (Your App, Recipients)
-interface SimpleNodeProps {
+type SimpleNodeProps = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   highlighted?: boolean;
   nodeRef?: React.RefObject<HTMLDivElement | null>;
-}
+};
 
 function SimpleNode({
   label,
@@ -116,11 +116,11 @@ function SimpleNode({
 }
 
 // AWS Account container with SES and Wraps infrastructure boxes
-interface AWSAccountBoxProps {
+type AWSAccountBoxProps = {
   activeTab: TabKey;
   sesRef?: React.RefObject<HTMLDivElement | null>;
   wrapsRef?: React.RefObject<HTMLDivElement | null>;
-}
+};
 
 function AWSAccountBox({ activeTab, sesRef, wrapsRef }: AWSAccountBoxProps) {
   const sesHighlighted =
@@ -301,18 +301,18 @@ function MobileFlow({ activeTab }: { activeTab: TabKey }) {
   );
 }
 
-interface Point {
+type Point = {
   x: number;
   y: number;
-}
+};
 
-interface NodePositions {
+type NodePositions = {
   yourApp: Point;
   cli: Point;
   ses: Point;
   wraps: Point;
   recipients: Point;
-}
+};
 
 // Generate curved path between two points
 function createCurvedPath(from: Point, to: Point, curvature = 0.5): string {

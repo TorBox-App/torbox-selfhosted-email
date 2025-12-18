@@ -60,7 +60,7 @@ function extractPrefix(key: string): string {
   if (match) {
     return `${match[1]}${match[2]}...`;
   }
-  return key.slice(0, 20) + "...";
+  return `${key.slice(0, 20)}...`;
 }
 
 /**

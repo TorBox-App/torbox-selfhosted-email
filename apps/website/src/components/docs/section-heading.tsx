@@ -4,13 +4,13 @@ import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-interface SectionHeadingProps {
+type SectionHeadingProps = {
   id: string;
   title: string;
   markdown: string;
   level?: 2 | 3;
   className?: string;
-}
+};
 
 export function SectionHeading({
   id,

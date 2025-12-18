@@ -10,10 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface CopyForAIButtonProps {
+type CopyForAIButtonProps = {
   markdown: string;
   slashCommand: string;
-}
+};
 
 export function CopyForAIButton({
   markdown,
