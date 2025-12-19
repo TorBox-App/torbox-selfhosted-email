@@ -16,3 +16,16 @@ export {
   getOrAssumeRole,
   invalidateCredentials,
 } from "./credential-cache";
+export {
+  getSMSCloudWatchMetrics,
+  getSMSMetricsSummary,
+  getSMSAccountAttributes,
+  getSMSSpendLimits,
+  getSMSPhoneNumbers,
+  getSMSConfigurationSets,
+  getSMSRegistrations,
+  querySMSEvents,
+  getRecentSMSActivity,
+  SMS_METRICS,
+  type SMSEvent,
+} from "./sms-voice";
