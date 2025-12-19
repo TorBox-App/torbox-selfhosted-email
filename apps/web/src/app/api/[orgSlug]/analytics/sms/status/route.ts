@@ -1,0 +1,185 @@
+import { auth } from "@wraps/auth";
+import { db } from "@wraps/db";
+import { awsAccount } from "@wraps/db/schema/app";
+import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import {
+  getSMSPhoneNumbers,
+  getSMSRegistrations,
+  getSMSSpendLimits,
+} from "@/lib/aws/sms-voice";
+import { getOrganizationWithMembership } from "@/lib/organization";
+
+type RouteContext = {
+  params: Promise<{
+    orgSlug: string;
+  }>;
+};
+
+export type PhoneNumberInfo = {
+  phoneNumber: string;
+  phoneNumberArn: string;
+  numberType: string;
+  status: string;
+  capabilities: string[];
+  twoWayEnabled: boolean;
+  selfManagedOptOutsEnabled: boolean;
+  isoCountryCode: string;
+  messageType: string;
+  monthlyLeasingPrice: string;
+};
+
+export type RegistrationInfo = {
+  registrationArn: string;
+  registrationId: string;
+  registrationType: string;
+  registrationStatus: string;
+  approvedVersionNumber?: number;
+  latestDeniedVersionNumber?: number;
+  additionalAttributes?: Record<string, string>;
+  createdTimestamp: string;
+};
+
+export type SpendLimitInfo = {
+  name: string;
+  enforcedLimit: number;
+  maxLimit: number;
+  overridden: boolean;
+};
+
+export type SMSStatusResponse = {
+  phoneNumbers: PhoneNumberInfo[];
+  registrations: RegistrationInfo[];
+  spendLimits: SpendLimitInfo[];
+  hasSMSInfrastructure: boolean;
+};
+
+export async function GET(request: Request, context: RouteContext) {
+  try {
+    const { orgSlug } = await context.params;
+
+    // Authenticate user
+    const session = await auth.api.getSession({
+      headers: await import("next/headers").then((mod) => mod.headers()),
+    });
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify organization membership
+    const orgWithMembership = await getOrganizationWithMembership(
+      orgSlug,
+      session.user.id
+    );
+
+    if (!orgWithMembership) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Get all AWS accounts for this organization
+    const accounts = await db.query.awsAccount.findMany({
+      where: eq(awsAccount.organizationId, orgWithMembership.id),
+    });
+
+    if (accounts.length === 0) {
+      return NextResponse.json<SMSStatusResponse>({
+        phoneNumbers: [],
+        registrations: [],
+        spendLimits: [],
+        hasSMSInfrastructure: false,
+      });
+    }
+
+    // Fetch SMS data for all accounts in parallel
+    const results = await Promise.all(
+      accounts.map(async (account) => {
+        try {
+          const [phoneNumbers, registrations, spendLimits] = await Promise.all([
+            getSMSPhoneNumbers(account.id),
+            getSMSRegistrations(account.id),
+            getSMSSpendLimits(account.id),
+          ]);
+          console.log(
+            `[SMS Status] Account ${account.accountId}: ${phoneNumbers.length} phone numbers, ${registrations.length} registrations, ${spendLimits.length} spend limits`
+          );
+          return { phoneNumbers, registrations, spendLimits };
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error(
+            `[SMS Status] Failed to fetch SMS status for account ${account.id} (${account.accountId}):`,
+            {
+              error: errorMessage,
+              roleArn: account.roleArn,
+              region: account.region,
+            }
+          );
+          return { phoneNumbers: [], registrations: [], spendLimits: [] };
+        }
+      })
+    );
+
+    // Aggregate results from all accounts
+    const allPhoneNumbers: PhoneNumberInfo[] = [];
+    const allRegistrations: RegistrationInfo[] = [];
+    const allSpendLimits: SpendLimitInfo[] = [];
+
+    for (const result of results) {
+      // Map phone numbers
+      for (const phone of result.phoneNumbers) {
+        allPhoneNumbers.push({
+          phoneNumber: phone.PhoneNumber || "",
+          phoneNumberArn: phone.PhoneNumberArn || "",
+          numberType: phone.NumberType || "UNKNOWN",
+          status: phone.Status || "UNKNOWN",
+          capabilities: phone.NumberCapabilities || [],
+          twoWayEnabled: phone.TwoWayEnabled || false,
+          selfManagedOptOutsEnabled: phone.SelfManagedOptOutsEnabled || false,
+          isoCountryCode: phone.IsoCountryCode || "",
+          messageType: phone.MessageType || "TRANSACTIONAL",
+          monthlyLeasingPrice: phone.MonthlyLeasingPrice || "0.00",
+        });
+      }
+
+      // Map registrations
+      for (const reg of result.registrations) {
+        allRegistrations.push({
+          registrationArn: reg.RegistrationArn || "",
+          registrationId: reg.RegistrationId || "",
+          registrationType: reg.RegistrationType || "UNKNOWN",
+          registrationStatus: reg.RegistrationStatus || "UNKNOWN",
+          approvedVersionNumber: reg.ApprovedVersionNumber,
+          latestDeniedVersionNumber: reg.LatestDeniedVersionNumber,
+          additionalAttributes: reg.AdditionalAttributes,
+          createdTimestamp: reg.CreatedTimestamp?.toISOString() || "",
+        });
+      }
+
+      // Map spend limits
+      for (const limit of result.spendLimits) {
+        allSpendLimits.push({
+          name: limit.Name || "UNKNOWN",
+          enforcedLimit: limit.EnforcedLimit || 0,
+          maxLimit: limit.MaxLimit || 0,
+          overridden: limit.Overridden || false,
+        });
+      }
+    }
+
+    const hasSMSInfrastructure = allPhoneNumbers.length > 0;
+
+    return NextResponse.json<SMSStatusResponse>({
+      phoneNumbers: allPhoneNumbers,
+      registrations: allRegistrations,
+      spendLimits: allSpendLimits,
+      hasSMSInfrastructure,
+    });
+  } catch (error) {
+    console.error("Error fetching SMS status:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
