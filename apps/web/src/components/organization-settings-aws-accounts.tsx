@@ -308,7 +308,7 @@ export function OrganizationSettingsAwsAccounts({
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Link href={`/${orgSlug}/aws-accounts/${account.id}`}>
+                    <Link href={`/${orgSlug}/settings/aws-accounts/${account.id}`}>
                       <Button variant="outline">
                         <ExternalLink className="mr-2 h-4 w-4" />
                         Manage

@@ -1,17 +1,15 @@
 import { auth } from "@wraps/auth";
 import { redirect } from "next/navigation";
-import { OrganizationSettingsGeneral } from "@/components/organization-settings-general";
+import { OrganizationSettingsBilling } from "@/components/organization-settings-billing";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
-type OrganizationSettingsPageProps = {
+type BillingPageProps = {
   params: Promise<{
     orgSlug: string;
   }>;
 };
 
-export default async function OrganizationSettingsPage({
-  params,
-}: OrganizationSettingsPageProps) {
+export default async function BillingPage({ params }: BillingPageProps) {
   const { orgSlug } = await params;
   const session = await auth.api.getSession({
     headers: await import("next/headers").then((mod) => mod.headers()),
@@ -33,13 +31,13 @@ export default async function OrganizationSettingsPage({
   return (
     <div className="space-y-6 px-4 lg:px-6">
       <div>
-        <h1 className="font-bold text-3xl">General Settings</h1>
+        <h1 className="font-bold text-3xl">Billing</h1>
         <p className="text-muted-foreground">
-          Manage your organization name, slug, and branding.
+          Manage your subscription and billing information.
         </p>
       </div>
 
-      <OrganizationSettingsGeneral
+      <OrganizationSettingsBilling
         organization={orgWithMembership}
         userRole={orgWithMembership.userRole}
       />
@@ -58,9 +56,7 @@ export async function generateMetadata({
   });
 
   if (!session?.user) {
-    return {
-      title: "Organization Settings",
-    };
+    return { title: "Billing" };
   }
 
   const orgWithMembership = await getOrganizationWithMembership(
@@ -69,13 +65,11 @@ export async function generateMetadata({
   );
 
   if (!orgWithMembership) {
-    return {
-      title: "Organization Not Found",
-    };
+    return { title: "Organization Not Found" };
   }
 
   return {
-    title: `Settings | ${orgWithMembership.name} | Wraps`,
-    description: `Manage settings for ${orgWithMembership.name}`,
+    title: `Billing | ${orgWithMembership.name} | Wraps`,
+    description: `Manage billing for ${orgWithMembership.name}`,
   };
 }

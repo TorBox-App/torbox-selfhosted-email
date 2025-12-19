@@ -1,6 +1,16 @@
 "use client";
 
-import { BarChart3, FileText, Mail, MessageSquare } from "lucide-react";
+import {
+  BarChart3,
+  Cloud,
+  CreditCard,
+  FileText,
+  Key,
+  Mail,
+  MessageSquare,
+  Settings,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
 import { Logo } from "@/components/logo";
@@ -89,7 +99,41 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     : null;
 
-  const orgScopedNavGroups = [emailNavGroup, smsNavGroup].filter(
+  // Settings navigation
+  const settingsNavGroup = orgSlug
+    ? {
+        label: "Settings",
+        items: [
+          {
+            title: "General",
+            url: `/${orgSlug}/settings`,
+            icon: Settings,
+          },
+          {
+            title: "AWS Accounts",
+            url: `/${orgSlug}/settings/aws-accounts`,
+            icon: Cloud,
+          },
+          {
+            title: "API Keys",
+            url: `/${orgSlug}/settings/api-keys`,
+            icon: Key,
+          },
+          {
+            title: "Members",
+            url: `/${orgSlug}/settings/members`,
+            icon: Users,
+          },
+          {
+            title: "Billing",
+            url: `/${orgSlug}/settings/billing`,
+            icon: CreditCard,
+          },
+        ],
+      }
+    : null;
+
+  const orgScopedNavGroups = [emailNavGroup, smsNavGroup, settingsNavGroup].filter(
     (g): g is NonNullable<typeof g> => g !== null
   );
 

@@ -1,17 +1,15 @@
 import { auth } from "@wraps/auth";
 import { redirect } from "next/navigation";
-import { OrganizationSettingsGeneral } from "@/components/organization-settings-general";
+import { OrganizationSettingsApiKeys } from "@/components/organization-settings-api-keys";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
-type OrganizationSettingsPageProps = {
+type ApiKeysPageProps = {
   params: Promise<{
     orgSlug: string;
   }>;
 };
 
-export default async function OrganizationSettingsPage({
-  params,
-}: OrganizationSettingsPageProps) {
+export default async function ApiKeysPage({ params }: ApiKeysPageProps) {
   const { orgSlug } = await params;
   const session = await auth.api.getSession({
     headers: await import("next/headers").then((mod) => mod.headers()),
@@ -33,13 +31,13 @@ export default async function OrganizationSettingsPage({
   return (
     <div className="space-y-6 px-4 lg:px-6">
       <div>
-        <h1 className="font-bold text-3xl">General Settings</h1>
+        <h1 className="font-bold text-3xl">API Keys</h1>
         <p className="text-muted-foreground">
-          Manage your organization name, slug, and branding.
+          Manage API keys for programmatic access to your organization.
         </p>
       </div>
 
-      <OrganizationSettingsGeneral
+      <OrganizationSettingsApiKeys
         organization={orgWithMembership}
         userRole={orgWithMembership.userRole}
       />
@@ -58,9 +56,7 @@ export async function generateMetadata({
   });
 
   if (!session?.user) {
-    return {
-      title: "Organization Settings",
-    };
+    return { title: "API Keys" };
   }
 
   const orgWithMembership = await getOrganizationWithMembership(
@@ -69,13 +65,11 @@ export async function generateMetadata({
   );
 
   if (!orgWithMembership) {
-    return {
-      title: "Organization Not Found",
-    };
+    return { title: "Organization Not Found" };
   }
 
   return {
-    title: `Settings | ${orgWithMembership.name} | Wraps`,
-    description: `Manage settings for ${orgWithMembership.name}`,
+    title: `API Keys | ${orgWithMembership.name} | Wraps`,
+    description: `Manage API keys for ${orgWithMembership.name}`,
   };
 }
