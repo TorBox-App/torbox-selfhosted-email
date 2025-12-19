@@ -1,0 +1,106 @@
+import { auth } from "@wraps/auth";
+import { Mail, Terminal, ArrowRight, RefreshCw } from "lucide-react";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { getOrganizationWithMembership } from "@/lib/organization";
+
+type EmailSetupPageProps = {
+  params: Promise<{
+    orgSlug: string;
+  }>;
+};
+
+export default async function EmailSetupPage({ params }: EmailSetupPageProps) {
+  const { orgSlug } = await params;
+
+  const session = await auth.api.getSession({
+    headers: await import("next/headers").then((mod) => mod.headers()),
+  });
+
+  if (!session?.user) {
+    redirect("/auth");
+  }
+
+  const orgWithMembership = await getOrganizationWithMembership(
+    orgSlug,
+    session.user.id
+  );
+
+  if (!orgWithMembership) {
+    redirect("/");
+  }
+
+  return (
+    <div className="flex flex-1 items-center justify-center p-4 lg:p-6">
+      <Empty className="border max-w-2xl">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Mail className="size-6" />
+          </EmptyMedia>
+          <EmptyTitle>Email Not Configured</EmptyTitle>
+          <EmptyDescription>
+            Deploy email infrastructure to your AWS account to start sending
+            emails with AWS SES. Get production-ready email sending in under 2
+            minutes.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <div className="flex flex-col gap-4 w-full">
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                <Terminal className="size-4" />
+                Deploy Email with CLI
+              </h4>
+              <div className="bg-background rounded-md p-3 font-mono text-sm">
+                <code className="text-muted-foreground">$ </code>
+                <code>wraps email init</code>
+              </div>
+              <p className="text-muted-foreground text-xs mt-2">
+                This will deploy email infrastructure (SES, DynamoDB,
+                EventBridge) to your AWS account.
+              </p>
+            </div>
+
+            <div className="text-center text-muted-foreground text-sm">or</div>
+
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                <RefreshCw className="size-4" />
+                Already deployed? Update your console role
+              </h4>
+              <div className="bg-background rounded-md p-3 font-mono text-sm">
+                <code className="text-muted-foreground">$ </code>
+                <code>wraps dashboard update-role</code>
+              </div>
+              <p className="text-muted-foreground text-xs mt-2">
+                If you&apos;ve already deployed email infrastructure, run this
+                command to grant the dashboard access to your email resources.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <Button asChild variant="outline">
+              <a
+                href="https://docs.wraps.dev/email/quickstart"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                View Documentation
+                <ArrowRight className="size-4 ml-2" />
+              </a>
+            </Button>
+          </div>
+        </EmptyContent>
+      </Empty>
+    </div>
+  );
+}
