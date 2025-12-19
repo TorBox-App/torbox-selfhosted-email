@@ -11,6 +11,10 @@ import { EmailDetail } from "@/components/EmailDetail";
 import { EmailLogs } from "@/components/EmailLogs";
 import { EmailMetrics } from "@/components/EmailMetrics";
 import { EmailSettings } from "@/components/EmailSettings";
+import { SMSDetail } from "@/components/SMSDetail";
+import { SMSLogs } from "@/components/SMSLogs";
+import { SMSMetrics } from "@/components/SMSMetrics";
+import { SMSSettings } from "@/components/SMSSettings";
 import { ThemeProvider } from "@/components/theme-provider";
 import {
   Breadcrumb,
@@ -60,6 +64,15 @@ function AppContent() {
       return "Email Details";
     }
 
+    // Handle dynamic SMS detail route
+    if (
+      location.pathname.startsWith("/sms/") &&
+      location.pathname !== "/sms/metrics" &&
+      location.pathname !== "/sms/settings"
+    ) {
+      return "SMS Details";
+    }
+
     switch (location.pathname) {
       case "/":
       case "/email":
@@ -68,6 +81,12 @@ function AppContent() {
         return "Email Metrics";
       case "/email/settings":
         return "Email Settings";
+      case "/sms":
+        return "SMS Messages";
+      case "/sms/metrics":
+        return "SMS Metrics";
+      case "/sms/settings":
+        return "SMS Settings";
       default:
         return "Emails";
     }
@@ -99,6 +118,10 @@ function AppContent() {
               <Route element={<EmailDetail />} path="/email/:id" />
               <Route element={<EmailMetrics />} path="/email/metrics" />
               <Route element={<EmailSettings />} path="/email/settings" />
+              <Route element={<SMSLogs />} path="/sms" />
+              <Route element={<SMSDetail />} path="/sms/:id" />
+              <Route element={<SMSMetrics />} path="/sms/metrics" />
+              <Route element={<SMSSettings />} path="/sms/settings" />
             </Routes>
           ) : (
             <div className="flex items-center justify-center p-8">

@@ -26,6 +26,15 @@ import { upgrade } from "./commands/email/upgrade.js";
 import { dashboard } from "./commands/shared/dashboard.js";
 import { destroy } from "./commands/shared/destroy.js";
 import { status } from "./commands/shared/status.js";
+// SMS commands
+import { smsDestroy } from "./commands/sms/destroy.js";
+import { init as smsInit } from "./commands/sms/init.js";
+import { smsRegister } from "./commands/sms/register.js";
+import { smsStatus } from "./commands/sms/status.js";
+import { smsSync } from "./commands/sms/sync.js";
+import { smsTest } from "./commands/sms/test.js";
+import { smsUpgrade } from "./commands/sms/upgrade.js";
+import { smsVerifyNumber } from "./commands/sms/verify-number.js";
 // Telemetry commands
 import {
   telemetryDisable,
@@ -63,7 +72,10 @@ function showHelp() {
   console.log("Deploy AWS infrastructure to your account\n");
   console.log("Usage: wraps [service] <command> [options]\n");
   console.log("Services:");
-  console.log(`  ${pc.cyan("email")}       Email infrastructure (AWS SES)\n`);
+  console.log(`  ${pc.cyan("email")}       Email infrastructure (AWS SES)`);
+  console.log(
+    `  ${pc.cyan("sms")}         SMS infrastructure (AWS End User Messaging)\n`
+  );
   console.log("Email Commands:");
   console.log(
     `  ${pc.cyan("email init")}           Deploy new email infrastructure`
@@ -88,6 +100,23 @@ function showHelp() {
   console.log(`  ${pc.cyan("email domains add")}    Add a domain to SES`);
   console.log(`  ${pc.cyan("email domains list")}   List all domains`);
   console.log(`  ${pc.cyan("email domains remove")} Remove a domain\n`);
+  console.log("SMS Commands:");
+  console.log(`  ${pc.cyan("sms init")}             Deploy SMS infrastructure`);
+  console.log(
+    `  ${pc.cyan("sms status")}           Show SMS infrastructure details`
+  );
+  console.log(`  ${pc.cyan("sms test")}             Send a test SMS message`);
+  console.log(
+    `  ${pc.cyan("sms verify-number")}    Verify a destination phone number`
+  );
+  console.log(
+    `  ${pc.cyan("sms sync")}             Sync infrastructure (update Lambda, etc.)`
+  );
+  console.log(`  ${pc.cyan("sms upgrade")}          Upgrade SMS features`);
+  console.log(`  ${pc.cyan("sms register")}         Register toll-free number`);
+  console.log(
+    `  ${pc.cyan("sms destroy")}          Remove SMS infrastructure\n`
+  );
   console.log("Console & Dashboard:");
   console.log(`  ${pc.cyan("console")}               Start local web console`);
   console.log(
@@ -182,6 +211,43 @@ args.options([
   {
     name: "preview",
     description: "Preview changes without deploying",
+    defaultValue: false,
+  },
+  // SMS-specific options
+  {
+    name: "to",
+    description: "Destination phone number (E.164 format)",
+    defaultValue: undefined,
+  },
+  {
+    name: "message",
+    description: "SMS message content",
+    defaultValue: undefined,
+  },
+  // SMS verify-number options
+  {
+    name: "phoneNumber",
+    description: "Phone number to verify (E.164 format)",
+    defaultValue: undefined,
+  },
+  {
+    name: "code",
+    description: "Verification code received via SMS",
+    defaultValue: undefined,
+  },
+  {
+    name: "list",
+    description: "List all verified destination numbers",
+    defaultValue: false,
+  },
+  {
+    name: "delete",
+    description: "Delete a verified destination number",
+    defaultValue: false,
+  },
+  {
+    name: "resend",
+    description: "Resend verification code",
     defaultValue: false,
   },
 ]);
@@ -436,6 +502,86 @@ async function run() {
       return;
     }
 
+    // Handle SMS subcommands (e.g., wraps sms init)
+    if (primaryCommand === "sms" && subCommand) {
+      switch (subCommand) {
+        case "init":
+          await smsInit({
+            provider: flags.provider,
+            region: flags.region,
+            preset: flags.preset,
+            yes: flags.yes,
+          });
+          break;
+
+        case "status":
+          await smsStatus({
+            account: flags.account,
+          });
+          break;
+
+        case "test":
+          await smsTest({
+            to: flags.to,
+            message: flags.message,
+          });
+          break;
+
+        case "upgrade":
+          await smsUpgrade({
+            region: flags.region,
+            yes: flags.yes,
+          });
+          break;
+
+        case "sync":
+          await smsSync({
+            region: flags.region,
+            yes: flags.yes,
+          });
+          break;
+
+        case "destroy":
+          await smsDestroy({
+            force: flags.force,
+            preview: flags.preview,
+          });
+          break;
+
+        case "verify-number":
+          await smsVerifyNumber({
+            phoneNumber: flags.phoneNumber,
+            code: flags.code,
+            list: flags.list,
+            delete: flags.delete,
+            resend: flags.resend,
+          });
+          break;
+
+        case "register":
+          await smsRegister({
+            region: flags.region,
+          });
+          break;
+
+        default:
+          clack.log.error(`Unknown sms command: ${subCommand}`);
+          console.log(
+            `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
+          );
+          process.exit(1);
+      }
+      // Track SMS commands
+      const smsDuration = Date.now() - startTime;
+      const smsCommandName = `sms:${subCommand}`;
+      trackCommand(smsCommandName, {
+        success: true,
+        duration_ms: smsDuration,
+        service: "sms",
+      });
+      return;
+    }
+
     // Handle Dashboard subcommands
     if (primaryCommand === "dashboard" && subCommand) {
       switch (subCommand) {
@@ -530,6 +676,7 @@ async function run() {
 
       // Show help for service without subcommand
       case "email":
+      case "sms":
         console.log(
           `\nPlease specify a command for ${primaryCommand} service.\n`
         );

@@ -9,6 +9,7 @@ import { createDomainsRouter } from "./routes/domains.js";
 import { createEmailsRouter } from "./routes/emails.js";
 import { createMetricsRouter } from "./routes/metrics.js";
 import { createSettingsRouter } from "./routes/settings.js";
+import { createSMSRouter } from "./routes/sms.js";
 import { createUserRouter } from "./routes/user.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,6 +23,16 @@ export type ServerConfig = {
   noOpen: boolean;
   archiveArn?: string;
   archivingEnabled?: boolean;
+  // SMS config
+  smsTableName?: string;
+  smsPhoneNumber?: string;
+  smsPhoneNumberArn?: string;
+  smsPhoneNumberType?: string;
+  smsConfigSetName?: string;
+  smsProtectEnabled?: boolean;
+  smsAllowedCountries?: string[];
+  smsAitFiltering?: boolean;
+  smsArchiveRetention?: string;
 };
 
 export type ServerInfo = {
@@ -114,6 +125,7 @@ export async function startConsoleServer(
     createSettingsRouter(config)
   );
   app.use("/api/user", authenticateToken(authToken), createUserRouter(config));
+  app.use("/api/sms", authenticateToken(authToken), createSMSRouter(config));
 
   // Serve static files from console-ui build
   // __dirname will be dist/ after compilation, console UI is in dist/console/

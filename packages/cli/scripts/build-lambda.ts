@@ -49,9 +49,16 @@ async function bundleLambda(name: string, entryPoint: string) {
 async function main() {
   console.log("Building Lambda functions...\n");
 
+  // Email event processor
   await bundleLambda(
     "event-processor",
     join(packageRoot, "lambda", "event-processor", "index.ts")
+  );
+
+  // SMS event processor
+  await bundleLambda(
+    "sms-event-processor",
+    join(packageRoot, "lambda", "sms-event-processor", "index.ts")
   );
 
   console.log("\n✓ All Lambda functions bundled successfully");

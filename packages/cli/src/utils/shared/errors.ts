@@ -112,4 +112,53 @@ export const errors = {
       "This happens when a previous deployment was interrupted.\n\nTo unlock, run:\n  rm -rf ~/.wraps/pulumi/.pulumi/locks\n\nThen try your command again.",
       "https://wraps.dev/docs/troubleshooting"
     ),
+
+  // SMS-specific errors
+  smsNotConfigured: () =>
+    new WrapsError(
+      "SMS infrastructure not found",
+      "SMS_NOT_CONFIGURED",
+      "Run: wraps sms init\nTo deploy SMS infrastructure",
+      "https://wraps.dev/docs/sms/init"
+    ),
+
+  smsPhoneNotVerified: () =>
+    new WrapsError(
+      "Phone number registration not complete",
+      "SMS_PHONE_NOT_VERIFIED",
+      "Toll-free numbers require registration (15+ days).\nCheck status in AWS console.",
+      "https://wraps.dev/docs/sms/registration"
+    ),
+
+  smsOptedOut: (phoneNumber: string) =>
+    new WrapsError(
+      `Destination number ${phoneNumber} has opted out`,
+      "SMS_OPTED_OUT",
+      "The recipient has opted out of receiving messages.\nThey can opt back in by texting START to your number.",
+      "https://wraps.dev/docs/sms/opt-out"
+    ),
+
+  smsSpendingLimit: () =>
+    new WrapsError(
+      "AWS SMS spending limit reached",
+      "SMS_SPENDING_LIMIT",
+      "Request a spending limit increase in the AWS console:\nAWS → End User Messaging → Account Settings → Spending Limits",
+      "https://docs.aws.amazon.com/sms-voice/latest/userguide/spend-limit-increase.html"
+    ),
+
+  smsInvalidPhoneNumber: (phoneNumber: string) =>
+    new WrapsError(
+      `Invalid phone number format: ${phoneNumber}`,
+      "SMS_INVALID_PHONE_NUMBER",
+      "Phone numbers must be in E.164 format:\n  Example: +14155551234 (US)\n  Example: +447911123456 (UK)",
+      "https://wraps.dev/docs/sms/phone-format"
+    ),
+
+  smsSimulatorLimit: () =>
+    new WrapsError(
+      "Simulator daily message limit reached (100 messages)",
+      "SMS_SIMULATOR_LIMIT",
+      "Upgrade to a toll-free number for production use:\n  wraps sms upgrade --phone-type toll-free",
+      "https://wraps.dev/docs/sms/upgrade"
+    ),
 };

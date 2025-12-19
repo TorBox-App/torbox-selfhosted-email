@@ -194,6 +194,15 @@ describe("console command", () => {
         noOpen: false,
         archiveArn: undefined,
         archivingEnabled: false,
+        smsTableName: "wraps-email-history",
+        smsPhoneNumber: undefined,
+        smsPhoneNumberArn: undefined,
+        smsPhoneNumberType: undefined,
+        smsConfigSetName: undefined,
+        smsArchiveRetention: undefined,
+        smsProtectEnabled: false,
+        smsAllowedCountries: undefined,
+        smsAitFiltering: undefined,
       });
     });
 

@@ -104,7 +104,7 @@ async function findEventSourceMapping(
  * In production (published package), uses pre-bundled code from dist/lambda/
  * In development, bundles the TypeScript source on-the-fly
  */
-async function getLambdaCode(functionName: string): Promise<string> {
+export async function getLambdaCode(functionName: string): Promise<string> {
   const packageRoot = getPackageRoot();
 
   // Check for pre-bundled Lambda code in dist/ (production - published package)

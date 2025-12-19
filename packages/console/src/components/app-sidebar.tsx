@@ -1,7 +1,13 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Activity, BarChart3, Mail, Settings } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  Mail,
+  MessageSquare,
+  Settings,
+} from "lucide-react";
 import * as React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NavUser } from "@/components/nav-user";
@@ -60,6 +66,17 @@ const data = {
         { title: "Settings", icon: Settings, url: "/email/settings" },
       ],
     },
+    {
+      title: "SMS",
+      url: "#",
+      icon: MessageSquare,
+      isActive: false,
+      subItems: [
+        { title: "Messages", icon: MessageSquare, url: "/sms" },
+        { title: "Metrics", icon: BarChart3, url: "/sms/metrics" },
+        { title: "Settings", icon: Settings, url: "/sms/settings" },
+      ],
+    },
   ] as NavItem[],
 };
 
@@ -76,6 +93,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
     if (location.pathname.startsWith("/email")) {
       return data.navMain[1];
+    }
+    if (location.pathname.startsWith("/sms")) {
+      return data.navMain[2];
     }
     // Default to dashboard
     return data.navMain[0];
@@ -198,7 +218,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         (subItem.url === "/email" &&
                           location.pathname.startsWith("/email/") &&
                           location.pathname !== "/email/metrics" &&
-                          location.pathname !== "/email/settings");
+                          location.pathname !== "/email/settings") ||
+                        (subItem.url === "/sms" &&
+                          location.pathname.startsWith("/sms/") &&
+                          location.pathname !== "/sms/metrics" &&
+                          location.pathname !== "/sms/settings");
                       return (
                         <Link
                           className={`flex items-center gap-3 border-b p-4 text-sm leading-tight transition-colors last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${

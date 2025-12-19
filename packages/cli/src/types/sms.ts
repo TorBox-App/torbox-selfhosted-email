@@ -19,13 +19,14 @@ export type SMSEventType =
   | "TTL_EXPIRED";
 
 /**
- * Phone number type
+ * Phone number type for AWS End User Messaging
+ * @see https://docs.aws.amazon.com/sms-voice/latest/userguide/phone-numbers.html
  */
 export type PhoneNumberType =
-  | "long-code" // Standard phone number
-  | "short-code" // Dedicated short code (5-6 digits)
-  | "toll-free" // Toll-free number
-  | "10dlc"; // 10-digit long code (US)
+  | "simulator" // Testing only, no real messages ($1/mo, 100 msg/day)
+  | "toll-free" // Toll-free number ($2/mo, 3 MPS, requires registration)
+  | "10dlc" // 10-digit long code ($2/mo + campaign fees, up to 75 MPS)
+  | "short-code"; // Dedicated short code ($995+/mo, 100+ MPS, separate application)
 
 /**
  * Feature-based SMS configuration
@@ -62,6 +63,14 @@ export type WrapsSMSConfig = {
   dedicatedShortCode?: boolean;
   sendingEnabled?: boolean;
   optOutManagement?: boolean; // Automatic opt-out handling
+
+  // Fraud protection
+  protectConfiguration?: {
+    enabled: boolean;
+    allowedCountries?: string[]; // ISO country codes (e.g., ["US", "CA"])
+    blockedCountries?: string[]; // ISO country codes to block
+    aitFiltering?: boolean; // Enable AIT (Artificially Inflated Traffic) filtering
+  };
 };
 
 /**
@@ -106,11 +115,13 @@ export type SMSStackOutputs = {
   roleArn: string;
   phoneNumber?: string;
   phoneNumberArn?: string;
+  phoneNumberType?: PhoneNumberType;
+  poolId?: string;
   configSetName?: string;
   tableName?: string;
   region: string;
   lambdaFunctions?: string[];
-  eventBusName?: string;
+  snsTopicArn?: string;
   queueUrl?: string;
   dlqUrl?: string;
   optOutListArn?: string;
@@ -179,4 +190,38 @@ export type SMSUpgradeOptions = {
 export type SMSUpdateOptions = {
   region?: string;
   yes?: boolean;
+};
+
+/**
+ * Command options for SMS destroy
+ */
+export type SMSDestroyOptions = {
+  force?: boolean;
+  preview?: boolean;
+};
+
+/**
+ * Command options for SMS test
+ */
+export type SMSTestOptions = {
+  to?: string;
+  message?: string;
+};
+
+/**
+ * Command options for SMS status
+ */
+export type SMSStatusOptions = {
+  account?: string;
+};
+
+/**
+ * Command options for SMS verify-number
+ */
+export type SMSVerifyNumberOptions = {
+  phoneNumber?: string;
+  code?: string;
+  list?: boolean;
+  delete?: boolean;
+  resend?: boolean;
 };
