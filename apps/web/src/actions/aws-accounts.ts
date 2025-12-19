@@ -1,6 +1,10 @@
 "use server";
 
 import { DescribeTableCommand, DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
+  DescribePhoneNumbersCommand,
+  PinpointSMSVoiceV2Client,
+} from "@aws-sdk/client-pinpoint-sms-voice-v2";
 import { GetConfigurationSetCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { createServerValidate } from "@tanstack/react-form/nextjs";
 import { auth } from "@wraps/auth";
@@ -284,12 +288,17 @@ export type ScanFeaturesResult =
   | {
       success: true;
       features: {
+        // Email features
         archivingEnabled: boolean;
         archiveArn?: string;
         eventHistoryEnabled: boolean;
         eventTrackingEnabled: boolean;
         configSetName?: string;
         customTrackingDomain?: string;
+        // SMS features
+        smsEnabled: boolean;
+        smsPhoneNumberCount?: number;
+        smsEventHistoryEnabled: boolean;
       };
     }
   | {
@@ -451,33 +460,94 @@ export async function scanAWSAccountFeatures(
     // Event tracking is enabled if DynamoDB table exists (created by EventBridge rule + Lambda)
     const eventTrackingEnabled = eventHistoryEnabled;
 
-    // 9. Update database with discovered features
+    // 9. Scan for SMS infrastructure (phone numbers)
+    let smsEnabled = false;
+    let smsPhoneNumberCount = 0;
+
+    try {
+      const smsClient = new PinpointSMSVoiceV2Client({
+        region: account.region,
+        credentials: awsCredentials,
+      });
+
+      const phoneNumbersResponse = await smsClient.send(
+        new DescribePhoneNumbersCommand({})
+      );
+
+      smsPhoneNumberCount = phoneNumbersResponse.PhoneNumbers?.length ?? 0;
+      smsEnabled = smsPhoneNumberCount > 0;
+    } catch (error: any) {
+      // AccessDeniedException means user hasn't granted SMS permissions
+      // That's fine - assume SMS is not enabled
+      if (error.name !== "AccessDeniedException") {
+        console.error("Error scanning for SMS infrastructure:", error);
+      }
+    }
+
+    // 10. Scan for SMS event history (DynamoDB table)
+    let smsEventHistoryEnabled = false;
+
+    try {
+      const smsDynamoClient = new DynamoDBClient({
+        region: account.region,
+        credentials: awsCredentials,
+      });
+
+      await smsDynamoClient.send(
+        new DescribeTableCommand({
+          TableName: "wraps-sms-history",
+        })
+      );
+      // If the command succeeds, the table exists
+      smsEventHistoryEnabled = true;
+    } catch (error: any) {
+      // ResourceNotFoundException means table doesn't exist
+      // AccessDeniedException means user hasn't granted DynamoDB permissions
+      if (
+        error.name !== "ResourceNotFoundException" &&
+        error.name !== "AccessDeniedException"
+      ) {
+        console.error("Error scanning for SMS history table:", error);
+      }
+    }
+
+    // 11. Update database with discovered features
     await db
       .update(awsAccount)
       .set({
+        // Email features
         archivingEnabled,
         archiveArn: archiveArn ?? null,
         eventHistoryEnabled,
         eventTrackingEnabled,
         configSetName: configSetName ?? null,
         customTrackingDomain: customTrackingDomain ?? null,
+        // SMS features
+        smsEnabled,
+        smsPhoneNumberCount,
+        smsEventHistoryEnabled,
         updatedAt: new Date(),
       })
       .where(eq(awsAccount.id, awsAccountId));
 
-    // 10. Revalidate pages
-    revalidatePath(`/${organizationId}/aws-accounts/${awsAccountId}`);
-    revalidatePath(`/${organizationId}/aws-accounts`);
+    // 12. Revalidate pages
+    revalidatePath(`/${organizationId}/settings/aws-accounts/${awsAccountId}`);
+    revalidatePath(`/${organizationId}/settings`);
 
     return {
       success: true,
       features: {
+        // Email features
         archivingEnabled,
         archiveArn,
         eventHistoryEnabled,
         eventTrackingEnabled,
         configSetName,
         customTrackingDomain,
+        // SMS features
+        smsEnabled,
+        smsPhoneNumberCount,
+        smsEventHistoryEnabled,
       },
     };
   } catch (error) {

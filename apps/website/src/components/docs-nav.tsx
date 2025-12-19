@@ -1,6 +1,13 @@
 "use client";
 
-import { Book, Code, FileText, MessageSquare, Rocket, Terminal } from "lucide-react";
+import {
+  Book,
+  Code,
+  FileText,
+  MessageSquare,
+  Rocket,
+  Terminal,
+} from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 

@@ -832,9 +832,7 @@ export default function SDKReferencePage() {
           </CardHeader>
           <CardContent>
             <code className="block rounded bg-muted p-4 font-mono text-sm">
-              {
-                "email.send(params: SendEmailParams): Promise<SendEmailResult>"
-              }
+              {"email.send(params: SendEmailParams): Promise<SendEmailResult>"}
             </code>
           </CardContent>
         </Card>

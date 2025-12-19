@@ -1,5 +1,5 @@
 import { auth } from "@wraps/auth";
-import { MessageSquare, Terminal, ArrowRight, RefreshCw } from "lucide-react";
+import { ArrowRight, MessageSquare, RefreshCw, Terminal } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +40,7 @@ export default async function SMSSetupPage({ params }: SMSSetupPageProps) {
 
   return (
     <div className="flex flex-1 items-center justify-center p-4 lg:p-6">
-      <Empty className="border max-w-2xl">
+      <Empty className="max-w-2xl border">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <MessageSquare className="size-6" />
@@ -53,17 +53,17 @@ export default async function SMSSetupPage({ params }: SMSSetupPageProps) {
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <div className="flex flex-col gap-4 w-full">
+          <div className="flex w-full flex-col gap-4">
             <div className="rounded-lg border bg-muted/50 p-4">
-              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+              <h4 className="mb-2 flex items-center gap-2 font-medium text-sm">
                 <Terminal className="size-4" />
                 Deploy SMS with CLI
               </h4>
-              <div className="bg-background rounded-md p-3 font-mono text-sm">
+              <div className="rounded-md bg-background p-3 font-mono text-sm">
                 <code className="text-muted-foreground">$ </code>
                 <code>wraps sms init</code>
               </div>
-              <p className="text-muted-foreground text-xs mt-2">
+              <p className="mt-2 text-muted-foreground text-xs">
                 This will deploy SMS infrastructure to your AWS account and
                 configure toll-free number registration.
               </p>
@@ -72,22 +72,22 @@ export default async function SMSSetupPage({ params }: SMSSetupPageProps) {
             <div className="text-center text-muted-foreground text-sm">or</div>
 
             <div className="rounded-lg border bg-muted/50 p-4">
-              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+              <h4 className="mb-2 flex items-center gap-2 font-medium text-sm">
                 <RefreshCw className="size-4" />
                 Already deployed? Update your console role
               </h4>
-              <div className="bg-background rounded-md p-3 font-mono text-sm">
+              <div className="rounded-md bg-background p-3 font-mono text-sm">
                 <code className="text-muted-foreground">$ </code>
                 <code>wraps dashboard update-role</code>
               </div>
-              <p className="text-muted-foreground text-xs mt-2">
+              <p className="mt-2 text-muted-foreground text-xs">
                 If you&apos;ve already deployed SMS infrastructure, run this
                 command to grant the dashboard access to your SMS resources.
               </p>
             </div>
           </div>
 
-          <div className="flex gap-2 mt-4">
+          <div className="mt-4 flex gap-2">
             <Button asChild variant="outline">
               <a
                 href="https://docs.wraps.dev/sms/quickstart"
@@ -95,7 +95,7 @@ export default async function SMSSetupPage({ params }: SMSSetupPageProps) {
                 target="_blank"
               >
                 View Documentation
-                <ArrowRight className="size-4 ml-2" />
+                <ArrowRight className="ml-2 size-4" />
               </a>
             </Button>
           </div>

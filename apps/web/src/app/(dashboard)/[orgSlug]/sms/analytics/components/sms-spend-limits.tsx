@@ -1,6 +1,6 @@
 "use client";
 
-import { DollarSign, AlertCircle } from "lucide-react";
+import { AlertCircle, DollarSign } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -32,7 +32,10 @@ function getSpendLimitLabel(name: string): string {
     case "VOICE_MESSAGE_MONTHLY_SPEND":
       return "Current Monthly Voice Spend";
     default:
-      return name.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+      return name
+        .replace(/_/g, " ")
+        .toLowerCase()
+        .replace(/^\w/, (c) => c.toUpperCase());
   }
 }
 
@@ -47,9 +50,7 @@ export function SMSSpendLimits({ orgSlug }: { orgSlug: string }) {
             <DollarSign className="h-5 w-5" />
             Spend Limits
           </CardTitle>
-          <CardDescription>
-            Monthly spend limits and usage
-          </CardDescription>
+          <CardDescription>Monthly spend limits and usage</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -88,15 +89,13 @@ export function SMSSpendLimits({ orgSlug }: { orgSlug: string }) {
             <DollarSign className="h-5 w-5" />
             Spend Limits
           </CardTitle>
-          <CardDescription>
-            Monthly spend limits and usage
-          </CardDescription>
+          <CardDescription>Monthly spend limits and usage</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <DollarSign className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
             <h3 className="font-medium text-lg">No Spend Limits Set</h3>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="mt-1 text-muted-foreground text-sm">
               Configure spend limits in AWS SMS Voice console
             </p>
           </div>
@@ -119,12 +118,10 @@ export function SMSSpendLimits({ orgSlug }: { orgSlug: string }) {
             <DollarSign className="h-5 w-5" />
             Spend Limits
           </CardTitle>
-          <CardDescription>
-            Monthly spend limits and usage
-          </CardDescription>
+          <CardDescription>Monthly spend limits and usage</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-4">
+          <div className="py-4 text-center">
             <p className="text-muted-foreground text-sm">
               Default AWS spend limits apply
             </p>
@@ -141,9 +138,7 @@ export function SMSSpendLimits({ orgSlug }: { orgSlug: string }) {
           <DollarSign className="h-5 w-5" />
           Spend Limits
         </CardTitle>
-        <CardDescription>
-          Monthly spend limits and usage
-        </CardDescription>
+        <CardDescription>Monthly spend limits and usage</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -154,22 +149,24 @@ export function SMSSpendLimits({ orgSlug }: { orgSlug: string }) {
               (l) => l.name === spendName
             );
             const spent = currentSpend?.enforcedLimit || 0;
-            const percentage = limit.enforcedLimit > 0
-              ? Math.min((spent / limit.enforcedLimit) * 100, 100)
-              : 0;
+            const percentage =
+              limit.enforcedLimit > 0
+                ? Math.min((spent / limit.enforcedLimit) * 100, 100)
+                : 0;
 
             return (
-              <div key={limit.name} className="space-y-2">
+              <div className="space-y-2" key={limit.name}>
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">
                     {getSpendLimitLabel(limit.name)}
                   </span>
                   <span className="text-muted-foreground">
-                    {formatCurrency(spent)} / {formatCurrency(limit.enforcedLimit)}
+                    {formatCurrency(spent)} /{" "}
+                    {formatCurrency(limit.enforcedLimit)}
                   </span>
                 </div>
-                <Progress value={percentage} className="h-2" />
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <Progress className="h-2" value={percentage} />
+                <div className="flex items-center justify-between text-muted-foreground text-xs">
                   <span>{percentage.toFixed(1)}% used</span>
                   {limit.overridden && (
                     <span className="text-yellow-600">Custom limit set</span>

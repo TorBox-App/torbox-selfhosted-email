@@ -1,6 +1,7 @@
 "use client";
 
-import { Phone, ShieldCheck, MessageSquareMore, AlertCircle } from "lucide-react";
+import { AlertCircle, MessageSquareMore, Phone } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -8,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSMSStatus } from "../hooks/use-sms-analytics";
 
@@ -38,15 +38,30 @@ function getStatusColor(status: string): string {
 function getNumberTypeBadge(type: string): { label: string; color: string } {
   switch (type.toUpperCase()) {
     case "TOLL_FREE":
-      return { label: "Toll-Free", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" };
+      return {
+        label: "Toll-Free",
+        color: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      };
     case "TEN_DLC":
-      return { label: "10DLC", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" };
+      return {
+        label: "10DLC",
+        color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+      };
     case "SHORT_CODE":
-      return { label: "Short Code", color: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" };
+      return {
+        label: "Short Code",
+        color: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+      };
     case "SIMULATOR":
-      return { label: "Simulator", color: "bg-orange-500/10 text-orange-500 border-orange-500/20" };
+      return {
+        label: "Simulator",
+        color: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+      };
     default:
-      return { label: type, color: "bg-gray-500/10 text-gray-500 border-gray-500/20" };
+      return {
+        label: type,
+        color: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+      };
   }
 }
 
@@ -61,9 +76,7 @@ export function SMSPhoneNumbers({ orgSlug }: { orgSlug: string }) {
             <Phone className="h-5 w-5" />
             Phone Numbers
           </CardTitle>
-          <CardDescription>
-            Your provisioned SMS phone numbers
-          </CardDescription>
+          <CardDescription>Your provisioned SMS phone numbers</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -102,16 +115,15 @@ export function SMSPhoneNumbers({ orgSlug }: { orgSlug: string }) {
             <Phone className="h-5 w-5" />
             Phone Numbers
           </CardTitle>
-          <CardDescription>
-            Your provisioned SMS phone numbers
-          </CardDescription>
+          <CardDescription>Your provisioned SMS phone numbers</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Phone className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <Phone className="mb-4 h-12 w-12 text-muted-foreground/50" />
             <h3 className="font-medium text-lg">No Phone Numbers</h3>
-            <p className="text-muted-foreground text-sm mt-1">
-              Run <code className="bg-muted px-1 rounded">wraps sms init</code> to provision a phone number
+            <p className="mt-1 text-muted-foreground text-sm">
+              Run <code className="rounded bg-muted px-1">wraps sms init</code>{" "}
+              to provision a phone number
             </p>
           </div>
         </CardContent>
@@ -126,9 +138,7 @@ export function SMSPhoneNumbers({ orgSlug }: { orgSlug: string }) {
           <Phone className="h-5 w-5" />
           Phone Numbers
         </CardTitle>
-        <CardDescription>
-          Your provisioned SMS phone numbers
-        </CardDescription>
+        <CardDescription>Your provisioned SMS phone numbers</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -136,23 +146,29 @@ export function SMSPhoneNumbers({ orgSlug }: { orgSlug: string }) {
             const typeInfo = getNumberTypeBadge(phone.numberType);
             return (
               <div
-                key={phone.phoneNumberArn}
                 className="flex items-center justify-between rounded-lg border p-4"
+                key={phone.phoneNumberArn}
               >
                 <div className="space-y-1">
                   <p className="font-mono font-semibold text-lg">
                     {formatPhoneNumber(phone.phoneNumber)}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={typeInfo.color}>
+                    <Badge className={typeInfo.color} variant="outline">
                       {typeInfo.label}
                     </Badge>
-                    <Badge variant="outline" className={getStatusColor(phone.status)}>
+                    <Badge
+                      className={getStatusColor(phone.status)}
+                      variant="outline"
+                    >
                       {phone.status}
                     </Badge>
                     {phone.twoWayEnabled && (
-                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                        <MessageSquareMore className="h-3 w-3 mr-1" />
+                      <Badge
+                        className="border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                        variant="outline"
+                      >
+                        <MessageSquareMore className="mr-1 h-3 w-3" />
                         Two-Way
                       </Badge>
                     )}

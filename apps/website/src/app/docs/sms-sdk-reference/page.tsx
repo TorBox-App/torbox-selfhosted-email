@@ -549,7 +549,9 @@ export default function SMSSDKReferencePage() {
                   provided.
                 </li>
                 <li>
-                  <code className="rounded bg-muted px-1.5 py-0.5">roleArn</code>{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    roleArn
+                  </code>{" "}
                   (optional): IAM role ARN for OIDC authentication (Vercel, EKS,
                   GitHub Actions).
                 </li>
@@ -714,7 +716,9 @@ export default function SMSSDKReferencePage() {
                     <code className="rounded bg-muted px-1.5 py-0.5">from</code>
                   </td>
                   <td className="py-2">string</td>
-                  <td className="py-2">Override sender phone number (optional)</td>
+                  <td className="py-2">
+                    Override sender phone number (optional)
+                  </td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2">

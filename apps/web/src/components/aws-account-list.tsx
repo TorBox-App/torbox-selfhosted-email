@@ -26,8 +26,8 @@ export function AWSAccountList({
 }: AWSAccountListProps) {
   // Use slug-based URLs if orgSlug is provided, otherwise fall back to old format
   const baseUrl = orgSlug
-    ? `/${orgSlug}/aws-accounts`
-    : `/dashboard/organizations/${organizationId}/aws-accounts`;
+    ? `/${orgSlug}/settings/aws-accounts`
+    : `/dashboard/organizations/${organizationId}/settings/aws-accounts`;
 
   // CloudFormation template URL for updating stacks
   const templateUrl =

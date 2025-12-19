@@ -1,0 +1,1 @@
+ALTER TABLE "aws_account" ADD COLUMN "sms_event_history_enabled" boolean DEFAULT false NOT NULL;

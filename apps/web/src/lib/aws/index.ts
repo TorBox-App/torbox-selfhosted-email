@@ -17,15 +17,15 @@ export {
   invalidateCredentials,
 } from "./credential-cache";
 export {
-  getSMSCloudWatchMetrics,
-  getSMSMetricsSummary,
-  getSMSAccountAttributes,
-  getSMSSpendLimits,
-  getSMSPhoneNumbers,
-  getSMSConfigurationSets,
-  getSMSRegistrations,
-  querySMSEvents,
   getRecentSMSActivity,
+  getSMSAccountAttributes,
+  getSMSCloudWatchMetrics,
+  getSMSConfigurationSets,
+  getSMSMetricsSummary,
+  getSMSPhoneNumbers,
+  getSMSRegistrations,
+  getSMSSpendLimits,
+  querySMSEvents,
   SMS_METRICS,
   type SMSEvent,
 } from "./sms-voice";

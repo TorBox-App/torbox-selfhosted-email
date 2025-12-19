@@ -134,8 +134,8 @@ export async function GET(request: Request, context: RouteContext) {
           numberType: phone.NumberType || "UNKNOWN",
           status: phone.Status || "UNKNOWN",
           capabilities: phone.NumberCapabilities || [],
-          twoWayEnabled: phone.TwoWayEnabled || false,
-          selfManagedOptOutsEnabled: phone.SelfManagedOptOutsEnabled || false,
+          twoWayEnabled: phone.TwoWayEnabled ?? false,
+          selfManagedOptOutsEnabled: phone.SelfManagedOptOutsEnabled ?? false,
           isoCountryCode: phone.IsoCountryCode || "",
           messageType: phone.MessageType || "TRANSACTIONAL",
           monthlyLeasingPrice: phone.MonthlyLeasingPrice || "0.00",
@@ -162,7 +162,7 @@ export async function GET(request: Request, context: RouteContext) {
           name: limit.Name || "UNKNOWN",
           enforcedLimit: limit.EnforcedLimit || 0,
           maxLimit: limit.MaxLimit || 0,
-          overridden: limit.Overridden || false,
+          overridden: limit.Overridden ?? false,
         });
       }
     }

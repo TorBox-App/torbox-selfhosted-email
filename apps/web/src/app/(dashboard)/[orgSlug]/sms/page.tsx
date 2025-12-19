@@ -20,7 +20,10 @@ type SMSPageProps = {
 };
 
 // Map AWS event types to our SMSStatus
-function mapEventTypeToStatus(eventType: string, eventStatus: string): SMSStatus {
+function mapEventTypeToStatus(
+  eventType: string,
+  eventStatus: string
+): SMSStatus {
   const statusLower = eventStatus.toLowerCase();
 
   if (statusLower === "delivered" || statusLower === "delivery") {
@@ -118,7 +121,10 @@ async function fetchSMSMessages(
 
         if (existing) {
           // Update status to most recent/significant event
-          const newStatus = mapEventTypeToStatus(event.eventType, event.eventStatus);
+          const newStatus = mapEventTypeToStatus(
+            event.eventType,
+            event.eventStatus
+          );
           const statusPriority: SMSStatus[] = [
             "delivered",
             "failed",
@@ -170,10 +176,7 @@ async function fetchSMSMessages(
   }
 }
 
-export default async function SMSPage({
-  params,
-  searchParams,
-}: SMSPageProps) {
+export default async function SMSPage({ params, searchParams }: SMSPageProps) {
   const { orgSlug } = await params;
   const { days = "7", limit = "100" } = await searchParams;
 

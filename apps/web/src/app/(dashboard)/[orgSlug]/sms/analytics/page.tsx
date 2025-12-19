@@ -15,7 +15,9 @@ type SMSAnalyticsPageProps = {
   }>;
 };
 
-export default async function SMSAnalyticsPage({ params }: SMSAnalyticsPageProps) {
+export default async function SMSAnalyticsPage({
+  params,
+}: SMSAnalyticsPageProps) {
   const { orgSlug } = await params;
   const session = await auth.api.getSession({
     headers: await import("next/headers").then((mod) => mod.headers()),

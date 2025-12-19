@@ -213,7 +213,9 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
                   colSpan={columns.length}
                 >
                   <div className="flex flex-col items-center gap-2">
-                    <p className="text-muted-foreground">No SMS messages found</p>
+                    <p className="text-muted-foreground">
+                      No SMS messages found
+                    </p>
                     <p className="text-muted-foreground text-sm">
                       Try adjusting the time range or send your first SMS
                     </p>

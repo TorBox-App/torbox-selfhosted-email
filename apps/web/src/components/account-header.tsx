@@ -38,7 +38,7 @@ export function AccountHeader({
         <div className="flex-1">
           <h1 className="font-bold text-3xl">{account.name}</h1>
           <p className="mt-2 text-muted-foreground">
-            Manage your AWS account connection and email sending infrastructure.
+            Manage your AWS account connection and infrastructure.
           </p>
           <div className="mt-3 flex items-center gap-3 text-muted-foreground text-sm">
             <span className="font-mono">{account.accountId}</span>
@@ -50,7 +50,9 @@ export function AccountHeader({
         {/* Actions */}
         {permissions.canManage && (
           <Button asChild variant="outline">
-            <Link href={`/${orgSlug}/aws-accounts/${account.id}/permissions`}>
+            <Link
+              href={`/${orgSlug}/settings/aws-accounts/${account.id}/permissions`}
+            >
               Manage Access
             </Link>
           </Button>

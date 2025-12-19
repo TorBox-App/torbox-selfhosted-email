@@ -1,22 +1,22 @@
 import {
-  PinpointSMSVoiceV2Client,
-  DescribeAccountAttributesCommand,
-  DescribeSpendLimitsCommand,
-  DescribePhoneNumbersCommand,
-  DescribeConfigurationSetsCommand,
-  DescribeRegistrationsCommand,
-  type PhoneNumberInformation,
-  type AccountAttribute,
-  type SpendLimit,
-  type ConfigurationSetInformation,
-  type RegistrationInformation,
-} from "@aws-sdk/client-pinpoint-sms-voice-v2";
-import {
   CloudWatchClient,
   GetMetricDataCommand,
   type MetricDataResult,
 } from "@aws-sdk/client-cloudwatch";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
+  type AccountAttribute,
+  type ConfigurationSetInformation,
+  DescribeAccountAttributesCommand,
+  DescribeConfigurationSetsCommand,
+  DescribePhoneNumbersCommand,
+  DescribeRegistrationsCommand,
+  DescribeSpendLimitsCommand,
+  type PhoneNumberInformation,
+  PinpointSMSVoiceV2Client,
+  type RegistrationInformation,
+  type SpendLimit,
+} from "@aws-sdk/client-pinpoint-sms-voice-v2";
 import {
   DynamoDBDocumentClient,
   QueryCommand,
@@ -113,7 +113,9 @@ export async function getSMSCloudWatchMetrics(
     return response.MetricDataResults || [];
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Failed to fetch SMS CloudWatch metrics: ${error.message}`);
+      throw new Error(
+        `Failed to fetch SMS CloudWatch metrics: ${error.message}`
+      );
     }
     throw error;
   }
@@ -149,7 +151,9 @@ export async function getSMSAccountAttributes(
   });
 
   try {
-    const response = await client.send(new DescribeAccountAttributesCommand({}));
+    const response = await client.send(
+      new DescribeAccountAttributesCommand({})
+    );
     return response.AccountAttributes || [];
   } catch (error) {
     if (error instanceof Error) {
@@ -193,7 +197,9 @@ export async function getSMSSpendLimits(
     return response.SpendLimits || [];
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`[SMS] Failed to fetch spend limits for ${account.accountId}: ${error.message}`);
+      console.error(
+        `[SMS] Failed to fetch spend limits for ${account.accountId}: ${error.message}`
+      );
     }
     return [];
   }
@@ -230,11 +236,15 @@ export async function getSMSPhoneNumbers(
 
   try {
     const response = await client.send(new DescribePhoneNumbersCommand({}));
-    console.log(`[SMS] Found ${response.PhoneNumbers?.length || 0} phone numbers for ${account.accountId}`);
+    console.log(
+      `[SMS] Found ${response.PhoneNumbers?.length || 0} phone numbers for ${account.accountId}`
+    );
     return response.PhoneNumbers || [];
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`[SMS] Failed to fetch phone numbers for ${account.accountId}: ${error.message}`);
+      console.error(
+        `[SMS] Failed to fetch phone numbers for ${account.accountId}: ${error.message}`
+      );
     }
     return [];
   }
@@ -270,7 +280,9 @@ export async function getSMSConfigurationSets(
   });
 
   try {
-    const response = await client.send(new DescribeConfigurationSetsCommand({}));
+    const response = await client.send(
+      new DescribeConfigurationSetsCommand({})
+    );
     return response.ConfigurationSets || [];
   } catch (error) {
     if (error instanceof Error) {
@@ -311,11 +323,15 @@ export async function getSMSRegistrations(
 
   try {
     const response = await client.send(new DescribeRegistrationsCommand({}));
-    console.log(`[SMS] Found ${response.Registrations?.length || 0} registrations for ${account.accountId}`);
+    console.log(
+      `[SMS] Found ${response.Registrations?.length || 0} registrations for ${account.accountId}`
+    );
     return response.Registrations || [];
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`[SMS] Failed to fetch registrations for ${account.accountId}: ${error.message}`);
+      console.error(
+        `[SMS] Failed to fetch registrations for ${account.accountId}: ${error.message}`
+      );
     }
     return [];
   }

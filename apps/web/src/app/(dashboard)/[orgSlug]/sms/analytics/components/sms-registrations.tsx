@@ -1,6 +1,13 @@
 "use client";
 
-import { FileCheck, AlertCircle, Clock, CheckCircle, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  FileCheck,
+  XCircle,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -8,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSMSStatus } from "../hooks/use-sms-analytics";
 
@@ -61,7 +67,10 @@ function getRegistrationStatusInfo(status: string): {
         icon: <XCircle className="h-4 w-4" />,
         color: "bg-red-500/10 text-red-500 border-red-500/20",
         label: status === "DENIED" ? "Denied" : "Closed",
-        description: status === "DENIED" ? "Registration was denied" : "Registration was closed",
+        description:
+          status === "DENIED"
+            ? "Registration was denied"
+            : "Registration was closed",
       };
     default:
       return {
@@ -73,16 +82,31 @@ function getRegistrationStatusInfo(status: string): {
   }
 }
 
-function getRegistrationTypeBadge(type: string): { label: string; color: string } {
+function getRegistrationTypeBadge(type: string): {
+  label: string;
+  color: string;
+} {
   switch (type.toUpperCase()) {
     case "TOLL_FREE":
-      return { label: "Toll-Free", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" };
+      return {
+        label: "Toll-Free",
+        color: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      };
     case "TEN_DLC_BRAND":
-      return { label: "10DLC Brand", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" };
+      return {
+        label: "10DLC Brand",
+        color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+      };
     case "TEN_DLC_CAMPAIGN":
-      return { label: "10DLC Campaign", color: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" };
+      return {
+        label: "10DLC Campaign",
+        color: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+      };
     default:
-      return { label: type, color: "bg-gray-500/10 text-gray-500 border-gray-500/20" };
+      return {
+        label: type,
+        color: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+      };
   }
 }
 
@@ -153,13 +177,15 @@ export function SMSRegistrations({ orgSlug }: { orgSlug: string }) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <FileCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <FileCheck className="mb-4 h-12 w-12 text-muted-foreground/50" />
             <h3 className="font-medium text-lg">No Registrations</h3>
-            <p className="text-muted-foreground text-sm mt-1">
+            <p className="mt-1 text-muted-foreground text-sm">
               Toll-free and 10DLC numbers require registration before sending
             </p>
-            <p className="text-muted-foreground text-sm mt-1">
-              Run <code className="bg-muted px-1 rounded">wraps sms register</code> to start
+            <p className="mt-1 text-muted-foreground text-sm">
+              Run{" "}
+              <code className="rounded bg-muted px-1">wraps sms register</code>{" "}
+              to start
             </p>
           </div>
         </CardContent>
@@ -181,20 +207,19 @@ export function SMSRegistrations({ orgSlug }: { orgSlug: string }) {
       <CardContent>
         <div className="space-y-4">
           {data.registrations.map((reg) => {
-            const statusInfo = getRegistrationStatusInfo(reg.registrationStatus);
+            const statusInfo = getRegistrationStatusInfo(
+              reg.registrationStatus
+            );
             const typeInfo = getRegistrationTypeBadge(reg.registrationType);
             return (
-              <div
-                key={reg.registrationArn}
-                className="rounded-lg border p-4"
-              >
+              <div className="rounded-lg border p-4" key={reg.registrationArn}>
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={typeInfo.color}>
+                      <Badge className={typeInfo.color} variant="outline">
                         {typeInfo.label}
                       </Badge>
-                      <Badge variant="outline" className={statusInfo.color}>
+                      <Badge className={statusInfo.color} variant="outline">
                         {statusInfo.icon}
                         <span className="ml-1">{statusInfo.label}</span>
                       </Badge>
@@ -211,7 +236,7 @@ export function SMSRegistrations({ orgSlug }: { orgSlug: string }) {
                       Created {formatDate(reg.createdTimestamp)}
                     </p>
                     {reg.approvedVersionNumber && (
-                      <p className="text-green-600 text-xs mt-1">
+                      <p className="mt-1 text-green-600 text-xs">
                         Approved v{reg.approvedVersionNumber}
                       </p>
                     )}

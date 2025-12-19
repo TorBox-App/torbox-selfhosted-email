@@ -72,6 +72,9 @@ export const awsAccount = pgTable(
     // SMS Features
     smsEnabled: boolean("sms_enabled").default(false).notNull(),
     smsPhoneNumberCount: integer("sms_phone_number_count").default(0).notNull(),
+    smsEventHistoryEnabled: boolean("sms_event_history_enabled")
+      .default(false)
+      .notNull(),
 
     // Audit
     createdBy: text("created_by").references(() => user.id),

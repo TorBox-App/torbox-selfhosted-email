@@ -95,8 +95,6 @@ async function checkEmailInfrastructure(
         errorName === "ResourceNotFoundException" ||
         errorMessage.includes("Requested resource not found")
       ) {
-        // Continue checking other accounts
-        continue;
       }
 
       // Other errors - continue checking other accounts

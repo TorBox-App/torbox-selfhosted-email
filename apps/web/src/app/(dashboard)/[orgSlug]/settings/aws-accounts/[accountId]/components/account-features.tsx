@@ -9,7 +9,7 @@ import {
   Loader2,
   Mail,
   MessageSquare,
-  Radio,
+  Phone,
   RefreshCw,
   Settings2,
   XCircle,
@@ -49,6 +49,7 @@ export function AccountFeatures({
       // SMS features
       smsEnabled: boolean;
       smsPhoneNumberCount?: number;
+      smsEventHistoryEnabled: boolean;
     };
   } | null>(null);
 
@@ -85,7 +86,12 @@ export function AccountFeatures({
     // SMS features
     smsEnabled: account.smsEnabled ?? false,
     smsPhoneNumberCount: account.smsPhoneNumberCount ?? 0,
+    smsEventHistoryEnabled: account.smsEventHistoryEnabled ?? false,
   };
+
+  // Combined email event tracking (EventBridge + DynamoDB work together)
+  const emailEventTrackingEnabled =
+    features.eventHistoryEnabled || features.eventTrackingEnabled;
 
   return (
     <Card>
@@ -177,51 +183,21 @@ export function AccountFeatures({
 
         <Separator />
 
-        {/* Event History */}
+        {/* Event Tracking (combined EventBridge + DynamoDB) */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
               <Database className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h4 className="font-medium text-sm">Event History</h4>
-              <p className="text-muted-foreground text-xs">
-                Email event storage in DynamoDB
-              </p>
-            </div>
-          </div>
-          <div>
-            {features.eventHistoryEnabled ? (
-              <Badge className="gap-1" variant="default">
-                <CheckCircle2 className="h-3 w-3" />
-                Enabled
-              </Badge>
-            ) : (
-              <Badge className="gap-1" variant="secondary">
-                <XCircle className="h-3 w-3" />
-                Not Enabled
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Event Tracking */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-              <Radio className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
               <h4 className="font-medium text-sm">Event Tracking</h4>
               <p className="text-muted-foreground text-xs">
-                Real-time email events via EventBridge
+                Real-time events via EventBridge + DynamoDB storage
               </p>
             </div>
           </div>
           <div>
-            {features.eventTrackingEnabled ? (
+            {emailEventTrackingEnabled ? (
               <Badge className="gap-1" variant="default">
                 <CheckCircle2 className="h-3 w-3" />
                 Enabled
@@ -269,23 +245,53 @@ export function AccountFeatures({
           <h3 className="font-medium text-muted-foreground text-sm">SMS</h3>
         </div>
 
-        {/* SMS Infrastructure */}
+        {/* SMS Phone Numbers */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100">
-              <MessageSquare className="h-5 w-5 text-teal-600" />
+              <Phone className="h-5 w-5 text-teal-600" />
             </div>
             <div>
-              <h4 className="font-medium text-sm">SMS Infrastructure</h4>
+              <h4 className="font-medium text-sm">Phone Numbers</h4>
               <p className="text-muted-foreground text-xs">
                 {features.smsEnabled && features.smsPhoneNumberCount
                   ? `${features.smsPhoneNumberCount} phone number${features.smsPhoneNumberCount > 1 ? "s" : ""} configured`
-                  : "Phone numbers and messaging via AWS End User Messaging"}
+                  : "AWS End User Messaging phone numbers"}
               </p>
             </div>
           </div>
           <div>
             {features.smsEnabled ? (
+              <Badge className="gap-1" variant="default">
+                <CheckCircle2 className="h-3 w-3" />
+                Enabled
+              </Badge>
+            ) : (
+              <Badge className="gap-1" variant="secondary">
+                <XCircle className="h-3 w-3" />
+                Not Enabled
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* SMS Event Tracking */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+              <Database className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <h4 className="font-medium text-sm">Event Tracking</h4>
+              <p className="text-muted-foreground text-xs">
+                SMS event storage in DynamoDB
+              </p>
+            </div>
+          </div>
+          <div>
+            {features.smsEventHistoryEnabled ? (
               <Badge className="gap-1" variant="default">
                 <CheckCircle2 className="h-3 w-3" />
                 Enabled

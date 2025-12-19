@@ -1,8 +1,8 @@
-import type {
-  ProductsStatusResponse,
-  ProductStatus,
-} from "@/app/api/[orgSlug]/products/route";
 import { useQuery } from "@tanstack/react-query";
+import type {
+  ProductStatus,
+  ProductsStatusResponse,
+} from "@/app/api/[orgSlug]/products/route";
 
 async function fetchProductsStatus(
   orgSlug: string

@@ -58,7 +58,11 @@ export function SMSDeliverabilityChart({ orgSlug }: { orgSlug: string }) {
   }, [isMobile]);
 
   const days = timeRange === "90d" ? 90 : timeRange === "30d" ? 30 : 7;
-  const { data: volumeData, isLoading, error } = useSMSVolumeData(orgSlug, days);
+  const {
+    data: volumeData,
+    isLoading,
+    error,
+  } = useSMSVolumeData(orgSlug, days);
 
   const chartData = volumeData || [];
 
