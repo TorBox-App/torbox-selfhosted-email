@@ -530,9 +530,10 @@ export async function scanAWSAccountFeatures(
       })
       .where(eq(awsAccount.id, awsAccountId));
 
-    // 12. Revalidate pages
+    // 12. Revalidate pages (layout will re-fetch products status)
     revalidatePath(`/${organizationId}/settings/aws-accounts/${awsAccountId}`);
     revalidatePath(`/${organizationId}/settings`);
+    revalidatePath(`/${organizationId}`);
 
     return {
       success: true,

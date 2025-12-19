@@ -27,18 +27,16 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useActiveOrganization } from "@/contexts/organization-context";
-import { useProductsStatus } from "@/hooks/use-products-status";
+import { useProductsStore } from "@/stores/products-store";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { activeOrganization } = useActiveOrganization();
   const orgSlug = activeOrganization?.slug ?? "";
-  const { data: productsStatus } = useProductsStatus(orgSlug || undefined);
+  const productsStatus = useProductsStore((s) => s.status);
 
-  // Check if products are enabled
-  const isEmailEnabled =
-    productsStatus?.products.find((p) => p.id === "email")?.enabled ?? true;
-  const isSMSEnabled =
-    productsStatus?.products.find((p) => p.id === "sms")?.enabled ?? false;
+  // Check if products are enabled (hydrated from server, no flash)
+  const isEmailEnabled = productsStatus?.emailEnabled ?? false;
+  const isSMSEnabled = productsStatus?.smsEnabled ?? false;
 
   // Email navigation - always shown with full nav if enabled, otherwise single link
   const emailNavGroup = orgSlug

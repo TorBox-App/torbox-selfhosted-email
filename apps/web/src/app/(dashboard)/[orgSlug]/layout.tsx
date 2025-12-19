@@ -1,10 +1,11 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
-import { organizationExtension } from "@wraps/db/schema/app";
+import { awsAccount, organizationExtension } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { ProductsStatusHydrator } from "@/components/products-status-hydrator";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type OrganizationLayoutProps = {
@@ -62,7 +63,33 @@ export default async function OrganizationLayout({
     redirect(`/${orgSlug}/upgrade`);
   }
 
-  return <>{children}</>;
+  // Fetch products status from AWS accounts
+  const accounts = await db.query.awsAccount.findMany({
+    where: eq(awsAccount.organizationId, orgWithMembership.id),
+    columns: {
+      eventHistoryEnabled: true,
+      eventTrackingEnabled: true,
+      smsEnabled: true,
+    },
+  });
+
+  const productsStatus = {
+    emailEnabled: accounts.some(
+      (a) => a.eventHistoryEnabled || a.eventTrackingEnabled
+    ),
+    smsEnabled: accounts.some((a) => a.smsEnabled),
+    hasAwsAccounts: accounts.length > 0,
+  };
+
+  return (
+    <>
+      <ProductsStatusHydrator
+        orgId={orgWithMembership.id}
+        status={productsStatus}
+      />
+      {children}
+    </>
+  );
 }
 
 export async function generateMetadata({

@@ -36,7 +36,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     const fetchOrganizations = async () => {
       const { data } = await authClient.organization.list();
       if (data) {
-        // Map the better-auth organization format to our database format
         const orgs = data.map((item: any) => ({
           id: item.id,
           name: item.name,
@@ -58,14 +57,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     });
 
     if (!error && data) {
-      // Navigate to the organization's emails page
       router.push(`/${orgSlug}/emails`);
       router.refresh();
     }
   };
 
   // Map better-auth organization to our format
-  // Check if activeOrgData has the organization nested or if it IS the organization
   const activeOrg = activeOrgData
     ? (() => {
         const orgData = (activeOrgData as any).organization || activeOrgData;
