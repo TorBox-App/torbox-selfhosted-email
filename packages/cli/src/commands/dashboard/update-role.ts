@@ -99,7 +99,8 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
 
   // 6. Build updated policy
   const emailConfig = metadata.services.email?.config;
-  const policy = buildConsolePolicyDocument(emailConfig);
+  const smsConfig = metadata.services.sms?.config;
+  const policy = buildConsolePolicyDocument(emailConfig, smsConfig);
 
   // Extract config values for display
   const sendingEnabled =
@@ -109,6 +110,12 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     | Record<string, unknown>
     | undefined;
   const emailArchiving = emailConfig?.emailArchiving as
+    | Record<string, unknown>
+    | undefined;
+  const smsEnabled = !!smsConfig;
+  const smsSendingEnabled =
+    smsConfig && (smsConfig.sendingEnabled as boolean | undefined) !== false;
+  const smsEventTracking = smsConfig?.eventTracking as
     | Record<string, unknown>
     | undefined;
 
@@ -131,6 +138,9 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
   outro(pc.green("✓ Hosted dashboard access role updated successfully"));
 
   console.log(`\n${pc.bold("Updated Permissions:")}`);
+
+  // Email permissions
+  console.log(`\n  ${pc.bold(pc.cyan("Email:"))}`);
   console.log(
     `  ${pc.green("✓")} SES metrics and identity verification (always enabled)`
   );
@@ -154,6 +164,26 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     console.log(`  ${pc.green("✓")} Mail Manager Archive access`);
   }
 
+  // SMS permissions
+  if (smsEnabled) {
+    console.log(`\n  ${pc.bold(pc.cyan("SMS:"))}`);
+    console.log(
+      `  ${pc.green("✓")} SMS Voice V2 read access (phone numbers, config, registrations)`
+    );
+
+    if (smsSendingEnabled) {
+      console.log(`  ${pc.green("✓")} SMS sending via SMS Voice V2`);
+    }
+
+    if (smsEventTracking?.dynamoDBHistory) {
+      console.log(`  ${pc.green("✓")} DynamoDB read access for SMS history`);
+    }
+
+    if (smsEventTracking?.enabled) {
+      console.log(`  ${pc.green("✓")} SNS topic access for SMS events`);
+    }
+  }
+
   console.log(
     `\n${pc.dim("The hosted dashboard will now have updated permissions for feature detection.")}\n`
   );
@@ -162,8 +192,8 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
 /**
  * Build IAM policy document for hosted dashboard access role
  *
- * This mirrors the permissions from the main wraps-email-role but is used
- * for the hosted dashboard app (not for SDK sending or local console).
+ * This mirrors the permissions from the main wraps-email-role and wraps-sms-role
+ * but is used for the hosted dashboard app (not for SDK sending or local console).
  */
 type PolicyStatement = {
   Effect: string;
@@ -177,9 +207,12 @@ type PolicyDocument = {
 };
 
 function buildConsolePolicyDocument(
-  emailConfig: Record<string, unknown> | undefined
+  emailConfig: Record<string, unknown> | undefined,
+  smsConfig?: Record<string, unknown> | undefined
 ): PolicyDocument {
   const statements: PolicyStatement[] = [];
+
+  // ========== EMAIL PERMISSIONS ==========
 
   // Always allow reading SES metrics for dashboard
   statements.push({
@@ -287,6 +320,72 @@ function buildConsolePolicyDocument(
       ],
       Resource: "arn:aws:ses:*:*:mailmanager-archive/*",
     });
+  }
+
+  // ========== SMS PERMISSIONS ==========
+
+  if (smsConfig) {
+    // Always allow reading SMS metrics and config for dashboard
+    statements.push({
+      Effect: "Allow",
+      Action: [
+        "sms-voice:DescribeAccountAttributes",
+        "sms-voice:DescribeSpendLimits",
+        "sms-voice:DescribeConfigurationSets",
+        "sms-voice:DescribeOptOutLists",
+        "sms-voice:DescribeOptedOutNumbers",
+        "sms-voice:DescribePools",
+        "sms-voice:DescribePhoneNumbers",
+        "sms-voice:DescribeProtectConfigurations",
+        "sms-voice:DescribeRegistrations",
+        "sms-voice:DescribeRegistrationAttachments",
+        "sms-voice:DescribeRegistrationFieldDefinitions",
+        "sms-voice:DescribeRegistrationFieldValues",
+        "sms-voice:DescribeRegistrationSectionDefinitions",
+        "sms-voice:DescribeRegistrationVersions",
+      ],
+      Resource: "*",
+    });
+
+    // Allow SMS sending if enabled
+    const smsSendingEnabled = smsConfig.sendingEnabled !== false;
+    if (smsSendingEnabled) {
+      statements.push({
+        Effect: "Allow",
+        Action: ["sms-voice:SendTextMessage", "sms-voice:SendMediaMessage"],
+        Resource: "*",
+      });
+    }
+
+    // Allow DynamoDB access for SMS history if enabled
+    const smsEventTracking = smsConfig.eventTracking as
+      | Record<string, unknown>
+      | undefined;
+    if (smsEventTracking?.dynamoDBHistory) {
+      statements.push({
+        Effect: "Allow",
+        Action: [
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:BatchGetItem",
+          "dynamodb:DescribeTable",
+        ],
+        Resource: [
+          "arn:aws:dynamodb:*:*:table/wraps-sms-*",
+          "arn:aws:dynamodb:*:*:table/wraps-sms-*/index/*",
+        ],
+      });
+    }
+
+    // Allow SNS access for SMS events if enabled
+    if (smsEventTracking?.enabled) {
+      statements.push({
+        Effect: "Allow",
+        Action: ["sns:GetTopicAttributes", "sns:ListSubscriptionsByTopic"],
+        Resource: "arn:aws:sns:*:*:wraps-sms-*",
+      });
+    }
   }
 
   return {
