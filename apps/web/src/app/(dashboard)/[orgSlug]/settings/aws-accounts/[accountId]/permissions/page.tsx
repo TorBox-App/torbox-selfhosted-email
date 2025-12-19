@@ -1,23 +1,33 @@
 import { auth } from "@wraps/auth";
+import type { awsAccountPermission, member, user } from "@wraps/db";
 import { db } from "@wraps/db";
+import type { InferSelectModel } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { AccountHeader } from "@/components/account-header";
-import { getSESMetricsSummary } from "@/lib/aws/cloudwatch";
 import { getOrganizationBySlug } from "@/lib/organization";
 import { checkAWSAccountAccess } from "@/lib/permissions/check-access";
-import { AccountDetails } from "./components/account-details";
-import { AccountFeatures } from "./components/account-features";
-import { EmailMetrics } from "./components/email-metrics";
-import { IAMConfiguration } from "./components/iam-configuration";
+import { CurrentAccess } from "./components/current-access";
+import { GrantAccessCard } from "./components/grant-access";
 
-type AWSAccountPageProps = {
+type PermissionWithUser = InferSelectModel<typeof awsAccountPermission> & {
+  user: InferSelectModel<typeof user>;
+  grantedByUser: InferSelectModel<typeof user> | null;
+};
+
+type MemberWithUser = InferSelectModel<typeof member> & {
+  user: InferSelectModel<typeof user>;
+};
+
+type PermissionsPageProps = {
   params: Promise<{
     orgSlug: string;
     accountId: string;
   }>;
 };
 
-export default async function AWSAccountPage({ params }: AWSAccountPageProps) {
+export default async function PermissionsPage({
+  params,
+}: PermissionsPageProps) {
   const { orgSlug, accountId } = await params;
 
   // Get session
@@ -45,19 +55,45 @@ export default async function AWSAccountPage({ params }: AWSAccountPageProps) {
     redirect(`/${orgSlug}/settings?tab=aws-accounts`);
   }
 
-  // Check if user has view permission
+  // Check if user has manage permission
   const access = await checkAWSAccountAccess({
     userId: session.user.id,
     organizationId: organization.id,
     awsAccountId: accountId,
-    permission: "view",
+    permission: "manage",
   });
 
   if (!access.authorized) {
-    redirect(`/${orgSlug}/emails`);
+    redirect(`/${orgSlug}/settings/aws-accounts/${accountId}`);
   }
 
-  // Check all permissions
+  // Get all permissions for this AWS account
+  const permissionsRaw = await db.query.awsAccountPermission.findMany({
+    where: (p, { eq }) => eq(p.awsAccountId, accountId),
+    with: {
+      user: true,
+      grantedByUser: true,
+    },
+  });
+
+  // Type assertion for permissions
+  const permissions = permissionsRaw as unknown as PermissionWithUser[];
+
+  // Get all organization members for the grant form
+  const membersRaw = await db.query.member.findMany({
+    where: (m, { eq }) => eq(m.organizationId, organization.id),
+    with: {
+      user: true,
+    },
+  });
+
+  // Type assertion for members
+  const members = membersRaw as unknown as MemberWithUser[];
+
+  // Get organization owners (they have implicit full access)
+  const owners = members.filter((m) => m.role === "owner");
+
+  // Check all permissions for current user
   const [viewAccess, sendAccess, manageAccess] = await Promise.all([
     checkAWSAccountAccess({
       userId: session.user.id,
@@ -79,31 +115,11 @@ export default async function AWSAccountPage({ params }: AWSAccountPageProps) {
     }),
   ]);
 
-  const permissions = {
+  const userPermissions = {
     canView: viewAccess.authorized,
     canSend: sendAccess.authorized,
     canManage: manageAccess.authorized,
   };
-
-  // Get metrics for last 7 days
-  const endTime = new Date();
-  const startTime = new Date(endTime.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  let metrics: Awaited<ReturnType<typeof getSESMetricsSummary>> | null = null;
-  let metricsError: string | null = null;
-
-  try {
-    metrics = await getSESMetricsSummary({
-      awsAccountId: accountId,
-      startTime,
-      endTime,
-      period: 3600, // 1 hour intervals
-    });
-  } catch (error) {
-    console.error("Error fetching metrics:", error);
-    metricsError =
-      error instanceof Error ? error.message : "Failed to fetch metrics";
-  }
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
@@ -111,20 +127,23 @@ export default async function AWSAccountPage({ params }: AWSAccountPageProps) {
       <AccountHeader
         account={account}
         orgSlug={orgSlug}
+        permissions={userPermissions}
+      />
+
+      {/* Current Access */}
+      <CurrentAccess
+        awsAccountId={accountId}
+        organizationId={organization.id}
+        owners={owners}
         permissions={permissions}
       />
 
-      {/* Email Metrics */}
-      <EmailMetrics error={metricsError} metrics={metrics} />
-
-      {/* Deployed Features */}
-      <AccountFeatures account={account} organizationId={organization.id} />
-
-      {/* Account Details */}
-      <AccountDetails account={account} />
-
-      {/* IAM Configuration - only show to managers */}
-      {permissions.canManage && <IAMConfiguration account={account} />}
+      {/* Grant Access */}
+      <GrantAccessCard
+        awsAccountId={accountId}
+        members={members}
+        organizationId={organization.id}
+      />
     </div>
   );
 }

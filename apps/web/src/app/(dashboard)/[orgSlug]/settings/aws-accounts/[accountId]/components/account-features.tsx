@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   Database,
   Loader2,
+  Mail,
+  MessageSquare,
   Radio,
   RefreshCw,
   Settings2,
@@ -39,10 +41,14 @@ export function AccountFeatures({
     success: boolean;
     message: string;
     features?: {
+      // Email features
       archivingEnabled: boolean;
       eventHistoryEnabled: boolean;
       eventTrackingEnabled: boolean;
       customTrackingDomain?: string;
+      // SMS features
+      smsEnabled: boolean;
+      smsPhoneNumberCount?: number;
     };
   } | null>(null);
 
@@ -71,10 +77,14 @@ export function AccountFeatures({
 
   // Get feature status - use scan result if available, otherwise use account data
   const features = scanResult?.features || {
+    // Email features
     archivingEnabled: account.archivingEnabled,
     eventHistoryEnabled: account.eventHistoryEnabled,
     eventTrackingEnabled: account.eventTrackingEnabled,
     customTrackingDomain: account.customTrackingDomain ?? undefined,
+    // SMS features
+    smsEnabled: account.smsEnabled ?? false,
+    smsPhoneNumberCount: account.smsPhoneNumberCount ?? 0,
   };
 
   return (
@@ -130,6 +140,12 @@ export function AccountFeatures({
             <Separator />
           </>
         )}
+
+        {/* Email Section Header */}
+        <div className="flex items-center gap-2">
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-medium text-muted-foreground text-sm">Email</h3>
+        </div>
 
         {/* Email Archiving */}
         <div className="flex items-center justify-between">
@@ -247,12 +263,50 @@ export function AccountFeatures({
 
         <Separator />
 
+        {/* SMS Section Header */}
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-medium text-muted-foreground text-sm">SMS</h3>
+        </div>
+
+        {/* SMS Infrastructure */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100">
+              <MessageSquare className="h-5 w-5 text-teal-600" />
+            </div>
+            <div>
+              <h4 className="font-medium text-sm">SMS Infrastructure</h4>
+              <p className="text-muted-foreground text-xs">
+                {features.smsEnabled && features.smsPhoneNumberCount
+                  ? `${features.smsPhoneNumberCount} phone number${features.smsPhoneNumberCount > 1 ? "s" : ""} configured`
+                  : "Phone numbers and messaging via AWS End User Messaging"}
+              </p>
+            </div>
+          </div>
+          <div>
+            {features.smsEnabled ? (
+              <Badge className="gap-1" variant="default">
+                <CheckCircle2 className="h-3 w-3" />
+                Enabled
+              </Badge>
+            ) : (
+              <Badge className="gap-1" variant="secondary">
+                <XCircle className="h-3 w-3" />
+                Not Enabled
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <Separator />
+
         {/* Help Text */}
         <div className="rounded-md bg-muted p-3">
           <p className="text-muted-foreground text-xs">
             Click "Scan Features" to detect features deployed in your AWS
             account. This queries your AWS resources to identify enabled
-            features like email archiving and updates the dashboard accordingly.
+            features like email archiving and SMS infrastructure.
           </p>
         </div>
       </CardContent>
