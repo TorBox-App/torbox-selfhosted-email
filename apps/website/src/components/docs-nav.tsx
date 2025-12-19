@@ -1,6 +1,6 @@
 "use client";
 
-import { Book, Code, FileText, Rocket, Terminal } from "lucide-react";
+import { Book, Code, FileText, MessageSquare, Rocket, Terminal } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -41,9 +41,14 @@ const navItems: NavSection[] = [
         icon: Terminal,
       },
       {
-        title: "SDK Reference",
+        title: "Email SDK",
         href: "/docs/sdk-reference",
         icon: Code,
+      },
+      {
+        title: "SMS SDK",
+        href: "/docs/sms-sdk-reference",
+        icon: MessageSquare,
       },
     ],
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Book, Code, Rocket, Terminal } from "lucide-react";
+import { ArrowRight, Book, Code, MessageSquare, Rocket, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,9 +42,16 @@ const quickLinks = [
   },
   {
     icon: Code,
-    title: "SDK Reference",
+    title: "Email SDK",
     description: "Learn how to use @wraps.dev/email in your application",
     href: "/docs/sdk-reference",
+    disabled: false,
+  },
+  {
+    icon: MessageSquare,
+    title: "SMS SDK",
+    description: "Send SMS with @wraps.dev/sms through AWS",
+    href: "/docs/sms-sdk-reference",
     disabled: false,
   },
   {
@@ -214,7 +221,7 @@ export default function DocsPage() {
             <h2 className="mb-8 text-center font-bold text-2xl">
               Additional Resources
             </h2>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-3">
               <Card>
                 <CardHeader>
                   <CardTitle>GitHub Repository</CardTitle>
@@ -238,7 +245,7 @@ export default function DocsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>TypeScript SDK</CardTitle>
+                  <CardTitle>Email SDK</CardTitle>
                   <CardDescription>
                     View @wraps.dev/email package on npm
                   </CardDescription>
@@ -247,6 +254,27 @@ export default function DocsPage() {
                   <Button asChild variant="outline">
                     <a
                       href="https://www.npmjs.com/package/@wraps.dev/email"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      View on npm
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>SMS SDK</CardTitle>
+                  <CardDescription>
+                    View @wraps.dev/sms package on npm
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild variant="outline">
+                    <a
+                      href="https://www.npmjs.com/package/@wraps.dev/sms"
                       rel="noopener noreferrer"
                       target="_blank"
                     >

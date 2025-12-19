@@ -8,6 +8,9 @@ const Sms = lazy(() => import("@/app/sms/page"));
 const Docs = lazy(() => import("@/app/docs/page"));
 const QuickstartDocs = lazy(() => import("@/app/docs/quickstart/page"));
 const SDKReferenceDocs = lazy(() => import("@/app/docs/sdk-reference/page"));
+const SMSSDKReferenceDocs = lazy(
+  () => import("@/app/docs/sms-sdk-reference/page")
+);
 const CLIReferenceDocs = lazy(() => import("@/app/docs/cli-reference/page"));
 const Privacy = lazy(() => import("@/app/privacy/page"));
 const Terms = lazy(() => import("@/app/terms/page"));
@@ -56,6 +59,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/docs/sdk-reference",
     element: <SDKReferenceDocs />,
+  },
+  {
+    path: "/docs/sms-sdk-reference",
+    element: <SMSSDKReferenceDocs />,
   },
   {
     path: "/docs/cli-reference",
