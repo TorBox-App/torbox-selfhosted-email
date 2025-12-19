@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Wraps Console Access Role - Grants Wraps dashboard read-only access to CloudWatch metrics and SES data"
+Description: "Wraps Console Access Role - Grants Wraps dashboard read-only access to CloudWatch metrics, SES email, and SMS data"
 
 Parameters:
   ExternalId:
@@ -30,9 +30,27 @@ Parameters:
       - "true"
       - "false"
 
+  EnableSMSAccess:
+    Type: String
+    Description: "Enable access to SMS data and metrics (requires Wraps SMS feature)"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  AllowSMSSending:
+    Type: String
+    Description: "Allow Wraps to send SMS messages on your behalf (default: false)"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
 Conditions:
   EnableSending: !Equals [!Ref AllowEmailSending, "true"]
   EnableArchiving: !Equals [!Ref EnableEmailArchiving, "true"]
+  EnableSMS: !Equals [!Ref EnableSMSAccess, "true"]
+  EnableSMSSend: !Equals [!Ref AllowSMSSending, "true"]
 
 Resources:
   # IAM Role that Wraps will assume
@@ -124,6 +142,68 @@ Resources:
                   - "events:DescribeRule"
                 Resource:
                   - !Sub "arn:aws:events:*:${AWS::AccountId}:rule/wraps-email-events-to-sqs"
+
+              # SMS Voice V2 - Read Access (conditional)
+              - !If
+                - EnableSMS
+                - Sid: "SMSReadAccess"
+                  Effect: Allow
+                  Action:
+                    - "sms-voice:DescribeAccountAttributes"
+                    - "sms-voice:DescribeSpendLimits"
+                    - "sms-voice:DescribeConfigurationSets"
+                    - "sms-voice:DescribeOptOutLists"
+                    - "sms-voice:DescribeOptedOutNumbers"
+                    - "sms-voice:DescribePools"
+                    - "sms-voice:DescribePhoneNumbers"
+                    - "sms-voice:DescribeProtectConfigurations"
+                    - "sms-voice:DescribeRegistrations"
+                    - "sms-voice:DescribeRegistrationAttachments"
+                    - "sms-voice:DescribeRegistrationFieldDefinitions"
+                    - "sms-voice:DescribeRegistrationFieldValues"
+                    - "sms-voice:DescribeRegistrationSectionDefinitions"
+                    - "sms-voice:DescribeRegistrationVersions"
+                  Resource: "*"
+                - !Ref "AWS::NoValue"
+
+              # SMS - Send Access (conditional)
+              - !If
+                - EnableSMSSend
+                - Sid: "SMSSendAccess"
+                  Effect: Allow
+                  Action:
+                    - "sms-voice:SendTextMessage"
+                    - "sms-voice:SendMediaMessage"
+                  Resource: "*"
+                - !Ref "AWS::NoValue"
+
+              # DynamoDB - Read SMS Events (conditional, if using Wraps SMS tracking)
+              - !If
+                - EnableSMS
+                - Sid: "DynamoDBReadSMSEvents"
+                  Effect: Allow
+                  Action:
+                    - "dynamodb:DescribeTable"
+                    - "dynamodb:Query"
+                    - "dynamodb:Scan"
+                    - "dynamodb:GetItem"
+                    - "dynamodb:BatchGetItem"
+                  Resource:
+                    - !Sub "arn:aws:dynamodb:*:${AWS::AccountId}:table/wraps-sms-*"
+                    - !Sub "arn:aws:dynamodb:*:${AWS::AccountId}:table/wraps-sms-*/index/*"
+                - !Ref "AWS::NoValue"
+
+              # SNS - Read SMS Event Topics (conditional)
+              - !If
+                - EnableSMS
+                - Sid: "SNSReadSMSTopics"
+                  Effect: Allow
+                  Action:
+                    - "sns:GetTopicAttributes"
+                    - "sns:ListSubscriptionsByTopic"
+                  Resource:
+                    - !Sub "arn:aws:sns:*:${AWS::AccountId}:wraps-sms-*"
+                - !Ref "AWS::NoValue"
 
               # Mail Manager - Archive Access (conditional, if using Wraps email archiving)
               - !If
