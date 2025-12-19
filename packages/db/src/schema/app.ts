@@ -57,7 +57,7 @@ export const awsAccount = pgTable(
     isVerified: boolean("is_verified").default(false).notNull(),
     lastVerifiedAt: timestamp("last_verified_at"),
 
-    // Features
+    // Email Features
     archivingEnabled: boolean("archiving_enabled").default(false).notNull(),
     archiveArn: text("archive_arn"),
     eventHistoryEnabled: boolean("event_history_enabled")
@@ -68,6 +68,10 @@ export const awsAccount = pgTable(
       .notNull(),
     configSetName: text("config_set_name"),
     customTrackingDomain: text("custom_tracking_domain"),
+
+    // SMS Features
+    smsEnabled: boolean("sms_enabled").default(false).notNull(),
+    smsPhoneNumberCount: integer("sms_phone_number_count").default(0).notNull(),
 
     // Audit
     createdBy: text("created_by").references(() => user.id),
