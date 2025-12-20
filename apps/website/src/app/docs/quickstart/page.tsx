@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Mail, MessageSquare } from "lucide-react";
+import { ArrowRight, Mail, MessageSquare, Sparkles } from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,12 +78,27 @@ export default function QuickstartPage() {
                     </li>
                   ))}
                 </ul>
-                <Button asChild className="w-full">
-                  <a href={guide.href}>
-                    Get Started with {guide.title}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button asChild className="w-full">
+                    <a href={guide.href}>
+                      Get Started with {guide.title}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    className="w-full bg-orange-500 text-white hover:bg-orange-600"
+                  >
+                    <a
+                      href="https://app.wraps.dev/auth?mode=signup&plan=starter"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      Subscribe to Premium
+                      <Sparkles className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           );
