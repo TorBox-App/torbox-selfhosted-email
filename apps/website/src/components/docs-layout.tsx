@@ -2,6 +2,7 @@
 
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { DocsNav } from "./docs-nav";
 
@@ -34,8 +35,8 @@ export function DocsLayout({ children, headerActions }: DocsLayoutProps) {
           </Button>
 
           {/* Logo */}
-          <a className="flex items-center gap-2" href="/">
-            <span className="font-bold text-xl">Wraps</span>
+          <a className="flex items-center" href="/">
+            <Logo size={28} />
           </a>
 
           {/* Navigation */}

@@ -8,6 +8,7 @@ import {
   Rocket,
   Terminal,
 } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,8 +85,8 @@ export default function DocsPage() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <a className="flex items-center gap-2" href="/">
-              <span className="font-bold text-xl">Wraps</span>
+            <a className="flex items-center" href="/">
+              <Logo size={28} />
             </a>
             <Button asChild variant="ghost">
               <a href="/">Back to Home</a>
