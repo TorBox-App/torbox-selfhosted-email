@@ -2,10 +2,12 @@
 
 import {
   Book,
-  Code,
   FileText,
+  Globe,
+  Mail,
   MessageSquare,
   Rocket,
+  ShieldCheck,
   Terminal,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
@@ -16,6 +18,7 @@ type NavItem = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
+  children?: NavItem[];
 };
 
 type NavSection = {
@@ -36,6 +39,18 @@ const navItems: NavSection[] = [
         title: "Quickstart",
         href: "/docs/quickstart",
         icon: Rocket,
+        children: [
+          {
+            title: "Email",
+            href: "/docs/quickstart/email",
+            icon: Mail,
+          },
+          {
+            title: "SMS",
+            href: "/docs/quickstart/sms",
+            icon: MessageSquare,
+          },
+        ],
       },
     ],
   },
@@ -50,7 +65,7 @@ const navItems: NavSection[] = [
       {
         title: "Email SDK",
         href: "/docs/sdk-reference",
-        icon: Code,
+        icon: Mail,
       },
       {
         title: "SMS SDK",
@@ -66,11 +81,70 @@ const navItems: NavSection[] = [
         title: "Guides",
         href: "/docs/guides",
         icon: Book,
-        disabled: true,
+        children: [
+          {
+            title: "Production Access",
+            href: "/docs/guides/production-access",
+            icon: ShieldCheck,
+          },
+          {
+            title: "Domain Verification",
+            href: "/docs/guides/domain-verification",
+            icon: Globe,
+          },
+        ],
       },
     ],
   },
 ];
+
+function NavItemComponent({
+  item,
+  pathname,
+  depth = 0,
+}: {
+  item: NavItem;
+  pathname: string;
+  depth?: number;
+}) {
+  const Icon = item.icon;
+  const isActive = pathname === item.href;
+  const hasChildren = item.children && item.children.length > 0;
+  const isChildActive =
+    hasChildren && item.children?.some((child) => pathname === child.href);
+
+  return (
+    <>
+      <a
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+          isActive || isChildActive
+            ? "bg-primary/10 font-medium text-primary"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          item.disabled && "pointer-events-none opacity-50",
+          depth > 0 && "ml-4 pl-4 border-l"
+        )}
+        href={item.disabled ? undefined : item.href}
+      >
+        <Icon className="h-4 w-4" />
+        {item.title}
+        {item.disabled && <span className="ml-auto text-xs">(Soon)</span>}
+      </a>
+      {hasChildren && (
+        <div className="space-y-1">
+          {item.children?.map((child) => (
+            <NavItemComponent
+              key={child.href}
+              depth={depth + 1}
+              item={child}
+              pathname={pathname}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
 
 export function DocsNav() {
   const location = useLocation();
@@ -84,30 +158,13 @@ export function DocsNav() {
             {section.title}
           </h4>
           <div className="space-y-1">
-            {section.items.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-
-              return (
-                <a
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                    isActive
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    item.disabled && "pointer-events-none opacity-50"
-                  )}
-                  href={item.disabled ? undefined : item.href}
-                  key={item.href}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.title}
-                  {item.disabled && (
-                    <span className="ml-auto text-xs">(Soon)</span>
-                  )}
-                </a>
-              );
-            })}
+            {section.items.map((item) => (
+              <NavItemComponent
+                key={item.href}
+                item={item}
+                pathname={pathname}
+              />
+            ))}
           </div>
         </div>
       ))}

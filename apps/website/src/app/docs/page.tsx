@@ -3,7 +3,7 @@
 import {
   ArrowRight,
   Book,
-  Code,
+  Mail,
   MessageSquare,
   Rocket,
   Terminal,
@@ -48,7 +48,7 @@ const quickLinks = [
     disabled: false,
   },
   {
-    icon: Code,
+    icon: Mail,
     title: "Email SDK",
     description: "Learn how to use @wraps.dev/email in your application",
     href: "/docs/sdk-reference",
@@ -71,9 +71,9 @@ const quickLinks = [
   {
     icon: Book,
     title: "Guides",
-    description: "Step-by-step guides for common use cases",
+    description: "Production access, domain verification, and more",
     href: "/docs/guides",
-    disabled: true,
+    disabled: false,
   },
 ];
 
