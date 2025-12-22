@@ -89,7 +89,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
   });
 
   it("should allow request when under usage limit", async () => {
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     const requestBody = {
       messages: [
@@ -130,7 +132,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
       messageCount: 50,
     });
 
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     const requestBody = {
       messages: [
@@ -175,7 +179,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
       messageCount: 55,
     });
 
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     const requestBody = {
       messages: [
@@ -216,7 +222,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
       messageCount: 50,
     });
 
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     const requestBody = {
       messages: [
@@ -252,7 +260,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
     const { auth } = await import("@wraps/auth");
     vi.mocked(auth.api.getSession).mockResolvedValueOnce(mockSession(null));
 
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     const requestBody = {
       messages: [
@@ -290,7 +300,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
       mockSession(testUserNoAccess.id)
     );
 
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     const requestBody = {
       messages: [
@@ -323,7 +335,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
   });
 
   it("should return 400 when messages are missing", async () => {
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     const requestBody = {
       // No messages
@@ -350,7 +364,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
   });
 
   it("should return 400 when messages array is empty", async () => {
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     const requestBody = {
       messages: [],
@@ -386,7 +402,9 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
       messageCount: 50,
     });
 
-    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/ai/generate/route"
+    );
 
     // Even with invalid messages, should return 429 first (usage check happens before body parsing)
     // Actually, looking at the code, body parsing happens AFTER the limit check

@@ -647,7 +647,9 @@ describe("Templates API - GET /api/[orgSlug]/emails/templates/[id]/versions", ()
       status: "DRAFT",
     });
 
-    const { GET } = await import("../[orgSlug]/emails/templates/[id]/versions/route");
+    const { GET } = await import(
+      "../[orgSlug]/emails/templates/[id]/versions/route"
+    );
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-no-versions/versions`
@@ -703,7 +705,9 @@ describe("Templates API - GET /api/[orgSlug]/emails/templates/[id]/versions", ()
       },
     ]);
 
-    const { GET } = await import("../[orgSlug]/emails/templates/[id]/versions/route");
+    const { GET } = await import(
+      "../[orgSlug]/emails/templates/[id]/versions/route"
+    );
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-with-versions/versions`
@@ -726,7 +730,9 @@ describe("Templates API - GET /api/[orgSlug]/emails/templates/[id]/versions", ()
   });
 
   it("should return 404 for non-existent template", async () => {
-    const { GET } = await import("../[orgSlug]/emails/templates/[id]/versions/route");
+    const { GET } = await import(
+      "../[orgSlug]/emails/templates/[id]/versions/route"
+    );
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/emails/templates/non-existent/versions`
