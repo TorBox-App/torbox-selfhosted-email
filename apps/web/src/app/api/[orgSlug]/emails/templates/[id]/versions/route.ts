@@ -13,7 +13,7 @@ type RouteContext = {
   }>;
 };
 
-// GET /api/[orgSlug]/templates/[id]/versions - List all versions
+// GET /api/[orgSlug]/emails/templates/[id]/versions - List all versions
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -72,7 +72,7 @@ export async function GET(_request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]/versions",
+      path: "/api/[orgSlug]/emails/templates/[id]/versions",
       method: "GET",
       orgSlug,
     });
@@ -84,7 +84,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 }
 
-// POST /api/[orgSlug]/templates/[id]/versions - Create manual version snapshot
+// POST /api/[orgSlug]/emails/templates/[id]/versions - Create manual version snapshot
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -151,7 +151,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]/versions",
+      path: "/api/[orgSlug]/emails/templates/[id]/versions",
       method: "POST",
       orgSlug,
     });

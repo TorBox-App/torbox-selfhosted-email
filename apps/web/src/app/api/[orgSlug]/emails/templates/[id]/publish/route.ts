@@ -22,7 +22,7 @@ type RouteContext = {
   }>;
 };
 
-// POST /api/[orgSlug]/templates/[id]/publish - Publish template to SES
+// POST /api/[orgSlug]/emails/templates/[id]/publish - Publish template to SES
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -191,7 +191,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]/publish",
+      path: "/api/[orgSlug]/emails/templates/[id]/publish",
       method: "POST",
       orgSlug,
     });
@@ -206,7 +206,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 }
 
-// DELETE /api/[orgSlug]/templates/[id]/publish - Unpublish template from SES
+// DELETE /api/[orgSlug]/emails/templates/[id]/publish - Unpublish template from SES
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -296,7 +296,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]/publish",
+      path: "/api/[orgSlug]/emails/templates/[id]/publish",
       method: "DELETE",
       orgSlug,
     });

@@ -66,7 +66,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
 
   const handleDuplicate = async (templateId: string) => {
     const result = await duplicateTemplate.mutateAsync(templateId);
-    router.push(`/${orgSlug}/templates/${result.id}`);
+    router.push(`/${orgSlug}/emails/templates/${result.id}`);
   };
 
   // Publish/unpublish hooks need to be created per template
@@ -101,7 +101,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
             Create your first email template to get started.
           </p>
           <Button asChild>
-            <Link href={`/${orgSlug}/templates/new`}>
+            <Link href={`/${orgSlug}/emails/templates/new`}>
               <Plus className="mr-2 h-4 w-4" />
               Create Template
             </Link>
@@ -116,7 +116,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
       {/* Header with Create button */}
       <div className="flex justify-end">
         <Button asChild>
-          <Link href={`/${orgSlug}/templates/new`}>
+          <Link href={`/${orgSlug}/emails/templates/new`}>
             <Plus className="mr-2 h-4 w-4" />
             Create Template
           </Link>
@@ -223,7 +223,7 @@ function TemplateCard({
             <CardTitle className="text-base">
               <Link
                 className="hover:underline"
-                href={`/${orgSlug}/templates/${template.id}`}
+                href={`/${orgSlug}/emails/templates/${template.id}`}
               >
                 {template.name}
               </Link>
@@ -251,7 +251,7 @@ function TemplateCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/${orgSlug}/templates/${template.id}`}>
+                <Link href={`/${orgSlug}/emails/templates/${template.id}`}>
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </Link>

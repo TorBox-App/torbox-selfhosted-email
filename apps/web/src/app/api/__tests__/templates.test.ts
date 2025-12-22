@@ -135,7 +135,7 @@ afterAll(async () => {
 
 describe("Templates API - GET /api/[orgSlug]/templates", () => {
   it("should return empty list when no templates exist", async () => {
-    const { GET } = await import("../[orgSlug]/templates/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/route");
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/templates`
@@ -162,7 +162,7 @@ describe("Templates API - GET /api/[orgSlug]/templates", () => {
       status: "DRAFT",
     });
 
-    const { GET } = await import("../[orgSlug]/templates/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/route");
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/templates`
@@ -200,7 +200,7 @@ describe("Templates API - GET /api/[orgSlug]/templates", () => {
       },
     ]);
 
-    const { GET } = await import("../[orgSlug]/templates/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/route");
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/templates?status=DRAFT`
@@ -220,7 +220,7 @@ describe("Templates API - GET /api/[orgSlug]/templates", () => {
 
 describe("Templates API - POST /api/[orgSlug]/templates", () => {
   it("should create a new template", async () => {
-    const { POST } = await import("../[orgSlug]/templates/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/templates`,
@@ -247,7 +247,7 @@ describe("Templates API - POST /api/[orgSlug]/templates", () => {
   });
 
   it("should require template name", async () => {
-    const { POST } = await import("../[orgSlug]/templates/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/templates`,
@@ -270,7 +270,7 @@ describe("Templates API - POST /api/[orgSlug]/templates", () => {
   });
 
   it("should trim whitespace from name", async () => {
-    const { POST } = await import("../[orgSlug]/templates/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
 
     const request = new Request(
       `http://localhost/api/${testOrganization.slug}/templates`,
@@ -293,7 +293,7 @@ describe("Templates API - POST /api/[orgSlug]/templates", () => {
   });
 });
 
-describe("Templates API - GET /api/[orgSlug]/templates/[id]", () => {
+describe("Templates API - GET /api/[orgSlug]/emails/templates/[id]", () => {
   it("should return a single template", async () => {
     // Create a template
     await db.insert(template).values({
@@ -305,10 +305,10 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]", () => {
       status: "DRAFT",
     });
 
-    const { GET } = await import("../[orgSlug]/templates/[id]/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/[id]/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-single`
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-single`
     );
     const context = {
       params: Promise.resolve({
@@ -326,10 +326,10 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]", () => {
   });
 
   it("should return 404 for non-existent template", async () => {
-    const { GET } = await import("../[orgSlug]/templates/[id]/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/[id]/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/non-existent`
+      `http://localhost/api/${testOrganization.slug}/emails/templates/non-existent`
     );
     const context = {
       params: Promise.resolve({
@@ -346,7 +346,7 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]", () => {
   });
 });
 
-describe("Templates API - PUT /api/[orgSlug]/templates/[id]", () => {
+describe("Templates API - PUT /api/[orgSlug]/emails/templates/[id]", () => {
   it("should update template content", async () => {
     // Create a template
     await db.insert(template).values({
@@ -358,7 +358,7 @@ describe("Templates API - PUT /api/[orgSlug]/templates/[id]", () => {
       status: "DRAFT",
     });
 
-    const { PUT } = await import("../[orgSlug]/templates/[id]/route");
+    const { PUT } = await import("../[orgSlug]/emails/templates/[id]/route");
 
     const newContent = {
       type: "doc",
@@ -371,7 +371,7 @@ describe("Templates API - PUT /api/[orgSlug]/templates/[id]", () => {
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-update`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-update`,
       {
         method: "PUT",
         body: JSON.stringify({
@@ -413,10 +413,10 @@ describe("Templates API - PUT /api/[orgSlug]/templates/[id]", () => {
       status: "DRAFT",
     });
 
-    const { PUT } = await import("../[orgSlug]/templates/[id]/route");
+    const { PUT } = await import("../[orgSlug]/emails/templates/[id]/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-meta-update`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-meta-update`,
       {
         method: "PUT",
         body: JSON.stringify({
@@ -451,10 +451,10 @@ describe("Templates API - PUT /api/[orgSlug]/templates/[id]", () => {
       status: "DRAFT",
     });
 
-    const { PUT } = await import("../[orgSlug]/templates/[id]/route");
+    const { PUT } = await import("../[orgSlug]/emails/templates/[id]/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-status-update`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-status-update`,
       {
         method: "PUT",
         body: JSON.stringify({
@@ -477,10 +477,10 @@ describe("Templates API - PUT /api/[orgSlug]/templates/[id]", () => {
   });
 
   it("should return 404 for non-existent template", async () => {
-    const { PUT } = await import("../[orgSlug]/templates/[id]/route");
+    const { PUT } = await import("../[orgSlug]/emails/templates/[id]/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/non-existent`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/non-existent`,
       {
         method: "PUT",
         body: JSON.stringify({
@@ -503,7 +503,7 @@ describe("Templates API - PUT /api/[orgSlug]/templates/[id]", () => {
   });
 });
 
-describe("Templates API - DELETE /api/[orgSlug]/templates/[id]", () => {
+describe("Templates API - DELETE /api/[orgSlug]/emails/templates/[id]", () => {
   it("should delete a template", async () => {
     // Create a template
     await db.insert(template).values({
@@ -515,10 +515,10 @@ describe("Templates API - DELETE /api/[orgSlug]/templates/[id]", () => {
       status: "DRAFT",
     });
 
-    const { DELETE } = await import("../[orgSlug]/templates/[id]/route");
+    const { DELETE } = await import("../[orgSlug]/emails/templates/[id]/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-delete`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-delete`,
       {
         method: "DELETE",
       }
@@ -544,10 +544,10 @@ describe("Templates API - DELETE /api/[orgSlug]/templates/[id]", () => {
   });
 
   it("should return 404 for non-existent template", async () => {
-    const { DELETE } = await import("../[orgSlug]/templates/[id]/route");
+    const { DELETE } = await import("../[orgSlug]/emails/templates/[id]/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/non-existent`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/non-existent`,
       {
         method: "DELETE",
       }
@@ -567,7 +567,7 @@ describe("Templates API - DELETE /api/[orgSlug]/templates/[id]", () => {
   });
 });
 
-describe("Templates API - POST /api/[orgSlug]/templates/[id]/duplicate", () => {
+describe("Templates API - POST /api/[orgSlug]/emails/templates/[id]/duplicate", () => {
   it("should duplicate a template", async () => {
     // Create a template to duplicate
     await db.insert(template).values({
@@ -583,11 +583,11 @@ describe("Templates API - POST /api/[orgSlug]/templates/[id]/duplicate", () => {
     });
 
     const { POST } = await import(
-      "../[orgSlug]/templates/[id]/duplicate/route"
+      "../[orgSlug]/emails/templates/[id]/duplicate/route"
     );
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-original/duplicate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-original/duplicate`,
       {
         method: "POST",
       }
@@ -611,11 +611,11 @@ describe("Templates API - POST /api/[orgSlug]/templates/[id]/duplicate", () => {
 
   it("should return 404 for non-existent template", async () => {
     const { POST } = await import(
-      "../[orgSlug]/templates/[id]/duplicate/route"
+      "../[orgSlug]/emails/templates/[id]/duplicate/route"
     );
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/non-existent/duplicate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/non-existent/duplicate`,
       {
         method: "POST",
       }
@@ -635,7 +635,7 @@ describe("Templates API - POST /api/[orgSlug]/templates/[id]/duplicate", () => {
   });
 });
 
-describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions", () => {
+describe("Templates API - GET /api/[orgSlug]/emails/templates/[id]/versions", () => {
   it("should return empty list when no versions exist", async () => {
     // Create a template without versions
     await db.insert(template).values({
@@ -647,10 +647,10 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions", () => {
       status: "DRAFT",
     });
 
-    const { GET } = await import("../[orgSlug]/templates/[id]/versions/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/[id]/versions/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-no-versions/versions`
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-no-versions/versions`
     );
     const context = {
       params: Promise.resolve({
@@ -703,10 +703,10 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions", () => {
       },
     ]);
 
-    const { GET } = await import("../[orgSlug]/templates/[id]/versions/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/[id]/versions/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-with-versions/versions`
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-with-versions/versions`
     );
     const context = {
       params: Promise.resolve({
@@ -726,10 +726,10 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions", () => {
   });
 
   it("should return 404 for non-existent template", async () => {
-    const { GET } = await import("../[orgSlug]/templates/[id]/versions/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/[id]/versions/route");
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/non-existent/versions`
+      `http://localhost/api/${testOrganization.slug}/emails/templates/non-existent/versions`
     );
     const context = {
       params: Promise.resolve({
@@ -746,7 +746,7 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions", () => {
   });
 });
 
-describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions/[versionId]", () => {
+describe("Templates API - GET /api/[orgSlug]/emails/templates/[id]/versions/[versionId]", () => {
   it("should return a specific version", async () => {
     // Create a template
     await db.insert(template).values({
@@ -770,11 +770,11 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions/[versionId]
       .returning();
 
     const { GET } = await import(
-      "../[orgSlug]/templates/[id]/versions/[versionId]/route"
+      "../[orgSlug]/emails/templates/[id]/versions/[versionId]/route"
     );
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-version-get/versions/${version.id}`
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-version-get/versions/${version.id}`
     );
     const context = {
       params: Promise.resolve({
@@ -804,11 +804,11 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions/[versionId]
     });
 
     const { GET } = await import(
-      "../[orgSlug]/templates/[id]/versions/[versionId]/route"
+      "../[orgSlug]/emails/templates/[id]/versions/[versionId]/route"
     );
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/test-template-version-404/versions/non-existent`
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-version-404/versions/non-existent`
     );
     const context = {
       params: Promise.resolve({
@@ -828,7 +828,7 @@ describe("Templates API - GET /api/[orgSlug]/templates/[id]/versions/[versionId]
 
 describe("Templates API - Authorization", () => {
   it("should return 403 for unauthorized organization", async () => {
-    const { GET } = await import("../[orgSlug]/templates/route");
+    const { GET } = await import("../[orgSlug]/emails/templates/route");
 
     const request = new Request(
       "http://localhost/api/unauthorized-org/templates"

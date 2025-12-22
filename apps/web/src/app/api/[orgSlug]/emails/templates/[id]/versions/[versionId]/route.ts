@@ -14,7 +14,7 @@ type RouteContext = {
   }>;
 };
 
-// GET /api/[orgSlug]/templates/[id]/versions/[versionId] - Get single version
+// GET /api/[orgSlug]/emails/templates/[id]/versions/[versionId] - Get single version
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, id, versionId } = await context.params;
@@ -91,7 +91,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 }
 
-// POST /api/[orgSlug]/templates/[id]/versions/[versionId] - Restore to this version
+// POST /api/[orgSlug]/emails/templates/[id]/versions/[versionId] - Restore to this version
 export async function POST(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, id, versionId } = await context.params;
@@ -193,7 +193,7 @@ export async function POST(_request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]/versions/[versionId]",
+      path: "/api/[orgSlug]/emails/templates/[id]/versions/[versionId]",
       method: "POST",
       orgSlug,
     });

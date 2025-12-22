@@ -18,7 +18,7 @@ type RouteContext = {
   }>;
 };
 
-// POST /api/[orgSlug]/templates/ai/generate - Generate template content with AI
+// POST /api/[orgSlug]/emails/templates/ai/generate - Generate template content with AI
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
@@ -131,7 +131,7 @@ export async function POST(request: Request, context: RouteContext) {
       },
       onFinish: async ({ text, usage }) => {
         const log = createRequestLogger({
-          path: "/api/[orgSlug]/templates/ai/generate",
+          path: "/api/[orgSlug]/emails/templates/ai/generate",
           method: "POST",
           orgSlug,
         });
@@ -187,7 +187,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/ai/generate",
+      path: "/api/[orgSlug]/emails/templates/ai/generate",
       method: "POST",
       orgSlug,
     });
@@ -207,7 +207,7 @@ async function trackConversation(data: {
   userId: string;
 }): Promise<void> {
   const log = createRequestLogger({
-    path: "/api/[orgSlug]/templates/ai/generate",
+    path: "/api/[orgSlug]/emails/templates/ai/generate",
     method: "POST",
     orgSlug: "system",
   });

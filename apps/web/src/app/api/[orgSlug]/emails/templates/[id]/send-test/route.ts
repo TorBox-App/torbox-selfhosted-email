@@ -17,7 +17,7 @@ type RouteContext = {
   }>;
 };
 
-// POST /api/[orgSlug]/templates/[id]/send-test - Send test email
+// POST /api/[orgSlug]/emails/templates/[id]/send-test - Send test email
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -212,7 +212,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]/send-test",
+      path: "/api/[orgSlug]/emails/templates/[id]/send-test",
       method: "POST",
       orgSlug,
     });

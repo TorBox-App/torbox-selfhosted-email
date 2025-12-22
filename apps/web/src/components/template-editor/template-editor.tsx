@@ -296,7 +296,7 @@ function TemplateEditorContent({
       toast.success("Template duplicated", {
         description: `Created "${duplicatedTemplate.name}"`,
       });
-      router.push(`/${orgSlug}/templates/${duplicatedTemplate.id}`);
+      router.push(`/${orgSlug}/emails/templates/${duplicatedTemplate.id}`);
     } catch (error) {
       toast.error("Failed to duplicate template", {
         description: error instanceof Error ? error.message : "Unknown error",

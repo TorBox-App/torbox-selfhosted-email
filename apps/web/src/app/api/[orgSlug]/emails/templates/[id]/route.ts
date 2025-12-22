@@ -13,7 +13,7 @@ type RouteContext = {
   }>;
 };
 
-// GET /api/[orgSlug]/templates/[id] - Get single template
+// GET /api/[orgSlug]/emails/templates/[id] - Get single template
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -75,7 +75,7 @@ export async function GET(_request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]",
+      path: "/api/[orgSlug]/emails/templates/[id]",
       method: "GET",
       orgSlug,
     });
@@ -87,7 +87,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 }
 
-// PUT /api/[orgSlug]/templates/[id] - Update template
+// PUT /api/[orgSlug]/emails/templates/[id] - Update template
 export async function PUT(request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -200,7 +200,7 @@ export async function PUT(request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]",
+      path: "/api/[orgSlug]/emails/templates/[id]",
       method: "PUT",
       orgSlug,
     });
@@ -212,7 +212,7 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 }
 
-// DELETE /api/[orgSlug]/templates/[id] - Delete template
+// DELETE /api/[orgSlug]/emails/templates/[id] - Delete template
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -258,7 +258,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]",
+      path: "/api/[orgSlug]/emails/templates/[id]",
       method: "DELETE",
       orgSlug,
     });

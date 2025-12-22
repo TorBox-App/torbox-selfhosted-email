@@ -47,7 +47,7 @@ export function NewTemplateForm({ orgSlug }: NewTemplateFormProps) {
       description: values.description,
     });
 
-    router.push(`/${orgSlug}/templates/${template.id}`);
+    router.push(`/${orgSlug}/emails/templates/${template.id}`);
   };
 
   return (

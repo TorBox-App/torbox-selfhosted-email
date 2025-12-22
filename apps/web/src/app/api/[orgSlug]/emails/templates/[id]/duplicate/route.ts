@@ -13,7 +13,7 @@ type RouteContext = {
   }>;
 };
 
-// POST /api/[orgSlug]/templates/[id]/duplicate - Duplicate template
+// POST /api/[orgSlug]/emails/templates/[id]/duplicate - Duplicate template
 export async function POST(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
@@ -71,7 +71,7 @@ export async function POST(_request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]/duplicate",
+      path: "/api/[orgSlug]/emails/templates/[id]/duplicate",
       method: "POST",
       orgSlug,
     });

@@ -106,7 +106,7 @@ export function AIChatPanel({
   // Use the Vercel AI SDK v5's useChat hook
   const { messages, sendMessage, status, stop, regenerate, error } = useChat({
     transport: new DefaultChatTransport({
-      api: `/api/${orgSlug}/templates/ai/generate`,
+      api: `/api/${orgSlug}/emails/templates/ai/generate`,
       body: {
         templateId,
         brandKitId: selectedBrandKit?.id,

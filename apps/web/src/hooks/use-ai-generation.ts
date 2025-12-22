@@ -34,7 +34,7 @@ export function useAIGeneration({
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        api: `/api/${orgSlug}/templates/ai/generate`,
+        api: `/api/${orgSlug}/emails/templates/ai/generate`,
         body: {
           templateId,
           existingContent: editor?.getJSON(),

@@ -74,7 +74,7 @@ vi.mock("@/lib/ai/validator", () => ({
   validateTipTapJson: vi.fn(() => ({ valid: true, errors: [] })),
 }));
 
-describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
+describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", () => {
   beforeEach(async () => {
     // Clean up any existing usage data
     await db
@@ -89,7 +89,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
   });
 
   it("should allow request when under usage limit", async () => {
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     const requestBody = {
       messages: [
@@ -102,7 +102,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -130,7 +130,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
       messageCount: 50,
     });
 
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     const requestBody = {
       messages: [
@@ -143,7 +143,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -175,7 +175,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
       messageCount: 55,
     });
 
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     const requestBody = {
       messages: [
@@ -188,7 +188,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -216,7 +216,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
       messageCount: 50,
     });
 
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     const requestBody = {
       messages: [
@@ -229,7 +229,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -252,7 +252,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
     const { auth } = await import("@wraps/auth");
     vi.mocked(auth.api.getSession).mockResolvedValueOnce(mockSession(null));
 
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     const requestBody = {
       messages: [
@@ -265,7 +265,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -290,7 +290,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
       mockSession(testUserNoAccess.id)
     );
 
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     const requestBody = {
       messages: [
@@ -303,7 +303,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -323,14 +323,14 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
   });
 
   it("should return 400 when messages are missing", async () => {
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     const requestBody = {
       // No messages
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -350,14 +350,14 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
   });
 
   it("should return 400 when messages array is empty", async () => {
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     const requestBody = {
       messages: [],
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -386,7 +386,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
       messageCount: 50,
     });
 
-    const { POST } = await import("../[orgSlug]/templates/ai/generate/route");
+    const { POST } = await import("../[orgSlug]/emails/templates/ai/generate/route");
 
     // Even with invalid messages, should return 429 first (usage check happens before body parsing)
     // Actually, looking at the code, body parsing happens AFTER the limit check
@@ -402,7 +402,7 @@ describe("AI Generate API - POST /api/[orgSlug]/templates/ai/generate", () => {
     };
 
     const request = new Request(
-      `http://localhost/api/${testOrganization.slug}/templates/ai/generate`,
+      `http://localhost/api/${testOrganization.slug}/emails/templates/ai/generate`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

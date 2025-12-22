@@ -149,7 +149,7 @@ export function SendTestModal({
       }
 
       const response = await fetch(
-        `/api/${orgSlug}/templates/${templateId}/send-test`,
+        `/api/${orgSlug}/emails/templates/${templateId}/send-test`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -31,7 +31,7 @@ export function useTemplate(orgSlug: string, templateId: string) {
   return useQuery({
     queryKey: templateKeys.detail(orgSlug, templateId),
     queryFn: async () => {
-      const response = await fetch(`/api/${orgSlug}/templates/${templateId}`);
+      const response = await fetch(`/api/${orgSlug}/emails/templates/${templateId}`);
       if (!response.ok) {
         throw new Error("Failed to load template");
       }
@@ -67,7 +67,7 @@ export function useUpdateTemplate(orgSlug: string, templateId: string) {
       subject?: string;
       status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     }) => {
-      const response = await fetch(`/api/${orgSlug}/templates/${templateId}`, {
+      const response = await fetch(`/api/${orgSlug}/emails/templates/${templateId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -155,7 +155,7 @@ export function useDeleteTemplate(orgSlug: string) {
 
   return useMutation({
     mutationFn: async (templateId: string) => {
-      const response = await fetch(`/api/${orgSlug}/templates/${templateId}`, {
+      const response = await fetch(`/api/${orgSlug}/emails/templates/${templateId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -179,7 +179,7 @@ export function useDuplicateTemplate(orgSlug: string) {
   return useMutation({
     mutationFn: async (templateId: string) => {
       const response = await fetch(
-        `/api/${orgSlug}/templates/${templateId}/duplicate`,
+        `/api/${orgSlug}/emails/templates/${templateId}/duplicate`,
         {
           method: "POST",
         }
@@ -206,7 +206,7 @@ export function useTemplateVersions(orgSlug: string, templateId: string) {
     queryKey: templateKeys.versions(orgSlug, templateId),
     queryFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/templates/${templateId}/versions`
+        `/api/${orgSlug}/emails/templates/${templateId}/versions`
       );
       if (!response.ok) {
         throw new Error("Failed to load versions");
@@ -223,7 +223,7 @@ export function useCreateVersion(orgSlug: string, templateId: string) {
   return useMutation({
     mutationFn: async (data: { changeNote?: string }) => {
       const response = await fetch(
-        `/api/${orgSlug}/templates/${templateId}/versions`,
+        `/api/${orgSlug}/emails/templates/${templateId}/versions`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -255,7 +255,7 @@ export function useRestoreVersion(orgSlug: string, templateId: string) {
   return useMutation({
     mutationFn: async (versionId: string) => {
       const response = await fetch(
-        `/api/${orgSlug}/templates/${templateId}/versions/${versionId}`,
+        `/api/${orgSlug}/emails/templates/${templateId}/versions/${versionId}`,
         {
           method: "POST",
         }
@@ -291,7 +291,7 @@ export function usePublishTemplate(orgSlug: string, templateId: string) {
   return useMutation({
     mutationFn: async (data?: { brandKitId?: string }) => {
       const response = await fetch(
-        `/api/${orgSlug}/templates/${templateId}/publish`,
+        `/api/${orgSlug}/emails/templates/${templateId}/publish`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -328,7 +328,7 @@ export function useUnpublishTemplate(orgSlug: string, templateId: string) {
   return useMutation({
     mutationFn: async () => {
       const response = await fetch(
-        `/api/${orgSlug}/templates/${templateId}/publish`,
+        `/api/${orgSlug}/emails/templates/${templateId}/publish`,
         {
           method: "DELETE",
         }
