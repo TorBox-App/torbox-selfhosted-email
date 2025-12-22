@@ -2,15 +2,25 @@
  * Tests for telemetry configuration manager
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { TelemetryConfigManager } from "../config";
 
 describe("TelemetryConfigManager", () => {
   let config: TelemetryConfigManager;
+  let tempDir: string;
 
   beforeEach(() => {
-    config = new TelemetryConfigManager();
-    config.reset(); // Start with fresh config for each test
+    // Create isolated temp directory for each test
+    tempDir = mkdtempSync(join(tmpdir(), "wraps-telemetry-test-"));
+    config = new TelemetryConfigManager({ cwd: tempDir });
+  });
+
+  afterEach(() => {
+    // Clean up temp directory
+    rmSync(tempDir, { recursive: true, force: true });
   });
 
   describe("default configuration", () => {
@@ -53,8 +63,8 @@ describe("TelemetryConfigManager", () => {
     it("should persist notification status", () => {
       config.markNotificationShown();
 
-      // Create new instance to test persistence
-      const newConfig = new TelemetryConfigManager();
+      // Create new instance to test persistence (same temp dir)
+      const newConfig = new TelemetryConfigManager({ cwd: tempDir });
       expect(newConfig.hasShownNotification()).toBe(true);
     });
   });
@@ -63,8 +73,8 @@ describe("TelemetryConfigManager", () => {
     it("should persist anonymousId across instances", () => {
       const id = config.getAnonymousId();
 
-      // Create new instance
-      const newConfig = new TelemetryConfigManager();
+      // Create new instance (same temp dir)
+      const newConfig = new TelemetryConfigManager({ cwd: tempDir });
       expect(newConfig.getAnonymousId()).toBe(id);
     });
 

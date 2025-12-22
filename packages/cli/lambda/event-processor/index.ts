@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import type { SQSEvent } from "aws-lambda";
+import type { Context, SQSEvent } from "aws-lambda";
 
 const dynamodb = new DynamoDBClient({});
 
@@ -17,8 +18,24 @@ const dynamodb = new DynamoDBClient({});
  * - DeliveryDelay: Temporary delivery delay
  * - Subscription: Recipient unsubscribed/changed preferences
  */
-export async function handler(event: SQSEvent) {
-  console.log("Processing SES event from SQS:", JSON.stringify(event, null, 2));
+export async function handler(event: SQSEvent, context: Context) {
+  const requestId = context.awsRequestId;
+  const batchId = randomUUID().slice(0, 8);
+
+  const log = (msg: string, data?: Record<string, unknown>) => {
+    console.log(JSON.stringify({ requestId, batchId, msg, ...data }));
+  };
+  const logError = (
+    msg: string,
+    error: unknown,
+    data?: Record<string, unknown>
+  ) => {
+    console.error(
+      JSON.stringify({ requestId, batchId, msg, error: String(error), ...data })
+    );
+  };
+
+  log("Processing SES batch", { recordCount: event.Records.length });
 
   const tableName = process.env.TABLE_NAME;
   if (!tableName) {
@@ -42,13 +59,10 @@ export async function handler(event: SQSEvent) {
       const to = mail.destination || [];
       const subject = mail.commonHeaders?.subject || "";
 
-      console.log("Processing email event:", {
+      log("Processing email event", {
         messageId,
         eventType,
-        to,
-        toLength: to.length,
-        toType: typeof to,
-        isArray: Array.isArray(to),
+        recipientCount: to.length,
       });
 
       // Extract additional data and event-specific timestamp based on event type
@@ -157,13 +171,11 @@ export async function handler(event: SQSEvent) {
         })
       );
 
-      console.log(
-        `Stored ${eventType} event for message ${messageId}`,
-        additionalData
-      );
+      log("Stored event", { eventType, messageId });
     } catch (error) {
-      console.error("Error processing record:", error);
-      console.error("Record:", JSON.stringify(record, null, 2));
+      logError("Error processing record", error, {
+        sqsMessageId: record.messageId,
+      });
       // Don't throw - continue processing other records
     }
   }

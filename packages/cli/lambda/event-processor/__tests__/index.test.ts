@@ -1,10 +1,25 @@
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import type { SQSEvent, SQSRecord } from "aws-lambda";
+import type { Context, SQSEvent, SQSRecord } from "aws-lambda";
 import { mockClient } from "aws-sdk-client-mock";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handler } from "../index.js";
 
 const dynamoMock = mockClient(DynamoDBClient);
+
+const mockContext: Context = {
+  awsRequestId: "test-request-id-12345",
+  callbackWaitsForEmptyEventLoop: false,
+  functionName: "test-function",
+  functionVersion: "1",
+  invokedFunctionArn: "arn:aws:lambda:us-east-1:123456789012:function:test",
+  memoryLimitInMB: "128",
+  logGroupName: "/aws/lambda/test",
+  logStreamName: "2024/01/01/[$LATEST]abc123",
+  getRemainingTimeInMillis: () => 30_000,
+  done: () => {},
+  fail: () => {},
+  succeed: () => {},
+};
 
 /**
  * AWS SES Mailbox Simulator addresses for testing different scenarios
@@ -47,7 +62,7 @@ describe("Lambda Event Processor", () => {
       Records: [],
     };
 
-    await expect(handler(event)).rejects.toThrow(
+    await expect(handler(event, mockContext)).rejects.toThrow(
       "TABLE_NAME environment variable not set"
     );
   });
@@ -70,7 +85,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
       expect(dynamoMock.calls()).toHaveLength(1);
@@ -110,7 +125,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
       expect(dynamoMock.calls()).toHaveLength(1);
@@ -157,7 +172,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
       expect(dynamoMock.calls()).toHaveLength(1);
@@ -209,7 +224,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
 
@@ -250,7 +265,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
       expect(dynamoMock.calls()).toHaveLength(1);
@@ -304,7 +319,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
 
@@ -339,7 +354,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
 
@@ -378,7 +393,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
 
@@ -416,7 +431,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
 
@@ -451,7 +466,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
 
@@ -495,7 +510,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
 
@@ -545,7 +560,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
 
@@ -614,7 +629,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
       expect(dynamoMock.calls()).toHaveLength(3);
@@ -658,7 +673,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
       expect(dynamoMock.calls()).toHaveLength(1); // Only one successful call
@@ -687,13 +702,16 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      const result = await handler(event);
+      const result = await handler(event, mockContext);
 
       expect(result.statusCode).toBe(200);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error processing record:",
-        expect.any(Error)
-      );
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      const loggedMessage = consoleErrorSpy.mock.calls[0][0];
+      const parsed = JSON.parse(loggedMessage);
+      expect(parsed.msg).toBe("Error processing record");
+      expect(parsed.error).toContain("DynamoDB error");
+      expect(parsed.sqsMessageId).toBe("error-msg");
+      expect(parsed.requestId).toBe("test-request-id-12345");
 
       consoleErrorSpy.mockRestore();
     });
@@ -716,7 +734,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      await handler(event);
+      await handler(event, mockContext);
 
       const putItemCall = dynamoMock.call(0).args[0].input;
       const expiresAt = Number.parseInt(
@@ -762,7 +780,7 @@ describe("Lambda Event Processor", () => {
         ],
       };
 
-      await handler(event);
+      await handler(event, mockContext);
 
       const putItemCall = dynamoMock.call(0).args[0].input;
       const sentAt = Number.parseInt(putItemCall.Item?.sentAt.N || "0", 10);

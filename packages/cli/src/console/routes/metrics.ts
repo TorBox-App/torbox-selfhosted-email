@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Request, Response, Router } from "express";
 import { Router as createRouter } from "express";
 import type { ServerConfig } from "../server.js";
@@ -11,10 +12,18 @@ export function createMetricsRouter(config: ServerConfig): Router {
    * SSE endpoint for real-time metrics
    */
   router.get("/stream", async (req: Request, res: Response) => {
+    const connectionId = randomUUID().slice(0, 8);
+
+    const log = (msg: string, data?: Record<string, unknown>) => {
+      console.log(JSON.stringify({ connectionId, msg, ...data }));
+    };
+
     // Set SSE headers
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+
+    log("SSE connected");
 
     // Send initial connection event
     res.write('data: {"type":"connected"}\n\n');
@@ -33,16 +42,10 @@ export function createMetricsRouter(config: ServerConfig): Router {
     // Function to fetch and send metrics
     const sendMetrics = async () => {
       try {
-        console.log("Fetching metrics from AWS...");
-
         const timeRange = getTimeRange();
-
-        console.log("Time range:", timeRange);
-        console.log("Config:", {
-          region: config.region,
-          roleArn: config.roleArn
-            ? `${config.roleArn.substring(0, 30)}...`
-            : "using current credentials",
+        log("Fetching metrics", {
+          start: timeRange.start.toISOString(),
+          end: timeRange.end.toISOString(),
         });
 
         const [metrics, quota] = await Promise.all([
@@ -55,7 +58,7 @@ export function createMetricsRouter(config: ServerConfig): Router {
           fetchSendQuota(config.roleArn, config.region),
         ]);
 
-        console.log("Metrics fetched successfully");
+        log("Metrics fetched successfully");
 
         const data = {
           type: "metrics",
@@ -68,7 +71,13 @@ export function createMetricsRouter(config: ServerConfig): Router {
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        console.error("Error fetching metrics:", error);
+        console.error(
+          JSON.stringify({
+            connectionId,
+            msg: "Failed to fetch metrics",
+            error: errorMessage,
+          })
+        );
         res.write(
           `data: ${JSON.stringify({ type: "error", error: errorMessage })}\n\n`
         );
@@ -84,6 +93,7 @@ export function createMetricsRouter(config: ServerConfig): Router {
     // Clean up on disconnect
     req.on("close", () => {
       clearInterval(interval);
+      log("SSE disconnected");
     });
   });
 
@@ -150,7 +160,9 @@ export function createMetricsRouter(config: ServerConfig): Router {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("Error fetching metrics:", error);
+      console.error(
+        JSON.stringify({ msg: "Error fetching metrics", error: errorMessage })
+      );
       res.status(500).json({ error: errorMessage });
     }
   });
