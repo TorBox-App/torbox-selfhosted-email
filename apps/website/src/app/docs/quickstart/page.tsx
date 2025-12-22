@@ -59,8 +59,8 @@ export default function QuickstartPage() {
           const Icon = guide.icon;
           return (
             <Card
-              key={guide.title}
               className="group relative overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg"
+              key={guide.title}
             >
               <CardHeader>
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -72,7 +72,7 @@ export default function QuickstartPage() {
                 <p className="text-muted-foreground">{guide.description}</p>
                 <ul className="grid grid-cols-2 gap-2 text-muted-foreground text-sm">
                   {guide.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2">
+                    <li className="flex items-center gap-2" key={feature}>
                       <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                       {feature}
                     </li>

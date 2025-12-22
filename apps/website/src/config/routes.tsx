@@ -10,9 +10,7 @@ const QuickstartDocs = lazy(() => import("@/app/docs/quickstart/page"));
 const QuickstartEmailDocs = lazy(
   () => import("@/app/docs/quickstart/email/page")
 );
-const QuickstartSmsDocs = lazy(
-  () => import("@/app/docs/quickstart/sms/page")
-);
+const QuickstartSmsDocs = lazy(() => import("@/app/docs/quickstart/sms/page"));
 const SDKReferenceDocs = lazy(() => import("@/app/docs/sdk-reference/page"));
 const SMSSDKReferenceDocs = lazy(
   () => import("@/app/docs/sms-sdk-reference/page")

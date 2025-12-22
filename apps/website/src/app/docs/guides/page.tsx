@@ -48,8 +48,8 @@ export default function GuidesPage() {
           const Icon = guide.icon;
           return (
             <Card
-              key={guide.title}
               className="group transition-all hover:border-primary/50 hover:shadow-md"
+              key={guide.title}
             >
               <CardHeader className="flex flex-row items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">

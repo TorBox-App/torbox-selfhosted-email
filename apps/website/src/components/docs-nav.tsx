@@ -122,7 +122,7 @@ function NavItemComponent({
             ? "bg-primary/10 font-medium text-primary"
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
           item.disabled && "pointer-events-none opacity-50",
-          depth > 0 && "ml-4 pl-4 border-l"
+          depth > 0 && "ml-4 border-l pl-4"
         )}
         href={item.disabled ? undefined : item.href}
       >
@@ -134,9 +134,9 @@ function NavItemComponent({
         <div className="space-y-1">
           {item.children?.map((child) => (
             <NavItemComponent
-              key={child.href}
               depth={depth + 1}
               item={child}
+              key={child.href}
               pathname={pathname}
             />
           ))}
@@ -160,8 +160,8 @@ export function DocsNav() {
           <div className="space-y-1">
             {section.items.map((item) => (
               <NavItemComponent
-                key={item.href}
                 item={item}
+                key={item.href}
                 pathname={pathname}
               />
             ))}

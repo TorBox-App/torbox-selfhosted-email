@@ -22,11 +22,14 @@ import {
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
 
-const addDomainCommand = `npx @wraps.dev/cli email domains add -d yourdomain.com`;
+const addDomainCommand =
+  "npx @wraps.dev/cli email domains add -d yourdomain.com";
 
-const getDkimCommand = `npx @wraps.dev/cli email domains get-dkim -d yourdomain.com`;
+const getDkimCommand =
+  "npx @wraps.dev/cli email domains get-dkim -d yourdomain.com";
 
-const verifyCommand = `npx @wraps.dev/cli email domains verify -d yourdomain.com`;
+const verifyCommand =
+  "npx @wraps.dev/cli email domains verify -d yourdomain.com";
 
 const dkimRecordExample = `# You'll get 3 CNAME records like this:
 abc123._domainkey.yourdomain.com → abc123.dkim.amazonses.com
@@ -310,8 +313,11 @@ export default function DomainVerificationPage() {
           <p className="font-medium text-sm">Good news: SPF is automatic!</p>
           <p className="mt-2 text-muted-foreground text-sm">
             When you send through Amazon SES, the MAIL FROM domain is a
-            subdomain of <code className="rounded bg-muted px-1.5 py-0.5">amazonses.com</code>,
-            which already has SPF configured. No additional setup required.
+            subdomain of{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              amazonses.com
+            </code>
+            , which already has SPF configured. No additional setup required.
           </p>
         </div>
         <p className="mt-4 text-muted-foreground text-sm">
@@ -403,9 +409,7 @@ export default function DomainVerificationPage() {
                       p=none
                     </code>
                   </td>
-                  <td className="py-2">
-                    No enforcement, just collect reports
-                  </td>
+                  <td className="py-2">No enforcement, just collect reports</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 font-medium text-foreground">
@@ -432,11 +436,15 @@ export default function DomainVerificationPage() {
           </CardContent>
         </Card>
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
-          <p className="font-medium text-sm">Recommended: Start with quarantine</p>
+          <p className="font-medium text-sm">
+            Recommended: Start with quarantine
+          </p>
           <p className="mt-2 text-muted-foreground text-sm">
-            Use <code className="rounded bg-muted px-1.5 py-0.5">p=quarantine</code> to
-            start. Once you've confirmed all legitimate emails pass, you can
-            upgrade to <code className="rounded bg-muted px-1.5 py-0.5">p=reject</code>.
+            Use{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">p=quarantine</code>{" "}
+            to start. Once you've confirmed all legitimate emails pass, you can
+            upgrade to{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">p=reject</code>.
           </p>
         </div>
       </section>
@@ -581,7 +589,9 @@ export default function DomainVerificationPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="transition-colors hover:border-primary/50">
             <CardHeader>
-              <CardTitle className="text-lg">Request Production Access</CardTitle>
+              <CardTitle className="text-lg">
+                Request Production Access
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground text-sm">
