@@ -15,18 +15,19 @@ export default function TermsOfService() {
       <article className="prose prose-gray dark:prose-invert max-w-none">
         <h1>Terms of Service</h1>
         <p className="text-muted-foreground">
-          <strong>Last Updated:</strong>{" "}
-          {new Date().toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+          <strong>Last Updated:</strong> December 22, 2025
         </p>
 
         <p className="lead">
           These Terms of Service ("Terms") govern your use of Wraps CLI tool,
           SDK, dashboard, and related services (collectively, the "Services").
           By using Wraps, you agree to these Terms.
+        </p>
+
+        <p>
+          Wraps is a product of <strong>FlatironKids LLC</strong> ("Company",
+          "we", "us", or "our"), a company registered in the State of Colorado,
+          United States.
         </p>
 
         <h2>1. Acceptance of Terms</h2>
@@ -277,11 +278,11 @@ export default function TermsOfService() {
         <h2>9. Limitation of Liability</h2>
 
         <p>
-          TO THE MAXIMUM EXTENT PERMITTED BY LAW, WRAPS SHALL NOT BE LIABLE FOR
-          ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES,
-          OR ANY LOSS OF PROFITS OR REVENUES, WHETHER INCURRED DIRECTLY OR
-          INDIRECTLY, OR ANY LOSS OF DATA, USE, GOODWILL, OR OTHER INTANGIBLE
-          LOSSES, RESULTING FROM:
+          TO THE MAXIMUM EXTENT PERMITTED BY LAW, FLATIRONKIDS LLC AND WRAPS
+          SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+          CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR
+          REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY, OR ANY LOSS OF
+          DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM:
         </p>
 
         <ul>
@@ -298,18 +299,19 @@ export default function TermsOfService() {
         </ul>
 
         <p>
-          IN NO EVENT SHALL WRAPS'S TOTAL LIABILITY EXCEED THE AMOUNT YOU PAID
-          TO WRAPS IN THE TWELVE (12) MONTHS PRECEDING THE EVENT GIVING RISE TO
-          LIABILITY, OR ONE HUNDRED DOLLARS ($100), WHICHEVER IS GREATER.
+          IN NO EVENT SHALL FLATIRONKIDS LLC'S TOTAL LIABILITY EXCEED THE AMOUNT
+          YOU PAID TO FLATIRONKIDS LLC IN THE TWELVE (12) MONTHS PRECEDING THE
+          EVENT GIVING RISE TO LIABILITY, OR ONE HUNDRED DOLLARS ($100),
+          WHICHEVER IS GREATER.
         </p>
 
         <h2>10. Indemnification</h2>
 
         <p>
-          You agree to indemnify, defend, and hold harmless Wraps and its
-          officers, directors, employees, and agents from any claims, damages,
-          losses, liabilities, and expenses (including attorneys' fees) arising
-          from:
+          You agree to indemnify, defend, and hold harmless FlatironKids LLC,
+          its officers, directors, employees, and agents from any claims,
+          damages, losses, liabilities, and expenses (including attorneys' fees)
+          arising from:
         </p>
 
         <ul>
@@ -447,6 +449,9 @@ export default function TermsOfService() {
         </p>
 
         <ul className="list-none">
+          <li>
+            <strong>Company:</strong> FlatironKids LLC
+          </li>
           <li>
             <strong>Email:</strong>{" "}
             <a className="text-primary" href="mailto:legal@wraps.dev">

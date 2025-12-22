@@ -15,18 +15,18 @@ export default function PrivacyPolicy() {
       <article className="prose prose-gray dark:prose-invert max-w-none">
         <h1>Privacy Policy</h1>
         <p className="text-muted-foreground">
-          <strong>Last Updated:</strong>{" "}
-          {new Date().toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+          <strong>Last Updated:</strong> December 22, 2025
         </p>
 
         <p className="lead">
           At Wraps, we take your privacy seriously. This Privacy Policy explains
           how we collect, use, disclose, and safeguard your information when you
           use our CLI tool, SDK, and services.
+        </p>
+
+        <p>
+          Wraps is a product of <strong>FlatironKids LLC</strong>, a company
+          registered in the State of Colorado, United States.
         </p>
 
         <h2>1. Information We Collect</h2>
@@ -325,6 +325,9 @@ export DO_NOT_TRACK=1`}
         </p>
 
         <ul className="list-none">
+          <li>
+            <strong>Company:</strong> FlatironKids LLC
+          </li>
           <li>
             <strong>Email:</strong>{" "}
             <a className="text-primary" href="mailto:privacy@wraps.dev">
