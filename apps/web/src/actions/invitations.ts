@@ -4,6 +4,7 @@ import { auth } from "@wraps/auth";
 import { db, invitation, member, organization, user } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { createActionLogger, serializeError } from "@/lib/logger";
 
 export type InvitationDetails = {
   id: string;
@@ -118,7 +119,11 @@ export async function getInvitation(
       isAlreadyMember,
     };
   } catch (error) {
-    console.error("Error fetching invitation:", error);
+    const log = createActionLogger("getInvitation", {});
+    log.error(
+      { err: serializeError(error), invitationId },
+      "Failed to fetch invitation"
+    );
     return {
       success: false,
       error: "Failed to fetch invitation details",
@@ -246,7 +251,11 @@ export async function acceptInvitation(
       message: `Welcome to ${org.name}!`,
     };
   } catch (error) {
-    console.error("Error accepting invitation:", error);
+    const log = createActionLogger("acceptInvitation", {});
+    log.error(
+      { err: serializeError(error), invitationId },
+      "Failed to accept invitation"
+    );
     return {
       success: false,
       error: "Failed to accept invitation. Please try again.",
@@ -307,7 +316,11 @@ export async function declineInvitation(
       message: `You have declined the invitation to join ${org?.name || "the organization"}`,
     };
   } catch (error) {
-    console.error("Error declining invitation:", error);
+    const log = createActionLogger("declineInvitation", {});
+    log.error(
+      { err: serializeError(error), invitationId },
+      "Failed to decline invitation"
+    );
     return {
       success: false,
       error: "Failed to decline invitation. Please try again.",

@@ -8,6 +8,7 @@ import {
   StartArchiveSearchCommand,
 } from "@aws-sdk/client-mailmanager";
 import { type ParsedMail, simpleParser } from "mailparser";
+import { logger, serializeError } from "@/lib/logger";
 import type { AssumedRoleCredentials } from "./assume-role";
 
 /**
@@ -114,7 +115,7 @@ export async function findWrapsArchive(
     }
 
     // Log other errors for debugging
-    console.error("Error finding archive:", error);
+    logger.error({ err: serializeError(error) }, "Error finding archive");
     return null;
   }
 }
@@ -258,7 +259,10 @@ export async function getArchivedEmail(
         error.name === "ConflictException" &&
         error.message.includes("still in progress")
       ) {
-        console.log(`Search still in progress, attempt ${attempts + 1}...`);
+        logger.debug(
+          { attempt: attempts + 1 },
+          "Archive search still in progress"
+        );
       } else {
         // Other errors should be thrown
         throw error;

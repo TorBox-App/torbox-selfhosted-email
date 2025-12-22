@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { db, waitlist } from "@wraps/db";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 
 /**
  * Hash email with SHA-256 for deduplication
@@ -80,7 +81,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    console.error("Waitlist API error:", error);
+    const log = createRequestLogger({ path: "/api/waitlist", method: "POST" });
+    log.error({ err: serializeError(error) }, "Failed to add to waitlist");
     return NextResponse.json(
       { error: "Failed to join waitlist" },
       { status: 500, headers: corsHeaders }

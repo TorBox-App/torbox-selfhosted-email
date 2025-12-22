@@ -12,6 +12,7 @@ import {
   type UpdateOrganizationInput,
   updateOrganizationSchema,
 } from "@/lib/forms/update-organization";
+import { createActionLogger, serializeError } from "@/lib/logger";
 import {
   generateSlug,
   getOrganizationWithMembership,
@@ -138,7 +139,8 @@ export async function createOrganizationAction(
       },
     };
   } catch (error) {
-    console.error("Error creating organization:", error);
+    const log = createActionLogger("createOrganizationAction", {});
+    log.error({ err: serializeError(error) }, "Failed to create organization");
     return {
       success: false,
       error:
@@ -264,7 +266,8 @@ export async function updateOrganizationAction(
       },
     };
   } catch (error) {
-    console.error("Error updating organization:", error);
+    const log = createActionLogger("updateOrganizationAction", { orgSlug });
+    log.error({ err: serializeError(error) }, "Failed to update organization");
     return {
       success: false,
       error:

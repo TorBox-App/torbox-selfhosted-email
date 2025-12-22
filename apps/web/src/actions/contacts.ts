@@ -14,6 +14,7 @@ import type {
   ListContactsResult,
   UpdateContactResult,
 } from "@/lib/contacts";
+import { createActionLogger, serializeError } from "@/lib/logger";
 
 // Re-export types for convenience
 export type {
@@ -183,7 +184,8 @@ export async function listContacts(
       pageSize,
     };
   } catch (error) {
-    console.error("Error listing contacts:", error);
+    const log = createActionLogger("listContacts", { orgSlug: organizationId });
+    log.error({ err: serializeError(error) }, "Failed to list contacts");
     return { success: false, error: "Failed to fetch contacts" };
   }
 }
@@ -265,7 +267,11 @@ export async function getContact(
       },
     };
   } catch (error) {
-    console.error("Error getting contact:", error);
+    const log = createActionLogger("getContact", { orgSlug: organizationId });
+    log.error(
+      { err: serializeError(error), contactId },
+      "Failed to get contact"
+    );
     return { success: false, error: "Failed to fetch contact" };
   }
 }
@@ -357,7 +363,10 @@ export async function createContact(
     // Return the created contact
     return await getContact(newContact.id, organizationId);
   } catch (error) {
-    console.error("Error creating contact:", error);
+    const log = createActionLogger("createContact", {
+      orgSlug: organizationId,
+    });
+    log.error({ err: serializeError(error) }, "Failed to create contact");
     return { success: false, error: "Failed to create contact" };
   }
 }
@@ -463,7 +472,13 @@ export async function updateContact(
     // Return updated contact
     return await getContact(contactId, organizationId);
   } catch (error) {
-    console.error("Error updating contact:", error);
+    const log = createActionLogger("updateContact", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), contactId },
+      "Failed to update contact"
+    );
     return { success: false, error: "Failed to update contact" };
   }
 }
@@ -528,7 +543,13 @@ export async function deleteContact(
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting contact:", error);
+    const log = createActionLogger("deleteContact", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), contactId },
+      "Failed to delete contact"
+    );
     return { success: false, error: "Failed to delete contact" };
   }
 }
@@ -632,7 +653,13 @@ export async function subscribeContactToTopics(
 
     return { success: true };
   } catch (error) {
-    console.error("Error subscribing contact to topics:", error);
+    const log = createActionLogger("subscribeContactToTopics", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), contactId, topicIds },
+      "Failed to subscribe contact to topics"
+    );
     return { success: false, error: "Failed to subscribe to topics" };
   }
 }
@@ -731,7 +758,13 @@ export async function bulkSubscribeContactsToTopics(
     revalidatePath("/[orgSlug]/contacts", "page");
     return { success: true, count: subscribed };
   } catch (error) {
-    console.error("Error bulk subscribing contacts:", error);
+    const log = createActionLogger("bulkSubscribeContactsToTopics", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), contactCount: contactIds.length, topicIds },
+      "Failed to bulk subscribe contacts"
+    );
     return { success: false, error: "Failed to subscribe contacts" };
   }
 }
@@ -812,7 +845,13 @@ export async function bulkUnsubscribeContactsFromTopics(
     revalidatePath("/[orgSlug]/contacts", "page");
     return { success: true, count: unsubscribedCount };
   } catch (error) {
-    console.error("Error bulk unsubscribing contacts:", error);
+    const log = createActionLogger("bulkUnsubscribeContactsFromTopics", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), contactCount: contactIds.length, topicIds },
+      "Failed to bulk unsubscribe contacts"
+    );
     return { success: false, error: "Failed to unsubscribe contacts" };
   }
 }
@@ -874,7 +913,13 @@ export async function unsubscribeContactFromTopics(
 
     return { success: true };
   } catch (error) {
-    console.error("Error unsubscribing contact from topics:", error);
+    const log = createActionLogger("unsubscribeContactFromTopics", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), contactId, topicIds },
+      "Failed to unsubscribe contact from topics"
+    );
     return { success: false, error: "Failed to unsubscribe from topics" };
   }
 }

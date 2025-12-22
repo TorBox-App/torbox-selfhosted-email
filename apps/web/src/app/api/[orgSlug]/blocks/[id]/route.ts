@@ -3,6 +3,7 @@ import { db, reusableBlock } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -58,7 +59,11 @@ export async function GET(_request: Request, context: RouteContext) {
 
     return NextResponse.json(block);
   } catch (error) {
-    console.error("Error fetching block:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/blocks/[id]",
+      method: "GET",
+    });
+    log.error({ err: serializeError(error) }, "Error fetching block");
     return NextResponse.json(
       { error: "Failed to fetch block" },
       { status: 500 }
@@ -117,7 +122,11 @@ export async function PUT(request: Request, context: RouteContext) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error updating block:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/blocks/[id]",
+      method: "PUT",
+    });
+    log.error({ err: serializeError(error) }, "Error updating block");
     return NextResponse.json(
       { error: "Failed to update block" },
       { status: 500 }
@@ -160,7 +169,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting block:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/blocks/[id]",
+      method: "DELETE",
+    });
+    log.error({ err: serializeError(error) }, "Error deleting block");
     return NextResponse.json(
       { error: "Failed to delete block" },
       { status: 500 }

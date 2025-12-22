@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { findWrapsArchive, getArchivedEmail } from "@/lib/aws/mailmanager";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -18,6 +19,11 @@ type RouteContext = {
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, emailId } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/emails/[emailId]/archive",
+      method: "GET",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -88,9 +94,9 @@ export async function GET(_request: Request, context: RouteContext) {
           break;
         }
       } catch (error) {
-        console.error(
-          `Failed to search for email in account ${account.id}:`,
-          error
+        log.error(
+          { err: serializeError(error), accountId: account.id },
+          "Failed to search for email in account"
         );
         // Continue to next account
       }
@@ -140,7 +146,11 @@ export async function GET(_request: Request, context: RouteContext) {
 
     return NextResponse.json(archivedEmail);
   } catch (error) {
-    console.error("Error fetching archived email:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/emails/[emailId]/archive",
+      method: "GET",
+    });
+    log.error({ err: serializeError(error) }, "Error fetching archived email");
 
     // Handle specific error cases
     if (

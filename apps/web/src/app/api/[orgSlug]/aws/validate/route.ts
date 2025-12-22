@@ -5,6 +5,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 
@@ -17,6 +18,11 @@ type RouteContext = {
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/aws/validate",
+      method: "POST",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -148,7 +154,7 @@ export async function POST(request: Request, context: RouteContext) {
         roleName,
       });
     } catch (error: any) {
-      console.error("Error assuming role:", error);
+      log.error({ err: serializeError(error) }, "Error assuming role");
 
       // Provide user-friendly error messages
       let errorMessage = "Failed to validate AWS connection";
@@ -167,7 +173,14 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
   } catch (error) {
-    console.error("Error validating AWS connection:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/aws/validate",
+      method: "POST",
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Error validating AWS connection"
+    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

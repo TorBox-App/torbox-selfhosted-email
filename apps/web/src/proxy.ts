@@ -18,8 +18,24 @@ const publicRoutes = [
 // Auth routes that should redirect authenticated users to dashboard
 const authRoutes = ["/auth"];
 
+/**
+ * Add request ID header for log correlation
+ */
+function addRequestId(request: NextRequest, response: NextResponse): void {
+  const requestId =
+    request.headers.get("x-request-id") || crypto.randomUUID().slice(0, 8);
+  response.headers.set("x-request-id", requestId);
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // API routes: only add request ID, skip auth checks
+  if (pathname.startsWith("/api")) {
+    const response = NextResponse.next();
+    addRequestId(request, response);
+    return response;
+  }
 
   // Check if the current path is public (unprotected)
   const isPublicRoute = publicRoutes.some((route) =>
@@ -91,16 +107,17 @@ export async function proxy(request: NextRequest) {
   }
 
   // Allow the request to continue
-  return NextResponse.next();
+  const response = NextResponse.next();
+  addRequestId(request, response);
+  return response;
 }
 
 export const config = {
   matcher: [
     // Match all request paths except for the ones starting with:
-    // - api (API routes)
     // - _next/static (static files)
     // - _next/image (image optimization files)
     // - favicon.ico, sitemap.xml, robots.txt (meta files)
-    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };

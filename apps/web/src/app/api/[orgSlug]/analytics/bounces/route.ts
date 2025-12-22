@@ -4,6 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -26,6 +27,11 @@ type BounceDataPoint = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/bounces",
+      method: "GET",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -72,9 +78,9 @@ export async function GET(request: Request, context: RouteContext) {
             limit: 10_000,
           });
         } catch (error) {
-          console.error(
-            `Failed to fetch events for account ${account.id}:`,
-            error
+          log.error(
+            { err: serializeError(error), accountId: account.id },
+            "Failed to fetch events for account"
           );
           return [];
         }
@@ -118,8 +124,8 @@ export async function GET(request: Request, context: RouteContext) {
         try {
           const data = JSON.parse(event.additionalData);
           bounceType = data.bounceType || "Undetermined";
-        } catch (error) {
-          console.error("Failed to parse additionalData:", error);
+        } catch {
+          // Ignore parse errors
         }
       }
 
@@ -168,7 +174,14 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(dataPoints);
   } catch (error) {
-    console.error("Error fetching bounce analytics:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/bounces",
+      method: "GET",
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Error fetching bounce analytics"
+    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount, organizationExtension } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -53,7 +54,16 @@ export async function GET(_request: Request, context: RouteContext) {
       awsAccountCount: awsAccounts.length,
     });
   } catch (error) {
-    console.error("Error fetching onboarding status:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/onboarding/status",
+      method: "GET",
+      orgSlug,
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Error fetching onboarding status"
+    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

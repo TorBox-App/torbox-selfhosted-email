@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -34,15 +35,12 @@ export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
 
-    console.log("[API /emails] Request received for org:", orgSlug);
-
     // Authenticate user
     const session = await auth.api.getSession({
       headers: await import("next/headers").then((mod) => mod.headers()),
     });
 
     if (!session?.user) {
-      console.log("[API /emails] Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -53,7 +51,6 @@ export async function GET(request: Request, context: RouteContext) {
     );
 
     if (!orgWithMembership) {
-      console.log("[API /emails] Forbidden - not a member");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -65,24 +62,20 @@ export async function GET(request: Request, context: RouteContext) {
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
 
-    console.log("[API /emails] Query params:", {
-      days,
-      limit,
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
-    });
-
     // Get all AWS accounts for this organization
     const accounts = await db.query.awsAccount.findMany({
       where: eq(awsAccount.organizationId, orgWithMembership.id),
     });
 
-    console.log("[API /emails] Found accounts:", accounts.length);
-
     if (accounts.length === 0) {
-      console.log("[API /emails] No accounts found, returning empty array");
       return NextResponse.json([]);
     }
+
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/emails",
+      method: "GET",
+      orgSlug,
+    });
 
     // Fetch email events from all accounts
     const allEvents = await Promise.all(
@@ -95,9 +88,9 @@ export async function GET(request: Request, context: RouteContext) {
             limit: 500, // Get more to aggregate by message
           });
         } catch (error) {
-          console.error(
-            `Failed to fetch emails for account ${account.id}:`,
-            error
+          log.error(
+            { err: serializeError(error), accountId: account.id },
+            "Failed to fetch emails for account"
           );
           return [];
         }
@@ -191,7 +184,11 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(emails);
   } catch (error) {
-    console.error("Error fetching emails:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/emails",
+      method: "GET",
+    });
+    log.error({ err: serializeError(error) }, "Error fetching emails");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

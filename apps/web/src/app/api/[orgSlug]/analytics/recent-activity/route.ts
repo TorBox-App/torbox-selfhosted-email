@@ -4,6 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getRecentEmailActivity } from "@/lib/aws/dynamodb";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -15,6 +16,11 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/recent-activity",
+      method: "GET",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -57,9 +63,9 @@ export async function GET(request: Request, context: RouteContext) {
             limit: 50, // Get more initially
           });
         } catch (error) {
-          console.error(
-            `Failed to fetch recent activity for account ${account.id}:`,
-            error
+          log.error(
+            { err: serializeError(error), accountId: account.id },
+            "Failed to fetch recent activity for account"
           );
           return [];
         }
@@ -82,7 +88,11 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(recentActivity);
   } catch (error) {
-    console.error("Error fetching recent activity:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/recent-activity",
+      method: "GET",
+    });
+    log.error({ err: serializeError(error) }, "Error fetching recent activity");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

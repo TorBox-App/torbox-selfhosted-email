@@ -4,6 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getSMSMetricsSummary } from "@/lib/aws/sms-voice";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -15,6 +16,11 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/sms/overview",
+      method: "GET",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -68,9 +74,9 @@ export async function GET(request: Request, context: RouteContext) {
             period: 3600, // 1 hour aggregation
           });
         } catch (error) {
-          console.error(
-            `Failed to fetch SMS metrics for account ${account.id}:`,
-            error
+          log.error(
+            { err: serializeError(error), accountId: account.id },
+            "Failed to fetch SMS metrics for account"
           );
           return null;
         }
@@ -106,7 +112,14 @@ export async function GET(request: Request, context: RouteContext) {
       failureRate: Number(failureRate.toFixed(2)),
     });
   } catch (error) {
-    console.error("Error fetching SMS analytics overview:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/sms/overview",
+      method: "GET",
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Error fetching SMS analytics overview"
+    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { extractTipTapJson, validateTipTapJson } from "@/lib/ai/validator";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkAiUsageLimit, trackAiRequest } from "@/lib/usage/ai-usage";
 
@@ -129,12 +130,21 @@ export async function POST(request: Request, context: RouteContext) {
         },
       },
       onFinish: async ({ text, usage }) => {
+        const log = createRequestLogger({
+          path: "/api/[orgSlug]/templates/ai/generate",
+          method: "POST",
+          orgSlug,
+        });
+
         // Validate final output
         const json = extractTipTapJson(text);
         if (json) {
           const validation = validateTipTapJson(json);
           if (!validation.valid) {
-            console.warn("AI output validation issues:", validation.errors);
+            log.warn(
+              { validationErrors: validation.errors },
+              "AI output validation issues"
+            );
           }
         }
 
@@ -148,7 +158,12 @@ export async function POST(request: Request, context: RouteContext) {
           outputTokens: usage?.outputTokens,
           totalTokens: usage?.totalTokens,
           model: MODEL_ID,
-        }).catch(console.error);
+        }).catch((error) => {
+          log.error(
+            { err: serializeError(error) },
+            "Failed to track AI request"
+          );
+        });
 
         // Track conversation in database (async)
         trackConversation({
@@ -156,7 +171,12 @@ export async function POST(request: Request, context: RouteContext) {
           templateId,
           messages,
           userId: session.user.id,
-        }).catch(console.error);
+        }).catch((error) => {
+          log.error(
+            { err: serializeError(error) },
+            "Failed to track conversation"
+          );
+        });
       },
     });
 
@@ -165,7 +185,13 @@ export async function POST(request: Request, context: RouteContext) {
       sendReasoning: true,
     });
   } catch (error) {
-    console.error("Error generating AI content:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/ai/generate",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error generating AI content");
     return NextResponse.json(
       { error: "Failed to generate content" },
       { status: 500 }
@@ -180,6 +206,12 @@ async function trackConversation(data: {
   messages: UIMessage[];
   userId: string;
 }): Promise<void> {
+  const log = createRequestLogger({
+    path: "/api/[orgSlug]/templates/ai/generate",
+    method: "POST",
+    orgSlug: "system",
+  });
+
   try {
     // Convert UIMessages to a simpler format for storage
     const simplifiedMessages = data.messages.map((m) => ({
@@ -197,6 +229,9 @@ async function trackConversation(data: {
       createdBy: data.userId,
     });
   } catch (error) {
-    console.error("Failed to track AI conversation:", error);
+    log.error(
+      { err: serializeError(error) },
+      "Failed to track AI conversation"
+    );
   }
 }

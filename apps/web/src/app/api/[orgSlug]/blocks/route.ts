@@ -3,6 +3,7 @@ import { db, reusableBlock } from "@wraps/db";
 import { and, desc, eq, or } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -67,7 +68,11 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(blocks);
   } catch (error) {
-    console.error("Error fetching blocks:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/blocks",
+      method: "GET",
+    });
+    log.error({ err: serializeError(error) }, "Error fetching blocks");
     return NextResponse.json(
       { error: "Failed to fetch blocks" },
       { status: 500 }
@@ -130,7 +135,11 @@ export async function POST(request: Request, context: RouteContext) {
 
     return NextResponse.json(newBlock, { status: 201 });
   } catch (error) {
-    console.error("Error creating block:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/blocks",
+      method: "POST",
+    });
+    log.error({ err: serializeError(error) }, "Error creating block");
     return NextResponse.json(
       { error: "Failed to create block" },
       { status: 500 }

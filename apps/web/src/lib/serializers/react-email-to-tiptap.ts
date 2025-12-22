@@ -1054,6 +1054,8 @@ export function parseReactEmailToTipTap(code: string): JSONContent {
       },
     });
   } catch (error) {
+    // Note: Using console.error here because this file is used in client components
+    // and Pino logger is server-side only
     console.error("Failed to parse React Email code:", error);
     // Return a basic document with the error
     return {

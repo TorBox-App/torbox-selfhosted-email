@@ -8,6 +8,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -120,14 +121,25 @@ export async function POST(request: Request, context: RouteContext) {
         accountId,
       });
     } catch (awsError: any) {
-      console.error("AWS Validation Error:", awsError);
+      const log = createRequestLogger({
+        path: "/api/[orgSlug]/onboarding/aws/validate",
+        method: "POST",
+        orgSlug,
+      });
+      log.error({ err: serializeError(awsError) }, "AWS validation error");
       return NextResponse.json(
         { error: `Failed to validate AWS connection: ${awsError.message}` },
         { status: 400 }
       );
     }
   } catch (error) {
-    console.error("Error in AWS validation route:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/onboarding/aws/validate",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error in AWS validation route");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

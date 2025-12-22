@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { getSMSPhoneNumbers } from "@/lib/aws/sms-voice";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -183,7 +184,11 @@ export async function GET(request: Request, context: RouteContext) {
       hasAwsAccounts: true,
     });
   } catch (error) {
-    console.error("Error fetching products status:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/products",
+      method: "GET",
+    });
+    log.error({ err: serializeError(error) }, "Error fetching products status");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

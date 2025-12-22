@@ -6,6 +6,7 @@ import { WrapsEmail } from "@wraps.dev/email";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
 
@@ -209,7 +210,13 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
   } catch (error) {
-    console.error("Error sending test email:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]/send-test",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error sending test email");
     return NextResponse.json(
       {
         error:

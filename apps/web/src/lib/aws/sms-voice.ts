@@ -23,6 +23,7 @@ import {
   type QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import { db } from "@wraps/db";
+import { logger, serializeError } from "@/lib/logger";
 import { getOrAssumeRole } from "./credential-cache";
 
 /**
@@ -156,9 +157,10 @@ export async function getSMSAccountAttributes(
     );
     return response.AccountAttributes || [];
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(`Failed to fetch SMS account attributes: ${error.message}`);
-    }
+    logger.error(
+      { err: serializeError(error), awsAccountId },
+      "Failed to fetch SMS account attributes"
+    );
     return [];
   }
 }
@@ -196,11 +198,14 @@ export async function getSMSSpendLimits(
     const response = await client.send(new DescribeSpendLimitsCommand({}));
     return response.SpendLimits || [];
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(
-        `[SMS] Failed to fetch spend limits for ${account.accountId}: ${error.message}`
-      );
-    }
+    logger.error(
+      {
+        err: serializeError(error),
+        awsAccountId,
+        accountId: account.accountId,
+      },
+      "Failed to fetch SMS spend limits"
+    );
     return [];
   }
 }
@@ -236,16 +241,16 @@ export async function getSMSPhoneNumbers(
 
   try {
     const response = await client.send(new DescribePhoneNumbersCommand({}));
-    console.log(
-      `[SMS] Found ${response.PhoneNumbers?.length || 0} phone numbers for ${account.accountId}`
-    );
     return response.PhoneNumbers || [];
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(
-        `[SMS] Failed to fetch phone numbers for ${account.accountId}: ${error.message}`
-      );
-    }
+    logger.error(
+      {
+        err: serializeError(error),
+        awsAccountId,
+        accountId: account.accountId,
+      },
+      "Failed to fetch SMS phone numbers"
+    );
     return [];
   }
 }
@@ -285,9 +290,10 @@ export async function getSMSConfigurationSets(
     );
     return response.ConfigurationSets || [];
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(`Failed to fetch SMS configuration sets: ${error.message}`);
-    }
+    logger.error(
+      { err: serializeError(error), awsAccountId },
+      "Failed to fetch SMS configuration sets"
+    );
     return [];
   }
 }
@@ -323,16 +329,16 @@ export async function getSMSRegistrations(
 
   try {
     const response = await client.send(new DescribeRegistrationsCommand({}));
-    console.log(
-      `[SMS] Found ${response.Registrations?.length || 0} registrations for ${account.accountId}`
-    );
     return response.Registrations || [];
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(
-        `[SMS] Failed to fetch registrations for ${account.accountId}: ${error.message}`
-      );
-    }
+    logger.error(
+      {
+        err: serializeError(error),
+        awsAccountId,
+        accountId: account.accountId,
+      },
+      "Failed to fetch SMS registrations"
+    );
     return [];
   }
 }

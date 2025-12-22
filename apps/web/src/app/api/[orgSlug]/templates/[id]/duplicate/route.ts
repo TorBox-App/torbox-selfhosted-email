@@ -3,6 +3,7 @@ import { db, template } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -68,7 +69,13 @@ export async function POST(_request: Request, context: RouteContext) {
 
     return NextResponse.json(duplicated, { status: 201 });
   } catch (error) {
-    console.error("Error duplicating template:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]/duplicate",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error duplicating template");
     return NextResponse.json(
       { error: "Failed to duplicate template" },
       { status: 500 }

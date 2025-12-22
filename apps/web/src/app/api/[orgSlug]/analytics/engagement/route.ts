@@ -4,6 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getCloudWatchMetrics, SES_METRICS } from "@/lib/aws/cloudwatch";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -15,6 +16,11 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/engagement",
+      method: "GET",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -90,9 +96,9 @@ export async function GET(request: Request, context: RouteContext) {
 
           return { sent, delivered, opens, clicks };
         } catch (error) {
-          console.error(
-            `Failed to fetch engagement metrics for account ${account.id}:`,
-            error
+          log.error(
+            { err: serializeError(error), accountId: account.id },
+            "Failed to fetch engagement metrics for account"
           );
           return null;
         }
@@ -155,7 +161,14 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(dataPoints);
   } catch (error) {
-    console.error("Error fetching engagement analytics:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/engagement",
+      method: "GET",
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Error fetching engagement analytics"
+    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

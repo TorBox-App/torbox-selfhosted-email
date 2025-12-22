@@ -3,6 +3,7 @@ import { db, template } from "@wraps/db";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -64,7 +65,13 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(templates);
   } catch (error) {
-    console.error("Error fetching templates:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates",
+      method: "GET",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error fetching templates");
     return NextResponse.json(
       { error: "Failed to fetch templates" },
       { status: 500 }
@@ -130,7 +137,13 @@ export async function POST(request: Request, context: RouteContext) {
 
     return NextResponse.json(newTemplate, { status: 201 });
   } catch (error) {
-    console.error("Error creating template:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error creating template");
     return NextResponse.json(
       { error: "Failed to create template" },
       { status: 500 }

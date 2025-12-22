@@ -11,6 +11,7 @@ import {
   generateSESTemplateName,
   upsertSESTemplate,
 } from "@/lib/aws/ses-templates";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
 
@@ -188,7 +189,13 @@ export async function POST(request: Request, context: RouteContext) {
       message: `Template published to SES as "${sesTemplateName}"`,
     });
   } catch (error) {
-    console.error("Error publishing template:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]/publish",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error publishing template");
     return NextResponse.json(
       {
         error:
@@ -287,7 +294,13 @@ export async function DELETE(_request: Request, context: RouteContext) {
       message: "Template unpublished from SES",
     });
   } catch (error) {
-    console.error("Error unpublishing template:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]/publish",
+      method: "DELETE",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error unpublishing template");
     return NextResponse.json(
       {
         error:

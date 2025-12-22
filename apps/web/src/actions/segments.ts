@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { createActionLogger, serializeError } from "@/lib/logger";
 import {
   type CreateSegmentResult,
   type DeleteSegmentResult,
@@ -271,7 +272,8 @@ export async function listSegments(
       })),
     };
   } catch (error) {
-    console.error("Error listing segments:", error);
+    const log = createActionLogger("listSegments", { orgSlug: organizationId });
+    log.error({ err: serializeError(error) }, "Failed to list segments");
     return { success: false, error: "Failed to fetch segments" };
   }
 }
@@ -323,7 +325,11 @@ export async function getSegment(
       },
     };
   } catch (error) {
-    console.error("Error getting segment:", error);
+    const log = createActionLogger("getSegment", { orgSlug: organizationId });
+    log.error(
+      { err: serializeError(error), segmentId },
+      "Failed to get segment"
+    );
     return { success: false, error: "Failed to fetch segment" };
   }
 }
@@ -405,7 +411,10 @@ export async function createSegment(
     // Return the created segment
     return await getSegment(newSegment.id, organizationId);
   } catch (error) {
-    console.error("Error creating segment:", error);
+    const log = createActionLogger("createSegment", {
+      orgSlug: organizationId,
+    });
+    log.error({ err: serializeError(error) }, "Failed to create segment");
     return { success: false, error: "Failed to create segment" };
   }
 }
@@ -512,7 +521,13 @@ export async function updateSegment(
     // Return updated segment
     return await getSegment(segmentId, organizationId);
   } catch (error) {
-    console.error("Error updating segment:", error);
+    const log = createActionLogger("updateSegment", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), segmentId },
+      "Failed to update segment"
+    );
     return { success: false, error: "Failed to update segment" };
   }
 }
@@ -572,7 +587,13 @@ export async function deleteSegment(
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting segment:", error);
+    const log = createActionLogger("deleteSegment", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), segmentId },
+      "Failed to delete segment"
+    );
     return { success: false, error: "Failed to delete segment" };
   }
 }
@@ -626,7 +647,10 @@ export async function previewSegment(
       sampleEmails: samples.map((s) => s.email),
     };
   } catch (error) {
-    console.error("Error previewing segment:", error);
+    const log = createActionLogger("previewSegment", {
+      orgSlug: organizationId,
+    });
+    log.error({ err: serializeError(error) }, "Failed to preview segment");
     return { success: false, error: "Failed to preview segment" };
   }
 }
@@ -667,7 +691,10 @@ export async function getPropertyKeys(
 
     return { success: true, keys: Array.from(keys).sort() };
   } catch (error) {
-    console.error("Error getting property keys:", error);
+    const log = createActionLogger("getPropertyKeys", {
+      orgSlug: organizationId,
+    });
+    log.error({ err: serializeError(error) }, "Failed to get property keys");
     return { success: true, keys: [] };
   }
 }
@@ -718,7 +745,13 @@ export async function recomputeSegmentCounts(
 
     return { success: true };
   } catch (error) {
-    console.error("Error recomputing segment counts:", error);
+    const log = createActionLogger("recomputeSegmentCounts", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Failed to recompute segment counts"
+    );
     return { success: false, error: "Failed to recompute segment counts" };
   }
 }

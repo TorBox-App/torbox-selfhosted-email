@@ -1,5 +1,6 @@
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
+import { logger } from "@/lib/logger";
 
 // Types for AWS credentials - compatible with AWS SDK v3
 type AwsCredentialIdentity = {
@@ -211,12 +212,10 @@ export async function getCredentials(
 
   if (isDev) {
     // Dev mode: use ambient credentials
-    console.warn(
-      "[DEV MODE] Skipping role assumption, using ambient AWS credentials"
-    );
+    logger.warn("Skipping role assumption, using ambient AWS credentials");
 
     if (process.env.AWS_PROFILE) {
-      console.warn(`[DEV MODE] Using AWS_PROFILE: ${process.env.AWS_PROFILE}`);
+      logger.warn({ profile: process.env.AWS_PROFILE }, "Using AWS_PROFILE");
     }
 
     const credentials = await getAmbientCredentials(region);

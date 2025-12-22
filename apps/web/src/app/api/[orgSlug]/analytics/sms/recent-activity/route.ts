@@ -4,6 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { querySMSEvents } from "@/lib/aws/sms-voice";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -95,7 +96,14 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json<SMSRecentActivityItem[]>(activities);
   } catch (error) {
-    console.error("Error fetching SMS recent activity:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/sms/recent-activity",
+      method: "GET",
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Error fetching SMS recent activity"
+    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

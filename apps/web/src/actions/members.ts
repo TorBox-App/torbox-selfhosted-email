@@ -6,6 +6,7 @@ import { invitation, member, user } from "@wraps/db/schema/auth";
 import { sendInvitationEmail } from "@wraps/email/emails/invitation";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { createActionLogger, serializeError } from "@/lib/logger";
 
 export type MemberWithUser = {
   id: string;
@@ -141,7 +142,8 @@ export async function listMembers(
       })),
     };
   } catch (error) {
-    console.error("Error listing members:", error);
+    const log = createActionLogger("listMembers", { orgSlug: organizationId });
+    log.error({ err: serializeError(error) }, "Failed to list members");
     return {
       success: false,
       error: "Failed to fetch members",
@@ -251,7 +253,13 @@ export async function updateMemberRole(
       success: true,
     };
   } catch (error) {
-    console.error("Error updating member role:", error);
+    const log = createActionLogger("updateMemberRole", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), memberId, newRole },
+      "Failed to update member role"
+    );
     return {
       success: false,
       error: "Failed to update member role",
@@ -392,7 +400,13 @@ export async function inviteMember(
         invitationId: newInvitation.id,
       });
     } catch (emailError) {
-      console.error("Error sending invitation email:", emailError);
+      const log = createActionLogger("inviteMember", {
+        orgSlug: organizationId,
+      });
+      log.error(
+        { err: serializeError(emailError), email },
+        "Failed to send invitation email"
+      );
       // Continue even if email fails - the invitation is still created
       // The user can manually share the link or we can retry later
     }
@@ -407,7 +421,11 @@ export async function inviteMember(
       invitationId: newInvitation.id,
     };
   } catch (error) {
-    console.error("Error inviting member:", error);
+    const log = createActionLogger("inviteMember", { orgSlug: organizationId });
+    log.error(
+      { err: serializeError(error), email, role },
+      "Failed to invite member"
+    );
     return {
       success: false,
       error: "Failed to send invitation",
@@ -510,7 +528,11 @@ export async function removeMember(
       success: true,
     };
   } catch (error) {
-    console.error("Error removing member:", error);
+    const log = createActionLogger("removeMember", { orgSlug: organizationId });
+    log.error(
+      { err: serializeError(error), memberId },
+      "Failed to remove member"
+    );
     return {
       success: false,
       error: "Failed to remove member",
@@ -585,7 +607,13 @@ export async function cancelInvitation(
       success: true,
     };
   } catch (error) {
-    console.error("Error canceling invitation:", error);
+    const log = createActionLogger("cancelInvitation", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), invitationId },
+      "Failed to cancel invitation"
+    );
     return {
       success: false,
       error: "Failed to cancel invitation",

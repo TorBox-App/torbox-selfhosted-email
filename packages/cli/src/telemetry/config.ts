@@ -13,6 +13,11 @@ const CONFIG_DEFAULTS: TelemetryConfig = {
   notificationShown: false,
 };
 
+export type TelemetryConfigOptions = {
+  /** Custom config directory (for testing) */
+  cwd?: string;
+};
+
 /**
  * Manages telemetry configuration stored locally
  *
@@ -35,11 +40,12 @@ const CONFIG_DEFAULTS: TelemetryConfig = {
 export class TelemetryConfigManager {
   private readonly config: Conf<TelemetryConfig>;
 
-  constructor() {
+  constructor(options?: TelemetryConfigOptions) {
     this.config = new Conf<TelemetryConfig>({
       projectName: "wraps",
       configName: "telemetry",
       defaults: CONFIG_DEFAULTS,
+      cwd: options?.cwd,
     });
   }
 

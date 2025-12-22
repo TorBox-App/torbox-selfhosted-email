@@ -4,6 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getEmailEngagementMetrics } from "@/lib/aws/dynamodb";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -15,6 +16,11 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/top-performers",
+      method: "GET",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -62,9 +68,9 @@ export async function GET(request: Request, context: RouteContext) {
             limit: 1000, // Get more initially, will filter later
           });
         } catch (error) {
-          console.error(
-            `Failed to fetch email metrics for account ${account.id}:`,
-            error
+          log.error(
+            { err: serializeError(error), accountId: account.id },
+            "Failed to fetch email metrics for account"
           );
           return [];
         }
@@ -106,7 +112,11 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(topPerformers);
   } catch (error) {
-    console.error("Error fetching top performers:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/top-performers",
+      method: "GET",
+    });
+    log.error({ err: serializeError(error) }, "Error fetching top performers");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

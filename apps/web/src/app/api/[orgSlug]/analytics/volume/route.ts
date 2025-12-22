@@ -4,6 +4,7 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getCloudWatchMetrics, SES_METRICS } from "@/lib/aws/cloudwatch";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -15,6 +16,11 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/volume",
+      method: "GET",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -83,9 +89,9 @@ export async function GET(request: Request, context: RouteContext) {
 
           return { sent, delivered, bounced };
         } catch (error) {
-          console.error(
-            `Failed to fetch volume metrics for account ${account.id}:`,
-            error
+          log.error(
+            { err: serializeError(error), accountId: account.id },
+            "Failed to fetch volume metrics for account"
           );
           return null;
         }
@@ -137,7 +143,14 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(dataPoints);
   } catch (error) {
-    console.error("Error fetching volume analytics:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/volume",
+      method: "GET",
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Error fetching volume analytics"
+    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

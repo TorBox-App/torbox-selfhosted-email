@@ -9,6 +9,7 @@ import {
   grantAccessFormOpts,
   grantAccessSchema,
 } from "@/lib/forms/grant-access";
+import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkAWSAccountAccess } from "@/lib/permissions/check-access";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { revokeAWSAccountAccess } from "@/lib/permissions/revoke-access";
@@ -110,7 +111,8 @@ export async function grantAccessAction(_prev: unknown, formData: FormData) {
 
     // Handle other errors
     const message = e instanceof Error ? e.message : "Internal error";
-    console.error("Error granting access:", e);
+    const log = createActionLogger("grantAccessAction", {});
+    log.error({ err: serializeError(e) }, "Failed to grant access");
     return { error: "Internal error", details: message };
   }
 }
@@ -170,7 +172,11 @@ export async function revokeAccessAction(
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal error";
-    console.error("Error revoking access:", error);
+    const log = createActionLogger("revokeAccessAction", {});
+    log.error(
+      { err: serializeError(error), userId, awsAccountId },
+      "Failed to revoke access"
+    );
     return { error: "Internal error", details: message };
   }
 }

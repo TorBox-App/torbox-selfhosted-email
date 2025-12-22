@@ -131,9 +131,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     : null;
 
-  const orgScopedNavGroups = [emailNavGroup, smsNavGroup, settingsNavGroup].filter(
-    (g): g is NonNullable<typeof g> => g !== null
-  );
+  const orgScopedNavGroups = [
+    emailNavGroup,
+    smsNavGroup,
+    settingsNavGroup,
+  ].filter((g): g is NonNullable<typeof g> => g !== null);
 
   return (
     <Sidebar {...props}>

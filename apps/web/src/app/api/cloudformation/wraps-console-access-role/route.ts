@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -34,7 +35,14 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Failed to serve CloudFormation template:", error);
+    const log = createRequestLogger({
+      path: "/api/cloudformation/wraps-console-access-role",
+      method: "GET",
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Failed to serve CloudFormation template"
+    );
     return NextResponse.json(
       {
         error: "Failed to load CloudFormation template",

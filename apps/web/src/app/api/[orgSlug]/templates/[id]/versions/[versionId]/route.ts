@@ -3,6 +3,7 @@ import { db, template, templateVersion } from "@wraps/db";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -76,7 +77,13 @@ export async function GET(_request: Request, context: RouteContext) {
 
     return NextResponse.json(version);
   } catch (error) {
-    console.error("Error fetching version:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]/versions/[versionId]",
+      method: "GET",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error fetching version");
     return NextResponse.json(
       { error: "Failed to fetch version" },
       { status: 500 }
@@ -184,7 +191,13 @@ export async function POST(_request: Request, context: RouteContext) {
       restoredFromVersion: versionToRestore.version,
     });
   } catch (error) {
-    console.error("Error restoring version:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]/versions/[versionId]",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error restoring version");
     return NextResponse.json(
       { error: "Failed to restore version" },
       { status: 500 }

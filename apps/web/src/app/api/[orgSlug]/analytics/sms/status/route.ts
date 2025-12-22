@@ -8,6 +8,7 @@ import {
   getSMSRegistrations,
   getSMSSpendLimits,
 } from "@/lib/aws/sms-voice";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -57,6 +58,11 @@ export type SMSStatusResponse = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/sms/status",
+      method: "GET",
+      orgSlug,
+    });
 
     // Authenticate user
     const session = await auth.api.getSession({
@@ -100,20 +106,17 @@ export async function GET(request: Request, context: RouteContext) {
             getSMSRegistrations(account.id),
             getSMSSpendLimits(account.id),
           ]);
-          console.log(
-            `[SMS Status] Account ${account.accountId}: ${phoneNumbers.length} phone numbers, ${registrations.length} registrations, ${spendLimits.length} spend limits`
-          );
           return { phoneNumbers, registrations, spendLimits };
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          console.error(
-            `[SMS Status] Failed to fetch SMS status for account ${account.id} (${account.accountId}):`,
+          log.error(
             {
-              error: errorMessage,
+              err: serializeError(error),
+              accountId: account.id,
+              awsAccountId: account.accountId,
               roleArn: account.roleArn,
               region: account.region,
-            }
+            },
+            "Failed to fetch SMS status for account"
           );
           return { phoneNumbers: [], registrations: [], spendLimits: [] };
         }
@@ -176,7 +179,11 @@ export async function GET(request: Request, context: RouteContext) {
       hasSMSInfrastructure,
     });
   } catch (error) {
-    console.error("Error fetching SMS status:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/analytics/sms/status",
+      method: "GET",
+    });
+    log.error({ err: serializeError(error) }, "Error fetching SMS status");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

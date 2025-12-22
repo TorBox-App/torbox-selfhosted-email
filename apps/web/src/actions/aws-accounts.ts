@@ -20,6 +20,7 @@ import {
   connectAWSAccountFormOpts,
   connectAWSAccountSchema,
 } from "@/lib/forms/connect-aws-account";
+import { createActionLogger, serializeError } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
 
@@ -74,6 +75,10 @@ export type ListAWSAccountsResult =
 export async function listAWSAccounts(
   organizationId: string
 ): Promise<ListAWSAccountsResult> {
+  const log = createActionLogger("listAWSAccounts", {
+    orgSlug: organizationId,
+  });
+
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -85,6 +90,8 @@ export async function listAWSAccounts(
         error: "You must be logged in",
       };
     }
+
+    log.debug({ userId: session.user.id }, "Listing AWS accounts");
 
     // Verify user is a member of this organization
     const userMembership = await db.query.member.findFirst({
@@ -117,6 +124,8 @@ export async function listAWSAccounts(
       orderBy: (accs, { desc }) => [desc(accs.createdAt)],
     });
 
+    log.info({ count: accounts.length }, "Listed AWS accounts");
+
     return {
       success: true,
       accounts: accounts.map((account) => ({
@@ -132,7 +141,7 @@ export async function listAWSAccounts(
       })),
     };
   } catch (error) {
-    console.error("Error listing AWS accounts:", error);
+    log.error({ err: serializeError(error) }, "Failed to list AWS accounts");
     return {
       success: false,
       error: "Failed to fetch AWS accounts",
@@ -144,9 +153,18 @@ export async function connectAWSAccountAction(
   _prev: unknown,
   formData: FormData
 ) {
+  const log = createActionLogger("connectAWSAccount", {});
+
   try {
     // 1. Validate form data
     const validatedData = await serverValidate(formData);
+    log.debug(
+      {
+        orgSlug: validatedData.organizationId,
+        accountId: validatedData.accountId,
+      },
+      "Connecting AWS account"
+    );
 
     // 2. Get session
     const session = await auth.api.getSession({
@@ -188,6 +206,10 @@ export async function connectAWSAccountAction(
 
     const planId = activeSubscription?.plan || "starter";
     if (!canAddAwsAccount(planId, existingAccounts.length)) {
+      log.warn(
+        { planId, existingCount: existingAccounts.length },
+        "AWS account limit reached"
+      );
       return {
         error: "AWS account limit reached",
         message: getAwsAccountLimitMessage(planId),
@@ -207,6 +229,7 @@ export async function connectAWSAccountAction(
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
+      log.warn({ err: serializeError(error) }, "Failed to assume AWS role");
       return {
         error: "Unable to connect to AWS account",
         details: message,
@@ -258,6 +281,11 @@ export async function connectAWSAccountAction(
     revalidatePath(`/${validatedData.organizationId}/settings`, "page");
     revalidatePath("/");
 
+    log.info(
+      { accountId: account.id, awsAccountId: validatedData.accountId },
+      "AWS account connected"
+    );
+
     return {
       success: true,
       account: {
@@ -279,7 +307,7 @@ export async function connectAWSAccountAction(
 
     // Handle other errors
     const message = e instanceof Error ? e.message : "Internal error";
-    console.error("Error connecting AWS account:", e);
+    log.error({ err: serializeError(e) }, "Failed to connect AWS account");
     return { error: "Internal error", details: message };
   }
 }
@@ -314,6 +342,11 @@ export async function scanAWSAccountFeatures(
   awsAccountId: string,
   organizationId: string
 ): Promise<ScanFeaturesResult> {
+  const log = createActionLogger("scanAWSAccountFeatures", {
+    orgSlug: organizationId,
+    accountId: awsAccountId,
+  });
+
   try {
     // 1. Get session
     const session = await auth.api.getSession({
@@ -408,7 +441,10 @@ export async function scanAWSAccountFeatures(
         error.name !== "ResourceNotFoundException" &&
         error.name !== "AccessDeniedException"
       ) {
-        console.error("Error scanning for DynamoDB table:", error);
+        log.warn(
+          { err: serializeError(error) },
+          "Error scanning for DynamoDB table"
+        );
       }
     }
 
@@ -452,7 +488,10 @@ export async function scanAWSAccountFeatures(
         error.name !== "NotFoundException" &&
         error.name !== "AccessDeniedException"
       ) {
-        console.error("Error scanning for config set:", error);
+        log.warn(
+          { err: serializeError(error) },
+          "Error scanning for config set"
+        );
       }
     }
 
@@ -480,7 +519,10 @@ export async function scanAWSAccountFeatures(
       // AccessDeniedException means user hasn't granted SMS permissions
       // That's fine - assume SMS is not enabled
       if (error.name !== "AccessDeniedException") {
-        console.error("Error scanning for SMS infrastructure:", error);
+        log.warn(
+          { err: serializeError(error) },
+          "Error scanning for SMS infrastructure"
+        );
       }
     }
 
@@ -507,7 +549,10 @@ export async function scanAWSAccountFeatures(
         error.name !== "ResourceNotFoundException" &&
         error.name !== "AccessDeniedException"
       ) {
-        console.error("Error scanning for SMS history table:", error);
+        log.warn(
+          { err: serializeError(error) },
+          "Error scanning for SMS history table"
+        );
       }
     }
 
@@ -552,7 +597,10 @@ export async function scanAWSAccountFeatures(
       },
     };
   } catch (error) {
-    console.error("Error scanning AWS account features:", error);
+    log.error(
+      { err: serializeError(error) },
+      "Failed to scan AWS account features"
+    );
     const message = error instanceof Error ? error.message : "Unknown error";
     return {
       success: false,
@@ -577,6 +625,11 @@ export async function deleteAWSAccount(
   awsAccountId: string,
   organizationId: string
 ): Promise<DeleteAWSAccountResult> {
+  const log = createActionLogger("deleteAWSAccount", {
+    orgSlug: organizationId,
+    accountId: awsAccountId,
+  });
+
   try {
     // 1. Get session
     const session = await auth.api.getSession({
@@ -619,9 +672,10 @@ export async function deleteAWSAccount(
     // 5. Revalidate the settings page
     revalidatePath("/[orgSlug]/settings", "page");
 
+    log.info("AWS account deleted");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting AWS account:", error);
+    log.error({ err: serializeError(error) }, "Failed to delete AWS account");
     const message = error instanceof Error ? error.message : "Unknown error";
     return {
       success: false,

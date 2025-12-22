@@ -1,5 +1,6 @@
 import { auth } from "@wraps/auth";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -39,7 +40,13 @@ export async function POST(_request: Request, context: RouteContext) {
       message: "CLI verification successful",
     });
   } catch (error) {
-    console.error("Error verifying CLI:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/onboarding/verify-cli",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error verifying CLI");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

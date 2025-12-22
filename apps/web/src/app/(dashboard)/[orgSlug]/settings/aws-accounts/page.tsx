@@ -12,7 +12,9 @@ type AwsAccountsPageProps = {
   }>;
 };
 
-export default async function AwsAccountsPage({ params }: AwsAccountsPageProps) {
+export default async function AwsAccountsPage({
+  params,
+}: AwsAccountsPageProps) {
   const { orgSlug } = await params;
   const session = await auth.api.getSession({
     headers: await import("next/headers").then((mod) => mod.headers()),

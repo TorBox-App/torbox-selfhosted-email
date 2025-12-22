@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { organizationExtension } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -63,7 +64,13 @@ export async function POST(_request: Request, context: RouteContext) {
       message: "Onboarding completed successfully",
     });
   } catch (error) {
-    console.error("Error completing onboarding:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/onboarding/complete",
+      method: "POST",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error completing onboarding");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

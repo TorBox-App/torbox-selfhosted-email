@@ -2,6 +2,7 @@ import { auth } from "@wraps/auth";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { extractBrandKitFromDomain } from "@/lib/brand-kit/extractor";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -75,7 +76,11 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
   } catch (error) {
-    console.error("Error extracting brand kit:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/brand-kits/extract",
+      method: "POST",
+    });
+    log.error({ err: serializeError(error) }, "Error extracting brand kit");
     return NextResponse.json(
       { error: "Failed to extract brand kit from domain" },
       { status: 500 }

@@ -3,6 +3,7 @@ import { brandKit, db } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -71,7 +72,14 @@ export async function POST(_request: Request, context: RouteContext) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error setting default brand kit:", error);
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/brand-kits/[id]/default",
+      method: "POST",
+    });
+    log.error(
+      { err: serializeError(error) },
+      "Error setting default brand kit"
+    );
     return NextResponse.json(
       { error: "Failed to set default brand kit" },
       { status: 500 }

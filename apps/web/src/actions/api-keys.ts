@@ -17,6 +17,7 @@ import {
   READ_ONLY_PERMISSIONS,
   type UpdateApiKeyResult,
 } from "@/lib/api-keys";
+import { createActionLogger, serializeError } from "@/lib/logger";
 
 // Re-export types for convenience (types can be re-exported from server files)
 export type {
@@ -123,7 +124,8 @@ export async function listApiKeys(
       })),
     };
   } catch (error) {
-    console.error("Error listing API keys:", error);
+    const log = createActionLogger("listApiKeys", { orgSlug: organizationId });
+    log.error({ err: serializeError(error) }, "Failed to list API keys");
     return { success: false, error: "Failed to fetch API keys" };
   }
 }
@@ -235,7 +237,8 @@ export async function createApiKey(
       secretKey: key,
     };
   } catch (error) {
-    console.error("Error creating API key:", error);
+    const log = createActionLogger("createApiKey", { orgSlug: organizationId });
+    log.error({ err: serializeError(error) }, "Failed to create API key");
     return { success: false, error: "Failed to create API key" };
   }
 }
@@ -338,7 +341,11 @@ export async function updateApiKey(
       },
     };
   } catch (error) {
-    console.error("Error updating API key:", error);
+    const log = createActionLogger("updateApiKey", { orgSlug: organizationId });
+    log.error(
+      { err: serializeError(error), apiKeyId },
+      "Failed to update API key"
+    );
     return { success: false, error: "Failed to update API key" };
   }
 }
@@ -397,7 +404,11 @@ export async function deleteApiKey(
 
     return { success: true };
   } catch (error) {
-    console.error("Error deleting API key:", error);
+    const log = createActionLogger("deleteApiKey", { orgSlug: organizationId });
+    log.error(
+      { err: serializeError(error), apiKeyId },
+      "Failed to delete API key"
+    );
     return { success: false, error: "Failed to delete API key" };
   }
 }
@@ -439,7 +450,13 @@ export async function verifyApiKey(key: string): Promise<{
     db.update(apiKey)
       .set({ lastUsedAt: new Date() })
       .where(eq(apiKey.id, foundKey.id))
-      .catch((err) => console.error("Failed to update lastUsedAt:", err));
+      .catch((err) => {
+        const log = createActionLogger("verifyApiKey", {});
+        log.error(
+          { err: serializeError(err), apiKeyId: foundKey.id },
+          "Failed to update lastUsedAt"
+        );
+      });
 
     return {
       valid: true,
@@ -447,7 +464,8 @@ export async function verifyApiKey(key: string): Promise<{
       permissions: (foundKey.permissions as ApiKeyPermission[]) || [],
     };
   } catch (error) {
-    console.error("Error verifying API key:", error);
+    const log = createActionLogger("verifyApiKey", {});
+    log.error({ err: serializeError(error) }, "Failed to verify API key");
     return { valid: false, error: "Failed to verify API key" };
   }
 }

@@ -6,7 +6,12 @@ const nextConfig: NextConfig = {
   },
 
   // Mark server-only packages to prevent bundling in edge/client
-  serverExternalPackages: ["@wraps.dev/email", "@wraps/email"],
+  serverExternalPackages: [
+    "@wraps.dev/email",
+    "@wraps/email",
+    "pino",
+    "pino-pretty",
+  ],
 
   // Image optimization
   images: {

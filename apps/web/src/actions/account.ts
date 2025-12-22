@@ -17,6 +17,7 @@ import {
   updateAccountFormOpts,
   updateAccountSchema,
 } from "@/lib/forms/update-account";
+import { createActionLogger, serializeError } from "@/lib/logger";
 
 // Server validator for account update
 const serverValidateAccount = createServerValidate({
@@ -110,7 +111,8 @@ export async function updateAccountAction(
       throw error;
     }
 
-    console.error("Error updating account:", error);
+    const log = createActionLogger("updateAccountAction", {});
+    log.error({ err: serializeError(error) }, "Failed to update account");
     return {
       success: false,
       error:
@@ -178,7 +180,8 @@ export async function changePasswordAction(
       throw error;
     }
 
-    console.error("Error changing password:", error);
+    const log = createActionLogger("changePasswordAction", {});
+    log.error({ err: serializeError(error) }, "Failed to change password");
     return {
       success: false,
       error:

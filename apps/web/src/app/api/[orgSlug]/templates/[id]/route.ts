@@ -3,6 +3,7 @@ import { db, template, templateVersion } from "@wraps/db";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -72,7 +73,13 @@ export async function GET(_request: Request, context: RouteContext) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error fetching template:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]",
+      method: "GET",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error fetching template");
     return NextResponse.json(
       { error: "Failed to fetch template" },
       { status: 500 }
@@ -191,7 +198,13 @@ export async function PUT(request: Request, context: RouteContext) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Error updating template:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]",
+      method: "PUT",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error updating template");
     return NextResponse.json(
       { error: "Failed to update template" },
       { status: 500 }
@@ -243,7 +256,13 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting template:", error);
+    const orgSlug = (await context.params).orgSlug;
+    const log = createRequestLogger({
+      path: "/api/[orgSlug]/templates/[id]",
+      method: "DELETE",
+      orgSlug,
+    });
+    log.error({ err: serializeError(error) }, "Error deleting template");
     return NextResponse.json(
       { error: "Failed to delete template" },
       { status: 500 }
