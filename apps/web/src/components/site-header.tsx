@@ -33,7 +33,7 @@ function isInputElement(target: EventTarget | null): boolean {
 function getShortcutUrl(key: string, orgSlug: string): string | null {
   const shortcuts: Record<string, string> = {
     E: `/${orgSlug}/emails`,
-    T: `/${orgSlug}/templates`,
+    T: `/${orgSlug}/emails/templates`,
     A: `/${orgSlug}/analytics`,
     S: `/${orgSlug}/settings`,
   };

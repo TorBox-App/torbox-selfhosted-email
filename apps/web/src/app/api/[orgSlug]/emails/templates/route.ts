@@ -12,7 +12,7 @@ type RouteContext = {
   }>;
 };
 
-// GET /api/[orgSlug]/templates - List all templates
+// GET /api/[orgSlug]/emails/templates - List all templates
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
@@ -67,7 +67,7 @@ export async function GET(request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates",
+      path: "/api/[orgSlug]/emails/templates",
       method: "GET",
       orgSlug,
     });
@@ -79,7 +79,7 @@ export async function GET(request: Request, context: RouteContext) {
   }
 }
 
-// POST /api/[orgSlug]/templates - Create new template
+// POST /api/[orgSlug]/emails/templates - Create new template
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
@@ -139,7 +139,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates",
+      path: "/api/[orgSlug]/emails/templates",
       method: "POST",
       orgSlug,
     });

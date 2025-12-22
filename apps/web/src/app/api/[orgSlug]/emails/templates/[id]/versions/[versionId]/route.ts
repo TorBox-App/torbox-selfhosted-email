@@ -79,7 +79,7 @@ export async function GET(_request: Request, context: RouteContext) {
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/templates/[id]/versions/[versionId]",
+      path: "/api/[orgSlug]/emails/templates/[id]/versions/[versionId]",
       method: "GET",
       orgSlug,
     });

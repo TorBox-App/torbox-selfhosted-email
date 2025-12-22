@@ -163,7 +163,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
         },
         {
           title: "Templates",
-          url: `/${orgSlug}/templates`,
+          url: `/${orgSlug}/emails/templates`,
           group: "Navigation",
           icon: FileText,
           shortcut: "G T",

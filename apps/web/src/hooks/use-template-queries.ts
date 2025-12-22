@@ -31,7 +31,9 @@ export function useTemplate(orgSlug: string, templateId: string) {
   return useQuery({
     queryKey: templateKeys.detail(orgSlug, templateId),
     queryFn: async () => {
-      const response = await fetch(`/api/${orgSlug}/emails/templates/${templateId}`);
+      const response = await fetch(
+        `/api/${orgSlug}/emails/templates/${templateId}`
+      );
       if (!response.ok) {
         throw new Error("Failed to load template");
       }
@@ -46,7 +48,9 @@ export function useTemplates(orgSlug: string, filters?: { status?: string }) {
     queryKey: templateKeys.list(orgSlug, JSON.stringify(filters)),
     queryFn: async () => {
       const params = new URLSearchParams(filters as Record<string, string>);
-      const response = await fetch(`/api/${orgSlug}/templates?${params}`);
+      const response = await fetch(
+        `/api/${orgSlug}/emails/templates?${params}`
+      );
       if (!response.ok) {
         throw new Error("Failed to load templates");
       }
@@ -67,11 +71,14 @@ export function useUpdateTemplate(orgSlug: string, templateId: string) {
       subject?: string;
       status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     }) => {
-      const response = await fetch(`/api/${orgSlug}/emails/templates/${templateId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      const response = await fetch(
+        `/api/${orgSlug}/emails/templates/${templateId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        }
+      );
       if (!response.ok) {
         throw new Error("Failed to update template");
       }
@@ -129,7 +136,7 @@ export function useCreateTemplate(orgSlug: string) {
 
   return useMutation({
     mutationFn: async (data: { name: string; description?: string }) => {
-      const response = await fetch(`/api/${orgSlug}/templates`, {
+      const response = await fetch(`/api/${orgSlug}/emails/templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -155,9 +162,12 @@ export function useDeleteTemplate(orgSlug: string) {
 
   return useMutation({
     mutationFn: async (templateId: string) => {
-      const response = await fetch(`/api/${orgSlug}/emails/templates/${templateId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/${orgSlug}/emails/templates/${templateId}`,
+        {
+          method: "DELETE",
+        }
+      );
       if (!response.ok) {
         throw new Error("Failed to delete template");
       }

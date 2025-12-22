@@ -317,7 +317,7 @@ function TemplateEditorContent({
     try {
       await deleteMutation.mutateAsync(templateId);
       toast.success("Template deleted");
-      router.push(`/${orgSlug}/templates`);
+      router.push(`/${orgSlug}/emails/templates`);
     } catch (error) {
       toast.error("Failed to delete template", {
         description: error instanceof Error ? error.message : "Unknown error",

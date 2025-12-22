@@ -133,7 +133,7 @@ afterAll(async () => {
   await db.delete(user).where(eq(user.id, testUser.id));
 });
 
-describe("Templates API - GET /api/[orgSlug]/templates", () => {
+describe("Templates API - GET /api/[orgSlug]/emails/templates", () => {
   it("should return empty list when no templates exist", async () => {
     const { GET } = await import("../[orgSlug]/emails/templates/route");
 
@@ -218,7 +218,7 @@ describe("Templates API - GET /api/[orgSlug]/templates", () => {
   });
 });
 
-describe("Templates API - POST /api/[orgSlug]/templates", () => {
+describe("Templates API - POST /api/[orgSlug]/emails/templates", () => {
   it("should create a new template", async () => {
     const { POST } = await import("../[orgSlug]/emails/templates/route");
 
