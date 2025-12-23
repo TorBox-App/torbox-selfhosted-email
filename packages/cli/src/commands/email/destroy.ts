@@ -15,6 +15,7 @@ import {
 } from "../../utils/shared/fs.js";
 import {
   deleteConnectionMetadata,
+  findConnectionsWithService,
   loadConnectionMetadata,
 } from "../../utils/shared/metadata.js";
 import {
@@ -70,8 +71,43 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
     async () => validateAWSCredentials()
   );
 
-  // 2. Get region
-  const region = await getAWSRegion();
+  // 2. Get region - check flag, then env, then metadata, then default
+  let region = options.region || (await getAWSRegion());
+
+  // If using default region (us-east-1), check if we have metadata for other regions
+  if (
+    !(
+      options.region ||
+      process.env.AWS_REGION ||
+      process.env.AWS_DEFAULT_REGION
+    )
+  ) {
+    const emailConnections = await findConnectionsWithService(
+      identity.accountId,
+      "email"
+    );
+
+    if (emailConnections.length === 1) {
+      // Auto-select the only available region
+      region = emailConnections[0].region;
+    } else if (emailConnections.length > 1) {
+      // Multiple regions found - prompt user to select
+      const selectedRegion = await clack.select({
+        message: "Multiple email deployments found. Which region to destroy?",
+        options: emailConnections.map((conn) => ({
+          value: conn.region,
+          label: conn.region,
+        })),
+      });
+
+      if (clack.isCancel(selectedRegion)) {
+        clack.cancel("Operation cancelled");
+        process.exit(0);
+      }
+
+      region = selectedRegion as string;
+    }
+  }
 
   // 3. Load connection metadata to get domain info and stack name
   const metadata = await loadConnectionMetadata(identity.accountId, region);
@@ -186,6 +222,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       // Track preview completion
       trackServiceRemoved("email", {
         preview: true,
+        region,
         duration_ms: Date.now() - startTime,
       });
       return;
@@ -301,6 +338,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
   // 11. Track successful destruction
   trackServiceRemoved("email", {
     reason: "user_initiated",
+    region,
     duration_ms: Date.now() - startTime,
     dns_cleaned: shouldCleanDNS,
   });

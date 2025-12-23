@@ -73,6 +73,7 @@ describe("email destroy command", () => {
 
     // Mock metadata utilities
     vi.mocked(metadata.deleteConnectionMetadata).mockResolvedValue(undefined);
+    vi.mocked(metadata.findConnectionsWithService).mockResolvedValue([]);
     vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
       version: "1.0.0",
       accountId: "123456789012",
@@ -419,6 +420,7 @@ describe("global destroy command", () => {
 
     // Mock metadata utilities
     vi.mocked(metadata.deleteConnectionMetadata).mockResolvedValue(undefined);
+    vi.mocked(metadata.findConnectionsWithService).mockResolvedValue([]);
 
     // Mock Route53 utilities
     vi.mocked(route53.findHostedZone).mockResolvedValue(null);
@@ -440,7 +442,9 @@ describe("global destroy command", () => {
       new Error("Invalid credentials")
     );
 
-    await expect(destroy({ force: true })).rejects.toThrow("Invalid credentials");
+    await expect(destroy({ force: true })).rejects.toThrow(
+      "Invalid credentials"
+    );
   });
 
   it("should route to email destroy if only email is deployed", async () => {

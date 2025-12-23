@@ -340,7 +340,7 @@ export async function connect(options: ConnectOptions): Promise<void> {
   // 12. Create DNS records in Route53 (if hosted zone exists)
   if (outputs.domain && outputs.dkimTokens && outputs.dkimTokens.length > 0) {
     const { findHostedZone, createDNSRecords } = await import(
-      "../../utils/email/route53.js"
+      "../../utils/route53.js"
     );
     const hostedZone = await findHostedZone(outputs.domain, region);
 

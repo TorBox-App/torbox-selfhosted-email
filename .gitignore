@@ -55,3 +55,7 @@ notes/
 
 # Playwright
 .playwright*
+
+# SST
+.sst
+sst-env.d.ts

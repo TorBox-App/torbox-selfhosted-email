@@ -530,7 +530,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         );
 
         // Check if domain has Route53 hosted zone
-        const { findHostedZone } = await import("../../utils/email/route53.js");
+        const { findHostedZone } = await import("../../utils/route53.js");
         const hostedZone = await progress.execute(
           "Checking for Route53 hosted zone",
           async () =>
@@ -1034,7 +1034,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   // 13. Create DNS records in Route53 (if hosted zone exists)
   if (outputs.domain && outputs.dkimTokens && outputs.dkimTokens.length > 0) {
     const { findHostedZone, createDNSRecords } = await import(
-      "../../utils/email/route53.js"
+      "../../utils/route53.js"
     );
     const hostedZone = await findHostedZone(outputs.domain, region);
 
