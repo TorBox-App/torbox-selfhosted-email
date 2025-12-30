@@ -43,6 +43,7 @@ export const batchQueue = new sst.aws.Queue("BatchQueue", {
 batchQueue.subscribe(
   {
     handler: "apps/api/src/workers/batch-sender.handler",
+    runtime: "nodejs24.x",
     timeout: "5 minutes",
     memory: "512 MB",
     environment: {
