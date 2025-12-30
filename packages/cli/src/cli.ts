@@ -7,8 +7,9 @@ import args from "args";
 import pc from "picocolors";
 // Dashboard commands
 import { updateRole } from "./commands/dashboard/update-role.js";
-import { config } from "./commands/email/config.js";
 // Email commands
+import { check } from "./commands/email/check.js";
+import { config } from "./commands/email/config.js";
 import { connect } from "./commands/email/connect.js";
 import { emailDestroy } from "./commands/email/destroy.js";
 import {
@@ -79,6 +80,9 @@ function showHelp() {
   console.log("Email Commands:");
   console.log(
     `  ${pc.cyan("email init")}           Deploy new email infrastructure`
+  );
+  console.log(
+    `  ${pc.cyan("email check")}          Check email deliverability for a domain`
   );
   console.log(
     `  ${pc.cyan("email connect")}        Connect to existing AWS SES`
@@ -250,6 +254,42 @@ args.options([
     description: "Resend verification code",
     defaultValue: false,
   },
+  // Email check options
+  {
+    name: ["q", "quick"],
+    description: "Quick mode: fewer DKIM selectors, top blacklists only",
+    defaultValue: false,
+  },
+  {
+    name: ["j", "json"],
+    description: "Output results as JSON",
+    defaultValue: false,
+  },
+  {
+    name: "verbose",
+    description: "Show all checks including passing",
+    defaultValue: false,
+  },
+  {
+    name: "dkimSelector",
+    description: "Specific DKIM selector to check",
+    defaultValue: undefined,
+  },
+  {
+    name: "skipBlacklists",
+    description: "Skip blacklist checks",
+    defaultValue: false,
+  },
+  {
+    name: "skipTls",
+    description: "Skip MX TLS checks",
+    defaultValue: false,
+  },
+  {
+    name: "timeout",
+    description: "DNS timeout in milliseconds",
+    defaultValue: undefined,
+  },
 ]);
 
 // Get command and flags
@@ -350,6 +390,20 @@ async function run() {
             preset: flags.preset,
             yes: flags.yes,
             preview: flags.preview,
+          });
+          break;
+
+        case "check":
+          // Domain can be positional arg or --domain flag
+          await check({
+            domain: args.sub[2] || flags.domain,
+            quick: flags.quick,
+            json: flags.json,
+            verbose: flags.verbose,
+            dkimSelector: flags.dkimSelector,
+            skipBlacklists: flags.skipBlacklists,
+            skipTls: flags.skipTls,
+            timeout: flags.timeout,
           });
           break;
 

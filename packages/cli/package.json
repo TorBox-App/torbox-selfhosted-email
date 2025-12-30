@@ -47,6 +47,7 @@
   "author": "Wraps",
   "license": "MIT",
   "dependencies": {
+    "@wraps/email-check": "workspace:*",
     "@aws-sdk/client-acm": "3.933.0",
     "@aws-sdk/client-cloudformation": "^3.490.0",
     "@aws-sdk/client-cloudfront": "3.933.0",
