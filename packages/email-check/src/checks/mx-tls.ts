@@ -120,15 +120,15 @@ async function checkServer(
         );
 
         result.certificate = {
-          valid: tlsResult.authorized,
+          valid: tlsResult.authorized ?? false,
           issuer: formatX509Name(cert.issuer),
           subject: formatX509Name(cert.subject),
           altNames: parseAltNames(cert.subjectaltname),
           expiresAt: cert.valid_to,
           daysUntilExpiry,
-          matchesHostname: tlsResult.authorized,
+          matchesHostname: tlsResult.authorized ?? false,
           selfSigned: isSelfSigned(cert),
-          chainValid: tlsResult.authorized,
+          chainValid: tlsResult.authorized ?? false,
         };
       }
 
