@@ -7,7 +7,7 @@ import * as net from "node:net";
 import * as tls from "node:tls";
 import type { MxRecord, MxTlsResult, MxTlsServerResult } from "../types.js";
 
-const DEFAULT_TIMEOUT = 10000; // 10 seconds per server
+const DEFAULT_TIMEOUT = 10_000; // 10 seconds per server
 const SMTP_PORT = 25;
 
 export interface MxTlsCheckOptions {
@@ -120,15 +120,15 @@ async function checkServer(
         );
 
         result.certificate = {
-          valid: tlsResult.authorized || false,
+          valid: tlsResult.authorized,
           issuer: formatX509Name(cert.issuer),
           subject: formatX509Name(cert.subject),
           altNames: parseAltNames(cert.subjectaltname),
           expiresAt: cert.valid_to,
           daysUntilExpiry,
-          matchesHostname: tlsResult.authorized || false,
+          matchesHostname: tlsResult.authorized,
           selfSigned: isSelfSigned(cert),
-          chainValid: tlsResult.authorized || false,
+          chainValid: tlsResult.authorized,
         };
       }
 
@@ -140,7 +140,10 @@ async function checkServer(
     result.connectionError = error.message || "Connection failed";
     if (error.code === "ECONNREFUSED") {
       result.connectionError = "Connection refused (port 25 blocked?)";
-    } else if (error.code === "ETIMEDOUT" || error.message?.includes("timeout")) {
+    } else if (
+      error.code === "ETIMEDOUT" ||
+      error.message?.includes("timeout")
+    ) {
       result.connectionError = "Connection timed out";
     } else if (error.code === "ENOTFOUND") {
       result.connectionError = "Host not found";
@@ -183,12 +186,10 @@ function connectSmtp(
     socket.on("data", (data) => {
       buffer += data.toString();
       // SMTP banner ends with 220 ... \r\n
-      if (buffer.includes("\r\n") && buffer.startsWith("220")) {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          resolve({ socket, buffer: "" });
-        }
+      if (buffer.includes("\r\n") && buffer.startsWith("220") && !resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve({ socket, buffer: "" });
       }
     });
 
@@ -231,18 +232,16 @@ function sendEhlo(session: SmtpSession, timeout: number): Promise<string[]> {
       const lines = buffer.split("\r\n").filter(Boolean);
       const lastLine = lines[lines.length - 1];
 
-      if (lastLine && /^250[ ]/.test(lastLine)) {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
+      if (lastLine && /^250[ ]/.test(lastLine) && !resolved) {
+        resolved = true;
+        clearTimeout(timer);
 
-          // Parse capabilities from 250-XXX lines
-          const capabilities = lines
-            .filter((line) => line.startsWith("250"))
-            .map((line) => line.slice(4).trim().toUpperCase());
+        // Parse capabilities from 250-XXX lines
+        const capabilities = lines
+          .filter((line) => line.startsWith("250"))
+          .map((line) => line.slice(4).trim().toUpperCase());
 
-          resolve(capabilities);
-        }
+        resolve(capabilities);
       }
     });
 
@@ -380,10 +379,8 @@ function parseAltNames(subjectaltname?: string): string[] {
  * Check if certificate is self-signed
  */
 function isSelfSigned(cert: tls.PeerCertificate): boolean {
-  if (!cert.issuer || !cert.subject) return false;
-  return (
-    cert.issuer.CN === cert.subject.CN && cert.issuer.O === cert.subject.O
-  );
+  if (!(cert.issuer && cert.subject)) return false;
+  return cert.issuer.CN === cert.subject.CN && cert.issuer.O === cert.subject.O;
 }
 
 /**
@@ -405,13 +402,15 @@ export function formatMxTlsResult(result: MxTlsResult): string {
 
   if (allSupportTls && allValidCerts) {
     const versions = [
-      ...new Set(result.servers.map((s) => s.preferredTlsVersion).filter(Boolean)),
+      ...new Set(
+        result.servers.map((s) => s.preferredTlsVersion).filter(Boolean)
+      ),
     ];
     return `All ${result.servers.length} servers support TLS (${versions.join(", ")})`;
   }
 
   if (allSupportTls) {
-    return `All servers support TLS, some certificate issues`;
+    return "All servers support TLS, some certificate issues";
   }
 
   const noTls = result.servers.filter((s) => !s.supportsStarttls);

@@ -28,7 +28,12 @@ import { useTheme } from "@/hooks/use-theme";
 
 const navigationItems = [
   { name: "Home", href: "/" },
-  { name: "Features", href: "#features", hasSubmenu: true, submenuType: "features" },
+  {
+    name: "Features",
+    href: "#features",
+    hasSubmenu: true,
+    submenuType: "features",
+  },
   { name: "Docs", href: "/docs", hasSubmenu: true, submenuType: "docs" },
   { name: "Pricing", href: "#pricing" },
   { name: "FAQ", href: "#faq" },
@@ -336,7 +341,10 @@ export function LandingNavbar() {
                             </CollapsibleContent>
                           </Collapsible>
                         ) : (
-                          <Collapsible onOpenChange={setDocsOpen} open={docsOpen}>
+                          <Collapsible
+                            onOpenChange={setDocsOpen}
+                            open={docsOpen}
+                          >
                             <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground">
                               {item.name}
                               <ChevronDown

@@ -10,10 +10,10 @@
  *   ORG_ID=xxx AWS_ACCOUNT_ID=yyy pnpm --filter @wraps/db seed:demo
  */
 
-import dotenv from "dotenv";
 import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import dotenv from "dotenv";
 import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "../src/schema";
 
 // Load env from apps/web/.env.local (same as drizzle.config.ts)
@@ -40,10 +40,10 @@ const demoBatches = [
     name: "December Newsletter",
     subject: "Your December Updates Are Here",
     status: "completed" as const,
-    totalRecipients: 12500,
-    processedRecipients: 12500,
-    sent: 12450,
-    delivered: 12380,
+    totalRecipients: 12_500,
+    processedRecipients: 12_500,
+    sent: 12_450,
+    delivered: 12_380,
     failed: 50,
     opened: 4952,
     clicked: 1238,
@@ -55,10 +55,10 @@ const demoBatches = [
     name: "Black Friday Sale",
     subject: "40% Off Everything - Today Only!",
     status: "completed" as const,
-    totalRecipients: 15000,
-    processedRecipients: 15000,
-    sent: 14920,
-    delivered: 14850,
+    totalRecipients: 15_000,
+    processedRecipients: 15_000,
+    sent: 14_920,
+    delivered: 14_850,
     failed: 80,
     opened: 8910,
     clicked: 3712,
@@ -86,7 +86,7 @@ const demoBatches = [
     name: "New Year Campaign",
     subject: "Happy New Year from Our Team!",
     status: "scheduled" as const,
-    totalRecipients: 14200,
+    totalRecipients: 14_200,
     processedRecipients: 0,
     sent: 0,
     delivered: 0,
@@ -102,7 +102,7 @@ const demoBatches = [
     name: "January Newsletter",
     subject: "What's New in January",
     status: "scheduled" as const,
-    totalRecipients: 12800,
+    totalRecipients: 12_800,
     processedRecipients: 0,
     sent: 0,
     delivered: 0,
@@ -135,7 +135,7 @@ const demoBatches = [
     name: "Feature Update",
     subject: "New Features Just for You",
     status: "queued" as const,
-    totalRecipients: 11000,
+    totalRecipients: 11_000,
     processedRecipients: 0,
     sent: 0,
     delivered: 0,
@@ -166,10 +166,10 @@ const demoBatches = [
     name: "Thanksgiving Promotion",
     subject: "Thankful for You - Special Offer Inside",
     status: "completed" as const,
-    totalRecipients: 14800,
-    processedRecipients: 14800,
-    sent: 14750,
-    delivered: 14680,
+    totalRecipients: 14_800,
+    processedRecipients: 14_800,
+    sent: 14_750,
+    delivered: 14_680,
     failed: 50,
     opened: 5872,
     clicked: 2202,
@@ -236,11 +236,15 @@ async function main() {
 
   for (const batch of demoBatches) {
     const now = new Date();
-    const createdAt = new Date(now.getTime() - batch.daysAgo * 24 * 60 * 60 * 1000);
+    const createdAt = new Date(
+      now.getTime() - batch.daysAgo * 24 * 60 * 60 * 1000
+    );
 
     let scheduledFor: Date | undefined;
     if (batch.status === "scheduled" && batch.scheduledDaysFromNow) {
-      scheduledFor = new Date(now.getTime() + batch.scheduledDaysFromNow * 24 * 60 * 60 * 1000);
+      scheduledFor = new Date(
+        now.getTime() + batch.scheduledDaysFromNow * 24 * 60 * 60 * 1000
+      );
       // Set to 9am
       scheduledFor.setHours(9, 0, 0, 0);
     }

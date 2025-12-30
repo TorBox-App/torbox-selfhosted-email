@@ -149,9 +149,7 @@ export function BatchForm({
   // Form data
   const [campaignData, setCampaignData] = useState<CampaignData>(() => {
     // Extract domain from first verified domain if available
-    const firstDomain = initialVerifiedDomains.find(
-      (d) => d.type === "DOMAIN"
-    );
+    const firstDomain = initialVerifiedDomains.find((d) => d.type === "DOMAIN");
     return {
       name: "",
       subject: "",
@@ -225,7 +223,7 @@ export function BatchForm({
 
   // Compute full from address
   const getFromAddress = useCallback(() => {
-    if (!campaignData.fromPrefix || !campaignData.fromDomain) {
+    if (!(campaignData.fromPrefix && campaignData.fromDomain)) {
       return "";
     }
     return `${campaignData.fromPrefix}@${campaignData.fromDomain}`;
@@ -316,7 +314,9 @@ export function BatchForm({
         return;
       }
       // Combine date and time
-      const [hours, minutes] = campaignData.scheduledTime.split(":").map(Number);
+      const [hours, minutes] = campaignData.scheduledTime
+        .split(":")
+        .map(Number);
       const scheduledFor = new Date(campaignData.scheduledDate);
       scheduledFor.setHours(hours, minutes, 0, 0);
 
@@ -330,7 +330,9 @@ export function BatchForm({
       // Calculate scheduledFor if scheduling
       let scheduledFor: Date | undefined;
       if (campaignData.scheduleType === "later" && campaignData.scheduledDate) {
-        const [hours, minutes] = campaignData.scheduledTime.split(":").map(Number);
+        const [hours, minutes] = campaignData.scheduledTime
+          .split(":")
+          .map(Number);
         scheduledFor = new Date(campaignData.scheduledDate);
         scheduledFor.setHours(hours, minutes, 0, 0);
       }
@@ -358,11 +360,14 @@ export function BatchForm({
 
       if (result.success) {
         const isScheduled = result.batch.status === "scheduled";
-        toast.success(isScheduled ? "Broadcast scheduled" : "Broadcast created", {
-          description: isScheduled
-            ? `Will send to ${result.batch.totalRecipients} recipients at ${format(scheduledFor!, "PPp")}`
-            : `Sending to ${result.batch.totalRecipients} recipients`,
-        });
+        toast.success(
+          isScheduled ? "Broadcast scheduled" : "Broadcast created",
+          {
+            description: isScheduled
+              ? `Will send to ${result.batch.totalRecipients} recipients at ${format(scheduledFor!, "PPp")}`
+              : `Sending to ${result.batch.totalRecipients} recipients`,
+          }
+        );
         router.push(`/${orgSlug}/send/${result.batch.id}`);
       } else {
         toast.error("Failed to create broadcast", {
@@ -1196,9 +1201,7 @@ function ReviewStep({
       <Card>
         <CardHeader>
           <CardTitle>When to Send</CardTitle>
-          <CardDescription>
-            Send now or schedule for later
-          </CardDescription>
+          <CardDescription>Send now or schedule for later</CardDescription>
         </CardHeader>
         <CardContent>
           <RadioGroup
@@ -1239,7 +1242,9 @@ function ReviewStep({
                   <label
                     className={cn(
                       "font-medium text-sm",
-                      schedulingEnabled ? "cursor-pointer" : "cursor-not-allowed"
+                      schedulingEnabled
+                        ? "cursor-pointer"
+                        : "cursor-not-allowed"
                     )}
                     htmlFor="later"
                   >
@@ -1332,7 +1337,11 @@ function ReviewStep({
           size="lg"
         >
           {isPending ? (
-            data.scheduleType === "later" ? "Scheduling..." : "Sending..."
+            data.scheduleType === "later" ? (
+              "Scheduling..."
+            ) : (
+              "Sending..."
+            )
           ) : data.scheduleType === "later" ? (
             <>
               <Clock className="mr-2 h-4 w-4" />

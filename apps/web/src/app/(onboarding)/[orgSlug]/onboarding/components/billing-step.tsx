@@ -103,7 +103,9 @@ export function BillingStep({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold">{plan.name} Plan</h3>
-              <p className="text-muted-foreground text-sm">{plan.description}</p>
+              <p className="text-muted-foreground text-sm">
+                {plan.description}
+              </p>
             </div>
             <div className="text-right">
               <span className="font-bold text-2xl">

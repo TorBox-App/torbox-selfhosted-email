@@ -998,7 +998,7 @@ export async function getVerifiedDomains(
 
     // Filter to only Wraps-managed identities
     for (const detail of identityDetails) {
-      if (!detail || !detail.verified) continue;
+      if (!(detail && detail.verified)) continue;
 
       // Check if using our configuration set
       if (detail.configSet?.startsWith("wraps-email-")) {
@@ -1030,8 +1030,7 @@ export async function getVerifiedDomains(
     );
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to fetch domains",
+      error: error instanceof Error ? error.message : "Failed to fetch domains",
     };
   }
 }

@@ -1,13 +1,13 @@
 "use client";
 
 import { Check, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
 import {
   getDisplayPlans,
   getDisplayPrice,
   hasEarlyAdopterPricing,
   type PlanId,
 } from "@/lib/plans";
+import { cn } from "@/lib/utils";
 
 type PlanSelectorProps = {
   selectedPlan: PlanId;
@@ -41,7 +41,7 @@ export function PlanSelector({
         return (
           <button
             className={cn(
-              "relative rounded-xl border-2 px-6 pb-6 pt-8 text-left transition-all",
+              "relative rounded-xl border-2 px-6 pt-8 pb-6 text-left transition-all",
               "hover:border-primary/50 hover:bg-muted/50",
               isSelected && "border-primary bg-primary/5",
               !isSelected && "border-border",
@@ -54,7 +54,7 @@ export function PlanSelector({
             {/* Early adopter badge */}
             {isEarlyAdopter && !isPopular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 text-white text-xs font-medium">
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 font-medium text-white text-xs">
                   Early Adopter
                 </span>
               </div>
@@ -63,7 +63,7 @@ export function PlanSelector({
             {/* Popular badge (with early adopter note) */}
             {isPopular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-primary-foreground text-xs font-medium">
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground text-xs">
                   <Sparkles className="h-3 w-3" />
                   {isEarlyAdopter ? "Popular - Early Adopter" : "Popular"}
                 </span>
@@ -82,7 +82,7 @@ export function PlanSelector({
             {/* Selection indicator */}
             <div
               className={cn(
-                "absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                "absolute top-4 right-4 flex h-5 w-5 items-center justify-center rounded-full border-2",
                 isSelected
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-muted-foreground/30"
@@ -94,14 +94,16 @@ export function PlanSelector({
             {/* Plan details */}
             <div className="mb-4">
               <h3 className="font-semibold text-lg">{plan.name}</h3>
-              <p className="text-muted-foreground text-sm">{plan.description}</p>
+              <p className="text-muted-foreground text-sm">
+                {plan.description}
+              </p>
             </div>
 
             {/* Price */}
             <div className="mb-4">
               <span className="font-bold text-3xl">${displayPrice}</span>
               {isEarlyAdopter && (
-                <span className="ml-2 text-muted-foreground text-lg line-through">
+                <span className="ml-2 text-lg text-muted-foreground line-through">
                   ${plan.price}
                 </span>
               )}

@@ -307,7 +307,10 @@ export async function createBatchSend(
 
     // Check if scheduling is available (requires campaigns feature - Pro+)
     if (data.scheduledFor) {
-      const schedulingCheck = await checkFeatureAccess(organizationId, "campaigns");
+      const schedulingCheck = await checkFeatureAccess(
+        organizationId,
+        "campaigns"
+      );
       if (!schedulingCheck.allowed) {
         return {
           success: false,
@@ -497,7 +500,10 @@ export async function cancelBatchSend(
           error: errorData.error || "Failed to cancel batch send",
         };
       } catch {
-        return { success: false, error: errorText || "Failed to cancel batch send" };
+        return {
+          success: false,
+          error: errorText || "Failed to cancel batch send",
+        };
       }
     }
 

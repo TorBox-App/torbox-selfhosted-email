@@ -115,8 +115,8 @@ export function PricingSection() {
           >
             {/* Early Adopter badge */}
             {plan.earlyAdopter && (
-              <div className="absolute left-4 top-4">
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-2 py-1 text-white text-xs font-medium">
+              <div className="absolute top-4 left-4">
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-2 py-1 font-medium text-white text-xs">
                   Early Adopter
                 </span>
               </div>
@@ -124,8 +124,8 @@ export function PricingSection() {
 
             {/* Popular badge */}
             {plan.popular && (
-              <div className="absolute right-4 top-4">
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2 py-1 text-white text-xs font-medium">
+              <div className="absolute top-4 right-4">
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2 py-1 font-medium text-white text-xs">
                   <Sparkles className="h-3 w-3" />
                   Popular
                 </span>
@@ -150,7 +150,7 @@ export function PricingSection() {
               <div className="mb-4">
                 <span className="font-bold text-3xl">{plan.price}</span>
                 {plan.regularPrice && (
-                  <span className="ml-2 text-muted-foreground text-lg line-through">
+                  <span className="ml-2 text-lg text-muted-foreground line-through">
                     {plan.regularPrice}
                   </span>
                 )}
@@ -206,9 +206,8 @@ export function PricingSection() {
 
       {/* Scale tier note */}
       <p className="mb-8 text-center text-muted-foreground text-sm">
-        Need more?{" "}
-        <strong className="text-foreground">Scale ($299/mo)</strong> for 500K
-        contacts with custom retention and priority SLA.{" "}
+        Need more? <strong className="text-foreground">Scale ($299/mo)</strong>{" "}
+        for 500K contacts with custom retention and priority SLA.{" "}
         <a
           className="text-primary hover:underline"
           href="mailto:support@wraps.dev"

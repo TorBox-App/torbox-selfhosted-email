@@ -8,21 +8,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockSend = vi.hoisted(() => vi.fn());
 
 // Mock the AWS SDK before importing the service
-vi.mock("@aws-sdk/client-scheduler", () => {
-  return {
-    SchedulerClient: class MockSchedulerClient {
-      send = mockSend;
-    },
-    CreateScheduleCommand: vi.fn((params) => ({ ...params, _type: "CreateScheduleCommand" })),
-    DeleteScheduleCommand: vi.fn((params) => ({ ...params, _type: "DeleteScheduleCommand" })),
-  };
-});
+vi.mock("@aws-sdk/client-scheduler", () => ({
+  SchedulerClient: class MockSchedulerClient {
+    send = mockSend;
+  },
+  CreateScheduleCommand: vi.fn((params) => ({
+    ...params,
+    _type: "CreateScheduleCommand",
+  })),
+  DeleteScheduleCommand: vi.fn((params) => ({
+    ...params,
+    _type: "DeleteScheduleCommand",
+  })),
+}));
 
 // Import after mocking
-import {
-  createBroadcastSchedule,
-  deleteBroadcastSchedule,
-} from "../scheduler";
+import { createBroadcastSchedule, deleteBroadcastSchedule } from "../scheduler";
 
 describe("Scheduler Service", () => {
   beforeEach(() => {
@@ -78,7 +79,9 @@ describe("Scheduler Service", () => {
     });
 
     it("returns without error", async () => {
-      await expect(deleteBroadcastSchedule("test-batch-123")).resolves.toBeUndefined();
+      await expect(
+        deleteBroadcastSchedule("test-batch-123")
+      ).resolves.toBeUndefined();
     });
   });
 });

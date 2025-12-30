@@ -406,7 +406,9 @@ export function OrganizationSettingsBilling({
           <CardContent className="space-y-4">
             <div className="flex items-baseline gap-1">
               <span className="font-bold text-3xl">${PLANS.growth.price}</span>
-              <span className="text-muted-foreground">{PLANS.growth.period}</span>
+              <span className="text-muted-foreground">
+                {PLANS.growth.period}
+              </span>
             </div>
 
             <ul className="space-y-2">
@@ -453,7 +455,9 @@ export function OrganizationSettingsBilling({
           <CardContent className="space-y-4">
             <div className="flex items-baseline gap-1">
               <span className="font-bold text-3xl">${PLANS.growth.price}</span>
-              <span className="text-muted-foreground">{PLANS.growth.period}</span>
+              <span className="text-muted-foreground">
+                {PLANS.growth.period}
+              </span>
             </div>
 
             <ul className="space-y-2">

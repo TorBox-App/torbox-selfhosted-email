@@ -266,9 +266,7 @@ export default async function BatchDetailPage({
             )}
             {batch.startedAt && (
               <div>
-                <div className="font-medium text-muted-foreground">
-                  Started
-                </div>
+                <div className="font-medium text-muted-foreground">Started</div>
                 <div>{new Date(batch.startedAt).toLocaleString()}</div>
               </div>
             )}

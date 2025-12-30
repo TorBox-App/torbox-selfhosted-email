@@ -102,9 +102,12 @@ export async function checkDkim(
   if (!result.found && detectedProvider) {
     const randomSelectorProviders: Record<string, string> = {
       ses: "AWS SES uses random DKIM selectors. Check your SES console or use --dkimSelector with your actual selector.",
-      amazonses: "AWS SES uses random DKIM selectors. Check your SES console or use --dkimSelector with your actual selector.",
-      sendgrid: "SendGrid may use custom selectors. Check your SendGrid dashboard or use --dkimSelector.",
-      mailgun: "Mailgun may use custom selectors. Check your Mailgun dashboard or use --dkimSelector.",
+      amazonses:
+        "AWS SES uses random DKIM selectors. Check your SES console or use --dkimSelector with your actual selector.",
+      sendgrid:
+        "SendGrid may use custom selectors. Check your SendGrid dashboard or use --dkimSelector.",
+      mailgun:
+        "Mailgun may use custom selectors. Check your Mailgun dashboard or use --dkimSelector.",
     };
 
     const providerLower = detectedProvider.toLowerCase();

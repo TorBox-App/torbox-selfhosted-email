@@ -549,8 +549,8 @@ function displayMxTlsResult(result: EmailCheckResult): void {
   } else if (result.mxTls.checked) {
     const servers = result.mxTls.servers;
     const connected = servers.filter((s) => s.connected);
-    const timedOut = servers.filter(
-      (s) => s.connectionError?.includes("timed out")
+    const timedOut = servers.filter((s) =>
+      s.connectionError?.includes("timed out")
     );
     const allConnectedSupportTls =
       connected.length > 0 && connected.every((s) => s.supportsStarttls);
@@ -562,11 +562,10 @@ function displayMxTlsResult(result: EmailCheckResult): void {
       );
     } else if (allConnectedSupportTls) {
       const tlsVersions = [
-        ...new Set(
-          connected.map((s) => s.preferredTlsVersion).filter(Boolean)
-        ),
+        ...new Set(connected.map((s) => s.preferredTlsVersion).filter(Boolean)),
       ];
-      const tlsInfo = tlsVersions.length > 0 ? ` (${tlsVersions.join(", ")})` : "";
+      const tlsInfo =
+        tlsVersions.length > 0 ? ` (${tlsVersions.join(", ")})` : "";
       console.log(
         `  ${pc.green("✓")} ${pc.dim("Mail Server TLS")}  All ${connected.length} servers support TLS${tlsInfo}`
       );
@@ -750,10 +749,7 @@ async function tryGetSesDkimTokens(domain: string): Promise<string[]> {
         if (tokens && tokens.length > 0) {
           return tokens;
         }
-      } catch {
-        // Domain not found in this region, try next
-        continue;
-      }
+      } catch {}
     }
 
     return [];

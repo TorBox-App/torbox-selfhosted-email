@@ -11,7 +11,7 @@ const RDAP_BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json";
 // Cache for RDAP bootstrap data (TLD -> RDAP server URL)
 let rdapBootstrapCache: Map<string, string> | null = null;
 let bootstrapCacheTime = 0;
-const BOOTSTRAP_CACHE_TTL = 3600000; // 1 hour
+const BOOTSTRAP_CACHE_TTL = 3_600_000; // 1 hour
 
 interface RdapBootstrap {
   services: [string[], string[]][];
@@ -50,7 +50,7 @@ export async function checkDomainAge(
   domain: string,
   options: { quick?: boolean; timeout?: number } = {}
 ): Promise<DomainAgeResult> {
-  const { quick = false, timeout = 10000 } = options;
+  const { quick = false, timeout = 10_000 } = options;
 
   const result: DomainAgeResult = {
     createdAt: null,

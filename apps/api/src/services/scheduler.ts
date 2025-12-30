@@ -37,7 +37,7 @@ export async function createBroadcastSchedule(
 ): Promise<string> {
   const scheduleName = `wraps-batch-${params.batchId}`;
 
-  if (!TARGET_QUEUE_ARN || !SCHEDULER_ROLE_ARN) {
+  if (!(TARGET_QUEUE_ARN && SCHEDULER_ROLE_ARN)) {
     if (IS_PRODUCTION) {
       throw new Error(
         "EventBridge Scheduler not configured: BATCH_QUEUE_ARN and SCHEDULER_ROLE_ARN required"
@@ -86,7 +86,7 @@ export async function createBroadcastSchedule(
 export async function deleteBroadcastSchedule(batchId: string): Promise<void> {
   const scheduleName = `wraps-batch-${batchId}`;
 
-  if (!TARGET_QUEUE_ARN || !SCHEDULER_ROLE_ARN) {
+  if (!(TARGET_QUEUE_ARN && SCHEDULER_ROLE_ARN)) {
     if (!IS_PRODUCTION) {
       // In development/test, log warning and return
       console.warn(
@@ -110,10 +110,7 @@ export async function deleteBroadcastSchedule(batchId: string): Promise<void> {
     );
   } catch (error: unknown) {
     // Ignore if schedule doesn't exist (already executed or deleted)
-    if (
-      error instanceof Error &&
-      error.name === "ResourceNotFoundException"
-    ) {
+    if (error instanceof Error && error.name === "ResourceNotFoundException") {
       return;
     }
     throw error;

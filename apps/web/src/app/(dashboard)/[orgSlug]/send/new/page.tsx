@@ -73,7 +73,10 @@ export default async function NewBatchPage({ params }: NewBatchPageProps) {
   const segments = segmentsResult.success ? segmentsResult.segments : [];
 
   // Fetch verified domains for the first AWS account
-  let initialVerifiedDomains: { identity: string; type: "DOMAIN" | "EMAIL_ADDRESS" }[] = [];
+  let initialVerifiedDomains: {
+    identity: string;
+    type: "DOMAIN" | "EMAIL_ADDRESS";
+  }[] = [];
   if (awsAccounts.length > 0) {
     const domainsResult = await getVerifiedDomains(
       awsAccounts[0].id,

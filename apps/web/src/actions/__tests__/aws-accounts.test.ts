@@ -173,24 +173,23 @@ vi.mock("@/lib/aws/credential-cache", () => ({
 // Mock AWS SES SDK - must use function factory for hoisting
 const mockSend = vi.fn();
 
-vi.mock("@aws-sdk/client-sesv2", () => {
-  return {
-    SESv2Client: class {
-      send = (command: { _type: string; EmailIdentity?: string }) => mockSend(command);
-    },
-    ListEmailIdentitiesCommand: class {
-      _type = "ListEmailIdentitiesCommand";
-      constructor(public input?: unknown) {}
-    },
-    GetEmailIdentityCommand: class {
-      _type = "GetEmailIdentityCommand";
-      EmailIdentity: string;
-      constructor(input: { EmailIdentity: string }) {
-        this.EmailIdentity = input.EmailIdentity;
-      }
-    },
-  };
-});
+vi.mock("@aws-sdk/client-sesv2", () => ({
+  SESv2Client: class {
+    send = (command: { _type: string; EmailIdentity?: string }) =>
+      mockSend(command);
+  },
+  ListEmailIdentitiesCommand: class {
+    _type = "ListEmailIdentitiesCommand";
+    constructor(public input?: unknown) {}
+  },
+  GetEmailIdentityCommand: class {
+    _type = "GetEmailIdentityCommand";
+    EmailIdentity: string;
+    constructor(input: { EmailIdentity: string }) {
+      this.EmailIdentity = input.EmailIdentity;
+    }
+  },
+}));
 
 // Set up test database
 beforeAll(async () => {

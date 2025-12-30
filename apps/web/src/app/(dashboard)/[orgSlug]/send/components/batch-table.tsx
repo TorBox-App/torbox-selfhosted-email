@@ -170,7 +170,10 @@ export function BatchTable({
           const status = batch.status;
           return (
             <div className="space-y-1">
-              <Badge className={BATCH_STATUS_COLORS[status]} variant="secondary">
+              <Badge
+                className={BATCH_STATUS_COLORS[status]}
+                variant="secondary"
+              >
                 {status === "processing" && (
                   <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                 )}
