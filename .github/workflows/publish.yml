@@ -34,4 +34,4 @@ jobs:
         run: pnpm --filter @wraps.dev/cli build
 
       - name: Publish to npm (with OIDC Trusted Publishing)
-        run: cd packages/cli && npm publish --access public
+        run: pnpm --filter @wraps.dev/cli publish --access public --no-git-checks

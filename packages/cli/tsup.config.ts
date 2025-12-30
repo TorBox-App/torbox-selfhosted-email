@@ -12,6 +12,7 @@ export default defineConfig({
   sourcemap: true,
   target: "node24",
   outDir: "dist",
+  noExternal: ["@wraps/email-check"], // Bundle workspace package into CLI
   onSuccess: async () => {
     // Make CLI executable
     await import("node:fs/promises").then((fs) =>
