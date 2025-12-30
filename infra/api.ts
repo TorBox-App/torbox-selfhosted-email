@@ -20,12 +20,12 @@ import { rateLimitTable } from "./tables";
 
 // API Gateway with Elysia Lambda handler
 export const api = new sst.aws.ApiGatewayV2("Api", {
-  // Custom domain for production (DNS managed in Cloudflare, not Route53)
+  // Custom domain for production (DNS managed in Cloudflare)
   domain:
     $app.stage === "production"
       ? {
           name: "api.wraps.dev",
-          dns: false, // Manual DNS validation - add CNAME records in Cloudflare
+          dns: sst.cloudflare.dns(),
         }
       : undefined,
   transform: {
