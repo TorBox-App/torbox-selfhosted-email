@@ -48,9 +48,27 @@ export async function handler(
   // Handle request with Elysia
   const response = await app.handle(request);
 
+  // Convert Response to API Gateway format
+  const headers: Record<string, string> = {};
+  response.headers.forEach((value: string, key: string) => {
+    headers[key] = value;
+  });
+
+  // Safely read body - clone first to avoid "body already consumed" errors
+  let body: string;
+  try {
+    body = await response.clone().text();
+  } catch {
+    // If clone fails, try reading directly (body might not have been consumed)
+    try {
+      body = await response.text();
+    } catch {
+      body = "";
+    }
+  }
+
   // Debug: Add headers info to failed auth responses
   if (response.status === 401) {
-    const body = await response.text();
     return {
       statusCode: 401,
       headers: { "content-type": "application/json" },
@@ -67,14 +85,6 @@ export async function handler(
       isBase64Encoded: false,
     };
   }
-
-  // Convert Response to API Gateway format
-  const headers: Record<string, string> = {};
-  response.headers.forEach((value: string, key: string) => {
-    headers[key] = value;
-  });
-
-  const body = await response.text();
 
   return {
     statusCode: response.status,
