@@ -41,7 +41,7 @@ export const api = new sst.aws.ApiGatewayV2("Api", {
 // Main API handler - Elysia app
 const apiHandler = new sst.aws.Function("ApiHandler", {
   handler: "apps/api/src/lambda.handler",
-  runtime: "nodejs24.x",
+  runtime: "nodejs22.x",
   timeout: "30 seconds",
   memory: "512 MB",
   environment: {
