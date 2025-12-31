@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Mail, MessageSquare, Sparkles } from "lucide-react";
+import { ArrowRight, Blocks, Mail, MessageSquare, Sparkles } from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,19 @@ const quickstartGuides = [
       "Domain verification",
       "TypeScript SDK",
       "Analytics dashboard",
+    ],
+  },
+  {
+    title: "Platform",
+    description:
+      "Use the type-safe Platform SDK to manage contacts, segments, and send batch emails programmatically.",
+    href: "/docs/quickstart/platform",
+    icon: Blocks,
+    features: [
+      "Contact management",
+      "Batch email sends",
+      "Type-safe API client",
+      "Full TypeScript support",
     ],
   },
   {
@@ -54,7 +67,7 @@ export default function QuickstartPage() {
       </div>
 
       {/* Quickstart Cards */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {quickstartGuides.map((guide) => {
           const Icon = guide.icon;
           return (

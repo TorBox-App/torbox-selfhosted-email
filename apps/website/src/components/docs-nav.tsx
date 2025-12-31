@@ -2,6 +2,7 @@
 
 import {
   Book,
+  Blocks,
   FileText,
   Globe,
   Mail,
@@ -46,6 +47,11 @@ const navItems: NavSection[] = [
             icon: Mail,
           },
           {
+            title: "Platform",
+            href: "/docs/quickstart/platform",
+            icon: Blocks,
+          },
+          {
             title: "SMS",
             href: "/docs/quickstart/sms",
             icon: MessageSquare,
@@ -61,6 +67,11 @@ const navItems: NavSection[] = [
         title: "CLI Reference",
         href: "/docs/cli-reference",
         icon: Terminal,
+      },
+      {
+        title: "Platform SDK",
+        href: "/docs/client-sdk-reference",
+        icon: Blocks,
       },
       {
         title: "Email SDK",

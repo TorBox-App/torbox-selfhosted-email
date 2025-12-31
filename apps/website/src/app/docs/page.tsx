@@ -2,6 +2,7 @@
 
 import {
   ArrowRight,
+  Blocks,
   Book,
   Mail,
   MessageSquare,
@@ -46,6 +47,13 @@ const quickLinks = [
     title: "Quickstart",
     description: "Deploy your first email infrastructure in 2 minutes",
     href: "/docs/quickstart",
+    disabled: false,
+  },
+  {
+    icon: Blocks,
+    title: "Platform SDK",
+    description: "Type-safe API client for contacts, batches, and more",
+    href: "/docs/client-sdk-reference",
     disabled: false,
   },
   {
@@ -229,7 +237,7 @@ export default function DocsPage() {
             <h2 className="mb-8 text-center font-bold text-2xl">
               Additional Resources
             </h2>
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader>
                   <CardTitle>GitHub Repository</CardTitle>
@@ -245,6 +253,27 @@ export default function DocsPage() {
                       target="_blank"
                     >
                       View on GitHub
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Platform SDK</CardTitle>
+                  <CardDescription>
+                    View @wraps.dev/client package on npm
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild variant="outline">
+                    <a
+                      href="https://www.npmjs.com/package/@wraps.dev/client"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      View on npm
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </a>
                   </Button>

@@ -678,9 +678,9 @@ export function OrganizationSettingsApiKeys({
           <div>
             <h4 className="mb-2 font-medium">SDK Usage</h4>
             <pre className="overflow-x-auto rounded-lg bg-muted p-3 font-mono text-sm">
-              {`import { Wraps } from '@wraps.dev/email';
+              {`import { createPlatformClient } from '@wraps.dev/client';
 
-const wraps = new Wraps({
+const client = createPlatformClient({
   apiKey: process.env.WRAPS_API_KEY,
 });`}
             </pre>

@@ -11,7 +11,13 @@ const QuickstartEmailDocs = lazy(
   () => import("@/app/docs/quickstart/email/page")
 );
 const QuickstartSmsDocs = lazy(() => import("@/app/docs/quickstart/sms/page"));
+const QuickstartPlatformDocs = lazy(
+  () => import("@/app/docs/quickstart/platform/page")
+);
 const SDKReferenceDocs = lazy(() => import("@/app/docs/sdk-reference/page"));
+const ClientSDKReferenceDocs = lazy(
+  () => import("@/app/docs/client-sdk-reference/page")
+);
 const SMSSDKReferenceDocs = lazy(
   () => import("@/app/docs/sms-sdk-reference/page")
 );
@@ -76,8 +82,16 @@ export const routes: RouteConfig[] = [
     element: <QuickstartSmsDocs />,
   },
   {
+    path: "/docs/quickstart/platform",
+    element: <QuickstartPlatformDocs />,
+  },
+  {
     path: "/docs/sdk-reference",
     element: <SDKReferenceDocs />,
+  },
+  {
+    path: "/docs/client-sdk-reference",
+    element: <ClientSDKReferenceDocs />,
   },
   {
     path: "/docs/sms-sdk-reference",
