@@ -307,8 +307,6 @@ function displayResults(result: EmailCheckResult, options: CheckOptions): void {
   }
 
   console.log();
-  console.log(`Share: ${pc.cyan(`https://wraps.dev/check/${result.domain}`)}`);
-  console.log();
 }
 
 /**
