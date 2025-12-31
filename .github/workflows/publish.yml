@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build email-check (CLI dependency)
+        run: pnpm --filter @wraps/email-check build
+
       - name: Build CLI
         run: pnpm --filter @wraps.dev/cli build
 
