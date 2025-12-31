@@ -1,3 +1,4 @@
+import { passkey } from "@better-auth/passkey";
 import { stripe } from "@better-auth/stripe";
 import { db, eq } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
@@ -9,9 +10,8 @@ import {
   haveIBeenPwned,
   lastLoginMethod,
   organization,
+  twoFactor,
 } from "better-auth/plugins";
-import { passkey } from "better-auth/plugins/passkey";
-import { twoFactor } from "better-auth/plugins/two-factor";
 import Stripe from "stripe";
 
 // Only initialize Stripe client if the secret key is available

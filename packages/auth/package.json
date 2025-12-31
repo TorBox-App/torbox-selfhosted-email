@@ -22,13 +22,14 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@better-auth/passkey": "1.4.9",
     "@better-auth/stripe": "^1.3.34",
+    "@wraps.dev/email": "^0.4.0",
+    "@wraps/db": "workspace:*",
+    "@wraps/email": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "stripe": "catalog:",
-    "zod": "catalog:",
-    "@wraps/db": "workspace:*",
-    "@wraps/email": "workspace:*",
-    "@wraps.dev/email": "^0.4.0"
+    "zod": "catalog:"
   }
 }

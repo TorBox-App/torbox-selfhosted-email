@@ -1,6 +1,6 @@
 "use server";
 
-import { createServerValidate } from "@tanstack/react-form/nextjs";
+import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { revalidatePath } from "next/cache";

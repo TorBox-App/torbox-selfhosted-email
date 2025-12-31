@@ -32,7 +32,7 @@ export function ForgotPasswordForm1({
       email: "",
     },
     onSubmit: async ({ value }) => {
-      const { error } = await authClient.forgetPassword({
+      const { error } = await authClient.requestPasswordReset({
         email: value.email,
         redirectTo: "/reset-password",
       });

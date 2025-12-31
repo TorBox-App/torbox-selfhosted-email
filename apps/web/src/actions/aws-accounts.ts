@@ -11,7 +11,7 @@ import {
   ListEmailIdentitiesCommand,
   SESv2Client,
 } from "@aws-sdk/client-sesv2";
-import { createServerValidate } from "@tanstack/react-form/nextjs";
+import { createServerValidate } from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
 import { awsAccount, db } from "@wraps/db";
 import { subscription } from "@wraps/db/schema/auth";

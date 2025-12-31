@@ -3,7 +3,7 @@
 import {
   createServerValidate,
   type ServerValidateError,
-} from "@tanstack/react-form/nextjs";
+} from "@tanstack/react-form-nextjs";
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { user } from "@wraps/db/schema/auth";

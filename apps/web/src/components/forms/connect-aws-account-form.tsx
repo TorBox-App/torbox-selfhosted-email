@@ -1,7 +1,7 @@
 "use client";
 
-import { mergeForm, useForm, useTransform } from "@tanstack/react-form";
-import { initialFormState } from "@tanstack/react-form/nextjs";
+import { mergeForm, useForm } from "@tanstack/react-form";
+import { initialFormState, useTransform } from "@tanstack/react-form-nextjs";
 import { useStore } from "@tanstack/react-store";
 import { AlertCircle, CheckCircle, Copy, ExternalLink } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
