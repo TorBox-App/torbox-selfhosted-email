@@ -1,4 +1,5 @@
 import { createPlatformClient } from "@wraps.dev/client";
+import { and, db, eq, topic } from "@wraps/db";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 
@@ -10,16 +11,38 @@ function isValidEmail(email: string): boolean {
 }
 
 /**
- * Product to topic ID mapping from environment variables
+ * Product to topic slug mapping
  */
-const PRODUCT_TOPIC_MAP: Record<string, string | undefined> = {
-  sms: process.env.WRAPS_TOPIC_ID_SMS,
+const PRODUCT_TOPIC_SLUG_MAP: Record<string, string> = {
+  sms: "sms-waitlist",
 };
 
-const VALID_PRODUCTS = Object.keys(PRODUCT_TOPIC_MAP);
+const VALID_PRODUCTS = Object.keys(PRODUCT_TOPIC_SLUG_MAP);
 
 function isValidProduct(product: string): boolean {
   return VALID_PRODUCTS.includes(product);
+}
+
+// Cache topic IDs to avoid repeated DB lookups
+const topicIdCache = new Map<string, string>();
+
+async function getTopicIdBySlug(slug: string, organizationId: string): Promise<string | null> {
+  const cacheKey = `${organizationId}:${slug}`;
+  if (topicIdCache.has(cacheKey)) {
+    return topicIdCache.get(cacheKey)!;
+  }
+
+  const [result] = await db
+    .select({ id: topic.id })
+    .from(topic)
+    .where(and(eq(topic.slug, slug), eq(topic.organizationId, organizationId)))
+    .limit(1);
+
+  if (result) {
+    topicIdCache.set(cacheKey, result.id);
+    return result.id;
+  }
+  return null;
 }
 
 const corsHeaders = {
@@ -75,9 +98,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const topicId = PRODUCT_TOPIC_MAP[product];
+    const orgId = process.env.WRAPS_ORG_ID;
+    if (!orgId) {
+      log.error("WRAPS_ORG_ID environment variable is required");
+      return NextResponse.json(
+        { error: "Waitlist not configured" },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    const topicSlug = PRODUCT_TOPIC_SLUG_MAP[product];
+    const topicId = await getTopicIdBySlug(topicSlug, orgId);
     if (!topicId) {
-      log.warn({ product }, "Topic ID not configured for product");
+      log.warn({ product, topicSlug }, "Topic not found for product");
       return NextResponse.json(
         { error: "Waitlist not configured for this product" },
         { status: 500, headers: corsHeaders }
