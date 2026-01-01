@@ -361,13 +361,40 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       }
 
       // Add to topics if specified
+      const pendingTopics: string[] = [];
       if (topicIds.length > 0) {
+        // Get topic info to check for double opt-in
+        const topicInfos = await db
+          .select({ id: topic.id, doubleOptIn: topic.doubleOptIn })
+          .from(topic)
+          .where(
+            and(
+              eq(topic.organizationId, authContext.organizationId),
+              inArray(topic.id, topicIds)
+            )
+          );
+
+        const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
+
+        // Create subscriptions with appropriate status
+        const now = new Date();
         await db.insert(contactTopic).values(
-          topicIds.map((topicId) => ({
-            contactId: newContact.id,
-            topicId,
-            status: "subscribed",
-          }))
+          topicIds.map((topicId) => {
+            const topicInfo = topicMap.get(topicId);
+            const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
+
+            if (requiresConfirmation) {
+              pendingTopics.push(topicId);
+            }
+
+            return {
+              contactId: newContact.id,
+              topicId,
+              status: requiresConfirmation ? "pending" : "subscribed",
+              subscribedAt: requiresConfirmation ? null : now,
+              confirmedAt: requiresConfirmation ? null : now,
+            };
+          })
         );
       }
 
@@ -386,6 +413,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         smsClicked: newContact.smsClicked,
         createdAt: newContact.createdAt.toISOString(),
         updatedAt: newContact.updatedAt.toISOString(),
+        pendingTopics: pendingTopics.length > 0 ? pendingTopics : undefined,
       };
     },
     {
@@ -456,6 +484,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         .returning();
 
       // Update topic subscriptions if specified
+      const pendingTopics: string[] = [];
       if (body.topicIds !== undefined || body.topicSlugs !== undefined) {
         // Resolve topic slugs to IDs if provided
         let topicIds = body.topicIds || [];
@@ -467,19 +496,68 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           topicIds = [...topicIds, ...resolvedIds];
         }
 
+        // Get existing subscriptions to check for previously confirmed
+        const existingSubscriptions = await db
+          .select({
+            topicId: contactTopic.topicId,
+            confirmedAt: contactTopic.confirmedAt,
+          })
+          .from(contactTopic)
+          .where(eq(contactTopic.contactId, params.id));
+
+        const confirmedTopics = new Map(
+          existingSubscriptions
+            .filter((s) => s.confirmedAt !== null)
+            .map((s) => [s.topicId, s.confirmedAt])
+        );
+
         // Remove all existing subscriptions
         await db
           .delete(contactTopic)
           .where(eq(contactTopic.contactId, params.id));
 
-        // Add new subscriptions
+        // Add new subscriptions with double opt-in check
         if (topicIds.length > 0) {
+          // Get topic info to check for double opt-in
+          const topicInfos = await db
+            .select({ id: topic.id, doubleOptIn: topic.doubleOptIn })
+            .from(topic)
+            .where(
+              and(
+                eq(topic.organizationId, authContext.organizationId),
+                inArray(topic.id, topicIds)
+              )
+            );
+
+          const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
+          const now = new Date();
+
           await db.insert(contactTopic).values(
-            topicIds.map((topicId) => ({
-              contactId: params.id,
-              topicId,
-              status: "subscribed",
-            }))
+            topicIds.map((topicId) => {
+              const topicInfo = topicMap.get(topicId);
+              const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
+              const previouslyConfirmed = confirmedTopics.has(topicId);
+
+              // Skip confirmation if previously confirmed (re-subscription)
+              const needsConfirmation =
+                requiresConfirmation && !previouslyConfirmed;
+
+              if (needsConfirmation) {
+                pendingTopics.push(topicId);
+              }
+
+              return {
+                contactId: params.id,
+                topicId,
+                status: needsConfirmation ? "pending" : "subscribed",
+                subscribedAt: needsConfirmation ? null : now,
+                confirmedAt: needsConfirmation
+                  ? null
+                  : previouslyConfirmed
+                    ? confirmedTopics.get(topicId)
+                    : now,
+              };
+            })
           );
         }
       }
@@ -498,6 +576,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         smsClicked: updated.smsClicked,
         createdAt: updated.createdAt.toISOString(),
         updatedAt: updated.updatedAt.toISOString(),
+        pendingTopics: pendingTopics.length > 0 ? pendingTopics : undefined,
       };
     },
     {

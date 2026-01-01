@@ -1,0 +1,1 @@
+ALTER TABLE "contact_topic" ADD COLUMN "confirmed_at" timestamp;

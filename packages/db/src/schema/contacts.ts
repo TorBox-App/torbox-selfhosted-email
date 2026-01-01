@@ -196,9 +196,10 @@ export const contactTopic = pgTable(
       .references(() => topic.id, { onDelete: "cascade" })
       .notNull(),
 
-    status: text("status").default("subscribed").notNull(), // subscribed, unsubscribed
+    status: text("status").default("subscribed").notNull(), // pending, subscribed, unsubscribed
     subscribedAt: timestamp("subscribed_at").defaultNow(),
     unsubscribedAt: timestamp("unsubscribed_at"),
+    confirmedAt: timestamp("confirmed_at"), // When double opt-in was confirmed
   },
   (table) => ({
     pk: primaryKey({ columns: [table.contactId, table.topicId] }),

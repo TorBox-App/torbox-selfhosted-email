@@ -2,10 +2,11 @@ import { contact, contactTopic, db, eq, organization, topic } from "@wraps/db";
 import { and } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
-import { PreferencesForm } from "./preferences-form";
 
-interface PreferencesPageProps {
+import { verifyConfirmationToken } from "@/lib/confirmation-token";
+import { ConfirmationForm } from "./confirmation-form";
+
+interface ConfirmPageProps {
   params: Promise<{
     token: string;
   }>;
@@ -13,33 +14,33 @@ interface PreferencesPageProps {
 
 export async function generateMetadata({
   params,
-}: PreferencesPageProps): Promise<Metadata> {
+}: ConfirmPageProps): Promise<Metadata> {
   const { token } = await params;
-  const payload = await verifyUnsubscribeToken(token);
+  const payload = await verifyConfirmationToken(token);
 
   if (!payload) {
-    return { title: "Email Preferences" };
+    return { title: "Confirm Subscription" };
   }
 
-  const [org] = await db
-    .select({ name: organization.name })
-    .from(organization)
-    .where(eq(organization.id, payload.oid))
+  const [topicRecord] = await db
+    .select({ name: topic.name })
+    .from(topic)
+    .where(eq(topic.id, payload.tid))
     .limit(1);
 
   return {
-    title: org?.name ? `Email Preferences - ${org.name}` : "Email Preferences",
-    description: "Manage your email subscription preferences",
+    title: topicRecord?.name
+      ? `Confirm Subscription - ${topicRecord.name}`
+      : "Confirm Subscription",
+    description: "Confirm your email subscription",
   };
 }
 
-export default async function PreferencesPage({
-  params,
-}: PreferencesPageProps) {
+export default async function ConfirmPage({ params }: ConfirmPageProps) {
   const { token } = await params;
 
   // Verify token
-  const payload = await verifyUnsubscribeToken(token);
+  const payload = await verifyConfirmationToken(token);
   if (!payload) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
@@ -63,22 +64,21 @@ export default async function PreferencesPage({
             Link Expired
           </h1>
           <p className="text-gray-500 text-sm">
-            This preferences link is no longer valid. Please use the link from a
-            more recent email.
+            This confirmation link has expired. Please request a new
+            confirmation email from the subscription page.
           </p>
         </div>
       </div>
     );
   }
 
-  const { cid: contactId, oid: organizationId } = payload;
+  const { cid: contactId, oid: organizationId, tid: topicId } = payload;
 
   // Load contact
   const [contactRecord] = await db
     .select({
       id: contact.id,
       email: contact.email,
-      emailStatus: contact.emailStatus,
     })
     .from(contact)
     .where(
@@ -87,6 +87,23 @@ export default async function PreferencesPage({
     .limit(1);
 
   if (!contactRecord) {
+    notFound();
+  }
+
+  // Load topic
+  const [topicRecord] = await db
+    .select({
+      id: topic.id,
+      name: topic.name,
+      description: topic.description,
+    })
+    .from(topic)
+    .where(
+      and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
+    )
+    .limit(1);
+
+  if (!topicRecord) {
     notFound();
   }
 
@@ -101,49 +118,23 @@ export default async function PreferencesPage({
     .where(eq(organization.id, organizationId))
     .limit(1);
 
-  // Load public topics for this organization
-  const topics = await db
+  // Check current subscription status
+  const [subscription] = await db
     .select({
-      id: topic.id,
-      name: topic.name,
-      description: topic.description,
-    })
-    .from(topic)
-    .where(
-      and(eq(topic.organizationId, organizationId), eq(topic.public, true))
-    );
-
-  // Load contact's topic subscriptions
-  const subscriptions = await db
-    .select({
-      topicId: contactTopic.topicId,
       status: contactTopic.status,
       confirmedAt: contactTopic.confirmedAt,
     })
     .from(contactTopic)
-    .where(eq(contactTopic.contactId, contactId));
+    .where(
+      and(
+        eq(contactTopic.contactId, contactId),
+        eq(contactTopic.topicId, topicId)
+      )
+    )
+    .limit(1);
 
-  // Load topic doubleOptIn info
-  const topicDetails = await db
-    .select({
-      id: topic.id,
-      doubleOptIn: topic.doubleOptIn,
-    })
-    .from(topic)
-    .where(eq(topic.organizationId, organizationId));
-
-  const topicDoubleOptInMap = new Map(topicDetails.map((t) => [t.id, t.doubleOptIn]));
-
-  // Build topic list with subscription status
-  const topicsWithStatus = topics.map((t) => {
-    const sub = subscriptions.find((s) => s.topicId === t.id);
-    return {
-      ...t,
-      subscribed: sub?.status === "subscribed",
-      pending: sub?.status === "pending",
-      doubleOptIn: topicDoubleOptInMap.get(t.id) ?? false,
-    };
-  });
+  const isAlreadyConfirmed =
+    subscription?.status === "subscribed" && subscription.confirmedAt !== null;
 
   const maskedEmail = contactRecord.email
     ? maskEmail(contactRecord.email)
@@ -172,32 +163,66 @@ export default async function PreferencesPage({
           ) : null}
 
           <h1 className="mb-2 font-semibold text-2xl text-gray-900 tracking-tight">
-            Email Preferences
+            {isAlreadyConfirmed ? "Already Subscribed" : "Confirm Subscription"}
           </h1>
           <p className="text-gray-500 text-sm">
-            Manage subscriptions for{" "}
-            <span className="font-medium text-gray-700">{maskedEmail}</span>
+            {isAlreadyConfirmed ? (
+              <>
+                <span className="font-medium text-gray-700">{maskedEmail}</span>{" "}
+                is already subscribed to this topic.
+              </>
+            ) : (
+              <>
+                Confirm subscription for{" "}
+                <span className="font-medium text-gray-700">{maskedEmail}</span>
+              </>
+            )}
           </p>
         </div>
 
-        {/* Form card */}
+        {/* Confirmation card */}
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-          <PreferencesForm
-            brandColor={brandColor}
-            contactId={contactId}
-            isGloballyUnsubscribed={
-              contactRecord.emailStatus === "unsubscribed"
-            }
-            organizationId={organizationId}
-            orgName={org?.name || undefined}
-            token={token}
-            topics={topicsWithStatus}
-          />
+          {/* Topic info */}
+          <div className="mb-6 rounded-xl bg-gray-50 p-4">
+            <h2 className="font-medium text-gray-900">{topicRecord.name}</h2>
+            {topicRecord.description && (
+              <p className="mt-1 text-gray-500 text-sm">
+                {topicRecord.description}
+              </p>
+            )}
+          </div>
+
+          {isAlreadyConfirmed ? (
+            <div className="text-center">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
+                <svg
+                  className="h-5 w-5 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M5 13l4 4L19 7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                  />
+                </svg>
+              </div>
+              <p className="text-gray-500 text-sm">
+                You're already subscribed to this topic. You'll continue
+                receiving updates.
+              </p>
+            </div>
+          ) : (
+            <ConfirmationForm brandColor={brandColor} token={token} />
+          )}
         </div>
 
         {/* Footer */}
         <p className="mt-6 text-center text-gray-400 text-xs">
-          You can update your preferences anytime using the link in our emails.
+          You can manage your subscriptions anytime using the link in our
+          emails.
         </p>
       </div>
     </div>

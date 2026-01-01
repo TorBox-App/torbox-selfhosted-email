@@ -1,0 +1,487 @@
+import {
+  awsAccount,
+  contact,
+  contactTopic,
+  db,
+  member,
+  organization,
+  topic,
+  user,
+} from "@wraps/db";
+import { and, eq } from "drizzle-orm";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { generateUnsubscribeToken } from "@/lib/unsubscribe-token";
+import { resendConfirmation, updatePreferences } from "../actions";
+
+// Mock next/cache
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
+// Mock the subscriptions module to avoid actual AWS calls
+vi.mock("@/lib/subscriptions", () => ({
+  determineSubscriptionStatus: vi.fn(async (params) => {
+    // If topic requires double opt-in and no previous confirmation
+    if (params.topicDoubleOptIn && !params.existingSubscription?.confirmedAt) {
+      return {
+        status: "pending",
+        confirmationEmailSent: true,
+      };
+    }
+    return { status: "subscribed" };
+  }),
+}));
+
+// Test data
+const testUser = {
+  id: "test-pref-user-1",
+  email: "pref-test@example.com",
+  name: "Preferences Test User",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
+};
+
+const testOrganization = {
+  id: "test-pref-org-1",
+  name: "Preferences Test Org",
+  slug: "pref-test-org",
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const testRegularTopic = {
+  id: "test-pref-topic-regular",
+  organizationId: testOrganization.id,
+  name: "Regular Topic",
+  slug: "regular-topic",
+  description: "No double opt-in",
+  public: true,
+  doubleOptIn: false,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: testUser.id,
+};
+
+const testDoubleOptInTopic = {
+  id: "test-pref-topic-doi",
+  organizationId: testOrganization.id,
+  name: "Double Opt-In Topic",
+  slug: "double-opt-in-topic",
+  description: "Requires confirmation",
+  public: true,
+  doubleOptIn: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: testUser.id,
+};
+
+const testContact = {
+  id: "test-pref-contact-1",
+  organizationId: testOrganization.id,
+  email: "subscriber@example.com",
+  emailHash: "pref-contact-hash",
+  status: "active",
+  properties: {},
+  emailsSent: 0,
+  emailsOpened: 0,
+  emailsClicked: 0,
+  smsSent: 0,
+  smsClicked: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+// Set up test database
+beforeAll(async () => {
+  // Insert test user
+  await db.insert(user).values(testUser).onConflictDoUpdate({
+    target: user.id,
+    set: { updatedAt: new Date() },
+  });
+
+  // Insert test organization
+  await db.insert(organization).values(testOrganization).onConflictDoUpdate({
+    target: organization.id,
+    set: { name: testOrganization.name },
+  });
+
+  // Insert test member
+  await db
+    .insert(member)
+    .values({
+      id: "test-pref-member-1",
+      organizationId: testOrganization.id,
+      userId: testUser.id,
+      role: "owner",
+      createdAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: member.id,
+      set: { role: "owner" },
+    });
+
+  // Insert test topics
+  await db.insert(topic).values(testRegularTopic).onConflictDoUpdate({
+    target: topic.id,
+    set: { updatedAt: new Date() },
+  });
+
+  await db.insert(topic).values(testDoubleOptInTopic).onConflictDoUpdate({
+    target: topic.id,
+    set: { updatedAt: new Date() },
+  });
+
+  // Insert test contact
+  await db.insert(contact).values(testContact).onConflictDoUpdate({
+    target: contact.id,
+    set: { updatedAt: new Date() },
+  });
+});
+
+// Clean up contact topics before each test
+beforeEach(async () => {
+  await db.delete(contactTopic).where(eq(contactTopic.contactId, testContact.id));
+});
+
+// Clean up after all tests
+afterAll(async () => {
+  await db.delete(contactTopic).where(eq(contactTopic.contactId, testContact.id));
+  await db.delete(contact).where(eq(contact.id, testContact.id));
+  await db.delete(topic).where(eq(topic.id, testRegularTopic.id));
+  await db.delete(topic).where(eq(topic.id, testDoubleOptInTopic.id));
+  await db.delete(member).where(eq(member.organizationId, testOrganization.id));
+  await db.delete(organization).where(eq(organization.id, testOrganization.id));
+  await db.delete(user).where(eq(user.id, testUser.id));
+});
+
+describe("updatePreferences with double opt-in", () => {
+  it("should subscribe to regular topic immediately", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await updatePreferences(
+      token,
+      testContact.id,
+      testOrganization.id,
+      { [testRegularTopic.id]: true }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.pendingTopics).toBeUndefined();
+
+    // Verify subscription is active
+    const [subscription] = await db
+      .select()
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.contactId, testContact.id),
+          eq(contactTopic.topicId, testRegularTopic.id)
+        )
+      )
+      .limit(1);
+
+    expect(subscription.status).toBe("subscribed");
+  });
+
+  it("should set pending status for double opt-in topic", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await updatePreferences(
+      token,
+      testContact.id,
+      testOrganization.id,
+      { [testDoubleOptInTopic.id]: true }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.pendingTopics).toContain(testDoubleOptInTopic.id);
+
+    // Verify subscription is pending
+    const [subscription] = await db
+      .select()
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.contactId, testContact.id),
+          eq(contactTopic.topicId, testDoubleOptInTopic.id)
+        )
+      )
+      .limit(1);
+
+    expect(subscription.status).toBe("pending");
+  });
+
+  it("should auto-confirm re-subscription if previously confirmed", async () => {
+    const confirmedAt = new Date(Date.now() - 86400000); // 1 day ago
+
+    // Create previously confirmed but now unsubscribed subscription
+    await db.insert(contactTopic).values({
+      contactId: testContact.id,
+      topicId: testDoubleOptInTopic.id,
+      status: "unsubscribed",
+      subscribedAt: confirmedAt,
+      confirmedAt: confirmedAt,
+      unsubscribedAt: new Date(),
+    });
+
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    // Re-import to get the unmocked version for this specific test
+    const { determineSubscriptionStatus } = await import("@/lib/subscriptions");
+    vi.mocked(determineSubscriptionStatus).mockResolvedValueOnce({
+      status: "subscribed", // Auto-confirmed because previously confirmed
+    });
+
+    const result = await updatePreferences(
+      token,
+      testContact.id,
+      testOrganization.id,
+      { [testDoubleOptInTopic.id]: true }
+    );
+
+    expect(result.success).toBe(true);
+    // Should NOT be in pending since previously confirmed
+    expect(result.pendingTopics).toBeUndefined();
+  });
+
+  it("should unsubscribe from pending topic", async () => {
+    // Create pending subscription
+    await db.insert(contactTopic).values({
+      contactId: testContact.id,
+      topicId: testDoubleOptInTopic.id,
+      status: "pending",
+      subscribedAt: null,
+      confirmedAt: null,
+    });
+
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await updatePreferences(
+      token,
+      testContact.id,
+      testOrganization.id,
+      { [testDoubleOptInTopic.id]: false }
+    );
+
+    expect(result.success).toBe(true);
+
+    // Verify subscription is unsubscribed
+    const [subscription] = await db
+      .select()
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.contactId, testContact.id),
+          eq(contactTopic.topicId, testDoubleOptInTopic.id)
+        )
+      )
+      .limit(1);
+
+    expect(subscription.status).toBe("unsubscribed");
+    expect(subscription.unsubscribedAt).not.toBeNull();
+  });
+
+  it("should handle mixed regular and double opt-in topics", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await updatePreferences(
+      token,
+      testContact.id,
+      testOrganization.id,
+      {
+        [testRegularTopic.id]: true,
+        [testDoubleOptInTopic.id]: true,
+      }
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.pendingTopics).toHaveLength(1);
+    expect(result.pendingTopics).toContain(testDoubleOptInTopic.id);
+
+    // Verify regular topic is subscribed
+    const [regularSub] = await db
+      .select()
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.contactId, testContact.id),
+          eq(contactTopic.topicId, testRegularTopic.id)
+        )
+      )
+      .limit(1);
+
+    expect(regularSub.status).toBe("subscribed");
+
+    // Verify double opt-in topic is pending
+    const [doiSub] = await db
+      .select()
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.contactId, testContact.id),
+          eq(contactTopic.topicId, testDoubleOptInTopic.id)
+        )
+      )
+      .limit(1);
+
+    expect(doiSub.status).toBe("pending");
+  });
+
+  it("should fail with invalid token", async () => {
+    const result = await updatePreferences(
+      "invalid-token",
+      testContact.id,
+      testOrganization.id,
+      { [testRegularTopic.id]: true }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Invalid token");
+  });
+
+  it("should fail with mismatched contact ID", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await updatePreferences(
+      token,
+      "wrong-contact-id",
+      testOrganization.id,
+      { [testRegularTopic.id]: true }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Invalid token");
+  });
+});
+
+describe("resendConfirmation", () => {
+  it("should resend confirmation for pending subscription", async () => {
+    // Create pending subscription
+    await db.insert(contactTopic).values({
+      contactId: testContact.id,
+      topicId: testDoubleOptInTopic.id,
+      status: "pending",
+      subscribedAt: null,
+      confirmedAt: null,
+    });
+
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await resendConfirmation(
+      token,
+      testContact.id,
+      testOrganization.id,
+      testDoubleOptInTopic.id
+    );
+
+    expect(result.success).toBe(true);
+  });
+
+  it("should fail for non-pending subscription", async () => {
+    // Create active subscription
+    await db.insert(contactTopic).values({
+      contactId: testContact.id,
+      topicId: testDoubleOptInTopic.id,
+      status: "subscribed",
+      subscribedAt: new Date(),
+      confirmedAt: new Date(),
+    });
+
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await resendConfirmation(
+      token,
+      testContact.id,
+      testOrganization.id,
+      testDoubleOptInTopic.id
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("No pending subscription");
+  });
+
+  it("should fail for topic without double opt-in", async () => {
+    // Create pending subscription on regular topic (shouldn't happen normally)
+    await db.insert(contactTopic).values({
+      contactId: testContact.id,
+      topicId: testRegularTopic.id,
+      status: "pending",
+      subscribedAt: null,
+      confirmedAt: null,
+    });
+
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await resendConfirmation(
+      token,
+      testContact.id,
+      testOrganization.id,
+      testRegularTopic.id
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("does not require confirmation");
+  });
+
+  it("should fail with invalid token", async () => {
+    const result = await resendConfirmation(
+      "invalid-token",
+      testContact.id,
+      testOrganization.id,
+      testDoubleOptInTopic.id
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Invalid token");
+  });
+
+  it("should fail for non-existent topic", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    const result = await resendConfirmation(
+      token,
+      testContact.id,
+      testOrganization.id,
+      "non-existent-topic"
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Topic not found");
+  });
+});

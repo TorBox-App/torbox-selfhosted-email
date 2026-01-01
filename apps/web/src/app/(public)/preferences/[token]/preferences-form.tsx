@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { unsubscribeGlobally, updatePreferences } from "./actions";
+import {
+  resendConfirmation,
+  unsubscribeGlobally,
+  updatePreferences,
+} from "./actions";
 
 interface Topic {
   id: string;
   name: string;
   description: string | null;
   subscribed: boolean;
+  pending: boolean;
+  doubleOptIn: boolean;
 }
 
 interface PreferencesFormProps {
@@ -34,11 +40,16 @@ export function PreferencesForm({
     () => {
       const initial: Record<string, boolean> = {};
       for (const topic of topics) {
-        initial[topic.id] = topic.subscribed;
+        // Include both subscribed and pending as "checked"
+        initial[topic.id] = topic.subscribed || topic.pending;
       }
       return initial;
     }
   );
+  const [pendingTopics, setPendingTopics] = useState<Set<string>>(
+    () => new Set(topics.filter((t) => t.pending).map((t) => t.id))
+  );
+  const [resendingFor, setResendingFor] = useState<string | null>(null);
   const [isGloballyUnsubscribed, setIsGloballyUnsubscribed] = useState(
     initiallyUnsubscribed
   );
@@ -49,6 +60,14 @@ export function PreferencesForm({
 
   const handleTopicChange = (topicId: string, subscribed: boolean) => {
     setSubscriptions((prev) => ({ ...prev, [topicId]: subscribed }));
+    // If unchecking, remove from pending set
+    if (!subscribed) {
+      setPendingTopics((prev) => {
+        const next = new Set(prev);
+        next.delete(topicId);
+        return next;
+      });
+    }
   };
 
   const handleSave = () => {
@@ -61,14 +80,54 @@ export function PreferencesForm({
         subscriptions
       );
       if (result.success) {
-        setMessage({
-          type: "success",
-          text: "Your preferences have been saved.",
-        });
+        // Update pending topics state
+        if (result.pendingTopics) {
+          setPendingTopics((prev) => {
+            const next = new Set(prev);
+            for (const topicId of result.pendingTopics!) {
+              next.add(topicId);
+            }
+            return next;
+          });
+          setMessage({
+            type: "success",
+            text: `Preferences saved. Check your email to confirm ${result.pendingTopics.length === 1 ? "your subscription" : "your subscriptions"}.`,
+          });
+        } else {
+          setMessage({
+            type: "success",
+            text: "Your preferences have been saved.",
+          });
+        }
       } else {
         setMessage({
           type: "error",
           text: result.error || "Something went wrong. Please try again.",
+        });
+      }
+    });
+  };
+
+  const handleResendConfirmation = (topicId: string) => {
+    setResendingFor(topicId);
+    setMessage(null);
+    startTransition(async () => {
+      const result = await resendConfirmation(
+        token,
+        contactId,
+        organizationId,
+        topicId
+      );
+      setResendingFor(null);
+      if (result.success) {
+        setMessage({
+          type: "success",
+          text: "Confirmation email sent. Please check your inbox.",
+        });
+      } else {
+        setMessage({
+          type: "error",
+          text: result.error || "Failed to resend confirmation.",
         });
       }
     });
@@ -177,53 +236,88 @@ export function PreferencesForm({
             Email Topics
           </h2>
           <div className="divide-y divide-gray-100 rounded-xl border border-gray-200">
-            {topics.map((topic) => (
-              <label
-                className="flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-gray-50"
-                key={topic.id}
-              >
-                <div className="relative flex h-5 items-center">
-                  <input
-                    checked={subscriptions[topic.id] ?? false}
-                    className="peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-gray-300 transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2"
-                    onChange={(e) =>
-                      handleTopicChange(topic.id, e.target.checked)
-                    }
-                    style={{
-                      backgroundColor: subscriptions[topic.id]
-                        ? brandColor
-                        : undefined,
-                    }}
-                    type="checkbox"
-                  />
-                  {subscriptions[topic.id] && (
-                    <svg
-                      className="pointer-events-none absolute left-0 h-4 w-4 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={3}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M5 13l4 4L19 7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+            {topics.map((topic) => {
+              const isPendingConfirmation = pendingTopics.has(topic.id);
+              const isResending = resendingFor === topic.id;
+
+              return (
+                <div className="p-4" key={topic.id}>
+                  <label className="flex cursor-pointer items-start gap-4 transition-colors hover:bg-gray-50">
+                    <div className="relative flex h-5 items-center">
+                      <input
+                        checked={subscriptions[topic.id] ?? false}
+                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-gray-300 transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2"
+                        onChange={(e) =>
+                          handleTopicChange(topic.id, e.target.checked)
+                        }
+                        style={{
+                          backgroundColor: subscriptions[topic.id]
+                            ? isPendingConfirmation
+                              ? "#f59e0b" // Amber for pending
+                              : brandColor
+                            : undefined,
+                        }}
+                        type="checkbox"
                       />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900 text-sm">
-                    {topic.name}
-                  </div>
-                  {topic.description && (
-                    <div className="mt-0.5 text-gray-500 text-sm">
-                      {topic.description}
+                      {subscriptions[topic.id] && (
+                        <svg
+                          className="pointer-events-none absolute left-0 h-4 w-4 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                          viewBox="0 0 24 24"
+                        >
+                          {isPendingConfirmation ? (
+                            <path
+                              d="M12 8v4m0 4h.01"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          ) : (
+                            <path
+                              d="M5 13l4 4L19 7"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          )}
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900 text-sm">
+                          {topic.name}
+                        </span>
+                        {isPendingConfirmation && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 text-xs">
+                            Pending confirmation
+                          </span>
+                        )}
+                      </div>
+                      {topic.description && (
+                        <div className="mt-0.5 text-gray-500 text-sm">
+                          {topic.description}
+                        </div>
+                      )}
+                    </div>
+                  </label>
+
+                  {/* Resend confirmation button for pending subscriptions */}
+                  {isPendingConfirmation && (
+                    <div className="mt-2 ml-9">
+                      <button
+                        className="rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                        disabled={isPending || isResending}
+                        onClick={() => handleResendConfirmation(topic.id)}
+                        type="button"
+                      >
+                        {isResending ? "Sending..." : "Resend confirmation email"}
+                      </button>
                     </div>
                   )}
                 </div>
-              </label>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (

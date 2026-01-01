@@ -58,7 +58,19 @@ const testTopic = {
   description: "Test topic for API tests",
   public: true,
   doubleOptIn: false,
-  subscriberCount: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: testUser.id,
+};
+
+const testDoubleOptInTopic = {
+  id: `${TEST_PREFIX}-topic-doi`,
+  organizationId: testOrg.id,
+  name: "Double Opt-In Newsletter",
+  slug: "double-opt-in-newsletter",
+  description: "Test topic requiring confirmation",
+  public: true,
+  doubleOptIn: true,
   createdAt: new Date(),
   updatedAt: new Date(),
   createdBy: testUser.id,
@@ -106,13 +118,21 @@ beforeAll(async () => {
       set: { role: testMember.role },
     });
 
-  // Insert test topic
+  // Insert test topics
   await db
     .insert(topic)
     .values(testTopic)
     .onConflictDoUpdate({
       target: topic.id,
       set: { name: testTopic.name },
+    });
+
+  await db
+    .insert(topic)
+    .values(testDoubleOptInTopic)
+    .onConflictDoUpdate({
+      target: topic.id,
+      set: { name: testDoubleOptInTopic.name },
     });
 });
 
@@ -123,6 +143,7 @@ beforeEach(async () => {
 
 // Clean up after all tests
 afterAll(async () => {
+  await db.delete(contactTopic).where(eq(contactTopic.contactId, testOrg.id));
   await db.delete(contact).where(eq(contact.organizationId, testOrg.id));
   await db.delete(topic).where(eq(topic.organizationId, testOrg.id));
   await db.delete(member).where(eq(member.organizationId, testOrg.id));
@@ -410,7 +431,6 @@ describe("Contacts API Integration", () => {
         description: "Second test topic",
         public: true,
         doubleOptIn: false,
-        subscriberCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: testUser.id,
@@ -509,6 +529,105 @@ describe("Contacts API Integration", () => {
 
       const body = await response.json();
       expect(body.error).toContain("already exists");
+    });
+
+    it("creates contact with pending status for double opt-in topic", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "doi-subscriber@example.com",
+            topicIds: [testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+      expect(body.pendingTopics).toBeDefined();
+      expect(body.pendingTopics).toContain(testDoubleOptInTopic.id);
+
+      // Verify subscription is pending in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, body.id));
+      expect(subscriptions).toHaveLength(1);
+      expect(subscriptions[0].status).toBe("pending");
+      expect(subscriptions[0].subscribedAt).toBeNull();
+      expect(subscriptions[0].confirmedAt).toBeNull();
+    });
+
+    it("creates contact with mixed regular and double opt-in topics", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "mixed-topics@example.com",
+            topicIds: [testTopic.id, testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+      // Only double opt-in topic should be pending
+      expect(body.pendingTopics).toHaveLength(1);
+      expect(body.pendingTopics).toContain(testDoubleOptInTopic.id);
+
+      // Verify subscriptions in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, body.id));
+      expect(subscriptions).toHaveLength(2);
+
+      const regularSub = subscriptions.find((s) => s.topicId === testTopic.id);
+      const doiSub = subscriptions.find(
+        (s) => s.topicId === testDoubleOptInTopic.id
+      );
+
+      expect(regularSub?.status).toBe("subscribed");
+      expect(regularSub?.subscribedAt).not.toBeNull();
+      expect(regularSub?.confirmedAt).not.toBeNull();
+
+      expect(doiSub?.status).toBe("pending");
+      expect(doiSub?.subscribedAt).toBeNull();
+      expect(doiSub?.confirmedAt).toBeNull();
+    });
+
+    it("creates contact with regular topic without pendingTopics", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "regular-subscriber@example.com",
+            topicIds: [testTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+      // No pending topics for regular topics
+      expect(body.pendingTopics).toBeUndefined();
+
+      // Verify subscription is subscribed in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, body.id));
+      expect(subscriptions).toHaveLength(1);
+      expect(subscriptions[0].status).toBe("subscribed");
     });
   });
 
@@ -636,7 +755,6 @@ describe("Contacts API Integration", () => {
         description: "Third test topic",
         public: true,
         doubleOptIn: false,
-        subscriberCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: testUser.id,
@@ -690,6 +808,208 @@ describe("Contacts API Integration", () => {
 
       // Clean up
       await db.delete(topic).where(eq(topic.id, secondTopic.id));
+    });
+
+    it("sets pending status when adding double opt-in topic", async () => {
+      // Create contact without subscriptions
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "patch-doi@example.com",
+          emailHash: "hash-patch-doi",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topicIds: [testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.pendingTopics).toBeDefined();
+      expect(body.pendingTopics).toContain(testDoubleOptInTopic.id);
+
+      // Verify subscription is pending in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, existing.id));
+      expect(subscriptions).toHaveLength(1);
+      expect(subscriptions[0].status).toBe("pending");
+      expect(subscriptions[0].subscribedAt).toBeNull();
+      expect(subscriptions[0].confirmedAt).toBeNull();
+    });
+
+    it("auto-confirms re-subscription if previously confirmed", async () => {
+      const confirmedAt = new Date(Date.now() - 86400000); // 1 day ago
+
+      // Create contact with previously confirmed subscription
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "resubscribe-confirmed@example.com",
+          emailHash: "hash-resubscribe-confirmed",
+          properties: {},
+        })
+        .returning();
+
+      // Create previously confirmed but now unsubscribed subscription
+      await db.insert(contactTopic).values({
+        contactId: existing.id,
+        topicId: testDoubleOptInTopic.id,
+        status: "unsubscribed",
+        subscribedAt: confirmedAt,
+        confirmedAt: confirmedAt,
+        unsubscribedAt: new Date(),
+      });
+
+      // Re-subscribe via PATCH
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topicIds: [testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      // Should NOT be pending since previously confirmed
+      expect(body.pendingTopics).toBeUndefined();
+
+      // Verify subscription is auto-confirmed in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, existing.id));
+      expect(subscriptions).toHaveLength(1);
+      expect(subscriptions[0].status).toBe("subscribed");
+      // Preserves original confirmedAt
+      expect(subscriptions[0].confirmedAt?.getTime()).toBe(confirmedAt.getTime());
+    });
+
+    it("requires confirmation for re-subscription if never confirmed", async () => {
+      // Create contact with never-confirmed subscription
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "resubscribe-unconfirmed@example.com",
+          emailHash: "hash-resubscribe-unconfirmed",
+          properties: {},
+        })
+        .returning();
+
+      // Create subscription that was pending (never confirmed)
+      await db.insert(contactTopic).values({
+        contactId: existing.id,
+        topicId: testDoubleOptInTopic.id,
+        status: "unsubscribed",
+        subscribedAt: null,
+        confirmedAt: null, // Never confirmed
+        unsubscribedAt: new Date(),
+      });
+
+      // Re-subscribe via PATCH
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topicIds: [testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      // Should be pending since never confirmed
+      expect(body.pendingTopics).toBeDefined();
+      expect(body.pendingTopics).toContain(testDoubleOptInTopic.id);
+
+      // Verify subscription is pending in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, existing.id));
+      expect(subscriptions).toHaveLength(1);
+      expect(subscriptions[0].status).toBe("pending");
+    });
+
+    it("handles mixed topics with and without previous confirmation", async () => {
+      const confirmedAt = new Date(Date.now() - 86400000);
+
+      // Create contact
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "mixed-confirmation@example.com",
+          emailHash: "hash-mixed-confirmation",
+          properties: {},
+        })
+        .returning();
+
+      // Create previously confirmed subscription for double opt-in topic
+      await db.insert(contactTopic).values({
+        contactId: existing.id,
+        topicId: testDoubleOptInTopic.id,
+        status: "unsubscribed",
+        subscribedAt: confirmedAt,
+        confirmedAt: confirmedAt,
+        unsubscribedAt: new Date(),
+      });
+
+      // Re-subscribe to both regular and double opt-in topics
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topicIds: [testTopic.id, testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      // No pending topics: regular topic doesn't require confirmation,
+      // double opt-in topic was previously confirmed
+      expect(body.pendingTopics).toBeUndefined();
+
+      // Verify subscriptions in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, existing.id));
+      expect(subscriptions).toHaveLength(2);
+
+      const regularSub = subscriptions.find((s) => s.topicId === testTopic.id);
+      const doiSub = subscriptions.find(
+        (s) => s.topicId === testDoubleOptInTopic.id
+      );
+
+      expect(regularSub?.status).toBe("subscribed");
+      expect(doiSub?.status).toBe("subscribed");
     });
   });
 
