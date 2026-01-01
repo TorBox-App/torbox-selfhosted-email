@@ -22,7 +22,7 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "cli": "node packages/cli/dist/cli.js",
     "db:push:test": "dotenv -e apps/web/.env.test -- pnpm --filter=@wraps/db db:push",
-    "sst:dev": "sst dev",
+    "sst:dev": "dotenv -e apps/web/.env.local -- sst dev",
     "sst:deploy": "sst deploy",
     "sst:remove": "sst remove"
   },

@@ -1,5 +1,6 @@
+import crypto from "node:crypto";
 import { createPlatformClient } from "@wraps.dev/client";
-import { and, db, eq, topic } from "@wraps/db";
+import { and, apiKey, db, eq, topic } from "@wraps/db";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 
@@ -23,8 +24,32 @@ function isValidProduct(product: string): boolean {
   return VALID_PRODUCTS.includes(product);
 }
 
-// Cache topic IDs to avoid repeated DB lookups
+// Cache lookups to avoid repeated DB queries
 const topicIdCache = new Map<string, string>();
+const orgIdCache = new Map<string, string>();
+
+function hashApiKey(key: string): string {
+  return crypto.createHash("sha256").update(key).digest("hex");
+}
+
+async function getOrgIdFromApiKey(key: string): Promise<string | null> {
+  const keyHash = hashApiKey(key);
+  if (orgIdCache.has(keyHash)) {
+    return orgIdCache.get(keyHash)!;
+  }
+
+  const [result] = await db
+    .select({ organizationId: apiKey.organizationId })
+    .from(apiKey)
+    .where(eq(apiKey.keyHash, keyHash))
+    .limit(1);
+
+  if (result) {
+    orgIdCache.set(keyHash, result.organizationId);
+    return result.organizationId;
+  }
+  return null;
+}
 
 async function getTopicIdBySlug(slug: string, organizationId: string): Promise<string | null> {
   const cacheKey = `${organizationId}:${slug}`;
@@ -48,24 +73,12 @@ async function getTopicIdBySlug(slug: string, organizationId: string): Promise<s
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Lazy-initialize the client
-let client: ReturnType<typeof createPlatformClient> | null = null;
-
-function getClient() {
-  if (!client) {
-    const apiKey = process.env.WRAPS_API_KEY;
-    if (!apiKey) {
-      throw new Error("WRAPS_API_KEY environment variable is required");
-    }
-    client = createPlatformClient({
-      apiKey,
-      baseUrl: process.env.WRAPS_API_URL,
-    });
-  }
-  return client;
+// Create client with the provided API key
+function getClient(apiKey: string) {
+  return createPlatformClient({ apiKey });
 }
 
 export async function POST(request: Request) {
@@ -98,12 +111,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const orgId = process.env.WRAPS_ORG_ID;
-    if (!orgId) {
-      log.error("WRAPS_ORG_ID environment variable is required");
+    // Get API key from Authorization header
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader) {
       return NextResponse.json(
-        { error: "Waitlist not configured" },
-        { status: 500, headers: corsHeaders }
+        { error: "Authorization header required" },
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
+    const apiKeyValue = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : authHeader;
+
+    if (!apiKeyValue.startsWith("wraps_")) {
+      return NextResponse.json(
+        { error: "Invalid API key format" },
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
+    const orgId = await getOrgIdFromApiKey(apiKeyValue);
+    if (!orgId) {
+      return NextResponse.json(
+        { error: "Invalid API key" },
+        { status: 401, headers: corsHeaders }
       );
     }
 
@@ -120,7 +152,7 @@ export async function POST(request: Request) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Create contact and subscribe to topic using the Platform SDK
-    const platformClient = getClient();
+    const platformClient = getClient(apiKeyValue);
     const { error } = await platformClient.POST("/v1/contacts/", {
       body: {
         email: normalizedEmail,
@@ -158,10 +190,6 @@ export async function POST(request: Request) {
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
+    headers: corsHeaders,
   });
 }
