@@ -365,8 +365,8 @@ importers:
         specifier: 3.0.4
         version: 3.0.4
       '@wraps.dev/client':
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: 0.2.0
+        version: 0.2.0
       '@wraps.dev/email':
         specifier: 0.4.0
         version: 0.4.0(@react-email/components@1.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
@@ -5901,8 +5901,8 @@ packages:
   '@vitest/utils@4.0.8':
     resolution: {integrity: sha512-pdk2phO5NDvEFfUTxcTP8RFYjVj/kfLSPIN5ebP2Mu9kcIMeAQTbknqcFEyBcC4z2pJlJI9aS5UQjcYfhmKAow==}
 
-  '@wraps.dev/client@0.1.0':
-    resolution: {integrity: sha512-ci0LcEHj6JtV75Yr0EIY5MjX+8vxH+rls+QdHfKR6d4jr+EX+9pGyRikLbgI5Dgh65UhIGXD1NtUoTvKo4mtmg==}
+  '@wraps.dev/client@0.2.0':
+    resolution: {integrity: sha512-Bun8vp+U+ntSfqg2yAotFGWjFL95VbU2X5/HJvFK7O4ght0o121FvFSwGn2eKMS8sRSOuyHcaH6R3q9vLCKWvQ==}
     engines: {node: '>=20.0.0'}
 
   '@wraps.dev/email@0.4.0':
@@ -17862,7 +17862,7 @@ snapshots:
       '@vitest/pretty-format': 4.0.8
       tinyrainbow: 3.0.3
 
-  '@wraps.dev/client@0.1.0':
+  '@wraps.dev/client@0.2.0':
     dependencies:
       openapi-fetch: 0.14.1
 
