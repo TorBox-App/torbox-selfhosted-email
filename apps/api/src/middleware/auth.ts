@@ -201,14 +201,18 @@ async function authenticate(
 // Export authenticate function for direct use in routes
 export { authenticate };
 
-// Simple middleware that adds auth to context via derive
-export const authMiddleware = new Elysia({ name: "auth" }).derive(
-  async ({ request, set }) => {
+// Auth middleware using guard pattern for proper request termination
+export const authMiddleware = new Elysia({ name: "auth" })
+  .derive(async ({ request }) => {
     const result = await authenticate(request);
     if ("error" in result) {
-      set.status = 401;
-      throw new Error(result.error);
+      return { auth: null as AuthContext | null, authError: result.error };
     }
-    return { auth: result.auth };
-  }
-);
+    return { auth: result.auth as AuthContext | null, authError: null as string | null };
+  })
+  .onBeforeHandle(({ auth, authError, set }) => {
+    if (authError || !auth) {
+      set.status = 401;
+      return { error: authError || "Unauthorized" };
+    }
+  });
