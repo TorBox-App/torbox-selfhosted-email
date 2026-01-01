@@ -106,6 +106,13 @@
       "when": 1767117628131,
       "tag": "0014_hesitant_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1767300660311,
+      "tag": "0015_blue_giant_girl",
+      "breakpoints": true
     }
   ]
 }
