@@ -23,8 +23,10 @@ export const app = new Elysia()
   })
   .use(
     cors({
-      origin: ["https://wraps.dev", "http://localhost:3000"],
+      origin: true, // Allow any origin for public API
       credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization", "X-Organization-Id"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     })
   )
   .use(

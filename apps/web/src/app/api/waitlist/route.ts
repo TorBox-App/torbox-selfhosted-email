@@ -1,17 +1,6 @@
-import crypto from "node:crypto";
-import { db, waitlist } from "@wraps/db";
+import { createPlatformClient } from "@wraps.dev/client";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
-
-/**
- * Hash email with SHA-256 for deduplication
- */
-function hashEmail(email: string): string {
-  return crypto
-    .createHash("sha256")
-    .update(email.toLowerCase().trim())
-    .digest("hex");
-}
 
 /**
  * Validate email format
@@ -21,13 +10,16 @@ function isValidEmail(email: string): boolean {
 }
 
 /**
- * Valid products for waitlist
+ * Product to topic ID mapping from environment variables
  */
-const VALID_PRODUCTS = ["sms", "queue"] as const;
-type ValidProduct = (typeof VALID_PRODUCTS)[number];
+const PRODUCT_TOPIC_MAP: Record<string, string | undefined> = {
+  sms: process.env.WRAPS_TOPIC_ID_SMS,
+};
 
-function isValidProduct(product: string): product is ValidProduct {
-  return VALID_PRODUCTS.includes(product as ValidProduct);
+const VALID_PRODUCTS = Object.keys(PRODUCT_TOPIC_MAP);
+
+function isValidProduct(product: string): boolean {
+  return VALID_PRODUCTS.includes(product);
 }
 
 const corsHeaders = {
@@ -36,7 +28,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+// Lazy-initialize the client
+let client: ReturnType<typeof createPlatformClient> | null = null;
+
+function getClient() {
+  if (!client) {
+    const apiKey = process.env.WRAPS_API_KEY;
+    if (!apiKey) {
+      throw new Error("WRAPS_API_KEY environment variable is required");
+    }
+    client = createPlatformClient({
+      apiKey,
+      baseUrl: process.env.WRAPS_API_URL,
+    });
+  }
+  return client;
+}
+
 export async function POST(request: Request) {
+  const log = createRequestLogger({ path: "/api/waitlist", method: "POST" });
+
   try {
     const body = await request.json();
     const { email, product, source, referrer } = body as {
@@ -64,24 +75,44 @@ export async function POST(request: Request) {
       );
     }
 
+    const topicId = PRODUCT_TOPIC_MAP[product];
+    if (!topicId) {
+      log.warn({ product }, "Topic ID not configured for product");
+      return NextResponse.json(
+        { error: "Waitlist not configured for this product" },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
     const normalizedEmail = email.toLowerCase().trim();
-    const emailHash = hashEmail(normalizedEmail);
 
-    // Insert into waitlist, ignore duplicates
-    await db
-      .insert(waitlist)
-      .values({
+    // Create contact and subscribe to topic using the Platform SDK
+    const platformClient = getClient();
+    const { error } = await platformClient.POST("/v1/contacts/", {
+      body: {
         email: normalizedEmail,
-        emailHash,
-        product,
-        source: source || "website",
-        referrer: referrer || null,
-      })
-      .onConflictDoNothing();
+        emailStatus: "active",
+        properties: {
+          source: source || "website",
+          referrer: referrer || null,
+          waitlistProduct: product,
+          joinedAt: new Date().toISOString(),
+        },
+        topicIds: [topicId],
+      },
+    });
 
+    if (error) {
+      log.error({ error, email: normalizedEmail }, "API error creating contact");
+      return NextResponse.json(
+        { error: "Failed to join waitlist" },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    log.info({ email: normalizedEmail, product }, "Contact added to waitlist");
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
-    const log = createRequestLogger({ path: "/api/waitlist", method: "POST" });
     log.error({ err: serializeError(error) }, "Failed to add to waitlist");
     return NextResponse.json(
       { error: "Failed to join waitlist" },

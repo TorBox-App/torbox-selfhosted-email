@@ -46,24 +46,21 @@ async function validateApiKey(key: string): Promise<AuthContext | null> {
     return null;
   }
 
-  // Extract prefix (e.g., "wraps_live_abc123" -> "wraps_live_abc")
-  const prefix = key.substring(0, 15);
   const keyHash = hashApiKey(key);
 
-  // Look up API key by prefix
+  // Look up API key by hash (the only reliable way to match)
   const [keyRecord] = await db
     .select({
       id: apiKey.id,
       organizationId: apiKey.organizationId,
       createdBy: apiKey.createdBy,
       expiresAt: apiKey.expiresAt,
-      keyHash: apiKey.keyHash,
     })
     .from(apiKey)
-    .where(eq(apiKey.prefix, prefix))
+    .where(eq(apiKey.keyHash, keyHash))
     .limit(1);
 
-  if (!keyRecord || keyRecord.keyHash !== keyHash) {
+  if (!keyRecord) {
     return null;
   }
 
