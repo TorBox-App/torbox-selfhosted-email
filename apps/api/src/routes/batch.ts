@@ -7,12 +7,11 @@
 
 import { batchSend, contact, db, eq } from "@wraps/db";
 import { and, isNotNull, sql } from "drizzle-orm";
-import { Elysia, t } from "elysia";
+import { t } from "elysia";
 
 import {
   type AuthContext,
-  authenticate,
-  authMiddleware,
+  createAuthenticatedRoutes,
 } from "../middleware/auth";
 import { planGateMiddleware } from "../middleware/plan-gate";
 import { rateLimitMiddleware } from "../middleware/rate-limit";
@@ -54,32 +53,14 @@ const batchResponseSchema = t.Object({
   createdAt: t.String(),
 });
 
-export const batchRoutes = new Elysia({ prefix: "/v1/batch" })
-  .use(authMiddleware)
+export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
   .use(rateLimitMiddleware)
   .use(planGateMiddleware("batch"))
   .post(
     "/",
     async (ctx) => {
-      const { body, set, request } = ctx;
-
-      // Try middleware auth first, fall back to direct authenticate
-      let authContext = (ctx as unknown as { auth?: AuthContext }).auth;
-
-      if (!authContext) {
-        // Middleware didn't set auth, call authenticate directly
-        const authResult = await authenticate(request);
-        if ("error" in authResult) {
-          set.status = 401;
-          throw new Error(authResult.error);
-        }
-        authContext = authResult.auth;
-      }
-
-      if (!authContext?.organizationId) {
-        set.status = 401;
-        throw new Error("Auth failed: no organization ID");
-      }
+      const { body, set } = ctx;
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
       // Use pre-counted recipients if provided, otherwise count here
       let recipientCount = body.totalRecipients;
@@ -167,19 +148,8 @@ export const batchRoutes = new Elysia({ prefix: "/v1/batch" })
   .get(
     "/:id",
     async (ctx) => {
-      const { params, request, set } = ctx;
-
-      // Try middleware auth first, fall back to direct authenticate
-      let authContext = (ctx as unknown as { auth?: AuthContext }).auth;
-
-      if (!authContext) {
-        const authResult = await authenticate(request);
-        if ("error" in authResult) {
-          set.status = 401;
-          throw new Error(authResult.error);
-        }
-        authContext = authResult.auth;
-      }
+      const { params } = ctx;
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
       const [batch] = await db
         .select()
@@ -224,19 +194,8 @@ export const batchRoutes = new Elysia({ prefix: "/v1/batch" })
   .delete(
     "/:id",
     async (ctx) => {
-      const { params, request, set } = ctx;
-
-      // Try middleware auth first, fall back to direct authenticate
-      let authContext = (ctx as unknown as { auth?: AuthContext }).auth;
-
-      if (!authContext) {
-        const authResult = await authenticate(request);
-        if ("error" in authResult) {
-          set.status = 401;
-          throw new Error(authResult.error);
-        }
-        authContext = authResult.auth;
-      }
+      const { params, set } = ctx;
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
       // Find the batch
       const [batch] = await db

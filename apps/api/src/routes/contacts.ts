@@ -22,10 +22,12 @@ import {
   topic,
 } from "@wraps/db";
 import { and, desc, inArray, or, sql } from "drizzle-orm";
-import { Elysia, t } from "elysia";
+import { t } from "elysia";
 
-import { type AuthContext, authMiddleware } from "../middleware/auth";
-import { rateLimitMiddleware } from "../middleware/rate-limit";
+import {
+  type AuthContext,
+  createAuthenticatedRoutes,
+} from "../middleware/auth";
 
 // Schemas
 const contactSchema = t.Object({
@@ -122,9 +124,7 @@ async function resolveTopicSlugs(
   return topics.map((t) => t.id);
 }
 
-export const contactsRoutes = new Elysia({ prefix: "/v1/contacts" })
-  .use(authMiddleware)
-  .use(rateLimitMiddleware)
+export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
   // List contacts
   .get(
     "/",

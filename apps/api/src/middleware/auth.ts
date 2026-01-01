@@ -201,16 +201,55 @@ async function authenticate(
 // Export authenticate function for direct use in routes
 export { authenticate };
 
-// Auth middleware using guard pattern for proper request termination
+/**
+ * Factory function to create authenticated route handlers.
+ *
+ * This is the recommended way to create routes that require authentication.
+ * It sets up derive + onBeforeHandle to authenticate requests before handlers run.
+ *
+ * Usage:
+ * ```typescript
+ * export const myRoutes = createAuthenticatedRoutes("/v1/my-resource")
+ *   .get("/", async ({ auth }) => {
+ *     // auth is guaranteed to be set here
+ *     return { organizationId: auth.organizationId };
+ *   })
+ *   .post("/", async ({ auth, body }) => {
+ *     // ...
+ *   });
+ * ```
+ */
+export function createAuthenticatedRoutes(prefix: string) {
+  return new Elysia({ prefix })
+    .derive(async (ctx) => {
+      // Allow tests to inject mock auth by setting auth before .use()
+      const existingAuth = (ctx as unknown as { auth?: AuthContext }).auth;
+      if (existingAuth) {
+        return { auth: existingAuth, authError: null as string | null };
+      }
+
+      const result = await authenticate(ctx.request);
+      if ("error" in result) {
+        return { auth: null as AuthContext | null, authError: result.error };
+      }
+      return { auth: result.auth, authError: null as string | null };
+    })
+    .onBeforeHandle(({ auth, authError, set }) => {
+      if (authError || !auth) {
+        set.status = 401;
+        return { error: authError || "Unauthorized" };
+      }
+    });
+}
+
+// Legacy auth middleware - prefer createAuthenticatedRoutes for new routes
 export const authMiddleware = new Elysia({ name: "auth" })
   .derive(async ({ request }) => {
     try {
       const result = await authenticate(request);
       if ("error" in result) {
-        console.log("[AUTH MIDDLEWARE] Auth failed:", result.error);
         return { auth: null as AuthContext | null, authError: result.error };
       }
-      console.log("[AUTH MIDDLEWARE] Auth succeeded for org:", result.auth.organizationId);
       return {
         auth: result.auth as AuthContext | null,
         authError: null as string | null,
@@ -221,7 +260,6 @@ export const authMiddleware = new Elysia({ name: "auth" })
     }
   })
   .onBeforeHandle(({ auth, authError, set }) => {
-    console.log("[AUTH MIDDLEWARE] onBeforeHandle - auth:", !!auth, "authError:", authError);
     if (authError || !auth) {
       set.status = 401;
       return { error: authError || "Unauthorized" };
