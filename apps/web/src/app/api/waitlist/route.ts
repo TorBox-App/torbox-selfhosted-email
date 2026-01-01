@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { createPlatformClient } from "@wraps.dev/client";
 import { and, apiKey, db, eq, topic } from "@wraps/db";
+import { createPlatformClient } from "@wraps.dev/client";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 
@@ -51,7 +51,10 @@ async function getOrgIdFromApiKey(key: string): Promise<string | null> {
   return null;
 }
 
-async function getTopicIdBySlug(slug: string, organizationId: string): Promise<string | null> {
+async function getTopicIdBySlug(
+  slug: string,
+  organizationId: string
+): Promise<string | null> {
   const cacheKey = `${organizationId}:${slug}`;
   if (topicIdCache.has(cacheKey)) {
     return topicIdCache.get(cacheKey)!;
@@ -168,7 +171,10 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      log.error({ error, email: normalizedEmail }, "API error creating contact");
+      log.error(
+        { error, email: normalizedEmail },
+        "API error creating contact"
+      );
       return NextResponse.json(
         { error: "Failed to join waitlist" },
         { status: 500, headers: corsHeaders }

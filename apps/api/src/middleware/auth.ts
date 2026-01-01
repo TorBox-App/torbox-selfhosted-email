@@ -208,7 +208,10 @@ export const authMiddleware = new Elysia({ name: "auth" })
     if ("error" in result) {
       return { auth: null as AuthContext | null, authError: result.error };
     }
-    return { auth: result.auth as AuthContext | null, authError: null as string | null };
+    return {
+      auth: result.auth as AuthContext | null,
+      authError: null as string | null,
+    };
   })
   .onBeforeHandle(({ auth, authError, set }) => {
     if (authError || !auth) {

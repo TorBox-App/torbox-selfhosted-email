@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowRight, Blocks, Mail, MessageSquare, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Blocks,
+  Mail,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
