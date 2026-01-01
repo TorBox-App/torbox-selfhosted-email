@@ -67,7 +67,6 @@ const testTopic = {
   description: "Weekly newsletter",
   public: true,
   doubleOptIn: false,
-  subscriberCount: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
   createdBy: testUser.id,
@@ -81,7 +80,6 @@ const testTopic2 = {
   description: "Product release notes",
   public: true,
   doubleOptIn: false,
-  subscriberCount: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
   createdBy: testUser.id,
@@ -183,15 +181,6 @@ beforeEach(async () => {
   await db
     .delete(contact)
     .where(eq(contact.organizationId, testOrganization.id));
-  // Reset topic subscriber counts
-  await db
-    .update(topic)
-    .set({ subscriberCount: 0 })
-    .where(eq(topic.id, testTopic.id));
-  await db
-    .update(topic)
-    .set({ subscriberCount: 0 })
-    .where(eq(topic.id, testTopic2.id));
 });
 
 // Clean up after all tests
@@ -252,12 +241,6 @@ describe("Contacts Server Actions", () => {
         expect(result.contact.topics?.[0].topicId).toBe(testTopic.id);
         expect(result.contact.topics?.[0].status).toBe("subscribed");
       }
-
-      // Verify topic subscriber count was incremented
-      const updatedTopic = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      expect(updatedTopic?.subscriberCount).toBe(1);
     });
 
     it("should reject duplicate email", async () => {
@@ -539,20 +522,8 @@ describe("Contacts Server Actions", () => {
         return;
       }
 
-      // Verify subscriber count is 1
-      let topicData = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      expect(topicData?.subscriberCount).toBe(1);
-
       // Delete contact
       await deleteContact(createResult.contact.id, testOrganization.id);
-
-      // Verify subscriber count is 0
-      topicData = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      expect(topicData?.subscriberCount).toBe(0);
     });
 
     it("should return error for non-existent contact", async () => {
@@ -654,12 +625,6 @@ describe("Contacts Server Actions", () => {
       );
 
       expect(result.success).toBe(true);
-
-      // Verify topic subscriber count decremented
-      const topicData = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      expect(topicData?.subscriberCount).toBe(0);
     });
   });
 
@@ -697,12 +662,6 @@ describe("Contacts Server Actions", () => {
       expect(result.success).toBe(true);
       expect(result.count).toBe(3);
 
-      // Verify topic subscriber count
-      const topicData = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      expect(topicData?.subscriberCount).toBe(3);
-
       // Verify each contact is subscribed
       for (const id of contactIds) {
         const contactResult = await getContact(id, testOrganization.id);
@@ -737,12 +696,6 @@ describe("Contacts Server Actions", () => {
       expect(result.success).toBe(true);
       // Only 1 new subscription (contact2)
       expect(result.count).toBe(1);
-
-      // Topic count should be 2 (1 from creation + 1 from bulk)
-      const topicData = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      expect(topicData?.subscriberCount).toBe(2);
     });
 
     it("should subscribe contacts to multiple topics", async () => {
@@ -772,16 +725,6 @@ describe("Contacts Server Actions", () => {
       if (contactResult.success) {
         expect(contactResult.contact.topics).toHaveLength(2);
       }
-
-      // Verify both topic counts
-      const topic1Data = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      const topic2Data = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic2.id),
-      });
-      expect(topic1Data?.subscriberCount).toBe(1);
-      expect(topic2Data?.subscriberCount).toBe(1);
     });
   });
 
@@ -801,12 +744,6 @@ describe("Contacts Server Actions", () => {
         return;
       }
 
-      // Verify initial count
-      let topicData = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      expect(topicData?.subscriberCount).toBe(2);
-
       const result = await bulkUnsubscribeContactsFromTopics(
         testOrganization.id,
         [contact1.contact.id, contact2.contact.id],
@@ -815,12 +752,6 @@ describe("Contacts Server Actions", () => {
 
       expect(result.success).toBe(true);
       expect(result.count).toBe(2);
-
-      // Verify topic subscriber count is 0
-      topicData = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      expect(topicData?.subscriberCount).toBe(0);
 
       // Verify contacts are unsubscribed
       const contact1Result = await getContact(
@@ -870,16 +801,6 @@ describe("Contacts Server Actions", () => {
         expect(topic1Sub?.status).toBe("unsubscribed");
         expect(topic2Sub?.status).toBe("subscribed");
       }
-
-      // Verify topic counts
-      const topic1Data = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic.id),
-      });
-      const topic2Data = await db.query.topic.findFirst({
-        where: eq(topic.id, testTopic2.id),
-      });
-      expect(topic1Data?.subscriberCount).toBe(0);
-      expect(topic2Data?.subscriberCount).toBe(1);
     });
 
     it("should handle unsubscribing contacts not subscribed to topic", async () => {

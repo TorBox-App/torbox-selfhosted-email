@@ -66,7 +66,7 @@ const SESSION_ORG_1 = {
   token: "session-token-org1",
   userId: "user-1",
   activeOrganizationId: ORG_1.id,
-  expiresAt: new Date(Date.now() + 86400000), // 24 hours from now
+  expiresAt: new Date(Date.now() + 86_400_000), // 24 hours from now
 };
 
 // API key type
@@ -102,14 +102,26 @@ const mockContacts = new Map([
   [
     ORG_1.id,
     [
-      { id: "contact-1-org1", email: "user1@tenant1.com", organizationId: ORG_1.id },
-      { id: "contact-2-org1", email: "user2@tenant1.com", organizationId: ORG_1.id },
+      {
+        id: "contact-1-org1",
+        email: "user1@tenant1.com",
+        organizationId: ORG_1.id,
+      },
+      {
+        id: "contact-2-org1",
+        email: "user2@tenant1.com",
+        organizationId: ORG_1.id,
+      },
     ],
   ],
   [
     ORG_2.id,
     [
-      { id: "contact-1-org2", email: "user1@tenant2.com", organizationId: ORG_2.id },
+      {
+        id: "contact-1-org2",
+        email: "user1@tenant2.com",
+        organizationId: ORG_2.id,
+      },
     ],
   ],
 ]);
@@ -179,114 +191,135 @@ type AuthContext = {
 
 // Create a test app that mimics the real auth middleware behavior
 function createAuthTestApp() {
-  return new Elysia()
-    .derive(async ({ request }) => {
-      const authHeader = request.headers.get("authorization");
-      const orgIdHeader = request.headers.get("x-organization-id");
+  return (
+    new Elysia()
+      .derive(async ({ request }) => {
+        const authHeader = request.headers.get("authorization");
+        const orgIdHeader = request.headers.get("x-organization-id");
 
-      if (!authHeader) {
-        return { auth: null as AuthContext | null, authError: "Unauthorized: no auth header" };
-      }
-
-      const token = authHeader.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : authHeader;
-
-      // API Key auth
-      if (token.startsWith("wraps_")) {
-        const keyHash = getHashForKey(token);
-        const keyRecord = mockApiKeys.get(keyHash);
-
-        if (!keyRecord) {
-          return { auth: null as AuthContext | null, authError: "Unauthorized: invalid API key" };
+        if (!authHeader) {
+          return {
+            auth: null as AuthContext | null,
+            authError: "Unauthorized: no auth header",
+          };
         }
 
-        if (keyRecord.expiresAt && keyRecord.expiresAt < new Date()) {
-          return { auth: null as AuthContext | null, authError: "Unauthorized: API key expired" };
+        const token = authHeader.startsWith("Bearer ")
+          ? authHeader.slice(7)
+          : authHeader;
+
+        // API Key auth
+        if (token.startsWith("wraps_")) {
+          const keyHash = getHashForKey(token);
+          const keyRecord = mockApiKeys.get(keyHash);
+
+          if (!keyRecord) {
+            return {
+              auth: null as AuthContext | null,
+              authError: "Unauthorized: invalid API key",
+            };
+          }
+
+          if (keyRecord.expiresAt && keyRecord.expiresAt < new Date()) {
+            return {
+              auth: null as AuthContext | null,
+              authError: "Unauthorized: API key expired",
+            };
+          }
+
+          const sub = mockSubscriptions.get(keyRecord.organizationId);
+          return {
+            auth: {
+              apiKeyId: keyRecord.id,
+              organizationId: keyRecord.organizationId,
+              userId: keyRecord.createdBy,
+              planId: sub?.plan || null,
+            } as AuthContext,
+            authError: null as string | null,
+          };
         }
 
-        const sub = mockSubscriptions.get(keyRecord.organizationId);
+        // Session auth
+        const sessionRecord = mockSessions.get(token);
+        if (!sessionRecord) {
+          return {
+            auth: null as AuthContext | null,
+            authError: "Unauthorized: session not found",
+          };
+        }
+
+        if (sessionRecord.expiresAt < new Date()) {
+          return {
+            auth: null as AuthContext | null,
+            authError: "Unauthorized: session expired",
+          };
+        }
+
+        const orgId = orgIdHeader || sessionRecord.activeOrganizationId;
+        if (!orgId) {
+          return {
+            auth: null as AuthContext | null,
+            authError: "Unauthorized: no org id",
+          };
+        }
+
+        const memberKey = `${sessionRecord.userId}:${orgId}`;
+        const memberRecord = mockMembers.get(memberKey);
+        if (!memberRecord) {
+          return {
+            auth: null as AuthContext | null,
+            authError: "Unauthorized: user not member of org",
+          };
+        }
+
+        const sub = mockSubscriptions.get(orgId);
         return {
           auth: {
-            apiKeyId: keyRecord.id,
-            organizationId: keyRecord.organizationId,
-            userId: keyRecord.createdBy,
+            apiKeyId: null,
+            organizationId: orgId,
+            userId: sessionRecord.userId,
             planId: sub?.plan || null,
           } as AuthContext,
           authError: null as string | null,
         };
-      }
+      })
+      .onBeforeHandle(({ auth, authError, set }) => {
+        if (authError || !auth) {
+          set.status = 401;
+          return { error: authError || "Unauthorized" };
+        }
+      })
+      // Test endpoints
+      .get("/v1/contacts", ({ auth }) => {
+        const contacts = mockContacts.get(auth!.organizationId) || [];
+        return { contacts, organizationId: auth!.organizationId };
+      })
+      .get("/v1/contacts/:id", ({ auth, params, set }) => {
+        const contacts = mockContacts.get(auth!.organizationId) || [];
+        const contact = contacts.find((c) => c.id === params.id);
 
-      // Session auth
-      const sessionRecord = mockSessions.get(token);
-      if (!sessionRecord) {
-        return { auth: null as AuthContext | null, authError: "Unauthorized: session not found" };
-      }
+        if (!contact) {
+          set.status = 404;
+          return { error: "Contact not found" };
+        }
 
-      if (sessionRecord.expiresAt < new Date()) {
-        return { auth: null as AuthContext | null, authError: "Unauthorized: session expired" };
-      }
-
-      const orgId = orgIdHeader || sessionRecord.activeOrganizationId;
-      if (!orgId) {
-        return { auth: null as AuthContext | null, authError: "Unauthorized: no org id" };
-      }
-
-      const memberKey = `${sessionRecord.userId}:${orgId}`;
-      const memberRecord = mockMembers.get(memberKey);
-      if (!memberRecord) {
-        return { auth: null as AuthContext | null, authError: "Unauthorized: user not member of org" };
-      }
-
-      const sub = mockSubscriptions.get(orgId);
-      return {
-        auth: {
-          apiKeyId: null,
-          organizationId: orgId,
-          userId: sessionRecord.userId,
-          planId: sub?.plan || null,
-        } as AuthContext,
-        authError: null as string | null,
-      };
-    })
-    .onBeforeHandle(({ auth, authError, set }) => {
-      if (authError || !auth) {
-        set.status = 401;
-        return { error: authError || "Unauthorized" };
-      }
-    })
-    // Test endpoints
-    .get("/v1/contacts", ({ auth }) => {
-      const contacts = mockContacts.get(auth!.organizationId) || [];
-      return { contacts, organizationId: auth!.organizationId };
-    })
-    .get("/v1/contacts/:id", ({ auth, params, set }) => {
-      const contacts = mockContacts.get(auth!.organizationId) || [];
-      const contact = contacts.find((c) => c.id === params.id);
-
-      if (!contact) {
-        set.status = 404;
-        return { error: "Contact not found" };
-      }
-
-      return contact;
-    })
-    .post("/v1/contacts", async ({ auth, request }) => {
-      const body = await request.json();
-      return {
-        id: "new-contact",
-        ...body,
-        organizationId: auth!.organizationId,
-      };
-    })
-    .get("/v1/me", ({ auth }) => {
-      return {
+        return contact;
+      })
+      .post("/v1/contacts", async ({ auth, request }) => {
+        const body = await request.json();
+        return {
+          id: "new-contact",
+          ...body,
+          organizationId: auth!.organizationId,
+        };
+      })
+      .get("/v1/me", ({ auth }) => ({
         organizationId: auth!.organizationId,
         userId: auth!.userId,
         planId: auth!.planId,
         apiKeyId: auth!.apiKeyId,
-      };
-    });
+      }))
+  );
 }
 
 describe("Authentication", () => {
@@ -439,7 +472,11 @@ describe("Authentication", () => {
       const body = await response.json();
       expect(body.organizationId).toBe(ORG_1.id);
       expect(body.contacts).toHaveLength(2);
-      expect(body.contacts.every((c: { organizationId: string }) => c.organizationId === ORG_1.id)).toBe(true);
+      expect(
+        body.contacts.every(
+          (c: { organizationId: string }) => c.organizationId === ORG_1.id
+        )
+      ).toBe(true);
     });
 
     it("org 2 can only see org 2 contacts", async () => {
@@ -455,7 +492,11 @@ describe("Authentication", () => {
       const body = await response.json();
       expect(body.organizationId).toBe(ORG_2.id);
       expect(body.contacts).toHaveLength(1);
-      expect(body.contacts.every((c: { organizationId: string }) => c.organizationId === ORG_2.id)).toBe(true);
+      expect(
+        body.contacts.every(
+          (c: { organizationId: string }) => c.organizationId === ORG_2.id
+        )
+      ).toBe(true);
     });
 
     it("org 1 cannot access org 2 contact by ID", async () => {
@@ -649,7 +690,7 @@ describe("Security Edge Cases", () => {
   });
 
   it("handles very long API keys gracefully", async () => {
-    const longKey = "wraps_live_" + "a".repeat(10000);
+    const longKey = "wraps_live_" + "a".repeat(10_000);
     const response = await app.handle(
       new Request("http://localhost/v1/contacts", {
         headers: {

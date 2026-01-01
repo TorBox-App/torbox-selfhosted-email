@@ -2,7 +2,7 @@
 
 import crypto from "node:crypto";
 import { auth } from "@wraps/auth";
-import { contact, contactTopic, db, topic } from "@wraps/db";
+import { contact, contactTopic, db } from "@wraps/db";
 import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -467,16 +467,6 @@ export async function createContact(
           status: "subscribed",
         }))
       );
-
-      // Update topic subscriber counts
-      for (const topicId of data.topicIds) {
-        await db
-          .update(topic)
-          .set({
-            subscriberCount: sql`${topic.subscriberCount} + 1`,
-          })
-          .where(eq(topic.id, topicId));
-      }
     }
 
     // Revalidate
@@ -734,22 +724,6 @@ export async function deleteContact(
       return { success: false, error: "Contact not found" };
     }
 
-    // Decrement topic subscriber counts for subscribed topics
-    const subscribedTopicIds = existing.topics
-      .filter((t) => t.status === "subscribed")
-      .map((t) => t.topicId);
-
-    if (subscribedTopicIds.length > 0) {
-      for (const topicId of subscribedTopicIds) {
-        await db
-          .update(topic)
-          .set({
-            subscriberCount: sql`GREATEST(${topic.subscriberCount} - 1, 0)`,
-          })
-          .where(eq(topic.id, topicId));
-      }
-    }
-
     // Delete contact (cascades to contact_topic)
     await db
       .delete(contact)
@@ -860,16 +834,6 @@ export async function subscribeContactToTopics(
       );
     }
 
-    // Update topic subscriber counts
-    for (const topicId of newTopicIds) {
-      await db
-        .update(topic)
-        .set({
-          subscriberCount: sql`${topic.subscriberCount} + 1`,
-        })
-        .where(eq(topic.id, topicId));
-    }
-
     // Revalidate
     revalidatePath("/[orgSlug]/contacts", "page");
 
@@ -966,14 +930,6 @@ export async function bulkSubscribeContactsToTopics(
         );
       }
 
-      // Update topic counts
-      for (const topicId of newTopicIds) {
-        await db
-          .update(topic)
-          .set({ subscriberCount: sql`${topic.subscriberCount} + 1` })
-          .where(eq(topic.id, topicId));
-      }
-
       subscribed++;
     }
 
@@ -1044,24 +1000,6 @@ export async function bulkUnsubscribeContactsFromTopics(
             or(...topicIds.map((id) => eq(contactTopic.topicId, id)))
           )
         );
-
-      // Update topic counts (decrement for each contact-topic pair)
-      for (const topicId of topicIds) {
-        const countResult = await db
-          .select({ count: count() })
-          .from(contactTopic)
-          .where(
-            and(
-              eq(contactTopic.topicId, topicId),
-              eq(contactTopic.status, "subscribed")
-            )
-          );
-
-        await db
-          .update(topic)
-          .set({ subscriberCount: countResult[0]?.count ?? 0 })
-          .where(eq(topic.id, topicId));
-      }
     }
 
     revalidatePath("/[orgSlug]/contacts", "page");
@@ -1119,16 +1057,6 @@ export async function unsubscribeContactFromTopics(
           or(...topicIds.map((id) => eq(contactTopic.topicId, id)))
         )
       );
-
-    // Decrement topic subscriber counts
-    for (const topicId of topicIds) {
-      await db
-        .update(topic)
-        .set({
-          subscriberCount: sql`GREATEST(${topic.subscriberCount} - 1, 0)`,
-        })
-        .where(eq(topic.id, topicId));
-    }
 
     // Revalidate
     revalidatePath("/[orgSlug]/contacts", "page");

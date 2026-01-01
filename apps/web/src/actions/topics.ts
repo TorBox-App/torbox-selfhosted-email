@@ -81,6 +81,18 @@ export async function listTopics(
       orderBy: [desc(topic.createdAt)],
     });
 
+    // Get subscriber counts using SQL COUNT
+    const subscriberCounts = await db
+      .select({
+        topicId: contactTopic.topicId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(contactTopic)
+      .where(eq(contactTopic.status, "subscribed"))
+      .groupBy(contactTopic.topicId);
+
+    const countMap = new Map(subscriberCounts.map((c) => [c.topicId, c.count]));
+
     return {
       success: true,
       topics: topics.map((t) => ({
@@ -90,7 +102,7 @@ export async function listTopics(
         description: t.description,
         public: t.public,
         doubleOptIn: t.doubleOptIn,
-        subscriberCount: t.subscriberCount,
+        subscriberCount: countMap.get(t.id) ?? 0,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
         createdBy: t.createdByUser,
@@ -137,6 +149,17 @@ export async function getTopic(
       return { success: false, error: "Topic not found" };
     }
 
+    // Get subscriber count using SQL COUNT
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.topicId, topicId),
+          eq(contactTopic.status, "subscribed")
+        )
+      );
+
     return {
       success: true,
       topic: {
@@ -146,7 +169,7 @@ export async function getTopic(
         description: t.description,
         public: t.public,
         doubleOptIn: t.doubleOptIn,
-        subscriberCount: t.subscriberCount,
+        subscriberCount: countResult?.count ?? 0,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
         createdBy: t.createdByUser,

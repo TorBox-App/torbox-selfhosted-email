@@ -1,7 +1,7 @@
 "use server";
 
-import { contact, contactTopic, db, eq, topic } from "@wraps/db";
-import { and, sql } from "drizzle-orm";
+import { contact, contactTopic, db, eq } from "@wraps/db";
+import { and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 
@@ -58,14 +58,6 @@ export async function updatePreferences(
                   eq(contactTopic.topicId, topicId)
                 )
               );
-
-            // Increment topic subscriber count
-            await db
-              .update(topic)
-              .set({
-                subscriberCount: sql`${topic.subscriberCount} + 1`,
-              })
-              .where(eq(topic.id, topicId));
           }
         } else {
           // Create subscription
@@ -75,14 +67,6 @@ export async function updatePreferences(
             status: "subscribed",
             subscribedAt: now,
           });
-
-          // Increment topic subscriber count
-          await db
-            .update(topic)
-            .set({
-              subscriberCount: sql`${topic.subscriberCount} + 1`,
-            })
-            .where(eq(topic.id, topicId));
         }
       } else if (existing && existing.status === "subscribed") {
         // Unsubscribe
@@ -98,14 +82,6 @@ export async function updatePreferences(
               eq(contactTopic.topicId, topicId)
             )
           );
-
-        // Decrement topic subscriber count
-        await db
-          .update(topic)
-          .set({
-            subscriberCount: sql`GREATEST(0, ${topic.subscriberCount} - 1)`,
-          })
-          .where(eq(topic.id, topicId));
       }
     }
 
@@ -144,35 +120,13 @@ export async function unsubscribeGlobally(
       .where(eq(contact.id, contactId));
 
     // Unsubscribe from all topics
-    const existingSubscriptions = await db
-      .select({ topicId: contactTopic.topicId, status: contactTopic.status })
-      .from(contactTopic)
+    await db
+      .update(contactTopic)
+      .set({
+        status: "unsubscribed",
+        unsubscribedAt: now,
+      })
       .where(eq(contactTopic.contactId, contactId));
-
-    for (const sub of existingSubscriptions) {
-      if (sub.status === "subscribed") {
-        await db
-          .update(contactTopic)
-          .set({
-            status: "unsubscribed",
-            unsubscribedAt: now,
-          })
-          .where(
-            and(
-              eq(contactTopic.contactId, contactId),
-              eq(contactTopic.topicId, sub.topicId)
-            )
-          );
-
-        // Decrement topic subscriber count
-        await db
-          .update(topic)
-          .set({
-            subscriberCount: sql`GREATEST(0, ${topic.subscriberCount} - 1)`,
-          })
-          .where(eq(topic.id, sub.topicId));
-      }
-    }
 
     revalidatePath(`/preferences/${token}`);
     return { success: true };

@@ -256,7 +256,10 @@ export const authMiddleware = new Elysia({ name: "auth" })
       };
     } catch (error) {
       console.error("[AUTH MIDDLEWARE] Exception in derive:", error);
-      return { auth: null as AuthContext | null, authError: "Internal auth error" };
+      return {
+        auth: null as AuthContext | null,
+        authError: "Internal auth error",
+      };
     }
   })
   .onBeforeHandle(({ auth, authError, set }) => {

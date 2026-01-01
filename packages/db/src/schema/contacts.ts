@@ -170,9 +170,6 @@ export const topic = pgTable(
     public: boolean("public").default(true).notNull(), // Visible in preference center
     doubleOptIn: boolean("double_opt_in").default(false).notNull(),
 
-    // Cached stats
-    subscriberCount: integer("subscriber_count").default(0).notNull(),
-
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 

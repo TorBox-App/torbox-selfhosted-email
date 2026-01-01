@@ -8,7 +8,7 @@
  */
 
 import { contact, contactTopic, db, eq, topic } from "@wraps/db";
-import { and, sql } from "drizzle-orm";
+import { and } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { verifyUnsubscribeToken } from "../lib/unsubscribe-token";
 
@@ -84,14 +84,6 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
               eq(contactTopic.topicId, topicId)
             )
           );
-
-        // Decrement topic subscriber count
-        await db
-          .update(topic)
-          .set({
-            subscriberCount: sql`GREATEST(0, ${topic.subscriberCount} - 1)`,
-          })
-          .where(eq(topic.id, topicId));
 
         console.log(
           `[UNSUBSCRIBE] Contact ${contactId} unsubscribed from topic ${topicId}`

@@ -820,18 +820,33 @@ export async function listTopicsForBatch(organizationId: string): Promise<
       columns: {
         id: true,
         name: true,
-        subscriberCount: true,
       },
-      orderBy: (t, { desc }) => [desc(t.subscriberCount)],
     });
+
+    // Get subscriber counts using SQL COUNT
+    const subscriberCounts = await db
+      .select({
+        topicId: contactTopic.topicId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(contactTopic)
+      .where(eq(contactTopic.status, "subscribed"))
+      .groupBy(contactTopic.topicId);
+
+    const countMap = new Map(subscriberCounts.map((c) => [c.topicId, c.count]));
+
+    // Sort by subscriber count descending
+    const topicsWithCounts = topics
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        subscriberCount: countMap.get(t.id) ?? 0,
+      }))
+      .sort((a, b) => b.subscriberCount - a.subscriberCount);
 
     return {
       success: true,
-      topics: topics.map((t) => ({
-        id: t.id,
-        name: t.name,
-        subscriberCount: t.subscriberCount,
-      })),
+      topics: topicsWithCounts,
     };
   } catch (error) {
     const log = createActionLogger("listTopicsForBatch", {
