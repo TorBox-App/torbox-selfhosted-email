@@ -7,10 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const API_BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:3000"
-    : "https://app.wraps.dev";
 
 type WaitlistFormProps = {
   product?: string;
@@ -54,7 +50,7 @@ export function WaitlistForm({
       setErrorMessage("");
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/waitlist`, {
+        const response = await fetch("/api/waitlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
