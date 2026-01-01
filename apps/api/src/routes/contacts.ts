@@ -65,6 +65,7 @@ const createContactSchema = t.Object({
   ),
   properties: t.Optional(t.Record(t.String(), t.Unknown())),
   topicIds: t.Optional(t.Array(t.String())),
+  topicSlugs: t.Optional(t.Array(t.String())),
 });
 
 const updateContactSchema = t.Object({
@@ -88,6 +89,7 @@ const updateContactSchema = t.Object({
   ),
   properties: t.Optional(t.Record(t.String(), t.Unknown())),
   topicIds: t.Optional(t.Array(t.String())),
+  topicSlugs: t.Optional(t.Array(t.String())),
 });
 
 const listContactsQuerySchema = t.Object({
@@ -101,6 +103,23 @@ const listContactsQuerySchema = t.Object({
 // Helpers
 function hashValue(value: string): string {
   return createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
+}
+
+// Resolve topic slugs to IDs for the given organization
+async function resolveTopicSlugs(
+  slugs: string[],
+  organizationId: string
+): Promise<string[]> {
+  if (slugs.length === 0) return [];
+
+  const topics = await db
+    .select({ id: topic.id, slug: topic.slug })
+    .from(topic)
+    .where(
+      and(eq(topic.organizationId, organizationId), inArray(topic.slug, slugs))
+    );
+
+  return topics.map((t) => t.id);
 }
 
 export const contactsRoutes = new Elysia({ prefix: "/v1/contacts" })
@@ -331,10 +350,20 @@ export const contactsRoutes = new Elysia({ prefix: "/v1/contacts" })
         })
         .returning();
 
+      // Resolve topic slugs to IDs if provided
+      let topicIds = body.topicIds || [];
+      if (body.topicSlugs && body.topicSlugs.length > 0) {
+        const resolvedIds = await resolveTopicSlugs(
+          body.topicSlugs,
+          authContext.organizationId
+        );
+        topicIds = [...topicIds, ...resolvedIds];
+      }
+
       // Add to topics if specified
-      if (body.topicIds && body.topicIds.length > 0) {
+      if (topicIds.length > 0) {
         await db.insert(contactTopic).values(
-          body.topicIds.map((topicId) => ({
+          topicIds.map((topicId) => ({
             contactId: newContact.id,
             topicId,
             status: "subscribed",
@@ -427,16 +456,26 @@ export const contactsRoutes = new Elysia({ prefix: "/v1/contacts" })
         .returning();
 
       // Update topic subscriptions if specified
-      if (body.topicIds !== undefined) {
+      if (body.topicIds !== undefined || body.topicSlugs !== undefined) {
+        // Resolve topic slugs to IDs if provided
+        let topicIds = body.topicIds || [];
+        if (body.topicSlugs && body.topicSlugs.length > 0) {
+          const resolvedIds = await resolveTopicSlugs(
+            body.topicSlugs,
+            authContext.organizationId
+          );
+          topicIds = [...topicIds, ...resolvedIds];
+        }
+
         // Remove all existing subscriptions
         await db
           .delete(contactTopic)
           .where(eq(contactTopic.contactId, params.id));
 
         // Add new subscriptions
-        if (body.topicIds.length > 0) {
+        if (topicIds.length > 0) {
           await db.insert(contactTopic).values(
-            body.topicIds.map((topicId) => ({
+            topicIds.map((topicId) => ({
               contactId: params.id,
               topicId,
               status: "subscribed",

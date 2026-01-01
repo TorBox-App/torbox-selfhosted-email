@@ -40,7 +40,7 @@ const API_KEY_ORG_1 = {
   keyHash: "hash-org1",
   organizationId: ORG_1.id,
   createdBy: "user-1",
-  expiresAt: null,
+  expiresAt: null as Date | null,
 };
 
 const API_KEY_ORG_2 = {
@@ -49,7 +49,7 @@ const API_KEY_ORG_2 = {
   keyHash: "hash-org2",
   organizationId: ORG_2.id,
   createdBy: "user-2",
-  expiresAt: null,
+  expiresAt: null as Date | null,
 };
 
 const EXPIRED_API_KEY = {
@@ -58,7 +58,7 @@ const EXPIRED_API_KEY = {
   keyHash: "hash-expired",
   organizationId: ORG_1.id,
   createdBy: "user-1",
-  expiresAt: new Date("2020-01-01"), // In the past
+  expiresAt: new Date("2020-01-01") as Date | null, // In the past
 };
 
 const SESSION_ORG_1 = {
@@ -69,8 +69,18 @@ const SESSION_ORG_1 = {
   expiresAt: new Date(Date.now() + 86400000), // 24 hours from now
 };
 
+// API key type
+type MockApiKey = {
+  id: string;
+  key: string;
+  keyHash: string;
+  organizationId: string;
+  createdBy: string;
+  expiresAt: Date | null;
+};
+
 // Mock database responses
-const mockApiKeys = new Map([
+const mockApiKeys = new Map<string, MockApiKey>([
   ["hash-org1", API_KEY_ORG_1],
   ["hash-org2", API_KEY_ORG_2],
   ["hash-expired", EXPIRED_API_KEY],
