@@ -102,11 +102,14 @@ export default async function handler(
     });
 
     if (error) {
-      console.error("API error creating contact:", JSON.stringify(error, null, 2));
+      console.error(
+        "API error creating contact:",
+        JSON.stringify(error, null, 2)
+      );
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.status(500).json({
         error: "Failed to join waitlist",
-        details: process.env.NODE_ENV === "development" ? error : undefined
+        details: process.env.NODE_ENV === "development" ? error : undefined,
       });
       return;
     }
