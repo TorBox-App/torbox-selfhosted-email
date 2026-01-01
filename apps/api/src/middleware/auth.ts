@@ -204,16 +204,24 @@ export { authenticate };
 // Auth middleware using guard pattern for proper request termination
 export const authMiddleware = new Elysia({ name: "auth" })
   .derive(async ({ request }) => {
-    const result = await authenticate(request);
-    if ("error" in result) {
-      return { auth: null as AuthContext | null, authError: result.error };
+    try {
+      const result = await authenticate(request);
+      if ("error" in result) {
+        console.log("[AUTH MIDDLEWARE] Auth failed:", result.error);
+        return { auth: null as AuthContext | null, authError: result.error };
+      }
+      console.log("[AUTH MIDDLEWARE] Auth succeeded for org:", result.auth.organizationId);
+      return {
+        auth: result.auth as AuthContext | null,
+        authError: null as string | null,
+      };
+    } catch (error) {
+      console.error("[AUTH MIDDLEWARE] Exception in derive:", error);
+      return { auth: null as AuthContext | null, authError: "Internal auth error" };
     }
-    return {
-      auth: result.auth as AuthContext | null,
-      authError: null as string | null,
-    };
   })
   .onBeforeHandle(({ auth, authError, set }) => {
+    console.log("[AUTH MIDDLEWARE] onBeforeHandle - auth:", !!auth, "authError:", authError);
     if (authError || !auth) {
       set.status = 401;
       return { error: authError || "Unauthorized" };
