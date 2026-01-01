@@ -374,6 +374,112 @@ describe("Contacts API Integration", () => {
       expect(body.error).toBe("Email or phone is required");
     });
 
+    it("creates contact with topicSlugs", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "slug-subscriber@example.com",
+            topicSlugs: [testTopic.slug],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+
+      // Verify topic subscription in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, body.id));
+      expect(subscriptions).toHaveLength(1);
+      expect(subscriptions[0].topicId).toBe(testTopic.id);
+    });
+
+    it("creates contact with both topicIds and topicSlugs", async () => {
+      // Create a second topic
+      const secondTopic = {
+        id: `${TEST_PREFIX}-topic-2`,
+        organizationId: testOrg.id,
+        name: "Second Topic",
+        slug: "second-topic",
+        description: "Second test topic",
+        public: true,
+        doubleOptIn: false,
+        subscriberCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: testUser.id,
+      };
+      await db
+        .insert(topic)
+        .values(secondTopic)
+        .onConflictDoUpdate({
+          target: topic.id,
+          set: { name: secondTopic.name },
+        });
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "both-topics@example.com",
+            topicIds: [testTopic.id],
+            topicSlugs: [secondTopic.slug],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+
+      // Verify both topic subscriptions in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, body.id));
+      expect(subscriptions).toHaveLength(2);
+
+      const topicIds = subscriptions.map((s) => s.topicId);
+      expect(topicIds).toContain(testTopic.id);
+      expect(topicIds).toContain(secondTopic.id);
+
+      // Clean up
+      await db.delete(topic).where(eq(topic.id, secondTopic.id));
+    });
+
+    it("ignores non-existent topicSlugs", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "invalid-slug@example.com",
+            topicSlugs: ["non-existent-slug"],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+
+      // Should create contact but with no subscriptions
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, body.id));
+      expect(subscriptions).toHaveLength(0);
+    });
+
     it("returns 409 for duplicate email", async () => {
       // Create first contact
       const app = createTestApp();
@@ -484,6 +590,106 @@ describe("Contacts API Integration", () => {
       );
 
       expect(response.status).toBe(404);
+    });
+
+    it("updates contact subscriptions with topicSlugs", async () => {
+      // Create contact without subscriptions
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "update-slugs@example.com",
+          emailHash: "hash-update-slugs",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topicSlugs: [testTopic.slug],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      // Verify topic subscription in database
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, existing.id));
+      expect(subscriptions).toHaveLength(1);
+      expect(subscriptions[0].topicId).toBe(testTopic.id);
+    });
+
+    it("replaces existing subscriptions when updating with topicSlugs", async () => {
+      // Create a second topic
+      const secondTopic = {
+        id: `${TEST_PREFIX}-topic-3`,
+        organizationId: testOrg.id,
+        name: "Third Topic",
+        slug: "third-topic",
+        description: "Third test topic",
+        public: true,
+        doubleOptIn: false,
+        subscriberCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: testUser.id,
+      };
+      await db
+        .insert(topic)
+        .values(secondTopic)
+        .onConflictDoUpdate({
+          target: topic.id,
+          set: { name: secondTopic.name },
+        });
+
+      // Create contact with first topic
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "replace-slugs@example.com",
+          emailHash: "hash-replace-slugs",
+          properties: {},
+        })
+        .returning();
+
+      await db.insert(contactTopic).values({
+        contactId: existing.id,
+        topicId: testTopic.id,
+        status: "subscribed",
+      });
+
+      // Update to second topic only
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topicSlugs: [secondTopic.slug],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      // Verify only second topic subscription exists
+      const subscriptions = await db
+        .select()
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, existing.id));
+      expect(subscriptions).toHaveLength(1);
+      expect(subscriptions[0].topicId).toBe(secondTopic.id);
+
+      // Clean up
+      await db.delete(topic).where(eq(topic.id, secondTopic.id));
     });
   });
 
