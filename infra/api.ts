@@ -78,6 +78,11 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
       actions: ["iam:PassRole"],
       resources: [schedulerRole.arn],
     },
+    // Allow assuming customer AWS roles for sending emails (double opt-in, etc.)
+    {
+      actions: ["sts:AssumeRole"],
+      resources: ["*"], // Customer roles are in their AWS accounts
+    },
   ],
 });
 
