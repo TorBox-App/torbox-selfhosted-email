@@ -405,25 +405,28 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
         // Send confirmation emails for double opt-in topics
         if (pendingTopics.length > 0 && newContact.email) {
-          for (const topicId of pendingTopics) {
-            const topicInfo = topicMap.get(topicId);
-            if (topicInfo) {
-              // Send in background - don't block the response
-              sendTopicConfirmationEmail({
-                contactId: newContact.id,
-                contactEmail: newContact.email,
-                topicId,
-                topicName: topicInfo.name,
-                topicDescription: topicInfo.description,
-                organizationId: authContext.organizationId,
-              }).catch((err: unknown) => {
-                console.error(
-                  `Failed to send confirmation email for topic ${topicId}:`,
-                  err
-                );
-              });
-            }
-          }
+          await Promise.all(
+            pendingTopics.map(async (topicId) => {
+              const topicInfo = topicMap.get(topicId);
+              if (topicInfo) {
+                try {
+                  await sendTopicConfirmationEmail({
+                    contactId: newContact.id,
+                    contactEmail: newContact.email,
+                    topicId,
+                    topicName: topicInfo.name,
+                    topicDescription: topicInfo.description,
+                    organizationId: authContext.organizationId,
+                  });
+                } catch (err) {
+                  console.error(
+                    `Failed to send confirmation email for topic ${topicId}:`,
+                    err
+                  );
+                }
+              }
+            })
+          );
         }
       }
 
@@ -596,25 +599,28 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
           // Send confirmation emails for newly pending topics
           if (pendingTopics.length > 0 && updated.email) {
-            for (const topicId of pendingTopics) {
-              const topicInfo = topicMap.get(topicId);
-              if (topicInfo) {
-                // Send in background - don't block the response
-                sendTopicConfirmationEmail({
-                  contactId: params.id,
-                  contactEmail: updated.email,
-                  topicId,
-                  topicName: topicInfo.name,
-                  topicDescription: topicInfo.description,
-                  organizationId: authContext.organizationId,
-                }).catch((err: unknown) => {
-                  console.error(
-                    `Failed to send confirmation email for topic ${topicId}:`,
-                    err
-                  );
-                });
-              }
-            }
+            await Promise.all(
+              pendingTopics.map(async (topicId) => {
+                const topicInfo = topicMap.get(topicId);
+                if (topicInfo) {
+                  try {
+                    await sendTopicConfirmationEmail({
+                      contactId: params.id,
+                      contactEmail: updated.email,
+                      topicId,
+                      topicName: topicInfo.name,
+                      topicDescription: topicInfo.description,
+                      organizationId: authContext.organizationId,
+                    });
+                  } catch (err) {
+                    console.error(
+                      `Failed to send confirmation email for topic ${topicId}:`,
+                      err
+                    );
+                  }
+                }
+              })
+            );
           }
         }
       }
