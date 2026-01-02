@@ -14,6 +14,7 @@ import {
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
+import { transformVariablesForSes } from "@/lib/ses-variables";
 
 type RouteContext = {
   params: Promise<{
@@ -144,15 +145,21 @@ export async function POST(request: Request, context: RouteContext) {
     );
 
     // Render to HTML
-    const html = await render(emailComponent);
+    const rawHtml = await render(emailComponent);
 
     // Generate plain text version
-    const text = html
+    const rawText = rawHtml
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+
+    // Transform variables for SES compatibility
+    // {{contact.email}} → {{contactEmail}}
+    const sesHtml = transformVariablesForSes(rawHtml);
+    const sesText = transformVariablesForSes(rawText);
+    const sesSubject = transformVariablesForSes(templateData.subject);
 
     // Generate SES template name
     const sesTemplateName = generateSESTemplateName(
@@ -160,15 +167,16 @@ export async function POST(request: Request, context: RouteContext) {
       templateData.name
     );
 
-    // Create or update SES template
+    // Create or update SES template with transformed variables
     await upsertSESTemplate(credentials, customerAwsAccount.region, {
       templateName: sesTemplateName,
-      subject: templateData.subject,
-      htmlPart: html,
-      textPart: text,
+      subject: sesSubject,
+      htmlPart: sesHtml,
+      textPart: sesText,
     });
 
     // Update template in our database
+    // Store the original HTML (with our variable format) for local use
     const now = new Date();
     await db
       .update(template)
@@ -176,8 +184,8 @@ export async function POST(request: Request, context: RouteContext) {
         status: "PUBLISHED",
         sesTemplateName,
         publishedAt: now,
-        compiledHtml: html,
-        compiledText: text,
+        compiledHtml: rawHtml,
+        compiledText: rawText,
         updatedAt: now,
       })
       .where(eq(template.id, id));

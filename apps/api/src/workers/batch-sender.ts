@@ -133,92 +133,89 @@ async function processJob(job: BatchJob): Promise<void> {
     orgName = org?.name ?? undefined;
   }
 
-  // Send to each contact
+  // Send to each contact (in parallel with concurrency limit)
   let sent = 0;
   let failed = 0;
 
   const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
   const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
 
-  for (const recipient of contacts) {
-    try {
-      if (channel === "email" && recipient.email) {
-        // Generate unsubscribe token and URLs only for marketing emails
-        let unsubscribeUrl: string | undefined;
-        let preferencesUrl: string | undefined;
+  // Concurrency limit - SES allows 14 requests/second in most regions
+  const CONCURRENCY_LIMIT = 10;
 
-        if (emailType === "marketing") {
-          const unsubscribeToken = await generateUnsubscribeToken(
-            recipient.id,
-            organizationId
-          );
-          unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
-          preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
-        }
+  // Process contacts in parallel batches
+  const emailContacts = contacts.filter(
+    (c) => channel === "email" && c.email
+  );
 
-        // Substitute variables in template HTML
-        let emailHtml =
-          templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
+  // Process in parallel with concurrency limit
+  const results = await Promise.allSettled(
+    emailContacts.map(async (recipient, index) => {
+      // Simple concurrency control - stagger starts
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.floor(index / CONCURRENCY_LIMIT) * 100)
+      );
 
-        if (templateHtml) {
-          // Build variables object for substitution
-          const variables: Record<string, string | undefined> = {
-            "contact.email": recipient.email,
-            "contact.firstName": recipient.firstName ?? undefined,
-            "contact.lastName": recipient.lastName ?? undefined,
-            "contact.company": recipient.company ?? undefined,
-            "contact.jobTitle": recipient.jobTitle ?? undefined,
-            "organization.name": orgName,
-            unsubscribeUrl,
-            preferencesUrl,
-            // Spread any custom properties (prefixed with contact.properties.)
-            ...Object.fromEntries(
-              Object.entries(recipient.properties).map(([key, value]) => [
-                `contact.properties.${key}`,
-                String(value ?? ""),
-              ])
-            ),
-          };
+      // Generate unsubscribe token and URLs only for marketing emails
+      let unsubscribeUrl: string | undefined;
+      let preferencesUrl: string | undefined;
 
-          emailHtml = substituteVariables(templateHtml, variables);
-        }
-        const messageId = await sendEmail(sesClient, {
-          from: batch.from ?? `noreply@${getDefaultDomain()}`,
-          fromName: batch.fromName,
-          to: recipient.email,
-          subject: batch.subject ?? "Message from Wraps",
-          html: emailHtml,
-          replyTo: batch.replyTo,
-          emailType,
+      if (emailType === "marketing") {
+        const unsubscribeToken = await generateUnsubscribeToken(
+          recipient.id,
+          organizationId
+        );
+        unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
+        preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+      }
+
+      // Substitute variables in template HTML
+      let emailHtml =
+        templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
+
+      if (templateHtml) {
+        // Build variables object for substitution
+        const variables: Record<string, string | undefined> = {
+          "contact.email": recipient.email!,
+          "contact.firstName": recipient.firstName ?? undefined,
+          "contact.lastName": recipient.lastName ?? undefined,
+          "contact.company": recipient.company ?? undefined,
+          "contact.jobTitle": recipient.jobTitle ?? undefined,
+          "organization.name": orgName,
           unsubscribeUrl,
           preferencesUrl,
-        });
+          // Spread any custom properties (prefixed with contact.properties.)
+          ...Object.fromEntries(
+            Object.entries(recipient.properties).map(([key, value]) => [
+              `contact.properties.${key}`,
+              String(value ?? ""),
+            ])
+          ),
+        };
 
-        // Record successful send
-        await db.insert(messageSend).values({
-          organizationId,
-          contactId: recipient.id,
-          awsAccountId,
-          channel: "email",
-          batchSendId: batchId,
-          sourceType: "batch",
-          recipient: recipient.email,
-          subject: batch.subject,
-          from: batch.from,
-          fromName: batch.fromName,
-          emailTemplateId: batch.emailTemplateId,
-          messageId,
-          status: "sent",
-          sentAt: new Date(),
-        });
-
-        sent++;
+        emailHtml = substituteVariables(templateHtml, variables);
       }
-      // SMS handling would go here (Phase 3)
-    } catch (error) {
-      console.error(`Failed to send to ${recipient.email}:`, error);
 
-      // Record failed send
+      const messageId = await sendEmail(sesClient, {
+        from: batch.from ?? `noreply@${getDefaultDomain()}`,
+        fromName: batch.fromName,
+        to: recipient.email!,
+        subject: batch.subject ?? "Message from Wraps",
+        html: emailHtml,
+        replyTo: batch.replyTo,
+        emailType,
+        unsubscribeUrl,
+        preferencesUrl,
+      });
+
+      return { recipient, messageId };
+    })
+  );
+
+  // Record results
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      const { recipient, messageId } = result.value;
       await db.insert(messageSend).values({
         organizationId,
         contactId: recipient.id,
@@ -226,15 +223,42 @@ async function processJob(job: BatchJob): Promise<void> {
         channel: "email",
         batchSendId: batchId,
         sourceType: "batch",
-        recipient: recipient.email ?? "",
+        recipient: recipient.email!,
         subject: batch.subject,
         from: batch.from,
         fromName: batch.fromName,
         emailTemplateId: batch.emailTemplateId,
-        status: "failed",
-        error: error instanceof Error ? error.message : "Unknown error",
+        messageId,
+        status: "sent",
+        sentAt: new Date(),
       });
+      sent++;
+    } else {
+      // Find which recipient failed
+      const index = results.indexOf(result);
+      const recipient = emailContacts[index];
+      console.error(`Failed to send to ${recipient?.email}:`, result.reason);
 
+      if (recipient) {
+        await db.insert(messageSend).values({
+          organizationId,
+          contactId: recipient.id,
+          awsAccountId,
+          channel: "email",
+          batchSendId: batchId,
+          sourceType: "batch",
+          recipient: recipient.email ?? "",
+          subject: batch.subject,
+          from: batch.from,
+          fromName: batch.fromName,
+          emailTemplateId: batch.emailTemplateId,
+          status: "failed",
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : "Unknown error",
+        });
+      }
       failed++;
     }
   }

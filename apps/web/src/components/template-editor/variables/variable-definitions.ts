@@ -253,3 +253,70 @@ export function toSuggestionFormat(
     description: v.description,
   }));
 }
+
+// =============================================================================
+// SES VARIABLE TRANSFORMATION
+// SES Handlebars requires flat variable names (no dot notation)
+// =============================================================================
+
+/**
+ * Convert our variable name (dot notation) to SES-compatible format (camelCase)
+ * Examples:
+ *   - "contact.email" → "contactEmail"
+ *   - "contact.firstName" → "contactFirstName"
+ *   - "organization.name" → "organizationName"
+ *   - "unsubscribeUrl" → "unsubscribeUrl" (no change)
+ */
+export function toSesVariableName(name: string): string {
+  if (!name.includes(".")) {
+    return name;
+  }
+
+  const parts = name.split(".");
+  return parts
+    .map((part, index) =>
+      index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
+    )
+    .join("");
+}
+
+/**
+ * Transform HTML content to use SES-compatible variable names
+ * Converts {{contact.email}} to {{contactEmail}}
+ */
+export function transformVariablesForSes(html: string): string {
+  // Match {{variableName}} patterns, including with whitespace
+  return html.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (match, varName) => {
+    const sesName = toSesVariableName(varName);
+    return `{{${sesName}}}`;
+  });
+}
+
+/**
+ * Build SES template data object with flattened variable names
+ * Input: { contact: { email: "foo@bar.com", firstName: "John" }, unsubscribeUrl: "..." }
+ * Output: { contactEmail: "foo@bar.com", contactFirstName: "John", unsubscribeUrl: "..." }
+ */
+export function flattenVariablesForSes(
+  data: Record<string, unknown>
+): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  function flatten(obj: Record<string, unknown>, prefix = "") {
+    for (const [key, value] of Object.entries(obj)) {
+      const newKey = prefix
+        ? `${prefix}${key.charAt(0).toUpperCase()}${key.slice(1)}`
+        : key;
+
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        flatten(value as Record<string, unknown>, newKey);
+      } else {
+        // SES requires string values
+        result[newKey] = value != null ? String(value) : "";
+      }
+    }
+  }
+
+  flatten(data);
+  return result;
+}
