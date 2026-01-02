@@ -1,10 +1,13 @@
+import { render } from "@react-email/render";
+import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
-import { db, template, templateVersion } from "@wraps/db";
+import { brandKit, db, template, templateVersion } from "@wraps/db";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
 
 type RouteContext = {
   params: Promise<{
@@ -131,6 +134,63 @@ export async function PUT(request: Request, context: RouteContext) {
 
     if (content !== undefined) {
       updateData.content = content;
+
+      // Auto-compile HTML for broadcasts (without pushing to SES)
+      try {
+        // Fetch default brand kit for styling
+        const defaultBrandKit = await db.query.brandKit.findFirst({
+          where: and(
+            eq(brandKit.organizationId, orgWithMembership.id),
+            eq(brandKit.isDefault, true)
+          ),
+        });
+
+        // Convert TipTap content to React Email component
+        const emailComponent = tiptapToReactEmail(
+          content as JSONContent,
+          {}, // Empty data - variables stay as placeholders
+          {
+            keepVariablesAsPlaceholders: true,
+            brandKit: defaultBrandKit
+              ? {
+                  primaryColor: defaultBrandKit.primaryColor,
+                  secondaryColor: defaultBrandKit.secondaryColor,
+                  backgroundColor: defaultBrandKit.backgroundColor,
+                  textColor: defaultBrandKit.textColor,
+                  fontFamily: defaultBrandKit.fontFamily,
+                  headingFontFamily:
+                    defaultBrandKit.headingFontFamily ?? undefined,
+                  buttonRadius: defaultBrandKit.buttonRadius,
+                }
+              : undefined,
+          }
+        );
+
+        // Render to HTML
+        const compiledHtml = await render(emailComponent);
+
+        // Generate plain text version
+        const compiledText = compiledHtml
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        updateData.compiledHtml = compiledHtml;
+        updateData.compiledText = compiledText;
+      } catch (compileError) {
+        // Log but don't fail the save - template content is still saved
+        const log = createRequestLogger({
+          path: "/api/[orgSlug]/emails/templates/[id]",
+          method: "PUT",
+          orgSlug,
+        });
+        log.warn(
+          { err: serializeError(compileError) },
+          "Failed to compile template HTML"
+        );
+      }
     }
     if (name !== undefined) {
       updateData.name = name.trim();

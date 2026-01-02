@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   useCreateTemplate,
-  usePublishTemplate,
   useTemplate,
   useUpdateTemplate,
 } from "@/hooks/use-template-queries";
@@ -138,8 +137,6 @@ export function InlineEditor({
     orgSlug,
     effectiveTemplateId ?? ""
   );
-  // Publish mutation to compile template for broadcasts
-  const publishMutation = usePublishTemplate(orgSlug, effectiveTemplateId ?? "");
 
   // Create template immediately on mount if no templateId (for AI support)
   useEffect(() => {
@@ -197,22 +194,12 @@ export function InlineEditor({
         }
 
         // Update template with content and metadata
+        // Note: The API auto-compiles HTML on save, so broadcasts work immediately
         await updateMutation.mutateAsync({
           content,
           subject: subject || metadata.subject,
           description: previewText || metadata.previewText,
         });
-
-        // Auto-publish to compile template HTML for broadcasts
-        // This populates compiledHtml which is needed for batch sending
-        if (savedTemplateId) {
-          try {
-            await publishMutation.mutateAsync({});
-          } catch (publishError) {
-            // Log but don't fail the save - template is saved, just not published
-            console.warn("Failed to auto-publish template:", publishError);
-          }
-        }
 
         toast.success("Template saved");
         onSave?.(savedTemplateId);
@@ -228,7 +215,6 @@ export function InlineEditor({
       effectiveTemplateId,
       createMutation,
       updateMutation,
-      publishMutation,
       templateName,
       subject,
       previewText,
