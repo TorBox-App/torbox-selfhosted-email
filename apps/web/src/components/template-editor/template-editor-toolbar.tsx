@@ -1,6 +1,7 @@
 "use client";
 
 import type { Editor } from "@tiptap/react";
+import type { EmailType } from "@wraps/db";
 import {
   BookOpen,
   Braces,
@@ -56,12 +57,17 @@ type TemplateEditorToolbarProps = {
   isPublishing?: boolean;
   subject?: string | null;
   previewText?: string | null;
+  emailType?: EmailType;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   onImport?: () => void;
   onSave?: () => void;
   onSaveBlock?: () => void;
   onSendTest?: () => void;
-  onSubjectChange?: (subject: string, previewText: string) => void;
+  onSubjectChange?: (
+    subject: string,
+    previewText: string,
+    emailType: EmailType
+  ) => void;
   onPublish?: () => void;
   onUnpublish?: () => void;
   onDuplicate?: () => void;
@@ -93,6 +99,7 @@ export function TemplateEditorToolbar({
   isPublishing,
   subject,
   previewText,
+  emailType = "marketing",
   status = "DRAFT",
   onImport,
   onSave,
@@ -475,10 +482,11 @@ export function TemplateEditorToolbar({
 
       {/* Subject Edit Dialog */}
       <SubjectEditDialog
+        emailType={emailType}
         isOpen={showSubjectDialog}
         onClose={() => setShowSubjectDialog(false)}
-        onSave={(newSubject, newPreviewText) => {
-          onSubjectChange?.(newSubject, newPreviewText);
+        onSave={(newSubject, newPreviewText, newEmailType) => {
+          onSubjectChange?.(newSubject, newPreviewText, newEmailType);
         }}
         previewText={previewText ?? ""}
         subject={subject ?? ""}

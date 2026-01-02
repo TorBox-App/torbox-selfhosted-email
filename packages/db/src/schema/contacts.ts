@@ -11,6 +11,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { organization, user } from "./auth";
+import { template } from "./templates";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -90,7 +91,13 @@ export const contact = pgTable(
     // SHARED FIELDS
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Custom attributes
+    // Contact profile (first-class fields for common attributes)
+    firstName: text("first_name"),
+    lastName: text("last_name"),
+    company: text("company"),
+    jobTitle: text("job_title"),
+
+    // Custom attributes (for additional/custom fields)
     properties: json("properties")
       .$type<Record<string, unknown>>()
       .default({})
@@ -195,6 +202,10 @@ export const topicSettings = pgTable("topic_settings", {
   confirmationFromName: text("confirmation_from_name"), // e.g., "Acme Inc"
   confirmationFromEmail: text("confirmation_from_email"), // e.g., "noreply@acme.com"
   confirmationReplyToEmail: text("confirmation_reply_to_email"), // optional reply-to
+  confirmationTemplateId: text("confirmation_template_id").references(
+    () => template.id,
+    { onDelete: "set null" }
+  ), // Optional custom email template for confirmation emails
 
   // Preference Center Settings
   preferenceCenterTitle: text("preference_center_title"),
@@ -269,5 +280,9 @@ export const topicSettingsRelations = relations(topicSettings, ({ one }) => ({
   organization: one(organization, {
     fields: [topicSettings.organizationId],
     references: [organization.id],
+  }),
+  confirmationTemplate: one(template, {
+    fields: [topicSettings.confirmationTemplateId],
+    references: [template.id],
   }),
 }));

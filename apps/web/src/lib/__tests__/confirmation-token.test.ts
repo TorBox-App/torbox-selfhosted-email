@@ -135,7 +135,7 @@ describe("Confirmation Token", () => {
         "topic-789"
       );
 
-      expect(url).toMatch(/^https:\/\/wraps\.dev\/confirm\/.+$/);
+      expect(url).toMatch(/^https:\/\/app\.wraps\.dev\/confirm\/.+$/);
     });
 
     it("should generate URL with verifiable token", async () => {

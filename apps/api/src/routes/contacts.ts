@@ -404,7 +404,8 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         );
 
         // Send confirmation emails for double opt-in topics
-        if (pendingTopics.length > 0 && newContact.email) {
+        const contactEmailForConfirmation = newContact.email;
+        if (pendingTopics.length > 0 && contactEmailForConfirmation) {
           await Promise.all(
             pendingTopics.map(async (topicId) => {
               const topicInfo = topicMap.get(topicId);
@@ -412,7 +413,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                 try {
                   await sendTopicConfirmationEmail({
                     contactId: newContact.id,
-                    contactEmail: newContact.email,
+                    contactEmail: contactEmailForConfirmation,
                     topicId,
                     topicName: topicInfo.name,
                     topicDescription: topicInfo.description,
@@ -598,7 +599,8 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           );
 
           // Send confirmation emails for newly pending topics
-          if (pendingTopics.length > 0 && updated.email) {
+          const updatedEmailForConfirmation = updated.email;
+          if (pendingTopics.length > 0 && updatedEmailForConfirmation) {
             await Promise.all(
               pendingTopics.map(async (topicId) => {
                 const topicInfo = topicMap.get(topicId);
@@ -606,7 +608,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                   try {
                     await sendTopicConfirmationEmail({
                       contactId: params.id,
-                      contactEmail: updated.email,
+                      contactEmail: updatedEmailForConfirmation,
                       topicId,
                       topicName: topicInfo.name,
                       topicDescription: topicInfo.description,

@@ -132,6 +132,7 @@ function TemplateEditorContent({
   const [showImportModal, setShowImportModal] = useState(false);
   const [subject, setSubject] = useState(template.subject ?? "");
   const [previewText, setPreviewText] = useState(template.description ?? "");
+  const [emailType, setEmailType] = useState(template.emailType);
 
   const {
     view,
@@ -223,15 +224,27 @@ function TemplateEditorContent({
 
   // Handle subject and preview text change from dialog
   const handleSubjectChange = useCallback(
-    (newSubject: string, newPreviewText: string) => {
+    (
+      newSubject: string,
+      newPreviewText: string,
+      newEmailType: "marketing" | "transactional"
+    ) => {
       setSubject(newSubject);
       setPreviewText(newPreviewText);
-      // Save description (preview text) immediately
+      setEmailType(newEmailType);
+      // Save description and emailType immediately
+      const updates: { description?: string; emailType?: "marketing" | "transactional" } = {};
       if (newPreviewText !== template.description) {
-        updateMutation.mutate({ description: newPreviewText });
+        updates.description = newPreviewText;
+      }
+      if (newEmailType !== template.emailType) {
+        updates.emailType = newEmailType;
+      }
+      if (Object.keys(updates).length > 0) {
+        updateMutation.mutate(updates);
       }
     },
-    [template.description, updateMutation]
+    [template.description, template.emailType, updateMutation]
   );
 
   // Handle publish
@@ -351,6 +364,7 @@ function TemplateEditorContent({
           {/* Toolbar */}
           <TemplateEditorToolbar
             editor={editor}
+            emailType={emailType}
             isPublishing={
               publishMutation.isPending || unpublishMutation.isPending
             }

@@ -5,12 +5,15 @@ import {
   ArrowLeft,
   CalendarIcon,
   Check,
+  ChevronDown,
   Clock,
   Code,
   ExternalLink,
   FileText,
   Filter,
   Lock,
+  Pencil,
+  Plus,
   RefreshCw,
   Send,
   Tag,
@@ -40,6 +43,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { TemplateEditorDialog } from "@/components/template-editor/wrappers";
+import { useTemplates } from "@/hooks/use-template-queries";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -471,7 +481,6 @@ export function BatchForm({
               data={campaignData}
               onChange={updateData}
               orgSlug={orgSlug}
-              templates={templates}
             />
           )}
           {currentStep === "audience" && (
@@ -494,10 +503,10 @@ export function BatchForm({
               loadingCount={loadingCount}
               onChange={updateData}
               onSend={handleSend}
+              orgSlug={orgSlug}
               recipientCount={recipientCount}
               schedulingEnabled={schedulingEnabled}
               segments={segments}
-              templates={templates}
               topics={topics}
             />
           )}
@@ -741,13 +750,44 @@ function ContentStep({
   data,
   onChange,
   orgSlug,
-  templates,
 }: {
   data: CampaignData;
   onChange: (updates: Partial<CampaignData>) => void;
   orgSlug: string;
-  templates: Template[];
 }) {
+  // Fetch templates with React Query - auto-updates when new templates are created
+  const { data: templatesData } = useTemplates(orgSlug);
+  const templates: Template[] = (templatesData ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    subject: t.subject,
+  }));
+  const [showEditorDialog, setShowEditorDialog] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | undefined>();
+  const [showAdvanced, setShowAdvanced] = useState(data.contentType === "html");
+
+  // Handle creating a new template - go straight to editor with broadcast name
+  const handleCreateNew = () => {
+    setEditingTemplateId(undefined);
+    setShowEditorDialog(true);
+  };
+
+  // Handle editing an existing template
+  const handleEditTemplate = (templateId: string) => {
+    setEditingTemplateId(templateId);
+    setShowEditorDialog(true);
+  };
+
+  // Handle template selection from editor
+  const handleTemplateSelect = (templateId: string) => {
+    onChange({ templateId, contentType: "template" });
+    setShowEditorDialog(false);
+    setEditingTemplateId(undefined);
+  };
+
+  // Use broadcast name as template name, or generate a default
+  const templateName = data.name || `Broadcast ${new Date().toLocaleDateString()}`;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -757,131 +797,188 @@ function ContentStep({
             Choose how to build your email content
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <RadioGroup
-            onValueChange={(v) =>
-              onChange({
-                contentType: v as ContentType,
-                templateId: "",
-                htmlContent: "",
-              })
-            }
-            value={data.contentType}
-          >
-            {/* Use Template */}
-            <div className="flex items-start space-x-3 rounded-lg border p-4">
-              <RadioGroupItem id="template" value="template" />
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-2">
-                  <label
-                    className="cursor-pointer font-medium text-sm"
-                    htmlFor="template"
-                  >
-                    <FileText className="mr-1 inline h-4 w-4" />
-                    Use Template
-                  </label>
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  Select from your saved email templates
-                </p>
-                {data.contentType === "template" && (
-                  <div className="space-y-3">
-                    {templates.length > 0 ? (
-                      <>
-                        <Select
-                          onValueChange={(v) => onChange({ templateId: v })}
-                          value={data.templateId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a template" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {templates.map((template) => (
-                              <SelectItem key={template.id} value={template.id}>
-                                {template.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-muted-foreground text-xs">
-                          Or{" "}
-                          <Link
-                            className="text-primary hover:underline"
-                            href={`/${orgSlug}/emails/templates/new`}
-                            target="_blank"
-                          >
-                            create a new template
-                            <ExternalLink className="ml-0.5 inline h-3 w-3" />
-                          </Link>
-                        </p>
-                      </>
-                    ) : (
-                      <div className="rounded-lg border border-dashed p-4 text-center">
-                        <p className="text-muted-foreground text-sm">
-                          No templates yet
-                        </p>
-                        <Button
-                          asChild
-                          className="mt-2"
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Link
-                            href={`/${orgSlug}/emails/templates/new`}
-                            target="_blank"
-                          >
-                            <ExternalLink className="mr-1 h-3 w-3" />
-                            Create Template
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
+        <CardContent className="space-y-4">
+          {/* Use Template - Primary Option */}
+          <div className="rounded-lg border p-4">
+            <RadioGroup
+              onValueChange={(v) => {
+                if (v === "template") {
+                  onChange({ contentType: v as ContentType });
+                  setShowAdvanced(false);
+                }
+              }}
+              value={data.contentType === "template" ? "template" : undefined}
+            >
+              <div className="flex items-start space-x-3">
+                <RadioGroupItem id="template" value="template" />
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <label
+                      className="cursor-pointer font-medium text-sm"
+                      htmlFor="template"
+                    >
+                      <FileText className="mr-1 inline h-4 w-4" />
+                      Use Template
+                    </label>
                   </div>
-                )}
-              </div>
-            </div>
+                  <p className="text-muted-foreground text-xs">
+                    Select from your saved email templates or create a new one
+                  </p>
+                  {data.contentType === "template" && (
+                    <div className="space-y-3">
+                      {templates.length > 0 ? (
+                        <>
+                          <Select
+                            onValueChange={(v) => onChange({ templateId: v })}
+                            value={data.templateId}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a template" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {templates.map((template) => (
+                                <SelectItem key={template.id} value={template.id}>
+                                  {template.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
 
-            {/* Custom HTML */}
-            <div className="flex items-start space-x-3 rounded-lg border p-4">
-              <RadioGroupItem id="html" value="html" />
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-2">
-                  <label
-                    className="cursor-pointer font-medium text-sm"
-                    htmlFor="html"
-                  >
-                    <Code className="mr-1 inline h-4 w-4" />
-                    Custom HTML
-                  </label>
+                          {/* Action buttons */}
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              onClick={handleCreateNew}
+                              size="sm"
+                              type="button"
+                              variant="outline"
+                            >
+                              <Plus className="mr-1 h-3.5 w-3.5" />
+                              Create New
+                            </Button>
+                            {data.templateId && (
+                              <Button
+                                onClick={() => handleEditTemplate(data.templateId)}
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                              >
+                                <Pencil className="mr-1 h-3.5 w-3.5" />
+                                Edit Selected
+                              </Button>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="rounded-lg border border-dashed p-4 text-center">
+                          <p className="text-muted-foreground text-sm">
+                            No templates yet
+                          </p>
+                          <Button
+                            className="mt-2"
+                            onClick={handleCreateNew}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" />
+                            Create Your First Template
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  Paste your own HTML email content
-                </p>
-                {data.contentType === "html" && (
-                  <div className="space-y-2">
-                    <Textarea
-                      className="min-h-[200px] font-mono text-sm"
-                      onChange={(e) =>
-                        onChange({ htmlContent: e.target.value })
-                      }
-                      placeholder="<html>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Advanced Options - Collapsible */}
+          <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+            <CollapsibleTrigger asChild>
+              <Button
+                className="w-full justify-between"
+                type="button"
+                variant="ghost"
+              >
+                <span className="text-muted-foreground text-sm">
+                  Advanced options
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-muted-foreground transition-transform",
+                    showAdvanced && "rotate-180"
+                  )}
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              <div className="rounded-lg border p-4">
+                <RadioGroup
+                  onValueChange={(v) => {
+                    onChange({
+                      contentType: v as ContentType,
+                      templateId: "",
+                    });
+                  }}
+                  value={data.contentType === "html" ? "html" : undefined}
+                >
+                  <div className="flex items-start space-x-3">
+                    <RadioGroupItem id="html" value="html" />
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <label
+                          className="cursor-pointer font-medium text-sm"
+                          htmlFor="html"
+                        >
+                          <Code className="mr-1 inline h-4 w-4" />
+                          Custom HTML
+                        </label>
+                      </div>
+                      <p className="text-muted-foreground text-xs">
+                        Paste your own HTML email content
+                      </p>
+                      {data.contentType === "html" && (
+                        <div className="space-y-2">
+                          <Textarea
+                            className="min-h-[200px] font-mono text-sm"
+                            onChange={(e) =>
+                              onChange({ htmlContent: e.target.value })
+                            }
+                            placeholder="<html>
   <body>
     <h1>Your Email Content</h1>
     <p>Enter your HTML here...</p>
   </body>
 </html>"
-                      value={data.htmlContent}
-                    />
-                    <p className="text-muted-foreground text-xs">
-                      Tip: Make sure your HTML is responsive for mobile devices
-                    </p>
+                            value={data.htmlContent}
+                          />
+                          <p className="text-muted-foreground text-xs">
+                            Tip: Make sure your HTML is responsive for mobile devices
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+                </RadioGroup>
               </div>
-            </div>
-          </RadioGroup>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
+
+      {/* Template Editor Dialog */}
+      <TemplateEditorDialog
+        open={showEditorDialog}
+        onOpenChange={setShowEditorDialog}
+        onTemplateSelect={handleTemplateSelect}
+        orgSlug={orgSlug}
+        templateId={editingTemplateId}
+        templateName={editingTemplateId ? undefined : templateName}
+        initialSubject={editingTemplateId ? undefined : data.subject}
+        initialPreviewText={editingTemplateId ? undefined : data.previewText}
+        variableContext="broadcast"
+        title={editingTemplateId ? "Edit Template" : "Create Template"}
+      />
     </div>
   );
 }
@@ -1076,10 +1173,10 @@ function ReviewStep({
   loadingCount,
   onChange,
   onSend,
+  orgSlug,
   recipientCount,
   schedulingEnabled,
   segments,
-  templates,
   topics,
 }: {
   data: CampaignData;
@@ -1087,12 +1184,19 @@ function ReviewStep({
   loadingCount: boolean;
   onChange: (updates: Partial<CampaignData>) => void;
   onSend: () => void;
+  orgSlug: string;
   recipientCount: number | null;
   schedulingEnabled: boolean;
   segments: Segment[];
-  templates: Template[];
   topics: Topic[];
 }) {
+  // Fetch templates with React Query - auto-updates when templates change
+  const { data: templatesData } = useTemplates(orgSlug);
+  const templates: Template[] = (templatesData ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    subject: t.subject,
+  }));
   const getAudienceLabel = () => {
     if (data.audienceType === "all") return "All Contacts";
     if (data.audienceType === "topic") {

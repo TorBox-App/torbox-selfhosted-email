@@ -82,6 +82,7 @@ export async function updateTopicSettings(
     confirmationFromName?: string | null;
     confirmationFromEmail?: string | null;
     confirmationReplyToEmail?: string | null;
+    confirmationTemplateId?: string | null;
     preferenceCenterTitle?: string | null;
     preferenceCenterDescription?: string | null;
   }

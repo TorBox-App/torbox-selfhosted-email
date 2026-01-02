@@ -8,9 +8,39 @@
 import { ListEmailIdentitiesCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { WrapsEmail } from "@wraps.dev/email";
-import { awsAccount, db, eq, organization, topicSettings } from "@wraps/db";
+import { awsAccount, db, eq, organization, template, topicSettings } from "@wraps/db";
 import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
 import { generateConfirmationUrl } from "./confirmation-token";
+
+/**
+ * Substitute variables in template content.
+ * Variables are in the format {{variableName}} or {{object.property}}
+ */
+function substituteVariables(
+  content: string,
+  variables: Record<string, string | undefined>
+): string {
+  return content.replace(
+    /\{\{\s*([^}]+)\s*\}\}/g,
+    (match, key) => variables[key.trim()] ?? match
+  );
+}
+
+/**
+ * Convert HTML to plain text for email fallback
+ */
+function stripHtmlForPlainText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export type CreateSubscriptionParams = {
   contactId: string;
@@ -162,13 +192,68 @@ export async function sendTopicConfirmationEmail(
     topicId
   );
 
-  // Generate email content
-  const { subject, html, text } = generateTopicConfirmationEmail({
-    url: confirmationUrl,
-    topicName,
-    topicDescription,
-    organizationName: org?.name,
-  });
+  // Generate email content - use custom template if configured
+  let subject: string;
+  let html: string;
+  let text: string;
+
+  if (settings?.confirmationTemplateId) {
+    // Load the custom confirmation template
+    const [customTemplate] = await db
+      .select({
+        subject: template.subject,
+        compiledHtml: template.compiledHtml,
+        compiledText: template.compiledText,
+      })
+      .from(template)
+      .where(eq(template.id, settings.confirmationTemplateId))
+      .limit(1);
+
+    if (customTemplate?.compiledHtml && customTemplate?.subject) {
+      console.log(
+        `[CONFIRMATION_EMAIL] Using custom template ${settings.confirmationTemplateId}`
+      );
+
+      // Define variables for substitution
+      const variables: Record<string, string | undefined> = {
+        confirmationUrl,
+        "topic.name": topicName,
+        "topic.description": topicDescription ?? undefined,
+        "contact.email": contactEmail,
+        "organization.name": org?.name ?? undefined,
+      };
+
+      subject = substituteVariables(customTemplate.subject, variables);
+      html = substituteVariables(customTemplate.compiledHtml, variables);
+      text = customTemplate.compiledText
+        ? substituteVariables(customTemplate.compiledText, variables)
+        : stripHtmlForPlainText(html);
+    } else {
+      console.log(
+        `[CONFIRMATION_EMAIL] Custom template ${settings.confirmationTemplateId} not found or not compiled, using default`
+      );
+      const defaultEmail = generateTopicConfirmationEmail({
+        url: confirmationUrl,
+        topicName,
+        topicDescription,
+        organizationName: org?.name,
+      });
+      subject = defaultEmail.subject;
+      html = defaultEmail.html;
+      text = defaultEmail.text;
+    }
+  } else {
+    // Use default confirmation email template
+    const defaultEmail = generateTopicConfirmationEmail({
+      url: confirmationUrl,
+      topicName,
+      topicDescription,
+      organizationName: org?.name,
+    });
+    subject = defaultEmail.subject;
+    html = defaultEmail.html;
+    text = defaultEmail.text;
+  }
 
   // Assume role to get SES credentials
   console.log(

@@ -69,6 +69,7 @@ export function useUpdateTemplate(orgSlug: string, templateId: string) {
       name?: string;
       description?: string;
       subject?: string;
+      emailType?: "marketing" | "transactional";
       status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     }) => {
       const response = await fetch(
@@ -135,7 +136,7 @@ export function useCreateTemplate(orgSlug: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; subject?: string }) => {
       const response = await fetch(`/api/${orgSlug}/emails/templates`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

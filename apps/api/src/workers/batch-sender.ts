@@ -7,7 +7,15 @@
 
 import { SESClient, SendRawEmailCommand } from "@aws-sdk/client-ses";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
-import { batchSend, contact, db, eq, messageSend, template } from "@wraps/db";
+import {
+  batchSend,
+  contact,
+  db,
+  eq,
+  messageSend,
+  organization,
+  template,
+} from "@wraps/db";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, isNotNull, sql } from "drizzle-orm";
 
@@ -17,6 +25,20 @@ import type { BatchJob } from "../services/queue";
 
 const CHUNK_SIZE = 100;
 const QUEUE_URL = process.env.BATCH_QUEUE_URL;
+
+/**
+ * Substitute variables in template content.
+ * Variables are in the format {{variableName}} or {{object.property}}
+ */
+function substituteVariables(
+  content: string,
+  variables: Record<string, string | undefined>
+): string {
+  return content.replace(
+    /\{\{\s*([^}]+)\s*\}\}/g,
+    (match, key) => variables[key.trim()] ?? match
+  );
+}
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
   for (const record of event.Records) {
@@ -85,34 +107,91 @@ async function processJob(job: BatchJob): Promise<void> {
     region: process.env.AWS_REGION ?? "us-east-1",
   });
 
-  // Load template if using one
+  // Load template and organization name if using a template
   let templateHtml: string | undefined;
+  let orgName: string | undefined;
+  let emailType: "marketing" | "transactional" = "marketing"; // Default to marketing for compliance
+
   if (batch.emailTemplateId) {
-    const [tmpl] = await db
-      .select({ compiledHtml: template.compiledHtml })
-      .from(template)
-      .where(eq(template.id, batch.emailTemplateId))
-      .limit(1);
+    const [[tmpl], [org]] = await Promise.all([
+      db
+        .select({
+          compiledHtml: template.compiledHtml,
+          emailType: template.emailType,
+        })
+        .from(template)
+        .where(eq(template.id, batch.emailTemplateId))
+        .limit(1),
+      db
+        .select({ name: organization.name })
+        .from(organization)
+        .where(eq(organization.id, organizationId))
+        .limit(1),
+    ]);
     templateHtml = tmpl?.compiledHtml ?? undefined;
+    emailType = tmpl?.emailType ?? "marketing";
+    orgName = org?.name ?? undefined;
   }
 
   // Send to each contact
   let sent = 0;
   let failed = 0;
 
+  const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
+  const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
+
   for (const recipient of contacts) {
     try {
       if (channel === "email" && recipient.email) {
+        // Generate unsubscribe token and URLs only for marketing emails
+        let unsubscribeUrl: string | undefined;
+        let preferencesUrl: string | undefined;
+
+        if (emailType === "marketing") {
+          const unsubscribeToken = await generateUnsubscribeToken(
+            recipient.id,
+            organizationId
+          );
+          unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
+          preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+        }
+
+        // Substitute variables in template HTML
+        let emailHtml =
+          templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
+
+        if (templateHtml) {
+          // Build variables object for substitution
+          const variables: Record<string, string | undefined> = {
+            "contact.email": recipient.email,
+            "contact.firstName": recipient.firstName ?? undefined,
+            "contact.lastName": recipient.lastName ?? undefined,
+            "contact.company": recipient.company ?? undefined,
+            "contact.jobTitle": recipient.jobTitle ?? undefined,
+            "organization.name": orgName,
+            unsubscribeUrl,
+            preferencesUrl,
+            // Spread any custom properties (prefixed with contact.properties.)
+            ...Object.fromEntries(
+              Object.entries(recipient.properties).map(([key, value]) => [
+                `contact.properties.${key}`,
+                String(value ?? ""),
+              ])
+            ),
+          };
+
+          emailHtml = substituteVariables(templateHtml, variables);
+        }
         const messageId = await sendEmail(sesClient, {
           from: batch.from ?? `noreply@${getDefaultDomain()}`,
           fromName: batch.fromName,
           to: recipient.email,
           subject: batch.subject ?? "Message from Wraps",
-          html: templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>",
+          html: emailHtml,
           replyTo: batch.replyTo,
-          // For unsubscribe link generation
-          contactId: recipient.id,
-          organizationId,
+          emailType,
+          unsubscribeUrl,
+          preferencesUrl,
         });
 
         // Record successful send
@@ -187,12 +266,23 @@ async function processJob(job: BatchJob): Promise<void> {
   }
 }
 
+type ContactChunk = {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  jobTitle: string | null;
+  properties: Record<string, unknown>;
+};
+
 async function getContactsChunk(
   organizationId: string,
   channel: string,
   offset: number,
   limit: number
-): Promise<Array<{ id: string; email: string | null; phone: string | null }>> {
+): Promise<ContactChunk[]> {
   if (channel === "email") {
     // Filter by active email status (null treated as active for backwards compat)
     return db
@@ -200,6 +290,11 @@ async function getContactsChunk(
         id: contact.id,
         email: contact.email,
         phone: contact.phone,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        company: contact.company,
+        jobTitle: contact.jobTitle,
+        properties: contact.properties,
       })
       .from(contact)
       .where(
@@ -221,6 +316,11 @@ async function getContactsChunk(
         id: contact.id,
         email: contact.email,
         phone: contact.phone,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        company: contact.company,
+        jobTitle: contact.jobTitle,
+        properties: contact.properties,
       })
       .from(contact)
       .where(
@@ -245,10 +345,11 @@ interface EmailParams {
   subject: string;
   html: string;
   replyTo?: string | null;
-  // Unsubscribe link params
-  contactId: string;
-  organizationId: string;
-  topicId?: string;
+  // Email type determines compliance behavior
+  emailType: "marketing" | "transactional";
+  // Unsubscribe URLs (only used for marketing emails)
+  unsubscribeUrl?: string;
+  preferencesUrl?: string;
 }
 
 async function sendEmail(
@@ -259,26 +360,16 @@ async function sendEmail(
     ? `${params.fromName} <${params.from}>`
     : params.from;
 
-  // Generate unsubscribe token for RFC 8058 compliance
-  const unsubscribeToken = await generateUnsubscribeToken(
-    params.contactId,
-    params.organizationId,
-    params.topicId
-  );
+  const { emailType, unsubscribeUrl, preferencesUrl } = params;
+  const isMarketing = emailType === "marketing";
 
-  const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
-  const appBaseUrl = process.env.APP_BASE_URL || "https://wraps.dev";
-  const unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
-  const preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+  // Add unsubscribe footer only for marketing emails
+  const finalHtml =
+    isMarketing && unsubscribeUrl && preferencesUrl
+      ? addUnsubscribeFooter(params.html, unsubscribeUrl, preferencesUrl)
+      : params.html;
 
-  // Add unsubscribe footer to HTML
-  const htmlWithFooter = addUnsubscribeFooter(
-    params.html,
-    unsubscribeUrl,
-    preferencesUrl
-  );
-
-  // Build raw email with List-Unsubscribe headers (RFC 8058)
+  // Build raw email (with List-Unsubscribe headers for marketing only - RFC 8058)
   const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(2)}`;
 
   const rawEmail = [
@@ -286,9 +377,9 @@ async function sendEmail(
     `To: ${params.to}`,
     `Subject: ${params.subject}`,
     params.replyTo ? `Reply-To: ${params.replyTo}` : null,
-    // RFC 8058 one-click unsubscribe headers
-    `List-Unsubscribe: <${unsubscribeUrl}>`,
-    "List-Unsubscribe-Post: List-Unsubscribe=One-Click",
+    // RFC 8058 one-click unsubscribe headers (marketing only)
+    isMarketing && unsubscribeUrl ? `List-Unsubscribe: <${unsubscribeUrl}>` : null,
+    isMarketing && unsubscribeUrl ? "List-Unsubscribe-Post: List-Unsubscribe=One-Click" : null,
     "MIME-Version: 1.0",
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
     "",
@@ -296,13 +387,13 @@ async function sendEmail(
     "Content-Type: text/plain; charset=UTF-8",
     "Content-Transfer-Encoding: quoted-printable",
     "",
-    stripHtml(htmlWithFooter),
+    stripHtml(finalHtml),
     "",
     `--${boundary}`,
     "Content-Type: text/html; charset=UTF-8",
     "Content-Transfer-Encoding: quoted-printable",
     "",
-    htmlWithFooter,
+    finalHtml,
     "",
     `--${boundary}--`,
   ]

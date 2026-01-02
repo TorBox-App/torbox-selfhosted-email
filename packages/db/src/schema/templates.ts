@@ -18,6 +18,10 @@ export const templateStatusEnum = pgEnum("template_status", [
   "PUBLISHED",
   "ARCHIVED",
 ]);
+export const emailTypeEnum = pgEnum("email_type", [
+  "marketing", // Includes unsubscribe headers/footer, subject to opt-out
+  "transactional", // No unsubscribe (password resets, order confirmations, etc.)
+]);
 export const variableTypeEnum = pgEnum("variable_type", [
   "TEXT",
   "NUMBER",
@@ -43,6 +47,9 @@ export const template = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     subject: text("subject"), // Email subject line (supports variables like {{firstName}})
+
+    // Email type determines compliance behavior
+    emailType: emailTypeEnum("email_type").default("marketing").notNull(), // marketing = unsubscribe headers, transactional = no unsubscribe
 
     // Single content field (Yjs-compatible structure)
     content: jsonb("content").$type<Record<string, unknown>>().notNull(),
@@ -365,6 +372,7 @@ export const aiConversationRelations = relations(aiConversation, ({ one }) => ({
 }));
 
 // Types
+export type EmailType = "marketing" | "transactional";
 export type Template = typeof template.$inferSelect;
 export type NewTemplate = typeof template.$inferInsert;
 export type TemplateVersion = typeof templateVersion.$inferSelect;

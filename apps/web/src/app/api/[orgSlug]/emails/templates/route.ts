@@ -103,7 +103,7 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { name, description } = await request.json();
+    const { name, description, subject } = await request.json();
 
     if (!name || typeof name !== "string") {
       return NextResponse.json(
@@ -119,6 +119,7 @@ export async function POST(request: Request, context: RouteContext) {
         organizationId: orgWithMembership.id,
         name: name.trim(),
         description: description?.trim() || null,
+        subject: subject?.trim() || null,
         content: {
           type: "doc",
           content: [

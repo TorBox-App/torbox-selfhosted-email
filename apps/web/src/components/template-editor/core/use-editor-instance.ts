@@ -39,35 +39,85 @@ import {
   VariableNode,
   VariableSuggestion,
 } from "@/components/template-editor/extensions";
-import type { VariableContext } from "@/components/template-editor/core/editor-context";
+import type { VariableContext } from "./editor-context";
 import {
   getVariablesForContext,
   toSuggestionFormat,
-} from "@/components/template-editor/variables/variable-definitions";
+} from "../variables/variable-definitions";
 
-type UseTemplateEditorOptions = {
-  templateId: string;
+export type UseEditorInstanceOptions = {
+  /**
+   * Initial content for the editor
+   */
   initialContent?: JSONContent;
+
+  /**
+   * Callback when content should be saved
+   */
   onSave?: (content: JSONContent) => Promise<void>;
+
+  /**
+   * Callback when content updates (for real-time sync)
+   */
   onUpdate?: (content: JSONContent) => void;
+
+  /**
+   * Callback when block library should toggle
+   */
   onToggleBlockLibrary?: () => void;
-  collaborative?: boolean;
-  /** Auto-save delay in milliseconds (default: 60000 = 1 minute) */
+
+  /**
+   * Enable auto-save (default: true)
+   */
+  autoSave?: boolean;
+
+  /**
+   * Auto-save delay in milliseconds (default: 60000 = 1 minute)
+   */
   autoSaveDelay?: number;
-  /** Variable context for context-aware variable suggestions (default: "broadcast") */
+
+  /**
+   * Placeholder text for empty editor
+   */
+  placeholder?: string;
+
+  /**
+   * Variable context for context-aware variable suggestions
+   */
   variableContext?: VariableContext;
 };
 
-export function useTemplateEditor({
-  templateId,
+// Default empty document structure with Preview for inbox preview text
+const defaultContent: JSONContent = {
+  type: "doc",
+  content: [
+    {
+      type: "emailPreview",
+      attrs: {
+        text: "Preview text shown in inbox",
+      },
+    },
+    {
+      type: "paragraph",
+      content: [{ type: "text", text: "Start typing or add blocks..." }],
+    },
+  ],
+};
+
+/**
+ * Core hook for creating a TipTap editor instance with all email extensions.
+ * This is a context-agnostic hook that can be used in any email editing scenario.
+ */
+export function useEditorInstance({
   initialContent,
   onSave,
   onUpdate,
   onToggleBlockLibrary,
-  collaborative = false,
-  autoSaveDelay = 60_000, // 1 minute default
+  autoSave = true,
+  autoSaveDelay = 60_000,
+  placeholder = "Start typing or use the block palette to add email components...",
   variableContext = "broadcast",
-}: UseTemplateEditorOptions) {
+}: UseEditorInstanceOptions = {}) {
   const lastSavedContentRef = useRef<string>("");
 
   // Save function that checks for changes
@@ -84,29 +134,15 @@ export function useTemplateEditor({
     [onSave]
   );
 
-  // Use TanStack Pacer for debounced auto-save (1 minute by default)
+  // Use TanStack Pacer for debounced auto-save
   const saveDebouncer = useDebouncer(saveContent, {
     wait: autoSaveDelay,
   });
 
-  // Default empty document structure with Preview for inbox preview text
-  const defaultContent: JSONContent = useMemo(
-    () => ({
-      type: "doc",
-      content: [
-        {
-          type: "emailPreview",
-          attrs: {
-            text: "Preview text shown in inbox",
-          },
-        },
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "Start typing or add blocks..." }],
-        },
-      ],
-    }),
-    []
+  // Memoize initial content to prevent unnecessary re-renders
+  const content = useMemo(
+    () => initialContent || defaultContent,
+    [initialContent]
   );
 
   const editor = useEditor({
@@ -124,8 +160,6 @@ export function useTemplateEditor({
         // Disable code extensions we don't need
         codeBlock: false,
         code: false,
-        // Note: history is handled by StarterKit by default
-        // When collaboration is enabled, we'll need to add Yjs extensions separately
       }),
 
       // Text blocks with draggable enabled
@@ -136,18 +170,17 @@ export function useTemplateEditor({
       OrderedList.extend({ draggable: true }),
 
       Placeholder.configure({
-        placeholder:
-          "Start typing or use the block palette to add email components...",
+        placeholder,
         showOnlyWhenEditable: true,
       }),
 
-      // Text styling extensions (required for block examples with colors and alignment)
+      // Text styling extensions
       TextStyle,
       Color,
       FontSize,
       Underline,
       Highlight.configure({
-        multicolor: true, // Allow multiple highlight colors
+        multicolor: true,
       }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
@@ -155,7 +188,7 @@ export function useTemplateEditor({
 
       // Link extension for text links
       Link.configure({
-        openOnClick: false, // Don't open links in editor
+        openOnClick: false,
         HTMLAttributes: {
           class: "text-primary underline",
         },
@@ -191,23 +224,16 @@ export function useTemplateEditor({
       // Keyboard shortcuts (Cmd+S to save, Cmd+K for block palette)
       KeyboardShortcuts.configure({
         onSave: (editorInstance) => {
-          // Trigger manual save - editor instance is passed from the shortcut handler
           if (onSave) {
-            const content = editorInstance.getJSON();
-            onSave(content);
+            const editorContent = editorInstance.getJSON();
+            onSave(editorContent);
           }
         },
         onToggleBlockLibrary,
       }),
-
-      // Future: Collaboration extensions
-      // ...(collaborative && ydoc ? [
-      //   Collaboration.configure({ document: ydoc }),
-      //   CollaborationCursor.configure({ provider })
-      // ] : [])
     ],
 
-    content: initialContent || defaultContent,
+    content,
 
     editorProps: {
       attributes: {
@@ -216,22 +242,20 @@ export function useTemplateEditor({
       },
     },
 
-    onUpdate: ({ editor }) => {
-      const content = editor.getJSON();
-      onUpdate?.(content);
+    onUpdate: ({ editor: editorInstance }) => {
+      const editorContent = editorInstance.getJSON();
+      onUpdate?.(editorContent);
 
       // Trigger auto-save via Pacer debouncer
-      if (onSave) {
-        saveDebouncer.maybeExecute(content);
+      if (autoSave && onSave) {
+        saveDebouncer.maybeExecute(editorContent);
       }
     },
 
-    // Track selection for properties panel
-    onSelectionUpdate: ({ editor }) => {
+    onSelectionUpdate: ({ editor: _editorInstance }) => {
       // Could emit selected node info here for properties panel
-      const { from, to } = editor.state.selection;
-      const _node = editor.state.doc.nodeAt(from);
-      // Emit node info if needed
+      // const { from, to } = editorInstance.state.selection;
+      // const node = editorInstance.state.doc.nodeAt(from);
     },
   });
 
@@ -251,9 +275,9 @@ export function useTemplateEditor({
     // Cancel any pending debounced save
     saveDebouncer.cancel();
 
-    const content = editor.getJSON();
-    lastSavedContentRef.current = JSON.stringify(content);
-    await onSave(content);
+    const editorContent = editor.getJSON();
+    lastSavedContentRef.current = JSON.stringify(editorContent);
+    await onSave(editorContent);
   }, [editor, onSave, saveDebouncer]);
 
   // Helper to insert blocks
@@ -306,10 +330,33 @@ export function useTemplateEditor({
     [editor]
   );
 
+  // Get current content
+  const getContent = useCallback(() => {
+    return editor?.getJSON() ?? null;
+  }, [editor]);
+
+  // Set content
+  const setContent = useCallback(
+    (newContent: JSONContent) => {
+      if (editor?.isEditable) {
+        editor.commands.setContent(newContent);
+      }
+    },
+    [editor]
+  );
+
+  // Cancel any pending saves (useful for cleanup)
+  const cancelPendingSave = useCallback(() => {
+    saveDebouncer.cancel();
+  }, [saveDebouncer]);
+
   return {
     editor,
     saveNow,
     insertBlock,
+    getContent,
+    setContent,
+    cancelPendingSave,
     isReady: !!editor,
   };
 }
