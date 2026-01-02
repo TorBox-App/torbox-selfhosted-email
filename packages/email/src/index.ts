@@ -6,8 +6,8 @@ export { getWrapsClient, sendEmail } from "./lib/client";
 export type { ConfirmationTokenPayload } from "./lib/confirmation-token";
 export {
   generateConfirmationToken,
-  verifyConfirmationToken,
   generateConfirmationUrl,
+  verifyConfirmationToken,
 } from "./lib/confirmation-token";
 
 // Subscription service

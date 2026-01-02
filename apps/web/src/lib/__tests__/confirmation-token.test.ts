@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   generateConfirmationToken,
   generateConfirmationUrl,
   verifyConfirmationToken,
 } from "@wraps/email";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Confirmation Token", () => {
   beforeEach(() => {

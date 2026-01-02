@@ -1,9 +1,8 @@
 import { contact, contactTopic, db, eq, organization, topic } from "@wraps/db";
+import { verifyConfirmationToken } from "@wraps/email";
 import { and } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-
-import { verifyConfirmationToken } from "@wraps/email";
 import { ConfirmationForm } from "./confirmation-form";
 
 interface ConfirmPageProps {
@@ -98,9 +97,7 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
       description: topic.description,
     })
     .from(topic)
-    .where(
-      and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
-    )
+    .where(and(eq(topic.id, topicId), eq(topic.organizationId, organizationId)))
     .limit(1);
 
   if (!topicRecord) {

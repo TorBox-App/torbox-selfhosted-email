@@ -963,7 +963,7 @@ describe("Contacts API Integration", () => {
     });
 
     it("does not send confirmation email for auto-confirmed re-subscription", async () => {
-      const confirmedAt = new Date(Date.now() - 86400000); // 1 day ago
+      const confirmedAt = new Date(Date.now() - 86_400_000); // 1 day ago
 
       // Create contact with previously confirmed subscription
       const [existing] = await db
@@ -982,7 +982,7 @@ describe("Contacts API Integration", () => {
         topicId: testDoubleOptInTopic.id,
         status: "unsubscribed",
         subscribedAt: confirmedAt,
-        confirmedAt: confirmedAt,
+        confirmedAt,
         unsubscribedAt: new Date(),
       });
 
@@ -1008,7 +1008,7 @@ describe("Contacts API Integration", () => {
     });
 
     it("auto-confirms re-subscription if previously confirmed", async () => {
-      const confirmedAt = new Date(Date.now() - 86400000); // 1 day ago
+      const confirmedAt = new Date(Date.now() - 86_400_000); // 1 day ago
 
       // Create contact with previously confirmed subscription
       const [existing] = await db
@@ -1027,7 +1027,7 @@ describe("Contacts API Integration", () => {
         topicId: testDoubleOptInTopic.id,
         status: "unsubscribed",
         subscribedAt: confirmedAt,
-        confirmedAt: confirmedAt,
+        confirmedAt,
         unsubscribedAt: new Date(),
       });
 
@@ -1057,7 +1057,9 @@ describe("Contacts API Integration", () => {
       expect(subscriptions).toHaveLength(1);
       expect(subscriptions[0].status).toBe("subscribed");
       // Preserves original confirmedAt
-      expect(subscriptions[0].confirmedAt?.getTime()).toBe(confirmedAt.getTime());
+      expect(subscriptions[0].confirmedAt?.getTime()).toBe(
+        confirmedAt.getTime()
+      );
     });
 
     it("requires confirmation for re-subscription if never confirmed", async () => {
@@ -1111,7 +1113,7 @@ describe("Contacts API Integration", () => {
     });
 
     it("handles mixed topics with and without previous confirmation", async () => {
-      const confirmedAt = new Date(Date.now() - 86400000);
+      const confirmedAt = new Date(Date.now() - 86_400_000);
 
       // Create contact
       const [existing] = await db
@@ -1130,7 +1132,7 @@ describe("Contacts API Integration", () => {
         topicId: testDoubleOptInTopic.id,
         status: "unsubscribed",
         subscribedAt: confirmedAt,
-        confirmedAt: confirmedAt,
+        confirmedAt,
         unsubscribedAt: new Date(),
       });
 

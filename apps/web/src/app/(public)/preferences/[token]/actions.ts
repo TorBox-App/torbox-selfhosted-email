@@ -1,10 +1,9 @@
 "use server";
 
 import { contact, contactTopic, db, eq, topic } from "@wraps/db";
+import { determineSubscriptionStatus } from "@wraps/email";
 import { and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
-import { determineSubscriptionStatus } from "@wraps/email";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 
 interface ActionResult {
@@ -55,7 +54,7 @@ export async function updatePreferences(
       .from(topic)
       .where(
         and(
-          eq(topic.organizationId, organizationId),
+          eq(topic.organizationId, organizationId)
           // Filter to only requested topics
           // Note: drizzle doesn't have an easy "in" for dynamic arrays in select,
           // so we'll filter in JS for now

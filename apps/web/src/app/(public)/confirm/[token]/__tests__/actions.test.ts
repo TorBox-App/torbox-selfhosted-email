@@ -7,10 +7,17 @@ import {
   topic,
   user,
 } from "@wraps/db";
-import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { generateConfirmationToken } from "@wraps/email";
+import { eq } from "drizzle-orm";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { confirmSubscription } from "../actions";
 
 // Mock next/cache
@@ -72,16 +79,22 @@ const testContact = {
 // Set up test database
 beforeAll(async () => {
   // Insert test user
-  await db.insert(user).values(testUser).onConflictDoUpdate({
-    target: user.id,
-    set: { updatedAt: new Date() },
-  });
+  await db
+    .insert(user)
+    .values(testUser)
+    .onConflictDoUpdate({
+      target: user.id,
+      set: { updatedAt: new Date() },
+    });
 
   // Insert test organization
-  await db.insert(organization).values(testOrganization).onConflictDoUpdate({
-    target: organization.id,
-    set: { name: testOrganization.name },
-  });
+  await db
+    .insert(organization)
+    .values(testOrganization)
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: testOrganization.name },
+    });
 
   // Insert test member
   await db
@@ -99,26 +112,36 @@ beforeAll(async () => {
     });
 
   // Insert test topic
-  await db.insert(topic).values(testTopic).onConflictDoUpdate({
-    target: topic.id,
-    set: { updatedAt: new Date() },
-  });
+  await db
+    .insert(topic)
+    .values(testTopic)
+    .onConflictDoUpdate({
+      target: topic.id,
+      set: { updatedAt: new Date() },
+    });
 
   // Insert test contact
-  await db.insert(contact).values(testContact).onConflictDoUpdate({
-    target: contact.id,
-    set: { updatedAt: new Date() },
-  });
+  await db
+    .insert(contact)
+    .values(testContact)
+    .onConflictDoUpdate({
+      target: contact.id,
+      set: { updatedAt: new Date() },
+    });
 });
 
 // Clean up contact topics before each test
 beforeEach(async () => {
-  await db.delete(contactTopic).where(eq(contactTopic.contactId, testContact.id));
+  await db
+    .delete(contactTopic)
+    .where(eq(contactTopic.contactId, testContact.id));
 });
 
 // Clean up after all tests
 afterAll(async () => {
-  await db.delete(contactTopic).where(eq(contactTopic.contactId, testContact.id));
+  await db
+    .delete(contactTopic)
+    .where(eq(contactTopic.contactId, testContact.id));
   await db.delete(contact).where(eq(contact.id, testContact.id));
   await db.delete(topic).where(eq(topic.id, testTopic.id));
   await db.delete(member).where(eq(member.organizationId, testOrganization.id));
@@ -169,7 +192,7 @@ describe("confirmSubscription", () => {
       topicId: testTopic.id,
       status: "subscribed",
       subscribedAt: confirmedAt,
-      confirmedAt: confirmedAt,
+      confirmedAt,
     });
 
     // Generate valid token
@@ -282,7 +305,7 @@ describe("confirmSubscription", () => {
   });
 
   it("should clear unsubscribedAt when confirming", async () => {
-    const unsubscribedAt = new Date(Date.now() - 86400000); // 1 day ago
+    const unsubscribedAt = new Date(Date.now() - 86_400_000); // 1 day ago
 
     // Create subscription that was previously unsubscribed
     await db.insert(contactTopic).values({
@@ -291,7 +314,7 @@ describe("confirmSubscription", () => {
       status: "pending",
       subscribedAt: null,
       confirmedAt: null,
-      unsubscribedAt: unsubscribedAt,
+      unsubscribedAt,
     });
 
     // Generate valid token

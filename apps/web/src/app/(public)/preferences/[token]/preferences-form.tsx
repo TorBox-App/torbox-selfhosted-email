@@ -306,12 +306,14 @@ export function PreferencesForm({
                   {isPendingConfirmation && (
                     <div className="mt-2 ml-9">
                       <button
-                        className="rounded-md px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                        className="rounded-md px-3 py-1.5 font-medium text-amber-700 text-xs transition-colors hover:bg-amber-50 disabled:opacity-50"
                         disabled={isPending || isResending}
                         onClick={() => handleResendConfirmation(topic.id)}
                         type="button"
                       >
-                        {isResending ? "Sending..." : "Resend confirmation email"}
+                        {isResending
+                          ? "Sending..."
+                          : "Resend confirmation email"}
                       </button>
                     </div>
                   )}

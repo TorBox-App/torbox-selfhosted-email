@@ -1,5 +1,4 @@
 import {
-  awsAccount,
   contact,
   contactTopic,
   db,
@@ -9,7 +8,15 @@ import {
   user,
 } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { generateUnsubscribeToken } from "@/lib/unsubscribe-token";
 import { resendConfirmation, updatePreferences } from "../actions";
@@ -100,16 +107,22 @@ const testContact = {
 // Set up test database
 beforeAll(async () => {
   // Insert test user
-  await db.insert(user).values(testUser).onConflictDoUpdate({
-    target: user.id,
-    set: { updatedAt: new Date() },
-  });
+  await db
+    .insert(user)
+    .values(testUser)
+    .onConflictDoUpdate({
+      target: user.id,
+      set: { updatedAt: new Date() },
+    });
 
   // Insert test organization
-  await db.insert(organization).values(testOrganization).onConflictDoUpdate({
-    target: organization.id,
-    set: { name: testOrganization.name },
-  });
+  await db
+    .insert(organization)
+    .values(testOrganization)
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: testOrganization.name },
+    });
 
   // Insert test member
   await db
@@ -127,31 +140,44 @@ beforeAll(async () => {
     });
 
   // Insert test topics
-  await db.insert(topic).values(testRegularTopic).onConflictDoUpdate({
-    target: topic.id,
-    set: { updatedAt: new Date() },
-  });
+  await db
+    .insert(topic)
+    .values(testRegularTopic)
+    .onConflictDoUpdate({
+      target: topic.id,
+      set: { updatedAt: new Date() },
+    });
 
-  await db.insert(topic).values(testDoubleOptInTopic).onConflictDoUpdate({
-    target: topic.id,
-    set: { updatedAt: new Date() },
-  });
+  await db
+    .insert(topic)
+    .values(testDoubleOptInTopic)
+    .onConflictDoUpdate({
+      target: topic.id,
+      set: { updatedAt: new Date() },
+    });
 
   // Insert test contact
-  await db.insert(contact).values(testContact).onConflictDoUpdate({
-    target: contact.id,
-    set: { updatedAt: new Date() },
-  });
+  await db
+    .insert(contact)
+    .values(testContact)
+    .onConflictDoUpdate({
+      target: contact.id,
+      set: { updatedAt: new Date() },
+    });
 });
 
 // Clean up contact topics before each test
 beforeEach(async () => {
-  await db.delete(contactTopic).where(eq(contactTopic.contactId, testContact.id));
+  await db
+    .delete(contactTopic)
+    .where(eq(contactTopic.contactId, testContact.id));
 });
 
 // Clean up after all tests
 afterAll(async () => {
-  await db.delete(contactTopic).where(eq(contactTopic.contactId, testContact.id));
+  await db
+    .delete(contactTopic)
+    .where(eq(contactTopic.contactId, testContact.id));
   await db.delete(contact).where(eq(contact.id, testContact.id));
   await db.delete(topic).where(eq(topic.id, testRegularTopic.id));
   await db.delete(topic).where(eq(topic.id, testDoubleOptInTopic.id));
@@ -224,7 +250,7 @@ describe("updatePreferences with double opt-in", () => {
   });
 
   it("should auto-confirm re-subscription if previously confirmed", async () => {
-    const confirmedAt = new Date(Date.now() - 86400000); // 1 day ago
+    const confirmedAt = new Date(Date.now() - 86_400_000); // 1 day ago
 
     // Create previously confirmed but now unsubscribed subscription
     await db.insert(contactTopic).values({
@@ -232,7 +258,7 @@ describe("updatePreferences with double opt-in", () => {
       topicId: testDoubleOptInTopic.id,
       status: "unsubscribed",
       subscribedAt: confirmedAt,
-      confirmedAt: confirmedAt,
+      confirmedAt,
       unsubscribedAt: new Date(),
     });
 

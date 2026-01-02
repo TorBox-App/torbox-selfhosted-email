@@ -10,9 +10,9 @@ interface ConfirmationFormProps {
 }
 
 export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(
-    "idle"
-  );
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   const [error, setError] = useState<string | null>(null);
 
   async function handleConfirm() {

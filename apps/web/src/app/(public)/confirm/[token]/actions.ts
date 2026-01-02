@@ -1,10 +1,9 @@
 "use server";
 
 import { contact, contactTopic, db, eq, topic } from "@wraps/db";
+import { verifyConfirmationToken } from "@wraps/email";
 import { and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-
-import { verifyConfirmationToken } from "@wraps/email";
 
 export type ConfirmResult =
   | { success: true }
@@ -13,7 +12,9 @@ export type ConfirmResult =
 /**
  * Confirm a topic subscription
  */
-export async function confirmSubscription(token: string): Promise<ConfirmResult> {
+export async function confirmSubscription(
+  token: string
+): Promise<ConfirmResult> {
   // Verify token
   const payload = await verifyConfirmationToken(token);
   if (!payload) {
@@ -39,9 +40,7 @@ export async function confirmSubscription(token: string): Promise<ConfirmResult>
   const [topicRecord] = await db
     .select({ id: topic.id })
     .from(topic)
-    .where(
-      and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
-    )
+    .where(and(eq(topic.id, topicId), eq(topic.organizationId, organizationId)))
     .limit(1);
 
   if (!topicRecord) {
@@ -70,17 +69,7 @@ export async function confirmSubscription(token: string): Promise<ConfirmResult>
   }
 
   // Check if subscription exists
-  if (!subscription) {
-    // No pending subscription found - this shouldn't happen normally
-    // but handle gracefully by creating the subscription
-    await db.insert(contactTopic).values({
-      contactId,
-      topicId,
-      status: "subscribed",
-      subscribedAt: new Date(),
-      confirmedAt: new Date(),
-    });
-  } else {
+  if (subscription) {
     // Update pending subscription to confirmed
     const now = new Date();
     await db
@@ -97,6 +86,16 @@ export async function confirmSubscription(token: string): Promise<ConfirmResult>
           eq(contactTopic.topicId, topicId)
         )
       );
+  } else {
+    // No pending subscription found - this shouldn't happen normally
+    // but handle gracefully by creating the subscription
+    await db.insert(contactTopic).values({
+      contactId,
+      topicId,
+      status: "subscribed",
+      subscribedAt: new Date(),
+      confirmedAt: new Date(),
+    });
   }
 
   revalidatePath(`/confirm/${token}`);
