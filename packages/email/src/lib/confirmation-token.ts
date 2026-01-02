@@ -102,6 +102,6 @@ export async function generateConfirmationUrl(
     topicId
   );
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wraps.dev";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev";
   return `${baseUrl}/confirm/${token}`;
 }
