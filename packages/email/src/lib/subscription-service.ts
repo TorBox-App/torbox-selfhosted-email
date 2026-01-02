@@ -2,15 +2,12 @@
  * Subscription Confirmation Service
  *
  * Handles double opt-in logic for topic subscriptions.
- * Sends confirmation emails via the organization's AWS SES.
+ * Sends confirmation emails via the organization's AWS SES using the Wraps email SDK.
  */
 
-import {
-  ListEmailIdentitiesCommand,
-  SESv2Client,
-  SendEmailCommand,
-} from "@aws-sdk/client-sesv2";
+import { ListEmailIdentitiesCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
+import { WrapsEmail } from "@wraps.dev/email";
 import { awsAccount, db, eq, organization, topicSettings } from "@wraps/db";
 import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
 import { generateConfirmationUrl } from "./confirmation-token";
@@ -103,6 +100,7 @@ type SendConfirmationParams = {
 
 /**
  * Send topic subscription confirmation email via the organization's SES
+ * using the @wraps.dev/email SDK
  */
 export async function sendTopicConfirmationEmail(
   params: SendConfirmationParams
@@ -115,6 +113,10 @@ export async function sendTopicConfirmationEmail(
     topicDescription,
     organizationId,
   } = params;
+
+  console.log(
+    `[CONFIRMATION_EMAIL] Starting for contact=${contactId} topic=${topicId} org=${organizationId}`
+  );
 
   // Get organization name, AWS account, and topic settings in parallel
   const [[org], [account], [settings]] = await Promise.all([
@@ -142,7 +144,14 @@ export async function sendTopicConfirmationEmail(
       .limit(1),
   ]);
 
+  console.log(
+    `[CONFIRMATION_EMAIL] Loaded org=${org?.name} account=${account?.id || "NONE"} settings=${settings?.organizationId || "NONE"}`
+  );
+
   if (!account) {
+    console.error(
+      `[CONFIRMATION_EMAIL] No AWS account configured for org=${organizationId}`
+    );
     throw new Error("Organization has no AWS account configured");
   }
 
@@ -162,39 +171,43 @@ export async function sendTopicConfirmationEmail(
   });
 
   // Assume role to get SES credentials
+  console.log(
+    `[CONFIRMATION_EMAIL] Assuming role ${account.roleArn} in ${account.region}`
+  );
+
   const stsClient = new STSClient({
     region: account.region,
   });
 
-  const assumeRoleResponse = await stsClient.send(
-    new AssumeRoleCommand({
-      RoleArn: account.roleArn,
-      RoleSessionName: `wraps-confirmation-${Date.now()}`,
-      ExternalId: account.externalId,
-      DurationSeconds: 900, // 15 minutes
-    })
-  );
+  let assumeRoleResponse;
+  try {
+    assumeRoleResponse = await stsClient.send(
+      new AssumeRoleCommand({
+        RoleArn: account.roleArn,
+        RoleSessionName: `wraps-confirmation-${Date.now()}`,
+        ExternalId: account.externalId,
+        DurationSeconds: 900, // 15 minutes
+      })
+    );
+  } catch (error) {
+    console.error(`[CONFIRMATION_EMAIL] Failed to assume role:`, error);
+    throw error;
+  }
 
   if (!assumeRoleResponse.Credentials) {
+    console.error(
+      `[CONFIRMATION_EMAIL] No credentials returned from assume role`
+    );
     throw new Error("Failed to assume AWS role");
   }
 
-  // Create SES v2 client with assumed credentials
-  const sesClient = new SESv2Client({
-    region: account.region,
-    credentials: {
-      accessKeyId: assumeRoleResponse.Credentials.AccessKeyId!,
-      secretAccessKey: assumeRoleResponse.Credentials.SecretAccessKey!,
-      sessionToken: assumeRoleResponse.Credentials.SessionToken!,
-    },
-  });
+  console.log(`[CONFIRMATION_EMAIL] Role assumed successfully`);
 
-  // Get verified email identities from the organization's SES
-  const identitiesResponse = await sesClient.send(
-    new ListEmailIdentitiesCommand({
-      PageSize: 100,
-    })
-  );
+  const credentials = {
+    accessKeyId: assumeRoleResponse.Credentials.AccessKeyId!,
+    secretAccessKey: assumeRoleResponse.Credentials.SecretAccessKey!,
+    sessionToken: assumeRoleResponse.Credentials.SessionToken!,
+  };
 
   // Determine from address - use custom settings if configured, otherwise auto-detect
   let fromAddress: string;
@@ -207,7 +220,22 @@ export async function sendTopicConfirmationEmail(
     fromName = settings.confirmationFromName || org?.name;
     replyToAddress = settings.confirmationReplyToEmail || undefined;
   } else {
-    // Fall back to auto-detected verified domain
+    // Need to list identities to auto-detect verified domain
+    console.log(`[CONFIRMATION_EMAIL] Listing email identities`);
+    const sesClient = new SESv2Client({
+      region: account.region,
+      credentials,
+    });
+
+    const identitiesResponse = await sesClient.send(
+      new ListEmailIdentitiesCommand({
+        PageSize: 100,
+      })
+    );
+    console.log(
+      `[CONFIRMATION_EMAIL] Found ${identitiesResponse.EmailIdentities?.length || 0} identities`
+    );
+
     const verifiedDomain = identitiesResponse.EmailIdentities?.find(
       (identity) =>
         identity.IdentityType === "DOMAIN" && identity.SendingEnabled === true
@@ -223,39 +251,38 @@ export async function sendTopicConfirmationEmail(
     fromName = org?.name;
   }
 
-  // Build the formatted from address
-  const formattedFromAddress = fromName
-    ? `${fromName} <${fromAddress}>`
-    : fromAddress;
+  // Build from address with display name
+  const from = fromName ? { name: fromName, email: fromAddress } : fromAddress;
 
-  // Send email using SES v2
-  await sesClient.send(
-    new SendEmailCommand({
-      FromEmailAddress: formattedFromAddress,
-      ReplyToAddresses: replyToAddress ? [replyToAddress] : undefined,
-      Destination: {
-        ToAddresses: [contactEmail],
-      },
-      Content: {
-        Simple: {
-          Subject: {
-            Data: subject,
-            Charset: "UTF-8",
-          },
-          Body: {
-            Html: {
-              Data: html,
-              Charset: "UTF-8",
-            },
-            Text: {
-              Data: text,
-              Charset: "UTF-8",
-            },
-          },
-        },
-      },
-    })
+  // Create Wraps email client with assumed credentials
+  const wrapsEmail = new WrapsEmail({
+    region: account.region,
+    credentials,
+  });
+
+  console.log(
+    `[CONFIRMATION_EMAIL] Sending email from=${fromName ? `${fromName} <${fromAddress}>` : fromAddress} to=${contactEmail}`
   );
 
-  return true;
+  try {
+    const result = await wrapsEmail.send({
+      from,
+      to: contactEmail,
+      subject,
+      html,
+      text,
+      replyTo: replyToAddress,
+    });
+
+    console.log(
+      `[CONFIRMATION_EMAIL] Email sent successfully, messageId=${result.messageId}`
+    );
+    return true;
+  } catch (error) {
+    console.error(`[CONFIRMATION_EMAIL] Failed to send email:`, error);
+    throw error;
+  } finally {
+    // Clean up the client
+    wrapsEmail.destroy();
+  }
 }
