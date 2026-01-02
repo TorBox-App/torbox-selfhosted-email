@@ -159,7 +159,7 @@ export function PreferencesForm({
   if (isGloballyUnsubscribed) {
     return (
       <div className="py-8 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
           <svg
             className="h-8 w-8 text-gray-400"
             fill="none"
@@ -174,10 +174,10 @@ export function PreferencesForm({
             />
           </svg>
         </div>
-        <h2 className="mb-2 font-semibold text-gray-900 text-lg">
+        <h2 className="mb-2 font-semibold text-gray-900 text-lg dark:text-white">
           You're Unsubscribed
         </h2>
-        <p className="text-gray-500 text-sm">
+        <p className="text-gray-500 text-sm dark:text-gray-400">
           You won't receive any more emails
           {orgName ? ` from ${orgName}` : ""}.
         </p>
@@ -232,21 +232,21 @@ export function PreferencesForm({
       {/* Topics list */}
       {topics.length > 0 ? (
         <div className="space-y-1">
-          <h2 className="mb-3 font-medium text-gray-900 text-sm">
+          <h2 className="mb-3 font-medium text-gray-900 text-sm dark:text-white">
             Email Topics
           </h2>
-          <div className="divide-y divide-gray-100 rounded-xl border border-gray-200">
+          <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
             {topics.map((topic) => {
               const isPendingConfirmation = pendingTopics.has(topic.id);
               const isResending = resendingFor === topic.id;
 
               return (
                 <div className="p-4" key={topic.id}>
-                  <label className="flex cursor-pointer items-start gap-4 transition-colors hover:bg-gray-50">
+                  <label className="flex cursor-pointer items-start gap-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <div className="relative flex h-5 items-center">
                       <input
                         checked={subscriptions[topic.id] ?? false}
-                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-gray-300 transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2"
+                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-gray-300 transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 dark:border-gray-600"
                         onChange={(e) =>
                           handleTopicChange(topic.id, e.target.checked)
                         }
@@ -285,17 +285,17 @@ export function PreferencesForm({
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 text-sm">
+                        <span className="font-medium text-gray-900 text-sm dark:text-white">
                           {topic.name}
                         </span>
                         {isPendingConfirmation && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 text-xs">
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 text-xs dark:bg-amber-900/30 dark:text-amber-400">
                             Pending confirmation
                           </span>
                         )}
                       </div>
                       {topic.description && (
-                        <div className="mt-0.5 text-gray-500 text-sm">
+                        <div className="mt-0.5 text-gray-500 text-sm dark:text-gray-400">
                           {topic.description}
                         </div>
                       )}
@@ -306,7 +306,7 @@ export function PreferencesForm({
                   {isPendingConfirmation && (
                     <div className="mt-2 ml-9">
                       <button
-                        className="rounded-md px-3 py-1.5 font-medium text-amber-700 text-xs transition-colors hover:bg-amber-50 disabled:opacity-50"
+                        className="rounded-md px-3 py-1.5 font-medium text-amber-700 text-xs transition-colors hover:bg-amber-50 disabled:opacity-50 dark:text-amber-400 dark:hover:bg-amber-900/30"
                         disabled={isPending || isResending}
                         onClick={() => handleResendConfirmation(topic.id)}
                         type="button"
@@ -324,7 +324,7 @@ export function PreferencesForm({
         </div>
       ) : (
         <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm">No email topics available.</p>
+          <p className="text-gray-500 text-sm dark:text-gray-400">No email topics available.</p>
         </div>
       )}
 
@@ -343,7 +343,7 @@ export function PreferencesForm({
         )}
 
         <button
-          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 disabled:opacity-50"
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
           disabled={isPending}
           onClick={handleUnsubscribeAll}
           type="button"

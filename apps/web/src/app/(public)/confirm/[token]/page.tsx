@@ -43,8 +43,8 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
   if (!payload) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30">
             <svg
               className="h-6 w-6 text-red-500"
               fill="none"
@@ -59,10 +59,10 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
               />
             </svg>
           </div>
-          <h1 className="mb-2 font-semibold text-gray-900 text-xl">
+          <h1 className="mb-2 font-semibold text-gray-900 text-xl dark:text-white">
             Link Expired
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 text-sm dark:text-gray-400">
             This confirmation link has expired. Please request a new
             confirmation email from the subscription page.
           </p>
@@ -137,7 +137,7 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
     ? maskEmail(contactRecord.email)
     : "your email";
 
-  const brandColor = org?.brandColor || "#3b82f6"; // Default to blue
+  const brandColor = org?.brandColor || "#000000"; // Default to black
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
@@ -159,31 +159,31 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
             </div>
           ) : null}
 
-          <h1 className="mb-2 font-semibold text-2xl text-gray-900 tracking-tight">
+          <h1 className="mb-2 font-semibold text-2xl text-gray-900 tracking-tight dark:text-white">
             {isAlreadyConfirmed ? "Already Subscribed" : "Confirm Subscription"}
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 text-sm dark:text-gray-400">
             {isAlreadyConfirmed ? (
               <>
-                <span className="font-medium text-gray-700">{maskedEmail}</span>{" "}
+                <span className="font-medium text-gray-700 dark:text-gray-300">{maskedEmail}</span>{" "}
                 is already subscribed to this topic.
               </>
             ) : (
               <>
                 Confirm subscription for{" "}
-                <span className="font-medium text-gray-700">{maskedEmail}</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">{maskedEmail}</span>
               </>
             )}
           </p>
         </div>
 
         {/* Confirmation card */}
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
           {/* Topic info */}
-          <div className="mb-6 rounded-xl bg-gray-50 p-4">
-            <h2 className="font-medium text-gray-900">{topicRecord.name}</h2>
+          <div className="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-700">
+            <h2 className="font-medium text-gray-900 dark:text-white">{topicRecord.name}</h2>
             {topicRecord.description && (
-              <p className="mt-1 text-gray-500 text-sm">
+              <p className="mt-1 text-gray-500 text-sm dark:text-gray-400">
                 {topicRecord.description}
               </p>
             )}
@@ -191,7 +191,7 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
 
           {isAlreadyConfirmed ? (
             <div className="text-center">
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/30">
                 <svg
                   className="h-5 w-5 text-green-500"
                   fill="none"
@@ -206,7 +206,7 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
                   />
                 </svg>
               </div>
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-500 text-sm dark:text-gray-400">
                 You're already subscribed to this topic. You'll continue
                 receiving updates.
               </p>
@@ -217,7 +217,7 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-center text-gray-400 text-xs">
+        <p className="mt-6 text-center text-gray-400 text-xs dark:text-gray-500">
           You can manage your subscriptions anytime using the link in our
           emails.
         </p>

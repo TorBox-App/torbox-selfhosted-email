@@ -32,7 +32,7 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
   if (status === "success") {
     return (
       <div className="text-center">
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/30">
           <svg
             className="h-5 w-5 text-green-500"
             fill="none"
@@ -47,10 +47,10 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
             />
           </svg>
         </div>
-        <h3 className="mb-1 font-medium text-gray-900">
+        <h3 className="mb-1 font-medium text-gray-900 dark:text-white">
           Subscription Confirmed!
         </h3>
-        <p className="text-gray-500 text-sm">
+        <p className="text-gray-500 text-sm dark:text-gray-400">
           You're now subscribed and will receive updates.
         </p>
       </div>
@@ -60,7 +60,7 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
   return (
     <div>
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700 text-sm">
+        <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700 text-sm dark:bg-red-900/30 dark:text-red-400">
           {error}
         </div>
       )}
@@ -100,7 +100,7 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
         )}
       </button>
 
-      <p className="mt-4 text-center text-gray-400 text-xs">
+      <p className="mt-4 text-center text-gray-400 text-xs dark:text-gray-500">
         By confirming, you agree to receive emails for this topic.
       </p>
     </div>
