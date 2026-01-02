@@ -4,7 +4,7 @@ import { contact, contactTopic, db, eq, topic } from "@wraps/db";
 import { and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { verifyConfirmationToken } from "@/lib/confirmation-token";
+import { verifyConfirmationToken } from "@wraps/email";
 
 export type ConfirmResult =
   | { success: true }

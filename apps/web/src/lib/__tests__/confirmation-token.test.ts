@@ -3,7 +3,7 @@ import {
   generateConfirmationToken,
   generateConfirmationUrl,
   verifyConfirmationToken,
-} from "../confirmation-token";
+} from "@wraps/email";
 
 describe("Confirmation Token", () => {
   beforeEach(() => {

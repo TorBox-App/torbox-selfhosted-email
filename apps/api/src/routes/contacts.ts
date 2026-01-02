@@ -21,6 +21,7 @@ import {
   type SmsStatus,
   topic,
 } from "@wraps/db";
+import { sendTopicConfirmationEmail } from "@wraps/email";
 import { and, desc, inArray, or, sql } from "drizzle-orm";
 import { t } from "elysia";
 
@@ -365,7 +366,12 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       if (topicIds.length > 0) {
         // Get topic info to check for double opt-in
         const topicInfos = await db
-          .select({ id: topic.id, doubleOptIn: topic.doubleOptIn })
+          .select({
+            id: topic.id,
+            name: topic.name,
+            description: topic.description,
+            doubleOptIn: topic.doubleOptIn,
+          })
           .from(topic)
           .where(
             and(
@@ -396,6 +402,29 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             };
           })
         );
+
+        // Send confirmation emails for double opt-in topics
+        if (pendingTopics.length > 0 && newContact.email) {
+          for (const topicId of pendingTopics) {
+            const topicInfo = topicMap.get(topicId);
+            if (topicInfo) {
+              // Send in background - don't block the response
+              sendTopicConfirmationEmail({
+                contactId: newContact.id,
+                contactEmail: newContact.email,
+                topicId,
+                topicName: topicInfo.name,
+                topicDescription: topicInfo.description,
+                organizationId: authContext.organizationId,
+              }).catch((err: unknown) => {
+                console.error(
+                  `Failed to send confirmation email for topic ${topicId}:`,
+                  err
+                );
+              });
+            }
+          }
+        }
       }
 
       ctx.set.status = 201;
@@ -520,7 +549,12 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         if (topicIds.length > 0) {
           // Get topic info to check for double opt-in
           const topicInfos = await db
-            .select({ id: topic.id, doubleOptIn: topic.doubleOptIn })
+            .select({
+              id: topic.id,
+              name: topic.name,
+              description: topic.description,
+              doubleOptIn: topic.doubleOptIn,
+            })
             .from(topic)
             .where(
               and(
@@ -559,6 +593,29 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
               };
             })
           );
+
+          // Send confirmation emails for newly pending topics
+          if (pendingTopics.length > 0 && updated.email) {
+            for (const topicId of pendingTopics) {
+              const topicInfo = topicMap.get(topicId);
+              if (topicInfo) {
+                // Send in background - don't block the response
+                sendTopicConfirmationEmail({
+                  contactId: params.id,
+                  contactEmail: updated.email,
+                  topicId,
+                  topicName: topicInfo.name,
+                  topicDescription: topicInfo.description,
+                  organizationId: authContext.organizationId,
+                }).catch((err: unknown) => {
+                  console.error(
+                    `Failed to send confirmation email for topic ${topicId}:`,
+                    err
+                  );
+                });
+              }
+            }
+          }
         }
       }
 

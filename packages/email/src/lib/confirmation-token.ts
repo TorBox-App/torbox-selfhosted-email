@@ -1,13 +1,12 @@
 /**
- * Confirmation Token Utility
+ * Confirmation Token Service
  *
- * Generates and verifies JWT tokens for topic subscription confirmation.
- * Used for double opt-in topic subscriptions.
+ * Generates and verifies JWT tokens for double opt-in email confirmation.
+ * Uses the same secret as unsubscribe tokens for simplicity.
  */
 
 import * as jose from "jose";
 
-// Token payload structure
 export interface ConfirmationTokenPayload {
   cid: string; // contact ID
   oid: string; // organization ID
@@ -15,16 +14,23 @@ export interface ConfirmationTokenPayload {
   type: "confirm"; // token type marker
 }
 
-// Get the secret from environment (reuse unsubscribe secret)
+const TOKEN_EXPIRATION = "48h"; // Confirmation links valid for 48 hours
+
+/**
+ * Get the secret key for signing tokens.
+ * Falls back to a default for development (should always be set in production).
+ */
 function getSecret(): Uint8Array {
-  const secret =
-    process.env.UNSUBSCRIBE_SECRET ||
-    "dev-unsubscribe-secret-change-in-production";
+  const secret = process.env.UNSUBSCRIBE_SECRET;
+  if (!secret) {
+    console.warn("UNSUBSCRIBE_SECRET not set, using default (insecure!)");
+    return new TextEncoder().encode("default-dev-secret-change-me");
+  }
   return new TextEncoder().encode(secret);
 }
 
 /**
- * Generate a confirmation token for a topic subscription
+ * Generate a confirmation token for a contact/topic subscription.
  */
 export async function generateConfirmationToken(
   contactId: string,
@@ -38,17 +44,17 @@ export async function generateConfirmationToken(
     type: "confirm",
   };
 
-  const token = await new jose.SignJWT(payload as unknown as jose.JWTPayload)
+  const token = await new jose.SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("48h") // 48 hour expiration
+    .setExpirationTime(TOKEN_EXPIRATION)
     .sign(getSecret());
 
   return token;
 }
 
 /**
- * Verify and decode a confirmation token
+ * Verify a confirmation token and return its payload.
+ * Returns null if the token is invalid or expired.
  */
 export async function verifyConfirmationToken(
   token: string
@@ -56,11 +62,16 @@ export async function verifyConfirmationToken(
   try {
     const { payload } = await jose.jwtVerify(token, getSecret());
 
+    // Verify it's a confirmation token (not an unsubscribe token)
+    if (payload.type !== "confirm") {
+      return null;
+    }
+
+    // Verify required fields exist
     if (
       typeof payload.cid !== "string" ||
       typeof payload.oid !== "string" ||
-      typeof payload.tid !== "string" ||
-      payload.type !== "confirm"
+      typeof payload.tid !== "string"
     ) {
       return null;
     }
@@ -72,12 +83,13 @@ export async function verifyConfirmationToken(
       type: "confirm",
     };
   } catch {
+    // Token is invalid or expired
     return null;
   }
 }
 
 /**
- * Generate confirmation URL for a topic subscription
+ * Generate a full confirmation URL for a contact/topic subscription.
  */
 export async function generateConfirmationUrl(
   contactId: string,
@@ -89,6 +101,7 @@ export async function generateConfirmationUrl(
     organizationId,
     topicId
   );
+
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wraps.dev";
   return `${baseUrl}/confirm/${token}`;
 }

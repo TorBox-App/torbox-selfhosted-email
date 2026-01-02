@@ -20,7 +20,7 @@ vi.mock("next/cache", () => ({
 }));
 
 // Mock the subscriptions module to avoid actual AWS calls
-vi.mock("@/lib/subscriptions", () => ({
+vi.mock("@wraps/email", () => ({
   determineSubscriptionStatus: vi.fn(async (params) => {
     // If topic requires double opt-in and no previous confirmation
     if (params.topicDoubleOptIn && !params.existingSubscription?.confirmedAt) {
@@ -242,7 +242,7 @@ describe("updatePreferences with double opt-in", () => {
     );
 
     // Re-import to get the unmocked version for this specific test
-    const { determineSubscriptionStatus } = await import("@/lib/subscriptions");
+    const { determineSubscriptionStatus } = await import("@wraps/email");
     vi.mocked(determineSubscriptionStatus).mockResolvedValueOnce({
       status: "subscribed", // Auto-confirmed because previously confirmed
     });

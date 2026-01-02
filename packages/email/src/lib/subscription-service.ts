@@ -1,5 +1,5 @@
 /**
- * Topic Subscription Service
+ * Subscription Confirmation Service
  *
  * Handles double opt-in logic for topic subscriptions.
  * Sends confirmation emails via the organization's AWS SES.
@@ -10,7 +10,7 @@ import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { awsAccount, db, eq, organization } from "@wraps/db";
 
 import { generateConfirmationUrl } from "./confirmation-token";
-import { generateTopicConfirmationEmail } from "@wraps/email/emails/topic-confirmation";
+import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
 
 export type CreateSubscriptionParams = {
   contactId: string;
@@ -101,7 +101,7 @@ type SendConfirmationParams = {
 /**
  * Send topic subscription confirmation email via the organization's SES
  */
-async function sendTopicConfirmationEmail(
+export async function sendTopicConfirmationEmail(
   params: SendConfirmationParams
 ): Promise<boolean> {
   const {
@@ -182,9 +182,9 @@ async function sendTopicConfirmationEmail(
   });
 
   // Get a verified sending identity (domain) for the organization
-  // For now, use a noreply address with the first verified domain
+  // For now, use a noreply address with the default domain
   // In production, this should be configurable per organization
-  const fromAddress = `noreply@${getDefaultDomain(account.region)}`;
+  const fromAddress = `noreply@${getDefaultDomain()}`;
 
   // Send email
   await sesClient.send(
@@ -215,7 +215,7 @@ async function sendTopicConfirmationEmail(
   return true;
 }
 
-function getDefaultDomain(_region: string): string {
+function getDefaultDomain(): string {
   // TODO: Look up organization's verified domains
   // For now, fall back to wraps.dev for confirmation emails
   return process.env.DEFAULT_EMAIL_DOMAIN ?? "wraps.dev";

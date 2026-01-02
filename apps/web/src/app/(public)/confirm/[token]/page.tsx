@@ -3,7 +3,7 @@ import { and } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { verifyConfirmationToken } from "@/lib/confirmation-token";
+import { verifyConfirmationToken } from "@wraps/email";
 import { ConfirmationForm } from "./confirmation-form";
 
 interface ConfirmPageProps {

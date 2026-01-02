@@ -10,7 +10,7 @@ import {
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { generateConfirmationToken } from "@/lib/confirmation-token";
+import { generateConfirmationToken } from "@wraps/email";
 import { confirmSubscription } from "../actions";
 
 // Mock next/cache
@@ -215,7 +215,9 @@ describe("confirmSubscription", () => {
     const result = await confirmSubscription("invalid-token");
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Invalid or expired");
+    if (!result.success) {
+      expect(result.error).toContain("Invalid or expired");
+    }
   });
 
   it("should fail with expired token", async () => {
@@ -226,7 +228,9 @@ describe("confirmSubscription", () => {
     );
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Invalid or expired");
+    if (!result.success) {
+      expect(result.error).toContain("Invalid or expired");
+    }
   });
 
   it("should fail with non-existent contact", async () => {
@@ -240,7 +244,9 @@ describe("confirmSubscription", () => {
     const result = await confirmSubscription(token);
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Contact not found");
+    if (!result.success) {
+      expect(result.error).toContain("Contact not found");
+    }
   });
 
   it("should fail with non-existent topic", async () => {
@@ -254,7 +260,9 @@ describe("confirmSubscription", () => {
     const result = await confirmSubscription(token);
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Topic not found");
+    if (!result.success) {
+      expect(result.error).toContain("Topic not found");
+    }
   });
 
   it("should fail with mismatched organization", async () => {
@@ -268,7 +276,9 @@ describe("confirmSubscription", () => {
     const result = await confirmSubscription(token);
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain("Contact not found");
+    if (!result.success) {
+      expect(result.error).toContain("Contact not found");
+    }
   });
 
   it("should clear unsubscribedAt when confirming", async () => {

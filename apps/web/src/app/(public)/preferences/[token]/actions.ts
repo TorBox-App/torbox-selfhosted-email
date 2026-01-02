@@ -4,7 +4,7 @@ import { contact, contactTopic, db, eq, topic } from "@wraps/db";
 import { and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-import { determineSubscriptionStatus } from "@/lib/subscriptions";
+import { determineSubscriptionStatus } from "@wraps/email";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 
 interface ActionResult {
