@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/api/**'
       - 'packages/db/**'
+      - 'packages/email/**'
       - 'infra/**'
       - 'sst.config.ts'
       - '.github/workflows/deploy-api.yml'
@@ -52,6 +53,7 @@ jobs:
         run: |
           pnpm --filter @wraps/db build
           pnpm --filter @wraps/auth build
+          pnpm --filter @wraps/email build
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -64,6 +66,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          UNSUBSCRIBE_SECRET: ${{ secrets.UNSUBSCRIBE_SECRET }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
 
       - name: Print outputs
         run: |

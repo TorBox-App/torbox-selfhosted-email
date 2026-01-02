@@ -15,9 +15,24 @@ import {
 } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { contactsRoutes } from "../routes/contacts";
+
+// Mock @wraps/email to track confirmation email calls
+vi.mock("@wraps/email", () => ({
+  sendTopicConfirmationEmail: vi.fn().mockResolvedValue(true),
+}));
+
+import { sendTopicConfirmationEmail } from "@wraps/email";
 
 // Test data IDs (unique to avoid conflicts with other tests)
 const TEST_PREFIX = "api-contacts-int";
@@ -136,9 +151,10 @@ beforeAll(async () => {
     });
 });
 
-// Clean up contacts before each test
+// Clean up contacts before each test and reset mocks
 beforeEach(async () => {
   await db.delete(contact).where(eq(contact.organizationId, testOrg.id));
+  vi.clearAllMocks();
 });
 
 // Clean up after all tests
@@ -561,6 +577,61 @@ describe("Contacts API Integration", () => {
       expect(subscriptions[0].confirmedAt).toBeNull();
     });
 
+    it("sends confirmation email for double opt-in topic", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "confirmation-email-test@example.com",
+            topicIds: [testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+
+      // Wait a tick for the async email to be queued
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Verify confirmation email was sent
+      expect(sendTopicConfirmationEmail).toHaveBeenCalledTimes(1);
+      expect(sendTopicConfirmationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contactId: body.id,
+          contactEmail: "confirmation-email-test@example.com",
+          topicId: testDoubleOptInTopic.id,
+          topicName: testDoubleOptInTopic.name,
+          organizationId: testOrg.id,
+        })
+      );
+    });
+
+    it("does not send confirmation email for regular topic", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "no-confirmation-email@example.com",
+            topicIds: [testTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      // Wait a tick
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Verify no confirmation email was sent
+      expect(sendTopicConfirmationEmail).not.toHaveBeenCalled();
+    });
+
     it("creates contact with mixed regular and double opt-in topics", async () => {
       const app = createTestApp();
       const response = await app.handle(
@@ -848,6 +919,92 @@ describe("Contacts API Integration", () => {
       expect(subscriptions[0].status).toBe("pending");
       expect(subscriptions[0].subscribedAt).toBeNull();
       expect(subscriptions[0].confirmedAt).toBeNull();
+    });
+
+    it("sends confirmation email when adding double opt-in topic via PATCH", async () => {
+      // Create contact without subscriptions
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "patch-confirmation-email@example.com",
+          emailHash: "hash-patch-confirmation",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topicIds: [testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      // Wait a tick for the async email to be queued
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Verify confirmation email was sent
+      expect(sendTopicConfirmationEmail).toHaveBeenCalledTimes(1);
+      expect(sendTopicConfirmationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contactId: existing.id,
+          contactEmail: "patch-confirmation-email@example.com",
+          topicId: testDoubleOptInTopic.id,
+          topicName: testDoubleOptInTopic.name,
+          organizationId: testOrg.id,
+        })
+      );
+    });
+
+    it("does not send confirmation email for auto-confirmed re-subscription", async () => {
+      const confirmedAt = new Date(Date.now() - 86400000); // 1 day ago
+
+      // Create contact with previously confirmed subscription
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "no-email-resubscribe@example.com",
+          emailHash: "hash-no-email-resubscribe",
+          properties: {},
+        })
+        .returning();
+
+      // Create previously confirmed but now unsubscribed subscription
+      await db.insert(contactTopic).values({
+        contactId: existing.id,
+        topicId: testDoubleOptInTopic.id,
+        status: "unsubscribed",
+        subscribedAt: confirmedAt,
+        confirmedAt: confirmedAt,
+        unsubscribedAt: new Date(),
+      });
+
+      // Re-subscribe via PATCH
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topicIds: [testDoubleOptInTopic.id],
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      // Wait a tick
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Should NOT send confirmation email since auto-confirmed
+      expect(sendTopicConfirmationEmail).not.toHaveBeenCalled();
     });
 
     it("auto-confirms re-subscription if previously confirmed", async () => {

@@ -51,6 +51,9 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
     BATCH_QUEUE_ARN: batchQueue.arn,
     SCHEDULER_ROLE_ARN: schedulerRole.arn,
     SCHEDULER_GROUP_NAME: schedulerGroup.name,
+    // Confirmation email tokens (double opt-in)
+    UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "https://app.wraps.dev",
   },
   link: [rateLimitTable, batchQueue],
   nodejs: {
