@@ -5,7 +5,12 @@
  * Sends emails/SMS in chunks of 100 contacts.
  */
 
-import { SESClient, SendRawEmailCommand } from "@aws-sdk/client-ses";
+import {
+  SendBulkEmailCommand,
+  SendEmailCommand,
+  SESv2Client,
+  type BulkEmailEntry,
+} from "@aws-sdk/client-sesv2";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import {
   batchSend,
@@ -25,20 +30,6 @@ import type { BatchJob } from "../services/queue";
 
 const CHUNK_SIZE = 100;
 const QUEUE_URL = process.env.BATCH_QUEUE_URL;
-
-/**
- * Substitute variables in template content.
- * Variables are in the format {{variableName}} or {{object.property}}
- */
-function substituteVariables(
-  content: string,
-  variables: Record<string, string | undefined>
-): string {
-  return content.replace(
-    /\{\{\s*([^}]+)\s*\}\}/g,
-    (match, key) => variables[key.trim()] ?? match
-  );
-}
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
   for (const record of event.Records) {
@@ -97,8 +88,8 @@ async function processJob(job: BatchJob): Promise<void> {
   // Get customer AWS credentials
   const credentials = await getCredentials(awsAccountId);
 
-  // Create SES client with customer credentials
-  const sesClient = new SESClient({
+  // Create SES v2 client with customer credentials (for bulk sending)
+  const sesClient = new SESv2Client({
     credentials: {
       accessKeyId: credentials.accessKeyId,
       secretAccessKey: credentials.secretAccessKey,
@@ -107,15 +98,17 @@ async function processJob(job: BatchJob): Promise<void> {
     region: process.env.AWS_REGION ?? "us-east-1",
   });
 
-  // Load template and organization name if using a template
+  // Load template info and organization name
+  let sesTemplateName: string | undefined;
   let templateHtml: string | undefined;
   let orgName: string | undefined;
-  let emailType: "marketing" | "transactional" = "marketing"; // Default to marketing for compliance
+  let emailType: "marketing" | "transactional" = "marketing";
 
   if (batch.emailTemplateId) {
     const [[tmpl], [org]] = await Promise.all([
       db
         .select({
+          sesTemplateName: template.sesTemplateName,
           compiledHtml: template.compiledHtml,
           emailType: template.emailType,
         })
@@ -128,138 +121,289 @@ async function processJob(job: BatchJob): Promise<void> {
         .where(eq(organization.id, organizationId))
         .limit(1),
     ]);
+    sesTemplateName = tmpl?.sesTemplateName ?? undefined;
     templateHtml = tmpl?.compiledHtml ?? undefined;
     emailType = tmpl?.emailType ?? "marketing";
     orgName = org?.name ?? undefined;
   }
 
-  // Send to each contact (in parallel with concurrency limit)
+  // Send to contacts using SES
   let sent = 0;
   let failed = 0;
 
   const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
   const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
 
-  // Concurrency limit - SES allows 14 requests/second in most regions
-  const CONCURRENCY_LIMIT = 10;
-
-  // Process contacts in parallel batches
+  // Filter email contacts
   const emailContacts = contacts.filter(
     (c) => channel === "email" && c.email
   );
 
-  // Process in parallel with concurrency limit
-  const results = await Promise.allSettled(
-    emailContacts.map(async (recipient, index) => {
-      // Simple concurrency control - stagger starts
-      await new Promise((resolve) =>
-        setTimeout(resolve, Math.floor(index / CONCURRENCY_LIMIT) * 100)
+  const isMarketing = emailType === "marketing";
+  const fromAddress = batch.from ?? `noreply@${getDefaultDomain()}`;
+  const fromDisplay = batch.fromName
+    ? `${batch.fromName} <${fromAddress}>`
+    : fromAddress;
+
+  // Use bulk sending for SES templates, individual sends for raw HTML
+  if (sesTemplateName) {
+    // SES bulk email limit is 50 recipients per API call
+    const BULK_BATCH_SIZE = 50;
+
+    // Process in batches of 50
+    for (let i = 0; i < emailContacts.length; i += BULK_BATCH_SIZE) {
+      const recipientBatch = emailContacts.slice(i, i + BULK_BATCH_SIZE);
+
+      // Build bulk email entries
+      const bulkEntries: BulkEmailEntry[] = await Promise.all(
+        recipientBatch.map(async (recipient) => {
+          // Generate unsubscribe URLs for marketing emails
+          let unsubscribeUrl: string | undefined;
+          let preferencesUrl: string | undefined;
+
+          if (isMarketing) {
+            const unsubscribeToken = await generateUnsubscribeToken(
+              recipient.id,
+              organizationId
+            );
+            unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
+            preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+          }
+
+          // Build replacement data for SES template (flattened variable names)
+          const replacementData: Record<string, string> = {
+            contactEmail: recipient.email!,
+            contactFirstName: recipient.firstName ?? "",
+            contactLastName: recipient.lastName ?? "",
+            contactCompany: recipient.company ?? "",
+            contactJobTitle: recipient.jobTitle ?? "",
+            organizationName: orgName ?? "",
+            unsubscribeUrl: unsubscribeUrl ?? "",
+            preferencesUrl: preferencesUrl ?? "",
+          };
+
+          // Add custom properties with flattened names
+          if (recipient.properties) {
+            for (const [key, value] of Object.entries(recipient.properties)) {
+              const flatKey = `contactProperties${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+              replacementData[flatKey] = String(value ?? "");
+            }
+          }
+
+          const entry: BulkEmailEntry = {
+            Destination: {
+              ToAddresses: [recipient.email!],
+            },
+            ReplacementEmailContent: {
+              ReplacementTemplate: {
+                ReplacementTemplateData: JSON.stringify(replacementData),
+              },
+            },
+          };
+
+          // Add List-Unsubscribe headers for marketing emails (RFC 8058)
+          if (isMarketing && unsubscribeUrl) {
+            entry.ReplacementHeaders = [
+              {
+                Name: "List-Unsubscribe",
+                Value: `<${unsubscribeUrl}>`,
+              },
+              {
+                Name: "List-Unsubscribe-Post",
+                Value: "List-Unsubscribe=One-Click",
+              },
+            ];
+          }
+
+          return entry;
+        })
       );
 
-      // Generate unsubscribe token and URLs only for marketing emails
-      let unsubscribeUrl: string | undefined;
-      let preferencesUrl: string | undefined;
-
-      if (emailType === "marketing") {
-        const unsubscribeToken = await generateUnsubscribeToken(
-          recipient.id,
-          organizationId
+      try {
+        const result = await sesClient.send(
+          new SendBulkEmailCommand({
+            FromEmailAddress: fromDisplay,
+            ReplyToAddresses: batch.replyTo ? [batch.replyTo] : undefined,
+            DefaultContent: {
+              Template: {
+                TemplateName: sesTemplateName,
+              },
+            },
+            BulkEmailEntries: bulkEntries,
+            ConfigurationSetName: "wraps-email-tracking",
+          })
         );
-        unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
-        preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+
+        // Process results for each recipient
+        for (let j = 0; j < recipientBatch.length; j++) {
+          const recipient = recipientBatch[j];
+          const bulkResult = result.BulkEmailEntryResults?.[j];
+
+          if (bulkResult?.Status === "SUCCESS") {
+            await db.insert(messageSend).values({
+              organizationId,
+              contactId: recipient.id,
+              awsAccountId,
+              channel: "email",
+              batchSendId: batchId,
+              sourceType: "batch",
+              recipient: recipient.email!,
+              subject: batch.subject,
+              from: batch.from,
+              fromName: batch.fromName,
+              emailTemplateId: batch.emailTemplateId,
+              messageId: bulkResult.MessageId ?? "",
+              status: "sent",
+              sentAt: new Date(),
+            });
+            sent++;
+          } else {
+            console.error(
+              `Failed to send to ${recipient.email}:`,
+              bulkResult?.Error
+            );
+            await db.insert(messageSend).values({
+              organizationId,
+              contactId: recipient.id,
+              awsAccountId,
+              channel: "email",
+              batchSendId: batchId,
+              sourceType: "batch",
+              recipient: recipient.email!,
+              subject: batch.subject,
+              from: batch.from,
+              fromName: batch.fromName,
+              emailTemplateId: batch.emailTemplateId,
+              status: "failed",
+              error: bulkResult?.Error ?? "Unknown error",
+            });
+            failed++;
+          }
+        }
+      } catch (error) {
+        // Entire batch failed
+        console.error(`Bulk send failed for batch starting at ${i}:`, error);
+        for (const recipient of recipientBatch) {
+          await db.insert(messageSend).values({
+            organizationId,
+            contactId: recipient.id,
+            awsAccountId,
+            channel: "email",
+            batchSendId: batchId,
+            sourceType: "batch",
+            recipient: recipient.email ?? "",
+            subject: batch.subject,
+            from: batch.from,
+            fromName: batch.fromName,
+            emailTemplateId: batch.emailTemplateId,
+            status: "failed",
+            error: error instanceof Error ? error.message : "Bulk send failed",
+          });
+          failed++;
+        }
       }
+    }
+  } else {
+    // Fallback: individual sends for raw HTML (parallel with concurrency limit)
+    const html = templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
+    const subject = batch.subject ?? "Message from Wraps";
+    const CONCURRENCY = 10;
 
-      // Substitute variables in template HTML
-      let emailHtml =
-        templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
+    for (let i = 0; i < emailContacts.length; i += CONCURRENCY) {
+      const recipientBatch = emailContacts.slice(i, i + CONCURRENCY);
 
-      if (templateHtml) {
-        // Build variables object for substitution
-        const variables: Record<string, string | undefined> = {
-          "contact.email": recipient.email!,
-          "contact.firstName": recipient.firstName ?? undefined,
-          "contact.lastName": recipient.lastName ?? undefined,
-          "contact.company": recipient.company ?? undefined,
-          "contact.jobTitle": recipient.jobTitle ?? undefined,
-          "organization.name": orgName,
-          unsubscribeUrl,
-          preferencesUrl,
-          // Spread any custom properties (prefixed with contact.properties.)
-          ...Object.fromEntries(
-            Object.entries(recipient.properties).map(([key, value]) => [
-              `contact.properties.${key}`,
-              String(value ?? ""),
-            ])
-          ),
-        };
+      const results = await Promise.allSettled(
+        recipientBatch.map(async (recipient) => {
+          // Generate unsubscribe URLs for marketing emails
+          let unsubscribeUrl: string | undefined;
+          let preferencesUrl: string | undefined;
 
-        emailHtml = substituteVariables(templateHtml, variables);
+          if (isMarketing) {
+            const unsubscribeToken = await generateUnsubscribeToken(
+              recipient.id,
+              organizationId
+            );
+            unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
+            preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+          }
+
+          // Build headers for marketing emails (RFC 8058)
+          const headers: Array<{ Name: string; Value: string }> = [];
+          if (isMarketing && unsubscribeUrl) {
+            headers.push(
+              { Name: "List-Unsubscribe", Value: `<${unsubscribeUrl}>` },
+              { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" }
+            );
+          }
+
+          const result = await sesClient.send(
+            new SendEmailCommand({
+              FromEmailAddress: fromDisplay,
+              ReplyToAddresses: batch.replyTo ? [batch.replyTo] : undefined,
+              Destination: {
+                ToAddresses: [recipient.email!],
+              },
+              Content: {
+                Simple: {
+                  Subject: { Data: subject },
+                  Body: {
+                    Html: { Data: html },
+                    Text: { Data: stripHtml(html) },
+                  },
+                  Headers: headers.length > 0 ? headers : undefined,
+                },
+              },
+              ConfigurationSetName: "wraps-email-tracking",
+            })
+          );
+
+          return { recipient, messageId: result.MessageId };
+        })
+      );
+
+      // Process results
+      for (let j = 0; j < results.length; j++) {
+        const result = results[j];
+        const recipient = recipientBatch[j];
+
+        if (result.status === "fulfilled") {
+          await db.insert(messageSend).values({
+            organizationId,
+            contactId: recipient.id,
+            awsAccountId,
+            channel: "email",
+            batchSendId: batchId,
+            sourceType: "batch",
+            recipient: recipient.email!,
+            subject: batch.subject,
+            from: batch.from,
+            fromName: batch.fromName,
+            emailTemplateId: batch.emailTemplateId,
+            messageId: result.value.messageId ?? "",
+            status: "sent",
+            sentAt: new Date(),
+          });
+          sent++;
+        } else {
+          console.error(`Failed to send to ${recipient.email}:`, result.reason);
+          await db.insert(messageSend).values({
+            organizationId,
+            contactId: recipient.id,
+            awsAccountId,
+            channel: "email",
+            batchSendId: batchId,
+            sourceType: "batch",
+            recipient: recipient.email!,
+            subject: batch.subject,
+            from: batch.from,
+            fromName: batch.fromName,
+            emailTemplateId: batch.emailTemplateId,
+            status: "failed",
+            error: result.reason instanceof Error ? result.reason.message : "Send failed",
+          });
+          failed++;
+        }
       }
-
-      const messageId = await sendEmail(sesClient, {
-        from: batch.from ?? `noreply@${getDefaultDomain()}`,
-        fromName: batch.fromName,
-        to: recipient.email!,
-        subject: batch.subject ?? "Message from Wraps",
-        html: emailHtml,
-        replyTo: batch.replyTo,
-        emailType,
-        unsubscribeUrl,
-        preferencesUrl,
-      });
-
-      return { recipient, messageId };
-    })
-  );
-
-  // Record results
-  for (const result of results) {
-    if (result.status === "fulfilled") {
-      const { recipient, messageId } = result.value;
-      await db.insert(messageSend).values({
-        organizationId,
-        contactId: recipient.id,
-        awsAccountId,
-        channel: "email",
-        batchSendId: batchId,
-        sourceType: "batch",
-        recipient: recipient.email!,
-        subject: batch.subject,
-        from: batch.from,
-        fromName: batch.fromName,
-        emailTemplateId: batch.emailTemplateId,
-        messageId,
-        status: "sent",
-        sentAt: new Date(),
-      });
-      sent++;
-    } else {
-      // Find which recipient failed
-      const index = results.indexOf(result);
-      const recipient = emailContacts[index];
-      console.error(`Failed to send to ${recipient?.email}:`, result.reason);
-
-      if (recipient) {
-        await db.insert(messageSend).values({
-          organizationId,
-          contactId: recipient.id,
-          awsAccountId,
-          channel: "email",
-          batchSendId: batchId,
-          sourceType: "batch",
-          recipient: recipient.email ?? "",
-          subject: batch.subject,
-          from: batch.from,
-          fromName: batch.fromName,
-          emailTemplateId: batch.emailTemplateId,
-          status: "failed",
-          error:
-            result.reason instanceof Error
-              ? result.reason.message
-              : "Unknown error",
-        });
-      }
-      failed++;
     }
   }
 
@@ -360,104 +504,6 @@ async function getContactsChunk(
   }
 
   return [];
-}
-
-interface EmailParams {
-  from: string;
-  fromName?: string | null;
-  to: string;
-  subject: string;
-  html: string;
-  replyTo?: string | null;
-  // Email type determines compliance behavior
-  emailType: "marketing" | "transactional";
-  // Unsubscribe URLs (only used for marketing emails)
-  unsubscribeUrl?: string;
-  preferencesUrl?: string;
-}
-
-async function sendEmail(
-  client: SESClient,
-  params: EmailParams
-): Promise<string> {
-  const source = params.fromName
-    ? `${params.fromName} <${params.from}>`
-    : params.from;
-
-  const { emailType, unsubscribeUrl, preferencesUrl } = params;
-  const isMarketing = emailType === "marketing";
-
-  // Add unsubscribe footer only for marketing emails
-  const finalHtml =
-    isMarketing && unsubscribeUrl && preferencesUrl
-      ? addUnsubscribeFooter(params.html, unsubscribeUrl, preferencesUrl)
-      : params.html;
-
-  // Build raw email (with List-Unsubscribe headers for marketing only - RFC 8058)
-  const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-
-  const rawEmail = [
-    `From: ${source}`,
-    `To: ${params.to}`,
-    `Subject: ${params.subject}`,
-    params.replyTo ? `Reply-To: ${params.replyTo}` : null,
-    // RFC 8058 one-click unsubscribe headers (marketing only)
-    isMarketing && unsubscribeUrl ? `List-Unsubscribe: <${unsubscribeUrl}>` : null,
-    isMarketing && unsubscribeUrl ? "List-Unsubscribe-Post: List-Unsubscribe=One-Click" : null,
-    "MIME-Version: 1.0",
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    "",
-    `--${boundary}`,
-    "Content-Type: text/plain; charset=UTF-8",
-    "Content-Transfer-Encoding: quoted-printable",
-    "",
-    stripHtml(finalHtml),
-    "",
-    `--${boundary}`,
-    "Content-Type: text/html; charset=UTF-8",
-    "Content-Transfer-Encoding: quoted-printable",
-    "",
-    finalHtml,
-    "",
-    `--${boundary}--`,
-  ]
-    .filter((line) => line !== null)
-    .join("\r\n");
-
-  const result = await client.send(
-    new SendRawEmailCommand({
-      RawMessage: {
-        Data: new TextEncoder().encode(rawEmail),
-      },
-      ConfigurationSetName: "wraps-email-tracking",
-    })
-  );
-
-  return result.MessageId ?? "";
-}
-
-/**
- * Add unsubscribe footer to HTML email
- */
-function addUnsubscribeFooter(
-  html: string,
-  unsubscribeUrl: string,
-  preferencesUrl: string
-): string {
-  const footer = `
-<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #6b7280;">
-  <p>
-    <a href="${preferencesUrl}" style="color: #6b7280; text-decoration: underline;">Manage preferences</a>
-    &nbsp;|&nbsp;
-    <a href="${unsubscribeUrl}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
-  </p>
-</div>`;
-
-  // Insert before </body> if exists, otherwise append
-  if (html.includes("</body>")) {
-    return html.replace("</body>", `${footer}</body>`);
-  }
-  return html + footer;
 }
 
 /**

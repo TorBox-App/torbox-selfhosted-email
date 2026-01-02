@@ -20,6 +20,7 @@
     "@aws-sdk/client-dynamodb": "^3.927.0",
     "@aws-sdk/client-scheduler": "3.958.0",
     "@aws-sdk/client-ses": "^3.927.0",
+    "@aws-sdk/client-sesv2": "3.962.0",
     "@aws-sdk/client-sqs": "^3.927.0",
     "@aws-sdk/client-sts": "^3.927.0",
     "@elysiajs/cors": "^1.4.1",
