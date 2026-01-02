@@ -123,6 +123,9 @@ export async function createIAMRole(
       "ses:GetSendStatistics",
       "ses:ListIdentities",
       "ses:GetIdentityVerificationAttributes",
+      // SES v2 API for listing/getting email identities (domains)
+      "ses:ListEmailIdentities",
+      "ses:GetEmailIdentity",
       "cloudwatch:GetMetricData",
       "cloudwatch:GetMetricStatistics",
     ],
