@@ -1,4 +1,12 @@
-import { contact, contactTopic, db, eq, organization, topic } from "@wraps/db";
+import {
+  contact,
+  contactTopic,
+  db,
+  eq,
+  organization,
+  topic,
+  topicSettings,
+} from "@wraps/db";
 import { and } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -21,15 +29,29 @@ export async function generateMetadata({
     return { title: "Email Preferences" };
   }
 
-  const [org] = await db
-    .select({ name: organization.name })
+  const [result] = await db
+    .select({
+      orgName: organization.name,
+      title: topicSettings.preferenceCenterTitle,
+      description: topicSettings.preferenceCenterDescription,
+    })
     .from(organization)
+    .leftJoin(
+      topicSettings,
+      eq(organization.id, topicSettings.organizationId)
+    )
     .where(eq(organization.id, payload.oid))
     .limit(1);
 
+  const pageTitle = result?.title || "Email Preferences";
+  const fullTitle = result?.orgName
+    ? `${pageTitle} - ${result.orgName}`
+    : pageTitle;
+
   return {
-    title: org?.name ? `Email Preferences - ${org.name}` : "Email Preferences",
-    description: "Manage your email subscription preferences",
+    title: fullTitle,
+    description:
+      result?.description || "Manage your email subscription preferences",
   };
 }
 
@@ -90,14 +112,20 @@ export default async function PreferencesPage({
     notFound();
   }
 
-  // Load organization with branding
-  const [org] = await db
+  // Load organization with branding and topic settings (single query with left join)
+  const [orgWithSettings] = await db
     .select({
       name: organization.name,
       logo: organization.logo,
       brandColor: organization.brandColor,
+      preferenceCenterTitle: topicSettings.preferenceCenterTitle,
+      preferenceCenterDescription: topicSettings.preferenceCenterDescription,
     })
     .from(organization)
+    .leftJoin(
+      topicSettings,
+      eq(organization.id, topicSettings.organizationId)
+    )
     .where(eq(organization.id, organizationId))
     .limit(1);
 
@@ -132,7 +160,9 @@ export default async function PreferencesPage({
     .from(topic)
     .where(eq(topic.organizationId, organizationId));
 
-  const topicDoubleOptInMap = new Map(topicDetails.map((t) => [t.id, t.doubleOptIn]));
+  const topicDoubleOptInMap = new Map(
+    topicDetails.map((t) => [t.id, t.doubleOptIn])
+  );
 
   // Build topic list with subscription status
   const topicsWithStatus = topics.map((t) => {
@@ -149,34 +179,44 @@ export default async function PreferencesPage({
     ? maskEmail(contactRecord.email)
     : "your email";
 
-  const brandColor = org?.brandColor || "#3b82f6"; // Default to blue
+  const brandColor = orgWithSettings?.brandColor || "#3b82f6"; // Default to blue
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         {/* Header with branding */}
         <div className="mb-8 text-center">
-          {org?.logo ? (
+          {orgWithSettings?.logo ? (
             <img
-              alt={org.name || "Company logo"}
+              alt={orgWithSettings.name || "Company logo"}
               className="mx-auto mb-6 h-12 w-auto"
-              src={org.logo}
+              src={orgWithSettings.logo}
             />
-          ) : org?.name ? (
+          ) : orgWithSettings?.name ? (
             <div
               className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl font-semibold text-lg text-white"
               style={{ backgroundColor: brandColor }}
             >
-              {org.name.charAt(0).toUpperCase()}
+              {orgWithSettings.name.charAt(0).toUpperCase()}
             </div>
           ) : null}
 
           <h1 className="mb-2 font-semibold text-2xl text-gray-900 tracking-tight">
-            Email Preferences
+            {orgWithSettings?.preferenceCenterTitle || "Email Preferences"}
           </h1>
           <p className="text-gray-500 text-sm">
-            Manage subscriptions for{" "}
-            <span className="font-medium text-gray-700">{maskedEmail}</span>
+            {orgWithSettings?.preferenceCenterDescription
+              ? renderDescription(orgWithSettings.preferenceCenterDescription, {
+                  masked_email: maskedEmail,
+                  email: contactRecord.email || "",
+                  org_name: orgWithSettings.name || "",
+                })
+              : (
+              <>
+                Manage subscriptions for{" "}
+                <span className="font-medium text-gray-700">{maskedEmail}</span>
+              </>
+            )}
           </p>
         </div>
 
@@ -189,7 +229,7 @@ export default async function PreferencesPage({
               contactRecord.emailStatus === "unsubscribed"
             }
             organizationId={organizationId}
-            orgName={org?.name || undefined}
+            orgName={orgWithSettings?.name || undefined}
             token={token}
             topics={topicsWithStatus}
           />
@@ -209,4 +249,38 @@ function maskEmail(email: string): string {
   if (!(local && domain)) return email;
   if (local.length <= 2) return `${local[0]}***@${domain}`;
   return `${local[0]}***${local[local.length - 1]}@${domain}`;
+}
+
+/**
+ * Render description with template variables
+ * Supported variables: {{masked_email}}, {{email}}, {{org_name}}
+ */
+function renderDescription(
+  template: string,
+  variables: Record<string, string>
+): React.ReactNode {
+  // Split by template variable pattern {{variable_name}}
+  const parts = template.split(/(\{\{[^}]+\}\})/g);
+
+  return parts.map((part, index) => {
+    const match = part.match(/^\{\{(\w+)\}\}$/);
+    if (match) {
+      const varName = match[1];
+      const value = variables[varName];
+      if (value !== undefined) {
+        // Highlight the masked_email variable
+        if (varName === "masked_email") {
+          return (
+            <span className="font-medium text-gray-700" key={index}>
+              {value}
+            </span>
+          );
+        }
+        return <span key={index}>{value}</span>;
+      }
+      // Return the original if variable not found
+      return part;
+    }
+    return part;
+  });
 }

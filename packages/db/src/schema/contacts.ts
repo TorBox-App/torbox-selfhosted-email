@@ -185,6 +185,24 @@ export const topic = pgTable(
   })
 );
 
+// Topic Settings (organization-level configuration)
+export const topicSettings = pgTable("topic_settings", {
+  organizationId: text("organization_id")
+    .references(() => organization.id, { onDelete: "cascade" })
+    .primaryKey(),
+
+  // Double Opt-In Email Settings
+  confirmationFromName: text("confirmation_from_name"), // e.g., "Acme Inc"
+  confirmationFromEmail: text("confirmation_from_email"), // e.g., "noreply@acme.com"
+  confirmationReplyToEmail: text("confirmation_reply_to_email"), // optional reply-to
+
+  // Preference Center Settings
+  preferenceCenterTitle: text("preference_center_title"),
+  preferenceCenterDescription: text("preference_center_description"),
+
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Contact-Topic relationship (subscriptions)
 export const contactTopic = pgTable(
   "contact_topic",
@@ -244,5 +262,12 @@ export const contactTopicRelations = relations(contactTopic, ({ one }) => ({
   topic: one(topic, {
     fields: [contactTopic.topicId],
     references: [topic.id],
+  }),
+}));
+
+export const topicSettingsRelations = relations(topicSettings, ({ one }) => ({
+  organization: one(organization, {
+    fields: [topicSettings.organizationId],
+    references: [organization.id],
   }),
 }));

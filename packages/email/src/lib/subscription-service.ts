@@ -5,12 +5,15 @@
  * Sends confirmation emails via the organization's AWS SES.
  */
 
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import {
+  ListEmailIdentitiesCommand,
+  SESv2Client,
+  SendEmailCommand,
+} from "@aws-sdk/client-sesv2";
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
-import { awsAccount, db, eq, organization } from "@wraps/db";
-
-import { generateConfirmationUrl } from "./confirmation-token";
+import { awsAccount, db, eq, organization, topicSettings } from "@wraps/db";
 import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
+import { generateConfirmationUrl } from "./confirmation-token";
 
 export type CreateSubscriptionParams = {
   contactId: string;
@@ -113,26 +116,31 @@ export async function sendTopicConfirmationEmail(
     organizationId,
   } = params;
 
-  // Get organization name and AWS account
-  const [org] = await db
-    .select({
-      name: organization.name,
-    })
-    .from(organization)
-    .where(eq(organization.id, organizationId))
-    .limit(1);
-
-  // Get the organization's first AWS account (for SES sending)
-  const [account] = await db
-    .select({
-      id: awsAccount.id,
-      roleArn: awsAccount.roleArn,
-      externalId: awsAccount.externalId,
-      region: awsAccount.region,
-    })
-    .from(awsAccount)
-    .where(eq(awsAccount.organizationId, organizationId))
-    .limit(1);
+  // Get organization name, AWS account, and topic settings in parallel
+  const [[org], [account], [settings]] = await Promise.all([
+    db
+      .select({
+        name: organization.name,
+      })
+      .from(organization)
+      .where(eq(organization.id, organizationId))
+      .limit(1),
+    db
+      .select({
+        id: awsAccount.id,
+        roleArn: awsAccount.roleArn,
+        externalId: awsAccount.externalId,
+        region: awsAccount.region,
+      })
+      .from(awsAccount)
+      .where(eq(awsAccount.organizationId, organizationId))
+      .limit(1),
+    db
+      .select()
+      .from(topicSettings)
+      .where(eq(topicSettings.organizationId, organizationId))
+      .limit(1),
+  ]);
 
   if (!account) {
     throw new Error("Organization has no AWS account configured");
@@ -171,8 +179,8 @@ export async function sendTopicConfirmationEmail(
     throw new Error("Failed to assume AWS role");
   }
 
-  // Create SES client with assumed credentials
-  const sesClient = new SESClient({
+  // Create SES v2 client with assumed credentials
+  const sesClient = new SESv2Client({
     region: account.region,
     credentials: {
       accessKeyId: assumeRoleResponse.Credentials.AccessKeyId!,
@@ -181,31 +189,68 @@ export async function sendTopicConfirmationEmail(
     },
   });
 
-  // Get a verified sending identity (domain) for the organization
-  // For now, use a noreply address with the default domain
-  // In production, this should be configurable per organization
-  const fromAddress = `noreply@${getDefaultDomain()}`;
+  // Get verified email identities from the organization's SES
+  const identitiesResponse = await sesClient.send(
+    new ListEmailIdentitiesCommand({
+      PageSize: 100,
+    })
+  );
 
-  // Send email
+  // Determine from address - use custom settings if configured, otherwise auto-detect
+  let fromAddress: string;
+  let fromName: string | undefined;
+  let replyToAddress: string | undefined;
+
+  if (settings?.confirmationFromEmail) {
+    // Use custom from email from settings
+    fromAddress = settings.confirmationFromEmail;
+    fromName = settings.confirmationFromName || org?.name;
+    replyToAddress = settings.confirmationReplyToEmail || undefined;
+  } else {
+    // Fall back to auto-detected verified domain
+    const verifiedDomain = identitiesResponse.EmailIdentities?.find(
+      (identity) =>
+        identity.IdentityType === "DOMAIN" && identity.SendingEnabled === true
+    );
+
+    if (!verifiedDomain?.IdentityName) {
+      throw new Error(
+        "No verified sending domain found. Please configure a from email in Topics settings or verify a domain in your AWS SES account."
+      );
+    }
+
+    fromAddress = `noreply@${verifiedDomain.IdentityName}`;
+    fromName = org?.name;
+  }
+
+  // Build the formatted from address
+  const formattedFromAddress = fromName
+    ? `${fromName} <${fromAddress}>`
+    : fromAddress;
+
+  // Send email using SES v2
   await sesClient.send(
     new SendEmailCommand({
-      Source: org?.name ? `${org.name} <${fromAddress}>` : fromAddress,
+      FromEmailAddress: formattedFromAddress,
+      ReplyToAddresses: replyToAddress ? [replyToAddress] : undefined,
       Destination: {
         ToAddresses: [contactEmail],
       },
-      Message: {
-        Subject: {
-          Data: subject,
-          Charset: "UTF-8",
-        },
-        Body: {
-          Html: {
-            Data: html,
+      Content: {
+        Simple: {
+          Subject: {
+            Data: subject,
             Charset: "UTF-8",
           },
-          Text: {
-            Data: text,
-            Charset: "UTF-8",
+          Body: {
+            Html: {
+              Data: html,
+              Charset: "UTF-8",
+            },
+            Text: {
+              Data: text,
+              Charset: "UTF-8",
+            },
           },
         },
       },
@@ -213,10 +258,4 @@ export async function sendTopicConfirmationEmail(
   );
 
   return true;
-}
-
-function getDefaultDomain(): string {
-  // TODO: Look up organization's verified domains
-  // For now, fall back to wraps.dev for confirmation emails
-  return process.env.DEFAULT_EMAIL_DOMAIN ?? "wraps.dev";
 }

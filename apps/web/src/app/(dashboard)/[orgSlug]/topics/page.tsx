@@ -1,11 +1,13 @@
 import { auth } from "@wraps/auth";
+import { db } from "@wraps/db";
 import { redirect } from "next/navigation";
+import { getVerifiedDomains } from "@/actions/aws-accounts";
 import { listTopics } from "@/actions/topics";
 import { FeatureGate } from "@/components/feature-gate";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkFeatureAccess, getOrganizationPlan } from "@/lib/plan-limits";
 import { getRequiredPlan, type PlanId } from "@/lib/plans";
-import { TopicsTable } from "./components/topics-table";
+import { TopicsTabs } from "./components/topics-tabs";
 
 type TopicsPageProps = {
   params: Promise<{
@@ -75,8 +77,32 @@ export default async function TopicsPage({ params }: TopicsPageProps) {
     );
   }
 
-  const topicsResult = await listTopics(orgWithMembership.id);
+  // Fetch topics, settings, and verified domains in parallel
+  const [topicsResult, settings, account] = await Promise.all([
+    listTopics(orgWithMembership.id),
+    db.query.topicSettings.findFirst({
+      where: (s, { eq }) => eq(s.organizationId, orgWithMembership.id),
+    }),
+    db.query.awsAccount.findFirst({
+      where: (a, { eq }) => eq(a.organizationId, orgWithMembership.id),
+    }),
+  ]);
+
   const topics = topicsResult.success ? topicsResult.topics : [];
+
+  // Get verified domains from the organization's AWS account
+  let verifiedDomains: string[] = [];
+  if (account) {
+    const domainsResult = await getVerifiedDomains(
+      account.id,
+      orgWithMembership.id
+    );
+    if (domainsResult.success) {
+      verifiedDomains = domainsResult.identities
+        .filter((i) => i.type === "DOMAIN")
+        .map((i) => i.identity);
+    }
+  }
 
   return (
     <>
@@ -90,13 +116,15 @@ export default async function TopicsPage({ params }: TopicsPageProps) {
         </div>
       </div>
 
-      {/* Topics Table */}
+      {/* Topics Tabs */}
       <div className="@container/main px-4 lg:px-6">
-        <TopicsTable
+        <TopicsTabs
           organizationId={orgWithMembership.id}
           orgSlug={orgSlug}
+          settings={settings ?? null}
           topics={topics}
           userRole={orgWithMembership.userRole}
+          verifiedDomains={verifiedDomains}
         />
       </div>
     </>
