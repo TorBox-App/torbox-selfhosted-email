@@ -961,6 +961,18 @@ export async function getVerifiedDomains(
       })
     );
 
+    log.info(
+      {
+        totalIdentities: listResponse.EmailIdentities?.length ?? 0,
+        identities: listResponse.EmailIdentities?.map((i) => ({
+          name: i.IdentityName,
+          type: i.IdentityType,
+          sendingEnabled: i.SendingEnabled,
+        })),
+      },
+      "Listed email identities from SES"
+    );
+
     if (!listResponse.EmailIdentities?.length) {
       return {
         success: true,
@@ -973,24 +985,36 @@ export async function getVerifiedDomains(
 
     // Get details for each identity to check config set
     // Using Promise.all for parallel requests
+    const sendingEnabledIdentities = listResponse.EmailIdentities.filter(
+      (identity) => identity.SendingEnabled === true
+    );
+
+    log.info(
+      { count: sendingEnabledIdentities.length },
+      "Identities with SendingEnabled=true"
+    );
+
     const identityDetails = await Promise.all(
-      listResponse.EmailIdentities.filter(
-        (identity) => identity.SendingEnabled === true
-      ).map(async (identity) => {
+      sendingEnabledIdentities.map(async (identity) => {
         try {
           const details = await sesClient.send(
             new GetEmailIdentityCommand({
               EmailIdentity: identity.IdentityName,
             })
           );
-          return {
+          const result = {
             name: identity.IdentityName,
             type: identity.IdentityType,
             configSet: details.ConfigurationSetName,
             verified: details.VerifiedForSendingStatus,
           };
-        } catch {
-          // Skip identities we can't access
+          log.info({ identity: result }, "Identity details");
+          return result;
+        } catch (err) {
+          log.warn(
+            { identity: identity.IdentityName, err },
+            "Failed to get identity details"
+          );
           return null;
         }
       })
