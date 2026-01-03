@@ -337,51 +337,61 @@ export function BatchForm({
     }
 
     startTransition(async () => {
-      // Calculate scheduledFor if scheduling
-      let scheduledFor: Date | undefined;
-      if (campaignData.scheduleType === "later" && campaignData.scheduledDate) {
-        const [hours, minutes] = campaignData.scheduledTime
-          .split(":")
-          .map(Number);
-        scheduledFor = new Date(campaignData.scheduledDate);
-        scheduledFor.setHours(hours, minutes, 0, 0);
-      }
+      try {
+        // Calculate scheduledFor if scheduling
+        let scheduledFor: Date | undefined;
+        if (campaignData.scheduleType === "later" && campaignData.scheduledDate) {
+          const [hours, minutes] = campaignData.scheduledTime
+            .split(":")
+            .map(Number);
+          scheduledFor = new Date(campaignData.scheduledDate);
+          scheduledFor.setHours(hours, minutes, 0, 0);
+        }
 
-      const result = await createBatchSend(organizationId, {
-        name: campaignData.name || undefined,
-        subject: campaignData.subject || undefined,
-        previewText: campaignData.previewText || undefined,
-        from: fromAddress,
-        fromName: campaignData.fromName || undefined,
-        replyTo: campaignData.replyTo || undefined,
-        contentType: campaignData.contentType,
-        templateId:
-          campaignData.contentType === "template"
-            ? campaignData.templateId || undefined
-            : undefined,
-        htmlContent:
-          campaignData.contentType === "html"
-            ? campaignData.htmlContent || undefined
-            : undefined,
-        awsAccountId: campaignData.awsAccountId,
-        recipientFilter: getCurrentFilter(),
-        scheduledFor,
-      });
+        console.log("[batch-form] Calling createBatchSend...");
+        const result = await createBatchSend(organizationId, {
+          name: campaignData.name || undefined,
+          subject: campaignData.subject || undefined,
+          previewText: campaignData.previewText || undefined,
+          from: fromAddress,
+          fromName: campaignData.fromName || undefined,
+          replyTo: campaignData.replyTo || undefined,
+          contentType: campaignData.contentType,
+          templateId:
+            campaignData.contentType === "template"
+              ? campaignData.templateId || undefined
+              : undefined,
+          htmlContent:
+            campaignData.contentType === "html"
+              ? campaignData.htmlContent || undefined
+              : undefined,
+          awsAccountId: campaignData.awsAccountId,
+          recipientFilter: getCurrentFilter(),
+          scheduledFor,
+        });
+        console.log("[batch-form] Result:", result);
 
-      if (result.success) {
-        const isScheduled = result.batch.status === "scheduled";
-        toast.success(
-          isScheduled ? "Broadcast scheduled" : "Broadcast created",
-          {
-            description: isScheduled
-              ? `Will send to ${result.batch.totalRecipients} recipients at ${format(scheduledFor!, "PPp")}`
-              : `Sending to ${result.batch.totalRecipients} recipients`,
-          }
-        );
-        router.push(`/${orgSlug}/send/${result.batch.id}`);
-      } else {
+        if (result.success) {
+          const isScheduled = result.batch.status === "scheduled";
+          toast.success(
+            isScheduled ? "Broadcast scheduled" : "Broadcast created",
+            {
+              description: isScheduled
+                ? `Will send to ${result.batch.totalRecipients} recipients at ${format(scheduledFor!, "PPp")}`
+                : `Sending to ${result.batch.totalRecipients} recipients`,
+            }
+          );
+          router.push(`/${orgSlug}/send/${result.batch.id}`);
+        } else {
+          console.error("[batch-form] Error:", result.error);
+          toast.error("Failed to create broadcast", {
+            description: result.error,
+          });
+        }
+      } catch (error) {
+        console.error("[batch-form] Caught error:", error);
         toast.error("Failed to create broadcast", {
-          description: result.error,
+          description: error instanceof Error ? error.message : "Unknown error",
         });
       }
     });
