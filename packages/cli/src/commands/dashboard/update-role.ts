@@ -254,6 +254,7 @@ function buildConsolePolicyDocument(
         "ses:SendRawEmail",
         "ses:SendTemplatedEmail",
         "ses:SendBulkTemplatedEmail",
+        "ses:SendBulkEmail", // SES v2 bulk sending
       ],
       Resource: "*",
     });
