@@ -120,6 +120,7 @@ export async function createIAMRole(
   statements.push({
     Effect: "Allow",
     Action: [
+      "ses:GetAccount", // Get SES rate limits and quotas
       "ses:GetSendStatistics",
       "ses:ListIdentities",
       "ses:GetIdentityVerificationAttributes",
