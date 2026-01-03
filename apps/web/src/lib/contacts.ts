@@ -121,6 +121,12 @@ export type ContactWithMeta = {
   smsSent: number;
   smsClicked: number;
 
+  // Contact details
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  jobTitle: string | null;
+
   // Shared
   properties: Record<string, unknown>;
   lastActivityAt: Date | null;

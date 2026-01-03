@@ -35,6 +35,10 @@ const contactSchema = t.Object({
   id: t.String(),
   email: t.Nullable(t.String()),
   phone: t.Nullable(t.String()),
+  firstName: t.Nullable(t.String()),
+  lastName: t.Nullable(t.String()),
+  company: t.Nullable(t.String()),
+  jobTitle: t.Nullable(t.String()),
   emailStatus: t.Nullable(t.String()),
   smsStatus: t.Nullable(t.String()),
   properties: t.Record(t.String(), t.Unknown()),
@@ -50,6 +54,10 @@ const contactSchema = t.Object({
 const createContactSchema = t.Object({
   email: t.Optional(t.String()),
   phone: t.Optional(t.String()),
+  firstName: t.Optional(t.String()),
+  lastName: t.Optional(t.String()),
+  company: t.Optional(t.String()),
+  jobTitle: t.Optional(t.String()),
   emailStatus: t.Optional(
     t.Union([
       t.Literal("active"),
@@ -74,6 +82,10 @@ const createContactSchema = t.Object({
 const updateContactSchema = t.Object({
   email: t.Optional(t.String()),
   phone: t.Optional(t.String()),
+  firstName: t.Optional(t.Nullable(t.String())),
+  lastName: t.Optional(t.Nullable(t.String())),
+  company: t.Optional(t.Nullable(t.String())),
+  jobTitle: t.Optional(t.Nullable(t.String())),
   emailStatus: t.Optional(
     t.Union([
       t.Literal("active"),
@@ -179,6 +191,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           id: contact.id,
           email: contact.email,
           phone: contact.phone,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          company: contact.company,
+          jobTitle: contact.jobTitle,
           emailStatus: contact.emailStatus,
           smsStatus: contact.smsStatus,
           properties: contact.properties,
@@ -256,6 +272,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         id: result.id,
         email: result.email,
         phone: result.phone,
+        firstName: result.firstName,
+        lastName: result.lastName,
+        company: result.company,
+        jobTitle: result.jobTitle,
         emailStatus: result.emailStatus,
         smsStatus: result.smsStatus,
         properties: result.properties,
@@ -346,6 +366,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           phone: body.phone,
           phoneHash: body.phone ? hashValue(body.phone) : null,
           smsStatus: body.smsStatus ?? (body.phone ? "pending_consent" : null),
+          firstName: body.firstName ?? null,
+          lastName: body.lastName ?? null,
+          company: body.company ?? null,
+          jobTitle: body.jobTitle ?? null,
           properties: body.properties ?? {},
           createdBy: authContext.userId,
         })
@@ -436,6 +460,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         id: newContact.id,
         email: newContact.email,
         phone: newContact.phone,
+        firstName: newContact.firstName,
+        lastName: newContact.lastName,
+        company: newContact.company,
+        jobTitle: newContact.jobTitle,
         emailStatus: newContact.emailStatus,
         smsStatus: newContact.smsStatus,
         properties: newContact.properties,
@@ -507,6 +535,22 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       if (body.properties !== undefined) {
         updateValues.properties = body.properties;
+      }
+
+      if (body.firstName !== undefined) {
+        updateValues.firstName = body.firstName;
+      }
+
+      if (body.lastName !== undefined) {
+        updateValues.lastName = body.lastName;
+      }
+
+      if (body.company !== undefined) {
+        updateValues.company = body.company;
+      }
+
+      if (body.jobTitle !== undefined) {
+        updateValues.jobTitle = body.jobTitle;
       }
 
       // Update contact
@@ -631,6 +675,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         id: updated.id,
         email: updated.email,
         phone: updated.phone,
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        company: updated.company,
+        jobTitle: updated.jobTitle,
         emailStatus: updated.emailStatus,
         smsStatus: updated.smsStatus,
         properties: updated.properties,

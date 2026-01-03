@@ -192,6 +192,11 @@ export async function listContacts(
         lastSmsClickedAt: c.lastSmsClickedAt,
         smsSent: c.smsSent,
         smsClicked: c.smsClicked,
+        // Contact details
+        firstName: c.firstName,
+        lastName: c.lastName,
+        company: c.company,
+        jobTitle: c.jobTitle,
         // Shared
         properties: (c.properties as Record<string, unknown>) || {},
         lastActivityAt: c.lastActivityAt,
@@ -296,6 +301,11 @@ export async function getContact(
         lastSmsClickedAt: c.lastSmsClickedAt,
         smsSent: c.smsSent,
         smsClicked: c.smsClicked,
+        // Contact details
+        firstName: c.firstName,
+        lastName: c.lastName,
+        company: c.company,
+        jobTitle: c.jobTitle,
         // Shared
         properties: (c.properties as Record<string, unknown>) || {},
         lastActivityAt: c.lastActivityAt,
@@ -334,6 +344,10 @@ export async function createContact(
   data: {
     email?: string;
     phone?: string;
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+    jobTitle?: string;
     emailStatus?: EmailStatus;
     smsStatus?: SmsStatus;
     properties?: Record<string, unknown>;
@@ -445,6 +459,11 @@ export async function createContact(
         phoneHash: phoneHashValue,
         smsStatus,
         smsConsentedAt: smsStatus === "opted_in" ? new Date() : null,
+        // Contact details
+        firstName: data.firstName || null,
+        lastName: data.lastName || null,
+        company: data.company || null,
+        jobTitle: data.jobTitle || null,
         // Shared
         properties: data.properties || {},
         createdBy: access.userId,
@@ -492,6 +511,10 @@ export async function updateContact(
   data: {
     email?: string;
     phone?: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    company?: string | null;
+    jobTitle?: string | null;
     emailStatus?: EmailStatus;
     smsStatus?: SmsStatus;
     properties?: Record<string, unknown>;
@@ -655,6 +678,23 @@ export async function updateContact(
 
     if (data.properties !== undefined) {
       updateData.properties = data.properties;
+    }
+
+    // Handle contact details fields
+    if (data.firstName !== undefined) {
+      updateData.firstName = data.firstName;
+    }
+
+    if (data.lastName !== undefined) {
+      updateData.lastName = data.lastName;
+    }
+
+    if (data.company !== undefined) {
+      updateData.company = data.company;
+    }
+
+    if (data.jobTitle !== undefined) {
+      updateData.jobTitle = data.jobTitle;
     }
 
     // Validate that contact still has at least email or phone

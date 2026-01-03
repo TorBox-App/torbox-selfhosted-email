@@ -48,6 +48,10 @@ type ContactFormDialogProps = {
   onSubmit: (data: {
     email?: string;
     phone?: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    company?: string | null;
+    jobTitle?: string | null;
     emailStatus?: EmailStatus;
     smsStatus?: SmsStatus;
     status?: ContactStatus;
@@ -73,6 +77,10 @@ export function ContactFormDialog({
 }: ContactFormDialogProps) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [company, setCompany] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [emailStatus, setEmailStatus] = useState<EmailStatus>("active");
   const [smsStatus, setSmsStatus] = useState<SmsStatus>("pending_consent");
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
@@ -84,6 +92,10 @@ export function ContactFormDialog({
       if (mode === "edit" && contact) {
         setEmail(contact.email || "");
         setPhone(contact.phone || "");
+        setFirstName(contact.firstName || "");
+        setLastName(contact.lastName || "");
+        setCompany(contact.company || "");
+        setJobTitle(contact.jobTitle || "");
         setEmailStatus(contact.emailStatus || "active");
         setSmsStatus(contact.smsStatus || "pending_consent");
         setSelectedTopicIds(
@@ -102,6 +114,10 @@ export function ContactFormDialog({
       } else {
         setEmail("");
         setPhone("");
+        setFirstName("");
+        setLastName("");
+        setCompany("");
+        setJobTitle("");
         setEmailStatus("active");
         setSmsStatus("pending_consent");
         setSelectedTopicIds([]);
@@ -128,6 +144,10 @@ export function ContactFormDialog({
       onSubmit({
         email: email || undefined,
         phone: phone || undefined,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        company: company || undefined,
+        jobTitle: jobTitle || undefined,
         emailStatus: email ? emailStatus : undefined,
         smsStatus: phone ? smsStatus : undefined,
         properties:
@@ -154,6 +174,20 @@ export function ContactFormDialog({
       onSubmit({
         email: email !== (contact?.email || "") ? email : undefined,
         phone: phone !== (contact?.phone || "") ? phone : undefined,
+        firstName:
+          firstName !== (contact?.firstName || "")
+            ? firstName || null
+            : undefined,
+        lastName:
+          lastName !== (contact?.lastName || "")
+            ? lastName || null
+            : undefined,
+        company:
+          company !== (contact?.company || "") ? company || null : undefined,
+        jobTitle:
+          jobTitle !== (contact?.jobTitle || "")
+            ? jobTitle || null
+            : undefined,
         emailStatus:
           emailStatus !== contact?.emailStatus ? emailStatus : undefined,
         smsStatus: smsStatus !== contact?.smsStatus ? smsStatus : undefined,
@@ -289,6 +323,49 @@ export function ContactFormDialog({
               <p className="text-muted-foreground text-xs">
                 Use E.164 format (e.g., +15551234567)
               </p>
+            </div>
+
+            {/* Contact Details */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="firstName">First name</Label>
+                <Input
+                  id="firstName"
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  value={firstName}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="lastName">Last name</Label>
+                <Input
+                  id="lastName"
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Doe"
+                  value={lastName}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="Acme Inc."
+                  value={company}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="jobTitle">Job title</Label>
+                <Input
+                  id="jobTitle"
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="Software Engineer"
+                  value={jobTitle}
+                />
+              </div>
             </div>
 
             {/* Topics */}
