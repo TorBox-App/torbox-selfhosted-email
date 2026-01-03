@@ -133,13 +133,18 @@ export const VariableNode = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
+    // Include fallback in mustache syntax: {{name|fallback}}
+    const variableSyntax = HTMLAttributes.fallback
+      ? `{{${HTMLAttributes.name}|${HTMLAttributes.fallback}}}`
+      : `{{${HTMLAttributes.name}}}`;
+
     return [
       "span",
       mergeAttributes(HTMLAttributes, {
         "data-variable": HTMLAttributes.name,
         class: "variable-node",
       }),
-      `{{${HTMLAttributes.name}}}`,
+      variableSyntax,
     ];
   },
 
