@@ -131,7 +131,7 @@ export function DeployStep({ onNext, onBack, onSkip }: DeployStepProps) {
               <strong>Infrastructure:</strong> ~$2-5/mo for most apps
             </p>
             <p>
-              <strong>Free tier:</strong> First 62,000 emails/month are free for
+              <strong>Free tier:</strong> First 3,000 emails/month are free for
               new AWS accounts
             </p>
           </div>

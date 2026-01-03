@@ -29,6 +29,18 @@ const ProductionAccessGuide = lazy(
 const DomainVerificationGuide = lazy(
   () => import("@/app/docs/guides/domain-verification/page")
 );
+const AWSSetupGuide = lazy(
+  () => import("@/app/docs/guides/aws-setup/page")
+);
+const AWSSetupQuickGuide = lazy(
+  () => import("@/app/docs/guides/aws-setup/quick/page")
+);
+const AWSSetupFullGuide = lazy(
+  () => import("@/app/docs/guides/aws-setup/full/page")
+);
+const AWSSetupTroubleshootingGuide = lazy(
+  () => import("@/app/docs/guides/aws-setup/troubleshooting/page")
+);
 const Privacy = lazy(() => import("@/app/privacy/page"));
 const Terms = lazy(() => import("@/app/terms/page"));
 const NotFound = lazy(() => import("@/app/not-found/page"));
@@ -112,6 +124,22 @@ export const routes: RouteConfig[] = [
   {
     path: "/docs/guides/domain-verification",
     element: <DomainVerificationGuide />,
+  },
+  {
+    path: "/docs/guides/aws-setup",
+    element: <AWSSetupGuide />,
+  },
+  {
+    path: "/docs/guides/aws-setup/quick",
+    element: <AWSSetupQuickGuide />,
+  },
+  {
+    path: "/docs/guides/aws-setup/full",
+    element: <AWSSetupFullGuide />,
+  },
+  {
+    path: "/docs/guides/aws-setup/troubleshooting",
+    element: <AWSSetupTroubleshootingGuide />,
   },
 
   // Legal pages

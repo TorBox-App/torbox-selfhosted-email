@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 import * as clack from "@clack/prompts";
 import args from "args";
 import pc from "picocolors";
+// AWS commands
+import { doctor as awsDoctor } from "./commands/aws/doctor.js";
+import { setup as awsSetup } from "./commands/aws/setup.js";
 // Dashboard commands
 import { updateRole } from "./commands/dashboard/update-role.js";
 // Email commands
@@ -126,6 +129,9 @@ function showHelp() {
   console.log(
     `  ${pc.cyan("dashboard update-role")} Update hosted dashboard IAM permissions\n`
   );
+  console.log("AWS Setup:");
+  console.log(`  ${pc.cyan("aws setup")}            Interactive AWS setup wizard`);
+  console.log(`  ${pc.cyan("aws doctor")}           Diagnose AWS configuration issues\n`);
   console.log("Global Commands:");
   console.log(`  ${pc.cyan("status")}       Show overview of all services`);
   console.log(`  ${pc.cyan("destroy")}      Remove deployed infrastructure`);
@@ -664,6 +670,37 @@ async function run() {
       return;
     }
 
+    // Handle AWS subcommands (e.g., wraps aws setup)
+    if (primaryCommand === "aws" && subCommand) {
+      switch (subCommand) {
+        case "setup":
+          await awsSetup({
+            yes: flags.yes,
+          });
+          break;
+
+        case "doctor":
+          await awsDoctor();
+          break;
+
+        default:
+          clack.log.error(`Unknown aws command: ${subCommand}`);
+          console.log(
+            `\nAvailable commands: ${pc.cyan("setup")}, ${pc.cyan("doctor")}\n`
+          );
+          console.log(`Run ${pc.cyan("wraps --help")} for more information.\n`);
+          process.exit(1);
+      }
+      // Track aws commands
+      const awsDuration = Date.now() - startTime;
+      const awsCommandName = `aws:${subCommand}`;
+      trackCommand(awsCommandName, {
+        success: true,
+        duration_ms: awsDuration,
+      });
+      return;
+    }
+
     // Handle global commands
     switch (primaryCommand) {
       // Global commands (work across all services)
@@ -733,6 +770,7 @@ async function run() {
       // Show help for service without subcommand
       case "email":
       case "sms":
+      case "aws":
         console.log(
           `\nPlease specify a command for ${primaryCommand} service.\n`
         );

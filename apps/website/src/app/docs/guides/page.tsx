@@ -1,12 +1,20 @@
 "use client";
 
-import { ArrowRight, Globe, ShieldCheck } from "lucide-react";
+import { ArrowRight, Cloud, Globe, ShieldCheck } from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const guides = [
+  {
+    title: "AWS Setup",
+    description:
+      "Configure your AWS credentials to deploy email infrastructure. Guides for beginners and experienced users.",
+    href: "/docs/guides/aws-setup",
+    icon: Cloud,
+    readTime: "2-10 min",
+  },
   {
     title: "Production Access",
     description:

@@ -3,6 +3,7 @@
 import {
   Blocks,
   Book,
+  Cloud,
   FileText,
   Globe,
   Mail,
@@ -93,6 +94,11 @@ const navItems: NavSection[] = [
         href: "/docs/guides",
         icon: Book,
         children: [
+          {
+            title: "AWS Setup",
+            href: "/docs/guides/aws-setup",
+            icon: Cloud,
+          },
           {
             title: "Production Access",
             href: "/docs/guides/production-access",

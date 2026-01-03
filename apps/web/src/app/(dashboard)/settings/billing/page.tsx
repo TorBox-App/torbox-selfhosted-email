@@ -215,7 +215,7 @@ export default function BillingSettings() {
             EventBridge
           </p>
           <p className="text-xs">
-            Free tier: First 62,000 emails/month are free for new AWS accounts
+            Free tier: First 3,000 emails/month are free for new AWS accounts
           </p>
         </CardContent>
       </Card>
