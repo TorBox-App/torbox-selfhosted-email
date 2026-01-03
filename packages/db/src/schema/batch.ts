@@ -116,6 +116,15 @@ export const batchSend = pgTable(
     // smsTemplateId will be added in Phase 3 when smsTemplate table exists
 
     // ═══════════════════════════════════════════════════════════════════════
+    // RECIPIENT TARGETING
+    // ═══════════════════════════════════════════════════════════════════════
+    audienceType: text("audience_type")
+      .$type<"all" | "topic" | "segment">()
+      .default("all"),
+    topicId: text("topic_id"), // For topic-based targeting
+    segmentId: text("segment_id"), // For segment-based targeting
+
+    // ═══════════════════════════════════════════════════════════════════════
     // STATUS & PROGRESS
     // ═══════════════════════════════════════════════════════════════════════
     status: batchSendStatusEnum("status").default("draft").notNull(),

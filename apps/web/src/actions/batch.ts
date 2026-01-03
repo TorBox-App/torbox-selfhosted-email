@@ -396,6 +396,11 @@ export async function createBatchSend(
       body: JSON.stringify({
         channel: data.channel ?? "email",
         name: data.name ?? `Broadcast ${new Date().toLocaleDateString()}`,
+        // Recipient targeting
+        audienceType: data.recipientFilter?.audienceType ?? "all",
+        topicId: data.recipientFilter?.topicId,
+        segmentId: data.recipientFilter?.segmentId,
+        // Email fields
         subject: data.subject,
         previewText: data.previewText,
         from: data.from,

@@ -25,6 +25,12 @@ import {
 const createBatchSchema = t.Object({
   channel: t.Optional(t.Union([t.Literal("email"), t.Literal("sms")])),
   name: t.Optional(t.String()),
+  // Recipient targeting
+  audienceType: t.Optional(
+    t.Union([t.Literal("all"), t.Literal("topic"), t.Literal("segment")])
+  ),
+  topicId: t.Optional(t.String()),
+  segmentId: t.Optional(t.String()),
   // Email-specific fields
   subject: t.Optional(t.String()),
   previewText: t.Optional(t.String()),
@@ -86,6 +92,10 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
           channel: body.channel ?? "email",
           name: body.name ?? `Batch ${new Date().toISOString()}`,
           status: isScheduled ? "scheduled" : "queued",
+          // Recipient targeting
+          audienceType: body.audienceType ?? "all",
+          topicId: body.topicId,
+          segmentId: body.segmentId,
           // Email fields
           subject: body.subject,
           previewText: body.previewText,

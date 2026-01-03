@@ -28,14 +28,29 @@ export function toSesVariableName(name: string): string {
 
 /**
  * Transform HTML content to use SES-compatible variable names
- * Converts {{contact.email}} to {{contactEmail}}
+ * Handles both simple and fallback formats:
+ *   - {{contact.email}} → {{contactEmail}}
+ *   - {{firstName|there}} → {{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}
+ *
+ * SES uses Handlebars syntax for conditionals.
  */
 export function transformVariablesForSes(html: string): string {
-  // Match {{variableName}} patterns, including with whitespace
-  return html.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (_match, varName) => {
-    const sesName = toSesVariableName(varName);
-    return `{{${sesName}}}`;
-  });
+  // Match {{variableName}} or {{variableName|fallback}} patterns, including with whitespace
+  // The fallback part [^}]* uses * instead of + to allow empty fallback values
+  return html.replace(
+    /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]*))?\s*\}\}/g,
+    (_match, varName, fallback) => {
+      const sesName = toSesVariableName(varName);
+
+      // If there's a fallback value (including empty string after |), use Handlebars conditional
+      if (fallback !== undefined) {
+        const trimmedFallback = fallback.trim();
+        return `{{#if ${sesName}}}{{${sesName}}}{{else}}${trimmedFallback}{{/if}}`;
+      }
+
+      return `{{${sesName}}}`;
+    }
+  );
 }
 
 /**

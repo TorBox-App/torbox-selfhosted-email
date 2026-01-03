@@ -2,10 +2,12 @@
  * Batch Sender Worker
  *
  * SQS Lambda handler that processes batch send jobs.
- * Sends emails/SMS in chunks of 100 contacts.
+ * Sends emails/SMS in chunks of 50 contacts (matching SES bulk limit).
+ * Respects customer's SES rate limit via SQS delay between chunks.
  */
 
 import {
+  GetAccountCommand,
   SendBulkEmailCommand,
   SendEmailCommand,
   SESv2Client,
@@ -15,20 +17,24 @@ import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import {
   batchSend,
   contact,
+  contactTopic,
   db,
   eq,
   messageSend,
   organization,
+  segment,
   template,
 } from "@wraps/db";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
-import { and, isNotNull, sql } from "drizzle-orm";
+import { and, exists, isNotNull, sql } from "drizzle-orm";
 
 import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 import { getCredentials } from "../services/credentials";
 import type { BatchJob } from "../services/queue";
 
-const CHUNK_SIZE = 100;
+// Align chunk size with SES bulk limit for clean 1:1 mapping
+const CHUNK_SIZE = 50; // SES SendBulkEmail limit per API call
+const DEFAULT_RATE_LIMIT = 14; // Fallback emails/sec if can't fetch from AWS
 const QUEUE_URL = process.env.BATCH_QUEUE_URL;
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
@@ -67,13 +73,18 @@ async function processJob(job: BatchJob): Promise<void> {
       .where(eq(batchSend.id, batchId));
   }
 
-  // Get contacts for this chunk
+  // Get contacts for this chunk (with recipient filtering)
   const offset = chunkIndex * CHUNK_SIZE;
   const contacts = await getContactsChunk(
     organizationId,
     channel,
     offset,
-    CHUNK_SIZE
+    CHUNK_SIZE,
+    {
+      audienceType: batch.audienceType as "all" | "topic" | "segment" | undefined,
+      topicId: batch.topicId ?? undefined,
+      segmentId: batch.segmentId ?? undefined,
+    }
   );
 
   if (contacts.length === 0) {
@@ -97,6 +108,20 @@ async function processJob(job: BatchJob): Promise<void> {
     },
     region: process.env.AWS_REGION ?? "us-east-1",
   });
+
+  // Fetch customer's SES rate limit
+  let maxSendRate = DEFAULT_RATE_LIMIT;
+  try {
+    const accountInfo = await sesClient.send(new GetAccountCommand({}));
+    maxSendRate = accountInfo.SendQuota?.MaxSendRate ?? DEFAULT_RATE_LIMIT;
+    console.log(`SES rate limit for account: ${maxSendRate} emails/sec`);
+  } catch (error) {
+    console.warn("Could not fetch SES rate limit, using default:", error);
+  }
+
+  // Calculate delay between chunks to respect rate limit
+  // CHUNK_SIZE recipients / rate limit = seconds to wait
+  const rateLimitDelay = Math.ceil(CHUNK_SIZE / maxSendRate);
 
   // Load template info and organization name
   let sesTemplateName: string | undefined;
@@ -170,14 +195,25 @@ async function processJob(job: BatchJob): Promise<void> {
             preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
           }
 
-          // Build replacement data for SES template (flattened variable names)
+          // Build replacement data for SES template
+          // Provide both short names (firstName) and full names (contactFirstName)
+          // to support different template variable conventions
           const replacementData: Record<string, string> = {
+            // Short names (for templates using {{firstName}})
+            email: recipient.email!,
+            firstName: recipient.firstName ?? "",
+            lastName: recipient.lastName ?? "",
+            company: recipient.company ?? "",
+            jobTitle: recipient.jobTitle ?? "",
+            // Full names with prefix (for templates using {{contact.firstName}})
             contactEmail: recipient.email!,
             contactFirstName: recipient.firstName ?? "",
             contactLastName: recipient.lastName ?? "",
             contactCompany: recipient.company ?? "",
             contactJobTitle: recipient.jobTitle ?? "",
+            // Organization
             organizationName: orgName ?? "",
+            // URLs
             unsubscribeUrl: unsubscribeUrl ?? "",
             preferencesUrl: preferencesUrl ?? "",
           };
@@ -185,6 +221,8 @@ async function processJob(job: BatchJob): Promise<void> {
           // Add custom properties with flattened names
           if (recipient.properties) {
             for (const [key, value] of Object.entries(recipient.properties)) {
+              // Provide both short and prefixed names
+              replacementData[key] = String(value ?? "");
               const flatKey = `contactProperties${key.charAt(0).toUpperCase()}${key.slice(1)}`;
               replacementData[flatKey] = String(value ?? "");
             }
@@ -243,13 +281,14 @@ async function processJob(job: BatchJob): Promise<void> {
           })
         );
 
-        // Process results for each recipient
+        // Collect all send records for batch insert
+        const sendRecords: Array<typeof messageSend.$inferInsert> = [];
         for (let j = 0; j < recipientBatch.length; j++) {
           const recipient = recipientBatch[j];
           const bulkResult = result.BulkEmailEntryResults?.[j];
 
           if (bulkResult?.Status === "SUCCESS") {
-            await db.insert(messageSend).values({
+            sendRecords.push({
               organizationId,
               contactId: recipient.id,
               awsAccountId,
@@ -271,7 +310,7 @@ async function processJob(job: BatchJob): Promise<void> {
               `Failed to send to ${recipient.email}:`,
               bulkResult?.Error
             );
-            await db.insert(messageSend).values({
+            sendRecords.push({
               organizationId,
               contactId: recipient.id,
               awsAccountId,
@@ -289,27 +328,52 @@ async function processJob(job: BatchJob): Promise<void> {
             failed++;
           }
         }
-      } catch (error) {
-        // Entire batch failed
-        console.error(`Bulk send failed for batch starting at ${i}:`, error);
-        for (const recipient of recipientBatch) {
-          await db.insert(messageSend).values({
-            organizationId,
-            contactId: recipient.id,
-            awsAccountId,
-            channel: "email",
-            batchSendId: batchId,
-            sourceType: "batch",
-            recipient: recipient.email ?? "",
-            subject: batch.subject,
-            from: batch.from,
-            fromName: batch.fromName,
-            emailTemplateId: batch.emailTemplateId,
-            status: "failed",
-            error: error instanceof Error ? error.message : "Bulk send failed",
-          });
-          failed++;
+
+        // Batch insert all send records
+        if (sendRecords.length > 0) {
+          await db.insert(messageSend).values(sendRecords);
         }
+      } catch (error) {
+        // Check if this is a throttle error
+        const isThrottle =
+          error instanceof Error &&
+          (error.name === "Throttling" ||
+            error.name === "TooManyRequestsException" ||
+            error.message.includes("rate exceeded"));
+
+        if (isThrottle) {
+          // Re-queue this chunk with a longer delay (30 seconds)
+          console.warn(
+            `SES throttled for batch ${batchId}, requeuing chunk ${chunkIndex} with 30s delay`
+          );
+          await enqueueNextChunk(
+            { ...job }, // Same job, same chunkIndex
+            { delaySeconds: 30 }
+          );
+          return; // Exit early, will retry later
+        }
+
+        // Non-throttle error: mark recipients as failed
+        console.error(`Bulk send failed for batch starting at ${i}:`, error);
+        const errorMessage =
+          error instanceof Error ? error.message : "Bulk send failed";
+        const failedRecords = recipientBatch.map((recipient) => ({
+          organizationId,
+          contactId: recipient.id,
+          awsAccountId,
+          channel: "email" as const,
+          batchSendId: batchId,
+          sourceType: "batch" as const,
+          recipient: recipient.email ?? "",
+          subject: batch.subject,
+          from: batch.from,
+          fromName: batch.fromName,
+          emailTemplateId: batch.emailTemplateId,
+          status: "failed" as const,
+          error: errorMessage,
+        }));
+        await db.insert(messageSend).values(failedRecords);
+        failed += recipientBatch.length;
       }
     }
   } else {
@@ -379,13 +443,14 @@ async function processJob(job: BatchJob): Promise<void> {
         })
       );
 
-      // Process results
+      // Collect send records for batch insert
+      const sendRecords: Array<typeof messageSend.$inferInsert> = [];
       for (let j = 0; j < results.length; j++) {
         const result = results[j];
         const recipient = recipientBatch[j];
 
         if (result.status === "fulfilled") {
-          await db.insert(messageSend).values({
+          sendRecords.push({
             organizationId,
             contactId: recipient.id,
             awsAccountId,
@@ -404,7 +469,7 @@ async function processJob(job: BatchJob): Promise<void> {
           sent++;
         } else {
           console.error(`Failed to send to ${recipient.email}:`, result.reason);
-          await db.insert(messageSend).values({
+          sendRecords.push({
             organizationId,
             contactId: recipient.id,
             awsAccountId,
@@ -417,10 +482,18 @@ async function processJob(job: BatchJob): Promise<void> {
             fromName: batch.fromName,
             emailTemplateId: batch.emailTemplateId,
             status: "failed",
-            error: result.reason instanceof Error ? result.reason.message : "Send failed",
+            error:
+              result.reason instanceof Error
+                ? result.reason.message
+                : "Send failed",
           });
           failed++;
         }
+      }
+
+      // Batch insert all send records
+      if (sendRecords.length > 0) {
+        await db.insert(messageSend).values(sendRecords);
       }
     }
   }
@@ -438,11 +511,11 @@ async function processJob(job: BatchJob): Promise<void> {
   // Check if more contacts to process
   const totalProcessed = (chunkIndex + 1) * CHUNK_SIZE;
   if (totalProcessed < batch.totalRecipients) {
-    // Enqueue next chunk
-    await enqueueNextChunk({
-      ...job,
-      chunkIndex: chunkIndex + 1,
-    });
+    // Enqueue next chunk with rate limit delay
+    await enqueueNextChunk(
+      { ...job, chunkIndex: chunkIndex + 1 },
+      { delaySeconds: rateLimitDelay }
+    );
   } else {
     // Mark batch as completed
     await db
@@ -463,14 +536,104 @@ type ContactChunk = {
   properties: Record<string, unknown>;
 };
 
+type RecipientFilter = {
+  audienceType?: "all" | "topic" | "segment";
+  topicId?: string;
+  segmentId?: string;
+};
+
 async function getContactsChunk(
   organizationId: string,
   channel: string,
   offset: number,
-  limit: number
+  limit: number,
+  filter?: RecipientFilter
 ): Promise<ContactChunk[]> {
+  // Build base conditions for channel
+  const conditions: ReturnType<typeof eq>[] = [];
+  conditions.push(eq(contact.organizationId, organizationId));
+
   if (channel === "email") {
-    // Filter by active email status (null treated as active for backwards compat)
+    conditions.push(isNotNull(contact.email));
+    // Active email status (null treated as active for backwards compat)
+  } else if (channel === "sms") {
+    conditions.push(isNotNull(contact.phone));
+    conditions.push(eq(contact.smsStatus, "opted_in"));
+  } else {
+    return [];
+  }
+
+  // Apply recipient filter
+  if (filter?.audienceType === "topic" && filter.topicId) {
+    // Filter by topic subscription using EXISTS subquery
+    const topicSubquery = db
+      .select({ contactId: contactTopic.contactId })
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.contactId, contact.id),
+          eq(contactTopic.topicId, filter.topicId),
+          eq(contactTopic.status, "subscribed")
+        )
+      );
+
+    // Build query with topic filter
+    if (channel === "email") {
+      return db
+        .select({
+          id: contact.id,
+          email: contact.email,
+          phone: contact.phone,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          company: contact.company,
+          jobTitle: contact.jobTitle,
+          properties: contact.properties,
+        })
+        .from(contact)
+        .where(
+          and(
+            eq(contact.organizationId, organizationId),
+            isNotNull(contact.email),
+            sql`(${contact.emailStatus} = 'active' OR ${contact.emailStatus} IS NULL)`,
+            exists(topicSubquery)
+          )
+        )
+        .orderBy(contact.createdAt)
+        .offset(offset)
+        .limit(limit);
+    }
+    // SMS with topic filter
+    return db
+      .select({
+        id: contact.id,
+        email: contact.email,
+        phone: contact.phone,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        company: contact.company,
+        jobTitle: contact.jobTitle,
+        properties: contact.properties,
+      })
+      .from(contact)
+      .where(
+        and(
+          eq(contact.organizationId, organizationId),
+          isNotNull(contact.phone),
+          eq(contact.smsStatus, "opted_in"),
+          exists(topicSubquery)
+        )
+      )
+      .orderBy(contact.createdAt)
+      .offset(offset)
+      .limit(limit);
+  }
+
+  // TODO: Add segment filtering when needed
+  // if (filter?.audienceType === "segment" && filter.segmentId) { ... }
+
+  // Default: all contacts (no additional filter)
+  if (channel === "email") {
     return db
       .select({
         id: contact.id,
@@ -495,33 +658,29 @@ async function getContactsChunk(
       .limit(limit);
   }
 
-  // SMS - filter by opted_in status
-  if (channel === "sms") {
-    return db
-      .select({
-        id: contact.id,
-        email: contact.email,
-        phone: contact.phone,
-        firstName: contact.firstName,
-        lastName: contact.lastName,
-        company: contact.company,
-        jobTitle: contact.jobTitle,
-        properties: contact.properties,
-      })
-      .from(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          isNotNull(contact.phone),
-          eq(contact.smsStatus, "opted_in")
-        )
+  // SMS - all contacts
+  return db
+    .select({
+      id: contact.id,
+      email: contact.email,
+      phone: contact.phone,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      company: contact.company,
+      jobTitle: contact.jobTitle,
+      properties: contact.properties,
+    })
+    .from(contact)
+    .where(
+      and(
+        eq(contact.organizationId, organizationId),
+        isNotNull(contact.phone),
+        eq(contact.smsStatus, "opted_in")
       )
-      .orderBy(contact.createdAt)
-      .offset(offset)
-      .limit(limit);
-  }
-
-  return [];
+    )
+    .orderBy(contact.createdAt)
+    .offset(offset)
+    .limit(limit);
 }
 
 /**
@@ -540,7 +699,10 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-async function enqueueNextChunk(job: BatchJob): Promise<void> {
+async function enqueueNextChunk(
+  job: BatchJob,
+  options?: { delaySeconds?: number }
+): Promise<void> {
   if (!QUEUE_URL) {
     throw new Error("BATCH_QUEUE_URL not configured");
   }
@@ -550,6 +712,10 @@ async function enqueueNextChunk(job: BatchJob): Promise<void> {
     new SendMessageCommand({
       QueueUrl: QUEUE_URL,
       MessageBody: JSON.stringify(job),
+      // SQS delay for rate limiting (max 900 seconds)
+      DelaySeconds: options?.delaySeconds
+        ? Math.min(options.delaySeconds, 900)
+        : undefined,
     })
   );
 }

@@ -48,6 +48,17 @@ batchQueue.subscribe(
     memory: "512 MB",
     environment: {
       DATABASE_URL: process.env.DATABASE_URL ?? "",
+      // Base URLs for unsubscribe/preferences links
+      API_BASE_URL:
+        $app.stage === "production"
+          ? "https://api.wraps.dev"
+          : process.env.API_BASE_URL ?? "https://api.wraps.dev",
+      APP_BASE_URL:
+        $app.stage === "production"
+          ? "https://wraps.dev"
+          : process.env.APP_BASE_URL ?? "https://wraps.dev",
+      // Secret for signing unsubscribe tokens (must match API and web)
+      UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
     },
     nodejs: {
       install: ["pg"], // PostgreSQL driver for Drizzle
