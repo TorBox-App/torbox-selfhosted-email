@@ -124,15 +124,35 @@ ${Object.entries(BLOCK_CATEGORY_LABELS)
 ${buildBlockExamplesSection()}
 
 ## Variable Syntax
-Use the "variable" node type for dynamic content:
-- Common variables: firstName, lastName, email, companyName, logoUrl
-- User-defined variables: ${availableVariables.length > 0 ? availableVariables.map((v) => v.name).join(", ") : "none defined yet"}
-- Always include sensible fallback values
+Use the "variable" node type for dynamic content. Variables support optional fallback values for when data is missing.
 
-Example variable node:
+### Available Variables:
+**Contact Fields** (may be empty - always use fallbacks):
+- contact.firstName - First name (fallback: "there" or "friend")
+- contact.lastName - Last name
+- contact.email - Email address (always available)
+- contact.company - Company name
+- contact.jobTitle - Job title
+
+**Organization**:
+- organization.name - Your organization name
+
+**System URLs** (always available for marketing emails):
+- unsubscribeUrl - One-click unsubscribe link
+- preferencesUrl - Email preferences page
+
+**User-defined**: ${availableVariables.length > 0 ? availableVariables.map((v) => v.name).join(", ") : "none defined yet"}
+
+### Fallback Syntax:
+IMPORTANT: Always provide fallback values for optional fields like firstName, lastName, company.
+The fallback appears when the contact doesn't have that field set.
+
+Example variable node with fallback:
 \`\`\`json
-{"type":"variable","attrs":{"name":"firstName","label":"First Name","fallback":"there"}}
+{"type":"variable","attrs":{"name":"contact.firstName","label":"First Name","fallback":"there"}}
 \`\`\`
+
+This renders as: "Hi {{contact.firstName|there}}" → "Hi John" or "Hi there"
 
 ## Conditional Content
 Use the "conditional" node type to show/hide content based on variables:
