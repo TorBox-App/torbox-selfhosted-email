@@ -196,35 +196,47 @@ async function processJob(job: BatchJob): Promise<void> {
           }
 
           // Build replacement data for SES template
-          // Provide both short names (firstName) and full names (contactFirstName)
-          // to support different template variable conventions
-          const replacementData: Record<string, string> = {
-            // Short names (for templates using {{firstName}})
-            email: recipient.email!,
-            firstName: recipient.firstName ?? "",
-            lastName: recipient.lastName ?? "",
-            company: recipient.company ?? "",
-            jobTitle: recipient.jobTitle ?? "",
-            // Full names with prefix (for templates using {{contact.firstName}})
-            contactEmail: recipient.email!,
-            contactFirstName: recipient.firstName ?? "",
-            contactLastName: recipient.lastName ?? "",
-            contactCompany: recipient.company ?? "",
-            contactJobTitle: recipient.jobTitle ?? "",
-            // Organization
-            organizationName: orgName ?? "",
-            // URLs
-            unsubscribeUrl: unsubscribeUrl ?? "",
-            preferencesUrl: preferencesUrl ?? "",
+          // IMPORTANT: Only include non-empty values!
+          // SES Handlebars treats empty strings as truthy, so {{#if firstName}}
+          // would be true even with firstName: "". Omitting the key entirely
+          // makes {{#if firstName}} false, allowing fallbacks to work.
+          const replacementData: Record<string, string> = {};
+
+          // Helper to add non-empty values
+          const addIfPresent = (key: string, value: string | null | undefined) => {
+            if (value) replacementData[key] = value;
           };
 
-          // Add custom properties with flattened names
+          // Always include email (required)
+          replacementData.email = recipient.email!;
+          replacementData.contactEmail = recipient.email!;
+
+          // Short names (for templates using {{firstName}})
+          addIfPresent("firstName", recipient.firstName);
+          addIfPresent("lastName", recipient.lastName);
+          addIfPresent("company", recipient.company);
+          addIfPresent("jobTitle", recipient.jobTitle);
+
+          // Full names with prefix (for templates using {{contact.firstName}})
+          addIfPresent("contactFirstName", recipient.firstName);
+          addIfPresent("contactLastName", recipient.lastName);
+          addIfPresent("contactCompany", recipient.company);
+          addIfPresent("contactJobTitle", recipient.jobTitle);
+
+          // Organization and URLs
+          addIfPresent("organizationName", orgName);
+          addIfPresent("unsubscribeUrl", unsubscribeUrl);
+          addIfPresent("preferencesUrl", preferencesUrl);
+
+          // Add custom properties with flattened names (only non-empty)
           if (recipient.properties) {
             for (const [key, value] of Object.entries(recipient.properties)) {
-              // Provide both short and prefixed names
-              replacementData[key] = String(value ?? "");
-              const flatKey = `contactProperties${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-              replacementData[flatKey] = String(value ?? "");
+              const strValue = value != null ? String(value) : null;
+              if (strValue) {
+                replacementData[key] = strValue;
+                const flatKey = `contactProperties${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+                replacementData[flatKey] = strValue;
+              }
             }
           }
 
