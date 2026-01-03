@@ -54,7 +54,7 @@ type SerializerOptions = {
 
 /**
  * Resolves a variable in the content with test data
- * @param keepAsPlaceholder - When true, always return {{name}} for SES substitution
+ * @param keepAsPlaceholder - When true, return {{name}} or {{name|fallback}} for SES substitution
  */
 function resolveVariable(
   name: string,
@@ -62,8 +62,12 @@ function resolveVariable(
   fallback?: string,
   keepAsPlaceholder?: boolean
 ): string {
-  // For SES templates, always keep as placeholder regardless of fallback
+  // For SES templates, keep as placeholder with fallback syntax for transformVariablesForSes
   if (keepAsPlaceholder) {
+    // Include fallback in placeholder so transformVariablesForSes can generate proper conditionals
+    if (fallback) {
+      return `{{${name}|${fallback}}}`;
+    }
     return `{{${name}}}`;
   }
   const value = testData[name];
