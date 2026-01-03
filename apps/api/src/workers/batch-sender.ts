@@ -257,6 +257,23 @@ async function processJob(job: BatchJob): Promise<void> {
         })
       );
 
+      // Build default template data (required by SES as fallback)
+      const defaultTemplateData: Record<string, string> = {
+        email: "",
+        firstName: "",
+        lastName: "",
+        company: "",
+        jobTitle: "",
+        contactEmail: "",
+        contactFirstName: "",
+        contactLastName: "",
+        contactCompany: "",
+        contactJobTitle: "",
+        organizationName: orgName ?? "",
+        unsubscribeUrl: "",
+        preferencesUrl: "",
+      };
+
       try {
         const result = await sesClient.send(
           new SendBulkEmailCommand({
@@ -265,6 +282,7 @@ async function processJob(job: BatchJob): Promise<void> {
             DefaultContent: {
               Template: {
                 TemplateName: sesTemplateName,
+                TemplateData: JSON.stringify(defaultTemplateData),
               },
             },
             BulkEmailEntries: bulkEntries,
