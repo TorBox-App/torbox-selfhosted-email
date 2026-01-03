@@ -176,7 +176,7 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     // Update template in our database
-    // Store the original HTML (with our variable format) for local use
+    // Store the SES-transformed HTML so fallback paths also have correct format
     const now = new Date();
     await db
       .update(template)
@@ -184,8 +184,8 @@ export async function POST(request: Request, context: RouteContext) {
         status: "PUBLISHED",
         sesTemplateName,
         publishedAt: now,
-        compiledHtml: rawHtml,
-        compiledText: rawText,
+        compiledHtml: sesHtml,
+        compiledText: sesText,
         updatedAt: now,
       })
       .where(eq(template.id, id));

@@ -32,6 +32,39 @@ import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 import { getCredentials } from "../services/credentials";
 import type { BatchJob } from "../services/queue";
 
+/**
+ * Transform variables from dot notation to SES-compatible camelCase format.
+ * Also converts fallback syntax to Handlebars conditionals.
+ *
+ * Examples:
+ *   {{contact.firstName}} -> {{contactFirstName}}
+ *   {{contact.firstName|there}} -> {{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}
+ *
+ * This is a safety net for the fallback path - normally auto-publish handles this.
+ */
+function transformVariablesForSes(html: string): string {
+  return html.replace(
+    /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]*))?\s*\}\}/g,
+    (_match, varName: string, fallback: string | undefined) => {
+      // Convert dot notation to camelCase: contact.firstName -> contactFirstName
+      const sesName = varName
+        .split(".")
+        .map((part, index) =>
+          index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
+        )
+        .join("");
+
+      // If there's a fallback value, use Handlebars conditional
+      if (fallback !== undefined) {
+        const trimmedFallback = fallback.trim();
+        return `{{#if ${sesName}}}{{${sesName}}}{{else}}${trimmedFallback}{{/if}}`;
+      }
+
+      return `{{${sesName}}}`;
+    }
+  );
+}
+
 // Align chunk size with SES bulk limit for clean 1:1 mapping
 const CHUNK_SIZE = 50; // SES SendBulkEmail limit per API call
 const DEFAULT_RATE_LIMIT = 14; // Fallback emails/sec if can't fetch from AWS
@@ -408,7 +441,11 @@ async function processJob(job: BatchJob): Promise<void> {
     }
   } else {
     // Fallback: individual sends for raw HTML (parallel with concurrency limit)
-    const html = templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
+    // Transform variables to SES format as a safety net
+    // Note: templateHtml (from compiledHtml) should already be transformed by publish
+    // but batch.htmlContent might contain untransformed variables
+    const rawHtml = templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
+    const html = transformVariablesForSes(rawHtml);
     const subject = batch.subject ?? "Message from Wraps";
     const CONCURRENCY = 10;
 

@@ -27,6 +27,7 @@ import type {
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
+import { publishTemplateToSES } from "./templates";
 
 // Re-export types for convenience
 export type {
@@ -329,15 +330,55 @@ export async function createBatchSend(
       return { success: false, error: "AWS account not found" };
     }
 
-    // Validate template if provided
+    // Validate template if provided and auto-publish if needed
     if (data.templateId) {
       const tmpl = await db.query.template.findFirst({
         where: (t, { and, eq }) =>
           and(eq(t.id, data.templateId!), eq(t.organizationId, organizationId)),
+        columns: {
+          id: true,
+          sesTemplateName: true,
+          subject: true,
+          updatedAt: true,
+          publishedAt: true,
+        },
       });
 
       if (!tmpl) {
         return { success: false, error: "Template not found" };
+      }
+
+      // Check if template needs (re)publishing:
+      // 1. Never published (no sesTemplateName)
+      // 2. Edited since last publish (updatedAt > publishedAt)
+      const needsPublish =
+        !tmpl.sesTemplateName ||
+        (tmpl.updatedAt &&
+          tmpl.publishedAt &&
+          tmpl.updatedAt > tmpl.publishedAt);
+
+      if (needsPublish) {
+        console.log(
+          "[batch] Template needs publishing:",
+          data.templateId,
+          tmpl.sesTemplateName ? "(modified since publish)" : "(never published)"
+        );
+        const publishResult = await publishTemplateToSES(
+          data.templateId,
+          organizationId
+        );
+
+        if (!publishResult.success) {
+          return {
+            success: false,
+            error: `Failed to publish template: ${publishResult.error}`,
+          };
+        }
+
+        console.log(
+          "[batch] Template published:",
+          publishResult.sesTemplateName
+        );
       }
     }
 
