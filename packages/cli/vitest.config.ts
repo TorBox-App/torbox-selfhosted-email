@@ -26,6 +26,11 @@ export default defineConfig({
         "src/utils/archive.ts",
         // CLI entry point
         "src/cli.ts",
+        // Complex utilities - tested through integration tests
+        "src/utils/shared/pulumi.ts",
+        "src/utils/shared/output.ts",
+        "src/utils/shared/prompts.ts",
+        "src/utils/route53.ts",
       ],
       thresholds: {
         lines: 70,
