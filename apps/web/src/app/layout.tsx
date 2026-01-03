@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/contexts/query-client-context";
 import { SessionProvider } from "@/contexts/session-context";
@@ -32,6 +33,7 @@ export default function RootLayout({
             <SessionProvider>
               <ThemeProvider defaultTheme="system" storageKey="nextjs-ui-theme">
                 <SidebarConfigProvider>{children}</SidebarConfigProvider>
+                <Toaster />
               </ThemeProvider>
             </SessionProvider>
           </QueryProvider>
