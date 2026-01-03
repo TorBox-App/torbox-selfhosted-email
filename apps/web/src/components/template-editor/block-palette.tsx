@@ -414,7 +414,7 @@ function DraggableBlockItem({
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={`group flex h-auto w-full cursor-grab items-center gap-1 rounded-md px-1 py-2 hover:bg-accent ${isDragging ? "opacity-50" : ""}`}
+          className={`group flex h-auto w-full cursor-grab items-center gap-2 rounded-lg border border-transparent bg-background px-3 py-2.5 shadow-sm transition-all hover:border-border hover:bg-accent ${isDragging ? "opacity-50" : ""}`}
           ref={setNodeRef}
           {...listeners}
           {...attributes}
@@ -485,20 +485,20 @@ export function BlockPalette({ editor, orgSlug }: BlockPaletteProps) {
 
   return (
     <TooltipProvider>
-      <div className="flex h-full min-h-0 w-60 flex-col border-r bg-muted/30">
-        <div className="border-b p-3">
+      <div className="flex h-full min-h-0 w-full flex-col bg-muted/30">
+        <div className="border-b px-4 py-3">
           <h3 className="font-semibold text-sm">Blocks</h3>
           <p className="text-muted-foreground text-xs">Click or drag to add</p>
         </div>
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-4 p-2">
+          <div className="space-y-4 p-3">
             {blocksByCategory.map(({ category, label, blocks }) => (
               <div key={category}>
-                <h4 className="mb-2 px-2 font-medium text-muted-foreground text-xs">
+                <h4 className="mb-2 px-1 font-medium text-muted-foreground text-xs uppercase tracking-wider">
                   {label}
                 </h4>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {blocks.map((block) => (
                     <DraggableBlockItem
                       block={block}

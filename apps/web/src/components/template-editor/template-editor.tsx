@@ -18,13 +18,12 @@ import {
 } from "@/hooks/use-template-queries";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
-import { AIChatPanel } from "./ai-chat-panel";
-import { BlockPalette } from "./block-palette";
 import { CodeView } from "./code-view";
 import { EditorDndProvider } from "./dnd-context";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { EditorErrorBoundary } from "./editor-error-boundary";
 import { ImportModal } from "./import-modal";
+import { LeftPanel } from "./left-panel";
 import { PreviewPanel } from "./preview-panel";
 import { PropertiesPanel } from "./properties-panel";
 import { SaveBlockModal } from "./save-block-modal";
@@ -136,9 +135,8 @@ function TemplateEditorContent({
 
   const {
     view,
-    showBlockLibrary,
+    showLeftPanel,
     showPropertiesPanel,
-    showAIPanel,
     showTestDataPanel,
     showVersionHistory,
     selectedBrandKitId,
@@ -387,9 +385,13 @@ function TemplateEditorContent({
 
           {/* Main Content Area */}
           <div className="flex min-h-0 flex-1 overflow-hidden">
-            {/* Left Panel - Block Library */}
-            {showBlockLibrary && view === "edit" && (
-              <BlockPalette editor={editor} orgSlug={orgSlug} />
+            {/* Left Panel - AI + Blocks tabs */}
+            {showLeftPanel && view === "edit" && (
+              <LeftPanel
+                editor={editor}
+                orgSlug={orgSlug}
+                templateId={templateId}
+              />
             )}
 
             {/* Center - Editor/Preview/Code/Usage */}
@@ -414,19 +416,11 @@ function TemplateEditorContent({
               {view === "usage" && <UsagePanel template={template} />}
             </div>
 
-            {/* Right Panel - Properties */}
-            {showPropertiesPanel && view === "edit" && (
-              <PropertiesPanel editor={editor} />
-            )}
-
-            {/* Right Panel - AI Assistant (shown in edit mode when toggled) */}
-            {showAIPanel && view === "edit" && (
-              <AIChatPanel
-                asSidePanel
-                editor={editor}
-                orgSlug={orgSlug}
-                templateId={templateId}
-              />
+            {/* Right Panel - Properties (always rendered in edit mode to detect selection) */}
+            {view === "edit" && (
+              <div className={showPropertiesPanel ? "" : "hidden"}>
+                <PropertiesPanel editor={editor} />
+              </div>
             )}
 
             {/* Right Panel - Test Data (shown when toggled) */}

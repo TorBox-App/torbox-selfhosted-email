@@ -1,13 +1,14 @@
 "use client";
 
 import { mergeAttributes, Node } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import {
   type NodeViewProps,
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from "@tiptap/react";
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -98,9 +99,31 @@ const EmailIconNodeView = ({
   node,
   updateAttributes,
   selected,
+  editor,
+  getPos,
 }: NodeViewProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const attrs = node.attrs as EmailIconAttributes;
+
+  // Click handler to select this node (for properties panel)
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Don't select if clicking on the edit button or popover
+      if ((e.target as HTMLElement).closest("button, [role='dialog']")) {
+        return;
+      }
+
+      const pos = getPos();
+      if (typeof pos !== "number") return;
+
+      // Create a NodeSelection at this node's position
+      const tr = editor.state.tr.setSelection(
+        NodeSelection.create(editor.state.doc, pos)
+      );
+      editor.view.dispatch(tr);
+    },
+    [editor, getPos]
+  );
 
   // Calculate icon size (icon is smaller than container to leave room for background)
   const iconImgSize = Math.round(attrs.size * 0.55);
@@ -108,7 +131,8 @@ const EmailIconNodeView = ({
 
   return (
     <NodeViewWrapper
-      className={`email-icon-wrapper my-2 ${selected ? "ring-2 ring-primary ring-offset-2" : ""}`}
+      className={`email-icon-wrapper my-2 cursor-pointer ${selected ? "ring-2 ring-primary ring-offset-2" : ""}`}
+      onClick={handleClick}
       style={{ textAlign: attrs.align }}
     >
       <div className="group relative inline-block">

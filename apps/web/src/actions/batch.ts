@@ -20,10 +20,14 @@ import type {
   Channel,
   CreateBatchInput,
   CreateBatchResult,
+  ExtractedVariable,
   GetBatchResult,
+  GetSampleContactsResult,
   ListBatchesResult,
   RecipientFilter,
+  SampleContact,
 } from "@/lib/batch";
+import { getVariablesForContext } from "@/components/template-editor/variables/variable-definitions";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
@@ -809,6 +813,104 @@ export async function getRecipientCount(
 }
 
 /**
+ * Get sample contacts for audience preview
+ * Returns a few sample contacts matching the filter for preview purposes
+ */
+export async function getSampleContacts(
+  organizationId: string,
+  channel: Channel = "email",
+  filter?: RecipientFilter,
+  limit: number = 5
+): Promise<GetSampleContactsResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // Base conditions for channel
+    const baseConditions: SQL[] = [eq(contact.organizationId, organizationId)];
+
+    if (channel === "email") {
+      baseConditions.push(isNotNull(contact.email));
+      baseConditions.push(
+        sql`(${contact.emailStatus} = 'active' OR ${contact.emailStatus} IS NULL)`
+      );
+    } else {
+      // SMS
+      baseConditions.push(isNotNull(contact.phone));
+      baseConditions.push(eq(contact.smsStatus, "opted_in"));
+    }
+
+    // Apply recipient filter
+    if (filter?.audienceType === "topic" && filter.topicId) {
+      // Filter by topic subscription
+      const topicSubquery = db
+        .select({ contactId: contactTopic.contactId })
+        .from(contactTopic)
+        .where(
+          and(
+            eq(contactTopic.contactId, contact.id),
+            eq(contactTopic.topicId, filter.topicId),
+            eq(contactTopic.status, "subscribed")
+          )
+        );
+      baseConditions.push(exists(topicSubquery));
+    } else if (filter?.audienceType === "segment" && filter.segmentId) {
+      // Fetch segment and apply its condition
+      const seg = await db.query.segment.findFirst({
+        where: (s, { and, eq }) =>
+          and(eq(s.id, filter.segmentId!), eq(s.organizationId, organizationId)),
+      });
+
+      if (seg?.condition) {
+        const segmentSQL = buildConditionSQL(seg.condition);
+        if (segmentSQL) {
+          baseConditions.push(segmentSQL);
+        }
+      }
+    }
+
+    // Get total count first
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(contact)
+      .where(and(...baseConditions));
+
+    const totalCount = countResult?.count ?? 0;
+
+    // Get sample contacts
+    const contacts = await db
+      .select({
+        id: contact.id,
+        email: contact.email,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        company: contact.company,
+      })
+      .from(contact)
+      .where(and(...baseConditions))
+      .orderBy(desc(contact.createdAt))
+      .limit(limit);
+
+    return {
+      success: true,
+      contacts: contacts as SampleContact[],
+      totalCount,
+    };
+  } catch (error) {
+    const log = createActionLogger("getSampleContacts", {
+      orgSlug: organizationId,
+    });
+    log.error({ err: serializeError(error) }, "Failed to get sample contacts");
+    return { success: false, error: "Failed to fetch sample contacts" };
+  }
+}
+
+/**
  * List templates for batch send form
  */
 export async function listTemplatesForBatch(organizationId: string): Promise<
@@ -955,5 +1057,187 @@ export async function listSegmentsForBatch(organizationId: string): Promise<
     });
     log.error({ err: serializeError(error) }, "Failed to list segments");
     return { success: false, error: "Failed to fetch segments" };
+  }
+}
+
+// =============================================================================
+// TEMPLATE VARIABLE EXTRACTION
+// =============================================================================
+
+type JSONContent = {
+  type?: string;
+  attrs?: Record<string, unknown>;
+  content?: JSONContent[];
+  text?: string;
+};
+
+/**
+ * Extract all variables from a template's JSON content
+ * Returns a list of variables with their known/custom status
+ */
+export async function extractTemplateVariables(
+  organizationId: string,
+  templateId: string
+): Promise<
+  | { success: true; variables: ExtractedVariable[] }
+  | { success: false; error: string }
+> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // Fetch the template
+    const templateData = await db.query.template.findFirst({
+      where: (t, { and, eq }) =>
+        and(eq(t.id, templateId), eq(t.organizationId, organizationId)),
+      columns: {
+        content: true,
+        emailType: true,
+      },
+    });
+
+    if (!templateData) {
+      return { success: false, error: "Template not found" };
+    }
+
+    // Get known variables for broadcast context
+    const knownVariables = getVariablesForContext("broadcast");
+    const knownVariableNames = new Set(knownVariables.map((v) => v.name));
+
+    // Extract variables from the template content
+    const extractedVariables: ExtractedVariable[] = [];
+    const seenVariables = new Set<string>();
+
+    function extractFromNode(node: JSONContent) {
+      // Check if this is a variable node
+      if (node.type === "variable" && node.attrs) {
+        const name = node.attrs.name as string;
+        const label = node.attrs.label as string | undefined;
+        const fallback = node.attrs.fallback as string | undefined;
+
+        if (name && !seenVariables.has(name)) {
+          seenVariables.add(name);
+
+          // Determine if this is a known variable
+          const isKnown = knownVariableNames.has(name);
+          const knownDef = knownVariables.find((v) => v.name === name);
+
+          let category: "contact" | "organization" | "system" | "custom";
+          if (isKnown && knownDef?.category) {
+            category = knownDef.category as typeof category;
+          } else if (name.startsWith("contact.")) {
+            category = "contact";
+          } else if (name.startsWith("organization.")) {
+            category = "organization";
+          } else if (
+            name === "unsubscribeUrl" ||
+            name === "preferencesUrl" ||
+            name === "confirmationUrl"
+          ) {
+            category = "system";
+          } else {
+            category = "custom";
+          }
+
+          extractedVariables.push({
+            name,
+            label: label ?? knownDef?.label,
+            fallback: fallback ?? undefined,
+            isKnown,
+            category,
+          });
+        }
+      }
+
+      // Recurse into children
+      if (node.content) {
+        for (const child of node.content) {
+          extractFromNode(child);
+        }
+      }
+    }
+
+    // Parse and extract from the template content
+    if (templateData.content) {
+      const content =
+        typeof templateData.content === "string"
+          ? JSON.parse(templateData.content)
+          : templateData.content;
+      extractFromNode(content as JSONContent);
+    }
+
+    // Sort variables: known first, then custom, alphabetically within each group
+    extractedVariables.sort((a, b) => {
+      if (a.isKnown !== b.isKnown) {
+        return a.isKnown ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    return { success: true, variables: extractedVariables };
+  } catch (error) {
+    const log = createActionLogger("extractTemplateVariables", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), templateId },
+      "Failed to extract variables"
+    );
+    return { success: false, error: "Failed to extract template variables" };
+  }
+}
+
+/**
+ * Get template content for preview rendering
+ * Returns the template's JSONContent for client-side rendering
+ */
+export async function getTemplateContent(
+  organizationId: string,
+  templateId: string
+): Promise<
+  | { success: true; content: unknown; subject: string | null }
+  | { success: false; error: string }
+> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    const templateData = await db.query.template.findFirst({
+      where: (t, { and, eq }) =>
+        and(eq(t.id, templateId), eq(t.organizationId, organizationId)),
+      columns: {
+        content: true,
+        subject: true,
+      },
+    });
+
+    if (!templateData) {
+      return { success: false, error: "Template not found" };
+    }
+
+    return {
+      success: true,
+      content: templateData.content,
+      subject: templateData.subject,
+    };
+  } catch (error) {
+    const log = createActionLogger("getTemplateContent", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), templateId },
+      "Failed to get template content"
+    );
+    return { success: false, error: "Failed to fetch template content" };
   }
 }

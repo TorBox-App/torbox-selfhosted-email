@@ -1,13 +1,14 @@
 "use client";
 
 import { mergeAttributes, Node } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import {
   type NodeViewProps,
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from "@tiptap/react";
 import { ExternalLink, Pencil } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,9 +52,31 @@ const EmailImageNodeView = ({
   node,
   updateAttributes,
   selected,
+  editor,
+  getPos,
 }: NodeViewProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const attrs = node.attrs as EmailImageAttributes;
+
+  // Click handler to select this node (for properties panel)
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Don't select if clicking on the edit button or popover
+      if ((e.target as HTMLElement).closest("button, [role='dialog']")) {
+        return;
+      }
+
+      const pos = getPos();
+      if (typeof pos !== "number") return;
+
+      // Create a NodeSelection at this node's position
+      const tr = editor.state.tr.setSelection(
+        NodeSelection.create(editor.state.doc, pos)
+      );
+      editor.view.dispatch(tr);
+    },
+    [editor, getPos]
+  );
 
   // Check if src is empty or an unresolved variable
   const hasValidSrc = attrs.src && !isVariablePlaceholder(attrs.src);
@@ -64,7 +87,8 @@ const EmailImageNodeView = ({
 
   return (
     <NodeViewWrapper
-      className={`email-image-wrapper my-4 ${selected ? "ring-2 ring-primary ring-offset-2" : ""}`}
+      className={`email-image-wrapper my-4 cursor-pointer ${selected ? "ring-2 ring-primary ring-offset-2" : ""}`}
+      onClick={handleClick}
       style={{ textAlign: attrs.align }}
     >
       <div className="group relative inline-block">

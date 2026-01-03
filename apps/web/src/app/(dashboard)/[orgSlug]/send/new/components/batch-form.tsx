@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   getVerifiedDomains,
@@ -32,8 +32,12 @@ import {
   type ContentType,
   createBatchSend,
   getRecipientCount,
+  getSampleContacts,
   type RecipientFilter,
 } from "@/actions/batch";
+import type { SampleContact, VariableMapping } from "@/lib/batch";
+import { EmailPreviewCarousel } from "./email-preview-carousel";
+import { VariableMapper } from "./variable-mapper";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -122,6 +126,7 @@ interface CampaignData {
   contentType: ContentType;
   templateId: string;
   htmlContent: string;
+  variableMappings: VariableMapping[];
   // Audience
   audienceType: AudienceType;
   topicId: string;
@@ -172,6 +177,7 @@ export function BatchForm({
       contentType: "template",
       templateId: "",
       htmlContent: "",
+      variableMappings: [],
       audienceType: "all",
       topicId: "",
       segmentId: "",
@@ -490,6 +496,7 @@ export function BatchForm({
             <ContentStep
               data={campaignData}
               onChange={updateData}
+              organizationId={organizationId}
               orgSlug={orgSlug}
             />
           )}
@@ -498,6 +505,7 @@ export function BatchForm({
               data={campaignData}
               loadingCount={loadingCount}
               onChange={updateData}
+              organizationId={organizationId}
               orgSlug={orgSlug}
               recipientCount={recipientCount}
               segments={segments}
@@ -513,6 +521,7 @@ export function BatchForm({
               loadingCount={loadingCount}
               onChange={updateData}
               onSend={handleSend}
+              organizationId={organizationId}
               orgSlug={orgSlug}
               recipientCount={recipientCount}
               schedulingEnabled={schedulingEnabled}
@@ -759,10 +768,12 @@ function SetupStep({
 function ContentStep({
   data,
   onChange,
+  organizationId,
   orgSlug,
 }: {
   data: CampaignData;
   onChange: (updates: Partial<CampaignData>) => void;
+  organizationId: string;
   orgSlug: string;
 }) {
   // Fetch templates with React Query - auto-updates when new templates are created
@@ -776,6 +787,23 @@ function ContentStep({
   const [editingTemplateId, setEditingTemplateId] = useState<string | undefined>();
   const [showAdvanced, setShowAdvanced] = useState(data.contentType === "html");
 
+  // Track if we just closed the editor (to prevent auto-reopen)
+  const justClosedEditorRef = useRef(false);
+
+  // Auto-open editor when a template is selected from dropdown
+  useEffect(() => {
+    if (
+      data.templateId &&
+      data.contentType === "template" &&
+      !justClosedEditorRef.current &&
+      !showEditorDialog
+    ) {
+      setEditingTemplateId(data.templateId);
+      setShowEditorDialog(true);
+    }
+    justClosedEditorRef.current = false;
+  }, [data.templateId, data.contentType, showEditorDialog]);
+
   // Handle creating a new template - go straight to editor with broadcast name
   const handleCreateNew = () => {
     setEditingTemplateId(undefined);
@@ -788,9 +816,10 @@ function ContentStep({
     setShowEditorDialog(true);
   };
 
-  // Handle template selection from editor
+  // Handle template selection from editor (or when closing)
   const handleTemplateSelect = (templateId: string) => {
-    onChange({ templateId, contentType: "template" });
+    justClosedEditorRef.current = true; // Prevent auto-reopen
+    onChange({ templateId, contentType: "template", variableMappings: [] });
     setShowEditorDialog(false);
     setEditingTemplateId(undefined);
   };
@@ -976,6 +1005,16 @@ function ContentStep({
         </CardContent>
       </Card>
 
+      {/* Variable Mapping - shown when a template is selected */}
+      {data.contentType === "template" && data.templateId && (
+        <VariableMapper
+          organizationId={organizationId}
+          templateId={data.templateId}
+          mappings={data.variableMappings}
+          onChange={(mappings) => onChange({ variableMappings: mappings })}
+        />
+      )}
+
       {/* Template Editor Dialog */}
       <TemplateEditorDialog
         open={showEditorDialog}
@@ -998,6 +1037,7 @@ function AudienceStep({
   data,
   loadingCount,
   onChange,
+  organizationId,
   orgSlug,
   recipientCount,
   segments,
@@ -1008,6 +1048,7 @@ function AudienceStep({
   data: CampaignData;
   loadingCount: boolean;
   onChange: (updates: Partial<CampaignData>) => void;
+  organizationId: string;
   orgSlug: string;
   recipientCount: number | null;
   segments: Segment[];
@@ -1015,6 +1056,41 @@ function AudienceStep({
   topics: Topic[];
   topicsEnabled: boolean;
 }) {
+  const [sampleContacts, setSampleContacts] = useState<SampleContact[]>([]);
+  const [loadingSamples, setLoadingSamples] = useState(false);
+
+  // Fetch sample contacts when audience selection changes
+  useEffect(() => {
+    async function fetchSamples() {
+      // Build the filter based on current selection
+      const filter: RecipientFilter = {
+        audienceType: data.audienceType,
+        topicId: data.audienceType === "topic" ? data.topicId : undefined,
+        segmentId: data.audienceType === "segment" ? data.segmentId : undefined,
+      };
+
+      // Only fetch if we have a valid selection
+      const hasValidSelection =
+        data.audienceType === "all" ||
+        (data.audienceType === "topic" && data.topicId) ||
+        (data.audienceType === "segment" && data.segmentId);
+
+      if (!hasValidSelection) {
+        setSampleContacts([]);
+        return;
+      }
+
+      setLoadingSamples(true);
+      const result = await getSampleContacts(organizationId, "email", filter, 5);
+      if (result.success) {
+        setSampleContacts(result.contacts);
+      }
+      setLoadingSamples(false);
+    }
+
+    fetchSamples();
+  }, [organizationId, data.audienceType, data.topicId, data.segmentId]);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -1152,7 +1228,7 @@ function AudienceStep({
         </CardContent>
       </Card>
 
-      {/* Recipient Count */}
+      {/* Recipient Count & Sample Preview */}
       <Card className="bg-muted/50">
         <CardContent className="pt-6">
           <div className="flex items-center gap-3">
@@ -1170,6 +1246,48 @@ function AudienceStep({
               </p>
             </div>
           </div>
+
+          {/* Sample Contacts Preview */}
+          {sampleContacts.length > 0 && (
+            <div className="mt-4 border-t pt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="font-medium text-muted-foreground text-sm">
+                  Preview ({sampleContacts.length} of{" "}
+                  {recipientCount?.toLocaleString() ?? 0})
+                </p>
+                <Link
+                  className="text-primary text-xs hover:underline"
+                  href={`/${orgSlug}/contacts`}
+                >
+                  View all contacts
+                </Link>
+              </div>
+              <div className="space-y-1">
+                {loadingSamples ? (
+                  <p className="text-muted-foreground text-sm">Loading...</p>
+                ) : (
+                  sampleContacts.map((contact) => (
+                    <div
+                      key={contact.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <span className="text-muted-foreground">
+                        {contact.email}
+                      </span>
+                      {(contact.firstName || contact.lastName) && (
+                        <span className="text-muted-foreground/70">
+                          ({[contact.firstName, contact.lastName]
+                            .filter(Boolean)
+                            .join(" ")}
+                          {contact.company && `, ${contact.company}`})
+                        </span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -1183,6 +1301,7 @@ function ReviewStep({
   loadingCount,
   onChange,
   onSend,
+  organizationId,
   orgSlug,
   recipientCount,
   schedulingEnabled,
@@ -1194,6 +1313,7 @@ function ReviewStep({
   loadingCount: boolean;
   onChange: (updates: Partial<CampaignData>) => void;
   onSend: () => void;
+  organizationId: string;
   orgSlug: string;
   recipientCount: number | null;
   schedulingEnabled: boolean;
@@ -1288,6 +1408,21 @@ function ReviewStep({
           )}
         </CardContent>
       </Card>
+
+      {/* Email Preview Carousel - only show for template content */}
+      {data.contentType === "template" && data.templateId && (
+        <EmailPreviewCarousel
+          organizationId={organizationId}
+          recipientFilter={{
+            audienceType: data.audienceType,
+            topicId: data.audienceType === "topic" ? data.topicId : undefined,
+            segmentId:
+              data.audienceType === "segment" ? data.segmentId : undefined,
+          }}
+          templateId={data.templateId}
+          variableMappings={data.variableMappings}
+        />
+      )}
 
       <Card className="bg-muted/50">
         <CardContent className="pt-6">

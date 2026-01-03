@@ -103,6 +103,24 @@ export type RecipientFilter = {
 // Content type for email
 export type ContentType = "template" | "html";
 
+// Variable mapping types
+export type VariableSource =
+  | { type: "static"; value: string }
+  | { type: "contact"; field: string }; // e.g., "firstName", "customFields.dashboardUrl"
+
+export type VariableMapping = {
+  variableName: string; // e.g., "dashboardUrl"
+  source: VariableSource;
+};
+
+export type ExtractedVariable = {
+  name: string;
+  label?: string;
+  fallback?: string;
+  isKnown: boolean; // true for contact.firstName, organization.name, etc.
+  category: "contact" | "organization" | "system" | "custom";
+};
+
 // Create batch input
 export type CreateBatchInput = {
   name?: string;
@@ -119,6 +137,8 @@ export type CreateBatchInput = {
   replyTo?: string;
   templateId?: string;
   htmlContent?: string;
+  // Variable mappings for custom variables
+  variableMappings?: VariableMapping[];
   // SMS-specific (Phase 3)
   body?: string;
   senderId?: string;
@@ -163,6 +183,26 @@ export type GetBatchResult =
 export type CancelBatchResult =
   | {
       success: true;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+// Sample contact for audience preview
+export type SampleContact = {
+  id: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+};
+
+export type GetSampleContactsResult =
+  | {
+      success: true;
+      contacts: SampleContact[];
+      totalCount: number;
     }
   | {
       success: false;

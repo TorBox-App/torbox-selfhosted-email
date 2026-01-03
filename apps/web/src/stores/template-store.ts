@@ -8,17 +8,22 @@ type User = {
 };
 
 type EditorView = "edit" | "preview" | "code" | "usage";
+export type LeftPanelTab = "ai" | "blocks";
 
 type LocalState = {
   view: EditorView;
   selectedNodeId: string | null;
   testData: Record<string, unknown>;
+  // Legacy panel toggles (kept for backwards compatibility during migration)
   showBlockLibrary: boolean;
   showPropertiesPanel: boolean;
   showAIPanel: boolean;
   showTestDataPanel: boolean;
   showVersionHistory: boolean;
   selectedBrandKitId: string | null;
+  // New unified left panel state
+  showLeftPanel: boolean;
+  leftPanelTab: LeftPanelTab;
 };
 
 type TemplateMetadata = {
@@ -53,9 +58,14 @@ type TemplateStoreActions = {
   // Panel toggles
   toggleBlockLibrary: () => void;
   togglePropertiesPanel: () => void;
+  setShowPropertiesPanel: (show: boolean) => void;
   toggleAIPanel: () => void;
   toggleTestDataPanel: () => void;
   toggleVersionHistory: () => void;
+  // New unified left panel actions
+  toggleLeftPanel: () => void;
+  setLeftPanelTab: (tab: LeftPanelTab) => void;
+  toggleLeftPanelWithTab: (tab: LeftPanelTab) => void;
 
   // Brand kit
   setSelectedBrandKitId: (id: string | null) => void;
@@ -97,12 +107,16 @@ const initialLocalState: LocalState = {
   view: "edit",
   selectedNodeId: null,
   testData: {},
+  // Legacy state (kept for backwards compatibility)
   showBlockLibrary: true,
-  showPropertiesPanel: true,
+  showPropertiesPanel: false, // Changed: closed by default
   showAIPanel: false,
   showTestDataPanel: false,
   showVersionHistory: false,
   selectedBrandKitId: null,
+  // New unified left panel state
+  showLeftPanel: true,
+  leftPanelTab: "ai", // AI is the default tab
 };
 
 const initialCollaborationState: CollaborationState = {
@@ -158,6 +172,14 @@ export const useTemplateStore = create<TemplateStore>((set) => ({
         },
       })),
 
+    setShowPropertiesPanel: (show) =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          showPropertiesPanel: show,
+        },
+      })),
+
     toggleAIPanel: () =>
       set((state) => ({
         localState: {
@@ -181,6 +203,44 @@ export const useTemplateStore = create<TemplateStore>((set) => ({
           showVersionHistory: !state.localState.showVersionHistory,
         },
       })),
+
+    toggleLeftPanel: () =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          showLeftPanel: !state.localState.showLeftPanel,
+        },
+      })),
+
+    setLeftPanelTab: (tab) =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          leftPanelTab: tab,
+        },
+      })),
+
+    toggleLeftPanelWithTab: (tab) =>
+      set((state) => {
+        const { showLeftPanel, leftPanelTab } = state.localState;
+        // If panel is open and showing the same tab, close it
+        if (showLeftPanel && leftPanelTab === tab) {
+          return {
+            localState: {
+              ...state.localState,
+              showLeftPanel: false,
+            },
+          };
+        }
+        // Otherwise, open the panel with the specified tab
+        return {
+          localState: {
+            ...state.localState,
+            showLeftPanel: true,
+            leftPanelTab: tab,
+          },
+        };
+      }),
 
     setSelectedBrandKitId: (id) =>
       set((state) => ({
@@ -239,6 +299,10 @@ export const useShowTestDataPanel = () =>
   useTemplateStore((state) => state.localState.showTestDataPanel);
 export const useShowVersionHistory = () =>
   useTemplateStore((state) => state.localState.showVersionHistory);
+export const useShowLeftPanel = () =>
+  useTemplateStore((state) => state.localState.showLeftPanel);
+export const useLeftPanelTab = () =>
+  useTemplateStore((state) => state.localState.leftPanelTab);
 export const useSelectedBrandKitId = () =>
   useTemplateStore((state) => state.localState.selectedBrandKitId);
 export const useTemplateMetadata = () =>

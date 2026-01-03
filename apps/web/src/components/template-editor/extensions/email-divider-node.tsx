@@ -1,13 +1,14 @@
 "use client";
 
 import { mergeAttributes, Node } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import {
   type NodeViewProps,
   NodeViewWrapper,
   ReactNodeViewRenderer,
 } from "@tiptap/react";
 import { Settings2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -42,13 +43,36 @@ const EmailDividerNodeView = ({
   node,
   updateAttributes,
   selected,
+  editor,
+  getPos,
 }: NodeViewProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const attrs = node.attrs as EmailDividerAttributes;
 
+  // Click handler to select this node (for properties panel)
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Don't select if clicking on the edit button or popover
+      if ((e.target as HTMLElement).closest("button, [role='dialog']")) {
+        return;
+      }
+
+      const pos = getPos();
+      if (typeof pos !== "number") return;
+
+      // Create a NodeSelection at this node's position
+      const tr = editor.state.tr.setSelection(
+        NodeSelection.create(editor.state.doc, pos)
+      );
+      editor.view.dispatch(tr);
+    },
+    [editor, getPos]
+  );
+
   return (
     <NodeViewWrapper
-      className={`email-divider-wrapper group relative ${selected ? "rounded ring-2 ring-primary ring-offset-2" : ""}`}
+      className={`email-divider-wrapper group relative cursor-pointer ${selected ? "rounded ring-2 ring-primary ring-offset-2" : ""}`}
+      onClick={handleClick}
     >
       <hr
         className="border-0"

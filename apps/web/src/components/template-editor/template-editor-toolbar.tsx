@@ -35,7 +35,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RainbowButton } from "@/components/ui/rainbow-button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -113,16 +112,15 @@ export function TemplateEditorToolbar({
 }: TemplateEditorToolbarProps) {
   const {
     view,
-    showBlockLibrary,
+    showLeftPanel,
+    leftPanelTab,
     showPropertiesPanel,
-    showAIPanel,
     showVersionHistory,
   } = useTemplateStore((state) => state.localState);
   const {
     setView,
-    toggleBlockLibrary,
+    toggleLeftPanelWithTab,
     togglePropertiesPanel,
-    toggleAIPanel,
     toggleVersionHistory,
   } = useTemplateStore((state) => state.actions);
 
@@ -201,14 +199,28 @@ export function TemplateEditorToolbar({
               <TooltipTrigger asChild>
                 <Button
                   className="h-8 w-8 p-0"
-                  onClick={toggleBlockLibrary}
+                  onClick={() => toggleLeftPanelWithTab("ai")}
                   size="sm"
-                  variant={showBlockLibrary ? "secondary" : "ghost"}
+                  variant={showLeftPanel && leftPanelTab === "ai" ? "secondary" : "ghost"}
+                >
+                  <Sparkles className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>AI Assistant</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-8 w-8 p-0"
+                  onClick={() => toggleLeftPanelWithTab("blocks")}
+                  size="sm"
+                  variant={showLeftPanel && leftPanelTab === "blocks" ? "secondary" : "ghost"}
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Toggle Blocks Panel</TooltipContent>
+              <TooltipContent>Blocks</TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -222,7 +234,7 @@ export function TemplateEditorToolbar({
                   <SlidersHorizontal className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Toggle Properties Panel</TooltipContent>
+              <TooltipContent>Properties</TooltipContent>
             </Tooltip>
           </div>
 
@@ -310,22 +322,6 @@ export function TemplateEditorToolbar({
 
           {/* Spacer */}
           <div className="flex-1" />
-
-          {/* AI Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <RainbowButton
-                className="h-8 gap-1.5 px-2.5"
-                onClick={toggleAIPanel}
-                size="sm"
-                variant={showAIPanel ? "default" : "outline"}
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="hidden text-xs sm:inline">AI</span>
-              </RainbowButton>
-            </TooltipTrigger>
-            <TooltipContent>AI Assistant</TooltipContent>
-          </Tooltip>
 
           {/* More Menu */}
           <DropdownMenu>
