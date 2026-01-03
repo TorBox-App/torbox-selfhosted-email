@@ -231,6 +231,15 @@ async function processJob(job: BatchJob): Promise<void> {
             },
             BulkEmailEntries: bulkEntries,
             ConfigurationSetName: "wraps-email-tracking",
+            // Message tags for tracking in CloudWatch and EventBridge
+            DefaultEmailTags: [
+              { Name: "batchId", Value: batchId },
+              { Name: "organizationId", Value: organizationId },
+              ...(batch.emailTemplateId
+                ? [{ Name: "templateId", Value: batch.emailTemplateId }]
+                : []),
+              { Name: "source", Value: "broadcast" },
+            ],
           })
         );
 
@@ -354,6 +363,15 @@ async function processJob(job: BatchJob): Promise<void> {
                 },
               },
               ConfigurationSetName: "wraps-email-tracking",
+              // Message tags for tracking in CloudWatch and EventBridge
+              EmailTags: [
+                { Name: "batchId", Value: batchId },
+                { Name: "organizationId", Value: organizationId },
+                ...(batch.emailTemplateId
+                  ? [{ Name: "templateId", Value: batch.emailTemplateId }]
+                  : []),
+                { Name: "source", Value: "broadcast" },
+              ],
             })
           );
 
