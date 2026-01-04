@@ -10,7 +10,7 @@
  * so we use the raw AWS provider (Pulumi) directly.
  */
 
-import { batchQueue } from "./queues";
+import { batchQueue, workflowQueue } from "./queues";
 
 // Schedule Group for organizing broadcast schedules
 // Using aws.scheduler.ScheduleGroup from the Pulumi AWS provider
@@ -46,7 +46,7 @@ export const schedulerRole = new aws.iam.Role("SchedulerRole", {
   },
 });
 
-// Policy to allow Scheduler to send messages to the batch queue
+// Policy to allow Scheduler to send messages to queues (batch + workflow)
 new aws.iam.RolePolicy("SchedulerSqsPolicy", {
   role: schedulerRole.name,
   policy: $jsonStringify({
@@ -55,7 +55,7 @@ new aws.iam.RolePolicy("SchedulerSqsPolicy", {
       {
         Effect: "Allow",
         Action: ["sqs:SendMessage"],
-        Resource: [batchQueue.arn],
+        Resource: [batchQueue.arn, workflowQueue.arn],
       },
     ],
   }),

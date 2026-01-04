@@ -29,9 +29,7 @@ const ProductionAccessGuide = lazy(
 const DomainVerificationGuide = lazy(
   () => import("@/app/docs/guides/domain-verification/page")
 );
-const AWSSetupGuide = lazy(
-  () => import("@/app/docs/guides/aws-setup/page")
-);
+const AWSSetupGuide = lazy(() => import("@/app/docs/guides/aws-setup/page"));
 const AWSSetupQuickGuide = lazy(
   () => import("@/app/docs/guides/aws-setup/quick/page")
 );

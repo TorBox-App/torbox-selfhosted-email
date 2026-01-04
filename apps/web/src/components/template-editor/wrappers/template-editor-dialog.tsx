@@ -128,8 +128,8 @@ export function TemplateEditorDialog({
       className="flex-1"
       height="100%"
       initialContent={initialContent}
-      initialSubject={initialSubject}
       initialPreviewText={initialPreviewText}
+      initialSubject={initialSubject}
       onCancel={handleCancel}
       onSave={handleSave}
       orgSlug={orgSlug}
@@ -141,7 +141,7 @@ export function TemplateEditorDialog({
 
   if (useSheet) {
     return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet onOpenChange={onOpenChange} open={open}>
         <SheetContent
           className="flex w-full max-w-6xl flex-col gap-0 p-0 sm:max-w-6xl"
           side="right"
@@ -156,7 +156,7 @@ export function TemplateEditorDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="flex h-[90vh] max-w-6xl flex-col gap-0 p-0">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{dialogTitle}</DialogTitle>

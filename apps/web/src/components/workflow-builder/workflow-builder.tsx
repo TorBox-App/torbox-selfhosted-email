@@ -53,17 +53,21 @@ export function WorkflowBuilder({
 
   return (
     <ReactFlowProvider>
-      <WorkflowDataProvider topics={topics} segments={segments}>
-        <div className="flex flex-col h-full">
+      <WorkflowDataProvider segments={segments} topics={topics}>
+        <div className="flex h-full flex-col">
           <WorkflowToolbar
-            workflow={workflow}
-            orgSlug={orgSlug}
             organizationId={organizationId}
+            orgSlug={orgSlug}
+            workflow={workflow}
           />
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">
             <AIDesignPanel orgSlug={orgSlug} workflowId={workflow.id} />
             <WorkflowCanvas />
-            <WorkflowPropertiesPanel orgSlug={orgSlug} topics={topics} segments={segments} />
+            <WorkflowPropertiesPanel
+              orgSlug={orgSlug}
+              segments={segments}
+              topics={topics}
+            />
           </div>
         </div>
       </WorkflowDataProvider>

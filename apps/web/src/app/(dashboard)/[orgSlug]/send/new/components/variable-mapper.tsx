@@ -1,9 +1,15 @@
 "use client";
 
-import { Check, AlertCircle, ChevronDown } from "lucide-react";
+import { AlertCircle, Check, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
+import { extractTemplateVariables } from "@/actions/batch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -15,14 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import type { ExtractedVariable, VariableMapping } from "@/lib/batch";
-import { extractTemplateVariables } from "@/actions/batch";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 type VariableMapperProps = {
   organizationId: string;
@@ -90,16 +90,18 @@ export function VariableMapper({
   }).length;
 
   // Update a single mapping
-  const updateMapping = (variableName: string, source: VariableMapping["source"]) => {
+  const updateMapping = (
+    variableName: string,
+    source: VariableMapping["source"]
+  ) => {
     const newMappings = mappings.filter((m) => m.variableName !== variableName);
     newMappings.push({ variableName, source });
     onChange(newMappings);
   };
 
   // Get current mapping for a variable
-  const getMapping = (variableName: string): VariableMapping | undefined => {
-    return mappings.find((m) => m.variableName === variableName);
-  };
+  const getMapping = (variableName: string): VariableMapping | undefined =>
+    mappings.find((m) => m.variableName === variableName);
 
   if (loading) {
     return (
@@ -133,18 +135,18 @@ export function VariableMapper({
 
   return (
     <Card className="mt-4">
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <Collapsible onOpenChange={setIsExpanded} open={isExpanded}>
         <CardHeader className="py-3">
           <CollapsibleTrigger className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2">
               <CardTitle className="text-base">Template Variables</CardTitle>
               {unmappedCount > 0 && (
-                <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
+                <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-xs text-yellow-700">
                   {unmappedCount} needs mapping
                 </span>
               )}
               {unmappedCount === 0 && customVariables.length > 0 && (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700 text-xs">
                   All mapped
                 </span>
               )}
@@ -169,8 +171,8 @@ export function VariableMapper({
                 <div className="space-y-1">
                   {knownVariables.map((v) => (
                     <div
-                      key={v.name}
                       className="flex items-center gap-2 text-sm"
+                      key={v.name}
                     >
                       <Check className="h-4 w-4 text-green-600" />
                       <span className="font-mono text-xs">{v.name}</span>
@@ -192,9 +194,9 @@ export function VariableMapper({
                   {customVariables.map((v) => (
                     <VariableMapperRow
                       key={v.name}
-                      variable={v}
                       mapping={getMapping(v.name)}
                       onUpdate={(source) => updateMapping(v.name, source)}
+                      variable={v}
                     />
                   ))}
                 </div>
@@ -235,7 +237,7 @@ function VariableMapperRow({
       )}
     >
       <div className="mb-2 flex items-center gap-2">
-        <span className="font-mono text-sm font-medium">{variable.name}</span>
+        <span className="font-medium font-mono text-sm">{variable.name}</span>
         {variable.fallback && (
           <span className="text-muted-foreground text-xs">
             (fallback: "{variable.fallback}")
@@ -244,7 +246,7 @@ function VariableMapperRow({
       </div>
 
       <RadioGroup
-        value={sourceType}
+        className="space-y-2"
         onValueChange={(value: "static" | "contact") => {
           if (value === "static") {
             onUpdate({ type: "static", value: staticValue });
@@ -252,26 +254,26 @@ function VariableMapperRow({
             onUpdate({ type: "contact", field: contactField });
           }
         }}
-        className="space-y-2"
+        value={sourceType}
       >
         {/* Static value option */}
         <div className="flex items-start space-x-2">
-          <RadioGroupItem value="static" id={`${variable.name}-static`} />
+          <RadioGroupItem id={`${variable.name}-static`} value="static" />
           <div className="flex-1 space-y-1">
             <Label
-              htmlFor={`${variable.name}-static`}
               className="cursor-pointer text-sm"
+              htmlFor={`${variable.name}-static`}
             >
               Static value
             </Label>
             {sourceType === "static" && (
               <Input
-                placeholder="Enter value..."
-                value={staticValue}
+                className="h-8"
                 onChange={(e) =>
                   onUpdate({ type: "static", value: e.target.value })
                 }
-                className="h-8"
+                placeholder="Enter value..."
+                value={staticValue}
               />
             )}
           </div>
@@ -279,20 +281,20 @@ function VariableMapperRow({
 
         {/* Contact field option */}
         <div className="flex items-start space-x-2">
-          <RadioGroupItem value="contact" id={`${variable.name}-contact`} />
+          <RadioGroupItem id={`${variable.name}-contact`} value="contact" />
           <div className="flex-1 space-y-1">
             <Label
-              htmlFor={`${variable.name}-contact`}
               className="cursor-pointer text-sm"
+              htmlFor={`${variable.name}-contact`}
             >
               Contact field
             </Label>
             {sourceType === "contact" && (
               <Select
-                value={contactField}
                 onValueChange={(value) =>
                   onUpdate({ type: "contact", field: value })
                 }
+                value={contactField}
               >
                 <SelectTrigger className="h-8">
                   <SelectValue placeholder="Select field..." />

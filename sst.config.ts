@@ -33,17 +33,24 @@ export default $config({
 
     // Import infrastructure modules
     const { rateLimitTable } = await import("./infra/tables");
-    const { batchQueue, batchDlq } = await import("./infra/queues");
+    const { batchQueue, batchDlq, workflowQueue, workflowDlq } = await import(
+      "./infra/queues"
+    );
     const { schedulerGroup, schedulerRole } = await import("./infra/scheduler");
     const { api } = await import("./infra/api");
+    // Cron jobs for scheduled workflows
+    const { scheduleTriggerCron } = await import("./infra/cron");
 
     return {
       apiUrl: api.url,
       batchQueueUrl: batchQueue.url,
       batchDlqUrl: batchDlq.url,
+      workflowQueueUrl: workflowQueue.url,
+      workflowDlqUrl: workflowDlq.url,
       rateLimitTableName: rateLimitTable.name,
       schedulerGroupName: schedulerGroup.name,
       schedulerRoleArn: schedulerRole.arn,
+      scheduleTriggerCronName: scheduleTriggerCron.nodes.job.name,
     };
   },
 });

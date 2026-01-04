@@ -2,7 +2,7 @@
 
 import type { Editor, JSONContent } from "@tiptap/core";
 import { EditorContent } from "@tiptap/react";
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
@@ -114,12 +114,8 @@ export function EditorCore({
     variableContext,
   } = useEditorContext();
 
-  const {
-    view,
-    showPropertiesPanel,
-    showTestDataPanel,
-    selectedBrandKitId,
-  } = useTemplateStore((state) => state.localState);
+  const { view, showPropertiesPanel, showTestDataPanel, selectedBrandKitId } =
+    useTemplateStore((state) => state.localState);
 
   const { setDocument } = useTemplateStore((state) => state.actions);
 
@@ -135,21 +131,17 @@ export function EditorCore({
   };
 
   // Create editor instance
-  const {
-    editor,
-    saveNow,
-    insertBlock,
-    getContent,
-    setContent,
-  } = useEditorInstance({
-    initialContent,
-    onSave: handleSave,
-    onUpdate: handleUpdate,
-    onToggleBlockLibrary: useTemplateStore.getState().actions.toggleBlockLibrary,
-    autoSave,
-    autoSaveDelay,
-    variableContext,
-  });
+  const { editor, saveNow, insertBlock, getContent, setContent } =
+    useEditorInstance({
+      initialContent,
+      onSave: handleSave,
+      onUpdate: handleUpdate,
+      onToggleBlockLibrary:
+        useTemplateStore.getState().actions.toggleBlockLibrary,
+      autoSave,
+      autoSaveDelay,
+      variableContext,
+    });
 
   // Fetch brand kits for DnD context
   const { data: brandKits } = useBrandKits(orgSlug);
@@ -189,14 +181,9 @@ export function EditorCore({
   );
 
   // Editor not ready yet
-  if (!editor || !instanceContextValue) {
+  if (!(editor && instanceContextValue)) {
     return (
-      <div
-        className={cn(
-          "flex h-full items-center justify-center",
-          className
-        )}
-      >
+      <div className={cn("flex h-full items-center justify-center", className)}>
         <p className="text-muted-foreground">Initializing editor...</p>
       </div>
     );
@@ -206,12 +193,7 @@ export function EditorCore({
     <EditorInstanceContext.Provider value={instanceContextValue}>
       <EditorErrorBoundary onReset={handleEditorReset}>
         <EditorDndProvider brandKit={brandKit} editor={editor}>
-          <div
-            className={cn(
-              "flex h-full flex-col bg-background",
-              className
-            )}
-          >
+          <div className={cn("flex h-full flex-col bg-background", className)}>
             {/* Toolbar slot - render children here */}
             {children}
 
@@ -241,9 +223,9 @@ export function EditorCore({
               </div>
 
               {/* Right Panel - Properties */}
-              {features.properties && showPropertiesPanel && view === "edit" && (
-                <PropertiesPanel editor={editor} />
-              )}
+              {features.properties &&
+                showPropertiesPanel &&
+                view === "edit" && <PropertiesPanel editor={editor} />}
 
               {/* Right Panel - Test Data */}
               {features.testData &&

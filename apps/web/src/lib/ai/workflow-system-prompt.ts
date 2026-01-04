@@ -36,8 +36,15 @@ type WorkflowContext = {
   };
 };
 
-export function buildWorkflowSystemPrompt(context: WorkflowContext = {}): string {
-  const { templates = [], segments = [], topics = [], existingWorkflow } = context;
+export function buildWorkflowSystemPrompt(
+  context: WorkflowContext = {}
+): string {
+  const {
+    templates = [],
+    segments = [],
+    topics = [],
+    existingWorkflow,
+  } = context;
 
   return `You are an expert automation designer for Wraps, an email and SMS marketing platform.
 
@@ -179,17 +186,29 @@ For wait_for_email_engagement, use "opened", "clicked", "bounced", or "timeout" 
 
 ## Available Resources
 
-${templates.length > 0 ? `**Email Templates:**
+${
+  templates.length > 0
+    ? `**Email Templates:**
 ${templates.map((t) => `- ${t.name} (ID: ${t.id})${t.description ? ` - ${t.description}` : ""}`).join("\n")}
-` : "No email templates available yet. Use placeholder templateId values."}
+`
+    : "No email templates available yet. Use placeholder templateId values."
+}
 
-${segments.length > 0 ? `**Segments:**
+${
+  segments.length > 0
+    ? `**Segments:**
 ${segments.map((s) => `- ${s.name} (ID: ${s.id})${s.memberCount ? ` - ${s.memberCount} contacts` : ""}${s.description ? ` - ${s.description}` : ""}`).join("\n")}
-` : "No segments available yet."}
+`
+    : "No segments available yet."
+}
 
-${topics.length > 0 ? `**Topics:**
+${
+  topics.length > 0
+    ? `**Topics:**
 ${topics.map((t) => `- ${t.name} (ID: ${t.id})${t.description ? ` - ${t.description}` : ""}`).join("\n")}
-` : "No topics available yet."}
+`
+    : "No topics available yet."
+}
 
 **Common Event Names:**
 - user.signup - New user registration
@@ -211,14 +230,18 @@ ${topics.map((t) => `- ${t.name} (ID: ${t.id})${t.description ? ` - ${t.descript
 7. Keep workflows focused - one clear goal per workflow
 8. Use descriptive names for each step
 
-${existingWorkflow ? `## Current Workflow
+${
+  existingWorkflow
+    ? `## Current Workflow
 The user is editing an existing workflow. Here's the current structure:
 - Name: ${existingWorkflow.name}
 - ${existingWorkflow.steps.length} steps
 - ${existingWorkflow.transitions.length} transitions
 
 Make targeted modifications based on their request, preserving existing structure where appropriate.
-` : ""}
+`
+    : ""
+}
 
 ## Response Format
 

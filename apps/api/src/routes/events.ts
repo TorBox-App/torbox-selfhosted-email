@@ -5,18 +5,18 @@
  * and resumes waiting executions.
  */
 
-import { t } from "elysia";
-import {
-  contact,
-  db,
-  eq,
-  workflow,
-  workflowExecution,
-} from "@wraps/db";
+import { contact, db, eq, workflow, workflowExecution } from "@wraps/db";
 import { and, sql } from "drizzle-orm";
+import { t } from "elysia";
 
-import { type AuthContext, createAuthenticatedRoutes } from "../middleware/auth";
-import { deleteScheduledStep, enqueueWorkflowStep } from "../services/workflow-queue";
+import {
+  type AuthContext,
+  createAuthenticatedRoutes,
+} from "../middleware/auth";
+import {
+  deleteScheduledStep,
+  enqueueWorkflowStep,
+} from "../services/workflow-queue";
 
 export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
 
@@ -142,16 +142,21 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
     },
     {
       body: t.Object({
-        name: t.String({ description: "Event name (e.g., 'purchase.completed')" }),
+        name: t.String({
+          description: "Event name (e.g., 'purchase.completed')",
+        }),
         contactId: t.Optional(t.String({ description: "Contact ID" })),
-        contactEmail: t.Optional(t.String({ description: "Contact email (alternative to contactId)" })),
+        contactEmail: t.Optional(
+          t.String({ description: "Contact email (alternative to contactId)" })
+        ),
         properties: t.Optional(
           t.Record(t.String(), t.Unknown(), { description: "Event properties" })
         ),
       }),
       detail: {
         summary: "Ingest event",
-        description: "Send a custom event to trigger workflows and resume waiting executions",
+        description:
+          "Send a custom event to trigger workflows and resume waiting executions",
         tags: ["events"],
       },
     }

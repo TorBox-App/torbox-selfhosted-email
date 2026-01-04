@@ -52,11 +52,11 @@ batchQueue.subscribe(
       API_BASE_URL:
         $app.stage === "production"
           ? "https://api.wraps.dev"
-          : process.env.API_BASE_URL ?? "https://api.wraps.dev",
+          : (process.env.API_BASE_URL ?? "https://api.wraps.dev"),
       APP_BASE_URL:
         $app.stage === "production"
           ? "https://wraps.dev"
-          : process.env.APP_BASE_URL ?? "https://wraps.dev",
+          : (process.env.APP_BASE_URL ?? "https://wraps.dev"),
       // Secret for signing unsubscribe tokens (must match API and web)
       UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
     },
@@ -74,6 +74,94 @@ batchQueue.subscribe(
   {
     batch: {
       size: 1, // Process one batch job at a time
+    },
+  }
+);
+
+/**
+ * Workflow Queue for Wraps Automations
+ *
+ * Processes workflow jobs:
+ * - trigger: Start a workflow for a contact
+ * - execute: Execute a specific workflow step
+ * - resume: Resume a delayed execution
+ */
+
+// Dead Letter Queue for failed workflow jobs
+export const workflowDlq = new sst.aws.Queue("WorkflowDlq", {
+  transform: {
+    queue: {
+      messageRetentionSeconds: 1_209_600, // 14 days
+      tags: {
+        ManagedBy: "sst",
+        Service: "wraps-api",
+      },
+    },
+  },
+});
+
+// Main workflow processing queue
+export const workflowQueue = new sst.aws.Queue("WorkflowQueue", {
+  dlq: {
+    queue: workflowDlq.arn,
+    retry: 3, // Retry 3 times before sending to DLQ
+  },
+  transform: {
+    queue: {
+      visibilityTimeoutSeconds: 300, // 5 minutes for processing
+      messageRetentionSeconds: 86_400, // 1 day
+      tags: {
+        ManagedBy: "sst",
+        Service: "wraps-api",
+      },
+    },
+  },
+});
+
+// Subscribe workflow processor to the queue
+// The worker is defined in apps/api/src/workers/workflow-processor.ts
+// Note: schedulerRole/schedulerGroup imported after queues.ts in sst.config.ts
+// Permissions for scheduler are added via link + inline permissions
+workflowQueue.subscribe(
+  {
+    handler: "apps/api/src/workers/workflow-processor.handler",
+    runtime: "nodejs22.x",
+    timeout: "5 minutes",
+    memory: "512 MB",
+    environment: {
+      DATABASE_URL: process.env.DATABASE_URL ?? "",
+      WORKFLOW_QUEUE_URL: workflowQueue.url,
+      // Base URLs for unsubscribe/preferences links
+      API_BASE_URL:
+        $app.stage === "production"
+          ? "https://api.wraps.dev"
+          : (process.env.API_BASE_URL ?? "https://api.wraps.dev"),
+      APP_BASE_URL:
+        $app.stage === "production"
+          ? "https://wraps.dev"
+          : (process.env.APP_BASE_URL ?? "https://wraps.dev"),
+      // Secret for signing unsubscribe tokens (must match API and web)
+      UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+    },
+    nodejs: {
+      install: ["pg"], // PostgreSQL driver for Drizzle
+    },
+    permissions: [
+      // Allow assuming cross-account roles for sending via customer's SES
+      {
+        actions: ["sts:AssumeRole"],
+        resources: ["arn:aws:iam::*:role/wraps-*"],
+      },
+      // Allow sending messages back to workflow queue (for next steps)
+      {
+        actions: ["sqs:SendMessage"],
+        resources: [workflowQueue.arn],
+      },
+    ],
+  },
+  {
+    batch: {
+      size: 1, // Process one workflow job at a time
     },
   }
 );

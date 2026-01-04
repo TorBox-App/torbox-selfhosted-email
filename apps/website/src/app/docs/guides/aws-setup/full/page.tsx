@@ -39,7 +39,7 @@ const installCommands = {
   Linux: `curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 sudo ./aws/install`,
-  Windows: `msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi`,
+  Windows: "msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi",
 };
 
 const verifyInstall = "aws --version";
@@ -112,8 +112,8 @@ export default function FullGuidePage() {
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">AWS Free Tier</p>
           <p className="mt-1 text-muted-foreground text-sm">
-            New AWS accounts get 3,000 outbound SES emails per month free for
-            12 months.
+            New AWS accounts get 3,000 outbound SES emails per month free for 12
+            months.
           </p>
         </div>
       </section>

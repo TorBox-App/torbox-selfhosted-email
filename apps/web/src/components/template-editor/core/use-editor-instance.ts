@@ -39,11 +39,11 @@ import {
   VariableNode,
   VariableSuggestion,
 } from "@/components/template-editor/extensions";
-import type { VariableContext } from "./editor-context";
 import {
   getVariablesForContext,
   toSuggestionFormat,
 } from "../variables/variable-definitions";
+import type { VariableContext } from "./editor-context";
 
 export type UseEditorInstanceOptions = {
   /**
@@ -331,9 +331,7 @@ export function useEditorInstance({
   );
 
   // Get current content
-  const getContent = useCallback(() => {
-    return editor?.getJSON() ?? null;
-  }, [editor]);
+  const getContent = useCallback(() => editor?.getJSON() ?? null, [editor]);
 
   // Set content
   const setContent = useCallback(

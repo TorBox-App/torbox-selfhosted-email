@@ -225,7 +225,9 @@ describe("Topic Settings Server Actions", () => {
 
     it("should reject unauthorized users", async () => {
       // Mock a user with no membership
-      vi.mocked((await import("@wraps/auth")).auth.api.getSession).mockResolvedValueOnce({
+      vi.mocked(
+        (await import("@wraps/auth")).auth.api.getSession
+      ).mockResolvedValueOnce({
         user: {
           id: "unauthorized-user",
           email: "unauthorized@example.com",
@@ -265,8 +267,12 @@ describe("Topic Settings Server Actions", () => {
       expect(getResult.success).toBe(true);
       if (getResult.success) {
         expect(getResult.settings?.confirmationFromName).toBe("New Company");
-        expect(getResult.settings?.confirmationFromEmail).toBe("new@example.com");
-        expect(getResult.settings?.confirmationReplyToEmail).toBe("reply@example.com");
+        expect(getResult.settings?.confirmationFromEmail).toBe(
+          "new@example.com"
+        );
+        expect(getResult.settings?.confirmationReplyToEmail).toBe(
+          "reply@example.com"
+        );
       }
     });
 
@@ -290,7 +296,9 @@ describe("Topic Settings Server Actions", () => {
       expect(getResult.success).toBe(true);
       if (getResult.success) {
         expect(getResult.settings?.confirmationFromName).toBe("Updated Name");
-        expect(getResult.settings?.confirmationFromEmail).toBe("updated@example.com");
+        expect(getResult.settings?.confirmationFromEmail).toBe(
+          "updated@example.com"
+        );
       }
     });
 
@@ -305,7 +313,9 @@ describe("Topic Settings Server Actions", () => {
       const getResult = await getTopicSettings(testOrganization.id);
       expect(getResult.success).toBe(true);
       if (getResult.success) {
-        expect(getResult.settings?.preferenceCenterTitle).toBe("My Preferences");
+        expect(getResult.settings?.preferenceCenterTitle).toBe(
+          "My Preferences"
+        );
         expect(getResult.settings?.preferenceCenterDescription).toBe(
           "Manage your subscriptions here"
         );
@@ -351,7 +361,9 @@ describe("Topic Settings Server Actions", () => {
 
   describe("generatePreferenceCenterPreviewUrl", () => {
     it("should return error when no contacts exist", async () => {
-      const result = await generatePreferenceCenterPreviewUrl(testOrganization.id);
+      const result = await generatePreferenceCenterPreviewUrl(
+        testOrganization.id
+      );
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -377,7 +389,9 @@ describe("Topic Settings Server Actions", () => {
         updatedAt: new Date(),
       });
 
-      const result = await generatePreferenceCenterPreviewUrl(testOrganization.id);
+      const result = await generatePreferenceCenterPreviewUrl(
+        testOrganization.id
+      );
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -407,7 +421,9 @@ describe("Topic Settings Server Actions", () => {
 
       currentMockUserId = testMemberUser.id;
 
-      const result = await generatePreferenceCenterPreviewUrl(testOrganization.id);
+      const result = await generatePreferenceCenterPreviewUrl(
+        testOrganization.id
+      );
 
       expect(result.success).toBe(true);
     });

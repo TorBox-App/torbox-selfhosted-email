@@ -7,11 +7,11 @@
  */
 
 import {
+  type BulkEmailEntry,
   GetAccountCommand,
+  SESv2Client,
   SendBulkEmailCommand,
   SendEmailCommand,
-  SESv2Client,
-  type BulkEmailEntry,
 } from "@aws-sdk/client-sesv2";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import {
@@ -22,7 +22,6 @@ import {
   eq,
   messageSend,
   organization,
-  segment,
   template,
 } from "@wraps/db";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
@@ -114,7 +113,11 @@ async function processJob(job: BatchJob): Promise<void> {
     offset,
     CHUNK_SIZE,
     {
-      audienceType: batch.audienceType as "all" | "topic" | "segment" | undefined,
+      audienceType: batch.audienceType as
+        | "all"
+        | "topic"
+        | "segment"
+        | undefined,
       topicId: batch.topicId ?? undefined,
       segmentId: batch.segmentId ?? undefined,
     }
@@ -193,9 +196,7 @@ async function processJob(job: BatchJob): Promise<void> {
   const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
 
   // Filter email contacts
-  const emailContacts = contacts.filter(
-    (c) => channel === "email" && c.email
-  );
+  const emailContacts = contacts.filter((c) => channel === "email" && c.email);
 
   const isMarketing = emailType === "marketing";
   const fromAddress = batch.from ?? `noreply@${getDefaultDomain()}`;
@@ -236,7 +237,10 @@ async function processJob(job: BatchJob): Promise<void> {
           const replacementData: Record<string, string> = {};
 
           // Helper to add non-empty values
-          const addIfPresent = (key: string, value: string | null | undefined) => {
+          const addIfPresent = (
+            key: string,
+            value: string | null | undefined
+          ) => {
             if (value) replacementData[key] = value;
           };
 
@@ -444,7 +448,8 @@ async function processJob(job: BatchJob): Promise<void> {
     // Transform variables to SES format as a safety net
     // Note: templateHtml (from compiledHtml) should already be transformed by publish
     // but batch.htmlContent might contain untransformed variables
-    const rawHtml = templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
+    const rawHtml =
+      templateHtml ?? batch.htmlContent ?? "<p>Hello from Wraps!</p>";
     const html = transformVariablesForSes(rawHtml);
     const subject = batch.subject ?? "Message from Wraps";
     const CONCURRENCY = 10;
@@ -472,7 +477,10 @@ async function processJob(job: BatchJob): Promise<void> {
           if (isMarketing && unsubscribeUrl) {
             headers.push(
               { Name: "List-Unsubscribe", Value: `<${unsubscribeUrl}>` },
-              { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" }
+              {
+                Name: "List-Unsubscribe-Post",
+                Value: "List-Unsubscribe=One-Click",
+              }
             );
           }
 

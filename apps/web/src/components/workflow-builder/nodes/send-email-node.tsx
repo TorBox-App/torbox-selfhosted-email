@@ -1,9 +1,9 @@
 "use client";
 
 import { Mail } from "lucide-react";
-import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
+import { BaseNode } from "./base-node";
 
 type SendEmailNodeProps = {
   id: string;
@@ -22,14 +22,14 @@ export function SendEmailNode({ id, data, selected }: SendEmailNodeProps) {
 
   return (
     <BaseNode
-      icon={<Mail className="w-4 h-4" />}
-      label={data.name}
-      description={description}
       accentColor="bg-blue-500"
+      description={description}
+      errorMessage={errorMessage}
       hasInput={true}
       hasOutput={true}
+      icon={<Mail className="h-4 w-4" />}
       isValid={isValid}
-      errorMessage={errorMessage}
+      label={data.name}
       selected={selected}
     />
   );

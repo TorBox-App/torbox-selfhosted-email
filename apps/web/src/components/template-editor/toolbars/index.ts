@@ -2,8 +2,8 @@
 export { BaseToolbar, type BaseToolbarProps } from "./base-toolbar";
 
 export {
-  TemplateToolbarActions,
   InlineToolbarActions,
-  type TemplateToolbarActionsProps,
   type InlineToolbarActionsProps,
+  TemplateToolbarActions,
+  type TemplateToolbarActionsProps,
 } from "./toolbar-actions";

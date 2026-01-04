@@ -14,7 +14,7 @@
  * - Scheduled broadcasts via EventBridge Scheduler
  */
 
-import { batchQueue } from "./queues";
+import { batchQueue, workflowQueue } from "./queues";
 import { schedulerGroup, schedulerRole } from "./scheduler";
 import { rateLimitTable } from "./tables";
 
@@ -51,12 +51,15 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
     BATCH_QUEUE_ARN: batchQueue.arn,
     SCHEDULER_ROLE_ARN: schedulerRole.arn,
     SCHEDULER_GROUP_NAME: schedulerGroup.name,
+    // Workflow automation queue
+    WORKFLOW_QUEUE_URL: workflowQueue.url,
+    WORKFLOW_QUEUE_ARN: workflowQueue.arn,
     // Confirmation email tokens (double opt-in)
     UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
     NEXT_PUBLIC_APP_URL:
       process.env.NEXT_PUBLIC_APP_URL ?? "https://app.wraps.dev",
   },
-  link: [rateLimitTable, batchQueue],
+  link: [rateLimitTable, batchQueue, workflowQueue],
   nodejs: {
     install: ["pg"], // PostgreSQL driver for Drizzle
   },

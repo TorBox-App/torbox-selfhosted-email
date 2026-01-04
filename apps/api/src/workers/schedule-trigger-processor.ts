@@ -12,18 +12,19 @@
  *    (or a specific segment if segmentId is configured)
  */
 
-import type { ScheduledHandler } from "aws-lambda";
-import { Cron } from "croner";
 import {
   contact,
   db,
   eq,
   segment,
-  workflow,
   type TriggerConfig,
+  workflow,
 } from "@wraps/db";
-import { and, sql } from "drizzle-orm";
+import type { ScheduledHandler } from "aws-lambda";
+import { Cron } from "croner";
+import { and } from "drizzle-orm";
 
+import { contactMatchesSegment } from "../services/segment-evaluator";
 import { enqueueWorkflowStep } from "../services/workflow-queue";
 
 // Maximum contacts to process per workflow per trigger
@@ -32,20 +33,21 @@ const MAX_CONTACTS_PER_TRIGGER = 1000;
 
 export const handler: ScheduledHandler = async () => {
   const now = new Date();
-  console.log(`[schedule-trigger] Starting schedule check at ${now.toISOString()}`);
+  console.log(
+    `[schedule-trigger] Starting schedule check at ${now.toISOString()}`
+  );
 
   // Find all enabled workflows with schedule trigger
   const scheduleWorkflows = await db
     .select()
     .from(workflow)
     .where(
-      and(
-        eq(workflow.status, "enabled"),
-        eq(workflow.triggerType, "schedule")
-      )
+      and(eq(workflow.status, "enabled"), eq(workflow.triggerType, "schedule"))
     );
 
-  console.log(`[schedule-trigger] Found ${scheduleWorkflows.length} schedule-triggered workflows`);
+  console.log(
+    `[schedule-trigger] Found ${scheduleWorkflows.length} schedule-triggered workflows`
+  );
 
   let totalTriggered = 0;
 
@@ -53,7 +55,9 @@ export const handler: ScheduledHandler = async () => {
     const config = wf.triggerConfig as TriggerConfig;
 
     if (!config.schedule) {
-      console.log(`[schedule-trigger] Workflow ${wf.id} has no cron schedule configured, skipping`);
+      console.log(
+        `[schedule-trigger] Workflow ${wf.id} has no cron schedule configured, skipping`
+      );
       continue;
     }
 
@@ -83,14 +87,19 @@ export const handler: ScheduledHandler = async () => {
         continue;
       }
 
-      console.log(`[schedule-trigger] Workflow ${wf.id} "${wf.name}" matches schedule, triggering`);
+      console.log(
+        `[schedule-trigger] Workflow ${wf.id} "${wf.name}" matches schedule, triggering`
+      );
 
       // Get contacts to trigger for
       let contacts: { id: string }[];
 
       if (config.segmentId) {
         // Get contacts from the segment
-        contacts = await getSegmentContacts(config.segmentId, wf.organizationId);
+        contacts = await getSegmentContacts(
+          config.segmentId,
+          wf.organizationId
+        );
       } else {
         // Get all active contacts in the organization
         contacts = await db
@@ -105,7 +114,9 @@ export const handler: ScheduledHandler = async () => {
           .limit(MAX_CONTACTS_PER_TRIGGER);
       }
 
-      console.log(`[schedule-trigger] Triggering workflow ${wf.id} for ${contacts.length} contacts`);
+      console.log(
+        `[schedule-trigger] Triggering workflow ${wf.id} for ${contacts.length} contacts`
+      );
 
       // Trigger workflow for each contact
       for (const c of contacts) {
@@ -128,38 +139,37 @@ export const handler: ScheduledHandler = async () => {
         .update(workflow)
         .set({ lastTriggeredAt: now })
         .where(eq(workflow.id, wf.id));
-
     } catch (error) {
-      console.error(`[schedule-trigger] Error processing workflow ${wf.id}:`, error);
+      console.error(
+        `[schedule-trigger] Error processing workflow ${wf.id}:`,
+        error
+      );
       // Continue processing other workflows
     }
   }
 
-  console.log(`[schedule-trigger] Complete. Triggered ${totalTriggered} workflow executions.`);
+  console.log(
+    `[schedule-trigger] Complete. Triggered ${totalTriggered} workflow executions.`
+  );
 };
 
 /**
  * Get contacts that match a segment's filter criteria
  *
- * For now, this uses a simplified approach:
- * - If the segment has trackMembership enabled, we could query a membership table
- * - Otherwise, we evaluate the segment condition dynamically
- *
- * TODO: Implement full segment filter evaluation or use cached membership
+ * This evaluates the segment condition for each active contact in the org.
+ * Note: This is O(n) per contact which can be slow for large organizations.
+ * A future optimization would generate SQL from segment conditions.
  */
 async function getSegmentContacts(
   segmentId: string,
   organizationId: string
 ): Promise<{ id: string }[]> {
-  // Get the segment definition
+  // First verify the segment exists
   const [seg] = await db
-    .select()
+    .select({ id: segment.id })
     .from(segment)
     .where(
-      and(
-        eq(segment.id, segmentId),
-        eq(segment.organizationId, organizationId)
-      )
+      and(eq(segment.id, segmentId), eq(segment.organizationId, organizationId))
     )
     .limit(1);
 
@@ -168,27 +178,8 @@ async function getSegmentContacts(
     return [];
   }
 
-  // For now, return all active contacts in the organization
-  // A full implementation would evaluate seg.condition (FilterCondition)
-  // to build a dynamic SQL query matching the segment's filters
-  //
-  // The segment condition structure is:
-  // {
-  //   logic: "AND" | "OR",
-  //   groups: [{
-  //     filters: [{ field, operator, value }],
-  //     nested?: { logic, groups } // recursive
-  //   }]
-  // }
-  //
-  // TODO: Implement buildSegmentQuery(seg.condition) to generate SQL
-
-  console.log(
-    `[schedule-trigger] Using simplified segment query for segment ${segmentId}. ` +
-    `Full filter evaluation not yet implemented.`
-  );
-
-  return db
+  // Get all active contacts in the organization
+  const allContacts = await db
     .select({ id: contact.id })
     .from(contact)
     .where(
@@ -198,4 +189,32 @@ async function getSegmentContacts(
       )
     )
     .limit(MAX_CONTACTS_PER_TRIGGER);
+
+  console.log(
+    `[schedule-trigger] Evaluating segment ${segmentId} for ${allContacts.length} contacts`
+  );
+
+  // Filter contacts by segment membership
+  const matchingContacts: { id: string }[] = [];
+
+  for (const c of allContacts) {
+    try {
+      const matches = await contactMatchesSegment(c.id, segmentId);
+      if (matches) {
+        matchingContacts.push(c);
+      }
+    } catch (error) {
+      console.error(
+        `[schedule-trigger] Error evaluating contact ${c.id} for segment ${segmentId}:`,
+        error
+      );
+      // Continue with other contacts
+    }
+  }
+
+  console.log(
+    `[schedule-trigger] Found ${matchingContacts.length} contacts matching segment ${segmentId}`
+  );
+
+  return matchingContacts;
 }

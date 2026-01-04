@@ -36,10 +36,7 @@ export async function generateMetadata({
       description: topicSettings.preferenceCenterDescription,
     })
     .from(organization)
-    .leftJoin(
-      topicSettings,
-      eq(organization.id, topicSettings.organizationId)
-    )
+    .leftJoin(topicSettings, eq(organization.id, topicSettings.organizationId))
     .where(eq(organization.id, payload.oid))
     .limit(1);
 
@@ -122,10 +119,7 @@ export default async function PreferencesPage({
       preferenceCenterDescription: topicSettings.preferenceCenterDescription,
     })
     .from(organization)
-    .leftJoin(
-      topicSettings,
-      eq(organization.id, topicSettings.organizationId)
-    )
+    .leftJoin(topicSettings, eq(organization.id, topicSettings.organizationId))
     .where(eq(organization.id, organizationId))
     .limit(1);
 
@@ -205,16 +199,18 @@ export default async function PreferencesPage({
             {orgWithSettings?.preferenceCenterTitle || "Email Preferences"}
           </h1>
           <p className="text-gray-500 text-sm dark:text-gray-400">
-            {orgWithSettings?.preferenceCenterDescription
-              ? renderDescription(orgWithSettings.preferenceCenterDescription, {
-                  masked_email: maskedEmail,
-                  email: contactRecord.email || "",
-                  org_name: orgWithSettings.name || "",
-                })
-              : (
+            {orgWithSettings?.preferenceCenterDescription ? (
+              renderDescription(orgWithSettings.preferenceCenterDescription, {
+                masked_email: maskedEmail,
+                email: contactRecord.email || "",
+                org_name: orgWithSettings.name || "",
+              })
+            ) : (
               <>
                 Manage subscriptions for{" "}
-                <span className="font-medium text-gray-700 dark:text-gray-300">{maskedEmail}</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {maskedEmail}
+                </span>
               </>
             )}
           </p>
@@ -271,7 +267,10 @@ function renderDescription(
         // Highlight the masked_email variable
         if (varName === "masked_email") {
           return (
-            <span className="font-medium text-gray-700 dark:text-gray-300" key={index}>
+            <span
+              className="font-medium text-gray-700 dark:text-gray-300"
+              key={index}
+            >
               {value}
             </span>
           );

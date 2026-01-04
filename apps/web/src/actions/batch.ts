@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { getVariablesForContext } from "@/components/template-editor/variables/variable-definitions";
 import type {
   BatchStatus,
   CancelBatchResult,
@@ -27,7 +28,6 @@ import type {
   RecipientFilter,
   SampleContact,
 } from "@/lib/batch";
-import { getVariablesForContext } from "@/components/template-editor/variables/variable-definitions";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
@@ -365,7 +365,9 @@ export async function createBatchSend(
         console.log(
           "[batch] Template needs publishing:",
           data.templateId,
-          tmpl.sesTemplateName ? "(modified since publish)" : "(never published)"
+          tmpl.sesTemplateName
+            ? "(modified since publish)"
+            : "(never published)"
         );
         const publishResult = await publishTemplateToSES(
           data.templateId,
@@ -467,7 +469,11 @@ export async function createBatchSend(
     if (!response.ok) {
       // Read body as text first, then try to parse as JSON
       const errorText = await response.text();
-      console.error("[batch] Failed to create batch via API:", response.status, errorText);
+      console.error(
+        "[batch] Failed to create batch via API:",
+        response.status,
+        errorText
+      );
       try {
         const errorData = JSON.parse(errorText) as {
           error?: string;
@@ -820,7 +826,7 @@ export async function getSampleContacts(
   organizationId: string,
   channel: Channel = "email",
   filter?: RecipientFilter,
-  limit: number = 5
+  limit = 5
 ): Promise<GetSampleContactsResult> {
   try {
     const access = await verifyOrgAccess(organizationId);
@@ -863,7 +869,10 @@ export async function getSampleContacts(
       // Fetch segment and apply its condition
       const seg = await db.query.segment.findFirst({
         where: (s, { and, eq }) =>
-          and(eq(s.id, filter.segmentId!), eq(s.organizationId, organizationId)),
+          and(
+            eq(s.id, filter.segmentId!),
+            eq(s.organizationId, organizationId)
+          ),
       });
 
       if (seg?.condition) {

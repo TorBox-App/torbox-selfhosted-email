@@ -79,16 +79,20 @@ export function DoubleOptInSettings({
   const [templateMode, setTemplateMode] = useState<"default" | "custom">(
     settings?.confirmationTemplateId ? "custom" : "default"
   );
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>(
-    settings?.confirmationTemplateId ?? undefined
-  );
+  const [selectedTemplateId, setSelectedTemplateId] = useState<
+    string | undefined
+  >(settings?.confirmationTemplateId ?? undefined);
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [showEditorDialog, setShowEditorDialog] = useState(false);
-  const [editingTemplateId, setEditingTemplateId] = useState<string | undefined>();
+  const [editingTemplateId, setEditingTemplateId] = useState<
+    string | undefined
+  >();
   const [newTemplateName, setNewTemplateName] = useState<string | undefined>();
 
   // Fetch templates
-  const { data: templates, isLoading: templatesLoading } = useTemplates(params.orgSlug);
+  const { data: templates, isLoading: templatesLoading } = useTemplates(
+    params.orgSlug
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -119,7 +123,8 @@ export function DoubleOptInSettings({
         confirmationFromName: values.confirmationFromName || null,
         confirmationFromEmail: values.confirmationFromEmail || null,
         confirmationReplyToEmail: values.confirmationReplyToEmail || null,
-        confirmationTemplateId: templateMode === "custom" ? selectedTemplateId : null,
+        confirmationTemplateId:
+          templateMode === "custom" ? selectedTemplateId : null,
       });
 
       if (result.success) {
@@ -241,7 +246,9 @@ export function DoubleOptInSettings({
               {/* Email Template Section */}
               <div className="space-y-4 rounded-lg border p-4">
                 <div>
-                  <Label className="text-base font-semibold">Email Template</Label>
+                  <Label className="font-semibold text-base">
+                    Email Template
+                  </Label>
                   <p className="text-muted-foreground text-sm">
                     Choose to use the default confirmation email or create a
                     custom template.
@@ -249,21 +256,21 @@ export function DoubleOptInSettings({
                 </div>
 
                 <RadioGroup
-                  value={templateMode}
+                  className="space-y-2"
                   onValueChange={(value) =>
                     setTemplateMode(value as "default" | "custom")
                   }
-                  className="space-y-2"
+                  value={templateMode}
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="default" id="template-default" />
-                    <Label htmlFor="template-default" className="font-normal">
+                    <RadioGroupItem id="template-default" value="default" />
+                    <Label className="font-normal" htmlFor="template-default">
                       Use default template
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="custom" id="template-custom" />
-                    <Label htmlFor="template-custom" className="font-normal">
+                    <RadioGroupItem id="template-custom" value="custom" />
+                    <Label className="font-normal" htmlFor="template-custom">
                       Use custom template
                     </Label>
                   </div>
@@ -275,9 +282,9 @@ export function DoubleOptInSettings({
                       <div className="flex-1">
                         <Label className="text-sm">Select Template</Label>
                         <Select
-                          value={selectedTemplateId}
-                          onValueChange={setSelectedTemplateId}
                           disabled={templatesLoading}
+                          onValueChange={setSelectedTemplateId}
+                          value={selectedTemplateId}
                         >
                           <SelectTrigger className="mt-1.5">
                             <SelectValue placeholder="Select a template..." />
@@ -297,20 +304,20 @@ export function DoubleOptInSettings({
                         </Select>
                       </div>
                       <Button
+                        disabled={!selectedTemplateId}
+                        onClick={handleEditTemplate}
+                        size="icon"
                         type="button"
                         variant="outline"
-                        size="icon"
-                        onClick={handleEditTemplate}
-                        disabled={!selectedTemplateId}
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Edit template</span>
                       </Button>
                       <Button
+                        onClick={() => setShowNameDialog(true)}
+                        size="icon"
                         type="button"
                         variant="outline"
-                        size="icon"
-                        onClick={() => setShowNameDialog(true)}
                       >
                         <Plus className="h-4 w-4" />
                         <span className="sr-only">Create new template</span>
@@ -319,7 +326,10 @@ export function DoubleOptInSettings({
 
                     <p className="text-muted-foreground text-xs">
                       <strong>Tip:</strong> Your confirmation template should
-                      include the <code className="rounded bg-muted px-1">{"{{confirmationUrl}}"}</code>{" "}
+                      include the{" "}
+                      <code className="rounded bg-muted px-1">
+                        {"{{confirmationUrl}}"}
+                      </code>{" "}
                       variable for the confirmation link.
                     </p>
                   </div>
@@ -337,23 +347,23 @@ export function DoubleOptInSettings({
 
       {/* Template Name Dialog */}
       <TemplateNameDialog
-        open={showNameDialog}
-        onOpenChange={setShowNameDialog}
-        onConfirm={handleCreateTemplate}
-        title="Create Confirmation Email Template"
         description="Give your confirmation email template a name."
         namePlaceholder="e.g., Subscription Confirmation"
+        onConfirm={handleCreateTemplate}
+        onOpenChange={setShowNameDialog}
+        open={showNameDialog}
+        title="Create Confirmation Email Template"
       />
 
       {/* Template Editor Dialog */}
       <TemplateEditorDialog
-        open={showEditorDialog}
         onOpenChange={setShowEditorDialog}
+        onTemplateSelect={handleTemplateSaved}
+        open={showEditorDialog}
         orgSlug={params.orgSlug}
         templateId={editingTemplateId}
         templateName={newTemplateName}
         variableContext="confirmation"
-        onTemplateSelect={handleTemplateSaved}
       />
     </>
   );

@@ -2,17 +2,17 @@
 
 import { auth } from "@wraps/auth";
 import {
-  db,
-  workflow,
-  workflowExecution,
   type CanvasViewport,
+  db,
   type TriggerConfig,
   type Workflow,
   type WorkflowStep,
   type WorkflowTransition,
   type WorkflowTriggerType,
+  workflow,
+  workflowExecution,
 } from "@wraps/db";
-import { and, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createActionLogger, serializeError } from "@/lib/logger";
@@ -122,7 +122,9 @@ function validateWorkflowDefinition(
   const stepIds = new Set(steps.map((s) => s.id));
   for (const transition of transitions) {
     if (!stepIds.has(transition.fromStepId)) {
-      errors.push(`Transition references unknown step: ${transition.fromStepId}`);
+      errors.push(
+        `Transition references unknown step: ${transition.fromStepId}`
+      );
     }
     if (!stepIds.has(transition.toStepId)) {
       errors.push(`Transition references unknown step: ${transition.toStepId}`);
@@ -600,18 +602,58 @@ export async function enableWorkflow(
       };
     }
 
-    // For custom event triggers, require eventName
-    if (existing.triggerType === "event") {
-      const triggerConfig = existing.triggerConfig as TriggerConfig;
-      if (!triggerConfig?.eventName) {
-        return {
-          success: false,
-          error: "Custom event trigger must have an event name configured",
-        };
-      }
-    }
+    // Validate trigger configuration based on type
+    const triggerConfig = existing.triggerConfig as TriggerConfig;
 
-    // contact_created, contact_updated, and api triggers don't need additional config
+    switch (existing.triggerType) {
+      case "event":
+        // Custom event triggers require eventName
+        if (!triggerConfig?.eventName) {
+          return {
+            success: false,
+            error: "Custom event trigger must have an event name configured",
+          };
+        }
+        break;
+
+      case "schedule":
+        // Schedule triggers require a cron expression
+        if (!triggerConfig?.schedule) {
+          return {
+            success: false,
+            error: "Schedule trigger must have a cron expression configured",
+          };
+        }
+        break;
+
+      case "segment_entry":
+      case "segment_exit":
+        // Segment triggers require a segmentId
+        if (!triggerConfig?.segmentId) {
+          return {
+            success: false,
+            error: "Segment trigger must have a segment selected",
+          };
+        }
+        break;
+
+      case "topic_subscribed":
+      case "topic_unsubscribed":
+        // Topic triggers require a topicId
+        if (!triggerConfig?.topicId) {
+          return {
+            success: false,
+            error: "Topic trigger must have a topic selected",
+          };
+        }
+        break;
+
+      case "api":
+      case "contact_created":
+      case "contact_updated":
+        // These triggers don't require additional configuration
+        break;
+    }
 
     // Check workflow has at least one action step
     const actionSteps = steps.filter(
@@ -763,7 +805,8 @@ export async function duplicateWorkflow(
       (transition) => ({
         ...transition,
         id: crypto.randomUUID(),
-        fromStepId: oldToNewIdMap.get(transition.fromStepId) || transition.fromStepId,
+        fromStepId:
+          oldToNewIdMap.get(transition.fromStepId) || transition.fromStepId,
         toStepId: oldToNewIdMap.get(transition.toStepId) || transition.toStepId,
       })
     );

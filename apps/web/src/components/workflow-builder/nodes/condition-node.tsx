@@ -1,7 +1,7 @@
 "use client";
 
-import { GitBranch } from "lucide-react";
 import { Handle, Position } from "@xyflow/react";
+import { GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
@@ -43,30 +43,32 @@ export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
     <div className="relative">
       {/* Input handle at top */}
       <Handle
-        type="target"
-        position={Position.Top}
         className="!bg-gray-400 !w-3 !h-3 !border-2 !border-white"
+        position={Position.Top}
+        type="target"
       />
 
       {/* Diamond shape container */}
       <div
         className={cn(
-          "w-[90px] h-[90px] rotate-45 rounded-md border-2 bg-white shadow-sm",
+          "h-[90px] w-[90px] rotate-45 rounded-md border-2 bg-white shadow-sm",
           "flex items-center justify-center",
           "transition-all duration-150",
-          selected ? "border-primary ring-2 ring-primary/20" : "border-gray-200",
+          selected
+            ? "border-primary ring-2 ring-primary/20"
+            : "border-gray-200",
           !isValid && "border-red-500 ring-2 ring-red-500/20"
         )}
       >
         {/* Content rotated back */}
-        <div className="-rotate-45 flex flex-col items-center text-center px-1">
-          <div className="w-6 h-6 rounded bg-orange-500 flex items-center justify-center text-white mb-0.5">
-            <GitBranch className="w-3 h-3" />
+        <div className="flex -rotate-45 flex-col items-center px-1 text-center">
+          <div className="mb-0.5 flex h-6 w-6 items-center justify-center rounded bg-orange-500 text-white">
+            <GitBranch className="h-3 w-3" />
           </div>
-          <div className="font-medium text-[10px] text-gray-900 truncate max-w-[55px]">
+          <div className="max-w-[55px] truncate font-medium text-[10px] text-gray-900">
             {data.name}
           </div>
-          <div className="text-[8px] text-gray-500 truncate max-w-[55px]">
+          <div className="max-w-[55px] truncate text-[8px] text-gray-500">
             {description}
           </div>
         </div>
@@ -74,28 +76,30 @@ export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
 
       {/* Yes output - bottom left */}
       <div className="absolute -bottom-5 left-2 flex flex-col items-center">
-        <span className="text-[8px] font-medium text-green-600 mb-0.5">Yes</span>
+        <span className="mb-0.5 font-medium text-[8px] text-green-600">
+          Yes
+        </span>
         <Handle
-          type="source"
-          position={Position.Bottom}
-          id="yes"
           className="!relative !transform-none !bg-green-500 !w-2.5 !h-2.5 !border-2 !border-white"
+          id="yes"
+          position={Position.Bottom}
+          type="source"
         />
       </div>
 
       {/* No output - bottom right */}
-      <div className="absolute -bottom-5 right-2 flex flex-col items-center">
-        <span className="text-[8px] font-medium text-red-600 mb-0.5">No</span>
+      <div className="absolute right-2 -bottom-5 flex flex-col items-center">
+        <span className="mb-0.5 font-medium text-[8px] text-red-600">No</span>
         <Handle
-          type="source"
-          position={Position.Bottom}
-          id="no"
           className="!relative !transform-none !bg-red-500 !w-2.5 !h-2.5 !border-2 !border-white"
+          id="no"
+          position={Position.Bottom}
+          type="source"
         />
       </div>
 
       {errorMessage && (
-        <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-xs text-red-500 whitespace-nowrap">
+        <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap text-red-500 text-xs">
           {errorMessage}
         </div>
       )}

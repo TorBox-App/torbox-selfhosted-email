@@ -44,7 +44,8 @@ const mockTemplate = {
   id: "template-123",
   name: "Welcome Email",
   subject: "Welcome, {{firstName}}!",
-  htmlBody: "<h1>Hello {{firstName}} {{lastName}}</h1><p>Welcome to {{company}}!</p>",
+  htmlBody:
+    "<h1>Hello {{firstName}} {{lastName}}</h1><p>Welcome to {{company}}!</p>",
   type: "marketing" as const,
 };
 
@@ -102,7 +103,7 @@ const mockCredentials = {
   accessKeyId: "AKIAIOSFODNN7EXAMPLE",
   secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
   sessionToken: "session-token",
-  expiration: new Date(Date.now() + 3600000),
+  expiration: new Date(Date.now() + 3_600_000),
 };
 
 // Track SES client calls
@@ -175,9 +176,10 @@ vi.mock("@wraps/db", async () => {
         },
       },
     },
-    sql: (strings: TemplateStringsArray, ...values: unknown[]) => {
-      return { sql: strings.join("?"), values };
-    },
+    sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({
+      sql: strings.join("?"),
+      values,
+    }),
   };
 });
 
@@ -264,7 +266,7 @@ describe("Workflow Processor - Email Sending", () => {
       // Simulate property variable replacement
       const result = template.replace(
         "{{properties.plan}}",
-        (contact.properties as Record<string, unknown>).plan as string || ""
+        ((contact.properties as Record<string, unknown>).plan as string) || ""
       );
 
       expect(result).toBe("Your plan: pro");
@@ -466,7 +468,9 @@ describe("Workflow Processor - Email Sending", () => {
 
     it("should handle SES send failure", async () => {
       // Simulate SES error
-      const errorSend = vi.fn().mockRejectedValue(new Error("SES rate limit exceeded"));
+      const errorSend = vi
+        .fn()
+        .mockRejectedValue(new Error("SES rate limit exceeded"));
 
       try {
         await errorSend();
@@ -528,7 +532,10 @@ describe("Workflow Processor Email - Integration Scenarios", () => {
       expect(contact.emailStatus).toBe("active");
 
       // 2. Process template variables
-      const subject = template.subject.replace("{{firstName}}", contact.firstName || "");
+      const subject = template.subject.replace(
+        "{{firstName}}",
+        contact.firstName || ""
+      );
       expect(subject).toBe("Welcome, John!");
 
       const htmlBody = template.htmlBody
@@ -554,13 +561,20 @@ describe("Workflow Processor Email - Integration Scenarios", () => {
         productName: "Premium Plan",
       };
 
-      const templateHtml = "<p>It's been {{trigger.lastActivityDays}} days since we saw you.</p>" +
+      const templateHtml =
+        "<p>It's been {{trigger.lastActivityDays}} days since we saw you.</p>" +
         "<p>Your last purchase: ${{trigger.lastPurchaseAmount}} for {{trigger.productName}}</p>";
 
       // Variable substitution
       const htmlBody = templateHtml
-        .replace("{{trigger.lastActivityDays}}", String(triggerData.lastActivityDays))
-        .replace("{{trigger.lastPurchaseAmount}}", String(triggerData.lastPurchaseAmount))
+        .replace(
+          "{{trigger.lastActivityDays}}",
+          String(triggerData.lastActivityDays)
+        )
+        .replace(
+          "{{trigger.lastPurchaseAmount}}",
+          String(triggerData.lastPurchaseAmount)
+        )
         .replace("{{trigger.productName}}", triggerData.productName);
 
       expect(htmlBody).toContain("30 days");
@@ -573,7 +587,7 @@ describe("Workflow Processor Email - Integration Scenarios", () => {
         cartTotal: 149.99,
         cartItems: [
           { name: "Widget A", price: 49.99 },
-          { name: "Widget B", price: 100.00 },
+          { name: "Widget B", price: 100.0 },
         ],
       };
 

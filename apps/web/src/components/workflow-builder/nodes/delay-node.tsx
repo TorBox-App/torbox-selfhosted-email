@@ -1,9 +1,9 @@
 "use client";
 
 import { Clock } from "lucide-react";
-import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
+import { BaseNode } from "./base-node";
 
 type DelayNodeProps = {
   id: string;
@@ -25,14 +25,14 @@ export function DelayNode({ id, data, selected }: DelayNodeProps) {
 
   return (
     <BaseNode
-      icon={<Clock className="w-4 h-4" />}
-      label={data.name}
-      description={description}
       accentColor="bg-purple-500"
+      description={description}
+      errorMessage={errorMessage}
       hasInput={true}
       hasOutput={true}
+      icon={<Clock className="h-4 w-4" />}
       isValid={isValid}
-      errorMessage={errorMessage}
+      label={data.name}
       selected={selected}
     />
   );

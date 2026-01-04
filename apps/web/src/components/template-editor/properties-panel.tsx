@@ -1,7 +1,7 @@
 "use client";
 
-import type { Editor } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
+import type { Editor } from "@tiptap/react";
 import { Layout, Link2, Palette, Settings2, Type } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -292,7 +292,9 @@ function ButtonProperties({ attrs, onChange }: PropertyProps) {
             )}
           </Label>
           <Input
-            className={!hasUrl ? "border-amber-300 focus-visible:ring-amber-500" : ""}
+            className={
+              hasUrl ? "" : "border-amber-300 focus-visible:ring-amber-500"
+            }
             id="href"
             onChange={(e) => onChange("href", e.target.value)}
             placeholder="https://example.com"
@@ -439,7 +441,9 @@ function ImageProperties({ attrs, onChange }: PropertyProps) {
           <Label>
             Click URL
             {!hasLink && (
-              <span className="ml-2 text-muted-foreground text-xs">(optional)</span>
+              <span className="ml-2 text-muted-foreground text-xs">
+                (optional)
+              </span>
             )}
           </Label>
           <Input
@@ -482,7 +486,10 @@ function ImageProperties({ attrs, onChange }: PropertyProps) {
               <Label>Width (px)</Label>
               <Input
                 onChange={(e) =>
-                  onChange("width", e.target.value ? Number(e.target.value) : null)
+                  onChange(
+                    "width",
+                    e.target.value ? Number(e.target.value) : null
+                  )
                 }
                 placeholder="Auto"
                 type="number"
@@ -493,7 +500,10 @@ function ImageProperties({ attrs, onChange }: PropertyProps) {
               <Label>Height (px)</Label>
               <Input
                 onChange={(e) =>
-                  onChange("height", e.target.value ? Number(e.target.value) : null)
+                  onChange(
+                    "height",
+                    e.target.value ? Number(e.target.value) : null
+                  )
                 }
                 placeholder="Auto"
                 type="number"
@@ -846,9 +856,10 @@ function ColumnProperties({ attrs, onChange }: PropertyProps) {
 }
 
 function SpacerProperties({ attrs, onChange }: PropertyProps) {
-  const heightValue = typeof attrs.height === "number"
-    ? attrs.height
-    : Number.parseInt((attrs.height as string) || "24", 10);
+  const heightValue =
+    typeof attrs.height === "number"
+      ? attrs.height
+      : Number.parseInt((attrs.height as string) || "24", 10);
 
   return (
     <PropertySection icon={<Layout className="h-4 w-4" />} title="Size">
@@ -858,9 +869,7 @@ function SpacerProperties({ attrs, onChange }: PropertyProps) {
           <Slider
             max={120}
             min={8}
-            onValueChange={(values: number[]) =>
-              onChange("height", values[0])
-            }
+            onValueChange={(values: number[]) => onChange("height", values[0])}
             step={4}
             value={[heightValue]}
           />

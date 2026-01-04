@@ -188,10 +188,7 @@ export async function generatePreferenceCenterPreviewUrl(
     log.info("Generated preference center preview URL");
     return { success: true, url };
   } catch (error) {
-    log.error(
-      { err: serializeError(error) },
-      "Failed to generate preview URL"
-    );
+    log.error({ err: serializeError(error) }, "Failed to generate preview URL");
     return { success: false, error: "Failed to generate preview URL" };
   }
 }

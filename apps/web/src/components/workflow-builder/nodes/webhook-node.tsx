@@ -1,9 +1,9 @@
 "use client";
 
 import { Webhook } from "lucide-react";
-import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
+import { BaseNode } from "./base-node";
 
 type WebhookNodeProps = {
   id: string;
@@ -27,14 +27,14 @@ export function WebhookNode({ id, data, selected }: WebhookNodeProps) {
 
   return (
     <BaseNode
-      icon={<Webhook className="w-4 h-4" />}
-      label={data.name}
-      description={description}
       accentColor="bg-cyan-500"
+      description={description}
+      errorMessage={errorMessage}
       hasInput={true}
       hasOutput={true}
+      icon={<Webhook className="h-4 w-4" />}
       isValid={isValid}
-      errorMessage={errorMessage}
+      label={data.name}
       selected={selected}
     />
   );

@@ -1,3 +1,4 @@
+import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
 import {
   contact,
   db,
@@ -9,7 +10,6 @@ import {
   workflow,
   workflowExecution,
 } from "@wraps/db";
-import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import {
   afterAll,
@@ -221,9 +221,9 @@ afterAll(async () => {
   await db
     .delete(organizationExtension)
     .where(eq(organizationExtension.organizationId, testOrganization.id));
-  await db.delete(subscription).where(
-    eq(subscription.id, `sub_test_workflows_${testOrganization.id}`)
-  );
+  await db
+    .delete(subscription)
+    .where(eq(subscription.id, `sub_test_workflows_${testOrganization.id}`));
   await db.delete(organization).where(eq(organization.id, testOrganization.id));
   await db.delete(user).where(eq(user.id, testUser.id));
   await db.delete(user).where(eq(user.id, testMemberUser.id));
@@ -249,7 +249,9 @@ describe("Workflows Server Actions", () => {
         expect(result.workflow.triggerType).toBe("event");
         expect(result.workflow.steps).toBeDefined();
         expect((result.workflow.steps as WorkflowStep[]).length).toBe(1);
-        expect((result.workflow.steps as WorkflowStep[])[0].type).toBe("trigger");
+        expect((result.workflow.steps as WorkflowStep[])[0].type).toBe(
+          "trigger"
+        );
       }
     });
 
@@ -427,10 +429,7 @@ describe("Workflows Server Actions", () => {
     });
 
     it("should return error for non-existent workflow", async () => {
-      const result = await getWorkflow(
-        "non-existent-id",
-        testOrganization.id
-      );
+      const result = await getWorkflow("non-existent-id", testOrganization.id);
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -546,7 +545,9 @@ describe("Workflows Server Actions", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect((result.workflow.steps as WorkflowStep[]).length).toBe(2);
-        expect((result.workflow.transitions as WorkflowTransition[]).length).toBe(1);
+        expect(
+          (result.workflow.transitions as WorkflowTransition[]).length
+        ).toBe(1);
       }
     });
 
@@ -663,30 +664,26 @@ describe("Workflows Server Actions", () => {
       if (!createResult.success) return;
 
       // Add required config
-      await updateWorkflow(
-        createResult.workflow.id,
-        testOrganization.id,
-        {
-          triggerConfig: { eventName: "signup" },
-          steps: [
-            ...(createResult.workflow.steps as WorkflowStep[]),
-            {
-              id: "action-1",
-              type: "send_email",
-              name: "Welcome",
-              position: { x: 100, y: 200 },
-              config: { type: "send_email", templateId: "tmpl-1" },
-            },
-          ],
-          transitions: [
-            {
-              id: "trans-1",
-              fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
-              toStepId: "action-1",
-            },
-          ],
-        }
-      );
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        triggerConfig: { eventName: "signup" },
+        steps: [
+          ...(createResult.workflow.steps as WorkflowStep[]),
+          {
+            id: "action-1",
+            type: "send_email",
+            name: "Welcome",
+            position: { x: 100, y: 200 },
+            config: { type: "send_email", templateId: "tmpl-1" },
+          },
+        ],
+        transitions: [
+          {
+            id: "trans-1",
+            fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
+            toStepId: "action-1",
+          },
+        ],
+      });
 
       const result = await enableWorkflow(
         createResult.workflow.id,
@@ -727,11 +724,9 @@ describe("Workflows Server Actions", () => {
       if (!createResult.success) return;
 
       // Add event name but no action step
-      await updateWorkflow(
-        createResult.workflow.id,
-        testOrganization.id,
-        { triggerConfig: { eventName: "signup" } }
-      );
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        triggerConfig: { eventName: "signup" },
+      });
 
       const result = await enableWorkflow(
         createResult.workflow.id,
@@ -752,29 +747,25 @@ describe("Workflows Server Actions", () => {
       if (!createResult.success) return;
 
       // Add action step but no eventName
-      await updateWorkflow(
-        createResult.workflow.id,
-        testOrganization.id,
-        {
-          steps: [
-            ...(createResult.workflow.steps as WorkflowStep[]),
-            {
-              id: "action-1",
-              type: "send_email",
-              name: "Email",
-              position: { x: 100, y: 200 },
-              config: { type: "send_email", templateId: "tmpl-1" },
-            },
-          ],
-          transitions: [
-            {
-              id: "trans-1",
-              fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
-              toStepId: "action-1",
-            },
-          ],
-        }
-      );
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        steps: [
+          ...(createResult.workflow.steps as WorkflowStep[]),
+          {
+            id: "action-1",
+            type: "send_email",
+            name: "Email",
+            position: { x: 100, y: 200 },
+            config: { type: "send_email", templateId: "tmpl-1" },
+          },
+        ],
+        transitions: [
+          {
+            id: "trans-1",
+            fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
+            toStepId: "action-1",
+          },
+        ],
+      });
 
       const result = await enableWorkflow(
         createResult.workflow.id,
@@ -813,30 +804,26 @@ describe("Workflows Server Actions", () => {
       if (!createResult.success) return;
 
       // Set up and enable
-      await updateWorkflow(
-        createResult.workflow.id,
-        testOrganization.id,
-        {
-          triggerConfig: { eventName: "signup" },
-          steps: [
-            ...(createResult.workflow.steps as WorkflowStep[]),
-            {
-              id: "action-1",
-              type: "send_email",
-              name: "Email",
-              position: { x: 100, y: 200 },
-              config: { type: "send_email", templateId: "tmpl-1" },
-            },
-          ],
-          transitions: [
-            {
-              id: "trans-1",
-              fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
-              toStepId: "action-1",
-            },
-          ],
-        }
-      );
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        triggerConfig: { eventName: "signup" },
+        steps: [
+          ...(createResult.workflow.steps as WorkflowStep[]),
+          {
+            id: "action-1",
+            type: "send_email",
+            name: "Email",
+            position: { x: 100, y: 200 },
+            config: { type: "send_email", templateId: "tmpl-1" },
+          },
+        ],
+        transitions: [
+          {
+            id: "trans-1",
+            fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
+            toStepId: "action-1",
+          },
+        ],
+      });
       await enableWorkflow(createResult.workflow.id, testOrganization.id);
 
       // Disable
@@ -937,7 +924,9 @@ describe("Workflows Server Actions", () => {
       }
 
       // Clean up
-      await db.delete(workflowExecution).where(eq(workflowExecution.id, "test-execution-1"));
+      await db
+        .delete(workflowExecution)
+        .where(eq(workflowExecution.id, "test-execution-1"));
       await db.delete(contact).where(eq(contact.id, testContactId));
     });
 
@@ -968,30 +957,26 @@ describe("Workflows Server Actions", () => {
       if (!createResult.success) return;
 
       // Add some steps
-      await updateWorkflow(
-        createResult.workflow.id,
-        testOrganization.id,
-        {
-          triggerConfig: { eventName: "signup" },
-          steps: [
-            ...(createResult.workflow.steps as WorkflowStep[]),
-            {
-              id: "delay-1",
-              type: "delay",
-              name: "Wait 1 Day",
-              position: { x: 100, y: 200 },
-              config: { type: "delay", amount: 1, unit: "days" },
-            },
-          ],
-          transitions: [
-            {
-              id: "trans-1",
-              fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
-              toStepId: "delay-1",
-            },
-          ],
-        }
-      );
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        triggerConfig: { eventName: "signup" },
+        steps: [
+          ...(createResult.workflow.steps as WorkflowStep[]),
+          {
+            id: "delay-1",
+            type: "delay",
+            name: "Wait 1 Day",
+            position: { x: 100, y: 200 },
+            config: { type: "delay", amount: 1, unit: "days" },
+          },
+        ],
+        transitions: [
+          {
+            id: "trans-1",
+            fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
+            toStepId: "delay-1",
+          },
+        ],
+      });
 
       const result = await duplicateWorkflow(
         createResult.workflow.id,
@@ -1005,9 +990,15 @@ describe("Workflows Server Actions", () => {
         expect(result.workflow.status).toBe("draft");
         expect(result.workflow.id).not.toBe(createResult.workflow.id);
         // Steps should have new IDs
-        const originalStepIds = (createResult.workflow.steps as WorkflowStep[]).map(s => s.id);
-        const duplicateStepIds = (result.workflow.steps as WorkflowStep[]).map(s => s.id);
-        expect(originalStepIds.some(id => duplicateStepIds.includes(id))).toBe(false);
+        const originalStepIds = (
+          createResult.workflow.steps as WorkflowStep[]
+        ).map((s) => s.id);
+        const duplicateStepIds = (result.workflow.steps as WorkflowStep[]).map(
+          (s) => s.id
+        );
+        expect(
+          originalStepIds.some((id) => duplicateStepIds.includes(id))
+        ).toBe(false);
       }
     });
 
@@ -1031,30 +1022,26 @@ describe("Workflows Server Actions", () => {
       if (!createResult.success) return;
 
       // Enable the original
-      await updateWorkflow(
-        createResult.workflow.id,
-        testOrganization.id,
-        {
-          triggerConfig: { eventName: "signup" },
-          steps: [
-            ...(createResult.workflow.steps as WorkflowStep[]),
-            {
-              id: "action-1",
-              type: "send_email",
-              name: "Email",
-              position: { x: 100, y: 200 },
-              config: { type: "send_email", templateId: "tmpl-1" },
-            },
-          ],
-          transitions: [
-            {
-              id: "trans-1",
-              fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
-              toStepId: "action-1",
-            },
-          ],
-        }
-      );
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        triggerConfig: { eventName: "signup" },
+        steps: [
+          ...(createResult.workflow.steps as WorkflowStep[]),
+          {
+            id: "action-1",
+            type: "send_email",
+            name: "Email",
+            position: { x: 100, y: 200 },
+            config: { type: "send_email", templateId: "tmpl-1" },
+          },
+        ],
+        transitions: [
+          {
+            id: "trans-1",
+            fromStepId: (createResult.workflow.steps as WorkflowStep[])[0].id,
+            toStepId: "action-1",
+          },
+        ],
+      });
       await enableWorkflow(createResult.workflow.id, testOrganization.id);
 
       const result = await duplicateWorkflow(

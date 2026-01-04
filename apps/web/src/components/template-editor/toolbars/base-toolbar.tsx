@@ -12,7 +12,7 @@ import {
   Sparkles,
   Undo2,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -26,8 +26,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { BrandKitSelector } from "../brand-kit-selector";
-import { SubjectEditDialog } from "../subject-edit-dialog";
 import { useEditorContext } from "../core/editor-context";
+import { SubjectEditDialog } from "../subject-edit-dialog";
 
 type ViewMode = "edit" | "preview" | "code" | "usage";
 
@@ -107,9 +107,8 @@ export function BaseToolbar({
 }: BaseToolbarProps) {
   const { orgSlug, mode, features } = useEditorContext();
 
-  const { view, showLeftPanel, leftPanelTab, showPropertiesPanel } = useTemplateStore(
-    (state) => state.localState
-  );
+  const { view, showLeftPanel, leftPanelTab, showPropertiesPanel } =
+    useTemplateStore((state) => state.localState);
   const { setView, toggleLeftPanelWithTab, togglePropertiesPanel } =
     useTemplateStore((state) => state.actions);
 
@@ -197,7 +196,11 @@ export function BaseToolbar({
                     className="h-8 w-8 p-0"
                     onClick={() => toggleLeftPanelWithTab("ai")}
                     size="sm"
-                    variant={showLeftPanel && leftPanelTab === "ai" ? "secondary" : "ghost"}
+                    variant={
+                      showLeftPanel && leftPanelTab === "ai"
+                        ? "secondary"
+                        : "ghost"
+                    }
                   >
                     <Sparkles className="h-4 w-4" />
                   </Button>
@@ -213,7 +216,11 @@ export function BaseToolbar({
                     className="h-8 w-8 p-0"
                     onClick={() => toggleLeftPanelWithTab("blocks")}
                     size="sm"
-                    variant={showLeftPanel && leftPanelTab === "blocks" ? "secondary" : "ghost"}
+                    variant={
+                      showLeftPanel && leftPanelTab === "blocks"
+                        ? "secondary"
+                        : "ghost"
+                    }
                   >
                     <LayoutGrid className="h-4 w-4" />
                   </Button>

@@ -488,13 +488,17 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       // Emit topic subscription events for immediate subscriptions (non-pending)
       if (topicIds.length > 0) {
-        const immediateTopics = topicIds.filter((tid) => !pendingTopics.includes(tid));
+        const immediateTopics = topicIds.filter(
+          (tid) => !pendingTopics.includes(tid)
+        );
         // Re-fetch topic names for the emission (topicMap was in inner scope)
         const topicNamesForEmit = await db
           .select({ id: topic.id, name: topic.name })
           .from(topic)
           .where(inArray(topic.id, immediateTopics));
-        const topicNameMap = new Map(topicNamesForEmit.map((t) => [t.id, t.name]));
+        const topicNameMap = new Map(
+          topicNamesForEmit.map((t) => [t.id, t.name])
+        );
 
         for (const topicId of immediateTopics) {
           emitTopicSubscribed({
@@ -503,7 +507,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             topicId,
             topicName: topicNameMap.get(topicId),
           }).catch((err) => {
-            console.error("[contacts] Failed to emit topic_subscribed event:", err);
+            console.error(
+              "[contacts] Failed to emit topic_subscribed event:",
+              err
+            );
           });
         }
       }

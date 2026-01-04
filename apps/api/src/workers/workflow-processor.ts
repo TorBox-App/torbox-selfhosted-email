@@ -5,15 +5,11 @@
  * Handles different step types and routes to next steps.
  */
 
-import type { SQSEvent, SQSHandler } from "aws-lambda";
 import {
   PinpointSMSVoiceV2Client,
   SendTextMessageCommand,
 } from "@aws-sdk/client-pinpoint-sms-voice-v2";
-import {
-  SendEmailCommand,
-  SESv2Client,
-} from "@aws-sdk/client-sesv2";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import {
   awsAccount,
   contact,
@@ -23,13 +19,14 @@ import {
   messageSend,
   organization,
   template,
-  workflow,
-  workflowExecution,
-  workflowStepExecution,
   type WorkflowStep,
   type WorkflowStepConfig,
   type WorkflowTransition,
+  workflow,
+  workflowExecution,
+  workflowStepExecution,
 } from "@wraps/db";
+import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, sql } from "drizzle-orm";
 
 import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
@@ -56,11 +53,16 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
           await resumeExecution(job.executionId, job.branch);
           break;
         case "trigger":
-          await triggerWorkflow(job.workflowId, job.contactId, job.organizationId, job.eventData);
+          await triggerWorkflow(
+            job.workflowId,
+            job.contactId,
+            job.organizationId,
+            job.eventData
+          );
           break;
       }
     } catch (error) {
-      console.error(`Error processing workflow job:`, error);
+      console.error("Error processing workflow job:", error);
       throw error; // Re-throw to let SQS retry
     }
   }
@@ -98,7 +100,46 @@ async function triggerWorkflow(
     });
 
     if (existing) {
-      console.log(`Skipping - contact ${contactId} already in workflow ${workflowId}`);
+      console.log(
+        `Skipping - contact ${contactId} already in workflow ${workflowId}`
+      );
+      return;
+    }
+
+    // Check reentry delay for completed executions
+    if (wf.reentryDelaySeconds && wf.reentryDelaySeconds > 0) {
+      const recentlyCompleted = await db.query.workflowExecution.findFirst({
+        where: and(
+          eq(workflowExecution.workflowId, workflowId),
+          eq(workflowExecution.contactId, contactId),
+          eq(workflowExecution.status, "completed"),
+          sql`${workflowExecution.completedAt} > NOW() - INTERVAL '${sql.raw(String(wf.reentryDelaySeconds))} seconds'`
+        ),
+      });
+
+      if (recentlyCompleted) {
+        console.log(
+          `Skipping - contact ${contactId} completed workflow recently (reentry delay: ${wf.reentryDelaySeconds}s)`
+        );
+        return;
+      }
+    }
+  }
+
+  // Check contact cooldown (any workflow in this org)
+  if (wf.contactCooldownSeconds && wf.contactCooldownSeconds > 0) {
+    const recentExecution = await db.query.workflowExecution.findFirst({
+      where: and(
+        eq(workflowExecution.organizationId, organizationId),
+        eq(workflowExecution.contactId, contactId),
+        sql`${workflowExecution.createdAt} > NOW() - INTERVAL '${sql.raw(String(wf.contactCooldownSeconds))} seconds'`
+      ),
+    });
+
+    if (recentExecution) {
+      console.log(
+        `Skipping - contact ${contactId} in cooldown period (${wf.contactCooldownSeconds}s)`
+      );
       return;
     }
   }
@@ -107,14 +148,16 @@ async function triggerWorkflow(
   const steps = wf.steps as WorkflowStep[];
   const transitions = wf.transitions as WorkflowTransition[];
 
-  const triggerStep = steps.find(s => s.type === "trigger");
+  const triggerStep = steps.find((s) => s.type === "trigger");
   if (!triggerStep) {
     console.error(`No trigger step found in workflow ${workflowId}`);
     return;
   }
 
   // Find the first step after trigger
-  const firstTransition = transitions.find(t => t.fromStepId === triggerStep.id);
+  const firstTransition = transitions.find(
+    (t) => t.fromStepId === triggerStep.id
+  );
   const firstStepId = firstTransition?.toStepId;
 
   if (!firstStepId) {
@@ -200,7 +243,7 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
   }
 
   const steps = wf.steps as WorkflowStep[];
-  const step = steps.find(s => s.id === stepId);
+  const step = steps.find((s) => s.id === stepId);
 
   if (!step) {
     console.error(`Step ${stepId} not found in workflow`);
@@ -293,7 +336,14 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
 /**
  * Execute a single step and return the result
  */
-type WorkflowBranch = "yes" | "no" | "timeout" | "default" | "opened" | "clicked" | "bounced";
+type WorkflowBranch =
+  | "yes"
+  | "no"
+  | "timeout"
+  | "default"
+  | "opened"
+  | "clicked"
+  | "bounced";
 
 async function executeStep(
   step: WorkflowStep,
@@ -313,10 +363,20 @@ async function executeStep(
       return { action: "next" };
 
     case "send_email":
-      return await handleSendEmail(config, execution, contactRecord, organizationId);
+      return await handleSendEmail(
+        config,
+        execution,
+        contactRecord,
+        organizationId
+      );
 
     case "send_sms":
-      return await handleSendSms(config, execution, contactRecord, organizationId);
+      return await handleSendSms(
+        config,
+        execution,
+        contactRecord,
+        organizationId
+      );
 
     case "delay":
       return await handleDelay(config, execution, step.id, organizationId);
@@ -331,10 +391,20 @@ async function executeStep(
       return await handleWebhook(config, contactRecord, execution);
 
     case "wait_for_event":
-      return await handleWaitForEvent(config, execution, step.id, organizationId);
+      return await handleWaitForEvent(
+        config,
+        execution,
+        step.id,
+        organizationId
+      );
 
     case "wait_for_email_engagement":
-      return await handleWaitForEmailEngagement(config, execution, step.id, organizationId);
+      return await handleWaitForEmailEngagement(
+        config,
+        execution,
+        step.id,
+        organizationId
+      );
 
     case "subscribe_topic":
       return await handleSubscribeTopic(config, contactRecord);
@@ -346,7 +416,9 @@ async function executeStep(
       return { action: "exit" };
 
     default:
-      throw new Error(`Unknown step type: ${(config as { type: string }).type}`);
+      throw new Error(
+        `Unknown step type: ${(config as { type: string }).type}`
+      );
   }
 }
 
@@ -362,7 +434,9 @@ async function handleSendEmail(
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
   // Check contact has email
   if (!contactRecord.email) {
-    console.log(`[workflow] Contact ${contactRecord.id} has no email, skipping`);
+    console.log(
+      `[workflow] Contact ${contactRecord.id} has no email, skipping`
+    );
     return {
       action: "next",
       data: {
@@ -374,10 +448,14 @@ async function handleSendEmail(
   }
 
   // Check contact email status
-  if (contactRecord.emailStatus === "unsubscribed" ||
-      contactRecord.emailStatus === "bounced" ||
-      contactRecord.emailStatus === "complained") {
-    console.log(`[workflow] Contact ${contactRecord.id} has email status ${contactRecord.emailStatus}, skipping`);
+  if (
+    contactRecord.emailStatus === "unsubscribed" ||
+    contactRecord.emailStatus === "bounced" ||
+    contactRecord.emailStatus === "complained"
+  ) {
+    console.log(
+      `[workflow] Contact ${contactRecord.id} has email status ${contactRecord.emailStatus}, skipping`
+    );
     return {
       action: "next",
       data: {
@@ -396,7 +474,9 @@ async function handleSendEmail(
     .limit(1);
 
   if (!wf?.awsAccountId) {
-    console.log(`[workflow] Workflow ${execution.workflowId} has no AWS account configured, skipping email`);
+    console.log(
+      `[workflow] Workflow ${execution.workflowId} has no AWS account configured, skipping email`
+    );
     return {
       action: "next",
       data: {
@@ -520,23 +600,20 @@ async function handleSendEmail(
     replacementData.preferencesUrl = preferencesUrl;
   }
 
-  // Apply variable substitution to HTML
-  let html = tmpl.compiledHtml;
-  for (const [key, value] of Object.entries(replacementData)) {
-    // Replace both {{key}} and {{contact.key}} patterns
-    html = html.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g"), value);
-    html = html.replace(new RegExp(`\\{\\{\\s*contact\\.${key}\\s*\\}\\}`, "g"), value);
-  }
+  // Apply variable substitution to HTML (with HTML escaping for user data)
+  const html = substituteVariables(tmpl.compiledHtml, replacementData, {
+    escapeHtml: true,
+  });
 
-  // Build subject with variable substitution
-  let subject = tmpl.subject || "Message";
-  for (const [key, value] of Object.entries(replacementData)) {
-    subject = subject.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g"), value);
-    subject = subject.replace(new RegExp(`\\{\\{\\s*contact\\.${key}\\s*\\}\\}`, "g"), value);
-  }
+  // Build subject with variable substitution (no HTML escaping for subject)
+  const subject = substituteVariables(
+    tmpl.subject || "Message",
+    replacementData
+  );
 
   // Build from address
-  const fromAddress = config.from || `noreply@${process.env.DEFAULT_DOMAIN || "wraps.dev"}`;
+  const fromAddress =
+    config.from || `noreply@${process.env.DEFAULT_DOMAIN || "wraps.dev"}`;
   const fromDisplay = config.fromName
     ? `${config.fromName} <${fromAddress}>`
     : fromAddress;
@@ -581,7 +658,9 @@ async function handleSendEmail(
 
   const messageId = result.MessageId ?? "";
 
-  console.log(`[workflow] Sent email to ${contactRecord.email}, messageId: ${messageId}`);
+  console.log(
+    `[workflow] Sent email to ${contactRecord.email}, messageId: ${messageId}`
+  );
 
   // Record the send in messageSend table
   // Note: workflowExecutionId is not yet in schema, will be added later
@@ -623,6 +702,43 @@ async function handleSendEmail(
 }
 
 /**
+ * Substitute variables in text with values from a data object
+ * Handles missing variables gracefully (empty string instead of leaving placeholder)
+ * Optionally escapes HTML entities for safe embedding in HTML
+ */
+function substituteVariables(
+  text: string,
+  data: Record<string, string>,
+  options: { escapeHtml?: boolean } = {}
+): string {
+  // Match {{variable}} or {{contact.variable}} patterns
+  return text.replace(/\{\{\s*(?:contact\.)?([^}]+)\s*\}\}/g, (match, key) => {
+    const trimmedKey = key.trim();
+    const value = data[trimmedKey];
+
+    if (value === undefined || value === null || value === "") {
+      // Use empty string for missing variables instead of leaving placeholder
+      console.warn(`[workflow] Missing variable in template: ${trimmedKey}`);
+      return "";
+    }
+
+    let stringValue = String(value);
+
+    // Escape HTML if needed (for email body, not subject)
+    if (options.escapeHtml) {
+      stringValue = stringValue
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;");
+    }
+
+    return stringValue;
+  });
+}
+
+/**
  * Strip HTML tags for plain text version
  */
 function stripHtml(html: string): string {
@@ -646,7 +762,9 @@ async function handleSendSms(
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
   // Get the contact's phone number
   if (!contactRecord.phone) {
-    console.log(`[workflow] Contact ${contactRecord.id} has no phone number, skipping SMS`);
+    console.log(
+      `[workflow] Contact ${contactRecord.id} has no phone number, skipping SMS`
+    );
     return {
       action: "next",
       data: {
@@ -665,7 +783,9 @@ async function handleSendSms(
     .limit(1);
 
   if (!wf?.awsAccountId) {
-    console.log(`[workflow] Workflow ${execution.workflowId} has no AWS account configured, skipping SMS`);
+    console.log(
+      `[workflow] Workflow ${execution.workflowId} has no AWS account configured, skipping SMS`
+    );
     return {
       action: "next",
       data: {
@@ -703,7 +823,7 @@ async function handleSendSms(
   // Build message body - use body from config or fetch from template
   const messageBody = config.body || "";
   if (!messageBody) {
-    console.log(`[workflow] SMS step has no message body configured, skipping`);
+    console.log("[workflow] SMS step has no message body configured, skipping");
     return {
       action: "next",
       data: {
@@ -725,7 +845,9 @@ async function handleSendSms(
 
   const response = await smsClient.send(command);
 
-  console.log(`[workflow] Sent SMS to ${contactRecord.phone}, messageId: ${response.MessageId}`);
+  console.log(
+    `[workflow] Sent SMS to ${contactRecord.phone}, messageId: ${response.MessageId}`
+  );
 
   // Update contact SMS metrics
   await db
@@ -763,10 +885,10 @@ async function handleDelay(
       delaySeconds *= 3600;
       break;
     case "days":
-      delaySeconds *= 86400;
+      delaySeconds *= 86_400;
       break;
     case "weeks":
-      delaySeconds *= 604800;
+      delaySeconds *= 604_800;
       break;
   }
 
@@ -778,7 +900,7 @@ async function handleDelay(
     .limit(1);
 
   const transitions = wf?.transitions as WorkflowTransition[] | undefined;
-  const nextTransition = transitions?.find(t => t.fromStepId === stepId);
+  const nextTransition = transitions?.find((t) => t.fromStepId === stepId);
 
   if (!nextTransition) {
     // No next step - complete execution
@@ -828,7 +950,11 @@ function handleCondition(
   }
 
   // Evaluate condition
-  const conditionMet = evaluateCondition(fieldValue, config.operator, config.value);
+  const conditionMet = evaluateCondition(
+    fieldValue,
+    config.operator,
+    config.value
+  );
 
   return {
     action: "next",
@@ -862,9 +988,13 @@ function evaluateCondition(
     case "less_than":
       return Number(fieldValue) < Number(compareValue);
     case "is_set":
-      return fieldValue !== null && fieldValue !== undefined && fieldValue !== "";
+      return (
+        fieldValue !== null && fieldValue !== undefined && fieldValue !== ""
+      );
     case "is_not_set":
-      return fieldValue === null || fieldValue === undefined || fieldValue === "";
+      return (
+        fieldValue === null || fieldValue === undefined || fieldValue === ""
+      );
     default:
       console.warn(`Unknown operator: ${operator}`);
       return false;
@@ -876,7 +1006,8 @@ async function handleUpdateContact(
   contactRecord: typeof contact.$inferSelect
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
   const updates = config.updates || [];
-  const currentProperties = (contactRecord.properties as Record<string, unknown>) || {};
+  const currentProperties =
+    (contactRecord.properties as Record<string, unknown>) || {};
   const newProperties = { ...currentProperties };
 
   for (const update of updates) {
@@ -888,21 +1019,26 @@ async function handleUpdateContact(
         delete newProperties[update.field];
         break;
       case "increment":
-        newProperties[update.field] = (Number(newProperties[update.field]) || 0) + Number(update.value);
+        newProperties[update.field] =
+          (Number(newProperties[update.field]) || 0) + Number(update.value);
         break;
       case "decrement":
-        newProperties[update.field] = (Number(newProperties[update.field]) || 0) - Number(update.value);
+        newProperties[update.field] =
+          (Number(newProperties[update.field]) || 0) - Number(update.value);
         break;
-      case "append":
-        const arr = Array.isArray(newProperties[update.field]) ? newProperties[update.field] : [];
+      case "append": {
+        const arr = Array.isArray(newProperties[update.field])
+          ? newProperties[update.field]
+          : [];
         (arr as unknown[]).push(update.value);
         newProperties[update.field] = arr;
         break;
+      }
       case "remove":
         if (Array.isArray(newProperties[update.field])) {
-          newProperties[update.field] = (newProperties[update.field] as unknown[]).filter(
-            v => v !== update.value
-          );
+          newProperties[update.field] = (
+            newProperties[update.field] as unknown[]
+          ).filter((v) => v !== update.value);
         }
         break;
     }
@@ -915,7 +1051,7 @@ async function handleUpdateContact(
 
   return {
     action: "next",
-    data: { updatedFields: updates.map(u => u.field) },
+    data: { updatedFields: updates.map((u) => u.field) },
   };
 }
 
@@ -956,7 +1092,7 @@ async function handleWebhook(
       },
     };
   } catch (error) {
-    console.error(`Webhook failed:`, error);
+    console.error("Webhook failed:", error);
     return {
       action: "next",
       data: {
@@ -972,7 +1108,7 @@ async function handleWaitForEvent(
   stepId: string,
   organizationId: string
 ): Promise<{ action: "wait" }> {
-  const timeoutSeconds = config.timeoutSeconds || 86400; // Default 24 hours
+  const timeoutSeconds = config.timeoutSeconds || 86_400; // Default 24 hours
   const timeoutAt = new Date(Date.now() + timeoutSeconds * 1000);
 
   // Schedule timeout
@@ -1004,7 +1140,7 @@ async function handleWaitForEmailEngagement(
   stepId: string,
   organizationId: string
 ): Promise<{ action: "wait" }> {
-  const timeoutSeconds = config.timeoutSeconds || 259200; // Default 3 days
+  const timeoutSeconds = config.timeoutSeconds || 259_200; // Default 3 days
   const timeoutAt = new Date(Date.now() + timeoutSeconds * 1000);
 
   // Find the previous send_email step execution to get the message ID
@@ -1074,7 +1210,11 @@ async function handleSubscribeTopic(
 
   return {
     action: "next",
-    data: { topicId: config.topicId, channel: config.channel, action: "subscribed" },
+    data: {
+      topicId: config.topicId,
+      channel: config.channel,
+      action: "subscribed",
+    },
   };
 }
 
@@ -1098,7 +1238,11 @@ async function handleUnsubscribeTopic(
 
   return {
     action: "next",
-    data: { topicId: config.topicId, channel: config.channel, action: "unsubscribed" },
+    data: {
+      topicId: config.topicId,
+      channel: config.channel,
+      action: "unsubscribed",
+    },
   };
 }
 
@@ -1123,14 +1267,14 @@ async function processNextStep(
   if (branch) {
     // Look for transition with matching branch
     nextTransition = transitions.find(
-      t => t.fromStepId === currentStep.id && t.condition?.branch === branch
+      (t) => t.fromStepId === currentStep.id && t.condition?.branch === branch
     );
   }
 
   // Fallback to any transition from this step
   if (!nextTransition) {
     nextTransition = transitions.find(
-      t => t.fromStepId === currentStep.id && !t.condition
+      (t) => t.fromStepId === currentStep.id && !t.condition
     );
   }
 
@@ -1166,7 +1310,9 @@ async function resumeExecution(
   }
 
   if (execution.status !== "waiting") {
-    console.log(`Execution ${executionId} not in waiting state (${execution.status})`);
+    console.log(
+      `Execution ${executionId} not in waiting state (${execution.status})`
+    );
     return;
   }
 
@@ -1183,7 +1329,7 @@ async function resumeExecution(
   }
 
   const steps = wf.steps as WorkflowStep[];
-  const currentStep = steps.find(s => s.id === execution.currentStepId);
+  const currentStep = steps.find((s) => s.id === execution.currentStepId);
 
   if (!currentStep) {
     console.error(`Current step ${execution.currentStepId} not found`);

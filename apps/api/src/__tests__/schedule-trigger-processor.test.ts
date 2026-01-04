@@ -71,9 +71,7 @@ const mockSegment = {
     logic: "AND" as const,
     groups: [
       {
-        filters: [
-          { field: "status", operator: "equals", value: "active" },
-        ],
+        filters: [{ field: "status", operator: "equals", value: "active" }],
       },
     ],
   },
@@ -125,10 +123,10 @@ describe("Schedule Trigger Processor", () => {
     it("should parse standard cron expressions", () => {
       // Test that cron expressions are valid
       const expressions = [
-        "0 9 * * 1",      // Every Monday at 9am
-        "0 10 * * *",     // Every day at 10am
-        "*/15 * * * *",   // Every 15 minutes
-        "0 0 1 * *",      // First day of month at midnight
+        "0 9 * * 1", // Every Monday at 9am
+        "0 10 * * *", // Every day at 10am
+        "*/15 * * * *", // Every 15 minutes
+        "0 0 1 * *", // First day of month at midnight
       ];
 
       for (const expr of expressions) {
@@ -179,7 +177,9 @@ describe("Schedule Trigger Processor", () => {
   describe("Contact Enumeration", () => {
     it("should get all active contacts when no segment specified", () => {
       // When no segmentId in config, should query all active contacts
-      const config = mockWorkflowWithSchedule.triggerConfig as { segmentId?: string };
+      const config = mockWorkflowWithSchedule.triggerConfig as {
+        segmentId?: string;
+      };
       expect(config.segmentId).toBeUndefined();
     });
 
@@ -232,15 +232,17 @@ describe("Schedule Trigger Processor", () => {
         logic: "AND" as const,
         groups: [
           {
-            filters: [
-              { field: "status", operator: "equals", value: "active" },
-            ],
+            filters: [{ field: "status", operator: "equals", value: "active" }],
             nested: {
               logic: "OR" as const,
               groups: [
                 {
                   filters: [
-                    { field: "email", operator: "contains", value: "@gmail.com" },
+                    {
+                      field: "email",
+                      operator: "contains",
+                      value: "@gmail.com",
+                    },
                   ],
                 },
               ],
@@ -301,10 +303,7 @@ describe("Schedule Trigger Processor", () => {
     it("should continue processing other workflows on error", () => {
       // The handler should catch errors per-workflow and continue
       // This is verified by the try-catch in the actual handler
-      const workflows = [
-        mockWorkflowWithSchedule,
-        mockWorkflowWithSegment,
-      ];
+      const workflows = [mockWorkflowWithSchedule, mockWorkflowWithSegment];
 
       // If one fails, we should still have processed the other
       expect(workflows.length).toBe(2);

@@ -72,7 +72,7 @@ export function CreateWorkflowDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -86,35 +86,35 @@ export function CreateWorkflowDialog({
             <div className="grid gap-2">
               <Label htmlFor="name">Name</Label>
               <Input
+                disabled={isPending}
                 id="name"
+                onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Welcome Series"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isPending}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description (optional)</Label>
               <Textarea
-                id="description"
-                placeholder="What does this automation do?"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
                 disabled={isPending}
+                id="description"
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What does this automation do?"
                 rows={3}
+                value={description}
               />
             </div>
           </div>
           <DialogFooter>
             <Button
+              disabled={isPending}
+              onClick={() => handleOpenChange(false)}
               type="button"
               variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={isPending}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending || !name.trim()}>
+            <Button disabled={isPending || !name.trim()} type="submit">
               {isPending ? "Creating..." : "Create"}
             </Button>
           </DialogFooter>

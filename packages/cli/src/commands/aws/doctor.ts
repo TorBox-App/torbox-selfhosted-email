@@ -6,6 +6,7 @@
 
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { isSESSandbox } from "../../utils/shared/aws.js";
 import {
   type AWSSetupState,
   detectAWSState,
@@ -15,7 +16,6 @@ import {
   hasConfigFile,
   hasCredentialsFile,
 } from "../../utils/shared/aws-detection.js";
-import { isSESSandbox } from "../../utils/shared/aws.js";
 
 type DoctorResult = {
   status: "pass" | "warn" | "fail" | "info";
@@ -39,7 +39,8 @@ async function runDiagnostics(state: AWSSetupState): Promise<DoctorResult[]> {
     results.push({
       status: "fail",
       message: "AWS CLI not installed",
-      details: "Install: brew install awscli (macOS) or https://aws.amazon.com/cli/",
+      details:
+        "Install: brew install awscli (macOS) or https://aws.amazon.com/cli/",
     });
   }
 
@@ -241,10 +242,7 @@ async function runDiagnostics(state: AWSSetupState): Promise<DoctorResult[]> {
   }
 
   // Check for common misconfigurations
-  if (
-    process.env.AWS_ACCESS_KEY_ID &&
-    !process.env.AWS_SECRET_ACCESS_KEY
-  ) {
+  if (process.env.AWS_ACCESS_KEY_ID && !process.env.AWS_SECRET_ACCESS_KEY) {
     results.push({
       status: "fail",
       message: "AWS_ACCESS_KEY_ID set but AWS_SECRET_ACCESS_KEY missing",
@@ -252,10 +250,7 @@ async function runDiagnostics(state: AWSSetupState): Promise<DoctorResult[]> {
     });
   }
 
-  if (
-    process.env.AWS_SECRET_ACCESS_KEY &&
-    !process.env.AWS_ACCESS_KEY_ID
-  ) {
+  if (process.env.AWS_SECRET_ACCESS_KEY && !process.env.AWS_ACCESS_KEY_ID) {
     results.push({
       status: "fail",
       message: "AWS_SECRET_ACCESS_KEY set but AWS_ACCESS_KEY_ID missing",
@@ -307,7 +302,10 @@ function displayResults(results: DoctorResult[]): void {
 /**
  * Generate suggestions based on results
  */
-function generateSuggestions(results: DoctorResult[], state: AWSSetupState): string[] {
+function generateSuggestions(
+  results: DoctorResult[],
+  state: AWSSetupState
+): string[] {
   const suggestions: string[] = [];
 
   const hasCredentialsFail = results.some(
@@ -334,14 +332,18 @@ function generateSuggestions(results: DoctorResult[], state: AWSSetupState): str
   }
 
   if (hasSSOExpired) {
-    const loginCmd = getSSOLoginCommand(state.sso.activeProfile?.name || state.sso.profiles[0]?.name);
+    const loginCmd = getSSOLoginCommand(
+      state.sso.activeProfile?.name || state.sso.profiles[0]?.name
+    );
     suggestions.push(`Refresh SSO session: ${loginCmd}`);
   } else if (hasSSOExpiring) {
     const loginCmd = getSSOLoginCommand(state.sso.activeProfile?.name);
     suggestions.push(`Session expiring soon, refresh with: ${loginCmd}`);
   } else if (hasCredentialsFail) {
     if (state.sso.configured) {
-      const loginCmd = getSSOLoginCommand(state.sso.activeProfile?.name || state.sso.profiles[0]?.name);
+      const loginCmd = getSSOLoginCommand(
+        state.sso.activeProfile?.name || state.sso.profiles[0]?.name
+      );
       suggestions.push(`SSO login required: ${loginCmd}`);
     } else {
       suggestions.push("Run `wraps aws setup` to configure credentials");
@@ -359,7 +361,11 @@ function generateSuggestions(results: DoctorResult[], state: AWSSetupState): str
   }
 
   // Additional SSO suggestions
-  if (state.sso.configured && state.sso.profiles.length > 1 && !state.sso.activeProfile) {
+  if (
+    state.sso.configured &&
+    state.sso.profiles.length > 1 &&
+    !state.sso.activeProfile
+  ) {
     suggestions.push(
       `Set AWS_PROFILE to use one of: ${state.sso.profiles.map((p) => p.name).join(", ")}`
     );

@@ -324,7 +324,9 @@ export function PreferencesForm({
         </div>
       ) : (
         <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm dark:text-gray-400">No email topics available.</p>
+          <p className="text-gray-500 text-sm dark:text-gray-400">
+            No email topics available.
+          </p>
         </div>
       )}
 

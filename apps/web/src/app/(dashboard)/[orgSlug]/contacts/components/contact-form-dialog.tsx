@@ -179,15 +179,11 @@ export function ContactFormDialog({
             ? firstName || null
             : undefined,
         lastName:
-          lastName !== (contact?.lastName || "")
-            ? lastName || null
-            : undefined,
+          lastName !== (contact?.lastName || "") ? lastName || null : undefined,
         company:
           company !== (contact?.company || "") ? company || null : undefined,
         jobTitle:
-          jobTitle !== (contact?.jobTitle || "")
-            ? jobTitle || null
-            : undefined,
+          jobTitle !== (contact?.jobTitle || "") ? jobTitle || null : undefined,
         emailStatus:
           emailStatus !== contact?.emailStatus ? emailStatus : undefined,
         smsStatus: smsStatus !== contact?.smsStatus ? smsStatus : undefined,

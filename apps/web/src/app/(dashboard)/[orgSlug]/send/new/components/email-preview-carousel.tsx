@@ -3,13 +3,13 @@
 import type { JSONContent } from "@tiptap/core";
 import { ChevronLeft, ChevronRight, Mail } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { getSampleContacts, getTemplateContent } from "@/actions/batch";
 import type { RecipientFilter } from "@/actions/batch";
+import { getSampleContacts, getTemplateContent } from "@/actions/batch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { renderTipTapToHtml } from "@/lib/serializers/tiptap-to-react-email";
 import type { SampleContact } from "@/lib/batch";
+import { renderTipTapToHtml } from "@/lib/serializers/tiptap-to-react-email";
 
 type EmailPreviewCarouselProps = {
   organizationId: string;

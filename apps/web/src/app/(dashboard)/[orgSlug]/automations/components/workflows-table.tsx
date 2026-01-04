@@ -26,7 +26,6 @@ import {
   Workflow,
   Zap,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -230,7 +229,10 @@ export function WorkflowsTable({
           const wf = row.original;
           const status = wf.status;
           return (
-            <Badge className={WORKFLOW_STATUS_COLORS[status]} variant="secondary">
+            <Badge
+              className={WORKFLOW_STATUS_COLORS[status]}
+              variant="secondary"
+            >
               {status === "enabled" && <CheckCircle className="mr-1 h-3 w-3" />}
               {status === "paused" && <Pause className="mr-1 h-3 w-3" />}
               {WORKFLOW_STATUS_LABELS[status]}
@@ -246,7 +248,7 @@ export function WorkflowsTable({
           return (
             <div className="flex items-center gap-2 text-sm">
               <Zap className="h-3 w-3 text-muted-foreground" />
-              <span className="truncate max-w-[200px]">
+              <span className="max-w-[200px] truncate">
                 {getTriggerDescription(wf)}
               </span>
             </div>
@@ -320,8 +322,8 @@ export function WorkflowsTable({
               <DropdownMenuTrigger asChild>
                 <Button
                   className="h-8 w-8 p-0"
-                  variant="ghost"
                   onClick={(e) => e.stopPropagation()}
+                  variant="ghost"
                 >
                   <span className="sr-only">Open menu</span>
                   <MoreHorizontal className="h-4 w-4" />
@@ -338,22 +340,22 @@ export function WorkflowsTable({
                   Edit workflow
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  disabled={isPending}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDuplicate(wf.id);
                   }}
-                  disabled={isPending}
                 >
                   <Copy className="mr-2 h-4 w-4" />
                   Duplicate
                 </DropdownMenuItem>
                 {canManage && canEnable && (
                   <DropdownMenuItem
+                    disabled={isPending}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEnable(wf.id);
                     }}
-                    disabled={isPending}
                   >
                     <Play className="mr-2 h-4 w-4" />
                     Enable
@@ -361,11 +363,11 @@ export function WorkflowsTable({
                 )}
                 {canManage && canDisable && (
                   <DropdownMenuItem
+                    disabled={isPending}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDisable(wf.id);
                     }}
-                    disabled={isPending}
                   >
                     <Pause className="mr-2 h-4 w-4" />
                     Pause
@@ -376,12 +378,12 @@ export function WorkflowsTable({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive"
+                      disabled={isPending}
                       onClick={(e) => {
                         e.stopPropagation();
                         setWorkflowToDelete(wf);
                         setDeleteDialogOpen(true);
                       }}
-                      disabled={isPending}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
@@ -434,7 +436,7 @@ export function WorkflowsTable({
           </div>
           <div className="flex items-center space-x-2">
             {canManage && (
-              <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Button onClick={() => setCreateDialogOpen(true)} size="sm">
                 <Plus className="mr-2 h-4 w-4" />
                 New Automation
               </Button>
@@ -494,9 +496,9 @@ export function WorkflowsTable({
                       </p>
                       {canManage && (
                         <Button
+                          onClick={() => setCreateDialogOpen(true)}
                           size="sm"
                           variant="outline"
-                          onClick={() => setCreateDialogOpen(true)}
                         >
                           <Plus className="mr-2 h-4 w-4" />
                           Create your first automation
@@ -540,14 +542,14 @@ export function WorkflowsTable({
 
       {/* Create Workflow Dialog */}
       <CreateWorkflowDialog
-        open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        open={createDialogOpen}
         organizationId={organizationId}
         orgSlug={orgSlug}
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete automation?</AlertDialogTitle>
@@ -559,8 +561,8 @@ export function WorkflowsTable({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDelete}
             >
               Delete
             </AlertDialogAction>

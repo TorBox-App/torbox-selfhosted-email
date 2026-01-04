@@ -1,6 +1,10 @@
 // apps/web/src/lib/ai/workflow-parser.ts
 
-import type { WorkflowStep, WorkflowTransition, WorkflowStepType } from "@wraps/db";
+import type {
+  WorkflowStep,
+  WorkflowStepType,
+  WorkflowTransition,
+} from "@wraps/db";
 
 /**
  * Valid step types that the AI can generate
@@ -35,7 +39,9 @@ export type ParsedWorkflow = {
  * @param content - The AI response content
  * @returns Parsed workflow or null if invalid
  */
-export function extractWorkflowFromMessage(content: string): ParsedWorkflow | null {
+export function extractWorkflowFromMessage(
+  content: string
+): ParsedWorkflow | null {
   try {
     // Try to find JSON in a markdown code block first
     const codeBlockMatch = content.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
@@ -45,7 +51,9 @@ export function extractWorkflowFromMessage(content: string): ParsedWorkflow | nu
       jsonStr = codeBlockMatch[1].trim();
     } else {
       // Try to find raw JSON object
-      const rawJsonMatch = content.match(/\{[\s\S]*"steps"[\s\S]*"transitions"[\s\S]*\}/);
+      const rawJsonMatch = content.match(
+        /\{[\s\S]*"steps"[\s\S]*"transitions"[\s\S]*\}/
+      );
       if (!rawJsonMatch) {
         console.warn("[workflow-parser] No JSON found in AI response");
         return null;
@@ -111,7 +119,10 @@ function validateSteps(steps: unknown[]): WorkflowStep[] | null {
       return null;
     }
 
-    if (typeof s.type !== "string" || !VALID_STEP_TYPES.includes(s.type as WorkflowStepType)) {
+    if (
+      typeof s.type !== "string" ||
+      !VALID_STEP_TYPES.includes(s.type as WorkflowStepType)
+    ) {
       console.warn(`[workflow-parser] Invalid step type: ${s.type}`);
       return null;
     }
@@ -157,7 +168,9 @@ function validateSteps(steps: unknown[]): WorkflowStep[] | null {
   // Must have exactly one trigger
   const triggers = validated.filter((s) => s.type === "trigger");
   if (triggers.length !== 1) {
-    console.warn(`[workflow-parser] Expected 1 trigger, found ${triggers.length}`);
+    console.warn(
+      `[workflow-parser] Expected 1 trigger, found ${triggers.length}`
+    );
     return null;
   }
 
@@ -208,7 +221,9 @@ function validateTransitions(
       const cond = t.condition as Record<string, unknown>;
       if (typeof cond.branch === "string") {
         validatedTransition.condition = {
-          branch: cond.branch as NonNullable<WorkflowTransition["condition"]>["branch"],
+          branch: cond.branch as NonNullable<
+            WorkflowTransition["condition"]
+          >["branch"],
         };
       }
     }

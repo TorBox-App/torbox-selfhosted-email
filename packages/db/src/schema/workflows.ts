@@ -1,9 +1,8 @@
-import { relations, sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import {
   boolean,
   index,
   integer,
-  json,
   jsonb,
   pgEnum,
   pgTable,
@@ -13,9 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { awsAccount } from "./app";
 import { organization, user } from "./auth";
-import { contact } from "./contacts";
-import { template } from "./templates";
-import { topic } from "./contacts";
+import { contact, topic } from "./contacts";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES (for JSONB columns)
@@ -81,15 +78,39 @@ export type TriggerConfig = {
  * Configuration for each step type
  */
 export type WorkflowStepConfig =
-  | { type: "trigger"; triggerType: WorkflowTriggerType } & TriggerConfig
-  | { type: "send_email"; templateId: string; from?: string; fromName?: string; replyTo?: string; subject?: string }
+  | ({ type: "trigger"; triggerType: WorkflowTriggerType } & TriggerConfig)
+  | {
+      type: "send_email";
+      templateId: string;
+      from?: string;
+      fromName?: string;
+      replyTo?: string;
+      subject?: string;
+    }
   | { type: "send_sms"; templateId?: string; body?: string; senderId?: string }
-  | { type: "delay"; amount: number; unit: "minutes" | "hours" | "days" | "weeks" }
-  | { type: "exit"; reason?: string; markAs?: "completed" | "cancelled" | "failed" }
+  | {
+      type: "delay";
+      amount: number;
+      unit: "minutes" | "hours" | "days" | "weeks";
+    }
+  | {
+      type: "exit";
+      reason?: string;
+      markAs?: "completed" | "cancelled" | "failed";
+    }
   // Slice 2+
   | { type: "condition"; field: string; operator: string; value: unknown }
-  | { type: "webhook"; url: string; method: string; headers?: Record<string, string>; body?: Record<string, unknown> }
-  | { type: "update_contact"; updates: Array<{ field: string; operation: string; value?: unknown }> }
+  | {
+      type: "webhook";
+      url: string;
+      method: string;
+      headers?: Record<string, string>;
+      body?: Record<string, unknown>;
+    }
+  | {
+      type: "update_contact";
+      updates: Array<{ field: string; operation: string; value?: unknown }>;
+    }
   | { type: "wait_for_event"; eventName: string; timeoutSeconds?: number }
   | { type: "wait_for_email_engagement"; timeoutSeconds?: number }
   | { type: "subscribe_topic"; topicId: string; channel: "email" | "sms" }
@@ -114,7 +135,14 @@ export type WorkflowTransition = {
   fromStepId: string;
   toStepId: string;
   condition?: {
-    branch: "yes" | "no" | "timeout" | "default" | "opened" | "clicked" | "bounced";
+    branch:
+      | "yes"
+      | "no"
+      | "timeout"
+      | "default"
+      | "opened"
+      | "clicked"
+      | "bounced";
   };
 };
 
@@ -183,8 +211,9 @@ export const workflow = pgTable(
       .references(() => organization.id, { onDelete: "cascade" })
       .notNull(),
 
-    awsAccountId: text("aws_account_id")
-      .references(() => awsAccount.id, { onDelete: "set null" }),
+    awsAccountId: text("aws_account_id").references(() => awsAccount.id, {
+      onDelete: "set null",
+    }),
 
     name: text("name").notNull(),
     description: text("description"),
@@ -216,9 +245,7 @@ export const workflow = pgTable(
     // WORKFLOW DEFINITION
     // ═══════════════════════════════════════════════════════════════════════
     steps: jsonb("steps").$type<WorkflowStep[]>().default([]),
-    transitions: jsonb("transitions")
-      .$type<WorkflowTransition[]>()
-      .default([]),
+    transitions: jsonb("transitions").$type<WorkflowTransition[]>().default([]),
 
     // ═══════════════════════════════════════════════════════════════════════
     // EXECUTION SETTINGS
@@ -312,7 +339,9 @@ export const workflowExecution = pgTable(
     // WAIT-FOR-EVENT TRACKING (Slice 3)
     // ═══════════════════════════════════════════════════════════════════════
     waitingForEvent: text("waiting_for_event"),
-    waitingForConditions: jsonb("waiting_for_conditions").$type<Record<string, unknown>>(),
+    waitingForConditions: jsonb("waiting_for_conditions").$type<
+      Record<string, unknown>
+    >(),
     waitTimeoutAt: timestamp("wait_timeout_at"),
     waitTimeoutSchedulerName: text("wait_timeout_scheduler_name"),
 

@@ -1,4 +1,8 @@
-import type { WorkflowStep, WorkflowStepConfig, WorkflowTransition } from "@wraps/db";
+import type {
+  WorkflowStep,
+  WorkflowStepConfig,
+  WorkflowTransition,
+} from "@wraps/db";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -107,13 +111,13 @@ function validateStructure(
   for (const transition of transitions) {
     if (!stepIds.has(transition.fromStepId)) {
       errors.push({
-        message: `Transition references non-existent source step`,
+        message: "Transition references non-existent source step",
         severity: "error",
       });
     }
     if (!stepIds.has(transition.toStepId)) {
       errors.push({
-        message: `Transition references non-existent target step`,
+        message: "Transition references non-existent target step",
         severity: "error",
       });
     }
@@ -311,14 +315,7 @@ function validateWebhook(
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
-  if (!config.url?.trim()) {
-    errors.push({
-      nodeId,
-      field: "url",
-      message: "Webhook URL is required",
-      severity: "error",
-    });
-  } else {
+  if (config.url?.trim()) {
     // Basic URL validation
     try {
       new URL(config.url);
@@ -330,6 +327,13 @@ function validateWebhook(
         severity: "error",
       });
     }
+  } else {
+    errors.push({
+      nodeId,
+      field: "url",
+      message: "Webhook URL is required",
+      severity: "error",
+    });
   }
 
   return errors;

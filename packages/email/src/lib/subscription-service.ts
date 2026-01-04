@@ -7,8 +7,15 @@
 
 import { ListEmailIdentitiesCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
+import {
+  awsAccount,
+  db,
+  eq,
+  organization,
+  template,
+  topicSettings,
+} from "@wraps/db";
 import { WrapsEmail } from "@wraps.dev/email";
-import { awsAccount, db, eq, organization, template, topicSettings } from "@wraps/db";
 import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
 import { generateConfirmationUrl } from "./confirmation-token";
 
@@ -275,18 +282,18 @@ export async function sendTopicConfirmationEmail(
       })
     );
   } catch (error) {
-    console.error(`[CONFIRMATION_EMAIL] Failed to assume role:`, error);
+    console.error("[CONFIRMATION_EMAIL] Failed to assume role:", error);
     throw error;
   }
 
   if (!assumeRoleResponse.Credentials) {
     console.error(
-      `[CONFIRMATION_EMAIL] No credentials returned from assume role`
+      "[CONFIRMATION_EMAIL] No credentials returned from assume role"
     );
     throw new Error("Failed to assume AWS role");
   }
 
-  console.log(`[CONFIRMATION_EMAIL] Role assumed successfully`);
+  console.log("[CONFIRMATION_EMAIL] Role assumed successfully");
 
   const credentials = {
     accessKeyId: assumeRoleResponse.Credentials.AccessKeyId!,
@@ -306,7 +313,7 @@ export async function sendTopicConfirmationEmail(
     replyToAddress = settings.confirmationReplyToEmail || undefined;
   } else {
     // Need to list identities to auto-detect verified domain
-    console.log(`[CONFIRMATION_EMAIL] Listing email identities`);
+    console.log("[CONFIRMATION_EMAIL] Listing email identities");
     const sesClient = new SESv2Client({
       region: account.region,
       credentials,
@@ -364,7 +371,7 @@ export async function sendTopicConfirmationEmail(
     );
     return true;
   } catch (error) {
-    console.error(`[CONFIRMATION_EMAIL] Failed to send email:`, error);
+    console.error("[CONFIRMATION_EMAIL] Failed to send email:", error);
     throw error;
   } finally {
     // Clean up the client

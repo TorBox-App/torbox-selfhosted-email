@@ -1,18 +1,9 @@
 "use client";
 
 import {
-  BarChart3,
-  Cloud,
-  CreditCard,
-  FileText,
-  Filter,
-  Key,
   Mail,
   MessageSquare,
-  Radio,
   Settings,
-  Tag,
-  UserSquare2,
   Users,
   Workflow,
 } from "lucide-react";
@@ -30,6 +21,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import { useActiveOrganization } from "@/contexts/organization-context";
 import { useProductsStore } from "@/stores/products-store";
@@ -47,35 +39,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Email navigation - always shown with full nav if enabled, otherwise single link
   const emailNavGroup = orgSlug
     ? {
-        label: "Email",
+        title: "Email",
+        icon: Mail,
         items: isEmailEnabled
           ? [
               {
                 title: "Emails",
                 url: `/${orgSlug}/emails`,
-                icon: Mail,
               },
               {
                 title: "Broadcast",
                 url: `/${orgSlug}/send`,
-                icon: Radio,
               },
               {
                 title: "Templates",
                 url: `/${orgSlug}/emails/templates`,
-                icon: FileText,
               },
               {
                 title: "Analytics",
                 url: `/${orgSlug}/emails/analytics`,
-                icon: BarChart3,
               },
             ]
           : [
               {
                 title: "Setup Email",
                 url: `/${orgSlug}/emails/setup`,
-                icon: Mail,
               },
             ],
       }
@@ -84,25 +72,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // SMS navigation - full nav if enabled, otherwise single link to setup
   const smsNavGroup = orgSlug
     ? {
-        label: "SMS",
+        title: "SMS",
+        icon: MessageSquare,
         items: isSMSEnabled
           ? [
               {
-                title: "SMS",
+                title: "Messages",
                 url: `/${orgSlug}/sms`,
-                icon: MessageSquare,
               },
               {
                 title: "Analytics",
                 url: `/${orgSlug}/sms/analytics`,
-                icon: BarChart3,
               },
             ]
           : [
               {
                 title: "Setup SMS",
                 url: `/${orgSlug}/sms/setup`,
-                icon: MessageSquare,
               },
             ],
       }
@@ -111,12 +97,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Audience navigation - Contacts always shown, Topics/Segments gated by plan
   const audienceNavGroup = orgSlug
     ? {
-        label: "Audience",
+        title: "Audience",
+        icon: Users,
         items: [
           {
             title: "Contacts",
             url: `/${orgSlug}/contacts`,
-            icon: UserSquare2,
           },
           // Topics - requires Pro plan
           ...(planFeatures?.topics
@@ -124,7 +110,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {
                   title: "Topics",
                   url: `/${orgSlug}/topics`,
-                  icon: Tag,
                 },
               ]
             : []),
@@ -134,7 +119,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {
                   title: "Segments",
                   url: `/${orgSlug}/segments`,
-                  icon: Filter,
                 },
               ]
             : []),
@@ -145,12 +129,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Automations navigation
   const automationsNavGroup = orgSlug
     ? {
-        label: "Automations",
+        title: "Automations",
+        icon: Workflow,
         items: [
           {
             title: "Workflows",
             url: `/${orgSlug}/automations`,
-            icon: Workflow,
           },
         ],
       }
@@ -159,32 +143,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Settings navigation
   const settingsNavGroup = orgSlug
     ? {
-        label: "Settings",
+        title: "Settings",
+        icon: Settings,
         items: [
           {
             title: "General",
             url: `/${orgSlug}/settings`,
-            icon: Settings,
           },
           {
             title: "AWS Accounts",
             url: `/${orgSlug}/settings/aws-accounts`,
-            icon: Cloud,
           },
           {
             title: "API Keys",
             url: `/${orgSlug}/settings/api-keys`,
-            icon: Key,
           },
           {
             title: "Members",
             url: `/${orgSlug}/settings/members`,
-            icon: Users,
           },
           {
             title: "Billing",
             url: `/${orgSlug}/settings/billing`,
-            icon: CreditCard,
           },
         ],
       }
@@ -199,13 +179,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   ].filter((g): g is NonNullable<typeof g> => g !== null);
 
   return (
-    <Sidebar {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg">
               <Link href={orgSlug ? `/${orgSlug}/emails` : "/"}>
-                <Logo className="rounded-sm" size={42} />
+                <Logo className="rounded-sm" size={32} />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -213,14 +193,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <OrganizationSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        {orgScopedNavGroups.map((group) => (
-          <NavMain items={group.items} key={group.label} label={group.label} />
-        ))}
+        <NavMain items={orgScopedNavGroups} />
       </SidebarContent>
       <SidebarFooter>
         {/* <SidebarNotification /> */}
         <NavUser />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

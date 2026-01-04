@@ -1,10 +1,10 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
 import { useWorkflowData } from "../workflow-data-context";
+import { BaseNode } from "./base-node";
 
 type TopicNodeProps = {
   id: string;
@@ -31,14 +31,14 @@ export function TopicNode({ id, data, selected }: TopicNodeProps) {
 
   return (
     <BaseNode
-      icon={<Bell className="w-4 h-4" />}
-      label={data.name || action}
-      description={description}
       accentColor="bg-emerald-500"
+      description={description}
+      errorMessage={errorMessage}
       hasInput={true}
       hasOutput={true}
+      icon={<Bell className="h-4 w-4" />}
       isValid={isValid}
-      errorMessage={errorMessage}
+      label={data.name || action}
       selected={selected}
     />
   );

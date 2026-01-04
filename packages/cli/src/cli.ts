@@ -130,8 +130,12 @@ function showHelp() {
     `  ${pc.cyan("dashboard update-role")} Update hosted dashboard IAM permissions\n`
   );
   console.log("AWS Setup:");
-  console.log(`  ${pc.cyan("aws setup")}            Interactive AWS setup wizard`);
-  console.log(`  ${pc.cyan("aws doctor")}           Diagnose AWS configuration issues\n`);
+  console.log(
+    `  ${pc.cyan("aws setup")}            Interactive AWS setup wizard`
+  );
+  console.log(
+    `  ${pc.cyan("aws doctor")}           Diagnose AWS configuration issues\n`
+  );
   console.log("Global Commands:");
   console.log(`  ${pc.cyan("status")}       Show overview of all services`);
   console.log(`  ${pc.cyan("destroy")}      Remove deployed infrastructure`);

@@ -1,7 +1,7 @@
 "use client";
 
 import type { JSONContent } from "@tiptap/core";
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, type ReactNode, useContext, useMemo } from "react";
 
 // Editor modes
 export type EditorMode = "standalone" | "inline";

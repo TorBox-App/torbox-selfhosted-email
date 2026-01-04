@@ -90,12 +90,12 @@ vi.mock("@wraps/db", () => ({
 
 // Import after mocking
 import {
+  checkSegmentEntry,
   emitContactCreated,
   emitContactUpdated,
   emitTopicSubscribed,
   emitTopicUnsubscribed,
   emitWorkflowEvent,
-  checkSegmentEntry,
 } from "../workflow-events";
 
 describe("Workflow Events Service", () => {

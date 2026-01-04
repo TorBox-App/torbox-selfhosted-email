@@ -8,7 +8,14 @@ import type {
   WorkflowTransition,
   WorkflowTriggerType,
 } from "@wraps/db";
-import type { Connection, Edge, Node, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
+import type {
+  Connection,
+  Edge,
+  Node,
+  OnConnect,
+  OnEdgesChange,
+  OnNodesChange,
+} from "@xyflow/react";
 import {
   addEdge,
   applyEdgeChanges,
@@ -16,7 +23,10 @@ import {
   reconnectEdge,
 } from "@xyflow/react";
 import { create } from "zustand";
-import { validateWorkflow, type ValidationError, type ValidationResult } from "@/lib/workflow-validation";
+import {
+  type ValidationResult,
+  validateWorkflow,
+} from "@/lib/workflow-validation";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -68,7 +78,10 @@ interface WorkflowStoreState {
     position: { x: number; y: number },
     config?: Partial<WorkflowStepConfig>
   ) => string;
-  updateNodeConfig: (nodeId: string, config: Partial<WorkflowStepConfig>) => void;
+  updateNodeConfig: (
+    nodeId: string,
+    config: Partial<WorkflowStepConfig>
+  ) => void;
   updateNodeName: (nodeId: string, name: string) => void;
   deleteNode: (nodeId: string) => void;
 
@@ -101,7 +114,10 @@ interface WorkflowStoreState {
   runValidation: () => ValidationResult;
 
   // AI Flow Designer
-  applyAIFlow: (steps: WorkflowStep[], transitions: WorkflowTransition[]) => void;
+  applyAIFlow: (
+    steps: WorkflowStep[],
+    transitions: WorkflowTransition[]
+  ) => void;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -192,7 +208,7 @@ function getDefaultConfig(type: WorkflowStepType): WorkflowStepConfig {
     case "wait_for_event":
       return { type: "wait_for_event", eventName: "" };
     case "wait_for_email_engagement":
-      return { type: "wait_for_email_engagement", timeoutSeconds: 259200 }; // 3 days default
+      return { type: "wait_for_email_engagement", timeoutSeconds: 259_200 }; // 3 days default
     case "subscribe_topic":
       return { type: "subscribe_topic", topicId: "", channel: "email" };
     case "unsubscribe_topic":
@@ -339,7 +355,10 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
               ...node,
               data: {
                 ...node.data,
-                config: { ...node.data.config, ...config } as WorkflowStepConfig,
+                config: {
+                  ...node.data.config,
+                  ...config,
+                } as WorkflowStepConfig,
               },
             }
           : node
@@ -458,7 +477,8 @@ export const useSelectedNode = () => {
 
 export const useIsDirty = () => useWorkflowStore((state) => state.isDirty);
 export const useIsSaving = () => useWorkflowStore((state) => state.isSaving);
-export const useValidationResult = () => useWorkflowStore((state) => state.validationResult);
+export const useValidationResult = () =>
+  useWorkflowStore((state) => state.validationResult);
 
 export const useNodeValidation = (nodeId: string) => {
   const validationResult = useWorkflowStore((state) => state.validationResult);
@@ -475,4 +495,7 @@ export const useNodeValidation = (nodeId: string) => {
 };
 
 // Re-export validation types for convenience
-export type { ValidationError, ValidationResult } from "@/lib/workflow-validation";
+export type {
+  ValidationError,
+  ValidationResult,
+} from "@/lib/workflow-validation";

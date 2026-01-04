@@ -43,7 +43,10 @@ export const app = new Elysia()
           { name: "health", description: "Health check endpoints" },
           { name: "contacts", description: "Contact management" },
           { name: "batch", description: "Batch sending operations" },
-          { name: "events", description: "Event ingestion for workflow triggers" },
+          {
+            name: "events",
+            description: "Event ingestion for workflow triggers",
+          },
           { name: "workflows", description: "Workflow trigger endpoints" },
           {
             name: "webhooks",

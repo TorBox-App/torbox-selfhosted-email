@@ -4,10 +4,21 @@
  * POST /webhooks/ses/:awsAccountId - Receive SES events from EventBridge API Destination
  */
 
-import { awsAccount, batchSend, contact, db, eq, messageSend, workflowExecution } from "@wraps/db";
+import {
+  awsAccount,
+  batchSend,
+  contact,
+  db,
+  eq,
+  messageSend,
+  workflowExecution,
+} from "@wraps/db";
 import { and, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
-import { deleteScheduledStep, enqueueWorkflowStep } from "../services/workflow-queue";
+import {
+  deleteScheduledStep,
+  enqueueWorkflowStep,
+} from "../services/workflow-queue";
 
 // SES event types we care about
 type SesEventType =
@@ -439,7 +450,9 @@ async function resumeWaitingExecutions(
     );
 
   for (const execution of waitingExecutions) {
-    console.log(`[WEBHOOK] Resuming execution ${execution.id} with branch: ${branch}`);
+    console.log(
+      `[WEBHOOK] Resuming execution ${execution.id} with branch: ${branch}`
+    );
 
     // Cancel timeout scheduler
     if (execution.waitTimeoutSchedulerName) {

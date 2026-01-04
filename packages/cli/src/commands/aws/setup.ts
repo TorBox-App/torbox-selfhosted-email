@@ -9,11 +9,11 @@ import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import {
   type AWSSetupState,
-  type SSOProfile,
   detectAWSState,
   formatSSOProfile,
   getSSOLoginCommand,
   parseSSOProfiles,
+  type SSOProfile,
 } from "../../utils/shared/aws-detection.js";
 import { promptProvider, promptRegion } from "../../utils/shared/prompts.js";
 
@@ -46,7 +46,9 @@ function displayCurrentState(state: AWSSetupState): void {
       state.profileName && state.profileName !== "default"
         ? pc.dim(` (${state.profileName})`)
         : "";
-    console.log(`  ${pc.green("✓")} Credentials ${pc.dim(`via ${source}`)}${profile}`);
+    console.log(
+      `  ${pc.green("✓")} Credentials ${pc.dim(`via ${source}`)}${profile}`
+    );
     console.log(`      ${pc.dim("Account:")} ${state.accountId}`);
   } else {
     console.log(`  ${pc.red("✗")} Credentials ${pc.dim("not configured")}`);
@@ -56,7 +58,9 @@ function displayCurrentState(state: AWSSetupState): void {
   if (state.region) {
     console.log(`  ${pc.green("✓")} Region ${pc.dim(state.region)}`);
   } else {
-    console.log(`  ${pc.yellow("○")} Region ${pc.dim("not set (defaults to us-east-1)")}`);
+    console.log(
+      `  ${pc.yellow("○")} Region ${pc.dim("not set (defaults to us-east-1)")}`
+    );
   }
 
   // SSO status
@@ -82,7 +86,9 @@ function displayCurrentState(state: AWSSetupState): void {
           console.log(`      ${pc.dim("Session expires in")} ${mins}m`);
         } else {
           const hours = Math.floor(mins / 60);
-          console.log(`      ${pc.dim("Session expires in")} ${hours}h ${mins % 60}m`);
+          console.log(
+            `      ${pc.dim("Session expires in")} ${hours}h ${mins % 60}m`
+          );
         }
       }
     }
@@ -128,7 +134,9 @@ async function runFullSetup(): Promise<boolean> {
 
   if (!hasAccount) {
     console.log();
-    console.log("  Please create an AWS account first, then run this command again.");
+    console.log(
+      "  Please create an AWS account first, then run this command again."
+    );
     console.log(`  ${pc.cyan("https://aws.amazon.com/free")}`);
     console.log();
     return false;
@@ -171,7 +179,9 @@ async function runFullSetup(): Promise<boolean> {
   if (!cliInstalled) {
     console.log();
     console.log("  Install AWS CLI and run this command again.");
-    console.log(`  ${pc.cyan("https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html")}`);
+    console.log(
+      `  ${pc.cyan("https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html")}`
+    );
     console.log();
     return false;
   }
@@ -235,22 +245,26 @@ async function showAccessKeyInstructions(): Promise<boolean> {
   clack.log.info(pc.bold("Create IAM User with Access Keys"));
   console.log();
   console.log("  1. Open the AWS IAM Console:");
-  console.log(`     ${pc.cyan("https://console.aws.amazon.com/iam/home#/users")}`);
+  console.log(
+    `     ${pc.cyan("https://console.aws.amazon.com/iam/home#/users")}`
+  );
   console.log();
-  console.log("  2. Click \"Create user\"");
+  console.log('  2. Click "Create user"');
   console.log(`     - User name: ${pc.cyan("wraps-cli")}`);
-  console.log("     - Click \"Next\"");
+  console.log('     - Click "Next"');
   console.log();
   console.log("  3. Set permissions:");
-  console.log(`     - Select \"Attach policies directly\"`);
+  console.log(`     - Select "Attach policies directly"`);
   console.log(`     - Search and select: ${pc.cyan("AdministratorAccess")}`);
-  console.log(pc.dim("        (You can use more restrictive permissions later)"));
-  console.log("     - Click \"Next\" → \"Create user\"");
+  console.log(
+    pc.dim("        (You can use more restrictive permissions later)")
+  );
+  console.log('     - Click "Next" → "Create user"');
   console.log();
   console.log("  4. Create access key:");
-  console.log("     - Click on your new user → \"Security credentials\" tab");
-  console.log("     - Click \"Create access key\"");
-  console.log(`     - Select \"Command Line Interface (CLI)\"`);
+  console.log('     - Click on your new user → "Security credentials" tab');
+  console.log('     - Click "Create access key"');
+  console.log(`     - Select "Command Line Interface (CLI)"`);
   console.log("     - Copy your Access Key ID and Secret Access Key");
   console.log();
 
@@ -281,7 +295,9 @@ async function showAccessKeyInstructions(): Promise<boolean> {
   console.log("  When prompted:");
   console.log("    - AWS Access Key ID: [paste your access key]");
   console.log("    - AWS Secret Access Key: [paste your secret key]");
-  console.log(`    - Default region: ${pc.cyan("us-east-1")} (or your preferred region)`);
+  console.log(
+    `    - Default region: ${pc.cyan("us-east-1")} (or your preferred region)`
+  );
   console.log("    - Default output format: [press Enter for default]");
   console.log();
 
@@ -306,7 +322,9 @@ async function showAccessKeyInstructions(): Promise<boolean> {
       return true;
     }
     console.log();
-    clack.log.warn("Credentials not detected. Please check your configuration.");
+    clack.log.warn(
+      "Credentials not detected. Please check your configuration."
+    );
     console.log();
     return false;
   }
@@ -317,7 +335,9 @@ async function showAccessKeyInstructions(): Promise<boolean> {
 /**
  * Handle SSO profile selection for users with existing SSO configuration
  */
-async function runSSOProfileSelection(profiles: SSOProfile[]): Promise<boolean> {
+async function runSSOProfileSelection(
+  profiles: SSOProfile[]
+): Promise<boolean> {
   console.log();
   clack.log.info(pc.bold("AWS SSO Profile Selection"));
   console.log();
@@ -378,7 +398,7 @@ async function runSSOProfileSelection(profiles: SSOProfile[]): Promise<boolean> 
 
   if (!loggedIn) {
     console.log();
-    console.log(`  Run the login command and try again:`);
+    console.log("  Run the login command and try again:");
     console.log(`  ${pc.yellow(getSSOLoginCommand(profile.name))}`);
     console.log();
     return false;
@@ -442,7 +462,7 @@ async function runSSORefresh(state: AWSSetupState): Promise<boolean> {
 
   if (!refreshed) {
     console.log();
-    console.log(`  Run the login command and try again:`);
+    console.log("  Run the login command and try again:");
     console.log(`  ${pc.yellow(loginCmd)}`);
     console.log();
     return false;
@@ -459,7 +479,9 @@ async function runSSORefresh(state: AWSSetupState): Promise<boolean> {
   }
 
   console.log();
-  clack.log.warn("Session still appears expired. Please check the login completed successfully.");
+  clack.log.warn(
+    "Session still appears expired. Please check the login completed successfully."
+  );
   return false;
 }
 
@@ -552,7 +574,9 @@ function showManualSetupInstructions(): void {
   console.log(`  ${pc.cyan("https://wraps.dev/docs/guides/aws-setup")}`);
   console.log();
   console.log("  Or the official AWS CLI guide:");
-  console.log(`  ${pc.cyan("https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html")}`);
+  console.log(
+    `  ${pc.cyan("https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html")}`
+  );
   console.log();
 }
 
@@ -593,15 +617,23 @@ async function runProviderSetup(state: AWSSetupState): Promise<boolean> {
   if (provider === "vercel") {
     clack.log.info(pc.bold("Vercel OIDC Setup"));
     console.log();
-    console.log("  With Vercel, your production app can access AWS without storing");
-    console.log("  any credentials. This is more secure and follows AWS best practices.");
+    console.log(
+      "  With Vercel, your production app can access AWS without storing"
+    );
+    console.log(
+      "  any credentials. This is more secure and follows AWS best practices."
+    );
     console.log();
     console.log("  When you run `wraps email init`, we'll:");
     console.log("  1. Create an OIDC provider in your AWS account");
     console.log("  2. Create an IAM role that trusts Vercel");
     console.log("  3. Tell you what environment variables to set in Vercel");
     console.log();
-    console.log(pc.dim("  Your local AWS credentials are only used for the initial setup."));
+    console.log(
+      pc.dim(
+        "  Your local AWS credentials are only used for the initial setup."
+      )
+    );
     console.log();
   } else if (provider === "aws") {
     clack.log.info(pc.bold("AWS Native Setup"));
@@ -613,15 +645,21 @@ async function runProviderSetup(state: AWSSetupState): Promise<boolean> {
     console.log("  that your compute can assume to send emails.");
     console.log();
   } else {
-    clack.log.info(pc.bold(`${provider === "railway" ? "Railway" : "Other"} Setup`));
+    clack.log.info(
+      pc.bold(`${provider === "railway" ? "Railway" : "Other"} Setup`)
+    );
     console.log();
-    console.log("  Your app will need AWS credentials set as environment variables:");
+    console.log(
+      "  Your app will need AWS credentials set as environment variables:"
+    );
     console.log();
     console.log(`  ${pc.cyan("AWS_ACCESS_KEY_ID")}=your-access-key`);
     console.log(`  ${pc.cyan("AWS_SECRET_ACCESS_KEY")}=your-secret-key`);
     console.log(`  ${pc.cyan("AWS_REGION")}=${state.region || "us-east-1"}`);
     console.log();
-    console.log(pc.dim("  We recommend creating a dedicated IAM user for production."));
+    console.log(
+      pc.dim("  We recommend creating a dedicated IAM user for production.")
+    );
     console.log();
   }
 
@@ -638,7 +676,9 @@ async function runProviderSetup(state: AWSSetupState): Promise<boolean> {
       console.log("  To set this region permanently, run:");
       console.log(`  ${pc.yellow(`export AWS_REGION=${region}`)}`);
       console.log();
-      console.log("  Or add it to your shell profile (~/.bashrc, ~/.zshrc, etc.)");
+      console.log(
+        "  Or add it to your shell profile (~/.bashrc, ~/.zshrc, etc.)"
+      );
       console.log();
     }
   }
@@ -686,7 +726,10 @@ export async function setup(_options: SetupOptions = {}): Promise<void> {
   if (!state.cliInstalled) {
     // Path A: Full setup
     await runFullSetup();
-  } else if (!state.credentialsConfigured) {
+  } else if (state.credentialsConfigured) {
+    // Path C: Provider setup (already have credentials)
+    await runProviderSetup(state);
+  } else {
     // Check if SSO is configured but session expired
     if (state.sso.configured && state.sso.tokenStatus?.expired) {
       // SSO configured but session expired - offer to refresh
@@ -698,9 +741,6 @@ export async function setup(_options: SetupOptions = {}): Promise<void> {
       // Path B: Credential setup (standard flow)
       await runCredentialSetup();
     }
-  } else {
-    // Path C: Provider setup (already have credentials)
-    await runProviderSetup(state);
   }
 
   clack.outro(pc.dim("Run `wraps aws doctor` to verify your setup"));

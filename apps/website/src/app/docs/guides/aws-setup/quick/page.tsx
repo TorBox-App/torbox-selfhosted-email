@@ -237,7 +237,10 @@ export default function QuickStartPage() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}

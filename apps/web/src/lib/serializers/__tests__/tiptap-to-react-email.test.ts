@@ -11,7 +11,6 @@ import { describe, expect, it } from "vitest";
 import { transformVariablesForSes } from "../../ses-variables";
 import {
   generateReactEmailCode,
-  renderTipTapToHtml,
   tiptapToReactEmail,
 } from "../tiptap-to-react-email";
 
@@ -27,7 +26,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
               { type: "text", text: "Hello " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -35,7 +38,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const html = await render(component);
 
       expect(html).toContain("{{contact.firstName}}");
@@ -52,7 +59,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
               { type: "text", text: "Hello " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "there" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "there",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -60,7 +71,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const html = await render(component);
 
       expect(html).toContain("{{contact.firstName|there}}");
@@ -75,14 +90,22 @@ describe("tiptapToReactEmail - Variable Handling", () => {
             content: [
               {
                 type: "variable",
-                attrs: { name: "greeting", label: "Greeting", fallback: "dear customer" },
+                attrs: {
+                  name: "greeting",
+                  label: "Greeting",
+                  fallback: "dear customer",
+                },
               },
             ],
           },
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const html = await render(component);
 
       expect(html).toContain("{{greeting|dear customer}}");
@@ -98,7 +121,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
               { type: "text", text: "Hi " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "there" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "there",
+                },
               },
               { type: "text", text: ", your email is " },
               {
@@ -110,7 +137,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const html = await render(component);
 
       expect(html).toContain("{{contact.firstName|there}}");
@@ -130,7 +161,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
               { type: "text", text: "Hello " },
               {
                 type: "variable",
-                attrs: { name: "firstName", label: "First Name", fallback: "there" },
+                attrs: {
+                  name: "firstName",
+                  label: "First Name",
+                  fallback: "there",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -139,7 +174,9 @@ describe("tiptapToReactEmail - Variable Handling", () => {
       };
 
       const testData = { firstName: "John" };
-      const component = tiptapToReactEmail(content, testData, { keepVariablesAsPlaceholders: false });
+      const component = tiptapToReactEmail(content, testData, {
+        keepVariablesAsPlaceholders: false,
+      });
       const html = await render(component);
 
       expect(html).toContain("John");
@@ -157,7 +194,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
               { type: "text", text: "Hello " },
               {
                 type: "variable",
-                attrs: { name: "firstName", label: "First Name", fallback: "there" },
+                attrs: {
+                  name: "firstName",
+                  label: "First Name",
+                  fallback: "there",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -165,7 +206,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: false });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: false }
+      );
       const html = await render(component);
 
       expect(html).toContain("there");
@@ -188,7 +233,11 @@ describe("tiptapToReactEmail - Variable Handling", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: false });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: false }
+      );
       const html = await render(component);
 
       expect(html).toContain("{{firstName}}");
@@ -208,7 +257,11 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
             { type: "text", text: "Welcome back, " },
             {
               type: "variable",
-              attrs: { name: "contact.firstName", label: "First Name", fallback: "friend" },
+              attrs: {
+                name: "contact.firstName",
+                label: "First Name",
+                fallback: "friend",
+              },
             },
             { type: "text", text: "! Here's what's new." },
           ],
@@ -217,7 +270,11 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
     };
 
     // 2. Convert to React Email with placeholders preserved
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
 
     // 3. Verify the raw HTML contains the fallback syntax
@@ -227,7 +284,9 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
     const sesHtml = transformVariablesForSes(rawHtml);
 
     // 5. Verify the SES template has proper Handlebars conditional
-    expect(sesHtml).toContain("{{#if contactFirstName}}{{contactFirstName}}{{else}}friend{{/if}}");
+    expect(sesHtml).toContain(
+      "{{#if contactFirstName}}{{contactFirstName}}{{else}}friend{{/if}}"
+    );
     expect(sesHtml).not.toContain("{{contact.firstName}}");
     expect(sesHtml).not.toContain("{{contact.firstName|friend}}");
   });
@@ -249,7 +308,11 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
     const sesHtml = transformVariablesForSes(rawHtml);
 
@@ -269,7 +332,11 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
             { type: "text", text: "Hi " },
             {
               type: "variable",
-              attrs: { name: "contact.firstName", label: "First Name", fallback: "there" },
+              attrs: {
+                name: "contact.firstName",
+                label: "First Name",
+                fallback: "there",
+              },
             },
             { type: "text", text: "," },
           ],
@@ -280,7 +347,11 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
             { type: "text", text: "Thanks for being part of " },
             {
               type: "variable",
-              attrs: { name: "organization.name", label: "Org Name", fallback: "our community" },
+              attrs: {
+                name: "organization.name",
+                label: "Org Name",
+                fallback: "our community",
+              },
             },
             { type: "text", text: "!" },
           ],
@@ -298,13 +369,21 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
     const sesHtml = transformVariablesForSes(rawHtml);
 
     // Variables with fallbacks should have conditionals
-    expect(sesHtml).toContain("{{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}");
-    expect(sesHtml).toContain("{{#if organizationName}}{{organizationName}}{{else}}our community{{/if}}");
+    expect(sesHtml).toContain(
+      "{{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}"
+    );
+    expect(sesHtml).toContain(
+      "{{#if organizationName}}{{organizationName}}{{else}}our community{{/if}}"
+    );
 
     // Variable without fallback should be simple
     expect(sesHtml).toContain("{{contactEmail}}");
@@ -316,23 +395,37 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
       content: [
         {
           type: "emailButton",
-          attrs: { href: "https://example.com", backgroundColor: "#5046e5", color: "#ffffff" },
+          attrs: {
+            href: "https://example.com",
+            backgroundColor: "#5046e5",
+            color: "#ffffff",
+          },
           content: [
             { type: "text", text: "Hello " },
             {
               type: "variable",
-              attrs: { name: "contact.firstName", label: "First Name", fallback: "there" },
+              attrs: {
+                name: "contact.firstName",
+                label: "First Name",
+                fallback: "there",
+              },
             },
           ],
         },
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
     const sesHtml = transformVariablesForSes(rawHtml);
 
-    expect(sesHtml).toContain("{{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}");
+    expect(sesHtml).toContain(
+      "{{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}"
+    );
   });
 
   it("handles variable in heading", async () => {
@@ -346,7 +439,11 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
             { type: "text", text: "Welcome, " },
             {
               type: "variable",
-              attrs: { name: "contact.firstName", label: "First Name", fallback: "Friend" },
+              attrs: {
+                name: "contact.firstName",
+                label: "First Name",
+                fallback: "Friend",
+              },
             },
             { type: "text", text: "!" },
           ],
@@ -354,11 +451,17 @@ describe("End-to-end: TipTap to SES Template Flow", () => {
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
     const sesHtml = transformVariablesForSes(rawHtml);
 
-    expect(sesHtml).toContain("{{#if contactFirstName}}{{contactFirstName}}{{else}}Friend{{/if}}");
+    expect(sesHtml).toContain(
+      "{{#if contactFirstName}}{{contactFirstName}}{{else}}Friend{{/if}}"
+    );
   });
 });
 
@@ -379,7 +482,11 @@ describe("Edge Cases", () => {
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const html = await render(component);
 
     // Empty fallback should NOT include the pipe
@@ -403,7 +510,11 @@ describe("Edge Cases", () => {
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
 
     // The fallback should be preserved (might be HTML-encoded)
@@ -419,18 +530,28 @@ describe("Edge Cases", () => {
           content: [
             {
               type: "variable",
-              attrs: { name: "contact.properties.customField", label: "Custom", fallback: "N/A" },
+              attrs: {
+                name: "contact.properties.customField",
+                label: "Custom",
+                fallback: "N/A",
+              },
             },
           ],
         },
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
     const sesHtml = transformVariablesForSes(rawHtml);
 
-    expect(sesHtml).toContain("{{#if contactPropertiesCustomField}}{{contactPropertiesCustomField}}{{else}}N/A{{/if}}");
+    expect(sesHtml).toContain(
+      "{{#if contactPropertiesCustomField}}{{contactPropertiesCustomField}}{{else}}N/A{{/if}}"
+    );
   });
 
   it("handles variable with undefined attrs gracefully", async () => {
@@ -449,7 +570,11 @@ describe("Edge Cases", () => {
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const html = await render(component);
 
     expect(html).toContain("{{test}}");

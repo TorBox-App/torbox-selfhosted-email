@@ -165,13 +165,17 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
           <p className="text-gray-500 text-sm dark:text-gray-400">
             {isAlreadyConfirmed ? (
               <>
-                <span className="font-medium text-gray-700 dark:text-gray-300">{maskedEmail}</span>{" "}
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {maskedEmail}
+                </span>{" "}
                 is already subscribed to this topic.
               </>
             ) : (
               <>
                 Confirm subscription for{" "}
-                <span className="font-medium text-gray-700 dark:text-gray-300">{maskedEmail}</span>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  {maskedEmail}
+                </span>
               </>
             )}
           </p>
@@ -181,7 +185,9 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
           {/* Topic info */}
           <div className="mb-6 rounded-xl bg-gray-50 p-4 dark:bg-gray-700">
-            <h2 className="font-medium text-gray-900 dark:text-white">{topicRecord.name}</h2>
+            <h2 className="font-medium text-gray-900 dark:text-white">
+              {topicRecord.name}
+            </h2>
             {topicRecord.description && (
               <p className="mt-1 text-gray-500 text-sm dark:text-gray-400">
                 {topicRecord.description}

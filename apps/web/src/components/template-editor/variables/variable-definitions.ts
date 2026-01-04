@@ -238,9 +238,7 @@ export const variablesByContext: Record<VariableContext, VariableDefinition[]> =
 /**
  * Convert VariableDefinition to the format expected by VariableSuggestion extension
  */
-export function toSuggestionFormat(
-  variables: VariableDefinition[]
-): Array<{
+export function toSuggestionFormat(variables: VariableDefinition[]): Array<{
   name: string;
   label: string;
   type: "text" | "number" | "boolean" | "date" | "url" | "email";

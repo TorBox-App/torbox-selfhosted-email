@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
+import { describe, expect, it } from "vitest";
 import { validateWorkflow } from "../workflow-validation";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -34,7 +34,12 @@ function createConditionStep(overrides?: Partial<WorkflowStep>): WorkflowStep {
     type: "condition",
     name: "Condition",
     position: { x: 0, y: 100 },
-    config: { type: "condition", field: "email", operator: "contains", value: "@gmail.com" },
+    config: {
+      type: "condition",
+      field: "email",
+      operator: "contains",
+      value: "@gmail.com",
+    },
     ...overrides,
   };
 }
@@ -56,7 +61,11 @@ function createWebhookStep(overrides?: Partial<WorkflowStep>): WorkflowStep {
     type: "webhook",
     name: "Webhook",
     position: { x: 0, y: 100 },
-    config: { type: "webhook", url: "https://example.com/hook", method: "POST" },
+    config: {
+      type: "webhook",
+      url: "https://example.com/hook",
+      method: "POST",
+    },
     ...overrides,
   };
 }
@@ -75,13 +84,19 @@ function createTopicStep(
   };
 }
 
-function createWaitForEventStep(overrides?: Partial<WorkflowStep>): WorkflowStep {
+function createWaitForEventStep(
+  overrides?: Partial<WorkflowStep>
+): WorkflowStep {
   return {
     id: "wait-1",
     type: "wait_for_event",
     name: "Wait for Event",
     position: { x: 0, y: 100 },
-    config: { type: "wait_for_event", eventName: "purchase.completed", timeoutSeconds: 86400 },
+    config: {
+      type: "wait_for_event",
+      eventName: "purchase.completed",
+      timeoutSeconds: 86_400,
+    },
     ...overrides,
   };
 }
@@ -124,7 +139,9 @@ describe("Workflow Validation - Structure", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContainEqual(
-        expect.objectContaining({ message: "Workflow must have a trigger node" })
+        expect.objectContaining({
+          message: "Workflow must have a trigger node",
+        })
       );
     });
 
@@ -142,7 +159,9 @@ describe("Workflow Validation - Structure", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContainEqual(
-        expect.objectContaining({ message: "Workflow can only have one trigger node" })
+        expect.objectContaining({
+          message: "Workflow can only have one trigger node",
+        })
       );
     });
 
@@ -163,10 +182,7 @@ describe("Workflow Validation - Structure", () => {
 
   describe("action step validation", () => {
     it("should require at least one action step", () => {
-      const steps: WorkflowStep[] = [
-        createTriggerStep(),
-        createExitStep(),
-      ];
+      const steps: WorkflowStep[] = [createTriggerStep(), createExitStep()];
       const transitions: WorkflowTransition[] = [
         createTransition("trigger-1", "exit-1"),
       ];
@@ -175,7 +191,9 @@ describe("Workflow Validation - Structure", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContainEqual(
-        expect.objectContaining({ message: "Workflow must have at least one action step" })
+        expect.objectContaining({
+          message: "Workflow must have at least one action step",
+        })
       );
     });
 
@@ -231,7 +249,9 @@ describe("Workflow Validation - Structure", () => {
       const result = validateWorkflow(steps, transitions);
 
       expect(result.isValid).toBe(true);
-      expect(result.errors.filter((e) => e.severity === "warning")).toHaveLength(0);
+      expect(
+        result.errors.filter((e) => e.severity === "warning")
+      ).toHaveLength(0);
     });
   });
 
@@ -249,7 +269,9 @@ describe("Workflow Validation - Structure", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContainEqual(
-        expect.objectContaining({ message: "Transition references non-existent target step" })
+        expect.objectContaining({
+          message: "Transition references non-existent target step",
+        })
       );
     });
 
@@ -266,7 +288,9 @@ describe("Workflow Validation - Structure", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContainEqual(
-        expect.objectContaining({ message: "Transition references non-existent source step" })
+        expect.objectContaining({
+          message: "Transition references non-existent source step",
+        })
       );
     });
   });
@@ -304,7 +328,11 @@ describe("Workflow Validation - Trigger Config", () => {
     it("should pass with valid eventName", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep({
-          config: { type: "trigger", triggerType: "event", eventName: "user.signup" },
+          config: {
+            type: "trigger",
+            triggerType: "event",
+            eventName: "user.signup",
+          },
         }),
         createSendEmailStep(),
       ];
@@ -322,7 +350,11 @@ describe("Workflow Validation - Trigger Config", () => {
     it("should require segmentId for segment_entry trigger", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep({
-          config: { type: "trigger", triggerType: "segment_entry", segmentId: "" },
+          config: {
+            type: "trigger",
+            triggerType: "segment_entry",
+            segmentId: "",
+          },
         }),
         createSendEmailStep(),
       ];
@@ -345,7 +377,11 @@ describe("Workflow Validation - Trigger Config", () => {
     it("should require segmentId for segment_exit trigger", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep({
-          config: { type: "trigger", triggerType: "segment_exit", segmentId: "" },
+          config: {
+            type: "trigger",
+            triggerType: "segment_exit",
+            segmentId: "",
+          },
         }),
         createSendEmailStep(),
       ];
@@ -366,7 +402,11 @@ describe("Workflow Validation - Trigger Config", () => {
     it("should require topicId for topic_subscribed trigger", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep({
-          config: { type: "trigger", triggerType: "topic_subscribed", topicId: "" },
+          config: {
+            type: "trigger",
+            triggerType: "topic_subscribed",
+            topicId: "",
+          },
         }),
         createSendEmailStep(),
       ];
@@ -389,7 +429,11 @@ describe("Workflow Validation - Trigger Config", () => {
     it("should require topicId for topic_unsubscribed trigger", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep({
-          config: { type: "trigger", triggerType: "topic_unsubscribed", topicId: "" },
+          config: {
+            type: "trigger",
+            triggerType: "topic_unsubscribed",
+            topicId: "",
+          },
         }),
         createSendEmailStep(),
       ];
@@ -410,7 +454,12 @@ describe("Workflow Validation - Trigger Config", () => {
     it("should require schedule for schedule trigger", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep({
-          config: { type: "trigger", triggerType: "schedule", schedule: "", timezone: "UTC" },
+          config: {
+            type: "trigger",
+            triggerType: "schedule",
+            schedule: "",
+            timezone: "UTC",
+          },
         }),
         createSendEmailStep(),
       ];
@@ -433,7 +482,12 @@ describe("Workflow Validation - Trigger Config", () => {
     it("should require timezone for schedule trigger", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep({
-          config: { type: "trigger", triggerType: "schedule", schedule: "0 9 * * *", timezone: "" },
+          config: {
+            type: "trigger",
+            triggerType: "schedule",
+            schedule: "0 9 * * *",
+            timezone: "",
+          },
         }),
         createSendEmailStep(),
       ];
@@ -456,7 +510,12 @@ describe("Workflow Validation - Trigger Config", () => {
     it("should pass with valid schedule and timezone", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep({
-          config: { type: "trigger", triggerType: "schedule", schedule: "0 9 * * 1", timezone: "America/New_York" },
+          config: {
+            type: "trigger",
+            triggerType: "schedule",
+            schedule: "0 9 * * 1",
+            timezone: "America/New_York",
+          },
         }),
         createSendEmailStep(),
       ];
@@ -572,7 +631,12 @@ describe("Workflow Validation - Step Config", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep(),
         createConditionStep({
-          config: { type: "condition", field: "", operator: "equals", value: "test" },
+          config: {
+            type: "condition",
+            field: "",
+            operator: "equals",
+            value: "test",
+          },
         }),
       ];
       const transitions: WorkflowTransition[] = [
@@ -595,7 +659,12 @@ describe("Workflow Validation - Step Config", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep(),
         createConditionStep({
-          config: { type: "condition", field: "email", operator: "", value: "test" },
+          config: {
+            type: "condition",
+            field: "email",
+            operator: "",
+            value: "test",
+          },
         }),
       ];
       const transitions: WorkflowTransition[] = [
@@ -618,7 +687,12 @@ describe("Workflow Validation - Step Config", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep(),
         createConditionStep({
-          config: { type: "condition", field: "email", operator: "equals", value: "" },
+          config: {
+            type: "condition",
+            field: "email",
+            operator: "equals",
+            value: "",
+          },
         }),
       ];
       const transitions: WorkflowTransition[] = [
@@ -641,7 +715,12 @@ describe("Workflow Validation - Step Config", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep(),
         createConditionStep({
-          config: { type: "condition", field: "phone", operator: "is_set", value: "" },
+          config: {
+            type: "condition",
+            field: "phone",
+            operator: "is_set",
+            value: "",
+          },
         }),
       ];
       const transitions: WorkflowTransition[] = [
@@ -657,7 +736,12 @@ describe("Workflow Validation - Step Config", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep(),
         createConditionStep({
-          config: { type: "condition", field: "phone", operator: "is_not_set", value: "" },
+          config: {
+            type: "condition",
+            field: "phone",
+            operator: "is_not_set",
+            value: "",
+          },
         }),
       ];
       const transitions: WorkflowTransition[] = [
@@ -721,7 +805,11 @@ describe("Workflow Validation - Step Config", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep(),
         createWebhookStep({
-          config: { type: "webhook", url: "https://example.com/webhook", method: "POST" },
+          config: {
+            type: "webhook",
+            url: "https://example.com/webhook",
+            method: "POST",
+          },
         }),
       ];
       const transitions: WorkflowTransition[] = [
@@ -783,7 +871,11 @@ describe("Workflow Validation - Step Config", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep(),
         createWaitForEventStep({
-          config: { type: "wait_for_event", eventName: "", timeoutSeconds: 86400 },
+          config: {
+            type: "wait_for_event",
+            eventName: "",
+            timeoutSeconds: 86_400,
+          },
         }),
       ];
       const transitions: WorkflowTransition[] = [
@@ -806,7 +898,11 @@ describe("Workflow Validation - Step Config", () => {
       const steps: WorkflowStep[] = [
         createTriggerStep(),
         createWaitForEventStep({
-          config: { type: "wait_for_event", eventName: "order.completed", timeoutSeconds: 86400 },
+          config: {
+            type: "wait_for_event",
+            eventName: "order.completed",
+            timeoutSeconds: 86_400,
+          },
         }),
       ];
       const transitions: WorkflowTransition[] = [
@@ -940,11 +1036,20 @@ describe("Workflow Validation - Complex Workflows", () => {
   it("should validate a conditional branching workflow", () => {
     const steps: WorkflowStep[] = [
       createTriggerStep({
-        config: { type: "trigger", triggerType: "event", eventName: "purchase.completed" },
+        config: {
+          type: "trigger",
+          triggerType: "event",
+          eventName: "purchase.completed",
+        },
       }),
       createConditionStep({
         id: "condition-1",
-        config: { type: "condition", field: "properties.total", operator: "greater_than", value: "100" },
+        config: {
+          type: "condition",
+          field: "properties.total",
+          operator: "greater_than",
+          value: "100",
+        },
       }),
       createSendEmailStep({
         id: "email-vip",

@@ -27,7 +27,7 @@ const issues = [
   {
     title: "Unable to locate credentials",
     error:
-      "Unable to locate credentials. You can configure credentials by running \"aws configure\".",
+      'Unable to locate credentials. You can configure credentials by running "aws configure".',
     causes: [
       "AWS CLI not configured",
       "No ~/.aws/credentials file",
@@ -98,7 +98,7 @@ const issues = [
   {
     title: "Region not set",
     error:
-      "You must specify a region. You can also configure your region by running \"aws configure\".",
+      'You must specify a region. You can also configure your region by running "aws configure".',
     causes: [
       "No default region configured",
       "AWS_REGION environment variable not set",
@@ -227,7 +227,10 @@ export default function TroubleshootingPage() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}

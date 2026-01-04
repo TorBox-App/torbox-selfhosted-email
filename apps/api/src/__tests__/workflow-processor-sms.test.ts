@@ -58,7 +58,7 @@ const mockCredentials = {
   accessKeyId: "AKIAIOSFODNN7EXAMPLE",
   secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
   sessionToken: "session-token",
-  expiration: new Date(Date.now() + 3600000),
+  expiration: new Date(Date.now() + 3_600_000),
 };
 
 // Track SMS client calls

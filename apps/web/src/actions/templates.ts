@@ -71,8 +71,7 @@ export async function publishTemplateToSES(
     if (!customerAwsAccount) {
       return {
         success: false,
-        error:
-          "No AWS account connected. Please connect an AWS account first.",
+        error: "No AWS account connected. Please connect an AWS account first.",
       };
     }
 

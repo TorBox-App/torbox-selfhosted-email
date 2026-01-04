@@ -54,7 +54,11 @@ describe("useWorkflowStore", () => {
             type: "trigger",
             name: "Start",
             position: { x: 100, y: 100 },
-            config: { type: "trigger", triggerType: "event", eventName: "signup" },
+            config: {
+              type: "trigger",
+              triggerType: "event",
+              eventName: "signup",
+            },
           },
           {
             id: "step-2",
@@ -86,7 +90,11 @@ describe("useWorkflowStore", () => {
           stepId: "step-1",
           type: "trigger",
           name: "Start",
-          config: { type: "trigger", triggerType: "event", eventName: "signup" },
+          config: {
+            type: "trigger",
+            triggerType: "event",
+            eventName: "signup",
+          },
           isValid: true,
         },
       });
@@ -112,7 +120,12 @@ describe("useWorkflowStore", () => {
             type: "condition",
             name: "Check Field",
             position: { x: 0, y: 0 },
-            config: { type: "condition", field: "email", operator: "contains", value: "@gmail.com" },
+            config: {
+              type: "condition",
+              field: "email",
+              operator: "contains",
+              value: "@gmail.com",
+            },
           },
           {
             id: "step-yes",
@@ -166,7 +179,9 @@ describe("useWorkflowStore", () => {
 
   describe("addNode", () => {
     it("should add a trigger node with default config", () => {
-      const id = useWorkflowStore.getState().addNode("trigger", { x: 100, y: 100 });
+      const id = useWorkflowStore
+        .getState()
+        .addNode("trigger", { x: 100, y: 100 });
       const state = useWorkflowStore.getState();
 
       expect(id).toBe("test-uuid-1");
@@ -244,12 +259,14 @@ describe("useWorkflowStore", () => {
     });
 
     it("should add a wait_for_email_engagement node with default timeout", () => {
-      useWorkflowStore.getState().addNode("wait_for_email_engagement", { x: 0, y: 0 });
+      useWorkflowStore
+        .getState()
+        .addNode("wait_for_email_engagement", { x: 0, y: 0 });
       const state = useWorkflowStore.getState();
 
       expect(state.nodes[0].data.config).toEqual({
         type: "wait_for_email_engagement",
-        timeoutSeconds: 259200, // 3 days
+        timeoutSeconds: 259_200, // 3 days
       });
     });
 
@@ -263,7 +280,9 @@ describe("useWorkflowStore", () => {
         channel: "email",
       });
 
-      useWorkflowStore.getState().addNode("unsubscribe_topic", { x: 100, y: 0 });
+      useWorkflowStore
+        .getState()
+        .addNode("unsubscribe_topic", { x: 100, y: 0 });
       state = useWorkflowStore.getState();
 
       expect(state.nodes[1].data.config).toEqual({
@@ -274,10 +293,14 @@ describe("useWorkflowStore", () => {
     });
 
     it("should merge custom config with defaults", () => {
-      useWorkflowStore.getState().addNode("send_email", { x: 0, y: 0 }, {
-        type: "send_email",
-        templateId: "tmpl-custom",
-      });
+      useWorkflowStore.getState().addNode(
+        "send_email",
+        { x: 0, y: 0 },
+        {
+          type: "send_email",
+          templateId: "tmpl-custom",
+        }
+      );
       const state = useWorkflowStore.getState();
 
       expect(state.nodes[0].data.config).toEqual({
@@ -333,7 +356,9 @@ describe("useWorkflowStore", () => {
       useWorkflowStore.getState().addNode("send_email", { x: 0, y: 0 });
       useWorkflowStore.setState({ isDirty: false });
 
-      useWorkflowStore.getState().updateNodeName("test-uuid-1", "Welcome Email");
+      useWorkflowStore
+        .getState()
+        .updateNodeName("test-uuid-1", "Welcome Email");
 
       const state = useWorkflowStore.getState();
       expect(state.nodes[0].data.name).toBe("Welcome Email");

@@ -1,9 +1,9 @@
 // Variable definitions and utilities
 export {
-  type VariableDefinition,
-  getVariablesForContext,
   getRequiredVariables,
+  getVariablesForContext,
+  toSuggestionFormat,
+  type VariableDefinition,
   validateRequiredVariables,
   variablesByContext,
-  toSuggestionFormat,
 } from "./variable-definitions";

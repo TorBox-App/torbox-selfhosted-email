@@ -30,7 +30,11 @@ vi.mock("@wraps/db", () => ({
     }),
   },
   contact: { id: "id" },
-  contactTopic: { contactId: "contact_id", topicId: "topic_id", status: "status" },
+  contactTopic: {
+    contactId: "contact_id",
+    topicId: "topic_id",
+    status: "status",
+  },
   segment: { id: "id" },
   eq: vi.fn((a, b) => ({ eq: [a, b] })),
 }));
@@ -60,12 +64,12 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 
   for (const part of parts) {
     if (current === null || current === undefined) {
-      return undefined;
+      return;
     }
     if (typeof current === "object" && current !== null) {
       current = (current as Record<string, unknown>)[part];
     } else {
-      return undefined;
+      return;
     }
   }
 
@@ -167,10 +171,14 @@ function evaluateFilter(
       return false;
 
     case "exists":
-      return actualValue !== null && actualValue !== undefined && actualValue !== "";
+      return (
+        actualValue !== null && actualValue !== undefined && actualValue !== ""
+      );
 
     case "notExists":
-      return actualValue === null || actualValue === undefined || actualValue === "";
+      return (
+        actualValue === null || actualValue === undefined || actualValue === ""
+      );
 
     case "inList":
       if (Array.isArray(value)) {
@@ -190,7 +198,11 @@ function evaluateFilter(
         const threshold = getThresholdDate(now, value, unit);
         return actualValue >= threshold;
       }
-      if (typeof actualValue === "string" && typeof value === "number" && unit) {
+      if (
+        typeof actualValue === "string" &&
+        typeof value === "number" &&
+        unit
+      ) {
         const dateValue = new Date(actualValue);
         if (!Number.isNaN(dateValue.getTime())) {
           const now = new Date();
@@ -424,7 +436,10 @@ describe("Segment Evaluator", () => {
       });
 
       it("should not match when field is empty string", () => {
-        const contactWithEmpty = { ...baseContact, firstName: "" as string | null };
+        const contactWithEmpty = {
+          ...baseContact,
+          firstName: "" as string | null,
+        };
         const filter: SegmentFilter = {
           field: "firstName",
           operator: "exists",
@@ -751,8 +766,16 @@ describe("Segment Evaluator", () => {
         const condition: FilterCondition = {
           logic: "AND",
           groups: [
-            { filters: [{ field: "emailStatus", operator: "equals", value: "active" }] },
-            { filters: [{ field: "properties.plan", operator: "equals", value: "pro" }] },
+            {
+              filters: [
+                { field: "emailStatus", operator: "equals", value: "active" },
+              ],
+            },
+            {
+              filters: [
+                { field: "properties.plan", operator: "equals", value: "pro" },
+              ],
+            },
           ],
         };
         expect(evaluateCondition(condition, baseContact)).toBe(true);
@@ -762,8 +785,16 @@ describe("Segment Evaluator", () => {
         const condition: FilterCondition = {
           logic: "AND",
           groups: [
-            { filters: [{ field: "emailStatus", operator: "equals", value: "active" }] },
-            { filters: [{ field: "properties.plan", operator: "equals", value: "free" }] },
+            {
+              filters: [
+                { field: "emailStatus", operator: "equals", value: "active" },
+              ],
+            },
+            {
+              filters: [
+                { field: "properties.plan", operator: "equals", value: "free" },
+              ],
+            },
           ],
         };
         expect(evaluateCondition(condition, baseContact)).toBe(false);
@@ -775,8 +806,16 @@ describe("Segment Evaluator", () => {
         const condition: FilterCondition = {
           logic: "OR",
           groups: [
-            { filters: [{ field: "emailStatus", operator: "equals", value: "bounced" }] },
-            { filters: [{ field: "properties.plan", operator: "equals", value: "pro" }] },
+            {
+              filters: [
+                { field: "emailStatus", operator: "equals", value: "bounced" },
+              ],
+            },
+            {
+              filters: [
+                { field: "properties.plan", operator: "equals", value: "pro" },
+              ],
+            },
           ],
         };
         expect(evaluateCondition(condition, baseContact)).toBe(true);
@@ -786,8 +825,16 @@ describe("Segment Evaluator", () => {
         const condition: FilterCondition = {
           logic: "OR",
           groups: [
-            { filters: [{ field: "emailStatus", operator: "equals", value: "bounced" }] },
-            { filters: [{ field: "properties.plan", operator: "equals", value: "free" }] },
+            {
+              filters: [
+                { field: "emailStatus", operator: "equals", value: "bounced" },
+              ],
+            },
+            {
+              filters: [
+                { field: "properties.plan", operator: "equals", value: "free" },
+              ],
+            },
           ],
         };
         expect(evaluateCondition(condition, baseContact)).toBe(false);
@@ -809,12 +856,30 @@ describe("Segment Evaluator", () => {
         logic: "AND",
         groups: [
           {
-            filters: [{ field: "emailStatus", operator: "equals", value: "active" }],
+            filters: [
+              { field: "emailStatus", operator: "equals", value: "active" },
+            ],
             nested: {
               logic: "OR",
               groups: [
-                { filters: [{ field: "properties.plan", operator: "equals", value: "pro" }] },
-                { filters: [{ field: "properties.plan", operator: "equals", value: "enterprise" }] },
+                {
+                  filters: [
+                    {
+                      field: "properties.plan",
+                      operator: "equals",
+                      value: "pro",
+                    },
+                  ],
+                },
+                {
+                  filters: [
+                    {
+                      field: "properties.plan",
+                      operator: "equals",
+                      value: "enterprise",
+                    },
+                  ],
+                },
               ],
             },
           },
@@ -828,11 +893,21 @@ describe("Segment Evaluator", () => {
         logic: "AND",
         groups: [
           {
-            filters: [{ field: "emailStatus", operator: "equals", value: "active" }],
+            filters: [
+              { field: "emailStatus", operator: "equals", value: "active" },
+            ],
             nested: {
               logic: "AND",
               groups: [
-                { filters: [{ field: "properties.plan", operator: "equals", value: "enterprise" }] },
+                {
+                  filters: [
+                    {
+                      field: "properties.plan",
+                      operator: "equals",
+                      value: "enterprise",
+                    },
+                  ],
+                },
               ],
             },
           },
@@ -847,10 +922,30 @@ describe("Segment Evaluator", () => {
       const condition: FilterCondition = {
         logic: "AND",
         groups: [
-          { filters: [{ field: "emailStatus", operator: "equals", value: "active" }] },
-          { filters: [{ field: "properties.country", operator: "equals", value: "US" }] },
-          { filters: [{ field: "properties.plan", operator: "inList", value: ["pro", "enterprise"] }] },
-          { filters: [{ field: "topics", operator: "hasTopic", value: "topic-1" }] },
+          {
+            filters: [
+              { field: "emailStatus", operator: "equals", value: "active" },
+            ],
+          },
+          {
+            filters: [
+              { field: "properties.country", operator: "equals", value: "US" },
+            ],
+          },
+          {
+            filters: [
+              {
+                field: "properties.plan",
+                operator: "inList",
+                value: ["pro", "enterprise"],
+              },
+            ],
+          },
+          {
+            filters: [
+              { field: "topics", operator: "hasTopic", value: "topic-1" },
+            ],
+          },
         ],
       };
       expect(evaluateCondition(condition, baseContact)).toBe(true);
@@ -860,8 +955,20 @@ describe("Segment Evaluator", () => {
       const condition: FilterCondition = {
         logic: "OR",
         groups: [
-          { filters: [{ field: "properties.score", operator: "greaterThan", value: 70 }] },
-          { filters: [{ field: "properties.plan", operator: "equals", value: "enterprise" }] },
+          {
+            filters: [
+              { field: "properties.score", operator: "greaterThan", value: 70 },
+            ],
+          },
+          {
+            filters: [
+              {
+                field: "properties.plan",
+                operator: "equals",
+                value: "enterprise",
+              },
+            ],
+          },
         ],
       };
       expect(evaluateCondition(condition, baseContact)).toBe(true);
@@ -875,7 +982,16 @@ describe("Segment Evaluator", () => {
       const condition: FilterCondition = {
         logic: "AND",
         groups: [
-          { filters: [{ field: "createdAt", operator: "within", value: 7, unit: "days" }] },
+          {
+            filters: [
+              {
+                field: "createdAt",
+                operator: "within",
+                value: 7,
+                unit: "days",
+              },
+            ],
+          },
           { filters: [{ field: "firstName", operator: "exists" }] },
           { filters: [{ field: "lastName", operator: "exists" }] },
           { filters: [{ field: "company", operator: "exists" }] },

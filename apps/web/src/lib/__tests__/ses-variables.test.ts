@@ -116,8 +116,7 @@ describe("transformVariablesForSes", () => {
     });
 
     it("handles multiple variables with and without fallbacks", () => {
-      const input =
-        "Hi {{firstName|there}}, your email is {{contact.email}}";
+      const input = "Hi {{firstName|there}}, your email is {{contact.email}}";
       const output = transformVariablesForSes(input);
       expect(output).toBe(
         "Hi {{#if firstName}}{{firstName}}{{else}}there{{/if}}, your email is {{contactEmail}}"

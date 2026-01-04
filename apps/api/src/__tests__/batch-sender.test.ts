@@ -174,9 +174,7 @@ vi.mock("@wraps/db", () => ({
 }));
 
 vi.mock("../lib/unsubscribe-token", () => ({
-  generateUnsubscribeToken: vi
-    .fn()
-    .mockResolvedValue("mock-unsubscribe-token"),
+  generateUnsubscribeToken: vi.fn().mockResolvedValue("mock-unsubscribe-token"),
 }));
 
 vi.mock("../services/credentials", () => ({
@@ -554,10 +552,8 @@ describe("URL Generation", () => {
 
   it("uses environment variable defaults correctly", () => {
     // These defaults are used when env vars are not set
-    const apiBaseUrl =
-      process.env.API_BASE_URL || "https://api.wraps.dev";
-    const appBaseUrl =
-      process.env.APP_BASE_URL || "https://wraps.dev";
+    const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
+    const appBaseUrl = process.env.APP_BASE_URL || "https://wraps.dev";
 
     expect(apiBaseUrl).toContain("api.wraps.dev");
     expect(appBaseUrl).toBe("https://wraps.dev");

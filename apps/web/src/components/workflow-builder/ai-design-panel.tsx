@@ -285,7 +285,9 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
                 <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
-              <h4 className="mb-1 font-medium text-sm">Monthly Limit Reached</h4>
+              <h4 className="mb-1 font-medium text-sm">
+                Monthly Limit Reached
+              </h4>
               <p className="mb-4 max-w-[200px] text-muted-foreground text-xs">
                 You've used all {aiUsage.limit} AI messages this month.
               </p>
@@ -367,13 +369,19 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
                         <ReasoningContent>
                           {message.parts
                             .filter((p) => p.type === "reasoning")
-                            .map((p) => (p as { type: "reasoning"; text: string }).text)
+                            .map(
+                              (p) =>
+                                (p as { type: "reasoning"; text: string }).text
+                            )
                             .join("")}
                         </ReasoningContent>
                       </Reasoning>
                     )}
                     <div className="whitespace-pre-wrap break-words">
-                      {getMessageText(message).replace(/```json[\s\S]*?```/g, "[Workflow applied to canvas]")}
+                      {getMessageText(message).replace(
+                        /```json[\s\S]*?```/g,
+                        "[Workflow applied to canvas]"
+                      )}
                     </div>
                   </div>
                 </div>
@@ -400,7 +408,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
         <div className="relative">
           <Textarea
             className="min-h-[44px] resize-none pr-10 text-sm"
-            disabled={isLoading || (aiUsage?.remaining === 0)}
+            disabled={isLoading || aiUsage?.remaining === 0}
             onChange={(e) => {
               setInput(e.target.value);
               adjustHeight();

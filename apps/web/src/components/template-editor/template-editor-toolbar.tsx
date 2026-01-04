@@ -201,7 +201,11 @@ export function TemplateEditorToolbar({
                   className="h-8 w-8 p-0"
                   onClick={() => toggleLeftPanelWithTab("ai")}
                   size="sm"
-                  variant={showLeftPanel && leftPanelTab === "ai" ? "secondary" : "ghost"}
+                  variant={
+                    showLeftPanel && leftPanelTab === "ai"
+                      ? "secondary"
+                      : "ghost"
+                  }
                 >
                   <Sparkles className="h-4 w-4" />
                 </Button>
@@ -215,7 +219,11 @@ export function TemplateEditorToolbar({
                   className="h-8 w-8 p-0"
                   onClick={() => toggleLeftPanelWithTab("blocks")}
                   size="sm"
-                  variant={showLeftPanel && leftPanelTab === "blocks" ? "secondary" : "ghost"}
+                  variant={
+                    showLeftPanel && leftPanelTab === "blocks"
+                      ? "secondary"
+                      : "ghost"
+                  }
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </Button>

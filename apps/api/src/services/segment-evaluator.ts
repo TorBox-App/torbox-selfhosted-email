@@ -5,20 +5,9 @@
  * Used for segment entry/exit workflow triggers.
  */
 
-import {
-  contact,
-  contactTopic,
-  db,
-  eq,
-  segment,
-} from "@wraps/db";
-import type {
-  FilterCondition,
-  FilterGroup,
-  FilterOperator,
-  SegmentFilter,
-} from "@wraps/db";
-import { and, inArray } from "drizzle-orm";
+import type { FilterCondition, FilterGroup, SegmentFilter } from "@wraps/db";
+import { contact, contactTopic, db, eq, segment } from "@wraps/db";
+import { and } from "drizzle-orm";
 
 // Contact with topic IDs for evaluation
 type ContactWithTopics = typeof contact.$inferSelect & {
@@ -112,10 +101,14 @@ function evaluateFilter(
       return false;
 
     case "exists":
-      return actualValue !== null && actualValue !== undefined && actualValue !== "";
+      return (
+        actualValue !== null && actualValue !== undefined && actualValue !== ""
+      );
 
     case "notExists":
-      return actualValue === null || actualValue === undefined || actualValue === "";
+      return (
+        actualValue === null || actualValue === undefined || actualValue === ""
+      );
 
     case "inList":
       if (Array.isArray(value)) {
@@ -137,7 +130,11 @@ function evaluateFilter(
         return actualValue >= threshold;
       }
       // Also handle string dates
-      if (typeof actualValue === "string" && typeof value === "number" && unit) {
+      if (
+        typeof actualValue === "string" &&
+        typeof value === "number" &&
+        unit
+      ) {
         const dateValue = new Date(actualValue);
         if (!Number.isNaN(dateValue.getTime())) {
           const now = new Date();
@@ -167,7 +164,9 @@ function evaluateFilter(
     case "notTriggered":
       // TODO: Implement event history lookup
       // For now, return false (event-based segments not yet supported)
-      console.log(`[segment-evaluator] Event-based operator "${operator}" not yet implemented`);
+      console.log(
+        `[segment-evaluator] Event-based operator "${operator}" not yet implemented`
+      );
       return false;
 
     default:
@@ -185,12 +184,12 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 
   for (const part of parts) {
     if (current === null || current === undefined) {
-      return undefined;
+      return;
     }
     if (typeof current === "object" && current !== null) {
       current = (current as Record<string, unknown>)[part];
     } else {
-      return undefined;
+      return;
     }
   }
 

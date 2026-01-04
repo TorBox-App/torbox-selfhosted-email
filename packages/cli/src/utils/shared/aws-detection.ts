@@ -304,7 +304,8 @@ export function parseSSOProfiles(): SSOProfile[] {
       continue;
     }
 
-    const profileName = header === "default" ? "default" : header.replace("profile ", "");
+    const profileName =
+      header === "default" ? "default" : header.replace("profile ", "");
 
     // Parse key-value pairs
     const config: Record<string, string> = {};
@@ -383,7 +384,9 @@ export function parseSSOSessions(): SSOSession[] {
       name: sessionName,
       ssoStartUrl: config.sso_start_url || "",
       ssoRegion: config.sso_region || "",
-      ssoRegistrationScopes: config.sso_registration_scopes?.split(",").map((s) => s.trim()),
+      ssoRegistrationScopes: config.sso_registration_scopes
+        ?.split(",")
+        .map((s) => s.trim()),
     });
   }
 
@@ -407,14 +410,16 @@ export function checkSSOTokenStatus(startUrl?: string): SSOTokenStatus {
   }
 
   try {
-    const cacheFiles = readdirSync(ssoCachePath).filter((f) => f.endsWith(".json"));
+    const cacheFiles = readdirSync(ssoCachePath).filter((f) =>
+      f.endsWith(".json")
+    );
 
     for (const file of cacheFiles) {
       const content = readFileSync(join(ssoCachePath, file), "utf-8");
       const token = JSON.parse(content);
 
       // Skip if this is not an access token
-      if (!token.accessToken || !token.expiresAt) {
+      if (!(token.accessToken && token.expiresAt)) {
         continue;
       }
 
@@ -426,7 +431,9 @@ export function checkSSOTokenStatus(startUrl?: string): SSOTokenStatus {
       const expiresAt = new Date(token.expiresAt);
       const now = new Date();
       const expired = expiresAt <= now;
-      const minutesRemaining = Math.floor((expiresAt.getTime() - now.getTime()) / 60000);
+      const minutesRemaining = Math.floor(
+        (expiresAt.getTime() - now.getTime()) / 60_000
+      );
 
       return {
         valid: !expired,
@@ -504,20 +511,26 @@ export async function detectAWSState(): Promise<AWSSetupState> {
   const activeProfile = getActiveSSOProfile(ssoProfiles);
 
   // Check SSO token status (use active profile's start URL if available)
-  const tokenStatus = ssoProfiles.length > 0
-    ? checkSSOTokenStatus(activeProfile?.ssoStartUrl)
-    : null;
+  const tokenStatus =
+    ssoProfiles.length > 0
+      ? checkSSOTokenStatus(activeProfile?.ssoStartUrl)
+      : null;
 
   // Determine if we're using SSO
-  const isUsingSSO = credentialSource === "sso" ||
+  const isUsingSSO =
+    credentialSource === "sso" ||
     (activeProfile !== null && accountId !== null);
 
   return {
     cliInstalled,
     cliVersion,
     credentialsConfigured: accountId !== null,
-    credentialSource: isUsingSSO ? "sso" : (accountId !== null ? credentialSource : null),
-    profileName: profileName,
+    credentialSource: isUsingSSO
+      ? "sso"
+      : accountId !== null
+        ? credentialSource
+        : null,
+    profileName,
     accountId,
     detectedProvider,
     region,

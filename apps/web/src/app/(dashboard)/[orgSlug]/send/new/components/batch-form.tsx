@@ -8,7 +8,6 @@ import {
   ChevronDown,
   Clock,
   Code,
-  ExternalLink,
   FileText,
   Filter,
   Lock,
@@ -35,9 +34,7 @@ import {
   getSampleContacts,
   type RecipientFilter,
 } from "@/actions/batch";
-import type { SampleContact, VariableMapping } from "@/lib/batch";
-import { EmailPreviewCarousel } from "./email-preview-carousel";
-import { VariableMapper } from "./variable-mapper";
+import { TemplateEditorDialog } from "@/components/template-editor/wrappers";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -52,8 +49,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { TemplateEditorDialog } from "@/components/template-editor/wrappers";
-import { useTemplates } from "@/hooks/use-template-queries";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -70,7 +65,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useTemplates } from "@/hooks/use-template-queries";
+import type { SampleContact, VariableMapping } from "@/lib/batch";
 import { cn } from "@/lib/utils";
+import { EmailPreviewCarousel } from "./email-preview-carousel";
+import { VariableMapper } from "./variable-mapper";
 
 type Template = {
   id: string;
@@ -346,7 +345,10 @@ export function BatchForm({
       try {
         // Calculate scheduledFor if scheduling
         let scheduledFor: Date | undefined;
-        if (campaignData.scheduleType === "later" && campaignData.scheduledDate) {
+        if (
+          campaignData.scheduleType === "later" &&
+          campaignData.scheduledDate
+        ) {
           const [hours, minutes] = campaignData.scheduledTime
             .split(":")
             .map(Number);
@@ -784,7 +786,9 @@ function ContentStep({
     subject: t.subject,
   }));
   const [showEditorDialog, setShowEditorDialog] = useState(false);
-  const [editingTemplateId, setEditingTemplateId] = useState<string | undefined>();
+  const [editingTemplateId, setEditingTemplateId] = useState<
+    string | undefined
+  >();
   const [showAdvanced, setShowAdvanced] = useState(data.contentType === "html");
 
   // Track if we just closed the editor (to prevent auto-reopen)
@@ -825,7 +829,8 @@ function ContentStep({
   };
 
   // Use broadcast name as template name, or generate a default
-  const templateName = data.name || `Broadcast ${new Date().toLocaleDateString()}`;
+  const templateName =
+    data.name || `Broadcast ${new Date().toLocaleDateString()}`;
 
   return (
     <div className="space-y-6">
@@ -876,7 +881,10 @@ function ContentStep({
                             </SelectTrigger>
                             <SelectContent>
                               {templates.map((template) => (
-                                <SelectItem key={template.id} value={template.id}>
+                                <SelectItem
+                                  key={template.id}
+                                  value={template.id}
+                                >
                                   {template.name}
                                 </SelectItem>
                               ))}
@@ -896,7 +904,9 @@ function ContentStep({
                             </Button>
                             {data.templateId && (
                               <Button
-                                onClick={() => handleEditTemplate(data.templateId)}
+                                onClick={() =>
+                                  handleEditTemplate(data.templateId)
+                                }
                                 size="sm"
                                 type="button"
                                 variant="outline"
@@ -932,7 +942,7 @@ function ContentStep({
           </div>
 
           {/* Advanced Options - Collapsible */}
-          <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+          <Collapsible onOpenChange={setShowAdvanced} open={showAdvanced}>
             <CollapsibleTrigger asChild>
               <Button
                 className="w-full justify-between"
@@ -992,7 +1002,8 @@ function ContentStep({
                             value={data.htmlContent}
                           />
                           <p className="text-muted-foreground text-xs">
-                            Tip: Make sure your HTML is responsive for mobile devices
+                            Tip: Make sure your HTML is responsive for mobile
+                            devices
                           </p>
                         </div>
                       )}
@@ -1008,25 +1019,25 @@ function ContentStep({
       {/* Variable Mapping - shown when a template is selected */}
       {data.contentType === "template" && data.templateId && (
         <VariableMapper
-          organizationId={organizationId}
-          templateId={data.templateId}
           mappings={data.variableMappings}
           onChange={(mappings) => onChange({ variableMappings: mappings })}
+          organizationId={organizationId}
+          templateId={data.templateId}
         />
       )}
 
       {/* Template Editor Dialog */}
       <TemplateEditorDialog
-        open={showEditorDialog}
+        initialPreviewText={editingTemplateId ? undefined : data.previewText}
+        initialSubject={editingTemplateId ? undefined : data.subject}
         onOpenChange={setShowEditorDialog}
         onTemplateSelect={handleTemplateSelect}
+        open={showEditorDialog}
         orgSlug={orgSlug}
         templateId={editingTemplateId}
         templateName={editingTemplateId ? undefined : templateName}
-        initialSubject={editingTemplateId ? undefined : data.subject}
-        initialPreviewText={editingTemplateId ? undefined : data.previewText}
-        variableContext="broadcast"
         title={editingTemplateId ? "Edit Template" : "Create Template"}
+        variableContext="broadcast"
       />
     </div>
   );
@@ -1081,7 +1092,12 @@ function AudienceStep({
       }
 
       setLoadingSamples(true);
-      const result = await getSampleContacts(organizationId, "email", filter, 5);
+      const result = await getSampleContacts(
+        organizationId,
+        "email",
+        filter,
+        5
+      );
       if (result.success) {
         setSampleContacts(result.contacts);
       }
@@ -1268,15 +1284,16 @@ function AudienceStep({
                 ) : (
                   sampleContacts.map((contact) => (
                     <div
-                      key={contact.id}
                       className="flex items-center gap-2 text-sm"
+                      key={contact.id}
                     >
                       <span className="text-muted-foreground">
                         {contact.email}
                       </span>
                       {(contact.firstName || contact.lastName) && (
                         <span className="text-muted-foreground/70">
-                          ({[contact.firstName, contact.lastName]
+                          (
+                          {[contact.firstName, contact.lastName]
                             .filter(Boolean)
                             .join(" ")}
                           {contact.company && `, ${contact.company}`})

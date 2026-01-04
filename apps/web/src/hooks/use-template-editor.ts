@@ -17,7 +17,7 @@ import Underline from "@tiptap/extension-underline";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-
+import type { VariableContext } from "@/components/template-editor/core/editor-context";
 // Import custom extensions
 import {
   ConditionalNode,
@@ -39,7 +39,6 @@ import {
   VariableNode,
   VariableSuggestion,
 } from "@/components/template-editor/extensions";
-import type { VariableContext } from "@/components/template-editor/core/editor-context";
 import {
   getVariablesForContext,
   toSuggestionFormat,

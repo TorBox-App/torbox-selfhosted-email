@@ -66,11 +66,11 @@ export default async function AutomationsPage({
       {/* Workflows Table */}
       <div className="@container/main px-4 lg:px-6">
         <WorkflowsTable
-          workflows={workflows}
-          total={total}
           organizationId={orgWithMembership.id}
           orgSlug={orgSlug}
+          total={total}
           userRole={orgWithMembership.userRole}
+          workflows={workflows}
         />
       </div>
     </>

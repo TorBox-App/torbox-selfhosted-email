@@ -29,7 +29,10 @@ const templateNameSchema = z.object({
     .string()
     .min(1, "Name is required")
     .max(100, "Name must be 100 characters or less"),
-  description: z.string().max(500, "Description must be 500 characters or less").optional(),
+  description: z
+    .string()
+    .max(500, "Description must be 500 characters or less")
+    .optional(),
 });
 
 type TemplateNameFormValues = z.infer<typeof templateNameSchema>;
@@ -123,7 +126,7 @@ export function TemplateNameDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -131,7 +134,10 @@ export function TemplateNameDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={form.handleSubmit(handleSubmit)}
+          >
             <FormField
               control={form.control}
               name="name"
@@ -139,11 +145,7 @@ export function TemplateNameDialog({
                 <FormItem>
                   <FormLabel>Template Name</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder={namePlaceholder}
-                      autoFocus
-                      {...field}
-                    />
+                    <Input autoFocus placeholder={namePlaceholder} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -158,8 +160,8 @@ export function TemplateNameDialog({
                   <FormLabel>Description (optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Brief description of what this template is for..."
                       className="resize-none"
+                      placeholder="Brief description of what this template is for..."
                       rows={2}
                       {...field}
                     />
@@ -174,9 +176,9 @@ export function TemplateNameDialog({
 
             <DialogFooter>
               <Button
+                onClick={() => handleOpenChange(false)}
                 type="button"
                 variant="outline"
-                onClick={() => handleOpenChange(false)}
               >
                 Cancel
               </Button>

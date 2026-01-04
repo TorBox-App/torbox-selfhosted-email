@@ -231,7 +231,10 @@ function TemplateEditorContent({
       setPreviewText(newPreviewText);
       setEmailType(newEmailType);
       // Save description and emailType immediately
-      const updates: { description?: string; emailType?: "marketing" | "transactional" } = {};
+      const updates: {
+        description?: string;
+        emailType?: "marketing" | "transactional";
+      } = {};
       if (newPreviewText !== template.description) {
         updates.description = newPreviewText;
       }

@@ -1,9 +1,9 @@
 "use client";
 
 import { MessageSquare } from "lucide-react";
-import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
+import { BaseNode } from "./base-node";
 
 type SendSmsNodeProps = {
   id: string;
@@ -25,14 +25,14 @@ export function SendSmsNode({ id, data, selected }: SendSmsNodeProps) {
 
   return (
     <BaseNode
-      icon={<MessageSquare className="w-4 h-4" />}
-      label={data.name}
-      description={description}
       accentColor="bg-green-500"
+      description={description}
+      errorMessage={errorMessage}
       hasInput={true}
       hasOutput={true}
+      icon={<MessageSquare className="h-4 w-4" />}
       isValid={isValid}
-      errorMessage={errorMessage}
+      label={data.name}
       selected={selected}
     />
   );

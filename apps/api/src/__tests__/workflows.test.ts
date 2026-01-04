@@ -28,19 +28,25 @@ vi.mock("../services/workflow-queue", () => ({
 }));
 
 // Mock data
-const mockWorkflows: Record<string, {
-  id: string;
-  organizationId: string;
-  name: string;
-  status: string;
-  triggerType: string;
-}> = {};
+const mockWorkflows: Record<
+  string,
+  {
+    id: string;
+    organizationId: string;
+    name: string;
+    status: string;
+    triggerType: string;
+  }
+> = {};
 
-const mockContacts: Record<string, {
-  id: string;
-  email: string;
-  organizationId: string;
-}> = {};
+const mockContacts: Record<
+  string,
+  {
+    id: string;
+    email: string;
+    organizationId: string;
+  }
+> = {};
 
 // Mock database
 vi.mock("@wraps/db", () => ({
@@ -52,8 +58,10 @@ vi.mock("@wraps/db", () => ({
             // Return based on what's in our mock data
             const workflows = Object.values(mockWorkflows);
             const contacts = Object.values(mockContacts);
-            if (workflows.length > 0) return Promise.resolve(workflows.slice(0, n));
-            if (contacts.length > 0) return Promise.resolve(contacts.slice(0, n));
+            if (workflows.length > 0)
+              return Promise.resolve(workflows.slice(0, n));
+            if (contacts.length > 0)
+              return Promise.resolve(contacts.slice(0, n));
             return Promise.resolve([]);
           }),
         })),
@@ -121,11 +129,15 @@ function createTestApp() {
       let contact: (typeof mockContacts)[string] | undefined;
       if (contactId) {
         contact = Object.values(mockContacts).find(
-          (c) => c.id === contactId && c.organizationId === mockAuthContext.organizationId
+          (c) =>
+            c.id === contactId &&
+            c.organizationId === mockAuthContext.organizationId
         );
       } else if (contactEmail) {
         contact = Object.values(mockContacts).find(
-          (c) => c.email === contactEmail && c.organizationId === mockAuthContext.organizationId
+          (c) =>
+            c.email === contactEmail &&
+            c.organizationId === mockAuthContext.organizationId
         );
       }
 
@@ -190,16 +202,22 @@ function createTestApp() {
         let contact: (typeof mockContacts)[string] | undefined;
         if (c.contactId) {
           contact = Object.values(mockContacts).find(
-            (mc) => mc.id === c.contactId && mc.organizationId === mockAuthContext.organizationId
+            (mc) =>
+              mc.id === c.contactId &&
+              mc.organizationId === mockAuthContext.organizationId
           );
         } else if (c.contactEmail) {
           contact = Object.values(mockContacts).find(
-            (mc) => mc.email === c.contactEmail && mc.organizationId === mockAuthContext.organizationId
+            (mc) =>
+              mc.email === c.contactEmail &&
+              mc.organizationId === mockAuthContext.organizationId
           );
         }
 
         if (!contact) {
-          results.errors.push(`Contact not found: ${c.contactId || c.contactEmail}`);
+          results.errors.push(
+            `Contact not found: ${c.contactId || c.contactEmail}`
+          );
           continue;
         }
 

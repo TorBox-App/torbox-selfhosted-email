@@ -137,7 +137,7 @@ export async function POST(request: Request, context: RouteContext) {
       model: gateway(MODEL_ID),
       system: systemPrompt,
       messages: modelMessages,
-      maxOutputTokens: 8_000,
+      maxOutputTokens: 8000,
       onFinish: async ({ usage }) => {
         const log = createRequestLogger({
           path: "/api/[orgSlug]/workflows/ai/generate",

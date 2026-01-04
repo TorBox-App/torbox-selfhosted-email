@@ -73,15 +73,15 @@ export default async function WorkflowBuilderPage({
   });
 
   return (
-    <div className="h-[calc(100vh-60px)] flex flex-col">
+    <div className="flex h-[calc(100vh-60px)] flex-col">
       <WorkflowBuilder
-        workflow={workflowResult.workflow}
+        awsAccounts={awsAccounts}
         organizationId={orgWithMembership.id}
         orgSlug={orgSlug}
-        topics={topics}
         segments={segments}
-        awsAccounts={awsAccounts}
+        topics={topics}
         userRole={orgWithMembership.userRole}
+        workflow={workflowResult.workflow}
       />
     </div>
   );

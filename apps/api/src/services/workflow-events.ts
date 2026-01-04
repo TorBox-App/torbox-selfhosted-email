@@ -5,13 +5,7 @@
  * Used for contact lifecycle events, topic subscriptions, etc.
  */
 
-import {
-  contact,
-  db,
-  eq,
-  segment,
-  workflow,
-} from "@wraps/db";
+import { db, eq, segment, workflow } from "@wraps/db";
 import { and, sql } from "drizzle-orm";
 
 import { contactMatchesSegment } from "./segment-evaluator";
@@ -56,7 +50,9 @@ export async function emitWorkflowEvent(params: {
   }
 
   if (matchingWorkflows.length > 0) {
-    console.log(`[workflow-events] Event "${eventName}" triggered ${matchingWorkflows.length} workflow(s) for contact ${contactId}`);
+    console.log(
+      `[workflow-events] Event "${eventName}" triggered ${matchingWorkflows.length} workflow(s) for contact ${contactId}`
+    );
   }
 
   return { workflowsTriggered: matchingWorkflows.length };
@@ -151,11 +147,14 @@ export async function emitTopicSubscribed(params: {
   }
 
   if (matchingByTrigger.length > 0) {
-    console.log(`[workflow-events] topic_subscribed trigger matched ${matchingByTrigger.length} workflow(s)`);
+    console.log(
+      `[workflow-events] topic_subscribed trigger matched ${matchingByTrigger.length} workflow(s)`
+    );
   }
 
   return {
-    workflowsTriggered: matchingByEvent.workflowsTriggered + matchingByTrigger.length,
+    workflowsTriggered:
+      matchingByEvent.workflowsTriggered + matchingByTrigger.length,
   };
 }
 
@@ -208,11 +207,14 @@ export async function emitTopicUnsubscribed(params: {
   }
 
   if (matchingByTrigger.length > 0) {
-    console.log(`[workflow-events] topic_unsubscribed trigger matched ${matchingByTrigger.length} workflow(s)`);
+    console.log(
+      `[workflow-events] topic_unsubscribed trigger matched ${matchingByTrigger.length} workflow(s)`
+    );
   }
 
   return {
-    workflowsTriggered: matchingByEvent.workflowsTriggered + matchingByTrigger.length,
+    workflowsTriggered:
+      matchingByEvent.workflowsTriggered + matchingByTrigger.length,
   };
 }
 
@@ -255,7 +257,10 @@ export async function checkSegmentEntry(params: {
 
     try {
       // Check if contact matches the segment
-      const matches = await contactMatchesSegment(params.contactId, config.segmentId);
+      const matches = await contactMatchesSegment(
+        params.contactId,
+        config.segmentId
+      );
 
       if (matches) {
         // Fetch segment name for event data
@@ -341,7 +346,10 @@ export async function checkSegmentExit(params: {
 
     try {
       // Check if contact NO LONGER matches the segment
-      const matches = await contactMatchesSegment(params.contactId, config.segmentId);
+      const matches = await contactMatchesSegment(
+        params.contactId,
+        config.segmentId
+      );
 
       if (!matches) {
         // Contact exited the segment

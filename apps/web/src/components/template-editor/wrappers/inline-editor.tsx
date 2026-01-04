@@ -13,13 +13,13 @@ import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import {
   EditorCore,
-  EditorProvider,
   type EditorMetadata,
+  EditorProvider,
   type VariableContext,
 } from "../core";
+import { useEditorInstanceContext } from "../core/editor-core";
 import { LeftPanel } from "../left-panel";
 import { BaseToolbar, InlineToolbarActions } from "../toolbars";
-import { useEditorInstanceContext } from "../core/editor-core";
 
 export type InlineEditorProps = {
   /**
@@ -133,29 +133,34 @@ export function InlineEditor({
 
   // Mutations
   const createMutation = useCreateTemplate(orgSlug);
-  const updateMutation = useUpdateTemplate(
-    orgSlug,
-    effectiveTemplateId ?? ""
-  );
+  const updateMutation = useUpdateTemplate(orgSlug, effectiveTemplateId ?? "");
 
   // Create template immediately on mount if no templateId (for AI support)
   useEffect(() => {
-    if (!templateId && templateName && !createdTemplateId && !isCreatingTemplate) {
+    if (
+      !templateId &&
+      templateName &&
+      !createdTemplateId &&
+      !isCreatingTemplate
+    ) {
       setIsCreatingTemplate(true);
-      createMutation.mutateAsync({
-        name: templateName,
-        subject: initialSubject,
-        description: initialPreviewText,
-      }).then((newTemplate) => {
-        setCreatedTemplateId(newTemplate.id);
-        setIsCreatingTemplate(false);
-      }).catch(() => {
-        setIsCreatingTemplate(false);
-        toast.error("Failed to create template");
-      });
+      createMutation
+        .mutateAsync({
+          name: templateName,
+          subject: initialSubject,
+          description: initialPreviewText,
+        })
+        .then((newTemplate) => {
+          setCreatedTemplateId(newTemplate.id);
+          setIsCreatingTemplate(false);
+        })
+        .catch(() => {
+          setIsCreatingTemplate(false);
+          toast.error("Failed to create template");
+        });
     }
-  // Only run on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync subject/preview from loaded template
@@ -226,10 +231,7 @@ export function InlineEditor({
   if (shouldShowLoading) {
     return (
       <div
-        className={cn(
-          "flex items-center justify-center",
-          className
-        )}
+        className={cn("flex items-center justify-center", className)}
         style={{ height }}
       >
         <div className="text-center">
@@ -244,10 +246,7 @@ export function InlineEditor({
   if (shouldShowError) {
     return (
       <div
-        className={cn(
-          "flex items-center justify-center",
-          className
-        )}
+        className={cn("flex items-center justify-center", className)}
         style={{ height }}
       >
         <div className="text-center text-destructive">
@@ -267,8 +266,8 @@ export function InlineEditor({
       autoSave={false}
       initialContent={editorInitialContent}
       mode="inline"
-      onSave={handleSave}
       onCancel={onCancel}
+      onSave={handleSave}
       orgSlug={orgSlug}
       previewText={template?.description ?? previewText}
       subject={template?.subject ?? subject}
@@ -316,12 +315,12 @@ function InlineEditorContent({
 }: InlineEditorContentProps) {
   return (
     <EditorCore
-      previewText={previewText}
       leftPanel={
         templateId ? (
           <InlineEditorLeftPanel orgSlug={orgSlug} templateId={templateId} />
         ) : undefined
       }
+      previewText={previewText}
     >
       <InlineEditorToolbar
         isSaving={isSaving}
@@ -352,11 +351,7 @@ function InlineEditorLeftPanel({
   }
 
   return (
-    <LeftPanel
-      editor={editor}
-      orgSlug={orgSlug}
-      templateId={templateId}
-    />
+    <LeftPanel editor={editor} orgSlug={orgSlug} templateId={templateId} />
   );
 }
 
@@ -389,10 +384,6 @@ function InlineEditorToolbar({
 
   return (
     <BaseToolbar
-      editor={editor}
-      onSubjectChange={onSubjectChange}
-      previewText={previewText}
-      subject={subject}
       actions={
         <InlineToolbarActions
           isSaving={isSaving}
@@ -400,6 +391,10 @@ function InlineEditorToolbar({
           onSave={handleSave}
         />
       }
+      editor={editor}
+      onSubjectChange={onSubjectChange}
+      previewText={previewText}
+      subject={subject}
     />
   );
 }

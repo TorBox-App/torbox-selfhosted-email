@@ -16,7 +16,10 @@ import { transformVariablesForSes } from "../ses-variables";
  * Simulates SES Handlebars template rendering
  * SES uses Handlebars for template substitution
  */
-function simulateSesRender(template: string, data: Record<string, string>): string {
+function simulateSesRender(
+  template: string,
+  data: Record<string, string>
+): string {
   const compiled = Handlebars.compile(template);
   return compiled(data);
 }
@@ -34,7 +37,11 @@ describe("SES Variable Substitution Integration", () => {
               { type: "text", text: "Welcome back, " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "there" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "there",
+                },
               },
               { type: "text", text: "! Here's what's new this week." },
             ],
@@ -43,7 +50,11 @@ describe("SES Variable Substitution Integration", () => {
       };
 
       // 2. Convert to React Email with placeholders
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
 
       // 3. Transform for SES (this is what gets stored in SES)
@@ -71,7 +82,11 @@ describe("SES Variable Substitution Integration", () => {
               { type: "text", text: "Welcome back, " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "there" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "there",
+                },
               },
               { type: "text", text: "! Here's what's new this week." },
             ],
@@ -79,7 +94,11 @@ describe("SES Variable Substitution Integration", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
       const sesTemplate = transformVariablesForSes(rawHtml);
 
@@ -112,7 +131,11 @@ describe("SES Variable Substitution Integration", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
       const sesTemplate = transformVariablesForSes(rawHtml);
 
@@ -140,7 +163,11 @@ describe("SES Variable Substitution Integration", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
       const sesTemplate = transformVariablesForSes(rawHtml);
 
@@ -165,7 +192,11 @@ describe("SES Variable Substitution Integration", () => {
               { type: "text", text: "Hello " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "Friend" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "Friend",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -176,7 +207,11 @@ describe("SES Variable Substitution Integration", () => {
               { type: "text", text: "Thanks for being part of " },
               {
                 type: "variable",
-                attrs: { name: "organization.name", label: "Org", fallback: "our community" },
+                attrs: {
+                  name: "organization.name",
+                  label: "Org",
+                  fallback: "our community",
+                },
               },
               { type: "text", text: "." },
             ],
@@ -194,7 +229,11 @@ describe("SES Variable Substitution Integration", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
       const sesTemplate = transformVariablesForSes(rawHtml);
 
@@ -219,12 +258,20 @@ describe("SES Variable Substitution Integration", () => {
               { type: "text", text: "Hi " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "there" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "there",
+                },
               },
               { type: "text", text: ", welcome to " },
               {
                 type: "variable",
-                attrs: { name: "organization.name", label: "Org", fallback: "our platform" },
+                attrs: {
+                  name: "organization.name",
+                  label: "Org",
+                  fallback: "our platform",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -232,7 +279,11 @@ describe("SES Variable Substitution Integration", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
       const sesTemplate = transformVariablesForSes(rawHtml);
 
@@ -253,12 +304,20 @@ describe("SES Variable Substitution Integration", () => {
               { type: "text", text: "Hi " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "there" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "there",
+                },
               },
               { type: "text", text: ", welcome to " },
               {
                 type: "variable",
-                attrs: { name: "organization.name", label: "Org", fallback: "our platform" },
+                attrs: {
+                  name: "organization.name",
+                  label: "Org",
+                  fallback: "our platform",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -266,7 +325,11 @@ describe("SES Variable Substitution Integration", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
       const sesTemplate = transformVariablesForSes(rawHtml);
 
@@ -300,7 +363,11 @@ describe("SES Variable Substitution Integration", () => {
               { type: "text", text: "Welcome back, " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "valued customer" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "valued customer",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -308,7 +375,11 @@ describe("SES Variable Substitution Integration", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
       const sesTemplate = transformVariablesForSes(rawHtml);
 
@@ -336,7 +407,11 @@ describe("SES Variable Substitution Integration", () => {
               { type: "text", text: "Welcome back, " },
               {
                 type: "variable",
-                attrs: { name: "contact.firstName", label: "First Name", fallback: "valued customer" },
+                attrs: {
+                  name: "contact.firstName",
+                  label: "First Name",
+                  fallback: "valued customer",
+                },
               },
               { type: "text", text: "!" },
             ],
@@ -344,7 +419,11 @@ describe("SES Variable Substitution Integration", () => {
         ],
       };
 
-      const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+      const component = tiptapToReactEmail(
+        content,
+        {},
+        { keepVariablesAsPlaceholders: true }
+      );
       const rawHtml = await render(component);
       const sesTemplate = transformVariablesForSes(rawHtml);
 
@@ -379,7 +458,11 @@ describe("Error handling and edge cases", () => {
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
 
     // Should handle empty name gracefully
@@ -403,7 +486,11 @@ describe("Error handling and edge cases", () => {
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
     const sesTemplate = transformVariablesForSes(rawHtml);
     const renderedHtml = simulateSesRender(sesTemplate, {});
@@ -420,14 +507,22 @@ describe("Error handling and edge cases", () => {
           content: [
             {
               type: "variable",
-              attrs: { name: "greeting", label: "Greeting", fallback: "👋 Hello there" },
+              attrs: {
+                name: "greeting",
+                label: "Greeting",
+                fallback: "👋 Hello there",
+              },
             },
           ],
         },
       ],
     };
 
-    const component = tiptapToReactEmail(content, {}, { keepVariablesAsPlaceholders: true });
+    const component = tiptapToReactEmail(
+      content,
+      {},
+      { keepVariablesAsPlaceholders: true }
+    );
     const rawHtml = await render(component);
     const sesTemplate = transformVariablesForSes(rawHtml);
     const renderedHtml = simulateSesRender(sesTemplate, {});

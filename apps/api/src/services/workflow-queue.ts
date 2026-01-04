@@ -51,7 +51,10 @@ export async function enqueueWorkflowStep(job: WorkflowJob): Promise<void> {
     if (IS_PRODUCTION) {
       throw new Error("WORKFLOW_QUEUE_URL not configured");
     }
-    console.warn("[workflow-queue] Skipping enqueue - queue not configured", job);
+    console.warn(
+      "[workflow-queue] Skipping enqueue - queue not configured",
+      job
+    );
     return;
   }
 
@@ -74,11 +77,13 @@ export async function scheduleWorkflowStep(params: {
 }): Promise<string> {
   const scheduleName = `wraps-wf-${params.executionId}-${params.stepId}`;
 
-  if (!SCHEDULER_ROLE_ARN || !WORKFLOW_QUEUE_URL) {
+  if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_URL)) {
     if (IS_PRODUCTION) {
       throw new Error("EventBridge Scheduler not configured for workflows");
     }
-    console.warn(`[workflow-queue] Skipping schedule creation - config not set`);
+    console.warn(
+      "[workflow-queue] Skipping schedule creation - config not set"
+    );
     return scheduleName;
   }
 
@@ -120,11 +125,11 @@ export async function scheduleWaitTimeout(params: {
 }): Promise<string> {
   const scheduleName = `wraps-wf-timeout-${params.executionId}-${params.stepId}`;
 
-  if (!SCHEDULER_ROLE_ARN || !WORKFLOW_QUEUE_URL) {
+  if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_URL)) {
     if (IS_PRODUCTION) {
       throw new Error("EventBridge Scheduler not configured for workflows");
     }
-    console.warn(`[workflow-queue] Skipping timeout schedule - config not set`);
+    console.warn("[workflow-queue] Skipping timeout schedule - config not set");
     return scheduleName;
   }
 
@@ -161,7 +166,9 @@ export async function scheduleWaitTimeout(params: {
 export async function deleteScheduledStep(scheduleName: string): Promise<void> {
   if (!SCHEDULER_ROLE_ARN) {
     if (!IS_PRODUCTION) {
-      console.warn(`[workflow-queue] Skipping schedule deletion - config not set`);
+      console.warn(
+        "[workflow-queue] Skipping schedule deletion - config not set"
+      );
       return;
     }
     return;

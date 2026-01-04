@@ -1,10 +1,10 @@
 "use client";
 
 import { Zap } from "lucide-react";
-import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
 import { useWorkflowData } from "../workflow-data-context";
+import { BaseNode } from "./base-node";
 
 type TriggerNodeProps = {
   id: string;
@@ -32,17 +32,17 @@ export function TriggerNode({ id, data, selected }: TriggerNodeProps) {
           : "Custom event (not configured)";
         break;
       case "segment_entry": {
-        const segmentName = segments.find((s) => s.id === config.segmentId)?.name;
-        description = segmentName
-          ? `Enters: ${segmentName}`
-          : "Segment entry";
+        const segmentName = segments.find(
+          (s) => s.id === config.segmentId
+        )?.name;
+        description = segmentName ? `Enters: ${segmentName}` : "Segment entry";
         break;
       }
       case "segment_exit": {
-        const segmentName = segments.find((s) => s.id === config.segmentId)?.name;
-        description = segmentName
-          ? `Exits: ${segmentName}`
-          : "Segment exit";
+        const segmentName = segments.find(
+          (s) => s.id === config.segmentId
+        )?.name;
+        description = segmentName ? `Exits: ${segmentName}` : "Segment exit";
         break;
       }
       case "topic_subscribed": {
@@ -72,14 +72,14 @@ export function TriggerNode({ id, data, selected }: TriggerNodeProps) {
 
   return (
     <BaseNode
-      icon={<Zap className="w-4 h-4" />}
-      label={data.name}
-      description={description}
       accentColor="bg-yellow-500"
+      description={description}
+      errorMessage={errorMessage}
       hasInput={false}
       hasOutput={true}
+      icon={<Zap className="h-4 w-4" />}
       isValid={isValid}
-      errorMessage={errorMessage}
+      label={data.name}
       selected={selected}
     />
   );
