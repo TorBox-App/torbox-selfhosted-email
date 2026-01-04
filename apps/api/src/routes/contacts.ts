@@ -29,6 +29,12 @@ import {
   type AuthContext,
   createAuthenticatedRoutes,
 } from "../middleware/auth";
+import {
+  checkSegmentEntry,
+  emitContactCreated,
+  emitContactUpdated,
+  emitTopicSubscribed,
+} from "../services/workflow-events";
 
 // Schemas
 const contactSchema = t.Object({
@@ -455,6 +461,53 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         }
       }
 
+      // Emit contact_created event to trigger workflows
+      // Run in background to not block API response
+      emitContactCreated({
+        contactId: newContact.id,
+        organizationId: authContext.organizationId,
+        contactData: {
+          email: newContact.email,
+          phone: newContact.phone,
+          firstName: newContact.firstName,
+          lastName: newContact.lastName,
+          company: newContact.company,
+          jobTitle: newContact.jobTitle,
+        },
+      }).catch((err) => {
+        console.error("[contacts] Failed to emit contact_created event:", err);
+      });
+
+      // Check segment entry triggers
+      checkSegmentEntry({
+        contactId: newContact.id,
+        organizationId: authContext.organizationId,
+      }).catch((err) => {
+        console.error("[contacts] Failed to check segment entry:", err);
+      });
+
+      // Emit topic subscription events for immediate subscriptions (non-pending)
+      if (topicIds.length > 0) {
+        const immediateTopics = topicIds.filter((tid) => !pendingTopics.includes(tid));
+        // Re-fetch topic names for the emission (topicMap was in inner scope)
+        const topicNamesForEmit = await db
+          .select({ id: topic.id, name: topic.name })
+          .from(topic)
+          .where(inArray(topic.id, immediateTopics));
+        const topicNameMap = new Map(topicNamesForEmit.map((t) => [t.id, t.name]));
+
+        for (const topicId of immediateTopics) {
+          emitTopicSubscribed({
+            contactId: newContact.id,
+            organizationId: authContext.organizationId,
+            topicId,
+            topicName: topicNameMap.get(topicId),
+          }).catch((err) => {
+            console.error("[contacts] Failed to emit topic_subscribed event:", err);
+          });
+        }
+      }
+
       ctx.set.status = 201;
       return {
         id: newContact.id,
@@ -670,6 +723,34 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           }
         }
       }
+
+      // Emit contact_updated event to trigger workflows
+      const updatedFields = Object.keys(body).filter(
+        (k) => k !== "topicIds" && k !== "topicSlugs"
+      );
+      emitContactUpdated({
+        contactId: params.id,
+        organizationId: authContext.organizationId,
+        updatedFields,
+        contactData: {
+          email: updated.email,
+          phone: updated.phone,
+          firstName: updated.firstName,
+          lastName: updated.lastName,
+          company: updated.company,
+          jobTitle: updated.jobTitle,
+        },
+      }).catch((err) => {
+        console.error("[contacts] Failed to emit contact_updated event:", err);
+      });
+
+      // Check segment entry triggers (contact may now match a segment)
+      checkSegmentEntry({
+        contactId: params.id,
+        organizationId: authContext.organizationId,
+      }).catch((err) => {
+        console.error("[contacts] Failed to check segment entry:", err);
+      });
 
       return {
         id: updated.id,

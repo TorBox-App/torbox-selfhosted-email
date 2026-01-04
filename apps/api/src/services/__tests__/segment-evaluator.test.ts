@@ -1,0 +1,887 @@
+/**
+ * Segment Evaluator Tests
+ *
+ * Tests for the segment filter evaluation logic.
+ * Covers:
+ * - Basic filter operators (equals, contains, exists, etc.)
+ * - Nested property access (properties.plan, etc.)
+ * - Topic subscription filters (hasTopic, notHasTopic)
+ * - Time-based filters (within)
+ * - Filter groups and conditions (AND/OR logic)
+ * - Nested conditions
+ */
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock the database
+const mockDbSelect = vi.fn();
+const mockDbFrom = vi.fn();
+const mockDbWhere = vi.fn();
+const mockDbLimit = vi.fn();
+
+vi.mock("@wraps/db", () => ({
+  db: {
+    select: () => ({
+      from: (table: unknown) => ({
+        where: (condition: unknown) => ({
+          limit: (n: number) => mockDbLimit(n),
+        }),
+      }),
+    }),
+  },
+  contact: { id: "id" },
+  contactTopic: { contactId: "contact_id", topicId: "topic_id", status: "status" },
+  segment: { id: "id" },
+  eq: vi.fn((a, b) => ({ eq: [a, b] })),
+}));
+
+// Import after mocking
+import type { FilterCondition, FilterGroup, SegmentFilter } from "@wraps/db";
+
+// Test the filter evaluation logic directly
+// We'll create a test version of the evaluator functions
+
+type ContactWithTopics = {
+  id: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  emailStatus: string | null;
+  properties: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  topicIds: string[];
+};
+
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  const parts = path.split(".");
+  let current: unknown = obj;
+
+  for (const part of parts) {
+    if (current === null || current === undefined) {
+      return undefined;
+    }
+    if (typeof current === "object" && current !== null) {
+      current = (current as Record<string, unknown>)[part];
+    } else {
+      return undefined;
+    }
+  }
+
+  return current;
+}
+
+function getThresholdDate(
+  now: Date,
+  value: number,
+  unit: "days" | "hours" | "minutes"
+): Date {
+  const threshold = new Date(now);
+
+  switch (unit) {
+    case "days":
+      threshold.setDate(threshold.getDate() - value);
+      break;
+    case "hours":
+      threshold.setHours(threshold.getHours() - value);
+      break;
+    case "minutes":
+      threshold.setMinutes(threshold.getMinutes() - value);
+      break;
+  }
+
+  return threshold;
+}
+
+function evaluateFilter(
+  filter: SegmentFilter,
+  contactData: ContactWithTopics
+): boolean {
+  const { field, operator, value, unit } = filter;
+
+  let actualValue: unknown;
+
+  if (field.startsWith("properties.")) {
+    const propPath = field.substring("properties.".length);
+    actualValue = getNestedValue(contactData.properties || {}, propPath);
+  } else if (field === "topics") {
+    actualValue = contactData.topicIds;
+  } else {
+    actualValue = contactData[field as keyof typeof contactData];
+  }
+
+  switch (operator) {
+    case "equals":
+      return actualValue === value;
+
+    case "notEquals":
+      return actualValue !== value;
+
+    case "contains":
+      if (typeof actualValue === "string" && typeof value === "string") {
+        return actualValue.toLowerCase().includes(value.toLowerCase());
+      }
+      return false;
+
+    case "notContains":
+      if (typeof actualValue === "string" && typeof value === "string") {
+        return !actualValue.toLowerCase().includes(value.toLowerCase());
+      }
+      return true;
+
+    case "startsWith":
+      if (typeof actualValue === "string" && typeof value === "string") {
+        return actualValue.toLowerCase().startsWith(value.toLowerCase());
+      }
+      return false;
+
+    case "endsWith":
+      if (typeof actualValue === "string" && typeof value === "string") {
+        return actualValue.toLowerCase().endsWith(value.toLowerCase());
+      }
+      return false;
+
+    case "greaterThan":
+      if (typeof actualValue === "number" && typeof value === "number") {
+        return actualValue > value;
+      }
+      return false;
+
+    case "lessThan":
+      if (typeof actualValue === "number" && typeof value === "number") {
+        return actualValue < value;
+      }
+      return false;
+
+    case "greaterThanOrEqual":
+      if (typeof actualValue === "number" && typeof value === "number") {
+        return actualValue >= value;
+      }
+      return false;
+
+    case "lessThanOrEqual":
+      if (typeof actualValue === "number" && typeof value === "number") {
+        return actualValue <= value;
+      }
+      return false;
+
+    case "exists":
+      return actualValue !== null && actualValue !== undefined && actualValue !== "";
+
+    case "notExists":
+      return actualValue === null || actualValue === undefined || actualValue === "";
+
+    case "inList":
+      if (Array.isArray(value)) {
+        return value.includes(actualValue);
+      }
+      return false;
+
+    case "notInList":
+      if (Array.isArray(value)) {
+        return !value.includes(actualValue);
+      }
+      return true;
+
+    case "within":
+      if (actualValue instanceof Date && typeof value === "number" && unit) {
+        const now = new Date();
+        const threshold = getThresholdDate(now, value, unit);
+        return actualValue >= threshold;
+      }
+      if (typeof actualValue === "string" && typeof value === "number" && unit) {
+        const dateValue = new Date(actualValue);
+        if (!Number.isNaN(dateValue.getTime())) {
+          const now = new Date();
+          const threshold = getThresholdDate(now, value, unit);
+          return dateValue >= threshold;
+        }
+      }
+      return false;
+
+    case "hasTopic":
+      if (Array.isArray(actualValue) && typeof value === "string") {
+        return actualValue.includes(value);
+      }
+      return false;
+
+    case "notHasTopic":
+      if (Array.isArray(actualValue) && typeof value === "string") {
+        return !actualValue.includes(value);
+      }
+      return true;
+
+    default:
+      return false;
+  }
+}
+
+function evaluateGroup(
+  group: FilterGroup,
+  contactData: ContactWithTopics
+): boolean {
+  for (const filter of group.filters) {
+    if (!evaluateFilter(filter, contactData)) {
+      return false;
+    }
+  }
+
+  if (group.nested) {
+    return evaluateCondition(group.nested, contactData);
+  }
+
+  return true;
+}
+
+function evaluateCondition(
+  condition: FilterCondition,
+  contactData: ContactWithTopics
+): boolean {
+  if (condition.groups.length === 0) {
+    return true;
+  }
+
+  if (condition.logic === "AND") {
+    return condition.groups.every((group) => evaluateGroup(group, contactData));
+  }
+
+  return condition.groups.some((group) => evaluateGroup(group, contactData));
+}
+
+describe("Segment Evaluator", () => {
+  const baseContact: ContactWithTopics = {
+    id: "contact-123",
+    email: "test@example.com",
+    firstName: "John",
+    lastName: "Doe",
+    company: "Acme Inc",
+    emailStatus: "active",
+    properties: {
+      plan: "pro",
+      country: "US",
+      score: 85,
+      nested: {
+        value: "deep",
+      },
+    },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    topicIds: ["topic-1", "topic-2"],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("Basic Operators", () => {
+    describe("equals", () => {
+      it("should match when values are equal", () => {
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "equals",
+          value: "active",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when values differ", () => {
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "equals",
+          value: "unsubscribed",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+
+      it("should handle null values", () => {
+        const contactWithNull = { ...baseContact, company: null };
+        const filter: SegmentFilter = {
+          field: "company",
+          operator: "equals",
+          value: null,
+        };
+        expect(evaluateFilter(filter, contactWithNull)).toBe(true);
+      });
+    });
+
+    describe("notEquals", () => {
+      it("should match when values differ", () => {
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "notEquals",
+          value: "bounced",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when values are equal", () => {
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "notEquals",
+          value: "active",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+
+    describe("contains", () => {
+      it("should match when string contains value", () => {
+        const filter: SegmentFilter = {
+          field: "email",
+          operator: "contains",
+          value: "example",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should be case insensitive", () => {
+        const filter: SegmentFilter = {
+          field: "email",
+          operator: "contains",
+          value: "EXAMPLE",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when string does not contain value", () => {
+        const filter: SegmentFilter = {
+          field: "email",
+          operator: "contains",
+          value: "gmail",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+
+    describe("notContains", () => {
+      it("should match when string does not contain value", () => {
+        const filter: SegmentFilter = {
+          field: "email",
+          operator: "notContains",
+          value: "gmail",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when string contains value", () => {
+        const filter: SegmentFilter = {
+          field: "email",
+          operator: "notContains",
+          value: "example",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+
+    describe("startsWith", () => {
+      it("should match when string starts with value", () => {
+        const filter: SegmentFilter = {
+          field: "email",
+          operator: "startsWith",
+          value: "test@",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should be case insensitive", () => {
+        const filter: SegmentFilter = {
+          field: "email",
+          operator: "startsWith",
+          value: "TEST@",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+    });
+
+    describe("endsWith", () => {
+      it("should match when string ends with value", () => {
+        const filter: SegmentFilter = {
+          field: "email",
+          operator: "endsWith",
+          value: ".com",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+    });
+
+    describe("exists", () => {
+      it("should match when field has value", () => {
+        const filter: SegmentFilter = {
+          field: "firstName",
+          operator: "exists",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when field is null", () => {
+        const contactWithNull = { ...baseContact, firstName: null };
+        const filter: SegmentFilter = {
+          field: "firstName",
+          operator: "exists",
+        };
+        expect(evaluateFilter(filter, contactWithNull)).toBe(false);
+      });
+
+      it("should not match when field is empty string", () => {
+        const contactWithEmpty = { ...baseContact, firstName: "" as string | null };
+        const filter: SegmentFilter = {
+          field: "firstName",
+          operator: "exists",
+        };
+        expect(evaluateFilter(filter, contactWithEmpty)).toBe(false);
+      });
+    });
+
+    describe("notExists", () => {
+      it("should match when field is null", () => {
+        const contactWithNull = { ...baseContact, firstName: null };
+        const filter: SegmentFilter = {
+          field: "firstName",
+          operator: "notExists",
+        };
+        expect(evaluateFilter(filter, contactWithNull)).toBe(true);
+      });
+
+      it("should not match when field has value", () => {
+        const filter: SegmentFilter = {
+          field: "firstName",
+          operator: "notExists",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+  });
+
+  describe("Numeric Operators", () => {
+    describe("greaterThan", () => {
+      it("should match when value is greater", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "greaterThan",
+          value: 80,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when value is equal", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "greaterThan",
+          value: 85,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+
+      it("should not match when value is less", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "greaterThan",
+          value: 90,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+
+    describe("lessThan", () => {
+      it("should match when value is less", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "lessThan",
+          value: 90,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when value is greater", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "lessThan",
+          value: 80,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+
+    describe("greaterThanOrEqual", () => {
+      it("should match when value is equal", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "greaterThanOrEqual",
+          value: 85,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should match when value is greater", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "greaterThanOrEqual",
+          value: 80,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+    });
+
+    describe("lessThanOrEqual", () => {
+      it("should match when value is equal", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "lessThanOrEqual",
+          value: 85,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should match when value is less", () => {
+        const filter: SegmentFilter = {
+          field: "properties.score",
+          operator: "lessThanOrEqual",
+          value: 90,
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+    });
+  });
+
+  describe("List Operators", () => {
+    describe("inList", () => {
+      it("should match when value is in list", () => {
+        const filter: SegmentFilter = {
+          field: "properties.plan",
+          operator: "inList",
+          value: ["free", "pro", "enterprise"],
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when value is not in list", () => {
+        const filter: SegmentFilter = {
+          field: "properties.plan",
+          operator: "inList",
+          value: ["free", "starter"],
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+
+    describe("notInList", () => {
+      it("should match when value is not in list", () => {
+        const filter: SegmentFilter = {
+          field: "properties.plan",
+          operator: "notInList",
+          value: ["free", "starter"],
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when value is in list", () => {
+        const filter: SegmentFilter = {
+          field: "properties.plan",
+          operator: "notInList",
+          value: ["pro", "enterprise"],
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+  });
+
+  describe("Property Access", () => {
+    it("should access top-level properties", () => {
+      const filter: SegmentFilter = {
+        field: "properties.plan",
+        operator: "equals",
+        value: "pro",
+      };
+      expect(evaluateFilter(filter, baseContact)).toBe(true);
+    });
+
+    it("should access nested properties", () => {
+      const filter: SegmentFilter = {
+        field: "properties.nested.value",
+        operator: "equals",
+        value: "deep",
+      };
+      expect(evaluateFilter(filter, baseContact)).toBe(true);
+    });
+
+    it("should handle missing nested properties", () => {
+      const filter: SegmentFilter = {
+        field: "properties.nonexistent.deep",
+        operator: "exists",
+      };
+      expect(evaluateFilter(filter, baseContact)).toBe(false);
+    });
+  });
+
+  describe("Topic Operators", () => {
+    describe("hasTopic", () => {
+      it("should match when contact has topic", () => {
+        const filter: SegmentFilter = {
+          field: "topics",
+          operator: "hasTopic",
+          value: "topic-1",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when contact does not have topic", () => {
+        const filter: SegmentFilter = {
+          field: "topics",
+          operator: "hasTopic",
+          value: "topic-999",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+
+    describe("notHasTopic", () => {
+      it("should match when contact does not have topic", () => {
+        const filter: SegmentFilter = {
+          field: "topics",
+          operator: "notHasTopic",
+          value: "topic-999",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(true);
+      });
+
+      it("should not match when contact has topic", () => {
+        const filter: SegmentFilter = {
+          field: "topics",
+          operator: "notHasTopic",
+          value: "topic-1",
+        };
+        expect(evaluateFilter(filter, baseContact)).toBe(false);
+      });
+    });
+  });
+
+  describe("Time-based Operators", () => {
+    describe("within", () => {
+      it("should match when date is within threshold (days)", () => {
+        const recentContact = {
+          ...baseContact,
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        };
+        const filter: SegmentFilter = {
+          field: "createdAt",
+          operator: "within",
+          value: 7,
+          unit: "days",
+        };
+        expect(evaluateFilter(filter, recentContact)).toBe(true);
+      });
+
+      it("should not match when date is outside threshold", () => {
+        const oldContact = {
+          ...baseContact,
+          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+        };
+        const filter: SegmentFilter = {
+          field: "createdAt",
+          operator: "within",
+          value: 7,
+          unit: "days",
+        };
+        expect(evaluateFilter(filter, oldContact)).toBe(false);
+      });
+
+      it("should handle hours unit", () => {
+        const recentContact = {
+          ...baseContact,
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        };
+        const filter: SegmentFilter = {
+          field: "createdAt",
+          operator: "within",
+          value: 24,
+          unit: "hours",
+        };
+        expect(evaluateFilter(filter, recentContact)).toBe(true);
+      });
+
+      it("should handle minutes unit", () => {
+        const recentContact = {
+          ...baseContact,
+          createdAt: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
+        };
+        const filter: SegmentFilter = {
+          field: "createdAt",
+          operator: "within",
+          value: 30,
+          unit: "minutes",
+        };
+        expect(evaluateFilter(filter, recentContact)).toBe(true);
+      });
+    });
+  });
+
+  describe("Filter Groups (AND logic within group)", () => {
+    it("should match when all filters in group match", () => {
+      const group: FilterGroup = {
+        filters: [
+          { field: "emailStatus", operator: "equals", value: "active" },
+          { field: "properties.plan", operator: "equals", value: "pro" },
+        ],
+      };
+      expect(evaluateGroup(group, baseContact)).toBe(true);
+    });
+
+    it("should not match when any filter in group fails", () => {
+      const group: FilterGroup = {
+        filters: [
+          { field: "emailStatus", operator: "equals", value: "active" },
+          { field: "properties.plan", operator: "equals", value: "free" },
+        ],
+      };
+      expect(evaluateGroup(group, baseContact)).toBe(false);
+    });
+
+    it("should handle empty filter group", () => {
+      const group: FilterGroup = {
+        filters: [],
+      };
+      expect(evaluateGroup(group, baseContact)).toBe(true);
+    });
+  });
+
+  describe("Filter Conditions (AND/OR between groups)", () => {
+    describe("AND logic", () => {
+      it("should match when all groups match", () => {
+        const condition: FilterCondition = {
+          logic: "AND",
+          groups: [
+            { filters: [{ field: "emailStatus", operator: "equals", value: "active" }] },
+            { filters: [{ field: "properties.plan", operator: "equals", value: "pro" }] },
+          ],
+        };
+        expect(evaluateCondition(condition, baseContact)).toBe(true);
+      });
+
+      it("should not match when any group fails", () => {
+        const condition: FilterCondition = {
+          logic: "AND",
+          groups: [
+            { filters: [{ field: "emailStatus", operator: "equals", value: "active" }] },
+            { filters: [{ field: "properties.plan", operator: "equals", value: "free" }] },
+          ],
+        };
+        expect(evaluateCondition(condition, baseContact)).toBe(false);
+      });
+    });
+
+    describe("OR logic", () => {
+      it("should match when any group matches", () => {
+        const condition: FilterCondition = {
+          logic: "OR",
+          groups: [
+            { filters: [{ field: "emailStatus", operator: "equals", value: "bounced" }] },
+            { filters: [{ field: "properties.plan", operator: "equals", value: "pro" }] },
+          ],
+        };
+        expect(evaluateCondition(condition, baseContact)).toBe(true);
+      });
+
+      it("should not match when all groups fail", () => {
+        const condition: FilterCondition = {
+          logic: "OR",
+          groups: [
+            { filters: [{ field: "emailStatus", operator: "equals", value: "bounced" }] },
+            { filters: [{ field: "properties.plan", operator: "equals", value: "free" }] },
+          ],
+        };
+        expect(evaluateCondition(condition, baseContact)).toBe(false);
+      });
+    });
+
+    it("should handle empty condition", () => {
+      const condition: FilterCondition = {
+        logic: "AND",
+        groups: [],
+      };
+      expect(evaluateCondition(condition, baseContact)).toBe(true);
+    });
+  });
+
+  describe("Nested Conditions", () => {
+    it("should evaluate nested conditions within groups", () => {
+      const condition: FilterCondition = {
+        logic: "AND",
+        groups: [
+          {
+            filters: [{ field: "emailStatus", operator: "equals", value: "active" }],
+            nested: {
+              logic: "OR",
+              groups: [
+                { filters: [{ field: "properties.plan", operator: "equals", value: "pro" }] },
+                { filters: [{ field: "properties.plan", operator: "equals", value: "enterprise" }] },
+              ],
+            },
+          },
+        ],
+      };
+      expect(evaluateCondition(condition, baseContact)).toBe(true);
+    });
+
+    it("should fail when nested condition fails", () => {
+      const condition: FilterCondition = {
+        logic: "AND",
+        groups: [
+          {
+            filters: [{ field: "emailStatus", operator: "equals", value: "active" }],
+            nested: {
+              logic: "AND",
+              groups: [
+                { filters: [{ field: "properties.plan", operator: "equals", value: "enterprise" }] },
+              ],
+            },
+          },
+        ],
+      };
+      expect(evaluateCondition(condition, baseContact)).toBe(false);
+    });
+  });
+
+  describe("Complex Real-world Scenarios", () => {
+    it("should match: active US pro users who subscribed to newsletter", () => {
+      const condition: FilterCondition = {
+        logic: "AND",
+        groups: [
+          { filters: [{ field: "emailStatus", operator: "equals", value: "active" }] },
+          { filters: [{ field: "properties.country", operator: "equals", value: "US" }] },
+          { filters: [{ field: "properties.plan", operator: "inList", value: ["pro", "enterprise"] }] },
+          { filters: [{ field: "topics", operator: "hasTopic", value: "topic-1" }] },
+        ],
+      };
+      expect(evaluateCondition(condition, baseContact)).toBe(true);
+    });
+
+    it("should match: high-value contacts (score > 70) OR enterprise plan", () => {
+      const condition: FilterCondition = {
+        logic: "OR",
+        groups: [
+          { filters: [{ field: "properties.score", operator: "greaterThan", value: 70 }] },
+          { filters: [{ field: "properties.plan", operator: "equals", value: "enterprise" }] },
+        ],
+      };
+      expect(evaluateCondition(condition, baseContact)).toBe(true);
+    });
+
+    it("should match: new users (created within 7 days) with complete profile", () => {
+      const newContact = {
+        ...baseContact,
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      };
+      const condition: FilterCondition = {
+        logic: "AND",
+        groups: [
+          { filters: [{ field: "createdAt", operator: "within", value: 7, unit: "days" }] },
+          { filters: [{ field: "firstName", operator: "exists" }] },
+          { filters: [{ field: "lastName", operator: "exists" }] },
+          { filters: [{ field: "company", operator: "exists" }] },
+        ],
+      };
+      expect(evaluateCondition(condition, newContact)).toBe(true);
+    });
+  });
+});

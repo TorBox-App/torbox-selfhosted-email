@@ -15,6 +15,7 @@ import { eventsRoutes } from "./routes/events";
 import { healthRoutes } from "./routes/health";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
+import { workflowsRoutes } from "./routes/workflows";
 
 export const app = new Elysia()
   .onError(({ error }) => {
@@ -43,6 +44,7 @@ export const app = new Elysia()
           { name: "contacts", description: "Contact management" },
           { name: "batch", description: "Batch sending operations" },
           { name: "events", description: "Event ingestion for workflow triggers" },
+          { name: "workflows", description: "Workflow trigger endpoints" },
           {
             name: "webhooks",
             description: "Webhook endpoints for event processing",
@@ -59,6 +61,7 @@ export const app = new Elysia()
   .use(contactsRoutes)
   .use(batchRoutes)
   .use(eventsRoutes)
+  .use(workflowsRoutes)
   .use(webhooksRoutes)
   .use(unsubscribeRoutes);
 

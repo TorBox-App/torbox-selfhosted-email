@@ -11,11 +11,18 @@ import {
   SendTextMessageCommand,
 } from "@aws-sdk/client-pinpoint-sms-voice-v2";
 import {
+  SendEmailCommand,
+  SESv2Client,
+} from "@aws-sdk/client-sesv2";
+import {
   awsAccount,
   contact,
   contactTopic,
   db,
   eq,
+  messageSend,
+  organization,
+  template,
   workflow,
   workflowExecution,
   workflowStepExecution,
@@ -24,6 +31,8 @@ import {
   type WorkflowTransition,
 } from "@wraps/db";
 import { and, sql } from "drizzle-orm";
+
+import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 
 import { getCredentials } from "../services/credentials";
 import {
@@ -349,20 +358,284 @@ async function handleSendEmail(
   config: Extract<WorkflowStepConfig, { type: "send_email" }>,
   execution: typeof workflowExecution.$inferSelect,
   contactRecord: typeof contact.$inferSelect,
-  _organizationId: string
+  organizationId: string
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
-  // TODO: Implement email sending via customer's SES
-  // For now, log and proceed
-  console.log(`[workflow] Would send email template ${config.templateId} to ${contactRecord.email}`);
+  // Check contact has email
+  if (!contactRecord.email) {
+    console.log(`[workflow] Contact ${contactRecord.id} has no email, skipping`);
+    return {
+      action: "next",
+      data: {
+        skipped: true,
+        reason: "no_email",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  // Check contact email status
+  if (contactRecord.emailStatus === "unsubscribed" ||
+      contactRecord.emailStatus === "bounced" ||
+      contactRecord.emailStatus === "complained") {
+    console.log(`[workflow] Contact ${contactRecord.id} has email status ${contactRecord.emailStatus}, skipping`);
+    return {
+      action: "next",
+      data: {
+        skipped: true,
+        reason: `email_status_${contactRecord.emailStatus}`,
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  // Get the workflow to find the AWS account
+  const [wf] = await db
+    .select({ awsAccountId: workflow.awsAccountId })
+    .from(workflow)
+    .where(eq(workflow.id, execution.workflowId))
+    .limit(1);
+
+  if (!wf?.awsAccountId) {
+    console.log(`[workflow] Workflow ${execution.workflowId} has no AWS account configured, skipping email`);
+    return {
+      action: "next",
+      data: {
+        skipped: true,
+        reason: "no_aws_account",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  // Get AWS account region
+  const [account] = await db
+    .select({ region: awsAccount.region })
+    .from(awsAccount)
+    .where(eq(awsAccount.id, wf.awsAccountId))
+    .limit(1);
+
+  if (!account) {
+    throw new Error(`AWS account ${wf.awsAccountId} not found`);
+  }
+
+  // Get template
+  const [tmpl] = await db
+    .select({
+      id: template.id,
+      name: template.name,
+      subject: template.subject,
+      compiledHtml: template.compiledHtml,
+      emailType: template.emailType,
+    })
+    .from(template)
+    .where(eq(template.id, config.templateId))
+    .limit(1);
+
+  if (!tmpl) {
+    throw new Error(`Template ${config.templateId} not found`);
+  }
+
+  if (!tmpl.compiledHtml) {
+    throw new Error(`Template ${config.templateId} has no compiled HTML`);
+  }
+
+  // Get organization for name
+  const [org] = await db
+    .select({ name: organization.name })
+    .from(organization)
+    .where(eq(organization.id, organizationId))
+    .limit(1);
+
+  // Get credentials for customer's AWS account
+  const credentials = await getCredentials(wf.awsAccountId);
+
+  // Create SES client
+  const sesClient = new SESv2Client({
+    region: account.region,
+    credentials: {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken,
+    },
+  });
+
+  // Build variable replacement data
+  const replacementData: Record<string, string> = {
+    email: contactRecord.email,
+    contactEmail: contactRecord.email,
+  };
+
+  const addIfPresent = (key: string, value: string | null | undefined) => {
+    if (value) replacementData[key] = value;
+  };
+
+  addIfPresent("firstName", contactRecord.firstName);
+  addIfPresent("lastName", contactRecord.lastName);
+  addIfPresent("company", contactRecord.company);
+  addIfPresent("jobTitle", contactRecord.jobTitle);
+  addIfPresent("contactFirstName", contactRecord.firstName);
+  addIfPresent("contactLastName", contactRecord.lastName);
+  addIfPresent("contactCompany", contactRecord.company);
+  addIfPresent("contactJobTitle", contactRecord.jobTitle);
+  addIfPresent("organizationName", org?.name);
+
+  // Add contact properties
+  const properties = contactRecord.properties as Record<string, unknown> | null;
+  if (properties) {
+    for (const [key, value] of Object.entries(properties)) {
+      const strValue = value != null ? String(value) : null;
+      if (strValue) {
+        replacementData[key] = strValue;
+      }
+    }
+  }
+
+  // Add trigger data
+  const triggerData = execution.triggerData as Record<string, unknown> | null;
+  if (triggerData) {
+    for (const [key, value] of Object.entries(triggerData)) {
+      const strValue = value != null ? String(value) : null;
+      if (strValue) {
+        replacementData[key] = strValue;
+      }
+    }
+  }
+
+  // Generate unsubscribe URLs for marketing emails
+  const isMarketing = tmpl.emailType === "marketing";
+  const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
+  const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
+
+  let unsubscribeUrl: string | undefined;
+  let preferencesUrl: string | undefined;
+
+  if (isMarketing) {
+    const unsubscribeToken = await generateUnsubscribeToken(
+      contactRecord.id,
+      organizationId
+    );
+    unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
+    preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+    replacementData.unsubscribeUrl = unsubscribeUrl;
+    replacementData.preferencesUrl = preferencesUrl;
+  }
+
+  // Apply variable substitution to HTML
+  let html = tmpl.compiledHtml;
+  for (const [key, value] of Object.entries(replacementData)) {
+    // Replace both {{key}} and {{contact.key}} patterns
+    html = html.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g"), value);
+    html = html.replace(new RegExp(`\\{\\{\\s*contact\\.${key}\\s*\\}\\}`, "g"), value);
+  }
+
+  // Build subject with variable substitution
+  let subject = tmpl.subject || "Message";
+  for (const [key, value] of Object.entries(replacementData)) {
+    subject = subject.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g"), value);
+    subject = subject.replace(new RegExp(`\\{\\{\\s*contact\\.${key}\\s*\\}\\}`, "g"), value);
+  }
+
+  // Build from address
+  const fromAddress = config.from || `noreply@${process.env.DEFAULT_DOMAIN || "wraps.dev"}`;
+  const fromDisplay = config.fromName
+    ? `${config.fromName} <${fromAddress}>`
+    : fromAddress;
+
+  // Build headers for marketing emails
+  const headers: Array<{ Name: string; Value: string }> = [];
+  if (isMarketing && unsubscribeUrl) {
+    headers.push(
+      { Name: "List-Unsubscribe", Value: `<${unsubscribeUrl}>` },
+      { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" }
+    );
+  }
+
+  // Send email
+  const result = await sesClient.send(
+    new SendEmailCommand({
+      FromEmailAddress: fromDisplay,
+      ReplyToAddresses: config.replyTo ? [config.replyTo] : undefined,
+      Destination: {
+        ToAddresses: [contactRecord.email],
+      },
+      Content: {
+        Simple: {
+          Subject: { Data: subject },
+          Body: {
+            Html: { Data: html },
+            Text: { Data: stripHtml(html) },
+          },
+          Headers: headers.length > 0 ? headers : undefined,
+        },
+      },
+      ConfigurationSetName: "wraps-email-tracking",
+      EmailTags: [
+        { Name: "workflowId", Value: execution.workflowId },
+        { Name: "executionId", Value: execution.id },
+        { Name: "organizationId", Value: organizationId },
+        { Name: "templateId", Value: config.templateId },
+        { Name: "source", Value: "automation" },
+      ],
+    })
+  );
+
+  const messageId = result.MessageId ?? "";
+
+  console.log(`[workflow] Sent email to ${contactRecord.email}, messageId: ${messageId}`);
+
+  // Record the send in messageSend table
+  // Note: workflowExecutionId is not yet in schema, will be added later
+  await db.insert(messageSend).values({
+    organizationId,
+    contactId: contactRecord.id,
+    awsAccountId: wf.awsAccountId,
+    channel: "email",
+    sourceType: "workflow",
+    recipient: contactRecord.email,
+    subject,
+    from: fromAddress,
+    fromName: config.fromName,
+    emailTemplateId: config.templateId,
+    messageId,
+    status: "sent",
+    sentAt: new Date(),
+  });
+
+  // Update contact email metrics
+  await db
+    .update(contact)
+    .set({
+      lastEmailSentAt: new Date(),
+      emailsSent: sql`COALESCE(${contact.emailsSent}, 0) + 1`,
+    })
+    .where(eq(contact.id, contactRecord.id));
 
   return {
     action: "next",
     data: {
+      messageId,
       templateId: config.templateId,
       recipient: contactRecord.email,
+      subject,
       timestamp: new Date().toISOString(),
     },
   };
+}
+
+/**
+ * Strip HTML tags for plain text version
+ */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function handleSendSms(
