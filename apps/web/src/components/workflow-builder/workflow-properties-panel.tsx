@@ -1,7 +1,8 @@
 "use client";
 
 import type { WorkflowStepConfig } from "@wraps/db";
-import { AlertCircle, Settings, Trash2, X } from "lucide-react";
+import { AlertCircle, Pencil, Plus, Settings, Trash2, X } from "lucide-react";
+import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { TemplateEditorDialog } from "@/components/template-editor/wrappers/template-editor-dialog";
+import { useTemplates } from "@/hooks/use-template-queries";
 import { useSelectedNode, useValidationResult, useWorkflowStore } from "./use-workflow-store";
 
 interface Template {
@@ -34,13 +37,13 @@ interface Segment {
 }
 
 interface WorkflowPropertiesPanelProps {
-  templates: Template[];
+  orgSlug: string;
   topics?: Topic[];
   segments?: Segment[];
 }
 
 export function WorkflowPropertiesPanel({
-  templates,
+  orgSlug,
   topics = [],
   segments = [],
 }: WorkflowPropertiesPanelProps) {
@@ -48,6 +51,32 @@ export function WorkflowPropertiesPanel({
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const updateNodeConfig = useWorkflowStore((state) => state.updateNodeConfig);
   const updateNodeName = useWorkflowStore((state) => state.updateNodeName);
+
+  // Fetch templates via React Query (auto-refreshes when new templates are created)
+  const { data: templatesData } = useTemplates(orgSlug);
+  const templates = templatesData ?? [];
+
+  // Template editor dialog state
+  const [showEditorDialog, setShowEditorDialog] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | undefined>();
+
+  const handleCreateNewTemplate = () => {
+    setEditingTemplateId(undefined);
+    setShowEditorDialog(true);
+  };
+
+  const handleEditTemplate = (templateId: string) => {
+    setEditingTemplateId(templateId);
+    setShowEditorDialog(true);
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    // Update the node config with the new/edited template
+    if (selectedNode) {
+      updateNodeConfig(selectedNode.id, { templateId });
+    }
+    setShowEditorDialog(false);
+  };
   const deleteNode = useWorkflowStore((state) => state.deleteNode);
   const validationResult = useValidationResult();
 
@@ -130,6 +159,8 @@ export function WorkflowPropertiesPanel({
             config={data.config}
             templates={templates}
             onChange={handleConfigChange}
+            onCreateNew={handleCreateNewTemplate}
+            onEditTemplate={handleEditTemplate}
           />
         )}
 
@@ -217,6 +248,18 @@ export function WorkflowPropertiesPanel({
           </div>
         )}
       </div>
+
+      {/* Template Editor Dialog */}
+      <TemplateEditorDialog
+        orgSlug={orgSlug}
+        templateId={editingTemplateId}
+        templateName={editingTemplateId ? undefined : "New Template"}
+        variableContext="automation"
+        open={showEditorDialog}
+        onOpenChange={setShowEditorDialog}
+        onTemplateSelect={handleTemplateSelect}
+        title={editingTemplateId ? "Edit Template" : "Create Template"}
+      />
     </div>
   );
 }
@@ -393,37 +436,81 @@ function SendEmailConfig({
   config,
   templates,
   onChange,
+  onCreateNew,
+  onEditTemplate,
 }: {
   config: WorkflowStepConfig;
   templates: Template[];
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
+  onCreateNew?: () => void;
+  onEditTemplate?: (templateId: string) => void;
 }) {
   if (config.type !== "send_email") return null;
+
+  const selectedTemplate = templates.find((t) => t.id === config.templateId);
 
   return (
     <>
       <div className="space-y-2">
-        <Label>Email Template</Label>
-        <Select
-          value={config.templateId || ""}
-          onValueChange={(value) => {
-            onChange({ templateId: value });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a template" />
-          </SelectTrigger>
-          <SelectContent>
-            {templates.map((template) => (
-              <SelectItem key={template.id} value={template.id}>
-                {template.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center justify-between">
+          <Label>Email Template</Label>
+          {onCreateNew && (
+            <button
+              type="button"
+              onClick={onCreateNew}
+              className="text-xs text-primary hover:underline flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" />
+              Create new
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Select
+            value={config.templateId || ""}
+            onValueChange={(value) => {
+              onChange({ templateId: value });
+            }}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Select a template" />
+            </SelectTrigger>
+            <SelectContent>
+              {templates.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {config.templateId && onEditTemplate && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => onEditTemplate(config.templateId!)}
+              title="Edit template"
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
         {templates.length === 0 && (
           <p className="text-xs text-gray-500">
-            No templates available. Create one first.
+            No templates available.{" "}
+            {onCreateNew && (
+              <button
+                type="button"
+                onClick={onCreateNew}
+                className="text-primary hover:underline"
+              >
+                Create one
+              </button>
+            )}
+          </p>
+        )}
+        {selectedTemplate && (
+          <p className="text-xs text-muted-foreground">
+            Subject: {selectedTemplate.subject || "(no subject)"}
           </p>
         )}
       </div>

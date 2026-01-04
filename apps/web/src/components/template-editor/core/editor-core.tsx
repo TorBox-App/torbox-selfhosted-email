@@ -6,7 +6,6 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
-import { BlockPalette } from "../block-palette";
 import { CodeView } from "../code-view";
 import { EditorDndProvider } from "../dnd-context";
 import { EditorBubbleMenu } from "../editor-bubble-menu";
@@ -78,9 +77,9 @@ export type EditorCoreProps = {
   previewText?: string;
 
   /**
-   * AI panel to render (rendered inside editor context so it has access to editor instance)
+   * Left panel to render (rendered inside editor context so it has access to editor instance)
    */
-  aiPanel?: ReactNode;
+  leftPanel?: ReactNode;
 };
 
 /**
@@ -103,7 +102,7 @@ export function EditorCore({
   onUpdate,
   onReset,
   previewText = "",
-  aiPanel,
+  leftPanel,
 }: EditorCoreProps) {
   const {
     orgSlug,
@@ -117,7 +116,6 @@ export function EditorCore({
 
   const {
     view,
-    showBlockLibrary,
     showPropertiesPanel,
     showTestDataPanel,
     selectedBrandKitId,
@@ -219,10 +217,8 @@ export function EditorCore({
 
             {/* Main Content Area */}
             <div className="flex min-h-0 flex-1 overflow-hidden">
-              {/* Left Panel - Block Library */}
-              {features.blocks && showBlockLibrary && view === "edit" && (
-                <BlockPalette editor={editor} orgSlug={orgSlug} />
-              )}
+              {/* Left Panel (rendered via prop to have access to editor context) */}
+              {leftPanel}
 
               {/* Center - Editor/Preview/Code */}
               <div className={cn("flex-1 overflow-auto")}>
@@ -255,9 +251,6 @@ export function EditorCore({
                 (view === "edit" || view === "preview") && (
                   <TestDataPanel editor={editor} />
                 )}
-
-              {/* Right Panel - AI (rendered via prop to have access to editor context) */}
-              {features.ai && view === "edit" && aiPanel}
             </div>
           </div>
         </EditorDndProvider>

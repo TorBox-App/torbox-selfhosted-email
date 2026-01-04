@@ -10,13 +10,6 @@ import { WorkflowDataProvider } from "./workflow-data-context";
 import { WorkflowPropertiesPanel } from "./workflow-properties-panel";
 import { WorkflowToolbar } from "./workflow-toolbar";
 
-interface Template {
-  id: string;
-  name: string;
-  subject: string | null;
-  status: string;
-}
-
 interface Topic {
   id: string;
   name: string;
@@ -37,7 +30,6 @@ interface WorkflowBuilderProps {
   workflow: Workflow;
   organizationId: string;
   orgSlug: string;
-  templates: Template[];
   topics: Topic[];
   segments: Segment[];
   awsAccounts: AwsAccount[];
@@ -48,7 +40,6 @@ export function WorkflowBuilder({
   workflow,
   organizationId,
   orgSlug,
-  templates,
   topics,
   segments,
   awsAccounts,
@@ -72,7 +63,7 @@ export function WorkflowBuilder({
           <div className="flex-1 flex overflow-hidden">
             <AIDesignPanel orgSlug={orgSlug} workflowId={workflow.id} />
             <WorkflowCanvas />
-            <WorkflowPropertiesPanel templates={templates} topics={topics} segments={segments} />
+            <WorkflowPropertiesPanel orgSlug={orgSlug} topics={topics} segments={segments} />
           </div>
         </div>
       </WorkflowDataProvider>

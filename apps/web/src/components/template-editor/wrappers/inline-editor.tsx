@@ -11,13 +11,13 @@ import {
 } from "@/hooks/use-template-queries";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
-import { AIChatPanel } from "../ai-chat-panel";
 import {
   EditorCore,
   EditorProvider,
   type EditorMetadata,
   type VariableContext,
 } from "../core";
+import { LeftPanel } from "../left-panel";
 import { BaseToolbar, InlineToolbarActions } from "../toolbars";
 import { useEditorInstanceContext } from "../core/editor-core";
 
@@ -302,7 +302,8 @@ type InlineEditorContentProps = {
 };
 
 /**
- * Inner component that has access to editor context
+ * Inner component that has access to editor context.
+ * Renders EditorCore with leftPanel prop for the AI/Blocks panel.
  */
 function InlineEditorContent({
   isSaving,
@@ -316,9 +317,9 @@ function InlineEditorContent({
   return (
     <EditorCore
       previewText={previewText}
-      aiPanel={
+      leftPanel={
         templateId ? (
-          <InlineEditorAIPanel orgSlug={orgSlug} templateId={templateId} />
+          <InlineEditorLeftPanel orgSlug={orgSlug} templateId={templateId} />
         ) : undefined
       }
     >
@@ -334,25 +335,24 @@ function InlineEditorContent({
 }
 
 /**
- * AI Panel wrapper that has access to editor context
+ * Left panel wrapper that has access to editor instance context
  */
-function InlineEditorAIPanel({
+function InlineEditorLeftPanel({
   orgSlug,
   templateId,
 }: {
   orgSlug: string;
-  templateId: string;
+  templateId?: string;
 }) {
-  const { showAIPanel } = useTemplateStore((state) => state.localState);
+  const { showLeftPanel, view } = useTemplateStore((state) => state.localState);
   const { editor } = useEditorInstanceContext();
 
-  if (!showAIPanel) {
+  if (!showLeftPanel || view !== "edit" || !templateId) {
     return null;
   }
 
   return (
-    <AIChatPanel
-      asSidePanel
+    <LeftPanel
       editor={editor}
       orgSlug={orgSlug}
       templateId={templateId}

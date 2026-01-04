@@ -9,6 +9,7 @@ import {
   Pencil,
   Redo2,
   SlidersHorizontal,
+  Sparkles,
   Undo2,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -106,10 +107,10 @@ export function BaseToolbar({
 }: BaseToolbarProps) {
   const { orgSlug, mode, features } = useEditorContext();
 
-  const { view, showBlockLibrary, showPropertiesPanel } = useTemplateStore(
+  const { view, showLeftPanel, leftPanelTab, showPropertiesPanel } = useTemplateStore(
     (state) => state.localState
   );
-  const { setView, toggleBlockLibrary, togglePropertiesPanel } =
+  const { setView, toggleLeftPanelWithTab, togglePropertiesPanel } =
     useTemplateStore((state) => state.actions);
 
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
@@ -189,19 +190,35 @@ export function BaseToolbar({
         <div className="flex items-center gap-1 bg-muted/30 px-2 py-1.5">
           {/* Sidebar Toggles */}
           <div className="flex items-center gap-0.5">
+            {features.ai && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    className="h-8 w-8 p-0"
+                    onClick={() => toggleLeftPanelWithTab("ai")}
+                    size="sm"
+                    variant={showLeftPanel && leftPanelTab === "ai" ? "secondary" : "ghost"}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>AI Assistant</TooltipContent>
+              </Tooltip>
+            )}
+
             {features.blocks && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     className="h-8 w-8 p-0"
-                    onClick={toggleBlockLibrary}
+                    onClick={() => toggleLeftPanelWithTab("blocks")}
                     size="sm"
-                    variant={showBlockLibrary ? "secondary" : "ghost"}
+                    variant={showLeftPanel && leftPanelTab === "blocks" ? "secondary" : "ghost"}
                   >
                     <LayoutGrid className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Toggle Blocks Panel</TooltipContent>
+                <TooltipContent>Blocks</TooltipContent>
               </Tooltip>
             )}
 
@@ -217,7 +234,7 @@ export function BaseToolbar({
                     <SlidersHorizontal className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Toggle Properties Panel</TooltipContent>
+                <TooltipContent>Properties</TooltipContent>
               </Tooltip>
             )}
           </div>
