@@ -1,9 +1,9 @@
 "use client";
 
 import type { Workflow } from "@wraps/db";
-import { AlertCircle, ArrowLeft, Loader2, Pause, Play, Save } from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, Pause, Pencil, Play, Save } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { disableWorkflow, enableWorkflow, updateWorkflow } from "@/actions/workflows";
 import { Badge } from "@/components/ui/badge";
@@ -39,13 +39,48 @@ export function WorkflowToolbar({
   const updateWorkflowAfterSave = useWorkflowStore((state) => state.updateWorkflowAfterSave);
   const runValidation = useWorkflowStore((state) => state.runValidation);
   const workflowState = useWorkflowStore((state) => state.workflow);
+  const updateWorkflowSettings = useWorkflowStore((state) => state.updateWorkflowSettings);
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
+
+  // Editable name state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Run validation on mount and when nodes/edges change
   useEffect(() => {
     runValidation();
   }, [nodes, edges, runValidation]);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [isEditingName]);
+
+  const handleStartEditingName = () => {
+    setEditedName(workflowState?.name || workflow.name);
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = () => {
+    const trimmedName = editedName.trim();
+    if (trimmedName && trimmedName !== (workflowState?.name || workflow.name)) {
+      updateWorkflowSettings({ name: trimmedName });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleKeyDownName = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSaveName();
+    } else if (e.key === "Escape") {
+      setIsEditingName(false);
+    }
+  };
 
   const currentStatus = workflowState?.status ?? workflow.status;
   const isEnabled = currentStatus === "enabled";
@@ -136,7 +171,25 @@ export function WorkflowToolbar({
         </Link>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-semibold">{workflowState?.name || workflow.name}</h1>
+            {isEditingName ? (
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={handleKeyDownName}
+                className="font-semibold bg-transparent border-b border-primary outline-none min-w-[200px]"
+              />
+            ) : (
+              <button
+                onClick={handleStartEditingName}
+                className="flex items-center gap-1.5 font-semibold hover:text-primary transition-colors group"
+              >
+                {workflowState?.name || workflow.name}
+                <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 transition-opacity" />
+              </button>
+            )}
             <Badge
               variant={(workflowState?.status ?? workflow.status) === "enabled" ? "default" : "secondary"}
             >
