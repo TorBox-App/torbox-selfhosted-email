@@ -38,7 +38,7 @@ export default async function NewBatchPage({ params }: NewBatchPageProps) {
 
   // Only owners and admins can create batch sends
   if (!["owner", "admin"].includes(orgWithMembership.userRole)) {
-    redirect(`/${orgSlug}/send`);
+    redirect(`/${orgSlug}/emails/broadcasts`);
   }
 
   // Fetch AWS accounts, templates, topics, segments, and feature access in parallel

@@ -389,7 +389,7 @@ export function BatchForm({
                 : `Sending to ${result.batch.totalRecipients} recipients`,
             }
           );
-          router.push(`/${orgSlug}/send/${result.batch.id}`);
+          router.push(`/${orgSlug}/emails/broadcasts/${result.batch.id}`);
         } else {
           console.error("[batch-form] Error:", result.error);
           toast.error("Failed to create broadcast", {
@@ -425,7 +425,7 @@ export function BatchForm({
       {/* Header */}
       <div className="flex items-center gap-4 pb-6">
         <Button asChild size="icon" variant="ghost">
-          <Link href={`/${orgSlug}/send`}>
+          <Link href={`/${orgSlug}/emails/broadcasts`}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>

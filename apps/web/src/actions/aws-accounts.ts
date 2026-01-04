@@ -1040,7 +1040,7 @@ export async function getVerifiedDomains(
 
     // Force revalidation if requested
     if (forceRefresh) {
-      revalidatePath(`/${organizationId}/send/new`);
+      revalidatePath(`/${organizationId}/emails/broadcasts/new`);
     }
 
     return {

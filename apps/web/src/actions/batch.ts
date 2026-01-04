@@ -491,7 +491,7 @@ export async function createBatchSend(
     const result = (await response.json()) as { id: string };
     console.log("[batch] Batch created successfully:", result.id);
 
-    revalidatePath("/[orgSlug]/send", "page");
+    revalidatePath("/[orgSlug]/emails/broadcasts", "page");
 
     return await getBatchSend(result.id, organizationId);
   } catch (error) {
@@ -572,8 +572,8 @@ export async function cancelBatchSend(
       }
     }
 
-    revalidatePath("/[orgSlug]/send", "page");
-    revalidatePath(`/[orgSlug]/send/${batchId}`, "page");
+    revalidatePath("/[orgSlug]/emails/broadcasts", "page");
+    revalidatePath(`/[orgSlug]/emails/broadcasts/${batchId}`, "page");
 
     return { success: true };
   } catch (error) {

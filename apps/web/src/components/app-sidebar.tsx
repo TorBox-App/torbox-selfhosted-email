@@ -49,11 +49,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               },
               {
                 title: "Broadcast",
-                url: `/${orgSlug}/send`,
+                url: `/${orgSlug}/emails/broadcasts`,
               },
               {
                 title: "Templates",
                 url: `/${orgSlug}/emails/templates`,
+              },
+              {
+                title: "Brand Kits",
+                url: `/${orgSlug}/emails/brand-kits`,
               },
               {
                 title: "Analytics",

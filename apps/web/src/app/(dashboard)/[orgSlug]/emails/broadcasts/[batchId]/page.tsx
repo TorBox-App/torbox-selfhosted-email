@@ -65,7 +65,7 @@ export default async function BatchDetailPage({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button asChild size="icon" variant="ghost">
-            <Link href={`/${orgSlug}/send`}>
+            <Link href={`/${orgSlug}/emails/broadcasts`}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>

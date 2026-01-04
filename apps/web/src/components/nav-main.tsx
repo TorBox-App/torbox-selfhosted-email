@@ -53,8 +53,19 @@ export function NavMain({
     );
   };
 
-  const isSubItemActive = (url: string) =>
-    pathname === url || pathname.startsWith(`${url}/`);
+  // Check if a sub-item is active, preferring the most specific match
+  const isSubItemActive = (url: string, siblings: { url: string }[]) => {
+    if (pathname === url) return true;
+    if (!pathname.startsWith(`${url}/`)) return false;
+    // Only match prefix if no sibling has a more specific match
+    const hasMoreSpecificMatch = siblings.some(
+      (sibling) =>
+        sibling.url !== url &&
+        sibling.url.length > url.length &&
+        (pathname === sibling.url || pathname.startsWith(`${sibling.url}/`))
+    );
+    return !hasMoreSpecificMatch;
+  };
 
   return (
     <SidebarGroup>
@@ -89,7 +100,7 @@ export function NavMain({
                       key={subItem.title}
                       href={subItem.url}
                       className={`rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
-                        isSubItemActive(subItem.url)
+                        isSubItemActive(subItem.url, item.items)
                           ? "bg-accent font-medium text-accent-foreground"
                           : "text-muted-foreground"
                       }`}
@@ -122,7 +133,7 @@ export function NavMain({
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
                           asChild
-                          isActive={isSubItemActive(subItem.url)}
+                          isActive={isSubItemActive(subItem.url, item.items)}
                         >
                           <Link href={subItem.url}>
                             <span>{subItem.title}</span>

@@ -107,7 +107,7 @@ export function BatchTable({
           params.set(key, value);
         }
       }
-      router.push(`/${orgSlug}/send?${params.toString()}`);
+      router.push(`/${orgSlug}/emails/broadcasts?${params.toString()}`);
     },
     [router, orgSlug, searchParams]
   );
@@ -306,7 +306,7 @@ export function BatchTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => router.push(`/${orgSlug}/send/${batch.id}`)}
+                  onClick={() => router.push(`/${orgSlug}/emails/broadcasts/${batch.id}`)}
                 >
                   View details
                 </DropdownMenuItem>
@@ -368,7 +368,7 @@ export function BatchTable({
         <div className="flex items-center space-x-2">
           {canManage && (
             <Button asChild size="sm">
-              <Link href={`/${orgSlug}/send/new`}>
+              <Link href={`/${orgSlug}/emails/broadcasts/new`}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Broadcast
               </Link>
@@ -403,7 +403,7 @@ export function BatchTable({
                   className="cursor-pointer hover:bg-muted/50"
                   key={row.id}
                   onClick={() =>
-                    router.push(`/${orgSlug}/send/${row.original.id}`)
+                    router.push(`/${orgSlug}/emails/broadcasts/${row.original.id}`)
                   }
                 >
                   {row.getVisibleCells().map((cell) => (
@@ -427,7 +427,7 @@ export function BatchTable({
                     <p className="text-muted-foreground">No broadcasts yet</p>
                     {canManage && (
                       <Button asChild size="sm" variant="outline">
-                        <Link href={`/${orgSlug}/send/new`}>
+                        <Link href={`/${orgSlug}/emails/broadcasts/new`}>
                           <Plus className="mr-2 h-4 w-4" />
                           Create your first broadcast
                         </Link>
