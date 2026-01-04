@@ -3,6 +3,7 @@
 import type { WorkflowStepConfig } from "@wraps/db";
 import { AlertCircle, Pencil, Plus, Settings, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { TemplateEditorDialog } from "@/components/template-editor/wrappers/template-editor-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { TemplateEditorDialog } from "@/components/template-editor/wrappers/template-editor-dialog";
 import { useTemplates } from "@/hooks/use-template-queries";
-import { useSelectedNode, useValidationResult, useWorkflowStore } from "./use-workflow-store";
+import {
+  useSelectedNode,
+  useValidationResult,
+  useWorkflowStore,
+} from "./use-workflow-store";
 
 interface Template {
   id: string;
@@ -58,7 +62,9 @@ export function WorkflowPropertiesPanel({
 
   // Template editor dialog state
   const [showEditorDialog, setShowEditorDialog] = useState(false);
-  const [editingTemplateId, setEditingTemplateId] = useState<string | undefined>();
+  const [editingTemplateId, setEditingTemplateId] = useState<
+    string | undefined
+  >();
 
   const handleCreateNewTemplate = () => {
     setEditingTemplateId(undefined);
@@ -87,9 +93,9 @@ export function WorkflowPropertiesPanel({
 
   if (!selectedNode) {
     return (
-      <div className="w-80 border-l bg-gray-50 flex items-center justify-center">
-        <div className="text-center text-gray-500">
-          <Settings className="w-8 h-8 mx-auto mb-2 opacity-50" />
+      <div className="flex w-80 items-center justify-center border-l bg-muted">
+        <div className="text-center text-muted-foreground">
+          <Settings className="mx-auto mb-2 h-8 w-8 opacity-50" />
           <p className="text-sm">Select a node to configure</p>
         </div>
       </div>
@@ -107,25 +113,21 @@ export function WorkflowPropertiesPanel({
   };
 
   return (
-    <div className="w-80 border-l bg-white overflow-y-auto">
-      <div className="p-4 border-b flex items-center justify-between">
+    <div className="w-80 overflow-y-auto border-l bg-background">
+      <div className="flex items-center justify-between border-b p-4">
         <h3 className="font-medium">Properties</h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => selectNode(null)}
-        >
-          <X className="w-4 h-4" />
+        <Button onClick={() => selectNode(null)} size="icon" variant="ghost">
+          <X className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="space-y-4 p-4">
         {/* Validation errors */}
         {nodeErrors.length > 0 && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <ul className="text-xs space-y-1 mt-1">
+              <ul className="mt-1 space-y-1 text-xs">
                 {nodeErrors.map((error, i) => (
                   <li key={i}>• {error.message}</li>
                 ))}
@@ -139,8 +141,8 @@ export function WorkflowPropertiesPanel({
           <Label htmlFor="node-name">Name</Label>
           <Input
             id="node-name"
-            value={data.name}
             onChange={(e) => updateNodeName(selectedNode.id, e.target.value)}
+            value={data.name}
           />
         </div>
 
@@ -148,41 +150,32 @@ export function WorkflowPropertiesPanel({
         {data.type === "trigger" && (
           <TriggerConfig
             config={data.config}
-            topics={topics}
-            segments={segments}
             onChange={handleConfigChange}
+            segments={segments}
+            topics={topics}
           />
         )}
 
         {data.type === "send_email" && (
           <SendEmailConfig
             config={data.config}
-            templates={templates}
             onChange={handleConfigChange}
             onCreateNew={handleCreateNewTemplate}
             onEditTemplate={handleEditTemplate}
+            templates={templates}
           />
         )}
 
         {data.type === "send_sms" && (
-          <SendSmsConfig
-            config={data.config}
-            onChange={handleConfigChange}
-          />
+          <SendSmsConfig config={data.config} onChange={handleConfigChange} />
         )}
 
         {data.type === "delay" && (
-          <DelayConfig
-            config={data.config}
-            onChange={handleConfigChange}
-          />
+          <DelayConfig config={data.config} onChange={handleConfigChange} />
         )}
 
         {data.type === "condition" && (
-          <ConditionConfig
-            config={data.config}
-            onChange={handleConfigChange}
-          />
+          <ConditionConfig config={data.config} onChange={handleConfigChange} />
         )}
 
         {data.type === "update_contact" && (
@@ -193,10 +186,7 @@ export function WorkflowPropertiesPanel({
         )}
 
         {data.type === "webhook" && (
-          <WebhookConfig
-            config={data.config}
-            onChange={handleConfigChange}
-          />
+          <WebhookConfig config={data.config} onChange={handleConfigChange} />
         )}
 
         {data.type === "wait_for_event" && (
@@ -213,36 +203,41 @@ export function WorkflowPropertiesPanel({
           />
         )}
 
-        {(data.type === "subscribe_topic" || data.type === "unsubscribe_topic") && (
+        {(data.type === "subscribe_topic" ||
+          data.type === "unsubscribe_topic") && (
           <TopicConfig
             config={data.config}
-            topics={topics}
             onChange={handleConfigChange}
             onTypeChange={(newType) => {
               // Switch between subscribe and unsubscribe types
               const currentConfig = data.config;
               updateNodeConfig(selectedNode.id, {
                 type: newType,
-                topicId: currentConfig.type === "subscribe_topic" || currentConfig.type === "unsubscribe_topic"
-                  ? currentConfig.topicId
-                  : "",
-                channel: currentConfig.type === "subscribe_topic" || currentConfig.type === "unsubscribe_topic"
-                  ? currentConfig.channel
-                  : "email",
+                topicId:
+                  currentConfig.type === "subscribe_topic" ||
+                  currentConfig.type === "unsubscribe_topic"
+                    ? currentConfig.topicId
+                    : "",
+                channel:
+                  currentConfig.type === "subscribe_topic" ||
+                  currentConfig.type === "unsubscribe_topic"
+                    ? currentConfig.channel
+                    : "email",
               } as WorkflowStepConfig);
             }}
+            topics={topics}
           />
         )}
 
         {/* Delete button */}
         {data.type !== "trigger" && (
-          <div className="pt-4 border-t">
+          <div className="border-t pt-4">
             <Button
-              variant="destructive"
               className="w-full"
               onClick={handleDelete}
+              variant="destructive"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <Trash2 className="mr-2 h-4 w-4" />
               Delete Node
             </Button>
           </div>
@@ -251,14 +246,14 @@ export function WorkflowPropertiesPanel({
 
       {/* Template Editor Dialog */}
       <TemplateEditorDialog
+        onOpenChange={setShowEditorDialog}
+        onTemplateSelect={handleTemplateSelect}
+        open={showEditorDialog}
         orgSlug={orgSlug}
         templateId={editingTemplateId}
         templateName={editingTemplateId ? undefined : "New Template"}
-        variableContext="automation"
-        open={showEditorDialog}
-        onOpenChange={setShowEditorDialog}
-        onTemplateSelect={handleTemplateSelect}
         title={editingTemplateId ? "Edit Template" : "Create Template"}
+        variableContext="automation"
       />
     </div>
   );
@@ -283,10 +278,10 @@ function TriggerConfig({
       <div className="space-y-2">
         <Label>Trigger Type</Label>
         <Select
-          value={config.triggerType}
           onValueChange={(value) =>
             onChange({ triggerType: value as typeof config.triggerType })
           }
+          value={config.triggerType}
         >
           <SelectTrigger>
             <SelectValue />
@@ -298,7 +293,9 @@ function TriggerConfig({
             <SelectItem value="segment_entry">Segment Entry</SelectItem>
             <SelectItem value="segment_exit">Segment Exit</SelectItem>
             <SelectItem value="topic_subscribed">Topic Subscribed</SelectItem>
-            <SelectItem value="topic_unsubscribed">Topic Unsubscribed</SelectItem>
+            <SelectItem value="topic_unsubscribed">
+              Topic Unsubscribed
+            </SelectItem>
             <SelectItem value="schedule">Schedule</SelectItem>
             <SelectItem value="api">API Trigger</SelectItem>
           </SelectContent>
@@ -310,11 +307,11 @@ function TriggerConfig({
           <Label htmlFor="event-name">Event Name</Label>
           <Input
             id="event-name"
+            onChange={(e) => onChange({ eventName: e.target.value })}
             placeholder="e.g., user.signed_up"
             value={config.eventName || ""}
-            onChange={(e) => onChange({ eventName: e.target.value })}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             The event that starts this workflow. Use your API to trigger it.
           </p>
         </div>
@@ -325,8 +322,8 @@ function TriggerConfig({
         <div className="space-y-2">
           <Label>Segment</Label>
           <Select
-            value={config.segmentId || ""}
             onValueChange={(value) => onChange({ segmentId: value })}
+            value={config.segmentId || ""}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a segment" />
@@ -340,11 +337,11 @@ function TriggerConfig({
             </SelectContent>
           </Select>
           {segments.length === 0 && (
-            <p className="text-xs text-gray-500">
+            <p className="text-muted-foreground text-xs">
               No segments available. Create one in Contacts &gt; Segments.
             </p>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {config.triggerType === "segment_entry"
               ? "Workflow starts when a contact enters this segment."
               : "Workflow starts when a contact exits this segment."}
@@ -357,8 +354,8 @@ function TriggerConfig({
         <div className="space-y-2">
           <Label>Topic</Label>
           <Select
-            value={config.topicId || ""}
             onValueChange={(value) => onChange({ topicId: value })}
+            value={config.topicId || ""}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a topic" />
@@ -372,11 +369,11 @@ function TriggerConfig({
             </SelectContent>
           </Select>
           {topics.length === 0 && (
-            <p className="text-xs text-gray-500">
+            <p className="text-muted-foreground text-xs">
               No topics available. Create one in Settings &gt; Topics.
             </p>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {config.triggerType === "topic_subscribed"
               ? "Workflow starts when a contact subscribes to this topic."
               : "Workflow starts when a contact unsubscribes from this topic."}
@@ -390,14 +387,14 @@ function TriggerConfig({
             <Label htmlFor="schedule-cron">Schedule (Cron)</Label>
             <Input
               id="schedule-cron"
+              onChange={(e) => onChange({ schedule: e.target.value })}
               placeholder="e.g., 0 9 * * 1 (Monday 9am)"
               value={config.schedule || ""}
-              onChange={(e) => onChange({ schedule: e.target.value })}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Cron expression for when to run this workflow. Common patterns:
             </p>
-            <ul className="text-xs text-muted-foreground ml-4 list-disc">
+            <ul className="ml-4 list-disc text-muted-foreground text-xs">
               <li>0 9 * * * - Daily at 9am</li>
               <li>0 9 * * 1 - Monday at 9am</li>
               <li>0 0 1 * * - First of month</li>
@@ -406,8 +403,8 @@ function TriggerConfig({
           <div className="space-y-2">
             <Label htmlFor="schedule-timezone">Timezone</Label>
             <Select
-              value={config.timezone || "UTC"}
               onValueChange={(value) => onChange({ timezone: value })}
+              value={config.timezone || "UTC"}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -417,7 +414,9 @@ function TriggerConfig({
                 <SelectItem value="America/New_York">Eastern Time</SelectItem>
                 <SelectItem value="America/Chicago">Central Time</SelectItem>
                 <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                <SelectItem value="America/Los_Angeles">
+                  Pacific Time
+                </SelectItem>
                 <SelectItem value="Europe/London">London</SelectItem>
                 <SelectItem value="Europe/Paris">Paris</SelectItem>
                 <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
@@ -456,21 +455,21 @@ function SendEmailConfig({
           <Label>Email Template</Label>
           {onCreateNew && (
             <button
-              type="button"
+              className="flex items-center gap-1 text-primary text-xs hover:underline"
               onClick={onCreateNew}
-              className="text-xs text-primary hover:underline flex items-center gap-1"
+              type="button"
             >
-              <Plus className="w-3 h-3" />
+              <Plus className="h-3 w-3" />
               Create new
             </button>
           )}
         </div>
         <div className="flex gap-2">
           <Select
-            value={config.templateId || ""}
             onValueChange={(value) => {
               onChange({ templateId: value });
             }}
+            value={config.templateId || ""}
           >
             <SelectTrigger className="flex-1">
               <SelectValue placeholder="Select a template" />
@@ -485,23 +484,23 @@ function SendEmailConfig({
           </Select>
           {config.templateId && onEditTemplate && (
             <Button
-              variant="outline"
-              size="icon"
               onClick={() => onEditTemplate(config.templateId!)}
+              size="icon"
               title="Edit template"
+              variant="outline"
             >
-              <Pencil className="w-4 h-4" />
+              <Pencil className="h-4 w-4" />
             </Button>
           )}
         </div>
         {templates.length === 0 && (
-          <p className="text-xs text-gray-500">
+          <p className="text-muted-foreground text-xs">
             No templates available.{" "}
             {onCreateNew && (
               <button
-                type="button"
-                onClick={onCreateNew}
                 className="text-primary hover:underline"
+                onClick={onCreateNew}
+                type="button"
               >
                 Create one
               </button>
@@ -509,7 +508,7 @@ function SendEmailConfig({
           </p>
         )}
         {selectedTemplate && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Subject: {selectedTemplate.subject || "(no subject)"}
           </p>
         )}
@@ -519,9 +518,9 @@ function SendEmailConfig({
         <Label htmlFor="from-name">From Name (optional)</Label>
         <Input
           id="from-name"
+          onChange={(e) => onChange({ fromName: e.target.value })}
           placeholder="e.g., Acme Team"
           value={config.fromName || ""}
-          onChange={(e) => onChange({ fromName: e.target.value })}
         />
       </div>
 
@@ -529,10 +528,10 @@ function SendEmailConfig({
         <Label htmlFor="reply-to">Reply To (optional)</Label>
         <Input
           id="reply-to"
-          type="email"
-          placeholder="e.g., support@acme.com"
-          value={config.replyTo || ""}
           onChange={(e) => onChange({ replyTo: e.target.value })}
+          placeholder="e.g., support@acme.com"
+          type="email"
+          value={config.replyTo || ""}
         />
       </div>
     </>
@@ -555,13 +554,13 @@ function SendSmsConfig({
         <Label htmlFor="sms-body">Message</Label>
         <Textarea
           id="sms-body"
-          placeholder="Enter your SMS message..."
-          value={config.body || ""}
           onChange={(e) => onChange({ body: e.target.value })}
+          placeholder="Enter your SMS message..."
           rows={4}
+          value={config.body || ""}
         />
-        <p className="text-xs text-gray-500">
-          {(config.body?.length || 0)} / 160 characters
+        <p className="text-muted-foreground text-xs">
+          {config.body?.length || 0} / 160 characters
         </p>
       </div>
     </>
@@ -584,20 +583,20 @@ function DelayConfig({
         <Label htmlFor="delay-amount">Duration</Label>
         <div className="flex gap-2">
           <Input
+            className="w-20"
             id="delay-amount"
-            type="number"
             min={1}
-            value={config.amount || 1}
             onChange={(e) =>
               onChange({ amount: Number.parseInt(e.target.value) || 1 })
             }
-            className="w-20"
+            type="number"
+            value={config.amount || 1}
           />
           <Select
-            value={config.unit || "days"}
             onValueChange={(value) =>
               onChange({ unit: value as typeof config.unit })
             }
+            value={config.unit || "days"}
           >
             <SelectTrigger className="flex-1">
               <SelectValue />
@@ -631,11 +630,11 @@ function ConditionConfig({
         <Label htmlFor="condition-field">Field</Label>
         <Input
           id="condition-field"
+          onChange={(e) => onChange({ field: e.target.value })}
           placeholder="e.g., email, tags, customField"
           value={config.field || ""}
-          onChange={(e) => onChange({ field: e.target.value })}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Contact property to evaluate
         </p>
       </div>
@@ -643,8 +642,8 @@ function ConditionConfig({
       <div className="space-y-2">
         <Label>Operator</Label>
         <Select
-          value={config.operator || "equals"}
           onValueChange={(value) => onChange({ operator: value })}
+          value={config.operator || "equals"}
         >
           <SelectTrigger>
             <SelectValue />
@@ -669,9 +668,9 @@ function ConditionConfig({
           <Label htmlFor="condition-value">Value</Label>
           <Input
             id="condition-value"
+            onChange={(e) => onChange({ value: e.target.value })}
             placeholder="Value to compare"
             value={String(config.value ?? "")}
-            onChange={(e) => onChange({ value: e.target.value })}
           />
         </div>
       )}
@@ -715,40 +714,44 @@ function UpdateContactConfig({
         <div className="flex items-center justify-between">
           <Label>Field Updates</Label>
           <button
-            type="button"
+            className="text-primary text-xs hover:underline"
             onClick={addUpdate}
-            className="text-xs text-primary hover:underline"
+            type="button"
           >
             + Add field
           </button>
         </div>
 
         {updates.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             No updates configured. Click "Add field" to add one.
           </p>
         ) : (
           <div className="space-y-3">
             {updates.map((update, index) => (
-              <div key={index} className="p-3 border rounded-md space-y-2">
+              <div className="space-y-2 rounded-md border p-3" key={index}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">Update {index + 1}</span>
+                  <span className="font-medium text-xs">
+                    Update {index + 1}
+                  </span>
                   <button
-                    type="button"
+                    className="text-destructive text-xs hover:underline"
                     onClick={() => removeUpdate(index)}
-                    className="text-xs text-destructive hover:underline"
+                    type="button"
                   >
                     Remove
                   </button>
                 </div>
                 <Input
+                  onChange={(e) => updateField(index, "field", e.target.value)}
                   placeholder="Field name"
                   value={update.field || ""}
-                  onChange={(e) => updateField(index, "field", e.target.value)}
                 />
                 <Select
+                  onValueChange={(value) =>
+                    updateField(index, "operation", value)
+                  }
                   value={update.operation || "set"}
-                  onValueChange={(value) => updateField(index, "operation", value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -764,9 +767,11 @@ function UpdateContactConfig({
                 </Select>
                 {update.operation !== "unset" && (
                   <Input
+                    onChange={(e) =>
+                      updateField(index, "value", e.target.value)
+                    }
                     placeholder="Value"
                     value={String(update.value ?? "")}
-                    onChange={(e) => updateField(index, "value", e.target.value)}
                   />
                 )}
               </div>
@@ -794,18 +799,18 @@ function WebhookConfig({
         <Label htmlFor="webhook-url">URL</Label>
         <Input
           id="webhook-url"
-          type="url"
-          placeholder="https://api.example.com/webhook"
-          value={config.url || ""}
           onChange={(e) => onChange({ url: e.target.value })}
+          placeholder="https://api.example.com/webhook"
+          type="url"
+          value={config.url || ""}
         />
       </div>
 
       <div className="space-y-2">
         <Label>Method</Label>
         <Select
-          value={config.method || "POST"}
           onValueChange={(value) => onChange({ method: value })}
+          value={config.method || "POST"}
         >
           <SelectTrigger>
             <SelectValue />
@@ -823,23 +828,25 @@ function WebhookConfig({
       <div className="space-y-2">
         <Label htmlFor="webhook-headers">Headers (JSON)</Label>
         <Textarea
+          className="font-mono text-xs"
           id="webhook-headers"
-          placeholder='{"Authorization": "Bearer ..."}'
-          value={config.headers ? JSON.stringify(config.headers, null, 2) : ""}
           onChange={(e) => {
             try {
-              const headers = e.target.value ? JSON.parse(e.target.value) : undefined;
+              const headers = e.target.value
+                ? JSON.parse(e.target.value)
+                : undefined;
               onChange({ headers });
             } catch {
               // Invalid JSON, ignore
             }
           }}
+          placeholder='{"Authorization": "Bearer ..."}'
           rows={3}
-          className="font-mono text-xs"
+          value={config.headers ? JSON.stringify(config.headers, null, 2) : ""}
         />
       </div>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         Contact data will be sent in the request body automatically.
       </p>
     </>
@@ -859,11 +866,13 @@ function WaitForEventConfig({
   // Convert timeout seconds to a human-readable format
   const getTimeoutValues = () => {
     const seconds = config.timeoutSeconds || 0;
-    if (seconds >= 86400) {
-      return { amount: Math.floor(seconds / 86400), unit: "days" };
-    } else if (seconds >= 3600) {
+    if (seconds >= 86_400) {
+      return { amount: Math.floor(seconds / 86_400), unit: "days" };
+    }
+    if (seconds >= 3600) {
       return { amount: Math.floor(seconds / 3600), unit: "hours" };
-    } else if (seconds >= 60) {
+    }
+    if (seconds >= 60) {
       return { amount: Math.floor(seconds / 60), unit: "minutes" };
     }
     return { amount: seconds || 24, unit: "hours" };
@@ -881,7 +890,7 @@ function WaitForEventConfig({
         seconds = newAmount * 3600;
         break;
       case "days":
-        seconds = newAmount * 86400;
+        seconds = newAmount * 86_400;
         break;
     }
     onChange({ timeoutSeconds: seconds });
@@ -893,12 +902,13 @@ function WaitForEventConfig({
         <Label htmlFor="wait-event-name">Event Name</Label>
         <Input
           id="wait-event-name"
+          onChange={(e) => onChange({ eventName: e.target.value })}
           placeholder="e.g., purchase.completed"
           value={config.eventName || ""}
-          onChange={(e) => onChange({ eventName: e.target.value })}
         />
-        <p className="text-xs text-muted-foreground">
-          The event to wait for. Workflow continues when this event is received for the contact.
+        <p className="text-muted-foreground text-xs">
+          The event to wait for. Workflow continues when this event is received
+          for the contact.
         </p>
       </div>
 
@@ -906,17 +916,17 @@ function WaitForEventConfig({
         <Label>Timeout</Label>
         <div className="flex gap-2">
           <Input
-            type="number"
+            className="w-20"
             min={1}
-            value={amount}
             onChange={(e) =>
               handleTimeoutChange(Number.parseInt(e.target.value) || 1, unit)
             }
-            className="w-20"
+            type="number"
+            value={amount}
           />
           <Select
-            value={unit}
             onValueChange={(value) => handleTimeoutChange(amount, value)}
+            value={unit}
           >
             <SelectTrigger className="flex-1">
               <SelectValue />
@@ -928,8 +938,9 @@ function WaitForEventConfig({
             </SelectContent>
           </Select>
         </div>
-        <p className="text-xs text-muted-foreground">
-          If the event is not received within this time, the timeout path is followed.
+        <p className="text-muted-foreground text-xs">
+          If the event is not received within this time, the timeout path is
+          followed.
         </p>
       </div>
     </>
@@ -949,11 +960,13 @@ function WaitForEmailEngagementConfig({
   // Convert timeout seconds to a human-readable format
   const getTimeoutValues = () => {
     const seconds = config.timeoutSeconds || 0;
-    if (seconds >= 86400) {
-      return { amount: Math.floor(seconds / 86400), unit: "days" };
-    } else if (seconds >= 3600) {
+    if (seconds >= 86_400) {
+      return { amount: Math.floor(seconds / 86_400), unit: "days" };
+    }
+    if (seconds >= 3600) {
       return { amount: Math.floor(seconds / 3600), unit: "hours" };
-    } else if (seconds >= 60) {
+    }
+    if (seconds >= 60) {
       return { amount: Math.floor(seconds / 60), unit: "minutes" };
     }
     return { amount: seconds || 3, unit: "days" };
@@ -971,7 +984,7 @@ function WaitForEmailEngagementConfig({
         seconds = newAmount * 3600;
         break;
       case "days":
-        seconds = newAmount * 86400;
+        seconds = newAmount * 86_400;
         break;
     }
     onChange({ timeoutSeconds: seconds });
@@ -980,9 +993,10 @@ function WaitForEmailEngagementConfig({
   return (
     <>
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">
-          Waits for engagement with the previous Send Email step. Routes contacts
-          based on whether they opened, clicked, or if the email bounced.
+        <p className="text-muted-foreground text-xs">
+          Waits for engagement with the previous Send Email step. Routes
+          contacts based on whether they opened, clicked, or if the email
+          bounced.
         </p>
       </div>
 
@@ -990,17 +1004,17 @@ function WaitForEmailEngagementConfig({
         <Label>Wait Duration</Label>
         <div className="flex gap-2">
           <Input
-            type="number"
+            className="w-20"
             min={1}
-            value={amount}
             onChange={(e) =>
               handleTimeoutChange(Number.parseInt(e.target.value) || 1, unit)
             }
-            className="w-20"
+            type="number"
+            value={amount}
           />
           <Select
-            value={unit}
             onValueChange={(value) => handleTimeoutChange(amount, value)}
+            value={unit}
           >
             <SelectTrigger className="flex-1">
               <SelectValue />
@@ -1011,18 +1025,30 @@ function WaitForEmailEngagementConfig({
             </SelectContent>
           </Select>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Time to wait for engagement before following the "None" path.
         </p>
       </div>
 
-      <div className="p-3 bg-muted rounded-md space-y-1">
-        <p className="text-xs font-medium">Output Paths:</p>
-        <ul className="text-xs text-muted-foreground space-y-0.5">
-          <li><span className="text-green-600 font-medium">Open</span> — Email was opened</li>
-          <li><span className="text-blue-600 font-medium">Click</span> — Link was clicked</li>
-          <li><span className="text-red-600 font-medium">Bounce</span> — Email bounced</li>
-          <li><span className="text-yellow-600 font-medium">None</span> — No engagement within timeout</li>
+      <div className="space-y-1 rounded-md bg-muted p-3">
+        <p className="font-medium text-xs">Output Paths:</p>
+        <ul className="space-y-0.5 text-muted-foreground text-xs">
+          <li>
+            <span className="font-medium text-green-600">Open</span> — Email was
+            opened
+          </li>
+          <li>
+            <span className="font-medium text-blue-600">Click</span> — Link was
+            clicked
+          </li>
+          <li>
+            <span className="font-medium text-red-600">Bounce</span> — Email
+            bounced
+          </li>
+          <li>
+            <span className="font-medium text-yellow-600">None</span> — No
+            engagement within timeout
+          </li>
         </ul>
       </div>
     </>
@@ -1041,7 +1067,8 @@ function TopicConfig({
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
   onTypeChange: (type: "subscribe_topic" | "unsubscribe_topic") => void;
 }) {
-  if (config.type !== "subscribe_topic" && config.type !== "unsubscribe_topic") return null;
+  if (config.type !== "subscribe_topic" && config.type !== "unsubscribe_topic")
+    return null;
 
   const isSubscribe = config.type === "subscribe_topic";
 
@@ -1050,8 +1077,10 @@ function TopicConfig({
       <div className="space-y-2">
         <Label>Action</Label>
         <Select
+          onValueChange={(value) =>
+            onTypeChange(value as "subscribe_topic" | "unsubscribe_topic")
+          }
           value={config.type}
-          onValueChange={(value) => onTypeChange(value as "subscribe_topic" | "unsubscribe_topic")}
         >
           <SelectTrigger>
             <SelectValue />
@@ -1066,8 +1095,8 @@ function TopicConfig({
       <div className="space-y-2">
         <Label>Topic</Label>
         <Select
-          value={config.topicId || ""}
           onValueChange={(value) => onChange({ topicId: value })}
+          value={config.topicId || ""}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select a topic" />
@@ -1081,7 +1110,7 @@ function TopicConfig({
           </SelectContent>
         </Select>
         {topics.length === 0 && (
-          <p className="text-xs text-gray-500">
+          <p className="text-muted-foreground text-xs">
             No topics available. Create one in Settings &gt; Topics.
           </p>
         )}
@@ -1090,10 +1119,10 @@ function TopicConfig({
       <div className="space-y-2">
         <Label>Channel</Label>
         <Select
-          value={config.channel || "email"}
           onValueChange={(value) =>
             onChange({ channel: value as "email" | "sms" })
           }
+          value={config.channel || "email"}
         >
           <SelectTrigger>
             <SelectValue />
@@ -1103,7 +1132,7 @@ function TopicConfig({
             <SelectItem value="sms">SMS</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {isSubscribe
             ? "Subscribe the contact to receive messages via this channel."
             : "Unsubscribe the contact from receiving messages via this channel."}

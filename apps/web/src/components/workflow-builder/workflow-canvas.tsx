@@ -1,7 +1,15 @@
 "use client";
 
 import type { WorkflowStepType } from "@wraps/db";
-import type { Connection, Edge, EdgeTypes, Node, NodeTypes, OnConnect, OnEdgesChange, OnNodesChange, OnReconnect } from "@xyflow/react";
+import type {
+  EdgeTypes,
+  Node,
+  NodeTypes,
+  OnConnect,
+  OnEdgesChange,
+  OnNodesChange,
+  OnReconnect,
+} from "@xyflow/react";
 import {
   Background,
   BackgroundVariant,
@@ -56,10 +64,16 @@ export function WorkflowCanvas() {
 
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
-  const onNodesChange = useWorkflowStore((state) => state.onNodesChange) as OnNodesChange<Node>;
-  const onEdgesChange = useWorkflowStore((state) => state.onEdgesChange) as OnEdgesChange;
+  const onNodesChange = useWorkflowStore(
+    (state) => state.onNodesChange
+  ) as OnNodesChange<Node>;
+  const onEdgesChange = useWorkflowStore(
+    (state) => state.onEdgesChange
+  ) as OnEdgesChange;
   const onConnect = useWorkflowStore((state) => state.onConnect) as OnConnect;
-  const onReconnect = useWorkflowStore((state) => state.onReconnect) as OnReconnect;
+  const onReconnect = useWorkflowStore(
+    (state) => state.onReconnect
+  ) as OnReconnect;
   const addNode = useWorkflowStore((state) => state.addNode);
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
@@ -86,7 +100,7 @@ export function WorkflowCanvas() {
         "application/reactflow"
       ) as WorkflowStepType;
 
-      if (!type || !reactFlowInstance || !reactFlowWrapper.current) {
+      if (!(type && reactFlowInstance && reactFlowWrapper.current)) {
         return;
       }
 
@@ -128,36 +142,33 @@ export function WorkflowCanvas() {
   );
 
   return (
-    <div ref={reactFlowWrapper} className="flex-1 h-full relative">
+    <div className="relative h-full flex-1" ref={reactFlowWrapper}>
       <ReactFlow
-        nodes={nodesWithSelection}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onReconnect={onReconnect}
-        onInit={setReactFlowInstance}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        snapToGrid
-        snapGrid={[15, 15]}
-        deleteKeyCode={["Backspace", "Delete"]}
         defaultEdgeOptions={{
           type: "labeled",
           animated: true,
         }}
+        deleteKeyCode={["Backspace", "Delete"]}
+        edges={edges}
+        edgeTypes={edgeTypes}
+        fitView
+        nodes={nodesWithSelection}
+        nodeTypes={nodeTypes}
+        onConnect={onConnect}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onEdgesChange={onEdgesChange}
+        onInit={setReactFlowInstance}
+        onNodeClick={onNodeClick}
+        onNodesChange={onNodesChange}
+        onPaneClick={onPaneClick}
+        onReconnect={onReconnect}
+        snapGrid={[15, 15]}
+        snapToGrid
       >
-        <Background variant={BackgroundVariant.Dots} gap={15} size={1} />
+        <Background gap={15} size={1} variant={BackgroundVariant.Dots} />
         <Controls />
-        <MiniMap
-          nodeStrokeWidth={3}
-          className="!bg-white !border !shadow-sm"
-        />
+        <MiniMap className="!border !bg-background !shadow-sm" nodeStrokeWidth={3} />
       </ReactFlow>
       <NodePalette onAddNode={handleAddNode} />
     </div>

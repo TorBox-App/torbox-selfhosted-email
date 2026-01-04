@@ -1,11 +1,23 @@
 "use client";
 
 import type { Workflow } from "@wraps/db";
-import { AlertCircle, ArrowLeft, Loader2, Pause, Pencil, Play, Save } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Loader2,
+  Pause,
+  Pencil,
+  Play,
+  Save,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { disableWorkflow, enableWorkflow, updateWorkflow } from "@/actions/workflows";
+import {
+  disableWorkflow,
+  enableWorkflow,
+  updateWorkflow,
+} from "@/actions/workflows";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +26,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useIsDirty, useIsSaving, useValidationResult, useWorkflowStore } from "./use-workflow-store";
+import {
+  useIsDirty,
+  useIsSaving,
+  useValidationResult,
+  useWorkflowStore,
+} from "./use-workflow-store";
 
 interface WorkflowToolbarProps {
   workflow: Workflow;
@@ -36,10 +53,14 @@ export function WorkflowToolbar({
     (state) => state.getWorkflowDefinition
   );
   const setIsSaving = useWorkflowStore((state) => state.setIsSaving);
-  const updateWorkflowAfterSave = useWorkflowStore((state) => state.updateWorkflowAfterSave);
+  const updateWorkflowAfterSave = useWorkflowStore(
+    (state) => state.updateWorkflowAfterSave
+  );
   const runValidation = useWorkflowStore((state) => state.runValidation);
   const workflowState = useWorkflowStore((state) => state.workflow);
-  const updateWorkflowSettings = useWorkflowStore((state) => state.updateWorkflowSettings);
+  const updateWorkflowSettings = useWorkflowStore(
+    (state) => state.updateWorkflowSettings
+  );
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
 
@@ -84,7 +105,8 @@ export function WorkflowToolbar({
 
   const currentStatus = workflowState?.status ?? workflow.status;
   const isEnabled = currentStatus === "enabled";
-  const errorCount = validationResult?.errors.filter((e) => e.severity === "error").length ?? 0;
+  const errorCount =
+    validationResult?.errors.filter((e) => e.severity === "error").length ?? 0;
   const hasErrors = errorCount > 0;
 
   const handleSave = () => {
@@ -101,10 +123,19 @@ export function WorkflowToolbar({
           name: workflowState?.name ?? undefined,
           description: workflowState?.description ?? undefined,
           // Sync trigger settings from the trigger step
-          triggerType: triggerConfig?.type === "trigger" ? triggerConfig.triggerType : undefined,
-          triggerConfig: triggerConfig?.type === "trigger"
-            ? { eventName: triggerConfig.eventName, segmentId: triggerConfig.segmentId, schedule: triggerConfig.schedule, timezone: triggerConfig.timezone }
-            : undefined,
+          triggerType:
+            triggerConfig?.type === "trigger"
+              ? triggerConfig.triggerType
+              : undefined,
+          triggerConfig:
+            triggerConfig?.type === "trigger"
+              ? {
+                  eventName: triggerConfig.eventName,
+                  segmentId: triggerConfig.segmentId,
+                  schedule: triggerConfig.schedule,
+                  timezone: triggerConfig.timezone,
+                }
+              : undefined,
           steps: definition.steps,
           transitions: definition.transitions,
           canvasViewport: definition.canvasViewport,
@@ -128,7 +159,9 @@ export function WorkflowToolbar({
     // Run validation first
     const result = runValidation();
     if (!result.isValid) {
-      toast.error(`Cannot enable: ${errorCount} issue${errorCount > 1 ? "s" : ""} to fix`);
+      toast.error(
+        `Cannot enable: ${errorCount} issue${errorCount > 1 ? "s" : ""} to fix`
+      );
       return;
     }
 
@@ -162,47 +195,54 @@ export function WorkflowToolbar({
   };
 
   return (
-    <div className="h-14 border-b bg-white flex items-center justify-between px-4">
+    <div className="flex h-14 items-center justify-between border-b bg-background px-4">
       <div className="flex items-center gap-4">
         <Link href={`/${orgSlug}/automations`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-4 h-4" />
+          <Button size="icon" variant="ghost">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
           <div className="flex items-center gap-2">
             {isEditingName ? (
               <input
+                className="min-w-[200px] border-primary border-b bg-transparent font-semibold outline-none"
+                onBlur={handleSaveName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={handleKeyDownName}
                 ref={nameInputRef}
                 type="text"
                 value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                onBlur={handleSaveName}
-                onKeyDown={handleKeyDownName}
-                className="font-semibold bg-transparent border-b border-primary outline-none min-w-[200px]"
               />
             ) : (
               <button
+                className="group flex items-center gap-1.5 font-semibold transition-colors hover:text-primary"
                 onClick={handleStartEditingName}
-                className="flex items-center gap-1.5 font-semibold hover:text-primary transition-colors group"
               >
                 {workflowState?.name || workflow.name}
-                <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 transition-opacity" />
+                <Pencil className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
               </button>
             )}
             <Badge
-              variant={(workflowState?.status ?? workflow.status) === "enabled" ? "default" : "secondary"}
+              variant={
+                (workflowState?.status ?? workflow.status) === "enabled"
+                  ? "default"
+                  : "secondary"
+              }
             >
               {workflowState?.status ?? workflow.status}
             </Badge>
             {isDirty && (
-              <Badge variant="outline" className="text-yellow-600 border-yellow-300">
+              <Badge
+                className="border-yellow-300 text-yellow-600"
+                variant="outline"
+              >
                 Unsaved
               </Badge>
             )}
           </div>
           {(workflowState?.description || workflow.description) && (
-            <p className="text-sm text-gray-500">
+            <p className="text-muted-foreground text-sm">
               {workflowState?.description || workflow.description}
             </p>
           )}
@@ -215,12 +255,14 @@ export function WorkflowToolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-1.5 text-red-600 text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{errorCount} issue{errorCount > 1 ? "s" : ""}</span>
+                  <AlertCircle className="h-4 w-4" />
+                  <span>
+                    {errorCount} issue{errorCount > 1 ? "s" : ""}
+                  </span>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <ul className="text-xs space-y-1">
+              <TooltipContent className="max-w-xs" side="bottom">
+                <ul className="space-y-1 text-xs">
                   {validationResult?.errors
                     .filter((e) => e.severity === "error")
                     .slice(0, 5)
@@ -240,18 +282,18 @@ export function WorkflowToolbar({
 
         {/* Save button */}
         <Button
-          variant="outline"
-          onClick={handleSave}
           disabled={!isDirty || isPending || isSaving}
+          onClick={handleSave}
+          variant="outline"
         >
           {isPending || isSaving ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Saving...
             </>
           ) : (
             <>
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="mr-2 h-4 w-4" />
               Save
             </>
           )}
@@ -260,14 +302,14 @@ export function WorkflowToolbar({
         {/* Enable/Disable button */}
         {isEnabled ? (
           <Button
-            variant="outline"
-            onClick={handleDisable}
             disabled={isEnabling}
+            onClick={handleDisable}
+            variant="outline"
           >
             {isEnabling ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Pause className="w-4 h-4 mr-2" />
+              <Pause className="mr-2 h-4 w-4" />
             )}
             Pause
           </Button>
@@ -277,13 +319,13 @@ export function WorkflowToolbar({
               <TooltipTrigger asChild>
                 <span>
                   <Button
-                    onClick={handleEnable}
                     disabled={isEnabling || hasErrors || isDirty}
+                    onClick={handleEnable}
                   >
                     {isEnabling ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                     )}
                     Enable
                   </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Handle, Position } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 
 interface BaseNodeProps {
@@ -31,61 +31,61 @@ export function BaseNode({
   return (
     <div
       className={cn(
-        "px-4 py-3 rounded-lg border-2 bg-white shadow-sm min-w-[180px]",
+        "min-w-[180px] rounded-lg border-2 bg-background px-4 py-3 shadow-sm",
         "transition-all duration-150",
-        selected ? "border-primary ring-2 ring-primary/20" : "border-gray-200",
+        selected ? "border-primary ring-2 ring-primary/20" : "border-border",
         !isValid && "border-red-500 ring-2 ring-red-500/20"
       )}
     >
       {hasInput && (
         <Handle
-          type="target"
+          className="!h-3 !w-3 !border-2 !border-background !bg-muted-foreground"
           position={Position.Top}
-          className="!bg-gray-400 !w-3 !h-3 !border-2 !border-white"
+          type="target"
         />
       )}
 
       <div className="flex items-center gap-3">
         <div
           className={cn(
-            "w-8 h-8 rounded-md flex items-center justify-center text-white",
+            "flex h-8 w-8 items-center justify-center rounded-md text-white",
             accentColor
           )}
         >
           {icon}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm text-gray-900 truncate">
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-foreground text-sm">
             {label}
           </div>
           {description && (
-            <div className="text-xs text-gray-500 truncate">{description}</div>
+            <div className="truncate text-muted-foreground text-xs">{description}</div>
           )}
         </div>
       </div>
 
       {!isValid && errorMessage && (
-        <div className="mt-2 text-xs text-red-500">{errorMessage}</div>
+        <div className="mt-2 text-red-500 text-xs">{errorMessage}</div>
       )}
 
       {hasOutput && !outputs && (
         <Handle
-          type="source"
+          className="!h-3 !w-3 !border-2 !border-background !bg-muted-foreground"
           position={Position.Bottom}
-          className="!bg-gray-400 !w-3 !h-3 !border-2 !border-white"
+          type="source"
         />
       )}
 
       {outputs?.map((output, index) => (
         <Handle
-          key={output.id}
-          type="source"
-          position={Position.Bottom}
+          className="!h-3 !w-3 !border-2 !border-background !bg-muted-foreground"
           id={output.id}
-          className="!bg-gray-400 !w-3 !h-3 !border-2 !border-white"
+          key={output.id}
+          position={Position.Bottom}
           style={{
             left: `${((index + 1) / (outputs.length + 1)) * 100}%`,
           }}
+          type="source"
         />
       ))}
     </div>

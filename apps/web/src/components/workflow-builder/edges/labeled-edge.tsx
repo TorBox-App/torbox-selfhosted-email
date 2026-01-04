@@ -30,45 +30,50 @@ export function LabeledEdge({
 
   // Determine label and color based on source handle
   let label = "";
-  let labelColor = "bg-gray-100 text-gray-600";
+  let labelColor = "bg-muted text-muted-foreground";
 
   if (sourceHandleId === "yes") {
     label = "Yes";
-    labelColor = "bg-green-100 text-green-700";
+    labelColor = "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400";
   } else if (sourceHandleId === "no") {
     label = "No";
-    labelColor = "bg-red-100 text-red-700";
+    labelColor = "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400";
   } else if (sourceHandleId === "timeout") {
     label = "Timeout";
-    labelColor = "bg-yellow-100 text-yellow-700";
+    labelColor = "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400";
   } else if (sourceHandleId === "default") {
     label = "Default";
-    labelColor = "bg-gray-100 text-gray-600";
+    labelColor = "bg-muted text-muted-foreground";
   }
 
   return (
     <>
       <BaseEdge
-        path={edgePath}
         markerEnd={markerEnd}
+        path={edgePath}
         style={{
           ...style,
           strokeWidth: 2,
-          stroke: sourceHandleId === "yes" ? "#22c55e" : sourceHandleId === "no" ? "#ef4444" : "#9ca3af",
+          stroke:
+            sourceHandleId === "yes"
+              ? "#22c55e"
+              : sourceHandleId === "no"
+                ? "#ef4444"
+                : "#9ca3af",
         }}
       />
       {label && (
         <EdgeLabelRenderer>
           <div
+            className="nodrag nopan"
             style={{
               position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: "all",
             }}
-            className="nodrag nopan"
           >
             <div
-              className={`px-2 py-0.5 rounded text-xs font-medium ${labelColor}`}
+              className={`rounded px-2 py-0.5 font-medium text-xs ${labelColor}`}
             >
               {label}
             </div>
