@@ -6,6 +6,7 @@ import type * as React from "react";
 import { Logo } from "@/components/logo";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
+import { SidebarUpgrade } from "@/components/sidebar-upgrade";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
   Sidebar,
@@ -124,19 +125,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     : null;
 
-  // Automations navigation
-  const automationsNavGroup = orgSlug
-    ? {
-        title: "Automations",
-        icon: Workflow,
-        items: [
-          {
-            title: "Workflows",
-            url: `/${orgSlug}/automations`,
-          },
-        ],
-      }
-    : null;
+  // Automations navigation - requires Growth+ plan
+  const automationsNavGroup =
+    orgSlug && planFeatures?.workflows
+      ? {
+          title: "Automations",
+          icon: Workflow,
+          items: [
+            {
+              title: "Workflows",
+              url: `/${orgSlug}/automations`,
+            },
+          ],
+        }
+      : null;
 
   // Settings navigation
   const settingsNavGroup = orgSlug
@@ -194,7 +196,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={orgScopedNavGroups} />
       </SidebarContent>
       <SidebarFooter>
-        {/* <SidebarNotification /> */}
+        <SidebarUpgrade />
         <NavUser />
       </SidebarFooter>
       <SidebarRail />
