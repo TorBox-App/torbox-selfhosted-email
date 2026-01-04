@@ -3,6 +3,7 @@
 import type { Workflow } from "@wraps/db";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
+import { AIDesignPanel } from "./ai-design-panel";
 import { useWorkflowStore } from "./use-workflow-store";
 import { WorkflowCanvas } from "./workflow-canvas";
 import { WorkflowDataProvider } from "./workflow-data-context";
@@ -69,6 +70,7 @@ export function WorkflowBuilder({
             organizationId={organizationId}
           />
           <div className="flex-1 flex overflow-hidden">
+            <AIDesignPanel orgSlug={orgSlug} workflowId={workflow.id} />
             <WorkflowCanvas />
             <WorkflowPropertiesPanel templates={templates} topics={topics} segments={segments} />
           </div>

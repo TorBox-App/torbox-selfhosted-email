@@ -99,6 +99,9 @@ interface WorkflowStoreState {
 
   // Validation
   runValidation: () => ValidationResult;
+
+  // AI Flow Designer
+  applyAIFlow: (steps: WorkflowStep[], transitions: WorkflowTransition[]) => void;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -425,6 +428,22 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
     // Node components should read their validation status from validationResult.errorsByNodeId
     set({ validationResult: result });
     return result;
+  },
+
+  applyAIFlow: (steps, transitions) => {
+    // Convert AI-generated steps and transitions to React Flow nodes and edges
+    const nodes = stepsToNodes(steps);
+    const edges = transitionsToEdges(transitions);
+
+    set({
+      nodes,
+      edges,
+      isDirty: true,
+      selectedNodeId: null,
+    });
+
+    // Run validation on the new flow
+    get().runValidation();
   },
 }));
 
