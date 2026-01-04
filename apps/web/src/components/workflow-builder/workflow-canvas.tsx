@@ -20,8 +20,11 @@ import {
   ExitNode,
   SendEmailNode,
   SendSmsNode,
+  SubscribeTopicNode,
   TriggerNode,
+  UnsubscribeTopicNode,
   UpdateContactNode,
+  WaitForEventNode,
   WebhookNode,
 } from "./nodes";
 import { useWorkflowStore } from "./use-workflow-store";
@@ -35,6 +38,10 @@ const nodeTypes: NodeTypes = {
   condition: ConditionNode,
   update_contact: UpdateContactNode,
   webhook: WebhookNode,
+  // Slice 3
+  wait_for_event: WaitForEventNode,
+  subscribe_topic: SubscribeTopicNode,
+  unsubscribe_topic: UnsubscribeTopicNode,
 };
 
 const edgeTypes: EdgeTypes = {

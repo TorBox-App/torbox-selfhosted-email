@@ -22,12 +22,19 @@ interface Template {
   status: string;
 }
 
+interface Topic {
+  id: string;
+  name: string;
+}
+
 interface WorkflowPropertiesPanelProps {
   templates: Template[];
+  topics?: Topic[];
 }
 
 export function WorkflowPropertiesPanel({
   templates,
+  topics = [],
 }: WorkflowPropertiesPanelProps) {
   const selectedNode = useSelectedNode();
   const selectNode = useWorkflowStore((state) => state.selectNode);
@@ -131,6 +138,29 @@ export function WorkflowPropertiesPanel({
           />
         )}
 
+        {data.type === "wait_for_event" && (
+          <WaitForEventConfig
+            config={data.config}
+            onChange={handleConfigChange}
+          />
+        )}
+
+        {data.type === "subscribe_topic" && (
+          <SubscribeTopicConfig
+            config={data.config}
+            topics={topics}
+            onChange={handleConfigChange}
+          />
+        )}
+
+        {data.type === "unsubscribe_topic" && (
+          <UnsubscribeTopicConfig
+            config={data.config}
+            topics={topics}
+            onChange={handleConfigChange}
+          />
+        )}
+
         {/* Delete button */}
         {data.type !== "trigger" && (
           <div className="pt-4 border-t">
@@ -176,6 +206,9 @@ function TriggerConfig({
             <SelectItem value="contact_created">Contact Created</SelectItem>
             <SelectItem value="contact_updated">Contact Updated</SelectItem>
             <SelectItem value="event">Custom Event</SelectItem>
+            <SelectItem value="segment_entry">Segment Entry</SelectItem>
+            <SelectItem value="segment_exit">Segment Exit</SelectItem>
+            <SelectItem value="schedule">Schedule</SelectItem>
             <SelectItem value="api">API Trigger</SelectItem>
           </SelectContent>
         </Select>
@@ -194,6 +227,68 @@ function TriggerConfig({
             The event that starts this workflow. Use your API to trigger it.
           </p>
         </div>
+      )}
+
+      {(config.triggerType === "segment_entry" ||
+        config.triggerType === "segment_exit") && (
+        <div className="space-y-2">
+          <Label htmlFor="segment-id">Segment ID</Label>
+          <Input
+            id="segment-id"
+            placeholder="Enter segment ID"
+            value={config.segmentId || ""}
+            onChange={(e) => onChange({ segmentId: e.target.value })}
+          />
+          <p className="text-xs text-muted-foreground">
+            {config.triggerType === "segment_entry"
+              ? "Workflow starts when a contact enters this segment."
+              : "Workflow starts when a contact exits this segment."}
+          </p>
+        </div>
+      )}
+
+      {config.triggerType === "schedule" && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="schedule-cron">Schedule (Cron)</Label>
+            <Input
+              id="schedule-cron"
+              placeholder="e.g., 0 9 * * 1 (Monday 9am)"
+              value={config.schedule || ""}
+              onChange={(e) => onChange({ schedule: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Cron expression for when to run this workflow. Common patterns:
+            </p>
+            <ul className="text-xs text-muted-foreground ml-4 list-disc">
+              <li>0 9 * * * - Daily at 9am</li>
+              <li>0 9 * * 1 - Monday at 9am</li>
+              <li>0 0 1 * * - First of month</li>
+            </ul>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="schedule-timezone">Timezone</Label>
+            <Select
+              value={config.timezone || "UTC"}
+              onValueChange={(value) => onChange({ timezone: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UTC">UTC</SelectItem>
+                <SelectItem value="America/New_York">Eastern Time</SelectItem>
+                <SelectItem value="America/Chicago">Central Time</SelectItem>
+                <SelectItem value="America/Denver">Mountain Time</SelectItem>
+                <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                <SelectItem value="Europe/London">London</SelectItem>
+                <SelectItem value="Europe/Paris">Paris</SelectItem>
+                <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
+                <SelectItem value="Australia/Sydney">Sydney</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
       )}
     </>
   );
@@ -566,6 +661,220 @@ function WebhookConfig({
       <p className="text-xs text-muted-foreground">
         Contact data will be sent in the request body automatically.
       </p>
+    </>
+  );
+}
+
+// Wait for Event configuration
+function WaitForEventConfig({
+  config,
+  onChange,
+}: {
+  config: WorkflowStepConfig;
+  onChange: (updates: Partial<WorkflowStepConfig>) => void;
+}) {
+  if (config.type !== "wait_for_event") return null;
+
+  // Convert timeout seconds to a human-readable format
+  const getTimeoutValues = () => {
+    const seconds = config.timeoutSeconds || 0;
+    if (seconds >= 86400) {
+      return { amount: Math.floor(seconds / 86400), unit: "days" };
+    } else if (seconds >= 3600) {
+      return { amount: Math.floor(seconds / 3600), unit: "hours" };
+    } else if (seconds >= 60) {
+      return { amount: Math.floor(seconds / 60), unit: "minutes" };
+    }
+    return { amount: seconds || 24, unit: "hours" };
+  };
+
+  const { amount, unit } = getTimeoutValues();
+
+  const handleTimeoutChange = (newAmount: number, newUnit: string) => {
+    let seconds = newAmount;
+    switch (newUnit) {
+      case "minutes":
+        seconds = newAmount * 60;
+        break;
+      case "hours":
+        seconds = newAmount * 3600;
+        break;
+      case "days":
+        seconds = newAmount * 86400;
+        break;
+    }
+    onChange({ timeoutSeconds: seconds });
+  };
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="wait-event-name">Event Name</Label>
+        <Input
+          id="wait-event-name"
+          placeholder="e.g., purchase.completed"
+          value={config.eventName || ""}
+          onChange={(e) => onChange({ eventName: e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">
+          The event to wait for. Workflow continues when this event is received for the contact.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Timeout</Label>
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            min={1}
+            value={amount}
+            onChange={(e) =>
+              handleTimeoutChange(Number.parseInt(e.target.value) || 1, unit)
+            }
+            className="w-20"
+          />
+          <Select
+            value={unit}
+            onValueChange={(value) => handleTimeoutChange(amount, value)}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="minutes">Minutes</SelectItem>
+              <SelectItem value="hours">Hours</SelectItem>
+              <SelectItem value="days">Days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          If the event is not received within this time, the timeout path is followed.
+        </p>
+      </div>
+    </>
+  );
+}
+
+// Subscribe Topic configuration
+function SubscribeTopicConfig({
+  config,
+  topics,
+  onChange,
+}: {
+  config: WorkflowStepConfig;
+  topics: { id: string; name: string }[];
+  onChange: (updates: Partial<WorkflowStepConfig>) => void;
+}) {
+  if (config.type !== "subscribe_topic") return null;
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label>Topic</Label>
+        <Select
+          value={config.topicId || ""}
+          onValueChange={(value) => onChange({ topicId: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a topic" />
+          </SelectTrigger>
+          <SelectContent>
+            {topics.map((topic) => (
+              <SelectItem key={topic.id} value={topic.id}>
+                {topic.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {topics.length === 0 && (
+          <p className="text-xs text-gray-500">
+            No topics available. Create one in Settings &gt; Topics.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Channel</Label>
+        <Select
+          value={config.channel || "email"}
+          onValueChange={(value) =>
+            onChange({ channel: value as "email" | "sms" })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="email">Email</SelectItem>
+            <SelectItem value="sms">SMS</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Subscribe the contact to receive messages via this channel.
+        </p>
+      </div>
+    </>
+  );
+}
+
+// Unsubscribe Topic configuration
+function UnsubscribeTopicConfig({
+  config,
+  topics,
+  onChange,
+}: {
+  config: WorkflowStepConfig;
+  topics: { id: string; name: string }[];
+  onChange: (updates: Partial<WorkflowStepConfig>) => void;
+}) {
+  if (config.type !== "unsubscribe_topic") return null;
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label>Topic</Label>
+        <Select
+          value={config.topicId || ""}
+          onValueChange={(value) => onChange({ topicId: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a topic" />
+          </SelectTrigger>
+          <SelectContent>
+            {topics.map((topic) => (
+              <SelectItem key={topic.id} value={topic.id}>
+                {topic.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {topics.length === 0 && (
+          <p className="text-xs text-gray-500">
+            No topics available. Create one in Settings &gt; Topics.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Channel</Label>
+        <Select
+          value={config.channel || "email"}
+          onValueChange={(value) =>
+            onChange({ channel: value as "email" | "sms" })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="email">Email</SelectItem>
+            <SelectItem value="sms">SMS</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Unsubscribe the contact from receiving messages via this channel.
+        </p>
+      </div>
     </>
   );
 }
