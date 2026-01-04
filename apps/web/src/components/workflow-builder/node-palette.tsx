@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkflowStepType } from "@wraps/db";
-import { Clock, LogOut, Mail, MessageSquare, Zap } from "lucide-react";
+import { Clock, GitBranch, LogOut, Mail, MessageSquare, UserCog, Webhook, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NodePaletteItem {
@@ -40,6 +40,27 @@ const paletteItems: NodePaletteItem[] = [
     description: "Wait before continuing",
     icon: <Clock className="w-4 h-4" />,
     accentColor: "bg-purple-500",
+  },
+  {
+    type: "condition",
+    label: "Condition",
+    description: "Branch Yes/No",
+    icon: <GitBranch className="w-4 h-4" />,
+    accentColor: "bg-orange-500",
+  },
+  {
+    type: "update_contact",
+    label: "Update Contact",
+    description: "Modify contact data",
+    icon: <UserCog className="w-4 h-4" />,
+    accentColor: "bg-indigo-500",
+  },
+  {
+    type: "webhook",
+    label: "Webhook",
+    description: "Call external API",
+    icon: <Webhook className="w-4 h-4" />,
+    accentColor: "bg-cyan-500",
   },
   {
     type: "exit",

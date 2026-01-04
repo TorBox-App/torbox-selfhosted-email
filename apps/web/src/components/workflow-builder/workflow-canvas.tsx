@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkflowStepType } from "@wraps/db";
-import type { Node, NodeTypes, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
+import type { EdgeTypes, Node, NodeTypes, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
 import {
   Background,
   BackgroundVariant,
@@ -12,13 +12,17 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { LabeledEdge } from "./edges/labeled-edge";
 import { NodePalette } from "./node-palette";
 import {
+  ConditionNode,
   DelayNode,
   ExitNode,
   SendEmailNode,
   SendSmsNode,
   TriggerNode,
+  UpdateContactNode,
+  WebhookNode,
 } from "./nodes";
 import { useWorkflowStore } from "./use-workflow-store";
 
@@ -28,6 +32,13 @@ const nodeTypes: NodeTypes = {
   send_sms: SendSmsNode,
   delay: DelayNode,
   exit: ExitNode,
+  condition: ConditionNode,
+  update_contact: UpdateContactNode,
+  webhook: WebhookNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  labeled: LabeledEdge,
 };
 
 export function WorkflowCanvas() {
@@ -121,11 +132,12 @@ export function WorkflowCanvas() {
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         snapToGrid
         snapGrid={[15, 15]}
         defaultEdgeOptions={{
-          type: "smoothstep",
+          type: "labeled",
           animated: true,
         }}
       >

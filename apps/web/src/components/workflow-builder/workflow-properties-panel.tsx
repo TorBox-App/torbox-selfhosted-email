@@ -110,6 +110,27 @@ export function WorkflowPropertiesPanel({
           />
         )}
 
+        {data.type === "condition" && (
+          <ConditionConfig
+            config={data.config}
+            onChange={handleConfigChange}
+          />
+        )}
+
+        {data.type === "update_contact" && (
+          <UpdateContactConfig
+            config={data.config}
+            onChange={handleConfigChange}
+          />
+        )}
+
+        {data.type === "webhook" && (
+          <WebhookConfig
+            config={data.config}
+            onChange={handleConfigChange}
+          />
+        )}
+
         {/* Delete button */}
         {data.type !== "trigger" && (
           <div className="pt-4 border-t">
@@ -314,6 +335,237 @@ function DelayConfig({
           </Select>
         </div>
       </div>
+    </>
+  );
+}
+
+// Condition configuration
+function ConditionConfig({
+  config,
+  onChange,
+}: {
+  config: WorkflowStepConfig;
+  onChange: (updates: Partial<WorkflowStepConfig>) => void;
+}) {
+  if (config.type !== "condition") return null;
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="condition-field">Field</Label>
+        <Input
+          id="condition-field"
+          placeholder="e.g., email, tags, customField"
+          value={config.field || ""}
+          onChange={(e) => onChange({ field: e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">
+          Contact property to evaluate
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Operator</Label>
+        <Select
+          value={config.operator || "equals"}
+          onValueChange={(value) => onChange({ operator: value })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="equals">Equals</SelectItem>
+            <SelectItem value="not_equals">Not Equals</SelectItem>
+            <SelectItem value="contains">Contains</SelectItem>
+            <SelectItem value="not_contains">Not Contains</SelectItem>
+            <SelectItem value="starts_with">Starts With</SelectItem>
+            <SelectItem value="ends_with">Ends With</SelectItem>
+            <SelectItem value="greater_than">Greater Than</SelectItem>
+            <SelectItem value="less_than">Less Than</SelectItem>
+            <SelectItem value="is_set">Is Set</SelectItem>
+            <SelectItem value="is_not_set">Is Not Set</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {config.operator !== "is_set" && config.operator !== "is_not_set" && (
+        <div className="space-y-2">
+          <Label htmlFor="condition-value">Value</Label>
+          <Input
+            id="condition-value"
+            placeholder="Value to compare"
+            value={String(config.value ?? "")}
+            onChange={(e) => onChange({ value: e.target.value })}
+          />
+        </div>
+      )}
+    </>
+  );
+}
+
+// Update Contact configuration
+function UpdateContactConfig({
+  config,
+  onChange,
+}: {
+  config: WorkflowStepConfig;
+  onChange: (updates: Partial<WorkflowStepConfig>) => void;
+}) {
+  if (config.type !== "update_contact") return null;
+
+  const updates = config.updates || [];
+
+  const addUpdate = () => {
+    onChange({
+      updates: [...updates, { field: "", operation: "set", value: "" }],
+    });
+  };
+
+  const removeUpdate = (index: number) => {
+    onChange({
+      updates: updates.filter((_, i) => i !== index),
+    });
+  };
+
+  const updateField = (index: number, key: string, value: unknown) => {
+    const newUpdates = [...updates];
+    newUpdates[index] = { ...newUpdates[index], [key]: value };
+    onChange({ updates: newUpdates });
+  };
+
+  return (
+    <>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label>Field Updates</Label>
+          <button
+            type="button"
+            onClick={addUpdate}
+            className="text-xs text-primary hover:underline"
+          >
+            + Add field
+          </button>
+        </div>
+
+        {updates.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            No updates configured. Click "Add field" to add one.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {updates.map((update, index) => (
+              <div key={index} className="p-3 border rounded-md space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium">Update {index + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeUpdate(index)}
+                    className="text-xs text-destructive hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <Input
+                  placeholder="Field name"
+                  value={update.field || ""}
+                  onChange={(e) => updateField(index, "field", e.target.value)}
+                />
+                <Select
+                  value={update.operation || "set"}
+                  onValueChange={(value) => updateField(index, "operation", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="set">Set to</SelectItem>
+                    <SelectItem value="increment">Increment by</SelectItem>
+                    <SelectItem value="decrement">Decrement by</SelectItem>
+                    <SelectItem value="append">Append</SelectItem>
+                    <SelectItem value="remove">Remove</SelectItem>
+                    <SelectItem value="unset">Unset</SelectItem>
+                  </SelectContent>
+                </Select>
+                {update.operation !== "unset" && (
+                  <Input
+                    placeholder="Value"
+                    value={String(update.value ?? "")}
+                    onChange={(e) => updateField(index, "value", e.target.value)}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// Webhook configuration
+function WebhookConfig({
+  config,
+  onChange,
+}: {
+  config: WorkflowStepConfig;
+  onChange: (updates: Partial<WorkflowStepConfig>) => void;
+}) {
+  if (config.type !== "webhook") return null;
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="webhook-url">URL</Label>
+        <Input
+          id="webhook-url"
+          type="url"
+          placeholder="https://api.example.com/webhook"
+          value={config.url || ""}
+          onChange={(e) => onChange({ url: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Method</Label>
+        <Select
+          value={config.method || "POST"}
+          onValueChange={(value) => onChange({ method: value })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="GET">GET</SelectItem>
+            <SelectItem value="POST">POST</SelectItem>
+            <SelectItem value="PUT">PUT</SelectItem>
+            <SelectItem value="PATCH">PATCH</SelectItem>
+            <SelectItem value="DELETE">DELETE</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="webhook-headers">Headers (JSON)</Label>
+        <Textarea
+          id="webhook-headers"
+          placeholder='{"Authorization": "Bearer ..."}'
+          value={config.headers ? JSON.stringify(config.headers, null, 2) : ""}
+          onChange={(e) => {
+            try {
+              const headers = e.target.value ? JSON.parse(e.target.value) : undefined;
+              onChange({ headers });
+            } catch {
+              // Invalid JSON, ignore
+            }
+          }}
+          rows={3}
+          className="font-mono text-xs"
+        />
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Contact data will be sent in the request body automatically.
+      </p>
     </>
   );
 }
