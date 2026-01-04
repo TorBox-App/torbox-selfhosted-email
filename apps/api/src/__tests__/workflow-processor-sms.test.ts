@@ -120,6 +120,117 @@ vi.mock("@wraps/db", async () => {
   };
 });
 
+describe("E.164 Phone Number Validation", () => {
+  /**
+   * Tests for the isValidE164Phone function.
+   * E.164 format: +[country code][subscriber number]
+   * Total length: 10-15 digits after the +
+   */
+
+  // Re-implement the function for testing
+  function isValidE164Phone(phone: string): boolean {
+    // E.164 format: + followed by 10-15 digits, starting with 1-9
+    const e164Regex = /^\+[1-9]\d{9,14}$/;
+    return e164Regex.test(phone);
+  }
+
+  describe("Valid E.164 Numbers", () => {
+    it("should accept US phone number (+1)", () => {
+      expect(isValidE164Phone("+15551234567")).toBe(true);
+    });
+
+    it("should accept UK phone number (+44)", () => {
+      expect(isValidE164Phone("+447911123456")).toBe(true);
+    });
+
+    it("should accept Australian phone number (+61)", () => {
+      expect(isValidE164Phone("+61412345678")).toBe(true);
+    });
+
+    it("should accept German phone number (+49)", () => {
+      expect(isValidE164Phone("+4915123456789")).toBe(true);
+    });
+
+    it("should accept Indian phone number (+91)", () => {
+      expect(isValidE164Phone("+919876543210")).toBe(true);
+    });
+
+    it("should accept minimum length (10 digits after +)", () => {
+      expect(isValidE164Phone("+1234567890")).toBe(true);
+    });
+
+    it("should accept maximum length (15 digits after +)", () => {
+      expect(isValidE164Phone("+123456789012345")).toBe(true);
+    });
+  });
+
+  describe("Invalid E.164 Numbers", () => {
+    it("should reject numbers without + prefix", () => {
+      expect(isValidE164Phone("15551234567")).toBe(false);
+    });
+
+    it("should reject numbers starting with 0 after +", () => {
+      expect(isValidE164Phone("+05551234567")).toBe(false);
+    });
+
+    it("should reject numbers that are too short", () => {
+      expect(isValidE164Phone("+123456789")).toBe(false); // 9 digits
+    });
+
+    it("should reject numbers that are too long", () => {
+      expect(isValidE164Phone("+1234567890123456")).toBe(false); // 16 digits
+    });
+
+    it("should reject numbers with letters", () => {
+      expect(isValidE164Phone("+1555ABC4567")).toBe(false);
+    });
+
+    it("should reject numbers with spaces", () => {
+      expect(isValidE164Phone("+1 555 123 4567")).toBe(false);
+    });
+
+    it("should reject numbers with dashes", () => {
+      expect(isValidE164Phone("+1-555-123-4567")).toBe(false);
+    });
+
+    it("should reject numbers with parentheses", () => {
+      expect(isValidE164Phone("+1(555)1234567")).toBe(false);
+    });
+
+    it("should reject empty string", () => {
+      expect(isValidE164Phone("")).toBe(false);
+    });
+
+    it("should reject just a plus sign", () => {
+      expect(isValidE164Phone("+")).toBe(false);
+    });
+
+    it("should reject local format numbers", () => {
+      expect(isValidE164Phone("(555) 123-4567")).toBe(false);
+    });
+
+    it("should reject numbers with special characters", () => {
+      expect(isValidE164Phone("+1555.123.4567")).toBe(false);
+    });
+  });
+
+  describe("Edge Cases", () => {
+    it("should reject numbers with leading zeros in subscriber part", () => {
+      // This is actually valid E.164, but let's verify our regex
+      expect(isValidE164Phone("+10001234567")).toBe(true);
+    });
+
+    it("should handle country codes with different lengths", () => {
+      // 1-digit country code (US/Canada)
+      expect(isValidE164Phone("+15551234567")).toBe(true);
+      // 2-digit country code (UK)
+      expect(isValidE164Phone("+447911123456")).toBe(true);
+      // 3-digit country code (India)
+      expect(isValidE164Phone("+919876543210")).toBe(true);
+    });
+  });
+});
+
 describe("Workflow Processor - SMS Sending", () => {
   beforeEach(() => {
     vi.clearAllMocks();

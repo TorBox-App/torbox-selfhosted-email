@@ -148,6 +148,13 @@
       "when": 1767491481740,
       "tag": "0020_misty_master_mold",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1767567697816,
+      "tag": "0021_regular_harrier",
+      "breakpoints": true
     }
   ]
 }

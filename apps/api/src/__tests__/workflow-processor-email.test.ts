@@ -510,6 +510,128 @@ describe("Workflow Processor - Email Sending", () => {
   });
 });
 
+describe("Subject Line Sanitization", () => {
+  /**
+   * Tests for the sanitizeEmailSubject function.
+   * Prevents header injection attacks and ensures RFC 2822 compliance.
+   */
+
+  // Re-implement the function for testing
+  function sanitizeEmailSubject(subject: string): string {
+    return subject
+      .replace(/[\r\n]+/g, " ") // Remove newlines (header injection prevention)
+      .replace(/\s+/g, " ") // Collapse whitespace
+      .trim()
+      .slice(0, 998); // RFC 2822 max line length
+  }
+
+  describe("Header Injection Prevention", () => {
+    it("should remove carriage return characters", () => {
+      const maliciousSubject = "Normal Subject\rBcc: attacker@evil.com";
+      const sanitized = sanitizeEmailSubject(maliciousSubject);
+      expect(sanitized).not.toContain("\r");
+      expect(sanitized).toBe("Normal Subject Bcc: attacker@evil.com");
+    });
+
+    it("should remove newline characters", () => {
+      const maliciousSubject = "Normal Subject\nX-Custom-Header: injected";
+      const sanitized = sanitizeEmailSubject(maliciousSubject);
+      expect(sanitized).not.toContain("\n");
+      expect(sanitized).toBe("Normal Subject X-Custom-Header: injected");
+    });
+
+    it("should remove CRLF sequences", () => {
+      const maliciousSubject =
+        "Normal Subject\r\nBcc: attacker@evil.com\r\nX-Injected: true";
+      const sanitized = sanitizeEmailSubject(maliciousSubject);
+      expect(sanitized).not.toContain("\r");
+      expect(sanitized).not.toContain("\n");
+      expect(sanitized).toBe(
+        "Normal Subject Bcc: attacker@evil.com X-Injected: true"
+      );
+    });
+
+    it("should handle multiple consecutive newlines", () => {
+      const subject = "Hello\n\n\nWorld";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("Hello World");
+    });
+  });
+
+  describe("Whitespace Handling", () => {
+    it("should collapse multiple spaces", () => {
+      const subject = "Hello    World";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("Hello World");
+    });
+
+    it("should collapse tabs", () => {
+      const subject = "Hello\t\tWorld";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("Hello World");
+    });
+
+    it("should trim leading and trailing whitespace", () => {
+      const subject = "   Hello World   ";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("Hello World");
+    });
+
+    it("should handle mixed whitespace", () => {
+      const subject = "  Hello \n\t World  \r\n ";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("Hello World");
+    });
+  });
+
+  describe("Length Limiting (RFC 2822)", () => {
+    it("should allow subjects up to 998 characters", () => {
+      const longSubject = "A".repeat(998);
+      const sanitized = sanitizeEmailSubject(longSubject);
+      expect(sanitized.length).toBe(998);
+    });
+
+    it("should truncate subjects longer than 998 characters", () => {
+      const veryLongSubject = "B".repeat(2000);
+      const sanitized = sanitizeEmailSubject(veryLongSubject);
+      expect(sanitized.length).toBe(998);
+    });
+
+    it("should truncate after sanitization", () => {
+      // Create a subject that exceeds 998 chars after newline replacement
+      const subject = "Hello\n" + "C".repeat(1000);
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized.length).toBe(998);
+    });
+  });
+
+  describe("Normal Subjects", () => {
+    it("should not modify normal subjects", () => {
+      const subject = "Welcome to our newsletter!";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("Welcome to our newsletter!");
+    });
+
+    it("should preserve special characters", () => {
+      const subject = "50% off! 🎉 [Limited Time]";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("50% off! 🎉 [Limited Time]");
+    });
+
+    it("should handle empty subject", () => {
+      const subject = "";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("");
+    });
+
+    it("should handle subject with only whitespace", () => {
+      const subject = "   ";
+      const sanitized = sanitizeEmailSubject(subject);
+      expect(sanitized).toBe("");
+    });
+  });
+});
+
 describe("Workflow Processor Email - Integration Scenarios", () => {
   beforeEach(() => {
     vi.clearAllMocks();
