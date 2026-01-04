@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.927.0",
+    "@aws-sdk/client-pinpoint-sms-voice-v2": "3.955.0",
     "@aws-sdk/client-scheduler": "3.958.0",
     "@aws-sdk/client-ses": "^3.927.0",
     "@aws-sdk/client-sesv2": "3.962.0",
@@ -28,6 +29,7 @@
     "@wraps/auth": "workspace:*",
     "@wraps/db": "workspace:*",
     "@wraps/email": "workspace:*",
+    "croner": "9.1.0",
     "drizzle-orm": "0.44.7",
     "elysia": "^1.4.19",
     "jose": "6.1.3",

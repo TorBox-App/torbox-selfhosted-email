@@ -7,6 +7,11 @@
 
 import type { SQSEvent, SQSHandler } from "aws-lambda";
 import {
+  PinpointSMSVoiceV2Client,
+  SendTextMessageCommand,
+} from "@aws-sdk/client-pinpoint-sms-voice-v2";
+import {
+  awsAccount,
   contact,
   contactTopic,
   db,
@@ -20,6 +25,7 @@ import {
 } from "@wraps/db";
 import { and, sql } from "drizzle-orm";
 
+import { getCredentials } from "../services/credentials";
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
@@ -361,17 +367,108 @@ async function handleSendEmail(
 
 async function handleSendSms(
   config: Extract<WorkflowStepConfig, { type: "send_sms" }>,
-  _execution: typeof workflowExecution.$inferSelect,
+  execution: typeof workflowExecution.$inferSelect,
   contactRecord: typeof contact.$inferSelect,
   _organizationId: string
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
-  // TODO: Implement SMS sending
-  console.log(`[workflow] Would send SMS to contact ${contactRecord.id}`);
+  // Get the contact's phone number
+  if (!contactRecord.phone) {
+    console.log(`[workflow] Contact ${contactRecord.id} has no phone number, skipping SMS`);
+    return {
+      action: "next",
+      data: {
+        skipped: true,
+        reason: "no_phone",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  // Get the workflow to find the AWS account
+  const [wf] = await db
+    .select({ awsAccountId: workflow.awsAccountId })
+    .from(workflow)
+    .where(eq(workflow.id, execution.workflowId))
+    .limit(1);
+
+  if (!wf?.awsAccountId) {
+    console.log(`[workflow] Workflow ${execution.workflowId} has no AWS account configured, skipping SMS`);
+    return {
+      action: "next",
+      data: {
+        skipped: true,
+        reason: "no_aws_account",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  // Get the AWS account region
+  const [account] = await db
+    .select({ region: awsAccount.region })
+    .from(awsAccount)
+    .where(eq(awsAccount.id, wf.awsAccountId))
+    .limit(1);
+
+  if (!account) {
+    throw new Error(`AWS account ${wf.awsAccountId} not found`);
+  }
+
+  // Get credentials for the customer's AWS account
+  const credentials = await getCredentials(wf.awsAccountId);
+
+  // Create Pinpoint SMS Voice V2 client with assumed credentials
+  const smsClient = new PinpointSMSVoiceV2Client({
+    region: account.region,
+    credentials: {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken,
+    },
+  });
+
+  // Build message body - use body from config or fetch from template
+  const messageBody = config.body || "";
+  if (!messageBody) {
+    console.log(`[workflow] SMS step has no message body configured, skipping`);
+    return {
+      action: "next",
+      data: {
+        skipped: true,
+        reason: "no_message_body",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  // Send SMS
+  const command = new SendTextMessageCommand({
+    DestinationPhoneNumber: contactRecord.phone,
+    MessageBody: messageBody,
+    ConfigurationSetName: "wraps-sms-config",
+    MessageType: "TRANSACTIONAL",
+    ...(config.senderId && { OriginationIdentity: config.senderId }),
+  });
+
+  const response = await smsClient.send(command);
+
+  console.log(`[workflow] Sent SMS to ${contactRecord.phone}, messageId: ${response.MessageId}`);
+
+  // Update contact SMS metrics
+  await db
+    .update(contact)
+    .set({
+      lastSmsSentAt: new Date(),
+      smsSent: sql`COALESCE(${contact.smsSent}, 0) + 1`,
+    })
+    .where(eq(contact.id, contactRecord.id));
 
   return {
     action: "next",
     data: {
-      body: config.body,
+      messageId: response.MessageId,
+      recipient: contactRecord.phone,
+      body: messageBody,
       timestamp: new Date().toISOString(),
     },
   };
