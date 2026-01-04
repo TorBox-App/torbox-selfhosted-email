@@ -1,5 +1,5 @@
 import { auth } from "@wraps/auth";
-import { awsAccount, db, template } from "@wraps/db";
+import { awsAccount, db, segment, template, topic } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getWorkflow } from "@/actions/workflows";
@@ -64,6 +64,26 @@ export default async function WorkflowBuilderPage({
     },
   });
 
+  // Fetch topics for workflow triggers and topic actions
+  const topics = await db.query.topic.findMany({
+    where: eq(topic.organizationId, orgWithMembership.id),
+    columns: {
+      id: true,
+      name: true,
+    },
+    orderBy: (t, { asc }) => [asc(t.name)],
+  });
+
+  // Fetch segments for workflow triggers
+  const segments = await db.query.segment.findMany({
+    where: eq(segment.organizationId, orgWithMembership.id),
+    columns: {
+      id: true,
+      name: true,
+    },
+    orderBy: (s, { asc }) => [asc(s.name)],
+  });
+
   return (
     <div className="h-[calc(100vh-60px)] flex flex-col">
       <WorkflowBuilder
@@ -71,6 +91,8 @@ export default async function WorkflowBuilderPage({
         organizationId={orgWithMembership.id}
         orgSlug={orgSlug}
         templates={templates}
+        topics={topics}
+        segments={segments}
         awsAccounts={awsAccounts}
         userRole={orgWithMembership.userRole}
       />

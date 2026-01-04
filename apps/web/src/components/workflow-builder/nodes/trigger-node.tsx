@@ -3,6 +3,7 @@
 import { Zap } from "lucide-react";
 import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
+import { useWorkflowData } from "../workflow-data-context";
 
 type TriggerNodeProps = {
   data: WorkflowNodeData;
@@ -11,6 +12,7 @@ type TriggerNodeProps = {
 
 export function TriggerNode({ data, selected }: TriggerNodeProps) {
   const config = data.config;
+  const { topics, segments } = useWorkflowData();
   let description = "When triggered";
 
   if (config.type === "trigger") {
@@ -26,16 +28,34 @@ export function TriggerNode({ data, selected }: TriggerNodeProps) {
           ? `Event: ${config.eventName}`
           : "Custom event (not configured)";
         break;
-      case "segment_entry":
-        description = config.segmentId
-          ? `Segment entry: ${config.segmentId}`
+      case "segment_entry": {
+        const segmentName = segments.find((s) => s.id === config.segmentId)?.name;
+        description = segmentName
+          ? `Enters: ${segmentName}`
           : "Segment entry";
         break;
-      case "segment_exit":
-        description = config.segmentId
-          ? `Segment exit: ${config.segmentId}`
+      }
+      case "segment_exit": {
+        const segmentName = segments.find((s) => s.id === config.segmentId)?.name;
+        description = segmentName
+          ? `Exits: ${segmentName}`
           : "Segment exit";
         break;
+      }
+      case "topic_subscribed": {
+        const topicName = topics.find((t) => t.id === config.topicId)?.name;
+        description = topicName
+          ? `Subscribes: ${topicName}`
+          : "Topic subscribed";
+        break;
+      }
+      case "topic_unsubscribed": {
+        const topicName = topics.find((t) => t.id === config.topicId)?.name;
+        description = topicName
+          ? `Unsubscribes: ${topicName}`
+          : "Topic unsubscribed";
+        break;
+      }
       case "schedule":
         description = config.schedule
           ? `Schedule: ${config.schedule}`

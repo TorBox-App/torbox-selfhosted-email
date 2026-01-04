@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkflowStepType } from "@wraps/db";
-import type { EdgeTypes, Node, NodeTypes, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
+import type { Connection, Edge, EdgeTypes, Node, NodeTypes, OnConnect, OnEdgesChange, OnNodesChange, OnReconnect } from "@xyflow/react";
 import {
   Background,
   BackgroundVariant,
@@ -20,10 +20,10 @@ import {
   ExitNode,
   SendEmailNode,
   SendSmsNode,
-  SubscribeTopicNode,
+  TopicNode,
   TriggerNode,
-  UnsubscribeTopicNode,
   UpdateContactNode,
+  WaitForEmailEngagementNode,
   WaitForEventNode,
   WebhookNode,
 } from "./nodes";
@@ -40,8 +40,9 @@ const nodeTypes: NodeTypes = {
   webhook: WebhookNode,
   // Slice 3
   wait_for_event: WaitForEventNode,
-  subscribe_topic: SubscribeTopicNode,
-  unsubscribe_topic: UnsubscribeTopicNode,
+  wait_for_email_engagement: WaitForEmailEngagementNode,
+  subscribe_topic: TopicNode,
+  unsubscribe_topic: TopicNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -58,6 +59,7 @@ export function WorkflowCanvas() {
   const onNodesChange = useWorkflowStore((state) => state.onNodesChange) as OnNodesChange<Node>;
   const onEdgesChange = useWorkflowStore((state) => state.onEdgesChange) as OnEdgesChange;
   const onConnect = useWorkflowStore((state) => state.onConnect) as OnConnect;
+  const onReconnect = useWorkflowStore((state) => state.onReconnect) as OnReconnect;
   const addNode = useWorkflowStore((state) => state.addNode);
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
@@ -133,6 +135,7 @@ export function WorkflowCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onReconnect={onReconnect}
         onInit={setReactFlowInstance}
         onDrop={onDrop}
         onDragOver={onDragOver}
@@ -143,6 +146,7 @@ export function WorkflowCanvas() {
         fitView
         snapToGrid
         snapGrid={[15, 15]}
+        deleteKeyCode={["Backspace", "Delete"]}
         defaultEdgeOptions={{
           type: "labeled",
           animated: true,

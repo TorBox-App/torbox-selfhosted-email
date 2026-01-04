@@ -4,9 +4,10 @@
  * POST /webhooks/ses/:awsAccountId - Receive SES events from EventBridge API Destination
  */
 
-import { awsAccount, batchSend, contact, db, eq, messageSend } from "@wraps/db";
-import { sql } from "drizzle-orm";
+import { awsAccount, batchSend, contact, db, eq, messageSend, workflowExecution } from "@wraps/db";
+import { and, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { deleteScheduledStep, enqueueWorkflowStep } from "../services/workflow-queue";
 
 // SES event types we care about
 type SesEventType =
@@ -137,16 +138,17 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
           break;
 
         case "Open":
-          await processOpen(message, event.detail.open?.timestamp);
+          await processOpen(message, messageId, event.detail.open?.timestamp);
           break;
 
         case "Click":
-          await processClick(message, event.detail.click?.timestamp);
+          await processClick(message, messageId, event.detail.click?.timestamp);
           break;
 
         case "Bounce":
           await processBounce(
             message,
+            messageId,
             event.detail.bounce?.bounceType,
             event.detail.bounce?.bounceSubType,
             event.detail.bounce?.timestamp
@@ -228,6 +230,7 @@ async function processDelivery(
 
 async function processOpen(
   message: MessageRecord,
+  messageId: string,
   timestamp?: string
 ): Promise<void> {
   const openedAt = timestamp ? new Date(timestamp) : new Date();
@@ -266,6 +269,9 @@ async function processOpen(
         emailsOpened: sql`${contact.emailsOpened} + 1`,
       })
       .where(eq(contact.id, message.contactId));
+
+    // Resume waiting workflow executions
+    await resumeWaitingExecutions(messageId, message.contactId, "opened");
   }
 
   console.log(`[WEBHOOK] Marked message ${message.id} as opened`);
@@ -273,6 +279,7 @@ async function processOpen(
 
 async function processClick(
   message: MessageRecord,
+  messageId: string,
   timestamp?: string
 ): Promise<void> {
   const clickedAt = timestamp ? new Date(timestamp) : new Date();
@@ -311,6 +318,9 @@ async function processClick(
         emailsClicked: sql`${contact.emailsClicked} + 1`,
       })
       .where(eq(contact.id, message.contactId));
+
+    // Resume waiting workflow executions
+    await resumeWaitingExecutions(messageId, message.contactId, "clicked");
   }
 
   console.log(`[WEBHOOK] Marked message ${message.id} as clicked`);
@@ -318,6 +328,7 @@ async function processClick(
 
 async function processBounce(
   message: MessageRecord,
+  messageId: string,
   bounceType?: string,
   bounceSubType?: string,
   timestamp?: string
@@ -354,6 +365,11 @@ async function processBounce(
         emailBouncedAt: bouncedAt,
       })
       .where(eq(contact.id, message.contactId));
+  }
+
+  // Resume waiting workflow executions (any bounce type)
+  if (message.contactId) {
+    await resumeWaitingExecutions(messageId, message.contactId, "bounced");
   }
 
   console.log(
@@ -398,4 +414,44 @@ async function processComplaint(
   }
 
   console.log(`[WEBHOOK] Marked message ${message.id} as complained`);
+}
+
+/**
+ * Resume workflow executions waiting for email engagement
+ */
+async function resumeWaitingExecutions(
+  messageId: string,
+  contactId: string,
+  branch: "opened" | "clicked" | "bounced"
+): Promise<void> {
+  // Find executions waiting for this email engagement
+  const waitingEvent = `email_engagement:${messageId}`;
+
+  const waitingExecutions = await db
+    .select()
+    .from(workflowExecution)
+    .where(
+      and(
+        eq(workflowExecution.contactId, contactId),
+        eq(workflowExecution.status, "waiting"),
+        eq(workflowExecution.waitingForEvent, waitingEvent)
+      )
+    );
+
+  for (const execution of waitingExecutions) {
+    console.log(`[WEBHOOK] Resuming execution ${execution.id} with branch: ${branch}`);
+
+    // Cancel timeout scheduler
+    if (execution.waitTimeoutSchedulerName) {
+      await deleteScheduledStep(execution.waitTimeoutSchedulerName);
+    }
+
+    // Resume with appropriate branch
+    await enqueueWorkflowStep({
+      type: "resume",
+      executionId: execution.id,
+      branch,
+      organizationId: execution.organizationId,
+    });
+  }
 }

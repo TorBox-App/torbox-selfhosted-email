@@ -27,14 +27,21 @@ interface Topic {
   name: string;
 }
 
+interface Segment {
+  id: string;
+  name: string;
+}
+
 interface WorkflowPropertiesPanelProps {
   templates: Template[];
   topics?: Topic[];
+  segments?: Segment[];
 }
 
 export function WorkflowPropertiesPanel({
   templates,
   topics = [],
+  segments = [],
 }: WorkflowPropertiesPanelProps) {
   const selectedNode = useSelectedNode();
   const selectNode = useWorkflowStore((state) => state.selectNode);
@@ -91,6 +98,8 @@ export function WorkflowPropertiesPanel({
         {data.type === "trigger" && (
           <TriggerConfig
             config={data.config}
+            topics={topics}
+            segments={segments}
             onChange={handleConfigChange}
           />
         )}
@@ -145,19 +154,31 @@ export function WorkflowPropertiesPanel({
           />
         )}
 
-        {data.type === "subscribe_topic" && (
-          <SubscribeTopicConfig
+        {data.type === "wait_for_email_engagement" && (
+          <WaitForEmailEngagementConfig
             config={data.config}
-            topics={topics}
             onChange={handleConfigChange}
           />
         )}
 
-        {data.type === "unsubscribe_topic" && (
-          <UnsubscribeTopicConfig
+        {(data.type === "subscribe_topic" || data.type === "unsubscribe_topic") && (
+          <TopicConfig
             config={data.config}
             topics={topics}
             onChange={handleConfigChange}
+            onTypeChange={(newType) => {
+              // Switch between subscribe and unsubscribe types
+              const currentConfig = data.config;
+              updateNodeConfig(selectedNode.id, {
+                type: newType,
+                topicId: currentConfig.type === "subscribe_topic" || currentConfig.type === "unsubscribe_topic"
+                  ? currentConfig.topicId
+                  : "",
+                channel: currentConfig.type === "subscribe_topic" || currentConfig.type === "unsubscribe_topic"
+                  ? currentConfig.channel
+                  : "email",
+              } as WorkflowStepConfig);
+            }}
           />
         )}
 
@@ -182,9 +203,13 @@ export function WorkflowPropertiesPanel({
 // Trigger configuration
 function TriggerConfig({
   config,
+  topics,
+  segments,
   onChange,
 }: {
   config: WorkflowStepConfig;
+  topics: { id: string; name: string }[];
+  segments: { id: string; name: string }[];
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
   if (config.type !== "trigger") return null;
@@ -208,6 +233,8 @@ function TriggerConfig({
             <SelectItem value="event">Custom Event</SelectItem>
             <SelectItem value="segment_entry">Segment Entry</SelectItem>
             <SelectItem value="segment_exit">Segment Exit</SelectItem>
+            <SelectItem value="topic_subscribed">Topic Subscribed</SelectItem>
+            <SelectItem value="topic_unsubscribed">Topic Unsubscribed</SelectItem>
             <SelectItem value="schedule">Schedule</SelectItem>
             <SelectItem value="api">API Trigger</SelectItem>
           </SelectContent>
@@ -232,17 +259,63 @@ function TriggerConfig({
       {(config.triggerType === "segment_entry" ||
         config.triggerType === "segment_exit") && (
         <div className="space-y-2">
-          <Label htmlFor="segment-id">Segment ID</Label>
-          <Input
-            id="segment-id"
-            placeholder="Enter segment ID"
+          <Label>Segment</Label>
+          <Select
             value={config.segmentId || ""}
-            onChange={(e) => onChange({ segmentId: e.target.value })}
-          />
+            onValueChange={(value) => onChange({ segmentId: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a segment" />
+            </SelectTrigger>
+            <SelectContent>
+              {segments.map((segment) => (
+                <SelectItem key={segment.id} value={segment.id}>
+                  {segment.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {segments.length === 0 && (
+            <p className="text-xs text-gray-500">
+              No segments available. Create one in Contacts &gt; Segments.
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
             {config.triggerType === "segment_entry"
               ? "Workflow starts when a contact enters this segment."
               : "Workflow starts when a contact exits this segment."}
+          </p>
+        </div>
+      )}
+
+      {(config.triggerType === "topic_subscribed" ||
+        config.triggerType === "topic_unsubscribed") && (
+        <div className="space-y-2">
+          <Label>Topic</Label>
+          <Select
+            value={config.topicId || ""}
+            onValueChange={(value) => onChange({ topicId: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a topic" />
+            </SelectTrigger>
+            <SelectContent>
+              {topics.map((topic) => (
+                <SelectItem key={topic.id} value={topic.id}>
+                  {topic.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {topics.length === 0 && (
+            <p className="text-xs text-gray-500">
+              No topics available. Create one in Settings &gt; Topics.
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {config.triggerType === "topic_subscribed"
+              ? "Workflow starts when a contact subscribes to this topic."
+              : "Workflow starts when a contact unsubscribes from this topic."}
           </p>
         </div>
       )}
@@ -755,82 +828,133 @@ function WaitForEventConfig({
   );
 }
 
-// Subscribe Topic configuration
-function SubscribeTopicConfig({
+// Wait for Email Engagement configuration
+function WaitForEmailEngagementConfig({
   config,
-  topics,
   onChange,
 }: {
   config: WorkflowStepConfig;
-  topics: { id: string; name: string }[];
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "subscribe_topic") return null;
+  if (config.type !== "wait_for_email_engagement") return null;
+
+  // Convert timeout seconds to a human-readable format
+  const getTimeoutValues = () => {
+    const seconds = config.timeoutSeconds || 0;
+    if (seconds >= 86400) {
+      return { amount: Math.floor(seconds / 86400), unit: "days" };
+    } else if (seconds >= 3600) {
+      return { amount: Math.floor(seconds / 3600), unit: "hours" };
+    } else if (seconds >= 60) {
+      return { amount: Math.floor(seconds / 60), unit: "minutes" };
+    }
+    return { amount: seconds || 3, unit: "days" };
+  };
+
+  const { amount, unit } = getTimeoutValues();
+
+  const handleTimeoutChange = (newAmount: number, newUnit: string) => {
+    let seconds = newAmount;
+    switch (newUnit) {
+      case "minutes":
+        seconds = newAmount * 60;
+        break;
+      case "hours":
+        seconds = newAmount * 3600;
+        break;
+      case "days":
+        seconds = newAmount * 86400;
+        break;
+    }
+    onChange({ timeoutSeconds: seconds });
+  };
 
   return (
     <>
       <div className="space-y-2">
-        <Label>Topic</Label>
-        <Select
-          value={config.topicId || ""}
-          onValueChange={(value) => onChange({ topicId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a topic" />
-          </SelectTrigger>
-          <SelectContent>
-            {topics.map((topic) => (
-              <SelectItem key={topic.id} value={topic.id}>
-                {topic.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {topics.length === 0 && (
-          <p className="text-xs text-gray-500">
-            No topics available. Create one in Settings &gt; Topics.
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Waits for engagement with the previous Send Email step. Routes contacts
+          based on whether they opened, clicked, or if the email bounced.
+        </p>
       </div>
 
       <div className="space-y-2">
-        <Label>Channel</Label>
-        <Select
-          value={config.channel || "email"}
-          onValueChange={(value) =>
-            onChange({ channel: value as "email" | "sms" })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="email">Email</SelectItem>
-            <SelectItem value="sms">SMS</SelectItem>
-          </SelectContent>
-        </Select>
+        <Label>Wait Duration</Label>
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            min={1}
+            value={amount}
+            onChange={(e) =>
+              handleTimeoutChange(Number.parseInt(e.target.value) || 1, unit)
+            }
+            className="w-20"
+          />
+          <Select
+            value={unit}
+            onValueChange={(value) => handleTimeoutChange(amount, value)}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hours">Hours</SelectItem>
+              <SelectItem value="days">Days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <p className="text-xs text-muted-foreground">
-          Subscribe the contact to receive messages via this channel.
+          Time to wait for engagement before following the "None" path.
         </p>
+      </div>
+
+      <div className="p-3 bg-muted rounded-md space-y-1">
+        <p className="text-xs font-medium">Output Paths:</p>
+        <ul className="text-xs text-muted-foreground space-y-0.5">
+          <li><span className="text-green-600 font-medium">Open</span> — Email was opened</li>
+          <li><span className="text-blue-600 font-medium">Click</span> — Link was clicked</li>
+          <li><span className="text-red-600 font-medium">Bounce</span> — Email bounced</li>
+          <li><span className="text-yellow-600 font-medium">None</span> — No engagement within timeout</li>
+        </ul>
       </div>
     </>
   );
 }
 
-// Unsubscribe Topic configuration
-function UnsubscribeTopicConfig({
+// Topic configuration (combined subscribe/unsubscribe)
+function TopicConfig({
   config,
   topics,
   onChange,
+  onTypeChange,
 }: {
   config: WorkflowStepConfig;
   topics: { id: string; name: string }[];
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
+  onTypeChange: (type: "subscribe_topic" | "unsubscribe_topic") => void;
 }) {
-  if (config.type !== "unsubscribe_topic") return null;
+  if (config.type !== "subscribe_topic" && config.type !== "unsubscribe_topic") return null;
+
+  const isSubscribe = config.type === "subscribe_topic";
 
   return (
     <>
+      <div className="space-y-2">
+        <Label>Action</Label>
+        <Select
+          value={config.type}
+          onValueChange={(value) => onTypeChange(value as "subscribe_topic" | "unsubscribe_topic")}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="subscribe_topic">Subscribe</SelectItem>
+            <SelectItem value="unsubscribe_topic">Unsubscribe</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="space-y-2">
         <Label>Topic</Label>
         <Select
@@ -872,7 +996,9 @@ function UnsubscribeTopicConfig({
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Unsubscribe the contact from receiving messages via this channel.
+          {isSubscribe
+            ? "Subscribe the contact to receive messages via this channel."
+            : "Unsubscribe the contact from receiving messages via this channel."}
         </p>
       </div>
     </>

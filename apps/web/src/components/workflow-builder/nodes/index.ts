@@ -8,5 +8,5 @@ export { UpdateContactNode } from "./update-contact-node";
 export { WebhookNode } from "./webhook-node";
 // Slice 3
 export { WaitForEventNode } from "./wait-for-event-node";
-export { SubscribeTopicNode } from "./subscribe-topic-node";
-export { UnsubscribeTopicNode } from "./unsubscribe-topic-node";
+export { WaitForEmailEngagementNode } from "./wait-for-email-engagement-node";
+export { TopicNode } from "./topic-node";

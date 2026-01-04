@@ -39,6 +39,7 @@ export type WorkflowStepType =
   | "update_contact"
   // Slice 3
   | "wait_for_event"
+  | "wait_for_email_engagement"
   | "subscribe_topic"
   | "unsubscribe_topic";
 
@@ -54,7 +55,9 @@ export type WorkflowTriggerType =
   | "segment_entry"
   | "segment_exit"
   | "schedule"
-  | "api";
+  | "api"
+  | "topic_subscribed"
+  | "topic_unsubscribed";
 
 /**
  * Trigger configuration based on trigger type
@@ -69,6 +72,9 @@ export type TriggerConfig = {
   // For schedule trigger (Slice 3)
   schedule?: string; // Cron expression
   timezone?: string;
+
+  // For topic triggers
+  topicId?: string;
 };
 
 /**
@@ -85,6 +91,7 @@ export type WorkflowStepConfig =
   | { type: "webhook"; url: string; method: string; headers?: Record<string, string>; body?: Record<string, unknown> }
   | { type: "update_contact"; updates: Array<{ field: string; operation: string; value?: unknown }> }
   | { type: "wait_for_event"; eventName: string; timeoutSeconds?: number }
+  | { type: "wait_for_email_engagement"; timeoutSeconds?: number }
   | { type: "subscribe_topic"; topicId: string; channel: "email" | "sms" }
   | { type: "unsubscribe_topic"; topicId: string; channel: "email" | "sms" };
 
@@ -107,7 +114,7 @@ export type WorkflowTransition = {
   fromStepId: string;
   toStepId: string;
   condition?: {
-    branch: "yes" | "no" | "timeout" | "default";
+    branch: "yes" | "no" | "timeout" | "default" | "opened" | "clicked" | "bounced";
   };
 };
 

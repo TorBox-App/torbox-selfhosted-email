@@ -8,11 +8,12 @@ import type {
   WorkflowTransition,
   WorkflowTriggerType,
 } from "@wraps/db";
-import type { Edge, Node, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
+import type { Connection, Edge, Node, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
 import {
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
+  reconnectEdge,
 } from "@xyflow/react";
 import { create } from "zustand";
 
@@ -56,6 +57,7 @@ interface WorkflowStoreState {
   onNodesChange: OnNodesChange<WorkflowNode>;
   onEdgesChange: OnEdgesChange<WorkflowEdge>;
   onConnect: OnConnect;
+  onReconnect: (oldEdge: WorkflowEdge, newConnection: Connection) => void;
 
   addNode: (
     type: WorkflowStepType,
@@ -179,6 +181,8 @@ function getDefaultConfig(type: WorkflowStepType): WorkflowStepConfig {
       return { type: "update_contact", updates: [] };
     case "wait_for_event":
       return { type: "wait_for_event", eventName: "" };
+    case "wait_for_email_engagement":
+      return { type: "wait_for_email_engagement", timeoutSeconds: 259200 }; // 3 days default
     case "subscribe_topic":
       return { type: "subscribe_topic", topicId: "", channel: "email" };
     case "unsubscribe_topic":
@@ -209,10 +213,12 @@ function getDefaultName(type: WorkflowStepType): string {
       return "Update Contact";
     case "wait_for_event":
       return "Wait for Event";
+    case "wait_for_email_engagement":
+      return "Email Engagement";
     case "subscribe_topic":
-      return "Subscribe";
+      return "Topic";
     case "unsubscribe_topic":
-      return "Unsubscribe";
+      return "Topic";
   }
 }
 
@@ -274,6 +280,13 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
         },
         state.edges
       ),
+      isDirty: true,
+    }));
+  },
+
+  onReconnect: (oldEdge, newConnection) => {
+    set((state) => ({
+      edges: reconnectEdge(oldEdge, newConnection, state.edges),
       isDirty: true,
     }));
   },

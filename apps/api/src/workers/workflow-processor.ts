@@ -278,6 +278,8 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
 /**
  * Execute a single step and return the result
  */
+type WorkflowBranch = "yes" | "no" | "timeout" | "default" | "opened" | "clicked" | "bounced";
+
 async function executeStep(
   step: WorkflowStep,
   execution: typeof workflowExecution.$inferSelect,
@@ -285,7 +287,7 @@ async function executeStep(
   organizationId: string
 ): Promise<{
   action: "next" | "wait" | "exit";
-  branch?: "yes" | "no" | "timeout" | "default";
+  branch?: WorkflowBranch;
   data?: Record<string, unknown>;
 }> {
   const config = step.config;
@@ -315,6 +317,9 @@ async function executeStep(
 
     case "wait_for_event":
       return await handleWaitForEvent(config, execution, step.id, organizationId);
+
+    case "wait_for_email_engagement":
+      return await handleWaitForEmailEngagement(config, execution, step.id, organizationId);
 
     case "subscribe_topic":
       return await handleSubscribeTopic(config, contactRecord);
@@ -623,6 +628,58 @@ async function handleWaitForEvent(
   return { action: "wait" };
 }
 
+async function handleWaitForEmailEngagement(
+  config: Extract<WorkflowStepConfig, { type: "wait_for_email_engagement" }>,
+  execution: typeof workflowExecution.$inferSelect,
+  stepId: string,
+  organizationId: string
+): Promise<{ action: "wait" }> {
+  const timeoutSeconds = config.timeoutSeconds || 259200; // Default 3 days
+  const timeoutAt = new Date(Date.now() + timeoutSeconds * 1000);
+
+  // Find the previous send_email step execution to get the message ID
+  const previousStepExecs = await db
+    .select()
+    .from(workflowStepExecution)
+    .where(
+      and(
+        eq(workflowStepExecution.executionId, execution.id),
+        eq(workflowStepExecution.stepType, "send_email"),
+        eq(workflowStepExecution.status, "completed")
+      )
+    )
+    .orderBy(sql`${workflowStepExecution.completedAt} DESC`)
+    .limit(1);
+
+  const lastEmailStep = previousStepExecs[0];
+  const messageId = lastEmailStep?.result
+    ? (lastEmailStep.result as Record<string, unknown>).messageId
+    : undefined;
+
+  // Schedule timeout
+  const schedulerName = await scheduleWaitTimeout({
+    executionId: execution.id,
+    stepId,
+    organizationId,
+    timeoutSeconds,
+  });
+
+  // Update execution to waiting state
+  // We use 'email_engagement' as a special event name prefix
+  await db
+    .update(workflowExecution)
+    .set({
+      status: "waiting",
+      waitingForEvent: `email_engagement:${messageId || "unknown"}`,
+      waitTimeoutAt: timeoutAt,
+      waitTimeoutSchedulerName: schedulerName,
+      updatedAt: new Date(),
+    })
+    .where(eq(workflowExecution.id, execution.id));
+
+  return { action: "wait" };
+}
+
 async function handleSubscribeTopic(
   config: Extract<WorkflowStepConfig, { type: "subscribe_topic" }>,
   contactRecord: typeof contact.$inferSelect
@@ -686,7 +743,7 @@ async function processNextStep(
   execution: typeof workflowExecution.$inferSelect,
   currentStep: WorkflowStep,
   wf: typeof workflow.$inferSelect,
-  branch?: "yes" | "no" | "timeout" | "default"
+  branch?: WorkflowBranch
 ): Promise<void> {
   const transitions = wf.transitions as WorkflowTransition[];
 
@@ -727,7 +784,7 @@ async function processNextStep(
  */
 async function resumeExecution(
   executionId: string,
-  branch: "yes" | "no" | "timeout"
+  branch: WorkflowBranch
 ): Promise<void> {
   const execution = await db.query.workflowExecution.findFirst({
     where: eq(workflowExecution.id, executionId),

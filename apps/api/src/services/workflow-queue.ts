@@ -32,7 +32,7 @@ export type WorkflowJob =
   | {
       type: "resume";
       executionId: string;
-      branch: "yes" | "no" | "timeout";
+      branch: "yes" | "no" | "timeout" | "opened" | "clicked" | "bounced";
       organizationId: string;
     }
   | {

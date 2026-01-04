@@ -5,6 +5,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 import { useWorkflowStore } from "./use-workflow-store";
 import { WorkflowCanvas } from "./workflow-canvas";
+import { WorkflowDataProvider } from "./workflow-data-context";
 import { WorkflowPropertiesPanel } from "./workflow-properties-panel";
 import { WorkflowToolbar } from "./workflow-toolbar";
 
@@ -13,6 +14,16 @@ interface Template {
   name: string;
   subject: string | null;
   status: string;
+}
+
+interface Topic {
+  id: string;
+  name: string;
+}
+
+interface Segment {
+  id: string;
+  name: string;
 }
 
 interface AwsAccount {
@@ -26,6 +37,8 @@ interface WorkflowBuilderProps {
   organizationId: string;
   orgSlug: string;
   templates: Template[];
+  topics: Topic[];
+  segments: Segment[];
   awsAccounts: AwsAccount[];
   userRole: string;
 }
@@ -35,6 +48,8 @@ export function WorkflowBuilder({
   organizationId,
   orgSlug,
   templates,
+  topics,
+  segments,
   awsAccounts,
   userRole,
 }: WorkflowBuilderProps) {
@@ -46,17 +61,19 @@ export function WorkflowBuilder({
 
   return (
     <ReactFlowProvider>
-      <div className="flex flex-col h-full">
-        <WorkflowToolbar
-          workflow={workflow}
-          orgSlug={orgSlug}
-          organizationId={organizationId}
-        />
-        <div className="flex-1 flex overflow-hidden">
-          <WorkflowCanvas />
-          <WorkflowPropertiesPanel templates={templates} />
+      <WorkflowDataProvider topics={topics} segments={segments}>
+        <div className="flex flex-col h-full">
+          <WorkflowToolbar
+            workflow={workflow}
+            orgSlug={orgSlug}
+            organizationId={organizationId}
+          />
+          <div className="flex-1 flex overflow-hidden">
+            <WorkflowCanvas />
+            <WorkflowPropertiesPanel templates={templates} topics={topics} segments={segments} />
+          </div>
         </div>
-      </div>
+      </WorkflowDataProvider>
     </ReactFlowProvider>
   );
 }

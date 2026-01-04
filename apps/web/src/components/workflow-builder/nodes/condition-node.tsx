@@ -48,7 +48,7 @@ export function ConditionNode({ data, selected }: ConditionNodeProps) {
       {/* Diamond shape container */}
       <div
         className={cn(
-          "w-[140px] h-[140px] rotate-45 rounded-lg border-2 bg-white shadow-sm",
+          "w-[90px] h-[90px] rotate-45 rounded-md border-2 bg-white shadow-sm",
           "flex items-center justify-center",
           "transition-all duration-150",
           selected ? "border-primary ring-2 ring-primary/20" : "border-gray-200",
@@ -56,38 +56,38 @@ export function ConditionNode({ data, selected }: ConditionNodeProps) {
         )}
       >
         {/* Content rotated back */}
-        <div className="-rotate-45 flex flex-col items-center text-center px-2">
-          <div className="w-8 h-8 rounded-md bg-orange-500 flex items-center justify-center text-white mb-1">
-            <GitBranch className="w-4 h-4" />
+        <div className="-rotate-45 flex flex-col items-center text-center px-1">
+          <div className="w-6 h-6 rounded bg-orange-500 flex items-center justify-center text-white mb-0.5">
+            <GitBranch className="w-3 h-3" />
           </div>
-          <div className="font-medium text-xs text-gray-900 truncate max-w-[80px]">
+          <div className="font-medium text-[10px] text-gray-900 truncate max-w-[55px]">
             {data.name}
           </div>
-          <div className="text-[10px] text-gray-500 truncate max-w-[80px]">
+          <div className="text-[8px] text-gray-500 truncate max-w-[55px]">
             {description}
           </div>
         </div>
       </div>
 
       {/* Yes output - bottom left */}
-      <div className="absolute -bottom-6 left-4 flex flex-col items-center">
-        <span className="text-[10px] font-medium text-green-600 mb-1">Yes</span>
+      <div className="absolute -bottom-5 left-2 flex flex-col items-center">
+        <span className="text-[8px] font-medium text-green-600 mb-0.5">Yes</span>
         <Handle
           type="source"
           position={Position.Bottom}
           id="yes"
-          className="!relative !transform-none !bg-green-500 !w-3 !h-3 !border-2 !border-white"
+          className="!relative !transform-none !bg-green-500 !w-2.5 !h-2.5 !border-2 !border-white"
         />
       </div>
 
       {/* No output - bottom right */}
-      <div className="absolute -bottom-6 right-4 flex flex-col items-center">
-        <span className="text-[10px] font-medium text-red-600 mb-1">No</span>
+      <div className="absolute -bottom-5 right-2 flex flex-col items-center">
+        <span className="text-[8px] font-medium text-red-600 mb-0.5">No</span>
         <Handle
           type="source"
           position={Position.Bottom}
           id="no"
-          className="!relative !transform-none !bg-red-500 !w-3 !h-3 !border-2 !border-white"
+          className="!relative !transform-none !bg-red-500 !w-2.5 !h-2.5 !border-2 !border-white"
         />
       </div>
 

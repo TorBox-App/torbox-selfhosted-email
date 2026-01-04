@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkflowStepType } from "@wraps/db";
-import { BellOff, BellPlus, Clock, GitBranch, Hourglass, LogOut, Mail, MessageSquare, UserCog, Webhook, Zap } from "lucide-react";
+import { Bell, Clock, GitBranch, Hourglass, LogOut, Mail, MailOpen, MessageSquare, UserCog, Webhook, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NodePaletteItem {
@@ -71,18 +71,18 @@ const paletteItems: NodePaletteItem[] = [
     accentColor: "bg-amber-500",
   },
   {
-    type: "subscribe_topic",
-    label: "Subscribe",
-    description: "Subscribe to topic",
-    icon: <BellPlus className="w-4 h-4" />,
-    accentColor: "bg-emerald-500",
+    type: "wait_for_email_engagement",
+    label: "Email Engagement",
+    description: "Wait for open/click",
+    icon: <MailOpen className="w-4 h-4" />,
+    accentColor: "bg-purple-500",
   },
   {
-    type: "unsubscribe_topic",
-    label: "Unsubscribe",
-    description: "Unsubscribe from topic",
-    icon: <BellOff className="w-4 h-4" />,
-    accentColor: "bg-rose-500",
+    type: "subscribe_topic",
+    label: "Topic",
+    description: "Manage subscription",
+    icon: <Bell className="w-4 h-4" />,
+    accentColor: "bg-emerald-500",
   },
   {
     type: "exit",
