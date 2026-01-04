@@ -355,7 +355,9 @@ describe("Workflows Server Actions", () => {
     it("should filter by status", async () => {
       // Enable one workflow first
       const listResult = await listWorkflows(testOrganization.id);
-      if (!listResult.success) return;
+      if (!listResult.success) {
+        return;
+      }
 
       // Add action step and enable
       const wf = listResult.workflows[0];
@@ -415,7 +417,9 @@ describe("Workflows Server Actions", () => {
         name: "Get Test Workflow",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await getWorkflow(
         createResult.workflow.id,
@@ -442,7 +446,9 @@ describe("Workflows Server Actions", () => {
         name: "User Info Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await getWorkflow(
         createResult.workflow.id,
@@ -467,7 +473,9 @@ describe("Workflows Server Actions", () => {
         name: "Old Name",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateWorkflow(
         createResult.workflow.id,
@@ -486,7 +494,9 @@ describe("Workflows Server Actions", () => {
         name: "Trigger Update Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateWorkflow(
         createResult.workflow.id,
@@ -509,7 +519,9 @@ describe("Workflows Server Actions", () => {
         name: "Steps Update Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const newSteps: WorkflowStep[] = [
         {
@@ -556,7 +568,9 @@ describe("Workflows Server Actions", () => {
         name: "Name Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await updateWorkflow(
         createResult.workflow.id,
@@ -575,7 +589,9 @@ describe("Workflows Server Actions", () => {
         name: "Invalid Definition Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // No trigger node
       const invalidSteps: WorkflowStep[] = [
@@ -605,7 +621,9 @@ describe("Workflows Server Actions", () => {
         name: "Invalid Transition Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const steps: WorkflowStep[] = [
         {
@@ -661,7 +679,9 @@ describe("Workflows Server Actions", () => {
         name: "Enable Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Add required config
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
@@ -701,7 +721,9 @@ describe("Workflows Server Actions", () => {
         name: "No Trigger Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Remove trigger by updating with empty steps (this is blocked by validation)
       // Instead, just try to enable without eventName
@@ -721,7 +743,9 @@ describe("Workflows Server Actions", () => {
         name: "No Action Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Add event name but no action step
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
@@ -744,7 +768,9 @@ describe("Workflows Server Actions", () => {
         name: "No Event Name Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Add action step but no eventName
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
@@ -801,7 +827,9 @@ describe("Workflows Server Actions", () => {
         name: "Disable Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Set up and enable
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
@@ -861,7 +889,9 @@ describe("Workflows Server Actions", () => {
         name: "To Delete",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await deleteWorkflow(
         createResult.workflow.id,
@@ -883,7 +913,9 @@ describe("Workflows Server Actions", () => {
         name: "Has Active Executions",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Create a contact for the execution (foreign key)
       const testContactId = "test-workflow-execution-contact";
@@ -954,7 +986,9 @@ describe("Workflows Server Actions", () => {
         description: "Original description",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Add some steps
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
@@ -1019,7 +1053,9 @@ describe("Workflows Server Actions", () => {
         name: "Enabled Original",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Enable the original
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
@@ -1066,7 +1102,9 @@ describe("Workflows Server Actions", () => {
         name: "Stats Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       const result = await getWorkflowStats(
         createResult.workflow.id,
@@ -1117,7 +1155,9 @@ describe("Workflows Server Actions", () => {
         name: "Read Access Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       // Switch to member
       currentMockUserId = testMemberUser.id;
@@ -1145,7 +1185,9 @@ describe("Workflows Server Actions", () => {
         name: "Update Access Test",
       });
       expect(createResult.success).toBe(true);
-      if (!createResult.success) return;
+      if (!createResult.success) {
+        return;
+      }
 
       currentMockUserId = testMemberUser.id;
 

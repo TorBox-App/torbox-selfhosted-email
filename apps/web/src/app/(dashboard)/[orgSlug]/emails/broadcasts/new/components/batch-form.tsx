@@ -112,7 +112,7 @@ type Step = "setup" | "content" | "audience" | "review";
 
 type ScheduleType = "now" | "later";
 
-interface CampaignData {
+type CampaignData = {
   name: string;
   subject: string;
   previewText: string;
@@ -134,7 +134,7 @@ interface CampaignData {
   scheduleType: ScheduleType;
   scheduledDate: Date | undefined;
   scheduledTime: string;
-}
+};
 
 export function BatchForm({
   awsAccounts,
@@ -1345,7 +1345,9 @@ function ReviewStep({
     subject: t.subject,
   }));
   const getAudienceLabel = () => {
-    if (data.audienceType === "all") return "All Contacts";
+    if (data.audienceType === "all") {
+      return "All Contacts";
+    }
     if (data.audienceType === "topic") {
       const topic = topics.find((t) => t.id === data.topicId);
       return topic ? `Topic: ${topic.name}` : "Topic";
@@ -1377,7 +1379,9 @@ function ReviewStep({
 
   // Calculate the scheduled datetime for display
   const getScheduledDateTime = () => {
-    if (!data.scheduledDate) return null;
+    if (!data.scheduledDate) {
+      return null;
+    }
     const [hours, minutes] = data.scheduledTime.split(":").map(Number);
     const scheduled = new Date(data.scheduledDate);
     scheduled.setHours(hours, minutes, 0, 0);

@@ -28,7 +28,7 @@ export default $config({
   async run() {
     // Load environment variables from apps/web/.env.local
     const { config } = await import("dotenv");
-    const { resolve } = await import("path");
+    const { resolve } = await import("node:path");
     config({ path: resolve(process.cwd(), "apps/web/.env.local") });
 
     // Import infrastructure modules

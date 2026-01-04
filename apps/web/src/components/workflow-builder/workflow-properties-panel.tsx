@@ -23,28 +23,28 @@ import {
   useWorkflowStore,
 } from "./use-workflow-store";
 
-interface Template {
+type Template = {
   id: string;
   name: string;
   subject: string | null;
   status: string;
-}
+};
 
-interface Topic {
+type Topic = {
   id: string;
   name: string;
-}
+};
 
-interface Segment {
+type Segment = {
   id: string;
   name: string;
-}
+};
 
-interface WorkflowPropertiesPanelProps {
+type WorkflowPropertiesPanelProps = {
   orgSlug: string;
   topics?: Topic[];
   segments?: Segment[];
-}
+};
 
 export function WorkflowPropertiesPanel({
   orgSlug,
@@ -271,7 +271,9 @@ function TriggerConfig({
   segments: { id: string; name: string }[];
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "trigger") return null;
+  if (config.type !== "trigger") {
+    return null;
+  }
 
   return (
     <>
@@ -444,7 +446,9 @@ function SendEmailConfig({
   onCreateNew?: () => void;
   onEditTemplate?: (templateId: string) => void;
 }) {
-  if (config.type !== "send_email") return null;
+  if (config.type !== "send_email") {
+    return null;
+  }
 
   const selectedTemplate = templates.find((t) => t.id === config.templateId);
 
@@ -546,24 +550,24 @@ function SendSmsConfig({
   config: WorkflowStepConfig;
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "send_sms") return null;
+  if (config.type !== "send_sms") {
+    return null;
+  }
 
   return (
-    <>
-      <div className="space-y-2">
-        <Label htmlFor="sms-body">Message</Label>
-        <Textarea
-          id="sms-body"
-          onChange={(e) => onChange({ body: e.target.value })}
-          placeholder="Enter your SMS message..."
-          rows={4}
-          value={config.body || ""}
-        />
-        <p className="text-muted-foreground text-xs">
-          {config.body?.length || 0} / 160 characters
-        </p>
-      </div>
-    </>
+    <div className="space-y-2">
+      <Label htmlFor="sms-body">Message</Label>
+      <Textarea
+        id="sms-body"
+        onChange={(e) => onChange({ body: e.target.value })}
+        placeholder="Enter your SMS message..."
+        rows={4}
+        value={config.body || ""}
+      />
+      <p className="text-muted-foreground text-xs">
+        {config.body?.length || 0} / 160 characters
+      </p>
+    </div>
   );
 }
 
@@ -575,42 +579,42 @@ function DelayConfig({
   config: WorkflowStepConfig;
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "delay") return null;
+  if (config.type !== "delay") {
+    return null;
+  }
 
   return (
-    <>
-      <div className="space-y-2">
-        <Label htmlFor="delay-amount">Duration</Label>
-        <div className="flex gap-2">
-          <Input
-            className="w-20"
-            id="delay-amount"
-            min={1}
-            onChange={(e) =>
-              onChange({ amount: Number.parseInt(e.target.value) || 1 })
-            }
-            type="number"
-            value={config.amount || 1}
-          />
-          <Select
-            onValueChange={(value) =>
-              onChange({ unit: value as typeof config.unit })
-            }
-            value={config.unit || "days"}
-          >
-            <SelectTrigger className="flex-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="minutes">Minutes</SelectItem>
-              <SelectItem value="hours">Hours</SelectItem>
-              <SelectItem value="days">Days</SelectItem>
-              <SelectItem value="weeks">Weeks</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="space-y-2">
+      <Label htmlFor="delay-amount">Duration</Label>
+      <div className="flex gap-2">
+        <Input
+          className="w-20"
+          id="delay-amount"
+          min={1}
+          onChange={(e) =>
+            onChange({ amount: Number.parseInt(e.target.value, 10) || 1 })
+          }
+          type="number"
+          value={config.amount || 1}
+        />
+        <Select
+          onValueChange={(value) =>
+            onChange({ unit: value as typeof config.unit })
+          }
+          value={config.unit || "days"}
+        >
+          <SelectTrigger className="flex-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="minutes">Minutes</SelectItem>
+            <SelectItem value="hours">Hours</SelectItem>
+            <SelectItem value="days">Days</SelectItem>
+            <SelectItem value="weeks">Weeks</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -622,7 +626,9 @@ function ConditionConfig({
   config: WorkflowStepConfig;
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "condition") return null;
+  if (config.type !== "condition") {
+    return null;
+  }
 
   return (
     <>
@@ -686,7 +692,9 @@ function UpdateContactConfig({
   config: WorkflowStepConfig;
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "update_contact") return null;
+  if (config.type !== "update_contact") {
+    return null;
+  }
 
   const updates = config.updates || [];
 
@@ -709,77 +717,71 @@ function UpdateContactConfig({
   };
 
   return (
-    <>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label>Field Updates</Label>
-          <button
-            className="text-primary text-xs hover:underline"
-            onClick={addUpdate}
-            type="button"
-          >
-            + Add field
-          </button>
-        </div>
-
-        {updates.length === 0 ? (
-          <p className="text-muted-foreground text-xs">
-            No updates configured. Click "Add field" to add one.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {updates.map((update, index) => (
-              <div className="space-y-2 rounded-md border p-3" key={index}>
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-xs">
-                    Update {index + 1}
-                  </span>
-                  <button
-                    className="text-destructive text-xs hover:underline"
-                    onClick={() => removeUpdate(index)}
-                    type="button"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <Input
-                  onChange={(e) => updateField(index, "field", e.target.value)}
-                  placeholder="Field name"
-                  value={update.field || ""}
-                />
-                <Select
-                  onValueChange={(value) =>
-                    updateField(index, "operation", value)
-                  }
-                  value={update.operation || "set"}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="set">Set to</SelectItem>
-                    <SelectItem value="increment">Increment by</SelectItem>
-                    <SelectItem value="decrement">Decrement by</SelectItem>
-                    <SelectItem value="append">Append</SelectItem>
-                    <SelectItem value="remove">Remove</SelectItem>
-                    <SelectItem value="unset">Unset</SelectItem>
-                  </SelectContent>
-                </Select>
-                {update.operation !== "unset" && (
-                  <Input
-                    onChange={(e) =>
-                      updateField(index, "value", e.target.value)
-                    }
-                    placeholder="Value"
-                    value={String(update.value ?? "")}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label>Field Updates</Label>
+        <button
+          className="text-primary text-xs hover:underline"
+          onClick={addUpdate}
+          type="button"
+        >
+          + Add field
+        </button>
       </div>
-    </>
+
+      {updates.length === 0 ? (
+        <p className="text-muted-foreground text-xs">
+          No updates configured. Click "Add field" to add one.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {updates.map((update, index) => (
+            <div className="space-y-2 rounded-md border p-3" key={index}>
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-xs">Update {index + 1}</span>
+                <button
+                  className="text-destructive text-xs hover:underline"
+                  onClick={() => removeUpdate(index)}
+                  type="button"
+                >
+                  Remove
+                </button>
+              </div>
+              <Input
+                onChange={(e) => updateField(index, "field", e.target.value)}
+                placeholder="Field name"
+                value={update.field || ""}
+              />
+              <Select
+                onValueChange={(value) =>
+                  updateField(index, "operation", value)
+                }
+                value={update.operation || "set"}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="set">Set to</SelectItem>
+                  <SelectItem value="increment">Increment by</SelectItem>
+                  <SelectItem value="decrement">Decrement by</SelectItem>
+                  <SelectItem value="append">Append</SelectItem>
+                  <SelectItem value="remove">Remove</SelectItem>
+                  <SelectItem value="unset">Unset</SelectItem>
+                </SelectContent>
+              </Select>
+              {update.operation !== "unset" && (
+                <Input
+                  onChange={(e) => updateField(index, "value", e.target.value)}
+                  placeholder="Value"
+                  value={String(update.value ?? "")}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -791,7 +793,9 @@ function WebhookConfig({
   config: WorkflowStepConfig;
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "webhook") return null;
+  if (config.type !== "webhook") {
+    return null;
+  }
 
   return (
     <>
@@ -861,7 +865,9 @@ function WaitForEventConfig({
   config: WorkflowStepConfig;
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "wait_for_event") return null;
+  if (config.type !== "wait_for_event") {
+    return null;
+  }
 
   // Convert timeout seconds to a human-readable format
   const getTimeoutValues = () => {
@@ -919,7 +925,10 @@ function WaitForEventConfig({
             className="w-20"
             min={1}
             onChange={(e) =>
-              handleTimeoutChange(Number.parseInt(e.target.value) || 1, unit)
+              handleTimeoutChange(
+                Number.parseInt(e.target.value, 10) || 1,
+                unit
+              )
             }
             type="number"
             value={amount}
@@ -955,7 +964,9 @@ function WaitForEmailEngagementConfig({
   config: WorkflowStepConfig;
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
 }) {
-  if (config.type !== "wait_for_email_engagement") return null;
+  if (config.type !== "wait_for_email_engagement") {
+    return null;
+  }
 
   // Convert timeout seconds to a human-readable format
   const getTimeoutValues = () => {
@@ -1007,7 +1018,10 @@ function WaitForEmailEngagementConfig({
             className="w-20"
             min={1}
             onChange={(e) =>
-              handleTimeoutChange(Number.parseInt(e.target.value) || 1, unit)
+              handleTimeoutChange(
+                Number.parseInt(e.target.value, 10) || 1,
+                unit
+              )
             }
             type="number"
             value={amount}
@@ -1067,8 +1081,12 @@ function TopicConfig({
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
   onTypeChange: (type: "subscribe_topic" | "unsubscribe_topic") => void;
 }) {
-  if (config.type !== "subscribe_topic" && config.type !== "unsubscribe_topic")
+  if (
+    config.type !== "subscribe_topic" &&
+    config.type !== "unsubscribe_topic"
+  ) {
     return null;
+  }
 
   const isSubscribe = config.type === "subscribe_topic";
 

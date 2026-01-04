@@ -50,9 +50,13 @@ export const EmailCodeInlineMark = Mark.create({
         tag: "code",
         getAttrs: (node) => {
           // Only match inline code, not code blocks
-          if (typeof node === "string") return false;
+          if (typeof node === "string") {
+            return false;
+          }
           const parent = node.parentElement;
-          if (parent?.tagName === "PRE") return false;
+          if (parent?.tagName === "PRE") {
+            return false;
+          }
           return {};
         },
       },

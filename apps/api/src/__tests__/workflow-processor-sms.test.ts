@@ -13,7 +13,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock data
-const mockWorkflow = {
+const _mockWorkflow = {
   id: "wf-123",
   organizationId: "org-123",
   awsAccountId: "aws-123",
@@ -30,7 +30,7 @@ const mockAwsAccount = {
   externalId: "ext-123",
 };
 
-const mockExecution = {
+const _mockExecution = {
   id: "exec-123",
   workflowId: "wf-123",
   contactId: "contact-123",

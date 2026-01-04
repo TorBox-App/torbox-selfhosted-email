@@ -423,13 +423,18 @@ export async function connect(options: ConnectOptions): Promise<void> {
   // 15. Track successful connection
   const duration = Date.now() - startTime;
   const enabledFeatures: string[] = [];
-  if (emailConfig.tracking?.enabled) enabledFeatures.push("tracking");
-  if (emailConfig.suppressionList?.enabled)
+  if (emailConfig.tracking?.enabled) {
+    enabledFeatures.push("tracking");
+  }
+  if (emailConfig.suppressionList?.enabled) {
     enabledFeatures.push("suppression_list");
-  if (emailConfig.eventTracking?.enabled)
+  }
+  if (emailConfig.eventTracking?.enabled) {
     enabledFeatures.push("event_tracking");
-  if (emailConfig.eventTracking?.dynamoDBHistory)
+  }
+  if (emailConfig.eventTracking?.dynamoDBHistory) {
     enabledFeatures.push("dynamodb_history");
+  }
 
   trackServiceInit("email", true, {
     preset,

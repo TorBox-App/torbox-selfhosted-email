@@ -661,7 +661,9 @@ export function displayPreview(outputs: PreviewOutputs): void {
 
     for (const operation of operationOrder) {
       const resources = grouped.get(operation);
-      if (!resources || resources.length === 0) continue;
+      if (!resources || resources.length === 0) {
+        continue;
+      }
 
       // Skip showing "same" resources unless there are few total changes
       if (operation === "same" && outputs.resourceChanges.length > 10) {

@@ -53,7 +53,9 @@ const EmailSpacerNodeView = ({
       }
 
       const pos = getPos();
-      if (typeof pos !== "number") return;
+      if (typeof pos !== "number") {
+        return;
+      }
 
       // Create a NodeSelection at this node's position
       const tr = editor.state.tr.setSelection(

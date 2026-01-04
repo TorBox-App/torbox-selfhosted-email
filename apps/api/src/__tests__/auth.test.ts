@@ -15,7 +15,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("node:crypto", () => ({
   createHash: vi.fn(() => ({
     update: vi.fn(() => ({
-      digest: vi.fn((encoding) => {
+      digest: vi.fn((_encoding) => {
         // Return predictable hashes for testing
         return "mocked-hash";
       }),
@@ -175,9 +175,15 @@ vi.mock("@wraps/db", () => ({
 
 // Helper to create hash for a specific key
 function getHashForKey(key: string): string {
-  if (key === API_KEY_ORG_1.key) return "hash-org1";
-  if (key === API_KEY_ORG_2.key) return "hash-org2";
-  if (key === EXPIRED_API_KEY.key) return "hash-expired";
+  if (key === API_KEY_ORG_1.key) {
+    return "hash-org1";
+  }
+  if (key === API_KEY_ORG_2.key) {
+    return "hash-org2";
+  }
+  if (key === EXPIRED_API_KEY.key) {
+    return "hash-expired";
+  }
   return "unknown-hash";
 }
 
@@ -291,11 +297,11 @@ function createAuthTestApp() {
       })
       // Test endpoints
       .get("/v1/contacts", ({ auth }) => {
-        const contacts = mockContacts.get(auth!.organizationId) || [];
-        return { contacts, organizationId: auth!.organizationId };
+        const contacts = mockContacts.get(auth?.organizationId ?? "") || [];
+        return { contacts, organizationId: auth?.organizationId };
       })
       .get("/v1/contacts/:id", ({ auth, params, set }) => {
-        const contacts = mockContacts.get(auth!.organizationId) || [];
+        const contacts = mockContacts.get(auth?.organizationId ?? "") || [];
         const contact = contacts.find((c) => c.id === params.id);
 
         if (!contact) {
@@ -310,14 +316,14 @@ function createAuthTestApp() {
         return {
           id: "new-contact",
           ...body,
-          organizationId: auth!.organizationId,
+          organizationId: auth?.organizationId,
         };
       })
       .get("/v1/me", ({ auth }) => ({
-        organizationId: auth!.organizationId,
-        userId: auth!.userId,
-        planId: auth!.planId,
-        apiKeyId: auth!.apiKeyId,
+        organizationId: auth?.organizationId,
+        userId: auth?.userId,
+        planId: auth?.planId,
+        apiKeyId: auth?.apiKeyId,
       }))
   );
 }
@@ -690,7 +696,7 @@ describe("Security Edge Cases", () => {
   });
 
   it("handles very long API keys gracefully", async () => {
-    const longKey = "wraps_live_" + "a".repeat(10_000);
+    const longKey = `wraps_live_${"a".repeat(10_000)}`;
     const response = await app.handle(
       new Request("http://localhost/v1/contacts", {
         headers: {

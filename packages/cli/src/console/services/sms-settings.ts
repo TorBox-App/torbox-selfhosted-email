@@ -86,9 +86,15 @@ export async function fetchPhoneNumberDetails(
     const capabilities: string[] = [];
     if (phoneNumber.NumberCapabilities) {
       for (const cap of phoneNumber.NumberCapabilities) {
-        if (cap === "SMS") capabilities.push("SMS");
-        if (cap === "VOICE") capabilities.push("Voice");
-        if (cap === "MMS") capabilities.push("MMS");
+        if (cap === "SMS") {
+          capabilities.push("SMS");
+        }
+        if (cap === "VOICE") {
+          capabilities.push("Voice");
+        }
+        if (cap === "MMS") {
+          capabilities.push("MMS");
+        }
       }
     }
 

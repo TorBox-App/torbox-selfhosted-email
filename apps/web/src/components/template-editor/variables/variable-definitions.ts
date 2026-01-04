@@ -284,7 +284,7 @@ export function toSesVariableName(name: string): string {
  */
 export function transformVariablesForSes(html: string): string {
   // Match {{variableName}} patterns, including with whitespace
-  return html.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (match, varName) => {
+  return html.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (_match, varName) => {
     const sesName = toSesVariableName(varName);
     return `{{${sesName}}}`;
   });

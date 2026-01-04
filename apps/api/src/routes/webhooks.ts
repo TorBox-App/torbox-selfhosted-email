@@ -33,7 +33,7 @@ type SesEventType =
   | "DeliveryDelay";
 
 // EventBridge envelope structure for SES events
-interface EventBridgeEvent {
+type EventBridgeEvent = {
   version: string;
   id: string;
   "detail-type": string;
@@ -80,7 +80,7 @@ interface EventBridgeEvent {
       complaintFeedbackType?: string;
     };
   };
-}
+};
 
 export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
   "/ses/:awsAccountNumber",
@@ -202,14 +202,14 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
 );
 
 // Helper types
-interface MessageRecord {
+type MessageRecord = {
   id: string;
   status: string;
   batchSendId: string | null;
   contactId: string | null;
   openedAt: Date | null;
   clickedAt: Date | null;
-}
+};
 
 async function processDelivery(
   message: MessageRecord,

@@ -33,7 +33,6 @@ import {
   UpdateContactNode,
   WaitForEmailEngagementNode,
   WaitForEventNode,
-  WebhookNode,
 } from "./nodes";
 import { useWorkflowStore } from "./use-workflow-store";
 
@@ -45,7 +44,8 @@ const nodeTypes: NodeTypes = {
   exit: ExitNode,
   condition: ConditionNode,
   update_contact: UpdateContactNode,
-  webhook: WebhookNode,
+  // Webhook node disabled until delivery retry/verification is implemented
+  // webhook: WebhookNode,
   // Slice 3
   wait_for_event: WaitForEventNode,
   wait_for_email_engagement: WaitForEmailEngagementNode,
@@ -168,7 +168,10 @@ export function WorkflowCanvas() {
       >
         <Background gap={15} size={1} variant={BackgroundVariant.Dots} />
         <Controls />
-        <MiniMap className="!border !bg-background !shadow-sm" nodeStrokeWidth={3} />
+        <MiniMap
+          className="!border !bg-background !shadow-sm"
+          nodeStrokeWidth={3}
+        />
       </ReactFlow>
       <NodePalette onAddNode={handleAddNode} />
     </div>

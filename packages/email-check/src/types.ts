@@ -7,7 +7,7 @@
 // Check Options
 // =============================================================================
 
-export interface EmailCheckOptions {
+export type EmailCheckOptions = {
   /** Fast mode: fewer DKIM selectors, top blacklists only, skip slow checks */
   quick?: boolean;
   /** Also verify via inbound test email */
@@ -28,13 +28,13 @@ export interface EmailCheckOptions {
   skipBlacklists?: boolean;
   /** Skip MX TLS checks (if port 25 blocked) */
   skipTls?: boolean;
-}
+};
 
 // =============================================================================
 // SPF Types
 // =============================================================================
 
-export interface SpfResult {
+export type SpfResult = {
   exists: boolean;
   record: string | null;
   records: string[]; // All SPF records found (should be 1)
@@ -58,30 +58,30 @@ export interface SpfResult {
   // Macro usage
   usesMacros: boolean;
   macros: string[];
-}
+};
 
-export interface SpfLookupNode {
+export type SpfLookupNode = {
   mechanism: string; // e.g., "include:_spf.google.com"
   type: "include" | "a" | "mx" | "ptr" | "exists" | "redirect";
   domain: string;
   lookups: number; // How many lookups this node used
   children: SpfLookupNode[]; // Nested includes
   error: string | null; // If lookup failed
-}
+};
 
 // =============================================================================
 // DKIM Types
 // =============================================================================
 
-export interface DkimResult {
+export type DkimResult = {
   found: boolean;
   selectors: DkimSelector[];
   selectorsChecked: number; // How many we tried
   earlyExit: boolean; // Did we stop early after finding valid?
   warnings: string[];
-}
+};
 
-export interface DkimSelector {
+export type DkimSelector = {
   selector: string;
   exists: boolean;
   record: string | null;
@@ -97,13 +97,13 @@ export interface DkimSelector {
   flags: string[]; // t= flags
   errors: string[];
   warnings: string[];
-}
+};
 
 // =============================================================================
 // DMARC Types
 // =============================================================================
 
-export interface DmarcResult {
+export type DmarcResult = {
   exists: boolean;
   record: string | null;
   valid: boolean;
@@ -120,20 +120,20 @@ export interface DmarcResult {
   reportFormat: string; // rf= tag
   errors: string[];
   warnings: string[];
-}
+};
 
 // =============================================================================
 // MX Types
 // =============================================================================
 
-export interface MxResult {
+export type MxResult = {
   exists: boolean;
   records: MxRecord[];
   hasRedundancy: boolean;
   warnings: string[];
-}
+};
 
-export interface MxRecord {
+export type MxRecord = {
   priority: number;
   exchange: string;
   resolves: boolean;
@@ -142,20 +142,20 @@ export interface MxRecord {
   isLocalhost: boolean;
   isIpAddress: boolean;
   reverseHostnames: string[]; // PTR for each IP
-}
+};
 
 // =============================================================================
 // MX TLS Types
 // =============================================================================
 
-export interface MxTlsResult {
+export type MxTlsResult = {
   checked: boolean;
   skipped: boolean;
   skipReason: string | null; // "Port 25 blocked", "--skip-tls flag", etc.
   servers: MxTlsServerResult[];
-}
+};
 
-export interface MxTlsServerResult {
+export type MxTlsServerResult = {
   server: string;
   port: number;
   connected: boolean;
@@ -166,9 +166,9 @@ export interface MxTlsServerResult {
   cipherSuite: string | null;
   certificate: TlsCertificate | null;
   errors: string[];
-}
+};
 
-export interface TlsCertificate {
+export type TlsCertificate = {
   valid: boolean;
   issuer: string;
   subject: string;
@@ -178,13 +178,13 @@ export interface TlsCertificate {
   matchesHostname: boolean;
   selfSigned: boolean;
   chainValid: boolean;
-}
+};
 
 // =============================================================================
 // MTA-STS Types
 // =============================================================================
 
-export interface MtaStsResult {
+export type MtaStsResult = {
   configured: boolean;
   dnsRecord: string | null;
   dnsRecordId: string | null;
@@ -194,64 +194,64 @@ export interface MtaStsResult {
   mxPatternsMatch: boolean;
   errors: string[];
   warnings: string[];
-}
+};
 
-export interface MtaStsPolicy {
+export type MtaStsPolicy = {
   version: string;
   mode: "enforce" | "testing" | "none";
   maxAge: number;
   mxPatterns: string[];
-}
+};
 
 // =============================================================================
 // TLS-RPT Types
 // =============================================================================
 
-export interface TlsRptResult {
+export type TlsRptResult = {
   configured: boolean;
   record: string | null;
   version: string | null;
   reportingUris: string[];
   errors: string[];
-}
+};
 
 // =============================================================================
 // Reverse DNS Types
 // =============================================================================
 
-export interface ReverseDnsResult {
+export type ReverseDnsResult = {
   results: PtrRecord[];
   allHavePtr: boolean;
   allConfirm: boolean;
   warnings: string[];
-}
+};
 
-export interface PtrRecord {
+export type PtrRecord = {
   ip: string;
   ipVersion: 4 | 6;
   ptrHostname: string | null;
   forwardConfirms: boolean; // PTR hostname resolves back to IP
   looksGeneric: boolean; // Pattern like IP-based hostname
   matchesDomain: boolean; // Contains the domain being checked
-}
+};
 
 // =============================================================================
 // IPv6 Types
 // =============================================================================
 
-export interface Ipv6Result {
+export type Ipv6Result = {
   mxHasIpv6: boolean;
   mxIpv6Addresses: { mx: string; addresses: string[] }[];
   ipv6Connectable: boolean;
   spfIncludesIpv6: boolean;
   warnings: string[];
-}
+};
 
 // =============================================================================
 // Blacklist Types
 // =============================================================================
 
-export interface BlacklistResult {
+export type BlacklistResult = {
   domainChecks: {
     checked: number;
     listed: BlacklistListing[];
@@ -268,9 +268,9 @@ export interface BlacklistResult {
   };
   overallClean: boolean;
   quickMode: boolean; // True if only top 10 checked
-}
+};
 
-export interface BlacklistListing {
+export type BlacklistListing = {
   blacklist: string;
   zone: string;
   priority: "critical" | "high" | "medium" | "low";
@@ -279,19 +279,19 @@ export interface BlacklistListing {
   returnCode: string; // e.g., "127.0.0.2"
   meaning: string; // Decoded meaning if known
   delistUrl: string | null; // URL to request removal
-}
+};
 
-export interface BlacklistConfig {
+export type BlacklistConfig = {
   name: string;
   zone: string;
   priority?: "critical" | "high" | "medium" | "low";
-}
+};
 
 // =============================================================================
 // Domain Age Types
 // =============================================================================
 
-export interface DomainAgeResult {
+export type DomainAgeResult = {
   createdAt: string | null;
   expiresAt: string | null;
   updatedAt: string | null;
@@ -307,13 +307,13 @@ export interface DomainAgeResult {
   source: "rdap" | "whois" | "unavailable";
   privacyEnabled: boolean; // True if WHOIS privacy service detected
   errors: string[];
-}
+};
 
 // =============================================================================
 // DNSSEC Types
 // =============================================================================
 
-export interface DnssecResult {
+export type DnssecResult = {
   enabled: boolean;
   valid: boolean;
   validationMethod: "google-dns" | "system-resolver";
@@ -327,32 +327,32 @@ export interface DnssecResult {
   algorithm: string | null;
   keyTag: number | null;
   errors: string[];
-}
+};
 
 // =============================================================================
 // CAA Types
 // =============================================================================
 
-export interface CaaResult {
+export type CaaResult = {
   configured: boolean;
   records: CaaRecord[];
   allowedIssuers: string[];
   allowedWildcardIssuers: string[];
   reportingConfigured: boolean;
   iodefUri: string | null;
-}
+};
 
-export interface CaaRecord {
+export type CaaRecord = {
   flags: number;
   tag: "issue" | "issuewild" | "iodef";
   value: string;
-}
+};
 
 // =============================================================================
 // BIMI Types
 // =============================================================================
 
-export interface BimiResult {
+export type BimiResult = {
   configured: boolean;
   record: string | null;
   logoUrl: string | null;
@@ -364,47 +364,47 @@ export interface BimiResult {
   dmarcCompatible: boolean; // DMARC must be enforcing
   errors: string[];
   warnings: string[];
-}
+};
 
 // =============================================================================
 // Scoring Types
 // =============================================================================
 
-export interface ScoreResult {
+export type ScoreResult = {
   rawScore: number;
   finalScore: number;
   grade: "A" | "B" | "C" | "D" | "F";
   deductions: Deduction[];
   bonuses: Bonus[];
   breakdown: ScoreBreakdown;
-}
+};
 
-export interface Deduction {
+export type Deduction = {
   check: string;
   points: number;
   reason: string;
-}
+};
 
-export interface Bonus {
+export type Bonus = {
   check: string;
   points: number;
   reason: string;
-}
+};
 
-export interface ScoreBreakdown {
+export type ScoreBreakdown = {
   spf: { max: number; score: number };
   dkim: { max: number; score: number };
   dmarc: { max: number; score: number };
   mx: { max: number; score: number };
   blacklist: { max: number; score: number };
   bonus: { earned: number; possible: number };
-}
+};
 
 // =============================================================================
 // Full Check Result
 // =============================================================================
 
-export interface EmailCheckResult {
+export type EmailCheckResult = {
   domain: string;
   checkedAt: string;
   duration: number; // Total check duration in ms
@@ -437,13 +437,13 @@ export interface EmailCheckResult {
 
   // Verification (only if --verify)
   verification?: VerificationResult;
-}
+};
 
 // =============================================================================
 // Verification Types (for --verify mode)
 // =============================================================================
 
-export interface VerificationResult {
+export type VerificationResult = {
   verificationId: string;
   email: string;
   received: boolean;
@@ -454,9 +454,9 @@ export interface VerificationResult {
   dkimSignature: DkimSignatureAnalysis | null;
   alignment: AlignmentResult | null;
   infrastructure: SendingInfraAnalysis | null;
-}
+};
 
-export interface InboundAuthResult {
+export type InboundAuthResult = {
   spf: {
     result:
       | "pass"
@@ -492,15 +492,15 @@ export interface InboundAuthResult {
     chainLength: number;
     seals: ArcSeal[];
   } | null;
-}
+};
 
-export interface ArcSeal {
+export type ArcSeal = {
   instance: number;
   domain: string;
   result: "pass" | "fail";
-}
+};
 
-export interface HeaderAnalysis {
+export type HeaderAnalysis = {
   from: {
     raw: string;
     address: string;
@@ -557,9 +557,9 @@ export interface HeaderAnalysis {
   customHeaders: Record<string, string>;
   warnings: string[];
   errors: string[];
-}
+};
 
-export interface ReceivedHeader {
+export type ReceivedHeader = {
   index: number;
   from: string | null;
   fromIp: string | null;
@@ -571,15 +571,15 @@ export interface ReceivedHeader {
   timestampRaw: string | null;
   tls: boolean;
   authenticated: boolean;
-}
+};
 
-export interface DkimSignatureAnalysis {
+export type DkimSignatureAnalysis = {
   present: boolean;
   count: number; // Number of DKIM signatures
   signatures: DkimSignatureDetail[];
-}
+};
 
-export interface DkimSignatureDetail {
+export type DkimSignatureDetail = {
   version: string; // v= tag
   algorithm: string; // a= tag (rsa-sha256, ed25519-sha256)
   signature: string; // b= tag (truncated for display)
@@ -616,9 +616,9 @@ export interface DkimSignatureDetail {
 
   warnings: string[];
   errors: string[];
-}
+};
 
-export interface AlignmentResult {
+export type AlignmentResult = {
   fromDomain: string;
   fromOrganizationalDomain: string;
 
@@ -645,9 +645,9 @@ export interface AlignmentResult {
     wouldPass: boolean; // At least one (passed + aligned)
     effectivePolicy: "none" | "quarantine" | "reject";
   };
-}
+};
 
-export interface SendingInfraAnalysis {
+export type SendingInfraAnalysis = {
   sendingIp: string;
   ipVersion: 4 | 6;
 
@@ -685,13 +685,13 @@ export interface SendingInfraAnalysis {
     external: number; // Hops across different orgs
     totalTime: number; // Total transit time in seconds
   };
-}
+};
 
 // =============================================================================
 // DNS Abstraction Types
 // =============================================================================
 
-export interface DnsProvider {
+export type DnsProvider = {
   resolveTxt(domain: string): Promise<string[][]>;
   resolveMx(domain: string): Promise<{ exchange: string; priority: number }[]>;
   resolveA(domain: string): Promise<string[]>;
@@ -699,9 +699,9 @@ export interface DnsProvider {
   resolvePtr(ip: string): Promise<string[]>;
   resolveCaa(domain: string): Promise<CaaRecord[]>;
   resolveCname(domain: string): Promise<string[]>;
-}
+};
 
-export interface DnsQueryOptions {
+export type DnsQueryOptions = {
   timeout?: number;
   retries?: number;
-}
+};

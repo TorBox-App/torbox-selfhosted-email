@@ -117,7 +117,9 @@ export function ContactDetailsSheet({
     }
   }, [open, contact]);
 
-  if (!contact) return null;
+  if (!contact) {
+    return null;
+  }
 
   const canEdit = userRole === "owner" || userRole === "admin";
   const subscribedTopics =

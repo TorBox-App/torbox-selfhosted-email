@@ -104,7 +104,7 @@ async function checkEmailInfrastructure(
   return { hasInfrastructure: false, needsRoleUpdate: false };
 }
 
-export async function GET(request: Request, context: RouteContext) {
+export async function GET(_request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
 

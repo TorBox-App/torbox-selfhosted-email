@@ -82,10 +82,15 @@ export function VariableMapper({
   // Check if all custom variables are mapped
   const unmappedCount = customVariables.filter((v) => {
     const mapping = mappings.find((m) => m.variableName === v.name);
-    if (!mapping) return true;
-    if (mapping.source.type === "static" && !mapping.source.value.trim())
+    if (!mapping) {
       return true;
-    if (mapping.source.type === "contact" && !mapping.source.field) return true;
+    }
+    if (mapping.source.type === "static" && !mapping.source.value.trim()) {
+      return true;
+    }
+    if (mapping.source.type === "contact" && !mapping.source.field) {
+      return true;
+    }
     return false;
   }).length;
 

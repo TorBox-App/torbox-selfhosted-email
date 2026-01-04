@@ -21,7 +21,7 @@ type SMSPageProps = {
 
 // Map AWS event types to our SMSStatus
 function mapEventTypeToStatus(
-  eventType: string,
+  _eventType: string,
   eventStatus: string
 ): SMSStatus {
   const statusLower = eventStatus.toLowerCase();

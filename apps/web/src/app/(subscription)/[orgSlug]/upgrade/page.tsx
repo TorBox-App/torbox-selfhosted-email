@@ -51,7 +51,9 @@ export default function UpgradePage() {
   const { data: subscriptions, isLoading: subsLoading } = useQuery({
     queryKey: ["subscriptions", organization?.id],
     queryFn: async () => {
-      if (!organization?.id) return { data: [] };
+      if (!organization?.id) {
+        return { data: [] };
+      }
       return authClient.subscription.list({
         query: { referenceId: organization.id },
       });

@@ -77,7 +77,9 @@ function CopyButton({
 
   const handleCopy = React.useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (isCopied) return;
+      if (isCopied) {
+        return;
+      }
       if (content) {
         // Call onCopy first to allow preventing the copy action
         const shouldCopy = onCopy?.(content);

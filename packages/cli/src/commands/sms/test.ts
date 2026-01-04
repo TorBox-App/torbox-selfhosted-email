@@ -113,7 +113,9 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
         message: "Enter destination phone number (E.164 format):",
         placeholder: "+14155551234",
         validate: (value) => {
-          if (!value) return "Phone number is required";
+          if (!value) {
+            return "Phone number is required";
+          }
           if (!isValidPhoneNumber(value)) {
             return "Please enter a valid phone number in E.164 format (e.g., +14155551234)";
           }
@@ -144,7 +146,9 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
       placeholder: "Hello from Wraps SMS!",
       defaultValue: "Hello from Wraps SMS! This is a test message.",
       validate: (value) => {
-        if (!value) return "Message is required";
+        if (!value) {
+          return "Message is required";
+        }
         if (value.length > 160) {
           return `Message is ${value.length} characters. SMS messages over 160 characters will be split.`;
         }

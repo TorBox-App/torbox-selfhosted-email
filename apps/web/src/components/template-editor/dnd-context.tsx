@@ -240,7 +240,9 @@ export function EditorDndProvider({
 
   const handleDragMove = useCallback(
     (event: DragMoveEvent) => {
-      if (!editor) return;
+      if (!editor) {
+        return;
+      }
 
       // Get pointer coordinates from the event
       const { activatorEvent } = event;

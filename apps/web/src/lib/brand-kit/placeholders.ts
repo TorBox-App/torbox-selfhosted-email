@@ -27,7 +27,9 @@ export const PLACEHOLDER_IMAGES = {
  * Checks if a URL is a variable placeholder (e.g., {{logoUrl}})
  */
 export function isVariablePlaceholder(url: string | null | undefined): boolean {
-  if (!url) return true;
+  if (!url) {
+    return true;
+  }
   return /^\{\{.+\}\}$/.test(url.trim());
 }
 

@@ -6,11 +6,11 @@ import { and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 
-interface ActionResult {
+type ActionResult = {
   success: boolean;
   error?: string;
   pendingTopics?: string[]; // Topic IDs that are now pending confirmation
-}
+};
 
 /**
  * Update topic subscriptions for a contact
@@ -43,7 +43,7 @@ export async function updatePreferences(
     }
 
     // Get all topic info for the subscriptions we're updating
-    const topicIds = Object.keys(subscriptions);
+    const _topicIds = Object.keys(subscriptions);
     const topics = await db
       .select({
         id: topic.id,
@@ -65,7 +65,9 @@ export async function updatePreferences(
 
     for (const [topicId, subscribed] of Object.entries(subscriptions)) {
       const topicInfo = topicMap.get(topicId);
-      if (!topicInfo) continue; // Skip unknown topics
+      if (!topicInfo) {
+        continue; // Skip unknown topics
+      }
 
       // Check if subscription exists
       const [existing] = await db

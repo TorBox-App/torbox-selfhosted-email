@@ -144,6 +144,26 @@ async function triggerWorkflow(
     }
   }
 
+  // Check maxConcurrentExecutions limit
+  if (wf.maxConcurrentExecutions && wf.maxConcurrentExecutions > 0) {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(workflowExecution)
+      .where(
+        and(
+          eq(workflowExecution.workflowId, workflowId),
+          sql`${workflowExecution.status} IN ('pending', 'active', 'paused', 'waiting')`
+        )
+      );
+
+    if (count >= wf.maxConcurrentExecutions) {
+      console.log(
+        `Skipping - workflow ${workflowId} at max concurrent executions (${count}/${wf.maxConcurrentExecutions})`
+      );
+      return;
+    }
+  }
+
   // Find the trigger step to get the first connected step
   const steps = wf.steps as WorkflowStep[];
   const transitions = wf.transitions as WorkflowTransition[];
@@ -251,35 +271,35 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     return;
   }
 
-  // Check idempotency - was this step already executed?
+  // Atomic idempotency check and step execution creation
+  // Uses ON CONFLICT to prevent race conditions with duplicate SQS messages
   const idempotencyKey = `${executionId}-${stepId}`;
-  const existingStepExec = await db.query.workflowStepExecution.findFirst({
-    where: eq(workflowStepExecution.idempotencyKey, idempotencyKey),
-  });
 
-  if (existingStepExec && existingStepExec.status === "completed") {
+  const [stepExec] = await db
+    .insert(workflowStepExecution)
+    .values({
+      executionId,
+      stepId,
+      stepType: step.type,
+      status: "executing",
+      idempotencyKey,
+      startedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: workflowStepExecution.idempotencyKey,
+      set: {
+        // Only update if not already completed (prevents re-execution)
+        status: sql`CASE WHEN ${workflowStepExecution.status} = 'completed' THEN ${workflowStepExecution.status} ELSE 'executing' END`,
+        startedAt: sql`CASE WHEN ${workflowStepExecution.status} = 'completed' THEN ${workflowStepExecution.startedAt} ELSE ${new Date().toISOString()}::timestamp END`,
+      },
+    })
+    .returning();
+
+  // If step was already completed, skip execution
+  if (stepExec.status === "completed") {
     console.log(`Step ${stepId} already executed for ${executionId}`);
     return;
   }
-
-  // Create or update step execution record
-  const [stepExec] = existingStepExec
-    ? await db
-        .update(workflowStepExecution)
-        .set({ status: "executing", startedAt: new Date() })
-        .where(eq(workflowStepExecution.id, existingStepExec.id))
-        .returning()
-    : await db
-        .insert(workflowStepExecution)
-        .values({
-          executionId,
-          stepId,
-          stepType: step.type,
-          status: "executing",
-          idempotencyKey,
-          startedAt: new Date(),
-        })
-        .returning();
 
   // Update execution current step
   await db
@@ -546,7 +566,9 @@ async function handleSendEmail(
   };
 
   const addIfPresent = (key: string, value: string | null | undefined) => {
-    if (value) replacementData[key] = value;
+    if (value) {
+      replacementData[key] = value;
+    }
   };
 
   addIfPresent("firstName", contactRecord.firstName);
@@ -605,11 +627,13 @@ async function handleSendEmail(
     escapeHtml: true,
   });
 
-  // Build subject with variable substitution (no HTML escaping for subject)
-  const subject = substituteVariables(
+  // Build subject with variable substitution
+  // Sanitize to prevent header injection (remove newlines) and limit length
+  const rawSubject = substituteVariables(
     tmpl.subject || "Message",
     replacementData
   );
+  const subject = sanitizeEmailSubject(rawSubject);
 
   // Build from address
   const fromAddress =
@@ -712,7 +736,7 @@ function substituteVariables(
   options: { escapeHtml?: boolean } = {}
 ): string {
   // Match {{variable}} or {{contact.variable}} patterns
-  return text.replace(/\{\{\s*(?:contact\.)?([^}]+)\s*\}\}/g, (match, key) => {
+  return text.replace(/\{\{\s*(?:contact\.)?([^}]+)\s*\}\}/g, (_match, key) => {
     const trimmedKey = key.trim();
     const value = data[trimmedKey];
 
@@ -739,6 +763,20 @@ function substituteVariables(
 }
 
 /**
+ * Sanitize email subject line
+ * - Removes newlines to prevent header injection
+ * - Collapses whitespace
+ * - Truncates to reasonable length (998 chars per RFC 2822)
+ */
+function sanitizeEmailSubject(subject: string): string {
+  return subject
+    .replace(/[\r\n]+/g, " ") // Remove newlines (header injection prevention)
+    .replace(/\s+/g, " ") // Collapse whitespace
+    .trim()
+    .slice(0, 998); // RFC 2822 max line length
+}
+
+/**
  * Strip HTML tags for plain text version
  */
 function stripHtml(html: string): string {
@@ -752,6 +790,16 @@ function stripHtml(html: string): string {
     .replace(/&amp;/g, "&")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * Validate phone number is in E.164 format
+ * E.164: +[country code][subscriber number] (e.g., +15551234567)
+ */
+function isValidE164Phone(phone: string): boolean {
+  // E.164 format: + followed by 10-15 digits
+  const e164Regex = /^\+[1-9]\d{9,14}$/;
+  return e164Regex.test(phone);
 }
 
 async function handleSendSms(
@@ -770,6 +818,22 @@ async function handleSendSms(
       data: {
         skipped: true,
         reason: "no_phone",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  // Validate phone number format (E.164)
+  if (!isValidE164Phone(contactRecord.phone)) {
+    console.log(
+      `[workflow] Contact ${contactRecord.id} has invalid phone format: ${contactRecord.phone}, skipping SMS`
+    );
+    return {
+      action: "next",
+      data: {
+        skipped: true,
+        reason: "invalid_phone_format",
+        phone: contactRecord.phone,
         timestamp: new Date().toISOString(),
       },
     };

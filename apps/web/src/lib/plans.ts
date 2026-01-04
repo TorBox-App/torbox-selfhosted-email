@@ -32,12 +32,12 @@ export type PlanFeature =
   | "customRetention" // Scale+: Custom data retention
   | "prioritySLA"; // Scale+: Priority support SLA
 
-export interface RateLimits {
+export type RateLimits = {
   dailyRequests: number; // -1 = unlimited
   minuteRequests: number;
-}
+};
 
-export interface PlanConfig {
+export type PlanConfig = {
   name: string;
   price: number;
   earlyAdopterPrice?: number; // Discounted price for first 50 customers
@@ -61,7 +61,7 @@ export interface PlanConfig {
   // Display
   featureList: string[];
   cta: string;
-}
+};
 
 // Early adopter pricing is active until we reach 50 customers
 // After that, prices return to normal (and SMS features will be added)
@@ -341,7 +341,9 @@ export function canAddContact(
   currentCount: number
 ): boolean {
   const limit = getContactLimit(planId);
-  if (limit === -1) return true; // Unlimited
+  if (limit === -1) {
+    return true; // Unlimited
+  }
   return currentCount < limit;
 }
 
@@ -353,10 +355,14 @@ export function getContactLimitMessage(
   currentCount: number
 ): string {
   const plan = PLANS[planId as PlanId];
-  if (!plan) return "You've reached your contact limit.";
+  if (!plan) {
+    return "You've reached your contact limit.";
+  }
 
   const limit = plan.maxContacts;
-  if (limit === -1) return ""; // No limit message needed
+  if (limit === -1) {
+    return ""; // No limit message needed
+  }
 
   const remaining = limit - currentCount;
   if (remaining <= 0) {
@@ -392,7 +398,9 @@ export function canAddAwsAccount(
   currentCount: number
 ): boolean {
   const limit = getAwsAccountLimit(planId);
-  if (limit === -1) return true; // Unlimited
+  if (limit === -1) {
+    return true; // Unlimited
+  }
   return currentCount < limit;
 }
 
@@ -401,10 +409,14 @@ export function canAddAwsAccount(
  */
 export function getAwsAccountLimitMessage(planId: PlanId | string): string {
   const plan = PLANS[planId as PlanId];
-  if (!plan) return "You've reached your AWS account limit.";
+  if (!plan) {
+    return "You've reached your AWS account limit.";
+  }
 
   const limit = plan.maxAwsAccounts;
-  if (limit === -1) return ""; // No limit message needed
+  if (limit === -1) {
+    return ""; // No limit message needed
+  }
 
   if (limit === 1) {
     return `Your ${plan.name} plan includes 1 AWS account. Upgrade to Pro for up to 3 accounts.`;

@@ -5,7 +5,7 @@
  * Used for contact lifecycle events, topic subscriptions, etc.
  */
 
-import { db, eq, segment, workflow } from "@wraps/db";
+import { contactEvent, db, eq, segment, workflow } from "@wraps/db";
 import { and, sql } from "drizzle-orm";
 
 import { contactMatchesSegment } from "./segment-evaluator";
@@ -22,8 +22,29 @@ export async function emitWorkflowEvent(params: {
   contactId: string;
   organizationId: string;
   eventData?: Record<string, unknown>;
+  /** Skip recording to contact_event table (for internal events that are already tracked elsewhere) */
+  skipEventRecord?: boolean;
 }): Promise<{ workflowsTriggered: number }> {
-  const { eventName, contactId, organizationId, eventData } = params;
+  const { eventName, contactId, organizationId, eventData, skipEventRecord } =
+    params;
+
+  // Record the event to contact_event table (for segment evaluation)
+  if (!skipEventRecord) {
+    try {
+      await db.insert(contactEvent).values({
+        contactId,
+        organizationId,
+        eventName,
+        eventData,
+      });
+    } catch (error) {
+      // Log but don't fail the event emission
+      console.error(
+        `[workflow-events] Failed to record event "${eventName}" for contact ${contactId}:`,
+        error
+      );
+    }
+  }
 
   // Find matching workflows
   const matchingWorkflows = await db
@@ -253,7 +274,9 @@ export async function checkSegmentEntry(params: {
   // For each segment workflow, check if contact matches segment
   for (const wf of segmentWorkflows) {
     const config = wf.triggerConfig as { segmentId?: string } | null;
-    if (!config?.segmentId) continue;
+    if (!config?.segmentId) {
+      continue;
+    }
 
     try {
       // Check if contact matches the segment
@@ -334,7 +357,9 @@ export async function checkSegmentExit(params: {
 
   for (const wf of segmentWorkflows) {
     const config = wf.triggerConfig as { segmentId?: string } | null;
-    if (!config?.segmentId) continue;
+    if (!config?.segmentId) {
+      continue;
+    }
 
     // Only check exit if we know the contact was previously in the segment
     if (

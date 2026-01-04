@@ -45,7 +45,7 @@ const mockBatch = {
   emailType: "marketing" as const,
 };
 
-const mockTemplate = {
+const _mockTemplate = {
   id: "template-123",
   sesTemplateName: "Test-Template",
   compiledHtml: "<p>Hello {{firstName|there}}!</p>",
@@ -120,7 +120,7 @@ const mockSesSend = vi.fn().mockImplementation((command) => {
 const mockSqsSend = vi.fn().mockResolvedValue({});
 
 // Mock database operations
-const mockDbSelect = vi.fn();
+const _mockDbSelect = vi.fn();
 const mockDbInsert = vi.fn().mockReturnValue({
   values: vi.fn().mockReturnThis(),
 });

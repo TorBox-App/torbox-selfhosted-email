@@ -4,10 +4,10 @@ import { useState } from "react";
 
 import { confirmSubscription } from "./actions";
 
-interface ConfirmationFormProps {
+type ConfirmationFormProps = {
   token: string;
   brandColor: string;
-}
+};
 
 export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
   const [status, setStatus] = useState<

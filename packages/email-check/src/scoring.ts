@@ -23,7 +23,7 @@ import type {
   TlsRptResult,
 } from "./types.js";
 
-export interface AllCheckResults {
+export type AllCheckResults = {
   spf: SpfResult;
   dkim: DkimResult;
   dmarc: DmarcResult;
@@ -38,7 +38,7 @@ export interface AllCheckResults {
   blacklist: BlacklistResult;
   domainAge: DomainAgeResult;
   caa: CaaResult;
-}
+};
 
 /**
  * Calculate email deliverability score
@@ -437,10 +437,18 @@ export function calculateScore(checks: AllCheckResults): ScoreResult {
  * Get letter grade from score
  */
 function getGrade(score: number): "A" | "B" | "C" | "D" | "F" {
-  if (score >= 90) return "A";
-  if (score >= 80) return "B";
-  if (score >= 70) return "C";
-  if (score >= 50) return "D";
+  if (score >= 90) {
+    return "A";
+  }
+  if (score >= 80) {
+    return "B";
+  }
+  if (score >= 70) {
+    return "C";
+  }
+  if (score >= 50) {
+    return "D";
+  }
   return "F";
 }
 

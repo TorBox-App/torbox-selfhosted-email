@@ -227,14 +227,30 @@ export async function fetchSMSMetricsFromDynamoDB(
  */
 function getEventPriority(eventType?: string): number {
   const type = (eventType || "").toUpperCase();
-  if (type.includes("OPTED_OUT")) return 8;
-  if (type.includes("BLOCKED")) return 7;
-  if (type.includes("INVALID")) return 6;
-  if (type.includes("FAILED") || type.includes("UNKNOWN")) return 5;
-  if (type.includes("UNREACHABLE")) return 4;
-  if (type.includes("SUCCESSFUL") || type.includes("DELIVERED")) return 3;
-  if (type.includes("SENT") || type.includes("PENDING")) return 2;
-  if (type.includes("QUEUED")) return 1;
+  if (type.includes("OPTED_OUT")) {
+    return 8;
+  }
+  if (type.includes("BLOCKED")) {
+    return 7;
+  }
+  if (type.includes("INVALID")) {
+    return 6;
+  }
+  if (type.includes("FAILED") || type.includes("UNKNOWN")) {
+    return 5;
+  }
+  if (type.includes("UNREACHABLE")) {
+    return 4;
+  }
+  if (type.includes("SUCCESSFUL") || type.includes("DELIVERED")) {
+    return 3;
+  }
+  if (type.includes("SENT") || type.includes("PENDING")) {
+    return 2;
+  }
+  if (type.includes("QUEUED")) {
+    return 1;
+  }
   return 0;
 }
 

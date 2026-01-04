@@ -10,12 +10,12 @@ import { awsAccount, db, eq } from "@wraps/db";
 
 const stsClient = new STSClient({});
 
-export interface AwsCredentials {
+export type AwsCredentials = {
   accessKeyId: string;
   secretAccessKey: string;
   sessionToken: string;
   expiration: Date;
-}
+};
 
 // Cache credentials by account ID
 const credentialCache = new Map<

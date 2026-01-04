@@ -89,8 +89,11 @@ function Tabs<T extends string = string>({
   };
 
   const handleValueChange = (val: T) => {
-    if (isControlled) onValueChange?.(val);
-    else setActiveValue(val);
+    if (isControlled) {
+      onValueChange?.(val);
+    } else {
+      setActiveValue(val);
+    }
   };
 
   return (

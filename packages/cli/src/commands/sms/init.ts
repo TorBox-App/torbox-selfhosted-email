@@ -554,11 +554,18 @@ export async function init(options: SMSInitOptions): Promise<void> {
   // Track successful deployment
   const duration = Date.now() - startTime;
   const enabledFeatures: string[] = [];
-  if (smsConfig.tracking?.enabled) enabledFeatures.push("tracking");
-  if (smsConfig.eventTracking?.enabled) enabledFeatures.push("event_tracking");
-  if (smsConfig.eventTracking?.dynamoDBHistory)
+  if (smsConfig.tracking?.enabled) {
+    enabledFeatures.push("tracking");
+  }
+  if (smsConfig.eventTracking?.enabled) {
+    enabledFeatures.push("event_tracking");
+  }
+  if (smsConfig.eventTracking?.dynamoDBHistory) {
     enabledFeatures.push("dynamodb_history");
-  if (smsConfig.optOutManagement) enabledFeatures.push("opt_out_management");
+  }
+  if (smsConfig.optOutManagement) {
+    enabledFeatures.push("opt_out_management");
+  }
 
   trackServiceInit("sms", true, {
     preset,

@@ -7,10 +7,10 @@ import { promises as dns, Resolver } from "node:dns";
 import { DEFAULT_TIMEOUT } from "../constants.js";
 import type { CaaRecord, DnsProvider } from "../types.js";
 
-export interface NodeDnsOptions {
+export type NodeDnsOptions = {
   timeout?: number;
   servers?: string[];
-}
+};
 
 /**
  * Create a Node.js DNS provider

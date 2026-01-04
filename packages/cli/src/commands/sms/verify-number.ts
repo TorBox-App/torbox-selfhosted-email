@@ -176,7 +176,9 @@ export async function smsVerifyNumber(
       message: "Enter phone number to verify (E.164 format):",
       placeholder: "+14155551234",
       validate: (value) => {
-        if (!value) return "Phone number is required";
+        if (!value) {
+          return "Phone number is required";
+        }
         if (!isValidPhoneNumber(value)) {
           return "Please enter a valid phone number in E.164 format (e.g., +14155551234)";
         }

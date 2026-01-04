@@ -135,7 +135,9 @@ function getReachableNodeIds(
 
   while (queue.length > 0) {
     const currentId = queue.shift()!;
-    if (reachable.has(currentId)) continue;
+    if (reachable.has(currentId)) {
+      continue;
+    }
     reachable.add(currentId);
 
     // Find all nodes this one connects to

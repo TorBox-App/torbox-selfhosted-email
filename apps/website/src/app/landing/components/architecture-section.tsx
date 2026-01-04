@@ -335,7 +335,9 @@ function ConnectionLines({
   activeTab: TabKey;
   positions: NodePositions | null;
 }) {
-  if (!positions) return null;
+  if (!positions) {
+    return null;
+  }
 
   const { yourApp, cli, ses, wraps, recipients } = positions;
 
@@ -482,12 +484,16 @@ export function ArchitectureSection() {
 
   // Calculate positions relative to container
   const updatePositions = useCallback(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      return;
+    }
 
     const containerRect = containerRef.current.getBoundingClientRect();
 
     const getCenter = (ref: React.RefObject<HTMLDivElement | null>): Point => {
-      if (!ref.current) return { x: 0, y: 0 };
+      if (!ref.current) {
+        return { x: 0, y: 0 };
+      }
       const rect = ref.current.getBoundingClientRect();
       return {
         x: rect.left + rect.width / 2 - containerRect.left,
@@ -514,13 +520,13 @@ export function ArchitectureSection() {
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [updatePositions, activeTab]);
+  }, [updatePositions]);
 
   // Small delay to ensure layout is complete
   useEffect(() => {
     const timer = setTimeout(updatePositions, 50);
     return () => clearTimeout(timer);
-  }, [activeTab, updatePositions]);
+  }, [updatePositions]);
 
   return (
     <section className="py-24">

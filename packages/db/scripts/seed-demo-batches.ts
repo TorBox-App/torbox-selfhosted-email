@@ -261,7 +261,7 @@ async function main() {
       startedAt = new Date(createdAt.getTime() + 5 * 60 * 1000);
     }
 
-    const [inserted] = await db
+    const [_inserted] = await db
       .insert(schema.batchSend)
       .values({
         organizationId,

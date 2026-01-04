@@ -2,20 +2,20 @@
 
 import { createContext, useContext } from "react";
 
-interface Topic {
+type Topic = {
   id: string;
   name: string;
-}
+};
 
-interface Segment {
+type Segment = {
   id: string;
   name: string;
-}
+};
 
-interface WorkflowDataContextValue {
+type WorkflowDataContextValue = {
   topics: Topic[];
   segments: Segment[];
-}
+};
 
 const WorkflowDataContext = createContext<WorkflowDataContextValue>({
   topics: [],

@@ -112,8 +112,7 @@ export async function previewWithResourceChanges(
 
           // Extract resource name from URN (last segment after ::)
           const urnParts = metadata.urn?.split("::") || [];
-          const name =
-            urnParts[urnParts.length - 1] || metadata.urn || "unknown";
+          const name = urnParts.at(-1) || metadata.urn || "unknown";
 
           // Collect property diffs for updates
           const diffs: string[] = [];

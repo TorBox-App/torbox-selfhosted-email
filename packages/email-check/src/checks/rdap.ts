@@ -13,12 +13,12 @@ let rdapBootstrapCache: Map<string, string> | null = null;
 let bootstrapCacheTime = 0;
 const BOOTSTRAP_CACHE_TTL = 3_600_000; // 1 hour
 
-interface RdapBootstrap {
+type RdapBootstrap = {
   services: [string[], string[]][];
   version: string;
-}
+};
 
-interface RdapDomainResponse {
+type RdapDomainResponse = {
   objectClassName?: string;
   handle?: string;
   ldhName?: string;
@@ -29,19 +29,19 @@ interface RdapDomainResponse {
   secureDNS?: {
     delegationSigned?: boolean;
   };
-}
+};
 
-interface RdapEvent {
+type RdapEvent = {
   eventAction: string;
   eventDate: string;
-}
+};
 
-interface RdapEntity {
+type RdapEntity = {
   objectClassName?: string;
   roles?: string[];
   vcardArray?: [string, ...any[]];
   publicIds?: { type: string; identifier: string }[];
-}
+};
 
 /**
  * Check domain age via RDAP
@@ -110,7 +110,9 @@ export async function checkDomainAge(
  */
 function getTld(domain: string): string | null {
   const parts = domain.toLowerCase().split(".");
-  if (parts.length < 2) return null;
+  if (parts.length < 2) {
+    return null;
+  }
 
   // Handle common second-level TLDs
   const lastTwo = parts.slice(-2).join(".");
@@ -134,7 +136,7 @@ function getTld(domain: string): string | null {
     return lastTwo;
   }
 
-  return parts[parts.length - 1] || null;
+  return parts.at(-1) || null;
 }
 
 /**
@@ -197,7 +199,9 @@ async function queryRdap(
   try {
     // Normalize server URL
     let url = serverUrl;
-    if (!url.endsWith("/")) url += "/";
+    if (!url.endsWith("/")) {
+      url += "/";
+    }
     url += `domain/${domain}`;
 
     const controller = new AbortController();
@@ -285,7 +289,9 @@ function parseRdapResponse(
       if (roles.includes("registrar")) {
         // Get registrar name from vCard
         const name = extractVcardName(entity.vcardArray);
-        if (name) result.registrar = name;
+        if (name) {
+          result.registrar = name;
+        }
       }
 
       if (roles.includes("registrant")) {
@@ -311,7 +317,9 @@ function parseRdapResponse(
 
         // Get country from vCard
         const country = extractVcardCountry(entity.vcardArray);
-        if (country) result.registrantCountry = country;
+        if (country) {
+          result.registrantCountry = country;
+        }
       }
     }
   }
@@ -321,13 +329,19 @@ function parseRdapResponse(
  * Extract name from vCard array
  */
 function extractVcardName(vcardArray?: [string, ...any[]]): string | null {
-  if (!vcardArray || vcardArray[0] !== "vcard") return null;
+  if (!vcardArray || vcardArray[0] !== "vcard") {
+    return null;
+  }
 
   const properties = vcardArray[1];
-  if (!Array.isArray(properties)) return null;
+  if (!Array.isArray(properties)) {
+    return null;
+  }
 
   for (const prop of properties) {
-    if (!Array.isArray(prop)) continue;
+    if (!Array.isArray(prop)) {
+      continue;
+    }
     const [name, , , value] = prop;
 
     // Try fn (formatted name) first, then org
@@ -346,13 +360,19 @@ function extractVcardName(vcardArray?: [string, ...any[]]): string | null {
  * Extract country from vCard array
  */
 function extractVcardCountry(vcardArray?: [string, ...any[]]): string | null {
-  if (!vcardArray || vcardArray[0] !== "vcard") return null;
+  if (!vcardArray || vcardArray[0] !== "vcard") {
+    return null;
+  }
 
   const properties = vcardArray[1];
-  if (!Array.isArray(properties)) return null;
+  if (!Array.isArray(properties)) {
+    return null;
+  }
 
   for (const prop of properties) {
-    if (!Array.isArray(prop)) continue;
+    if (!Array.isArray(prop)) {
+      continue;
+    }
     const [name, , , value] = prop;
 
     if (name === "adr" && Array.isArray(value)) {

@@ -321,7 +321,7 @@ describe("Workflow Processor - Email Sending", () => {
   describe("Unsubscribe URL Generation", () => {
     it("should generate unsubscribe URL for marketing emails", () => {
       const templateType = "marketing";
-      const contactId = "contact-123";
+      const _contactId = "contact-123";
       const token = "mock-unsubscribe-token";
       const baseUrl = "https://app.wraps.dev";
 
@@ -333,7 +333,9 @@ describe("Workflow Processor - Email Sending", () => {
     });
 
     it("should not require unsubscribe for transactional emails", () => {
-      const templateType = "transactional";
+      const getTemplateType = (): "transactional" | "marketing" =>
+        "transactional";
+      const templateType = getTemplateType();
       const requiresUnsubscribe = templateType === "marketing";
 
       expect(requiresUnsubscribe).toBe(false);
@@ -459,7 +461,7 @@ describe("Workflow Processor - Email Sending", () => {
     });
 
     it("should handle missing template", () => {
-      const templateId = "nonexistent-template";
+      const _templateId = "nonexistent-template";
       const template = null;
 
       expect(template).toBeNull();

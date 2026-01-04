@@ -175,7 +175,9 @@ export const auth = betterAuth<BetterAuthOptions>({
                   // Send payment failed email to all admins
                   const wraps = await getWrapsClient();
                   for (const admin of adminsToNotify) {
-                    if (!admin.user?.email) continue;
+                    if (!admin.user?.email) {
+                      continue;
+                    }
 
                     try {
                       await wraps.sendTemplate({

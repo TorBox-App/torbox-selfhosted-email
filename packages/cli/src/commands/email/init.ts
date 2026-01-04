@@ -493,16 +493,24 @@ export async function init(options: InitOptions): Promise<void> {
   // 13. Track successful deployment
   const duration = Date.now() - startTime;
   const enabledFeatures: string[] = [];
-  if (emailConfig.tracking?.enabled) enabledFeatures.push("tracking");
-  if (emailConfig.suppressionList?.enabled)
+  if (emailConfig.tracking?.enabled) {
+    enabledFeatures.push("tracking");
+  }
+  if (emailConfig.suppressionList?.enabled) {
     enabledFeatures.push("suppression_list");
-  if (emailConfig.eventTracking?.enabled)
+  }
+  if (emailConfig.eventTracking?.enabled) {
     enabledFeatures.push("event_tracking");
-  if (emailConfig.eventTracking?.dynamoDBHistory)
+  }
+  if (emailConfig.eventTracking?.dynamoDBHistory) {
     enabledFeatures.push("dynamodb_history");
-  if (emailConfig.dedicatedIp) enabledFeatures.push("dedicated_ip");
-  if (emailConfig.emailArchiving?.enabled)
+  }
+  if (emailConfig.dedicatedIp) {
+    enabledFeatures.push("dedicated_ip");
+  }
+  if (emailConfig.emailArchiving?.enabled) {
     enabledFeatures.push("email_archiving");
+  }
 
   trackServiceInit("email", true, {
     preset,

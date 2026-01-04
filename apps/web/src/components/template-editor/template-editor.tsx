@@ -203,7 +203,7 @@ function TemplateEditorContent({
       setSubject(template.subject);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only sync when template.subject changes from server
-  }, [template.subject]);
+  }, [template.subject, subject]);
 
   // Debounced subject save - waits 1s after last keystroke
   useEffect(() => {

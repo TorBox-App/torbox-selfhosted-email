@@ -163,15 +163,30 @@ function getSMSEventPriority(item: any): number {
   const type = item.eventType?.toUpperCase();
 
   // Handle AWS TEXT_* event types
-  if (type?.includes("OPTED_OUT")) return 8;
-  if (type?.includes("BLOCKED")) return 7;
-  if (type?.includes("INVALID")) return 6;
-  if (type?.includes("FAILED") || type?.includes("UNKNOWN")) return 5;
-  if (type?.includes("CARRIER_UNREACHABLE") || type?.includes("UNREACHABLE"))
+  if (type?.includes("OPTED_OUT")) {
+    return 8;
+  }
+  if (type?.includes("BLOCKED")) {
+    return 7;
+  }
+  if (type?.includes("INVALID")) {
+    return 6;
+  }
+  if (type?.includes("FAILED") || type?.includes("UNKNOWN")) {
+    return 5;
+  }
+  if (type?.includes("CARRIER_UNREACHABLE") || type?.includes("UNREACHABLE")) {
     return 4;
-  if (type?.includes("SUCCESSFUL") || type?.includes("DELIVERED")) return 3;
-  if (type?.includes("SENT") || type?.includes("PENDING")) return 2;
-  if (type?.includes("QUEUED")) return 1;
+  }
+  if (type?.includes("SUCCESSFUL") || type?.includes("DELIVERED")) {
+    return 3;
+  }
+  if (type?.includes("SENT") || type?.includes("PENDING")) {
+    return 2;
+  }
+  if (type?.includes("QUEUED")) {
+    return 1;
+  }
 
   return 0;
 }
@@ -209,7 +224,9 @@ function normalizeSMSLog(data: any): SMSLog {
 
   // Clean phone numbers - remove leading single quote if present
   const cleanPhone = (phone: string | undefined): string => {
-    if (!phone) return "unknown";
+    if (!phone) {
+      return "unknown";
+    }
     return phone.replace(/^'+/, "");
   };
 
@@ -238,7 +255,9 @@ export async function fetchSMSById(
 
   // Clean phone numbers - remove leading single quote if present
   const cleanPhone = (phone: string | undefined): string => {
-    if (!phone) return "unknown";
+    if (!phone) {
+      return "unknown";
+    }
     return phone.replace(/^'+/, "");
   };
 

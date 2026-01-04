@@ -234,7 +234,9 @@ export function TopicsTable({
     public?: boolean;
     doubleOptIn?: boolean;
   }) => {
-    if (!selectedTopic) return;
+    if (!selectedTopic) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await updateTopic(selectedTopic.id, organizationId, data);
@@ -254,7 +256,9 @@ export function TopicsTable({
   };
 
   const handleDeleteTopic = async () => {
-    if (!selectedTopic) return;
+    if (!selectedTopic) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await deleteTopic(selectedTopic.id, organizationId);
@@ -374,7 +378,9 @@ export function TopicsTable({
         mode="edit"
         onOpenChange={(open) => {
           setEditDialogOpen(open);
-          if (!open) setSelectedTopic(null);
+          if (!open) {
+            setSelectedTopic(null);
+          }
         }}
         onSubmit={handleUpdateTopic}
         open={editDialogOpen}

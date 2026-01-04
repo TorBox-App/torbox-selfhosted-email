@@ -924,7 +924,9 @@ export async function bulkSubscribeContactsToTopics(
         with: { topics: true },
       });
 
-      if (!existing) continue;
+      if (!existing) {
+        continue;
+      }
 
       const currentTopicIds = new Set(
         existing.topics
@@ -933,7 +935,9 @@ export async function bulkSubscribeContactsToTopics(
       );
 
       const newTopicIds = topicIds.filter((id) => !currentTopicIds.has(id));
-      if (newTopicIds.length === 0) continue;
+      if (newTopicIds.length === 0) {
+        continue;
+      }
 
       // Check for resubscriptions
       const previousSubs = existing.topics
@@ -1145,7 +1149,7 @@ export async function bulkDeleteContacts(
     }
 
     // Delete contacts (cascades to contact_topic)
-    const result = await db
+    const _result = await db
       .delete(contact)
       .where(
         and(

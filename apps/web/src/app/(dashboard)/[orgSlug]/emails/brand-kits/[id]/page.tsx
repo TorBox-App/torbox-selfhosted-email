@@ -1,12 +1,6 @@
 "use client";
 
-import type { BrandKit } from "@wraps/db";
-import {
-  ArrowLeft,
-  Globe,
-  Loader2,
-  Sparkles,
-} from "lucide-react";
+import { ArrowLeft, Globe, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -28,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -124,26 +117,47 @@ export default function BrandKitEditPage() {
   }, [existingKit]);
 
   const handleExtractFromDomain = async () => {
-    if (!extractDomain.trim()) return;
+    if (!extractDomain.trim()) {
+      return;
+    }
 
     try {
       const result = await extractBrandKit.mutateAsync(extractDomain.trim());
       const extracted = result.brandKit;
 
-      const ensureHexColor = (color: string | undefined, fallback: string): string => {
-        if (!color) return fallback;
+      const ensureHexColor = (
+        color: string | undefined,
+        fallback: string
+      ): string => {
+        if (!color) {
+          return fallback;
+        }
         const hex = color.trim().toLowerCase();
-        if (/^#[0-9a-f]{6}$/.test(hex)) return hex;
+        if (/^#[0-9a-f]{6}$/.test(hex)) {
+          return hex;
+        }
         return fallback;
       };
 
       setFormData({
         name: extracted.name || "",
         logoUrl: extracted.logoUrl || "",
-        primaryColor: ensureHexColor(extracted.primaryColor, defaultFormData.primaryColor),
-        secondaryColor: ensureHexColor(extracted.secondaryColor, defaultFormData.secondaryColor),
-        backgroundColor: ensureHexColor(extracted.backgroundColor, defaultFormData.backgroundColor),
-        textColor: ensureHexColor(extracted.textColor, defaultFormData.textColor),
+        primaryColor: ensureHexColor(
+          extracted.primaryColor,
+          defaultFormData.primaryColor
+        ),
+        secondaryColor: ensureHexColor(
+          extracted.secondaryColor,
+          defaultFormData.secondaryColor
+        ),
+        backgroundColor: ensureHexColor(
+          extracted.backgroundColor,
+          defaultFormData.backgroundColor
+        ),
+        textColor: ensureHexColor(
+          extracted.textColor,
+          defaultFormData.textColor
+        ),
         fontFamily: extracted.fontFamily || defaultFormData.fontFamily,
         headingFontFamily: "",
         buttonStyle: defaultFormData.buttonStyle,
@@ -178,7 +192,9 @@ export default function BrandKitEditPage() {
         toast.success("Brand kit updated");
       }
     } catch {
-      toast.error(isNew ? "Failed to create brand kit" : "Failed to update brand kit");
+      toast.error(
+        isNew ? "Failed to create brand kit" : "Failed to update brand kit"
+      );
     } finally {
       setIsSaving(false);
     }
@@ -207,7 +223,7 @@ export default function BrandKitEditPage() {
   return (
     <div className="px-4 lg:px-6">
       <div className="mb-6">
-        <Button variant="ghost" size="sm" className="mb-4" asChild>
+        <Button asChild className="mb-4" size="sm" variant="ghost">
           <Link href={`/${orgSlug}/emails/brand-kits`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Brand Kits
@@ -222,7 +238,10 @@ export default function BrandKitEditPage() {
               Configure your brand colors, fonts, and company information
             </p>
           </div>
-          <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()}>
+          <Button
+            disabled={isSaving || !formData.name.trim()}
+            onClick={handleSave}
+          >
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -272,7 +291,9 @@ export default function BrandKitEditPage() {
                     />
                   </div>
                   <Button
-                    disabled={!extractDomain.trim() || extractBrandKit.isPending}
+                    disabled={
+                      !extractDomain.trim() || extractBrandKit.isPending
+                    }
                     onClick={handleExtractFromDomain}
                     variant="secondary"
                   >
@@ -337,7 +358,10 @@ export default function BrandKitEditPage() {
                       className="h-10 w-14 p-1"
                       id="primaryColor"
                       onChange={(e) =>
-                        setFormData({ ...formData, primaryColor: e.target.value })
+                        setFormData({
+                          ...formData,
+                          primaryColor: e.target.value,
+                        })
                       }
                       type="color"
                       value={formData.primaryColor}
@@ -345,7 +369,10 @@ export default function BrandKitEditPage() {
                     <Input
                       className="flex-1"
                       onChange={(e) =>
-                        setFormData({ ...formData, primaryColor: e.target.value })
+                        setFormData({
+                          ...formData,
+                          primaryColor: e.target.value,
+                        })
                       }
                       placeholder="#5046e5"
                       value={formData.primaryColor}
@@ -359,7 +386,10 @@ export default function BrandKitEditPage() {
                       className="h-10 w-14 p-1"
                       id="secondaryColor"
                       onChange={(e) =>
-                        setFormData({ ...formData, secondaryColor: e.target.value })
+                        setFormData({
+                          ...formData,
+                          secondaryColor: e.target.value,
+                        })
                       }
                       type="color"
                       value={formData.secondaryColor}
@@ -367,7 +397,10 @@ export default function BrandKitEditPage() {
                     <Input
                       className="flex-1"
                       onChange={(e) =>
-                        setFormData({ ...formData, secondaryColor: e.target.value })
+                        setFormData({
+                          ...formData,
+                          secondaryColor: e.target.value,
+                        })
                       }
                       placeholder="#6366f1"
                       value={formData.secondaryColor}
@@ -381,7 +414,10 @@ export default function BrandKitEditPage() {
                       className="h-10 w-14 p-1"
                       id="backgroundColor"
                       onChange={(e) =>
-                        setFormData({ ...formData, backgroundColor: e.target.value })
+                        setFormData({
+                          ...formData,
+                          backgroundColor: e.target.value,
+                        })
                       }
                       type="color"
                       value={formData.backgroundColor}
@@ -389,7 +425,10 @@ export default function BrandKitEditPage() {
                     <Input
                       className="flex-1"
                       onChange={(e) =>
-                        setFormData({ ...formData, backgroundColor: e.target.value })
+                        setFormData({
+                          ...formData,
+                          backgroundColor: e.target.value,
+                        })
                       }
                       placeholder="#ffffff"
                       value={formData.backgroundColor}
@@ -565,7 +604,9 @@ export default function BrandKitEditPage() {
             <CardContent>
               {/* Color palette */}
               <div className="mb-4">
-                <p className="mb-2 text-muted-foreground text-xs">Color Palette</p>
+                <p className="mb-2 text-muted-foreground text-xs">
+                  Color Palette
+                </p>
                 <div className="flex gap-1">
                   <div
                     className="h-12 flex-1 rounded-l-md border"
@@ -592,9 +633,9 @@ export default function BrandKitEditPage() {
                   <p className="mb-2 text-muted-foreground text-xs">Logo</p>
                   <div className="flex h-16 items-center justify-center rounded border bg-muted/30 p-2">
                     <img
-                      src={formData.logoUrl}
                       alt="Logo preview"
                       className="max-h-full max-w-full object-contain"
+                      src={formData.logoUrl}
                     />
                   </div>
                 </div>
@@ -613,12 +654,16 @@ export default function BrandKitEditPage() {
                   <h3
                     className="mb-1 font-semibold"
                     style={{
-                      fontFamily: formData.headingFontFamily || formData.fontFamily,
+                      fontFamily:
+                        formData.headingFontFamily || formData.fontFamily,
                     }}
                   >
                     Heading Text
                   </h3>
-                  <p className="text-sm" style={{ fontFamily: formData.fontFamily }}>
+                  <p
+                    className="text-sm"
+                    style={{ fontFamily: formData.fontFamily }}
+                  >
                     Body text preview with your selected font.
                   </p>
                 </div>
@@ -628,7 +673,6 @@ export default function BrandKitEditPage() {
               <div>
                 <p className="mb-2 text-muted-foreground text-xs">Button</p>
                 <button
-                  type="button"
                   className="w-full px-4 py-2 font-medium text-white"
                   style={{
                     backgroundColor: formData.primaryColor,
@@ -640,6 +684,7 @@ export default function BrandKitEditPage() {
                           : formData.buttonRadius,
                     fontFamily: formData.fontFamily,
                   }}
+                  type="button"
                 >
                   Button Preview
                 </button>

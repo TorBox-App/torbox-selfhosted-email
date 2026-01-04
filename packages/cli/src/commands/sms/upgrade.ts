@@ -1119,15 +1119,21 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
 
   // 15. Track successful upgrade
   const enabledFeatures: string[] = [];
-  if (updatedConfig.tracking?.enabled) enabledFeatures.push("tracking");
-  if (updatedConfig.tracking?.linkTracking)
+  if (updatedConfig.tracking?.enabled) {
+    enabledFeatures.push("tracking");
+  }
+  if (updatedConfig.tracking?.linkTracking) {
     enabledFeatures.push("link_tracking");
-  if (updatedConfig.eventTracking?.enabled)
+  }
+  if (updatedConfig.eventTracking?.enabled) {
     enabledFeatures.push("event_tracking");
-  if (updatedConfig.eventTracking?.dynamoDBHistory)
+  }
+  if (updatedConfig.eventTracking?.dynamoDBHistory) {
     enabledFeatures.push("dynamodb_history");
-  if (updatedConfig.messageArchiving?.enabled)
+  }
+  if (updatedConfig.messageArchiving?.enabled) {
     enabledFeatures.push("message_archiving");
+  }
 
   trackServiceUpgrade("sms", {
     from_preset: metadata.services.sms?.preset,

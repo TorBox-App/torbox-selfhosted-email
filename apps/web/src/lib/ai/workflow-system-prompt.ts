@@ -86,20 +86,15 @@ Your job is to design communication automation workflows based on user descripti
    - value: comparison value
    - Outputs: "yes" (condition met) or "no" (condition not met)
 
-8. **webhook** - Call external API
-   - url: webhook URL (required)
-   - method: "GET" | "POST" | "PUT" | "DELETE"
-   - headers, body: optional
-
-9. **update_contact** - Modify contact properties
+8. **update_contact** - Modify contact properties
    - updates: array of { field, operation, value }
    - operations: "set" | "increment" | "append" | "unset"
 
-10. **subscribe_topic** / **unsubscribe_topic** - Manage topic subscriptions
+9. **subscribe_topic** / **unsubscribe_topic** - Manage topic subscriptions
     - topicId: topic ID (required)
     - channel: "email" | "sms"
 
-11. **exit** - End workflow
+10. **exit** - End workflow
     - reason: optional explanation
 
 ## Output Format

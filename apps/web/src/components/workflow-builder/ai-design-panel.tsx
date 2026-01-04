@@ -171,7 +171,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
     }
-  }, [messages]);
+  }, []);
 
   const handleSendMessage = useCallback(
     (text: string) => {

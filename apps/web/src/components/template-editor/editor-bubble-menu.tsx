@@ -87,7 +87,9 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
 
   // Set up the bubble menu plugin
   useEffect(() => {
-    if (!(editor && menuRef.current)) return;
+    if (!(editor && menuRef.current)) {
+      return;
+    }
 
     const plugin = BubbleMenuPlugin({
       pluginKey: "bubbleMenu",
@@ -103,12 +105,16 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
         }
 
         // Don't show if selection includes nodes (images, buttons, etc.)
-        const hasNodeSelection = ed.state.doc.nodesBetween(from, to, (node) => {
-          if (node.isBlock && node.type.name !== "paragraph") {
-            return false;
+        const _hasNodeSelection = ed.state.doc.nodesBetween(
+          from,
+          to,
+          (node) => {
+            if (node.isBlock && node.type.name !== "paragraph") {
+              return false;
+            }
+            return true;
           }
-          return true;
-        });
+        );
 
         // Only show for text selections (not node selections like images)
         const isTextSelection =

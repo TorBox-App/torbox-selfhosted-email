@@ -716,7 +716,7 @@ function nodeToReactEmail(
       );
 
     case "emailRow": {
-      const rowAttrs = node.attrs || {};
+      const _rowAttrs = node.attrs || {};
 
       return (
         <Row key={key}>

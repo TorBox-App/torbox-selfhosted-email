@@ -245,8 +245,10 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   // 7. Handle upgrade action
   switch (upgradeAction) {
     case "preset": {
-      // Show available presets
-      const presets = getAllPresetInfo();
+      // Show available presets (exclude "custom" since it's not a tier upgrade)
+      const presets = getAllPresetInfo().filter(
+        (p) => p.name.toLowerCase() !== "custom"
+      );
       const currentPresetIdx = presets.findIndex(
         (p) => p.name.toLowerCase() === metadata.services.email?.preset
       );
@@ -1365,16 +1367,24 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
   // 16. Track successful upgrade
   const enabledFeatures: string[] = [];
-  if (updatedConfig.tracking?.enabled) enabledFeatures.push("tracking");
-  if (updatedConfig.suppressionList?.enabled)
+  if (updatedConfig.tracking?.enabled) {
+    enabledFeatures.push("tracking");
+  }
+  if (updatedConfig.suppressionList?.enabled) {
     enabledFeatures.push("suppression_list");
-  if (updatedConfig.eventTracking?.enabled)
+  }
+  if (updatedConfig.eventTracking?.enabled) {
     enabledFeatures.push("event_tracking");
-  if (updatedConfig.eventTracking?.dynamoDBHistory)
+  }
+  if (updatedConfig.eventTracking?.dynamoDBHistory) {
     enabledFeatures.push("dynamodb_history");
-  if (updatedConfig.dedicatedIp) enabledFeatures.push("dedicated_ip");
-  if (updatedConfig.emailArchiving?.enabled)
+  }
+  if (updatedConfig.dedicatedIp) {
+    enabledFeatures.push("dedicated_ip");
+  }
+  if (updatedConfig.emailArchiving?.enabled) {
     enabledFeatures.push("email_archiving");
+  }
 
   trackServiceUpgrade("email", {
     from_preset: metadata.services.email?.preset,

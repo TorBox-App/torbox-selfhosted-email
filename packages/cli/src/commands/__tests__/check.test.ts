@@ -108,9 +108,15 @@ vi.mock("@wraps/email-check", () => ({
   runEmailCheck: vi.fn(),
   formatSpfLookupTree: vi.fn().mockReturnValue("SPF tree"),
   getExitCode: vi.fn((grade: string) => {
-    if (grade === "A" || grade === "B") return 0;
-    if (grade === "C") return 1;
-    if (grade === "D") return 2;
+    if (grade === "A" || grade === "B") {
+      return 0;
+    }
+    if (grade === "C") {
+      return 1;
+    }
+    if (grade === "D") {
+      return 2;
+    }
     return 3;
   }),
 }));

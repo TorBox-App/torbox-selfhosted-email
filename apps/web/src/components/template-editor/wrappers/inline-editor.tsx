@@ -161,7 +161,15 @@ export function InlineEditor({
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    createMutation.mutateAsync,
+    createdTemplateId,
+    initialPreviewText,
+    initialSubject,
+    isCreatingTemplate,
+    templateId,
+    templateName,
+  ]);
 
   // Sync subject/preview from loaded template
   useEffect(() => {

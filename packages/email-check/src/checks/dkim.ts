@@ -11,7 +11,7 @@ import {
 import { batchDnsQuery, findDkimRecord } from "../dns/index.js";
 import type { DkimResult, DkimSelector } from "../types.js";
 
-export interface DkimCheckOptions {
+export type DkimCheckOptions = {
   /** Use quick mode (fewer selectors) */
   quick?: boolean;
   /** Specific selector to check */
@@ -22,7 +22,7 @@ export interface DkimCheckOptions {
   verbose?: boolean;
   /** Detected email provider from SPF (for better messaging) */
   detectedProvider?: string;
-}
+};
 
 /**
  * Check DKIM records for a domain
@@ -218,15 +218,25 @@ function parseDkimRecord(record: string, result: DkimSelector): void {
       result.keyBits = Math.round((estimatedBits - 256) * 0.95);
 
       // Clamp to reasonable values
-      if (result.keyBits < 512) result.keyBits = 512;
-      if (result.keyBits > 4096) result.keyBits = 4096;
+      if (result.keyBits < 512) {
+        result.keyBits = 512;
+      }
+      if (result.keyBits > 4096) {
+        result.keyBits = 4096;
+      }
 
       // Round to common key sizes
-      if (result.keyBits <= 768) result.keyBits = 512;
-      else if (result.keyBits <= 1200) result.keyBits = 1024;
-      else if (result.keyBits <= 2500) result.keyBits = 2048;
-      else if (result.keyBits <= 3500) result.keyBits = 3072;
-      else result.keyBits = 4096;
+      if (result.keyBits <= 768) {
+        result.keyBits = 512;
+      } else if (result.keyBits <= 1200) {
+        result.keyBits = 1024;
+      } else if (result.keyBits <= 2500) {
+        result.keyBits = 2048;
+      } else if (result.keyBits <= 3500) {
+        result.keyBits = 3072;
+      } else {
+        result.keyBits = 4096;
+      }
 
       if (result.keyBits < 1024) {
         result.errors.push(`RSA key too weak: ${result.keyBits} bits`);
@@ -306,7 +316,9 @@ function parseDkimTags(record: string): Map<string, string> {
 
   for (const part of parts) {
     const eqIndex = part.indexOf("=");
-    if (eqIndex === -1) continue;
+    if (eqIndex === -1) {
+      continue;
+    }
 
     const key = part.slice(0, eqIndex).trim().toLowerCase();
     const value = part.slice(eqIndex + 1).trim();

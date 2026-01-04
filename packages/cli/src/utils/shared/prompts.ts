@@ -831,7 +831,7 @@ function formatDNSRecord(record: {
   }
 
   if (record.conflictReason) {
-    lines.push(`     ${pc.red("⚠ " + record.conflictReason)}`);
+    lines.push(`     ${pc.red(`⚠ ${record.conflictReason}`)}`);
   }
 
   return lines.join("\n");
@@ -946,7 +946,7 @@ export async function promptDNSConfirmation(preview: {
             ? "Will merge with existing"
             : "Will replace existing";
       if (info.hasConflict) {
-        hint = pc.red(hint + " ⚠");
+        hint = pc.red(`${hint} ⚠`);
       }
       return {
         value: category,

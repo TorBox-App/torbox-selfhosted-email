@@ -3,6 +3,7 @@ export * from "./app";
 export * from "./auth";
 export * from "./batch";
 export * from "./contacts";
+export * from "./events";
 export * from "./segments";
 export * from "./templates";
 export * from "./usage";

@@ -7,16 +7,16 @@ import {
   updatePreferences,
 } from "./actions";
 
-interface Topic {
+type Topic = {
   id: string;
   name: string;
   description: string | null;
   subscribed: boolean;
   pending: boolean;
   doubleOptIn: boolean;
-}
+};
 
-interface PreferencesFormProps {
+type PreferencesFormProps = {
   token: string;
   contactId: string;
   organizationId: string;
@@ -24,7 +24,7 @@ interface PreferencesFormProps {
   isGloballyUnsubscribed: boolean;
   brandColor: string;
   orgName?: string;
-}
+};
 
 export function PreferencesForm({
   token,

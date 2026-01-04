@@ -100,7 +100,7 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
         setEditedCode(code);
       }
     }
-  }, [tiptapEditor?.state.doc, format, generateCodeSync, isEditing]);
+  }, [format, generateCodeSync, isEditing]);
 
   // Generate HTML asynchronously using @react-email/render
   useEffect(() => {

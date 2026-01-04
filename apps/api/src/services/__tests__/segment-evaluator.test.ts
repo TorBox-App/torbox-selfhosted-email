@@ -14,16 +14,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the database
-const mockDbSelect = vi.fn();
-const mockDbFrom = vi.fn();
-const mockDbWhere = vi.fn();
+const _mockDbSelect = vi.fn();
+const _mockDbFrom = vi.fn();
+const _mockDbWhere = vi.fn();
 const mockDbLimit = vi.fn();
 
 vi.mock("@wraps/db", () => ({
   db: {
     select: () => ({
-      from: (table: unknown) => ({
-        where: (condition: unknown) => ({
+      from: (_table: unknown) => ({
+        where: (_condition: unknown) => ({
           limit: (n: number) => mockDbLimit(n),
         }),
       }),

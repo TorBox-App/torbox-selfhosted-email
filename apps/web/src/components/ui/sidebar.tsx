@@ -69,7 +69,9 @@ function SidebarProvider({
 
   // Read initial state from cookie, fallback to defaultOpen
   const getInitialState = React.useCallback(() => {
-    if (typeof document === "undefined") return defaultOpen;
+    if (typeof document === "undefined") {
+      return defaultOpen;
+    }
     const cookies = document.cookie.split("; ");
     const sidebarCookie = cookies.find((c) =>
       c.startsWith(`${SIDEBAR_COOKIE_NAME}=`)
@@ -91,7 +93,7 @@ function SidebarProvider({
     if (cookieState !== _open) {
       _setOpen(cookieState);
     }
-  }, []);
+  }, [_open, getInitialState]);
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;

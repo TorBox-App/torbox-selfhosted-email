@@ -15,7 +15,7 @@ import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import { listConnections } from "../../utils/shared/metadata.js";
 
-export interface CheckOptions {
+export type CheckOptions = {
   /** Domain to check */
   domain?: string;
   /** Fast mode: fewer DKIM selectors, top blacklists only */
@@ -32,7 +32,7 @@ export interface CheckOptions {
   skipTls?: boolean;
   /** DNS timeout in milliseconds */
   timeout?: number;
-}
+};
 
 /**
  * Run the email check command
@@ -47,7 +47,9 @@ export async function check(options: CheckOptions): Promise<void> {
       message: "Enter domain to check:",
       placeholder: "example.com",
       validate: (value) => {
-        if (!value) return "Domain is required";
+        if (!value) {
+          return "Domain is required";
+        }
         if (!/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(value)) {
           return "Invalid domain format";
         }
@@ -331,7 +333,7 @@ function displayScoreBox(
           ? pc.magenta
           : pc.red;
 
-  console.log(pc.dim("╭" + "─".repeat(width - 2) + "╮"));
+  console.log(pc.dim(`╭${"─".repeat(width - 2)}╮`));
   console.log(pc.dim("│") + " ".repeat(width - 2) + pc.dim("│"));
   console.log(
     pc.dim("│") +
@@ -367,7 +369,7 @@ function displayScoreBox(
       pc.dim("│")
   );
   console.log(pc.dim("│") + " ".repeat(width - 2) + pc.dim("│"));
-  console.log(pc.dim("╰" + "─".repeat(width - 2) + "╯"));
+  console.log(pc.dim(`╰${"─".repeat(width - 2)}╯`));
 }
 
 /**

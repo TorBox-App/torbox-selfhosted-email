@@ -233,7 +233,9 @@ export function OrganizationSettingsApiKeys({
   }
 
   async function handleUpdateApiKey() {
-    if (!editingKey) return;
+    if (!editingKey) {
+      return;
+    }
 
     setEditSubmitting(true);
     const result = await updateApiKey(editingKey.id, organization.id, {

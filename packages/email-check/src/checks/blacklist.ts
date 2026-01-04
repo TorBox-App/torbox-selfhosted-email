@@ -37,7 +37,7 @@ function isTestResponse(returnCode: string): boolean {
   return TEST_RETURN_CODES.has(returnCode);
 }
 
-export interface BlacklistCheckOptions {
+export type BlacklistCheckOptions = {
   /** Use quick mode (top 10 blacklists only) */
   quick?: boolean;
   /** Skip blacklist checks entirely */
@@ -46,7 +46,7 @@ export interface BlacklistCheckOptions {
   domain: string;
   /** IPs to check (from MX records) */
   ips?: string[];
-}
+};
 
 /**
  * Check domain and IPs against blacklists

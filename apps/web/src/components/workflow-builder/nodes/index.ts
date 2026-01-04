@@ -9,4 +9,5 @@ export { UpdateContactNode } from "./update-contact-node";
 export { WaitForEmailEngagementNode } from "./wait-for-email-engagement-node";
 // Slice 3
 export { WaitForEventNode } from "./wait-for-event-node";
-export { WebhookNode } from "./webhook-node";
+// Webhook node disabled until delivery retry/verification is implemented
+// export { WebhookNode } from "./webhook-node";

@@ -7,12 +7,12 @@
 
 import * as jose from "jose";
 
-export interface ConfirmationTokenPayload {
+export type ConfirmationTokenPayload = {
   cid: string; // contact ID
   oid: string; // organization ID
   tid: string; // topic ID (required for confirmation)
   type: "confirm"; // token type marker
-}
+};
 
 const TOKEN_EXPIRATION = "48h"; // Confirmation links valid for 48 hours
 

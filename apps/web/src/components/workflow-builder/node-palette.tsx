@@ -11,18 +11,17 @@ import {
   MailOpen,
   MessageSquare,
   UserCog,
-  Webhook,
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface NodePaletteItem {
+type NodePaletteItem = {
   type: WorkflowStepType;
   label: string;
   description: string;
   icon: React.ReactNode;
   accentColor: string;
-}
+};
 
 const paletteItems: NodePaletteItem[] = [
   {
@@ -67,13 +66,14 @@ const paletteItems: NodePaletteItem[] = [
     icon: <UserCog className="h-4 w-4" />,
     accentColor: "bg-indigo-500",
   },
-  {
-    type: "webhook",
-    label: "Webhook",
-    description: "Call external API",
-    icon: <Webhook className="h-4 w-4" />,
-    accentColor: "bg-cyan-500",
-  },
+  // Webhook node disabled until delivery retry/verification is implemented
+  // {
+  //   type: "webhook",
+  //   label: "Webhook",
+  //   description: "Call external API",
+  //   icon: <Webhook className="h-4 w-4" />,
+  //   accentColor: "bg-cyan-500",
+  // },
   // Slice 3 nodes
   {
     type: "wait_for_event",
@@ -105,9 +105,9 @@ const paletteItems: NodePaletteItem[] = [
   },
 ];
 
-interface NodePaletteProps {
+type NodePaletteProps = {
   onAddNode: (type: WorkflowStepType) => void;
-}
+};
 
 export function NodePalette({ onAddNode }: NodePaletteProps) {
   const onDragStart = (event: React.DragEvent, nodeType: WorkflowStepType) => {

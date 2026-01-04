@@ -146,7 +146,9 @@ export function WorkflowsTable({
   };
 
   const handleDelete = async () => {
-    if (!workflowToDelete) return;
+    if (!workflowToDelete) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await deleteWorkflow(workflowToDelete.id, organizationId);
@@ -396,7 +398,15 @@ export function WorkflowsTable({
         },
       },
     ],
-    [canManage, isPending, orgSlug, router]
+    [
+      canManage,
+      isPending,
+      orgSlug,
+      router,
+      handleDisable,
+      handleDuplicate,
+      handleEnable,
+    ]
   );
 
   const table = useReactTable({

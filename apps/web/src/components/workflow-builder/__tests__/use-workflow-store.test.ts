@@ -549,7 +549,7 @@ describe("useWorkflowStore", () => {
       useWorkflowStore.getState().addNode("send_email", { x: 0, y: 150 });
 
       // Manually add edge with sourceHandle (simulating React Flow)
-      useWorkflowStore.setState((state) => ({
+      useWorkflowStore.setState((_state) => ({
         edges: [
           {
             id: "edge-1",

@@ -7,16 +7,18 @@
  */
 
 import { contact, db, eq, workflow } from "@wraps/db";
-import { and } from "drizzle-orm";
+import { and, inArray } from "drizzle-orm";
 import { t } from "elysia";
 
 import {
   type AuthContext,
   createAuthenticatedRoutes,
 } from "../middleware/auth";
+import { rateLimitMiddleware } from "../middleware/rate-limit";
 import { enqueueWorkflowStep } from "../services/workflow-queue";
 
 export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
+  .use(rateLimitMiddleware)
 
   /**
    * Trigger a workflow via API
@@ -205,34 +207,58 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
         errors: [] as string[],
       };
 
+      // Batch fetch all contacts in 2 queries (by ID and by email) instead of N queries
+      const contactIds = contacts
+        .filter((c) => c.contactId)
+        .map((c) => c.contactId as string);
+      const contactEmails = contacts
+        .filter((c) => c.contactEmail && !c.contactId)
+        .map((c) => c.contactEmail as string);
+
+      // Fetch contacts by ID
+      const contactsById = new Map<string, typeof contact.$inferSelect>();
+      if (contactIds.length > 0) {
+        const foundById = await db
+          .select()
+          .from(contact)
+          .where(
+            and(
+              inArray(contact.id, contactIds),
+              eq(contact.organizationId, auth.organizationId)
+            )
+          );
+        for (const c of foundById) {
+          contactsById.set(c.id, c);
+        }
+      }
+
+      // Fetch contacts by email
+      const contactsByEmail = new Map<string, typeof contact.$inferSelect>();
+      if (contactEmails.length > 0) {
+        const foundByEmail = await db
+          .select()
+          .from(contact)
+          .where(
+            and(
+              inArray(contact.email, contactEmails),
+              eq(contact.organizationId, auth.organizationId)
+            )
+          );
+        for (const c of foundByEmail) {
+          if (c.email) {
+            contactsByEmail.set(c.email, c);
+          }
+        }
+      }
+
+      // Process each contact request
       for (const c of contacts) {
-        // Find the contact
         let contactRecord: typeof contact.$inferSelect | undefined;
 
         if (c.contactId) {
-          const [found] = await db
-            .select()
-            .from(contact)
-            .where(
-              and(
-                eq(contact.id, c.contactId),
-                eq(contact.organizationId, auth.organizationId)
-              )
-            )
-            .limit(1);
-          contactRecord = found;
+          contactRecord = contactsById.get(c.contactId);
         } else if (c.contactEmail) {
-          const [found] = await db
-            .select()
-            .from(contact)
-            .where(
-              and(
-                eq(contact.email, c.contactEmail),
-                eq(contact.organizationId, auth.organizationId)
-              )
-            )
-            .limit(1);
-          contactRecord = found;
+          contactRecord = contactsByEmail.get(c.contactEmail);
         }
 
         if (!contactRecord) {

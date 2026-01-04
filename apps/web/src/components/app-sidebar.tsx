@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Mail,
-  MessageSquare,
-  Settings,
-  Users,
-  Workflow,
-} from "lucide-react";
+import { Mail, MessageSquare, Settings, Users, Workflow } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
 import { Logo } from "@/components/logo";

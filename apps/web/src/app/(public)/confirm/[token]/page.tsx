@@ -5,11 +5,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ConfirmationForm } from "./confirmation-form";
 
-interface ConfirmPageProps {
+type ConfirmPageProps = {
   params: Promise<{
     token: string;
   }>;
-}
+};
 
 export async function generateMetadata({
   params,
@@ -234,7 +234,11 @@ export default async function ConfirmPage({ params }: ConfirmPageProps) {
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
-  if (!(local && domain)) return email;
-  if (local.length <= 2) return `${local[0]}***@${domain}`;
-  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+  if (!(local && domain)) {
+    return email;
+  }
+  if (local.length <= 2) {
+    return `${local[0]}***@${domain}`;
+  }
+  return `${local[0]}***${local.at(-1)}@${domain}`;
 }

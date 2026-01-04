@@ -10,14 +10,14 @@ import type { MxRecord, MxTlsResult, MxTlsServerResult } from "../types.js";
 const DEFAULT_TIMEOUT = 10_000; // 10 seconds per server
 const SMTP_PORT = 25;
 
-export interface MxTlsCheckOptions {
+export type MxTlsCheckOptions = {
   /** Skip TLS checks entirely */
   skip?: boolean;
   /** Connection timeout in ms */
   timeout?: number;
   /** Quick mode - only check first MX */
   quick?: boolean;
-}
+};
 
 /**
  * Check TLS support for MX servers
@@ -153,10 +153,10 @@ async function checkServer(
   return result;
 }
 
-interface SmtpSession {
+type SmtpSession = {
   socket: net.Socket;
   buffer: string;
-}
+};
 
 /**
  * Connect to SMTP server and wait for banner
@@ -230,7 +230,7 @@ function sendEhlo(session: SmtpSession, timeout: number): Promise<string[]> {
       buffer += data.toString();
       // Multi-line response ends with 250 (space) or single line 250
       const lines = buffer.split("\r\n").filter(Boolean);
-      const lastLine = lines[lines.length - 1];
+      const lastLine = lines.at(-1);
 
       if (lastLine && /^250[ ]/.test(lastLine) && !resolved) {
         resolved = true;
@@ -258,7 +258,7 @@ function sendEhlo(session: SmtpSession, timeout: number): Promise<string[]> {
   });
 }
 
-interface TlsUpgradeResult {
+type TlsUpgradeResult = {
   success: boolean;
   socket?: tls.TLSSocket;
   tlsVersion?: string;
@@ -266,7 +266,7 @@ interface TlsUpgradeResult {
   certificate?: tls.PeerCertificate;
   authorized?: boolean;
   error?: string;
-}
+};
 
 /**
  * Upgrade connection to TLS via STARTTLS
@@ -357,10 +357,16 @@ function upgradeToTls(
  * Format X.509 name object to string
  */
 function formatX509Name(name: tls.PeerCertificate["issuer"]): string {
-  if (!name) return "";
+  if (!name) {
+    return "";
+  }
   const parts: string[] = [];
-  if (name.O) parts.push(name.O);
-  if (name.CN) parts.push(name.CN);
+  if (name.O) {
+    parts.push(name.O);
+  }
+  if (name.CN) {
+    parts.push(name.CN);
+  }
   return parts.join(" - ") || JSON.stringify(name);
 }
 
@@ -368,7 +374,9 @@ function formatX509Name(name: tls.PeerCertificate["issuer"]): string {
  * Parse Subject Alternative Names
  */
 function parseAltNames(subjectaltname?: string): string[] {
-  if (!subjectaltname) return [];
+  if (!subjectaltname) {
+    return [];
+  }
   return subjectaltname
     .split(", ")
     .filter((san) => san.startsWith("DNS:"))
@@ -379,7 +387,9 @@ function parseAltNames(subjectaltname?: string): string[] {
  * Check if certificate is self-signed
  */
 function isSelfSigned(cert: tls.PeerCertificate): boolean {
-  if (!(cert.issuer && cert.subject)) return false;
+  if (!(cert.issuer && cert.subject)) {
+    return false;
+  }
   return cert.issuer.CN === cert.subject.CN && cert.issuer.O === cert.subject.O;
 }
 

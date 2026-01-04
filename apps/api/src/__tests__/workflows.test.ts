@@ -58,10 +58,12 @@ vi.mock("@wraps/db", () => ({
             // Return based on what's in our mock data
             const workflows = Object.values(mockWorkflows);
             const contacts = Object.values(mockContacts);
-            if (workflows.length > 0)
+            if (workflows.length > 0) {
               return Promise.resolve(workflows.slice(0, n));
-            if (contacts.length > 0)
+            }
+            if (contacts.length > 0) {
               return Promise.resolve(contacts.slice(0, n));
+            }
             return Promise.resolve([]);
           }),
         })),

@@ -211,25 +211,33 @@ export type GetSampleContactsResult =
 
 // Helper to calculate progress percentage
 export function calculateProgress(batch: BatchSendWithMeta): number {
-  if (batch.totalRecipients === 0) return 0;
+  if (batch.totalRecipients === 0) {
+    return 0;
+  }
   return Math.round((batch.processedRecipients / batch.totalRecipients) * 100);
 }
 
 // Helper to calculate delivery rate
 export function calculateDeliveryRate(batch: BatchSendWithMeta): number {
-  if (batch.sent === 0) return 0;
+  if (batch.sent === 0) {
+    return 0;
+  }
   return Math.round((batch.delivered / batch.sent) * 100);
 }
 
 // Helper to calculate open rate (email only)
 export function calculateOpenRate(batch: BatchSendWithMeta): number {
-  if (batch.delivered === 0) return 0;
+  if (batch.delivered === 0) {
+    return 0;
+  }
   return Math.round((batch.opened / batch.delivered) * 100);
 }
 
 // Helper to calculate click rate
 export function calculateClickRate(batch: BatchSendWithMeta): number {
-  if (batch.delivered === 0) return 0;
+  if (batch.delivered === 0) {
+    return 0;
+  }
   return Math.round((batch.clicked / batch.delivered) * 100);
 }
 
@@ -238,12 +246,20 @@ export function formatDuration(
   startedAt: Date | null,
   completedAt: Date | null
 ): string {
-  if (!startedAt) return "-";
+  if (!startedAt) {
+    return "-";
+  }
   const end = completedAt ?? new Date();
   const durationMs = end.getTime() - startedAt.getTime();
 
-  if (durationMs < 1000) return "<1s";
-  if (durationMs < 60_000) return `${Math.round(durationMs / 1000)}s`;
-  if (durationMs < 3_600_000) return `${Math.round(durationMs / 60_000)}m`;
+  if (durationMs < 1000) {
+    return "<1s";
+  }
+  if (durationMs < 60_000) {
+    return `${Math.round(durationMs / 1000)}s`;
+  }
+  if (durationMs < 3_600_000) {
+    return `${Math.round(durationMs / 60_000)}m`;
+  }
   return `${Math.round(durationMs / 3_600_000)}h`;
 }

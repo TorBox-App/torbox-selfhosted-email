@@ -241,7 +241,9 @@ async function processJob(job: BatchJob): Promise<void> {
             key: string,
             value: string | null | undefined
           ) => {
-            if (value) replacementData[key] = value;
+            if (value) {
+              replacementData[key] = value;
+            }
           };
 
           // Always include email (required)
@@ -349,7 +351,7 @@ async function processJob(job: BatchJob): Promise<void> {
         );
 
         // Collect all send records for batch insert
-        const sendRecords: Array<typeof messageSend.$inferInsert> = [];
+        const sendRecords: (typeof messageSend.$inferInsert)[] = [];
         for (let j = 0; j < recipientBatch.length; j++) {
           const recipient = recipientBatch[j];
           const bulkResult = result.BulkEmailEntryResults?.[j];
@@ -461,7 +463,7 @@ async function processJob(job: BatchJob): Promise<void> {
         recipientBatch.map(async (recipient) => {
           // Generate unsubscribe URLs for marketing emails
           let unsubscribeUrl: string | undefined;
-          let preferencesUrl: string | undefined;
+          let _preferencesUrl: string | undefined;
 
           if (isMarketing) {
             const unsubscribeToken = await generateUnsubscribeToken(
@@ -469,7 +471,7 @@ async function processJob(job: BatchJob): Promise<void> {
               organizationId
             );
             unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
-            preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+            _preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
           }
 
           // Build headers for marketing emails (RFC 8058)
@@ -519,7 +521,7 @@ async function processJob(job: BatchJob): Promise<void> {
       );
 
       // Collect send records for batch insert
-      const sendRecords: Array<typeof messageSend.$inferInsert> = [];
+      const sendRecords: (typeof messageSend.$inferInsert)[] = [];
       for (let j = 0; j < results.length; j++) {
         const result = results[j];
         const recipient = recipientBatch[j];

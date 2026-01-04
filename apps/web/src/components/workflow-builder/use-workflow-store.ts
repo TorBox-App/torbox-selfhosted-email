@@ -48,7 +48,7 @@ export type WorkflowEdge = Edge<{ label?: string }>;
 // STORE
 // ═══════════════════════════════════════════════════════════════════════════
 
-interface WorkflowStoreState {
+type WorkflowStoreState = {
   // Workflow metadata
   workflow: Workflow | null;
   isDirty: boolean;
@@ -118,7 +118,7 @@ interface WorkflowStoreState {
     steps: WorkflowStep[],
     transitions: WorkflowTransition[]
   ) => void;
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -402,7 +402,9 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
 
   updateWorkflowSettings: (settings) => {
     set((state) => {
-      if (!state.workflow) return state;
+      if (!state.workflow) {
+        return state;
+      }
 
       return {
         workflow: {
@@ -482,7 +484,9 @@ export const useValidationResult = () =>
 
 export const useNodeValidation = (nodeId: string) => {
   const validationResult = useWorkflowStore((state) => state.validationResult);
-  if (!validationResult) return { isValid: true, errorMessage: undefined };
+  if (!validationResult) {
+    return { isValid: true, errorMessage: undefined };
+  }
 
   const errors = validationResult.errorsByNodeId.get(nodeId) || [];
   const hasError = errors.some((e) => e.severity === "error");

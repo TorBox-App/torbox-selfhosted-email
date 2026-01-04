@@ -55,8 +55,12 @@ export function NavMain({
 
   // Check if a sub-item is active, preferring the most specific match
   const isSubItemActive = (url: string, siblings: { url: string }[]) => {
-    if (pathname === url) return true;
-    if (!pathname.startsWith(`${url}/`)) return false;
+    if (pathname === url) {
+      return true;
+    }
+    if (!pathname.startsWith(`${url}/`)) {
+      return false;
+    }
     // Only match prefix if no sibling has a more specific match
     const hasMoreSpecificMatch = siblings.some(
       (sibling) =>
@@ -73,7 +77,7 @@ export function NavMain({
         {items.map((item) =>
           isCollapsed ? (
             // Collapsed: show hover card with sub-items
-            <HoverCard key={item.title} openDelay={0} closeDelay={100}>
+            <HoverCard closeDelay={100} key={item.title} openDelay={0}>
               <HoverCardTrigger asChild>
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -86,24 +90,24 @@ export function NavMain({
                 </SidebarMenuItem>
               </HoverCardTrigger>
               <HoverCardContent
-                side="right"
                 align="start"
-                sideOffset={8}
                 className="w-48 p-2"
+                side="right"
+                sideOffset={8}
               >
                 <div className="flex flex-col gap-1">
-                  <div className="px-2 py-1.5 text-sm font-medium">
+                  <div className="px-2 py-1.5 font-medium text-sm">
                     {item.title}
                   </div>
                   {item.items.map((subItem) => (
                     <Link
-                      key={subItem.title}
-                      href={subItem.url}
                       className={`rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
                         isSubItemActive(subItem.url, item.items)
                           ? "bg-accent font-medium text-accent-foreground"
                           : "text-muted-foreground"
                       }`}
+                      href={subItem.url}
+                      key={subItem.title}
                     >
                       {subItem.title}
                     </Link>
@@ -114,10 +118,10 @@ export function NavMain({
           ) : (
             // Expanded: show collapsible with sub-items
             <Collapsible
-              key={item.title}
               asChild
-              defaultOpen={isGroupActive(item)}
               className="group/collapsible"
+              defaultOpen={isGroupActive(item)}
+              key={item.title}
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>

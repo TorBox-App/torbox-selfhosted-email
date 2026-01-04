@@ -291,7 +291,9 @@ export function ContactsTable({
     properties?: Record<string, unknown>;
     topicIds?: string[];
   }) => {
-    if (!selectedContact) return;
+    if (!selectedContact) {
+      return;
+    }
 
     startTransition(async () => {
       // Update contact fields (email, phone, status, properties)
@@ -369,7 +371,9 @@ export function ContactsTable({
   };
 
   const handleDeleteContact = async () => {
-    if (!selectedContact) return;
+    if (!selectedContact) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await deleteContact(selectedContact.id, organizationId);
@@ -390,7 +394,9 @@ export function ContactsTable({
 
   // Bulk action handlers
   const handleBulkSubscribe = async () => {
-    if (selectedContactIds.length === 0 || !selectedTopicId) return;
+    if (selectedContactIds.length === 0 || !selectedTopicId) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await bulkSubscribeContactsToTopics(
@@ -413,7 +419,9 @@ export function ContactsTable({
   };
 
   const handleBulkUnsubscribe = async () => {
-    if (selectedContactIds.length === 0 || !selectedTopicId) return;
+    if (selectedContactIds.length === 0 || !selectedTopicId) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await bulkUnsubscribeContactsFromTopics(
@@ -436,7 +444,9 @@ export function ContactsTable({
   };
 
   const handleBulkDelete = async () => {
-    if (selectedContactIds.length === 0) return;
+    if (selectedContactIds.length === 0) {
+      return;
+    }
 
     startTransition(async () => {
       const result = await bulkDeleteContacts(
@@ -714,7 +724,9 @@ export function ContactsTable({
         mode="edit"
         onOpenChange={(open) => {
           setEditDialogOpen(open);
-          if (!open) setSelectedContact(null);
+          if (!open) {
+            setSelectedContact(null);
+          }
         }}
         onSubmit={handleUpdateContact}
         open={editDialogOpen}
@@ -774,7 +786,9 @@ export function ContactsTable({
       <Dialog
         onOpenChange={(open) => {
           setBulkSubscribeDialogOpen(open);
-          if (!open) setSelectedTopicId("");
+          if (!open) {
+            setSelectedTopicId("");
+          }
         }}
         open={bulkSubscribeDialogOpen}
       >
@@ -825,7 +839,9 @@ export function ContactsTable({
       <Dialog
         onOpenChange={(open) => {
           setBulkUnsubscribeDialogOpen(open);
-          if (!open) setSelectedTopicId("");
+          if (!open) {
+            setSelectedTopicId("");
+          }
         }}
         open={bulkUnsubscribeDialogOpen}
       >

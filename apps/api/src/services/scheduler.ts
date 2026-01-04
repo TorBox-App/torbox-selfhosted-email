@@ -18,13 +18,13 @@ const TARGET_QUEUE_ARN = process.env.BATCH_QUEUE_ARN;
 const SCHEDULER_ROLE_ARN = process.env.SCHEDULER_ROLE_ARN;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
-export interface ScheduleBroadcastParams {
+export type ScheduleBroadcastParams = {
   batchId: string;
   organizationId: string;
   awsAccountId: string;
   scheduledFor: Date;
   channel: "email" | "sms";
-}
+};
 
 /**
  * Create a one-time EventBridge schedule for a broadcast

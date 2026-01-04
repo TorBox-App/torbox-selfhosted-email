@@ -127,7 +127,7 @@ async function checkMxRecord(mx: {
         // PTR lookup failed, that's ok
       }
     }
-  } catch (error: any) {
+  } catch (_error: any) {
     // DNS resolution failed
   }
 

@@ -116,7 +116,9 @@ export const VariableInput = forwardRef<HTMLInputElement, VariableInputProps>(
     // Handle variable selection
     const handleSelectVariable = useCallback(
       (variable: VariableItem) => {
-        if (triggerPosition === null) return;
+        if (triggerPosition === null) {
+          return;
+        }
 
         // Replace from trigger position to current cursor with the variable
         const before = value.slice(0, triggerPosition);

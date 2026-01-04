@@ -33,7 +33,7 @@ vi.mock("../workflow-queue", () => ({
 
 // Mock segment evaluator
 vi.mock("../segment-evaluator", () => ({
-  contactMatchesSegment: vi.fn().mockImplementation((contactId, segmentId) => {
+  contactMatchesSegment: vi.fn().mockImplementation((_contactId, segmentId) => {
     // Default: contact matches segment if segmentId ends with "-match"
     return Promise.resolve(segmentId.endsWith("-match"));
   }),
@@ -56,7 +56,7 @@ const mockSegments: Array<{
 vi.mock("@wraps/db", () => ({
   db: {
     select: vi.fn().mockImplementation(() => ({
-      from: vi.fn().mockImplementation((table) => ({
+      from: vi.fn().mockImplementation((_table) => ({
         where: vi.fn().mockImplementation(() => {
           // Return workflows or segments based on context
           if (mockWorkflows.length > 0) {

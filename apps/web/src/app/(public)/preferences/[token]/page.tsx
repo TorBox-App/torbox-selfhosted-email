@@ -13,11 +13,11 @@ import { notFound } from "next/navigation";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
 import { PreferencesForm } from "./preferences-form";
 
-interface PreferencesPageProps {
+type PreferencesPageProps = {
   params: Promise<{
     token: string;
   }>;
-}
+};
 
 export async function generateMetadata({
   params,
@@ -242,9 +242,13 @@ export default async function PreferencesPage({
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
-  if (!(local && domain)) return email;
-  if (local.length <= 2) return `${local[0]}***@${domain}`;
-  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+  if (!(local && domain)) {
+    return email;
+  }
+  if (local.length <= 2) {
+    return `${local[0]}***@${domain}`;
+  }
+  return `${local[0]}***${local.at(-1)}@${domain}`;
 }
 
 /**

@@ -4,7 +4,6 @@ import type { BrandKit } from "@wraps/db";
 import { formatDistanceToNow } from "date-fns";
 import {
   Check,
-  Loader2,
   MoreHorizontal,
   Palette,
   Plus,
@@ -53,7 +52,9 @@ export default function BrandKitsPage() {
         : `Delete "${kit.name}"?`
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
       await deleteBrandKit.mutateAsync(kit.id);
@@ -138,8 +139,8 @@ export default function BrandKitsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {brandKits.map((kit) => (
             <Card
-              key={kit.id}
               className="group relative cursor-pointer transition-shadow hover:shadow-md"
+              key={kit.id}
               onClick={() =>
                 router.push(`/${orgSlug}/emails/brand-kits/${kit.id}`)
               }
@@ -151,8 +152,8 @@ export default function BrandKitsPage() {
                       {kit.name}
                       {kit.isDefault && (
                         <Badge
-                          variant="secondary"
                           className="gap-1 bg-primary/10 text-primary"
+                          variant="secondary"
                         >
                           <Star className="h-3 w-3" />
                           Default
@@ -166,10 +167,10 @@ export default function BrandKitsPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
-                        variant="ghost"
-                        size="icon"
                         className="h-8 w-8 opacity-0 group-hover:opacity-100"
                         onClick={(e) => e.stopPropagation()}
+                        size="icon"
+                        variant="ghost"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
@@ -178,7 +179,9 @@ export default function BrandKitsPage() {
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/${orgSlug}/emails/brand-kits/${kit.id}`);
+                          router.push(
+                            `/${orgSlug}/emails/brand-kits/${kit.id}`
+                          );
                         }}
                       >
                         Edit
@@ -238,9 +241,9 @@ export default function BrandKitsPage() {
                 {kit.logoUrl && (
                   <div className="mb-3 flex h-12 items-center justify-center rounded border bg-muted/30 p-2">
                     <img
-                      src={kit.logoUrl}
                       alt={`${kit.name} logo`}
                       className="max-h-full max-w-full object-contain"
+                      src={kit.logoUrl}
                     />
                   </div>
                 )}

@@ -64,10 +64,14 @@ export function EmailPreviewCarousel({
 
   // Build test data from contact and variable mappings
   const testData = useMemo(() => {
-    if (contacts.length === 0) return {};
+    if (contacts.length === 0) {
+      return {};
+    }
 
     const contact = contacts[currentIndex];
-    if (!contact) return {};
+    if (!contact) {
+      return {};
+    }
 
     const data: Record<string, string> = {
       // Default contact fields
@@ -107,7 +111,9 @@ export function EmailPreviewCarousel({
 
   // Render HTML when template or test data changes
   useEffect(() => {
-    if (!templateContent) return;
+    if (!templateContent) {
+      return;
+    }
 
     let cancelled = false;
 

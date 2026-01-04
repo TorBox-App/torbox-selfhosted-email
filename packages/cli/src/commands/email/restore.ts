@@ -117,7 +117,7 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
           async () => {
             const stack = await pulumi.automation.LocalWorkspace.selectStack(
               {
-                stackName: metadata.services.email!.pulumiStackName!,
+                stackName: metadata.services.email?.pulumiStackName!,
                 projectName: "wraps-email",
                 program: async () => {}, // Empty program for destroy
               },

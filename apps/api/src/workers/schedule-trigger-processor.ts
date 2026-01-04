@@ -62,10 +62,18 @@ export const handler: ScheduledHandler = async () => {
     }
 
     try {
-      // Parse the cron expression
-      const cron = new Cron(config.schedule, {
-        timezone: config.timezone || "UTC",
-      });
+      // Parse the cron expression (validates syntax)
+      let cron: Cron;
+      try {
+        cron = new Cron(config.schedule, {
+          timezone: config.timezone || "UTC",
+        });
+      } catch (cronError) {
+        console.error(
+          `[schedule-trigger] Invalid cron expression "${config.schedule}" for workflow ${wf.id}: ${cronError instanceof Error ? cronError.message : String(cronError)}`
+        );
+        continue;
+      }
 
       // Check if this cron should have triggered in the last minute
       // We check the previous run time to see if it falls within our window

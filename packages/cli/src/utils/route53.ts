@@ -159,7 +159,9 @@ function findExistingRecord(
  * Extract the value(s) from a record set as a string
  */
 function getRecordValue(record: ResourceRecordSet | null): string | null {
-  if (!record?.ResourceRecords?.length) return null;
+  if (!record?.ResourceRecords?.length) {
+    return null;
+  }
   return record.ResourceRecords.map((r) => r.Value || "").join(", ");
 }
 

@@ -65,14 +65,20 @@ function formatDuration(
   startedAt: Date | null,
   completedAt: Date | null
 ): string {
-  if (!startedAt) return "-";
+  if (!startedAt) {
+    return "-";
+  }
   const end = completedAt ?? new Date();
   const diffMs = end.getTime() - new Date(startedAt).getTime();
   const diffSec = Math.floor(diffMs / 1000);
 
-  if (diffSec < 60) return `${diffSec}s`;
+  if (diffSec < 60) {
+    return `${diffSec}s`;
+  }
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ${diffSec % 60}s`;
+  if (diffMin < 60) {
+    return `${diffMin}m ${diffSec % 60}s`;
+  }
   const diffHour = Math.floor(diffMin / 60);
   return `${diffHour}h ${diffMin % 60}m`;
 }
@@ -125,7 +131,9 @@ export function BatchStats({
 
   // Auto-refresh when batch is processing
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh) {
+      return;
+    }
 
     // Refresh every 5 seconds while processing
     const interval = setInterval(() => {

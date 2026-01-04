@@ -69,9 +69,11 @@ export function TopicSubscribersSheet({
   // Reset page when topic changes
   useEffect(() => {
     setPage(1);
-  }, [topic?.id]);
+  }, []);
 
-  if (!topic) return null;
+  if (!topic) {
+    return null;
+  }
 
   const totalPages = Math.ceil(total / pageSize) || 1;
 

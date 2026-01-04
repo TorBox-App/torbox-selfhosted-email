@@ -143,7 +143,9 @@ function transformMark(
   mark: { type: string; attrs?: Record<string, unknown> },
   brandKit: BrandKitValues
 ): { type: string; attrs?: Record<string, unknown> } {
-  if (!mark.attrs) return mark;
+  if (!mark.attrs) {
+    return mark;
+  }
 
   const result = { ...mark, attrs: { ...mark.attrs } };
 
@@ -258,6 +260,8 @@ export function brandKitToValues(
     socialLinks?: Array<{ platform: string; url: string }> | null;
   } | null
 ): BrandKitValues | null {
-  if (!brandKit) return null;
+  if (!brandKit) {
+    return null;
+  }
   return brandKit;
 }

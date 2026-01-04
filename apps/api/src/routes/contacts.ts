@@ -37,7 +37,7 @@ import {
 } from "../services/workflow-events";
 
 // Schemas
-const contactSchema = t.Object({
+const _contactSchema = t.Object({
   id: t.String(),
   email: t.Nullable(t.String()),
   phone: t.Nullable(t.String()),
@@ -131,7 +131,9 @@ async function resolveTopicSlugs(
   slugs: string[],
   organizationId: string
 ): Promise<string[]> {
-  if (slugs.length === 0) return [];
+  if (slugs.length === 0) {
+    return [];
+  }
 
   const topics = await db
     .select({ id: topic.id, slug: topic.slug })

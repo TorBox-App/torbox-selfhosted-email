@@ -10,23 +10,23 @@ import { WorkflowDataProvider } from "./workflow-data-context";
 import { WorkflowPropertiesPanel } from "./workflow-properties-panel";
 import { WorkflowToolbar } from "./workflow-toolbar";
 
-interface Topic {
+type Topic = {
   id: string;
   name: string;
-}
+};
 
-interface Segment {
+type Segment = {
   id: string;
   name: string;
-}
+};
 
-interface AwsAccount {
+type AwsAccount = {
   id: string;
   name: string;
   region: string;
-}
+};
 
-interface WorkflowBuilderProps {
+type WorkflowBuilderProps = {
   workflow: Workflow;
   organizationId: string;
   orgSlug: string;
@@ -34,7 +34,7 @@ interface WorkflowBuilderProps {
   segments: Segment[];
   awsAccounts: AwsAccount[];
   userRole: string;
-}
+};
 
 export function WorkflowBuilder({
   workflow,

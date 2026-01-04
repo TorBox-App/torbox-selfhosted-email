@@ -35,18 +35,26 @@ export function toUnicodeDomain(domain: string): string {
  * Validate domain format
  */
 export function isValidDomain(domain: string): boolean {
-  if (!domain || domain.length > 253) return false;
+  if (!domain || domain.length > 253) {
+    return false;
+  }
 
   // Convert to ASCII for validation
   const asciiDomain = toAsciiDomain(domain);
 
   // Check each label
   const labels = asciiDomain.split(".");
-  if (labels.length < 2) return false;
+  if (labels.length < 2) {
+    return false;
+  }
 
   for (const label of labels) {
-    if (!label || label.length > 63) return false;
-    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(label)) return false;
+    if (!label || label.length > 63) {
+      return false;
+    }
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(label)) {
+      return false;
+    }
   }
 
   return true;
@@ -144,7 +152,9 @@ export function isIpAddress(str: string): boolean {
  */
 export function isIpv4(str: string): boolean {
   const parts = str.split(".");
-  if (parts.length !== 4) return false;
+  if (parts.length !== 4) {
+    return false;
+  }
 
   return parts.every((part) => {
     const num = Number.parseInt(part, 10);

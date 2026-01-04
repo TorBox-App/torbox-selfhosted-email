@@ -8,12 +8,12 @@
 import * as jose from "jose";
 
 // Token payload structure
-export interface UnsubscribeTokenPayload {
+export type UnsubscribeTokenPayload = {
   cid: string; // contact ID
   oid: string; // organization ID
   tid?: string; // optional: specific topic ID
   type: "unsub"; // token type marker
-}
+};
 
 // Get the secret from environment
 function getSecret(): Uint8Array {

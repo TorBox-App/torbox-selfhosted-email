@@ -17,19 +17,19 @@ import {
   type PlanId,
 } from "../plans";
 
-export interface LimitCheckResult {
+export type LimitCheckResult = {
   allowed: boolean;
   current: number;
   limit: number;
   message?: string;
   requiredPlan?: PlanId;
-}
+};
 
-export interface FeatureCheckResult {
+export type FeatureCheckResult = {
   allowed: boolean;
   requiredPlan: PlanId | null;
   message?: string;
-}
+};
 
 /**
  * Get the current plan for an organization

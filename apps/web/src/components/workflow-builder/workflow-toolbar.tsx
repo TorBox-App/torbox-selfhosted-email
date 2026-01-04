@@ -33,11 +33,11 @@ import {
   useWorkflowStore,
 } from "./use-workflow-store";
 
-interface WorkflowToolbarProps {
+type WorkflowToolbarProps = {
   workflow: Workflow;
   orgSlug: string;
   organizationId: string;
-}
+};
 
 export function WorkflowToolbar({
   workflow,
@@ -61,8 +61,8 @@ export function WorkflowToolbar({
   const updateWorkflowSettings = useWorkflowStore(
     (state) => state.updateWorkflowSettings
   );
-  const nodes = useWorkflowStore((state) => state.nodes);
-  const edges = useWorkflowStore((state) => state.edges);
+  const _nodes = useWorkflowStore((state) => state.nodes);
+  const _edges = useWorkflowStore((state) => state.edges);
 
   // Editable name state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -72,7 +72,7 @@ export function WorkflowToolbar({
   // Run validation on mount and when nodes/edges change
   useEffect(() => {
     runValidation();
-  }, [nodes, edges, runValidation]);
+  }, [runValidation]);
 
   // Focus input when editing starts
   useEffect(() => {

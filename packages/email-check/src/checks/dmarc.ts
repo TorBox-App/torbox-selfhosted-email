@@ -190,7 +190,7 @@ function parseDmarcRecord(record: string, result: DmarcResult): void {
   for (const addr of [...result.ruaAddresses, ...result.rufAddresses]) {
     const match = addr.match(/^mailto:([^@]+)@(.+)$/i);
     if (match) {
-      const domain = result.record?.includes("_dmarc.")
+      const _domain = result.record?.includes("_dmarc.")
         ? result.record.split("_dmarc.")[1]?.split(" ")[0]
         : null;
       // Note: Full external validation would require checking DNS
@@ -216,7 +216,9 @@ function parseDmarcTags(record: string): Map<string, string> {
 
   for (const part of parts) {
     const eqIndex = part.indexOf("=");
-    if (eqIndex === -1) continue;
+    if (eqIndex === -1) {
+      continue;
+    }
 
     const key = part.slice(0, eqIndex).trim().toLowerCase();
     const value = part.slice(eqIndex + 1).trim();

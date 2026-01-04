@@ -141,14 +141,18 @@ function MotionHighlight<T extends string>({
   const safeSetActiveValue = React.useCallback(
     (id: T | null) => {
       setActiveValue((prev) => (prev === id ? prev : id));
-      if (id !== activeValue) onValueChange?.(id as T);
+      if (id !== activeValue) {
+        onValueChange?.(id as T);
+      }
     },
     [activeValue, onValueChange]
   );
 
   const safeSetBounds = React.useCallback(
     (bounds: DOMRect) => {
-      if (!localRef.current) return;
+      if (!localRef.current) {
+        return;
+      }
 
       const boundsOffset = (props as ParentModeMotionHighlightProps)
         ?.boundsOffset ?? {
@@ -187,23 +191,34 @@ function MotionHighlight<T extends string>({
   }, []);
 
   React.useEffect(() => {
-    if (value !== undefined) setActiveValue(value);
-    else if (defaultValue !== undefined) setActiveValue(defaultValue);
+    if (value !== undefined) {
+      setActiveValue(value);
+    } else if (defaultValue !== undefined) {
+      setActiveValue(defaultValue);
+    }
   }, [value, defaultValue]);
 
   const id = React.useId();
 
   React.useEffect(() => {
-    if (mode !== "parent") return;
+    if (mode !== "parent") {
+      return;
+    }
     const container = localRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     const onScroll = () => {
-      if (!activeValue) return;
+      if (!activeValue) {
+        return;
+      }
       const activeEl = container.querySelector<HTMLElement>(
         `[data-value="${activeValue}"][data-highlight="true"]`
       );
-      if (activeEl) safeSetBounds(activeEl.getBoundingClientRect());
+      if (activeEl) {
+        safeSetBounds(activeEl.getBoundingClientRect());
+      }
     };
 
     container.addEventListener("scroll", onScroll, { passive: true });
@@ -403,7 +418,9 @@ function MotionHighlightItem({
   );
 
   React.useEffect(() => {
-    if (mode !== "parent") return;
+    if (mode !== "parent") {
+      return;
+    }
     let rafId: number;
     let previousBounds: Bounds | null = null;
     const shouldUpdateBounds =
@@ -411,7 +428,9 @@ function MotionHighlightItem({
       (contextForceUpdateBounds && forceUpdateBounds !== false);
 
     const updateBounds = () => {
-      if (!localRef.current) return;
+      if (!localRef.current) {
+        return;
+      }
 
       const bounds = localRef.current.getBoundingClientRect();
 
@@ -436,9 +455,13 @@ function MotionHighlightItem({
     if (isActive) {
       updateBounds();
       setActiveClassName(activeClassName ?? "");
-    } else if (!activeValue) clearBounds();
+    } else if (!activeValue) {
+      clearBounds();
+    }
 
-    if (shouldUpdateBounds) return () => cancelAnimationFrame(rafId);
+    if (shouldUpdateBounds) {
+      return () => cancelAnimationFrame(rafId);
+    }
   }, [
     mode,
     isActive,
@@ -451,7 +474,9 @@ function MotionHighlightItem({
     contextForceUpdateBounds,
   ]);
 
-  if (!React.isValidElement(children)) return children;
+  if (!React.isValidElement(children)) {
+    return children;
+  }
 
   const dataAttributes = {
     "data-active": isActive ? "true" : "false",

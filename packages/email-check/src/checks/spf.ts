@@ -7,12 +7,12 @@ import { SPF_LOOKUP_LIMIT } from "../constants.js";
 import { findSpfRecord } from "../dns/index.js";
 import type { SpfLookupNode, SpfResult } from "../types.js";
 
-interface SpfCheckContext {
+type SpfCheckContext = {
   visited: Set<string>;
   totalLookups: number;
   hasCircular: boolean;
   errors: string[];
-}
+};
 
 /**
  * Check SPF record for a domain
@@ -297,7 +297,9 @@ async function checkSpfInclude(
 
     for (const mech of mechanisms) {
       const parsed = parseMechanism(mech);
-      if (!parsed) continue;
+      if (!parsed) {
+        continue;
+      }
 
       switch (parsed.type) {
         case "include":
@@ -329,18 +331,20 @@ async function checkSpfInclude(
   return node;
 }
 
-interface ParsedMechanism {
+type ParsedMechanism = {
   qualifier: "+" | "-" | "~" | "?";
   type: string;
   domain?: string;
   prefix?: string;
-}
+};
 
 /**
  * Parse an SPF mechanism
  */
 function parseMechanism(mechanism: string): ParsedMechanism | null {
-  if (!mechanism) return null;
+  if (!mechanism) {
+    return null;
+  }
 
   // Extract qualifier
   let qualifier: ParsedMechanism["qualifier"] = "+";

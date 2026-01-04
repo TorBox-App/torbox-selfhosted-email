@@ -1022,7 +1022,9 @@ export async function getVerifiedDomains(
 
     // Filter to only Wraps-managed identities
     for (const detail of identityDetails) {
-      if (!(detail && detail.verified)) continue;
+      if (!detail?.verified) {
+        continue;
+      }
 
       // Check if using our configuration set
       if (detail.configSet?.startsWith("wraps-email-")) {

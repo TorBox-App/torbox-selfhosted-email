@@ -996,7 +996,9 @@ export async function deleteSMSPhonePoolWithSDK(region: string): Promise<void> {
     const existing = await client.send(new DescribePoolsCommand({}));
     if (existing.Pools) {
       for (const pool of existing.Pools) {
-        if (!(pool.PoolArn && pool.PoolId)) continue;
+        if (!(pool.PoolArn && pool.PoolId)) {
+          continue;
+        }
 
         // Get tags for this pool
         const tagsResponse = await client.send(
@@ -1077,7 +1079,9 @@ export async function createSMSProtectConfigurationWithSDK(
 
     // Check each protect config's tags to find ours
     for (const pc of existing.ProtectConfigurations || []) {
-      if (!(pc.ProtectConfigurationArn && pc.ProtectConfigurationId)) continue;
+      if (!(pc.ProtectConfigurationArn && pc.ProtectConfigurationId)) {
+        continue;
+      }
 
       const tagsResponse = await client.send(
         new ListTagsForResourceCommand({
@@ -1211,8 +1215,9 @@ export async function deleteSMSProtectConfigurationWithSDK(
 
     if (existing.ProtectConfigurations) {
       for (const pc of existing.ProtectConfigurations) {
-        if (!(pc.ProtectConfigurationArn && pc.ProtectConfigurationId))
+        if (!(pc.ProtectConfigurationArn && pc.ProtectConfigurationId)) {
           continue;
+        }
 
         // Check tags to see if managed by wraps-cli
         const tagsResponse = await client.send(

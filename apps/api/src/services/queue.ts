@@ -9,13 +9,13 @@ import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 const sqsClient = new SQSClient({});
 const QUEUE_URL = process.env.BATCH_QUEUE_URL;
 
-export interface BatchJob {
+export type BatchJob = {
   batchId: string;
   organizationId: string;
   awsAccountId: string;
   channel: string;
   chunkIndex: number;
-}
+};
 
 export async function enqueueJob(job: BatchJob): Promise<void> {
   if (!QUEUE_URL) {

@@ -121,7 +121,9 @@ function formatPhoneNumber(phone: string): string {
 }
 
 function formatCurrency(amount?: number): string {
-  if (amount === undefined || amount === null) return "-";
+  if (amount === undefined || amount === null) {
+    return "-";
+  }
   return `$${amount.toFixed(4)}`;
 }
 

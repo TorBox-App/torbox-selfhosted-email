@@ -3,7 +3,7 @@
 import { Handle, Position } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 
-interface BaseNodeProps {
+type BaseNodeProps = {
   icon: React.ReactNode;
   label: string;
   description?: string;
@@ -14,7 +14,7 @@ interface BaseNodeProps {
   isValid?: boolean;
   errorMessage?: string;
   selected?: boolean;
-}
+};
 
 export function BaseNode({
   icon,
@@ -59,7 +59,9 @@ export function BaseNode({
             {label}
           </div>
           {description && (
-            <div className="truncate text-muted-foreground text-xs">{description}</div>
+            <div className="truncate text-muted-foreground text-xs">
+              {description}
+            </div>
           )}
         </div>
       </div>

@@ -306,7 +306,9 @@ export function BatchTable({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => router.push(`/${orgSlug}/emails/broadcasts/${batch.id}`)}
+                  onClick={() =>
+                    router.push(`/${orgSlug}/emails/broadcasts/${batch.id}`)
+                  }
                 >
                   View details
                 </DropdownMenuItem>
@@ -328,7 +330,7 @@ export function BatchTable({
         },
       },
     ],
-    [canManage, isPending, orgSlug, router]
+    [canManage, isPending, orgSlug, router, handleCancel]
   );
 
   const table = useReactTable({
@@ -403,7 +405,9 @@ export function BatchTable({
                   className="cursor-pointer hover:bg-muted/50"
                   key={row.id}
                   onClick={() =>
-                    router.push(`/${orgSlug}/emails/broadcasts/${row.original.id}`)
+                    router.push(
+                      `/${orgSlug}/emails/broadcasts/${row.original.id}`
+                    )
                   }
                 >
                   {row.getVisibleCells().map((cell) => (
