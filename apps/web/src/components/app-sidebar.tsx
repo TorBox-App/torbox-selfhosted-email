@@ -14,6 +14,7 @@ import {
   Tag,
   UserSquare2,
   Users,
+  Workflow,
 } from "lucide-react";
 import Link from "next/link";
 import type * as React from "react";
@@ -141,6 +142,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     : null;
 
+  // Automations navigation
+  const automationsNavGroup = orgSlug
+    ? {
+        label: "Automations",
+        items: [
+          {
+            title: "Workflows",
+            url: `/${orgSlug}/automations`,
+            icon: Workflow,
+          },
+        ],
+      }
+    : null;
+
   // Settings navigation
   const settingsNavGroup = orgSlug
     ? {
@@ -179,6 +194,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     audienceNavGroup,
     emailNavGroup,
     smsNavGroup,
+    automationsNavGroup,
     settingsNavGroup,
   ].filter((g): g is NonNullable<typeof g> => g !== null);
 

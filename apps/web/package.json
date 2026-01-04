@@ -99,6 +99,7 @@
     "@wraps/auth": "workspace:*",
     "@wraps/db": "workspace:*",
     "@wraps/email": "workspace:*",
+    "@xyflow/react": "12.10.0",
     "ai": "5.0.108",
     "better-auth": "catalog:",
     "cheerio": "1.1.2",
