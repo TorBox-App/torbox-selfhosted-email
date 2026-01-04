@@ -4,17 +4,21 @@ import { MailOpen } from "lucide-react";
 import { Handle, Position } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import type { WorkflowNodeData } from "../use-workflow-store";
+import { useNodeValidation } from "../use-workflow-store";
 
 type WaitForEmailEngagementNodeProps = {
+  id: string;
   data: WorkflowNodeData;
   selected?: boolean;
 };
 
 export function WaitForEmailEngagementNode({
+  id,
   data,
   selected,
 }: WaitForEmailEngagementNodeProps) {
   const config = data.config;
+  const { isValid, errorMessage } = useNodeValidation(id);
   let timeoutDisplay = "No timeout";
 
   if (config.type === "wait_for_email_engagement" && config.timeoutSeconds) {
@@ -49,7 +53,7 @@ export function WaitForEmailEngagementNode({
           "px-3 py-2",
           "transition-all duration-150",
           selected ? "border-primary ring-2 ring-primary/20" : "border-gray-200",
-          !data.isValid && "border-red-500 ring-2 ring-red-500/20"
+          !isValid && "border-red-500 ring-2 ring-red-500/20"
         )}
       >
         <div className="flex items-center gap-2">
@@ -114,9 +118,9 @@ export function WaitForEmailEngagementNode({
         </div>
       </div>
 
-      {data.errorMessage && (
+      {errorMessage && (
         <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-xs text-red-500 whitespace-nowrap">
-          {data.errorMessage}
+          {errorMessage}
         </div>
       )}
     </div>

@@ -1,14 +1,20 @@
 "use client";
 
 import type { Workflow } from "@wraps/db";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, Pause, Play, Save } from "lucide-react";
 import Link from "next/link";
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import { toast } from "sonner";
-import { updateWorkflow } from "@/actions/workflows";
+import { disableWorkflow, enableWorkflow, updateWorkflow } from "@/actions/workflows";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useIsDirty, useIsSaving, useWorkflowStore } from "./use-workflow-store";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useIsDirty, useIsSaving, useValidationResult, useWorkflowStore } from "./use-workflow-store";
 
 interface WorkflowToolbarProps {
   workflow: Workflow;
@@ -22,14 +28,29 @@ export function WorkflowToolbar({
   organizationId,
 }: WorkflowToolbarProps) {
   const [isPending, startTransition] = useTransition();
+  const [isEnabling, startEnableTransition] = useTransition();
   const isDirty = useIsDirty();
   const isSaving = useIsSaving();
+  const validationResult = useValidationResult();
   const getWorkflowDefinition = useWorkflowStore(
     (state) => state.getWorkflowDefinition
   );
   const setIsSaving = useWorkflowStore((state) => state.setIsSaving);
   const updateWorkflowAfterSave = useWorkflowStore((state) => state.updateWorkflowAfterSave);
+  const runValidation = useWorkflowStore((state) => state.runValidation);
   const workflowState = useWorkflowStore((state) => state.workflow);
+  const nodes = useWorkflowStore((state) => state.nodes);
+  const edges = useWorkflowStore((state) => state.edges);
+
+  // Run validation on mount and when nodes/edges change
+  useEffect(() => {
+    runValidation();
+  }, [nodes, edges, runValidation]);
+
+  const currentStatus = workflowState?.status ?? workflow.status;
+  const isEnabled = currentStatus === "enabled";
+  const errorCount = validationResult?.errors.filter((e) => e.severity === "error").length ?? 0;
+  const hasErrors = errorCount > 0;
 
   const handleSave = () => {
     startTransition(async () => {
@@ -68,6 +89,43 @@ export function WorkflowToolbar({
     });
   };
 
+  const handleEnable = () => {
+    // Run validation first
+    const result = runValidation();
+    if (!result.isValid) {
+      toast.error(`Cannot enable: ${errorCount} issue${errorCount > 1 ? "s" : ""} to fix`);
+      return;
+    }
+
+    // Must save before enabling
+    if (isDirty) {
+      toast.error("Please save your changes before enabling the workflow");
+      return;
+    }
+
+    startEnableTransition(async () => {
+      const result = await enableWorkflow(workflow.id, organizationId);
+      if (result.success) {
+        updateWorkflowAfterSave(result.workflow);
+        toast.success("Workflow enabled");
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  const handleDisable = () => {
+    startEnableTransition(async () => {
+      const result = await disableWorkflow(workflow.id, organizationId);
+      if (result.success) {
+        updateWorkflowAfterSave(result.workflow);
+        toast.success("Workflow paused");
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
   return (
     <div className="h-14 border-b bg-white flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
@@ -97,8 +155,39 @@ export function WorkflowToolbar({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        {/* Validation error indicator */}
+        {hasErrors && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{errorCount} issue{errorCount > 1 ? "s" : ""}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <ul className="text-xs space-y-1">
+                  {validationResult?.errors
+                    .filter((e) => e.severity === "error")
+                    .slice(0, 5)
+                    .map((error, i) => (
+                      <li key={i}>• {error.message}</li>
+                    ))}
+                  {errorCount > 5 && (
+                    <li className="text-muted-foreground">
+                      ...and {errorCount - 5} more
+                    </li>
+                  )}
+                </ul>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        {/* Save button */}
         <Button
+          variant="outline"
           onClick={handleSave}
           disabled={!isDirty || isPending || isSaving}
         >
@@ -114,6 +203,49 @@ export function WorkflowToolbar({
             </>
           )}
         </Button>
+
+        {/* Enable/Disable button */}
+        {isEnabled ? (
+          <Button
+            variant="outline"
+            onClick={handleDisable}
+            disabled={isEnabling}
+          >
+            {isEnabling ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Pause className="w-4 h-4 mr-2" />
+            )}
+            Pause
+          </Button>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    onClick={handleEnable}
+                    disabled={isEnabling || hasErrors || isDirty}
+                  >
+                    {isEnabling ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="w-4 h-4 mr-2" />
+                    )}
+                    Enable
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {(hasErrors || isDirty) && (
+                <TooltipContent side="bottom">
+                  {hasErrors
+                    ? `Fix ${errorCount} issue${errorCount > 1 ? "s" : ""} before enabling`
+                    : "Save changes before enabling"}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
     </div>
   );

@@ -3,16 +3,19 @@
 import { Zap } from "lucide-react";
 import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
+import { useNodeValidation } from "../use-workflow-store";
 import { useWorkflowData } from "../workflow-data-context";
 
 type TriggerNodeProps = {
+  id: string;
   data: WorkflowNodeData;
   selected?: boolean;
 };
 
-export function TriggerNode({ data, selected }: TriggerNodeProps) {
+export function TriggerNode({ id, data, selected }: TriggerNodeProps) {
   const config = data.config;
   const { topics, segments } = useWorkflowData();
+  const { isValid, errorMessage } = useNodeValidation(id);
   let description = "When triggered";
 
   if (config.type === "trigger") {
@@ -75,8 +78,8 @@ export function TriggerNode({ data, selected }: TriggerNodeProps) {
       accentColor="bg-yellow-500"
       hasInput={false}
       hasOutput={true}
-      isValid={data.isValid}
-      errorMessage={data.errorMessage}
+      isValid={isValid}
+      errorMessage={errorMessage}
       selected={selected}
     />
   );

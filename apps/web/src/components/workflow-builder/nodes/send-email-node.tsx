@@ -3,14 +3,17 @@
 import { Mail } from "lucide-react";
 import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
+import { useNodeValidation } from "../use-workflow-store";
 
 type SendEmailNodeProps = {
+  id: string;
   data: WorkflowNodeData;
   selected?: boolean;
 };
 
-export function SendEmailNode({ data, selected }: SendEmailNodeProps) {
+export function SendEmailNode({ id, data, selected }: SendEmailNodeProps) {
   const config = data.config;
+  const { isValid, errorMessage } = useNodeValidation(id);
   let description = "No template selected";
 
   if (config.type === "send_email" && config.templateId) {
@@ -25,8 +28,8 @@ export function SendEmailNode({ data, selected }: SendEmailNodeProps) {
       accentColor="bg-blue-500"
       hasInput={true}
       hasOutput={true}
-      isValid={data.isValid}
-      errorMessage={data.errorMessage}
+      isValid={isValid}
+      errorMessage={errorMessage}
       selected={selected}
     />
   );

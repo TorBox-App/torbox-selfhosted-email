@@ -16,6 +16,7 @@ import {
   reconnectEdge,
 } from "@xyflow/react";
 import { create } from "zustand";
+import { validateWorkflow, type ValidationError, type ValidationResult } from "@/lib/workflow-validation";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -49,6 +50,9 @@ interface WorkflowStoreState {
 
   // UI state
   selectedNodeId: string | null;
+
+  // Validation state
+  validationResult: ValidationResult | null;
 
   // Actions
   setWorkflow: (workflow: Workflow) => void;
@@ -92,6 +96,9 @@ interface WorkflowStoreState {
 
   // Update workflow after save without touching nodes/edges (avoids re-triggering dirty state)
   updateWorkflowAfterSave: (workflow: Workflow) => void;
+
+  // Validation
+  runValidation: () => ValidationResult;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -234,6 +241,7 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
+  validationResult: null,
 
   // Actions
   setWorkflow: (workflow) => {
@@ -406,6 +414,18 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
     // This prevents React Flow from firing change events that would set isDirty=true
     set({ workflow, isDirty: false });
   },
+
+  runValidation: () => {
+    const state = get();
+    const steps = nodesToSteps(state.nodes);
+    const transitions = edgesToTransitions(state.edges);
+    const result = validateWorkflow(steps, transitions);
+
+    // Only update validationResult, don't touch nodes to avoid infinite loops
+    // Node components should read their validation status from validationResult.errorsByNodeId
+    set({ validationResult: result });
+    return result;
+  },
 }));
 
 // Selector hooks for common state slices
@@ -419,3 +439,21 @@ export const useSelectedNode = () => {
 
 export const useIsDirty = () => useWorkflowStore((state) => state.isDirty);
 export const useIsSaving = () => useWorkflowStore((state) => state.isSaving);
+export const useValidationResult = () => useWorkflowStore((state) => state.validationResult);
+
+export const useNodeValidation = (nodeId: string) => {
+  const validationResult = useWorkflowStore((state) => state.validationResult);
+  if (!validationResult) return { isValid: true, errorMessage: undefined };
+
+  const errors = validationResult.errorsByNodeId.get(nodeId) || [];
+  const hasError = errors.some((e) => e.severity === "error");
+  const errorMessage = errors
+    .filter((e) => e.severity === "error")
+    .map((e) => e.message)
+    .join(", ");
+
+  return { isValid: !hasError, errorMessage: errorMessage || undefined };
+};
+
+// Re-export validation types for convenience
+export type { ValidationError, ValidationResult } from "@/lib/workflow-validation";

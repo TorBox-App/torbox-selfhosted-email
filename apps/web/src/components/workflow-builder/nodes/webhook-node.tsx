@@ -3,14 +3,17 @@
 import { Webhook } from "lucide-react";
 import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
+import { useNodeValidation } from "../use-workflow-store";
 
 type WebhookNodeProps = {
+  id: string;
   data: WorkflowNodeData;
   selected?: boolean;
 };
 
-export function WebhookNode({ data, selected }: WebhookNodeProps) {
+export function WebhookNode({ id, data, selected }: WebhookNodeProps) {
   const config = data.config;
+  const { isValid, errorMessage } = useNodeValidation(id);
   let description = "No URL configured";
 
   if (config.type === "webhook" && config.url) {
@@ -30,8 +33,8 @@ export function WebhookNode({ data, selected }: WebhookNodeProps) {
       accentColor="bg-cyan-500"
       hasInput={true}
       hasOutput={true}
-      isValid={data.isValid}
-      errorMessage={data.errorMessage}
+      isValid={isValid}
+      errorMessage={errorMessage}
       selected={selected}
     />
   );

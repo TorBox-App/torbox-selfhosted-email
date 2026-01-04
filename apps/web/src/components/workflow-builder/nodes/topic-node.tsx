@@ -3,16 +3,19 @@
 import { Bell } from "lucide-react";
 import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
+import { useNodeValidation } from "../use-workflow-store";
 import { useWorkflowData } from "../workflow-data-context";
 
 type TopicNodeProps = {
+  id: string;
   data: WorkflowNodeData;
   selected?: boolean;
 };
 
-export function TopicNode({ data, selected }: TopicNodeProps) {
+export function TopicNode({ id, data, selected }: TopicNodeProps) {
   const config = data.config;
   const { topics } = useWorkflowData();
+  const { isValid, errorMessage } = useNodeValidation(id);
   let description = "Configure topic";
   let action = "Subscribe";
 
@@ -34,8 +37,8 @@ export function TopicNode({ data, selected }: TopicNodeProps) {
       accentColor="bg-emerald-500"
       hasInput={true}
       hasOutput={true}
-      isValid={data.isValid}
-      errorMessage={data.errorMessage}
+      isValid={isValid}
+      errorMessage={errorMessage}
       selected={selected}
     />
   );

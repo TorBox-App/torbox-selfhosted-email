@@ -3,14 +3,17 @@
 import { Clock } from "lucide-react";
 import { BaseNode } from "./base-node";
 import type { WorkflowNodeData } from "../use-workflow-store";
+import { useNodeValidation } from "../use-workflow-store";
 
 type DelayNodeProps = {
+  id: string;
   data: WorkflowNodeData;
   selected?: boolean;
 };
 
-export function DelayNode({ data, selected }: DelayNodeProps) {
+export function DelayNode({ id, data, selected }: DelayNodeProps) {
   const config = data.config;
+  const { isValid, errorMessage } = useNodeValidation(id);
   let description = "Configure delay";
 
   if (config.type === "delay") {
@@ -28,8 +31,8 @@ export function DelayNode({ data, selected }: DelayNodeProps) {
       accentColor="bg-purple-500"
       hasInput={true}
       hasOutput={true}
-      isValid={data.isValid}
-      errorMessage={data.errorMessage}
+      isValid={isValid}
+      errorMessage={errorMessage}
       selected={selected}
     />
   );

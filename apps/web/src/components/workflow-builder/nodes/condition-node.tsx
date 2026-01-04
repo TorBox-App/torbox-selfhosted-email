@@ -4,14 +4,17 @@ import { GitBranch } from "lucide-react";
 import { Handle, Position } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import type { WorkflowNodeData } from "../use-workflow-store";
+import { useNodeValidation } from "../use-workflow-store";
 
 type ConditionNodeProps = {
+  id: string;
   data: WorkflowNodeData;
   selected?: boolean;
 };
 
-export function ConditionNode({ data, selected }: ConditionNodeProps) {
+export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
   const config = data.config;
+  const { isValid, errorMessage } = useNodeValidation(id);
   let description = "Configure condition";
 
   if (config.type === "condition" && config.field) {
@@ -52,7 +55,7 @@ export function ConditionNode({ data, selected }: ConditionNodeProps) {
           "flex items-center justify-center",
           "transition-all duration-150",
           selected ? "border-primary ring-2 ring-primary/20" : "border-gray-200",
-          !data.isValid && "border-red-500 ring-2 ring-red-500/20"
+          !isValid && "border-red-500 ring-2 ring-red-500/20"
         )}
       >
         {/* Content rotated back */}
@@ -91,9 +94,9 @@ export function ConditionNode({ data, selected }: ConditionNodeProps) {
         />
       </div>
 
-      {data.errorMessage && (
+      {errorMessage && (
         <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-xs text-red-500 whitespace-nowrap">
-          {data.errorMessage}
+          {errorMessage}
         </div>
       )}
     </div>

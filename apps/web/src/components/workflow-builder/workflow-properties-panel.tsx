@@ -1,7 +1,8 @@
 "use client";
 
 import type { WorkflowStepConfig } from "@wraps/db";
-import { Settings, Trash2, X } from "lucide-react";
+import { AlertCircle, Settings, Trash2, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useSelectedNode, useWorkflowStore } from "./use-workflow-store";
+import { useSelectedNode, useValidationResult, useWorkflowStore } from "./use-workflow-store";
 
 interface Template {
   id: string;
@@ -48,6 +49,12 @@ export function WorkflowPropertiesPanel({
   const updateNodeConfig = useWorkflowStore((state) => state.updateNodeConfig);
   const updateNodeName = useWorkflowStore((state) => state.updateNodeName);
   const deleteNode = useWorkflowStore((state) => state.deleteNode);
+  const validationResult = useValidationResult();
+
+  // Get validation errors for the selected node
+  const nodeErrors = selectedNode
+    ? validationResult?.errorsByNodeId.get(selectedNode.id) || []
+    : [];
 
   if (!selectedNode) {
     return (
@@ -84,6 +91,20 @@ export function WorkflowPropertiesPanel({
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Validation errors */}
+        {nodeErrors.length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <ul className="text-xs space-y-1 mt-1">
+                {nodeErrors.map((error, i) => (
+                  <li key={i}>• {error.message}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Name field */}
         <div className="space-y-2">
           <Label htmlFor="node-name">Name</Label>
