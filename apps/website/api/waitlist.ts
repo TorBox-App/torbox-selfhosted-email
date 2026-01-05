@@ -102,6 +102,65 @@ export default async function handler(
     });
 
     if (error) {
+      // If contact already exists, try to subscribe them to the topic
+      const errorMessage =
+        error && typeof error === "object" && "error" in error
+          ? String((error as { error: unknown }).error)
+          : "";
+
+      if (errorMessage.includes("already exists")) {
+        console.log(`Contact exists, subscribing to topic: ${normalizedEmail}`);
+
+        // Find existing contact by email
+        const searchResult = await client.GET("/v1/contacts/", {
+          params: { query: { search: normalizedEmail, pageSize: "1" } },
+        });
+
+        const contactsData = searchResult.data as
+          | { contacts: Array<{ id: string }> }
+          | undefined;
+        const searchError = searchResult.error;
+        const existingContact = contactsData?.contacts?.[0];
+
+        if (searchError || !existingContact) {
+          console.error(
+            "Failed to find existing contact:",
+            JSON.stringify(searchError, null, 2)
+          );
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.status(500).json({ error: "Failed to join waitlist" });
+          return;
+        }
+
+        // Subscribe existing contact to the topic
+        const { error: updateError } = await client.PATCH(
+          "/v1/contacts/{id}",
+          {
+            params: { path: { id: existingContact.id } },
+            body: {
+              topicSlugs: [topicSlug],
+            },
+          }
+        );
+
+        if (updateError) {
+          console.error(
+            "Failed to subscribe existing contact to topic:",
+            JSON.stringify(updateError, null, 2)
+          );
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.status(500).json({ error: "Failed to join waitlist" });
+          return;
+        }
+
+        console.log(
+          `Existing contact subscribed to waitlist: ${normalizedEmail} for ${product}`
+        );
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.status(200).json({ success: true });
+        return;
+      }
+
       console.error(
         "API error creating contact:",
         JSON.stringify(error, null, 2)
