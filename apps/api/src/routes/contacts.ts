@@ -465,8 +465,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       }
 
       // Emit contact_created event to trigger workflows
-      // Run in background to not block API response
-      emitContactCreated({
+      await emitContactCreated({
         contactId: newContact.id,
         organizationId: authContext.organizationId,
         contactData: {
@@ -482,7 +481,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       });
 
       // Check segment entry triggers
-      checkSegmentEntry({
+      await checkSegmentEntry({
         contactId: newContact.id,
         organizationId: authContext.organizationId,
       }).catch((err) => {
@@ -503,19 +502,21 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           topicNamesForEmit.map((t) => [t.id, t.name])
         );
 
-        for (const topicId of immediateTopics) {
-          emitTopicSubscribed({
-            contactId: newContact.id,
-            organizationId: authContext.organizationId,
-            topicId,
-            topicName: topicNameMap.get(topicId),
-          }).catch((err) => {
-            console.error(
-              "[contacts] Failed to emit topic_subscribed event:",
-              err
-            );
-          });
-        }
+        await Promise.all(
+          immediateTopics.map((topicId) =>
+            emitTopicSubscribed({
+              contactId: newContact.id,
+              organizationId: authContext.organizationId,
+              topicId,
+              topicName: topicNameMap.get(topicId),
+            }).catch((err) => {
+              console.error(
+                "[contacts] Failed to emit topic_subscribed event:",
+                err
+              );
+            })
+          )
+        );
       }
 
       ctx.set.status = 201;
@@ -825,7 +826,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const updatedFields = Object.keys(body).filter(
         (k) => k !== "topicIds" && k !== "topicSlugs"
       );
-      emitContactUpdated({
+      await emitContactUpdated({
         contactId: params.id,
         organizationId: authContext.organizationId,
         updatedFields,
@@ -842,7 +843,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       });
 
       // Check segment entry triggers (contact may now match a segment)
-      checkSegmentEntry({
+      await checkSegmentEntry({
         contactId: params.id,
         organizationId: authContext.organizationId,
       }).catch((err) => {
@@ -1027,20 +1028,22 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           (tid) => !pendingTopics.includes(tid) && !existingTopicIds.has(tid)
         );
 
-        for (const topicId of newlySubscribedTopics) {
-          const topicInfo = topicMap.get(topicId);
-          emitTopicSubscribed({
-            contactId: params.id,
-            organizationId: authContext.organizationId,
-            topicId,
-            topicName: topicInfo?.name,
-          }).catch((err) => {
-            console.error(
-              "[contacts] Failed to emit topic_subscribed event:",
-              err
-            );
-          });
-        }
+        await Promise.all(
+          newlySubscribedTopics.map((topicId) => {
+            const topicInfo = topicMap.get(topicId);
+            return emitTopicSubscribed({
+              contactId: params.id,
+              organizationId: authContext.organizationId,
+              topicId,
+              topicName: topicInfo?.name,
+            }).catch((err) => {
+              console.error(
+                "[contacts] Failed to emit topic_subscribed event:",
+                err
+              );
+            });
+          })
+        );
       }
 
       // Get updated topics to return
