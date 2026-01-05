@@ -59,6 +59,7 @@ export async function check(options: CheckOptions): Promise<void> {
     if (clack.isCancel(input)) {
       clack.cancel("Operation cancelled");
       process.exit(0);
+      return;
     }
 
     domain = input as string;
