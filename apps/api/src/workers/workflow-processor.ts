@@ -487,9 +487,14 @@ async function handleSendEmail(
     };
   }
 
-  // Get the workflow to find the AWS account
+  // Get the workflow to find the AWS account and sender defaults
   const [wf] = await db
-    .select({ awsAccountId: workflow.awsAccountId })
+    .select({
+      awsAccountId: workflow.awsAccountId,
+      defaultFrom: workflow.defaultFrom,
+      defaultFromName: workflow.defaultFromName,
+      defaultReplyTo: workflow.defaultReplyTo,
+    })
     .from(workflow)
     .where(eq(workflow.id, execution.workflowId))
     .limit(1);
@@ -636,12 +641,14 @@ async function handleSendEmail(
   );
   const subject = sanitizeEmailSubject(rawSubject);
 
-  // Build from address
+  // Build from address (step config > workflow default > fallback)
   const fromAddress =
-    config.from || `noreply@${process.env.DEFAULT_DOMAIN || "wraps.dev"}`;
-  const fromDisplay = config.fromName
-    ? `${config.fromName} <${fromAddress}>`
-    : fromAddress;
+    config.from ||
+    wf.defaultFrom ||
+    `noreply@${process.env.DEFAULT_DOMAIN || "wraps.dev"}`;
+  const fromName = config.fromName || wf.defaultFromName;
+  const fromDisplay = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
+  const replyTo = config.replyTo || wf.defaultReplyTo;
 
   // Build headers for marketing emails
   const headers: Array<{ Name: string; Value: string }> = [];
@@ -656,7 +663,7 @@ async function handleSendEmail(
   const result = await sesClient.send(
     new SendEmailCommand({
       FromEmailAddress: fromDisplay,
-      ReplyToAddresses: config.replyTo ? [config.replyTo] : undefined,
+      ReplyToAddresses: replyTo ? [replyTo] : undefined,
       Destination: {
         ToAddresses: [contactRecord.email],
       },
@@ -698,7 +705,7 @@ async function handleSendEmail(
     recipient: contactRecord.email,
     subject,
     from: fromAddress,
-    fromName: config.fromName,
+    fromName: fromName || null,
     emailTemplateId: config.templateId,
     messageId,
     status: "sent",
@@ -832,9 +839,12 @@ async function handleSendSms(
     };
   }
 
-  // Get the workflow to find the AWS account
+  // Get the workflow to find the AWS account and sender defaults
   const [wf] = await db
-    .select({ awsAccountId: workflow.awsAccountId })
+    .select({
+      awsAccountId: workflow.awsAccountId,
+      defaultSenderId: workflow.defaultSenderId,
+    })
     .from(workflow)
     .where(eq(workflow.id, execution.workflowId))
     .limit(1);
@@ -891,13 +901,16 @@ async function handleSendSms(
     };
   }
 
+  // Build sender ID (step config > workflow default)
+  const senderId = config.senderId || wf.defaultSenderId;
+
   // Send SMS
   const command = new SendTextMessageCommand({
     DestinationPhoneNumber: contactRecord.phone,
     MessageBody: messageBody,
     ConfigurationSetName: "wraps-sms-config",
     MessageType: "TRANSACTIONAL",
-    ...(config.senderId && { OriginationIdentity: config.senderId }),
+    ...(senderId && { OriginationIdentity: senderId }),
   });
 
   const response = await smsClient.send(command);

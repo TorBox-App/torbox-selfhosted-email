@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/table";
 import {
   FILTER_FIELDS,
-  OPERATOR_LABELS,
   type FilterCondition,
+  OPERATOR_LABELS,
   type SegmentWithMeta,
 } from "@/lib/segments";
 import type { TopicWithMeta } from "@/lib/topics";

@@ -2,7 +2,6 @@
 
 import { auth } from "@wraps/auth";
 import { batchSend, contact, contactTopic, db, template } from "@wraps/db";
-import { z } from "zod";
 import {
   and,
   desc,
@@ -15,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { z } from "zod";
 import { getVariablesForContext } from "@/components/template-editor/variables/variable-definitions";
 import type {
   BatchStatus,

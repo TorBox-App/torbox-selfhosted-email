@@ -9,6 +9,7 @@ import {
   Pencil,
   Play,
   Save,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -29,6 +30,7 @@ import {
 import {
   useIsDirty,
   useIsSaving,
+  useSettingsPanelOpen,
   useValidationResult,
   useWorkflowStore,
 } from "./use-workflow-store";
@@ -63,6 +65,10 @@ export function WorkflowToolbar({
   );
   const _nodes = useWorkflowStore((state) => state.nodes);
   const _edges = useWorkflowStore((state) => state.edges);
+  const settingsPanelOpen = useSettingsPanelOpen();
+  const toggleSettingsPanel = useWorkflowStore(
+    (state) => state.toggleSettingsPanel
+  );
 
   // Editable name state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -279,6 +285,22 @@ export function WorkflowToolbar({
             </Tooltip>
           </TooltipProvider>
         )}
+
+        {/* Settings button */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={toggleSettingsPanel}
+                size="icon"
+                variant={settingsPanelOpen ? "secondary" : "outline"}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Workflow settings</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Save button */}
         <Button

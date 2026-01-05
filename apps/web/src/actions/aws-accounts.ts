@@ -1060,3 +1060,129 @@ export async function getVerifiedDomains(
     };
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SMS PHONE NUMBERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type PhoneNumber = {
+  phoneNumber: string;
+  phoneNumberArn: string;
+  status: string;
+  isoCountryCode: string;
+};
+
+export type GetSMSPhoneNumbersResult =
+  | {
+      success: true;
+      phoneNumbers: PhoneNumber[];
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+/**
+ * Get SMS phone numbers for an AWS account
+ */
+export async function getSMSPhoneNumbers(
+  awsAccountId: string,
+  organizationId: string
+): Promise<GetSMSPhoneNumbersResult> {
+  const log = createActionLogger("getSMSPhoneNumbers", {
+    accountId: awsAccountId,
+    orgSlug: organizationId,
+  });
+
+  try {
+    // 1. Get session
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session?.user) {
+      return {
+        success: false,
+        error: "Unauthorized",
+      };
+    }
+
+    // 2. Check org membership
+    const membership = await db.query.member.findFirst({
+      where: (m, { and: andOp, eq: eqOp }) =>
+        andOp(
+          eqOp(m.userId, session.user.id),
+          eqOp(m.organizationId, organizationId)
+        ),
+    });
+
+    if (!membership) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // 3. Get AWS account
+    const account = await db.query.awsAccount.findFirst({
+      where: (a, { and: andOp, eq: eqOp }) =>
+        andOp(eqOp(a.id, awsAccountId), eqOp(a.organizationId, organizationId)),
+    });
+
+    if (!account) {
+      return {
+        success: false,
+        error: "AWS account not found",
+      };
+    }
+
+    // 4. Check if SMS is enabled
+    if (!account.smsEnabled) {
+      return {
+        success: true,
+        phoneNumbers: [],
+      };
+    }
+
+    // 5. Get AWS credentials
+    const awsCredentials = await getOrAssumeRole(account);
+
+    // 6. Get phone numbers from Pinpoint SMS Voice
+    const smsClient = new PinpointSMSVoiceV2Client({
+      region: account.region,
+      credentials: awsCredentials,
+    });
+
+    const phoneNumbersResponse = await smsClient.send(
+      new DescribePhoneNumbersCommand({})
+    );
+
+    const phoneNumbers: PhoneNumber[] = (
+      phoneNumbersResponse.PhoneNumbers ?? []
+    ).map((pn) => ({
+      phoneNumber: pn.PhoneNumber ?? "",
+      phoneNumberArn: pn.PhoneNumberArn ?? "",
+      status: pn.Status ?? "",
+      isoCountryCode: pn.IsoCountryCode ?? "",
+    }));
+
+    log.info({ count: phoneNumbers.length }, "Fetched SMS phone numbers");
+
+    return {
+      success: true,
+      phoneNumbers,
+    };
+  } catch (error) {
+    log.error(
+      { err: serializeError(error) },
+      "Failed to fetch SMS phone numbers"
+    );
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch phone numbers",
+    };
+  }
+}

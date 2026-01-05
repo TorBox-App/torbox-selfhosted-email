@@ -6,8 +6,15 @@
  */
 
 import type { FilterCondition, FilterGroup, SegmentFilter } from "@wraps/db";
-import { contact, contactEvent, contactTopic, db, eq, segment } from "@wraps/db";
-import { and, desc, gte, inArray } from "drizzle-orm";
+import {
+  contact,
+  contactEvent,
+  contactTopic,
+  db,
+  eq,
+  segment,
+} from "@wraps/db";
+import { and, gte, inArray } from "drizzle-orm";
 
 // Contact with topic IDs for evaluation
 type ContactWithTopics = typeof contact.$inferSelect & {
@@ -263,7 +270,7 @@ async function evaluateFilterAsync(
       // Check if the event was triggered within the specified time window
       if (typeof value !== "number" || !unit) {
         console.warn(
-          `[segment-evaluator] triggeredWithin requires numeric value and unit`
+          "[segment-evaluator] triggeredWithin requires numeric value and unit"
         );
         return false;
       }

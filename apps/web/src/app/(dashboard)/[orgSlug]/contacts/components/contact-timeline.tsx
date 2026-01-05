@@ -16,6 +16,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
+import {
+  getContactTimeline,
+  type MessageStatusTimestamps,
+  type TimelineEvent,
+  type TimelineEventType,
+} from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -23,12 +29,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  getContactTimeline,
-  type MessageStatusTimestamps,
-  type TimelineEvent,
-  type TimelineEventType,
-} from "@/actions/contacts";
 import { cn } from "@/lib/utils";
 
 type ContactTimelineProps = {
@@ -193,10 +193,10 @@ function StatusDots({
                 )}
               />
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
+            <TooltipContent className="text-xs" side="top">
               <span className="font-medium">{config.label}</span>
               {timestamp && (
-                <span className="text-muted-foreground ml-1">
+                <span className="ml-1 text-muted-foreground">
                   {formatTimestampShort(new Date(timestamp))}
                 </span>
               )}
@@ -276,7 +276,7 @@ function TimelineEventRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">{config.label}</span>
-            <StatusDots status={event.status} channel={event.channel} />
+            <StatusDots channel={event.channel} status={event.status} />
             <span className="text-muted-foreground text-xs">
               {formatTimestamp(new Date(event.timestamp))}
             </span>
@@ -305,7 +305,8 @@ function TimelineEventRow({
   }
 
   // Handle workflow and contact_created events
-  const config = EVENT_CONFIG[event.type as Exclude<TimelineEventType, "message">];
+  const config =
+    EVENT_CONFIG[event.type as Exclude<TimelineEventType, "message">];
   if (!config) return null;
 
   const Icon = config.icon;

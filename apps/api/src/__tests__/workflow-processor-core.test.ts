@@ -9,7 +9,7 @@
  * - Contact cooldown enforcement
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 describe("Workflow Processor - Idempotency", () => {
   /**
@@ -538,6 +538,8 @@ describe("Workflow Processor - Complete Trigger Logic", () => {
       lastAnyExecutionAt: new Date("2024-01-01T11:00:00Z"), // 1 hour ago
       currentConcurrentCount: 5,
     };
-    expect(shouldTriggerWorkflow(config, state, now)).toEqual({ allowed: true });
+    expect(shouldTriggerWorkflow(config, state, now)).toEqual({
+      allowed: true,
+    });
   });
 });

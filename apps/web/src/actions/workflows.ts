@@ -355,6 +355,11 @@ export async function updateWorkflow(
     reentryDelaySeconds?: number | null;
     maxConcurrentExecutions?: number;
     contactCooldownSeconds?: number | null;
+    // Sender defaults
+    defaultFrom?: string | null;
+    defaultFromName?: string | null;
+    defaultReplyTo?: string | null;
+    defaultSenderId?: string | null;
   }
 ): Promise<UpdateWorkflowResult> {
   try {
@@ -451,6 +456,23 @@ export async function updateWorkflow(
 
     if (data.contactCooldownSeconds !== undefined) {
       updateData.contactCooldownSeconds = data.contactCooldownSeconds;
+    }
+
+    // Sender defaults
+    if (data.defaultFrom !== undefined) {
+      updateData.defaultFrom = data.defaultFrom;
+    }
+
+    if (data.defaultFromName !== undefined) {
+      updateData.defaultFromName = data.defaultFromName;
+    }
+
+    if (data.defaultReplyTo !== undefined) {
+      updateData.defaultReplyTo = data.defaultReplyTo;
+    }
+
+    if (data.defaultSenderId !== undefined) {
+      updateData.defaultSenderId = data.defaultSenderId;
     }
 
     // Update workflow
@@ -579,6 +601,15 @@ export async function enableWorkflow(
 
     if (!existing) {
       return { success: false, error: "Workflow not found" };
+    }
+
+    // Require AWS account to be configured
+    if (!existing.awsAccountId) {
+      return {
+        success: false,
+        error:
+          "Please select an AWS account in workflow settings before enabling",
+      };
     }
 
     // Validate workflow has required configuration

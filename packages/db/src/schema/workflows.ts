@@ -271,6 +271,14 @@ export const workflow = pgTable(
     aiPrompt: text("ai_prompt"),
 
     // ═══════════════════════════════════════════════════════════════════════
+    // SENDER DEFAULTS (step config can override these)
+    // ═══════════════════════════════════════════════════════════════════════
+    defaultFrom: text("default_from"), // e.g., "hello@example.com"
+    defaultFromName: text("default_from_name"), // e.g., "Acme Inc"
+    defaultReplyTo: text("default_reply_to"), // e.g., "support@example.com"
+    defaultSenderId: text("default_sender_id"), // SMS: phone number or alphanumeric ID
+
+    // ═══════════════════════════════════════════════════════════════════════
     // TIMESTAMPS
     // ═══════════════════════════════════════════════════════════════════════
     lastTriggeredAt: timestamp("last_triggered_at"),

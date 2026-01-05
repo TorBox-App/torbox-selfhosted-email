@@ -95,10 +95,18 @@ type Segment = {
   memberCount: number;
 };
 
+type OrgDefaults = {
+  defaultAwsAccountId: string | null;
+  defaultFrom: string | null;
+  defaultFromName: string | null;
+  defaultReplyTo: string | null;
+} | null;
+
 type BatchFormProps = {
   awsAccounts: AwsAccount[];
   initialVerifiedDomains: VerifiedIdentity[];
   organizationId: string;
+  orgDefaults: OrgDefaults;
   orgSlug: string;
   schedulingEnabled: boolean;
   segments: Segment[];
@@ -140,6 +148,7 @@ export function BatchForm({
   awsAccounts,
   initialVerifiedDomains,
   organizationId,
+  orgDefaults,
   orgSlug,
   schedulingEnabled,
   segments,
@@ -162,17 +171,40 @@ export function BatchForm({
 
   // Form data
   const [campaignData, setCampaignData] = useState<CampaignData>(() => {
-    // Extract domain from first verified domain if available
+    // Parse org default from email into prefix and domain
+    let defaultFromPrefix = "";
+    let defaultFromDomain = "";
+    if (orgDefaults?.defaultFrom && orgDefaults.defaultFrom.includes("@")) {
+      const [prefix, domain] = orgDefaults.defaultFrom.split("@");
+      defaultFromPrefix = prefix || "";
+      defaultFromDomain = domain || "";
+    }
+
+    // Find a valid domain: org default or first verified domain
     const firstDomain = initialVerifiedDomains.find((d) => d.type === "DOMAIN");
+    const isDefaultDomainValid = initialVerifiedDomains.some(
+      (d) => d.identity === defaultFromDomain && d.type === "DOMAIN"
+    );
+    const fromDomain = isDefaultDomainValid
+      ? defaultFromDomain
+      : firstDomain?.identity || "";
+
+    // Determine initial AWS account: org default or first available
+    const initialAwsAccountId =
+      orgDefaults?.defaultAwsAccountId &&
+      awsAccounts.some((a) => a.id === orgDefaults.defaultAwsAccountId)
+        ? orgDefaults.defaultAwsAccountId
+        : awsAccounts[0]?.id || "";
+
     return {
       name: "",
       subject: "",
       previewText: "",
-      fromPrefix: "",
-      fromDomain: firstDomain?.identity || "",
-      fromName: "",
-      replyTo: "",
-      awsAccountId: awsAccounts[0]?.id || "",
+      fromPrefix: defaultFromPrefix,
+      fromDomain,
+      fromName: orgDefaults?.defaultFromName || "",
+      replyTo: orgDefaults?.defaultReplyTo || "",
+      awsAccountId: initialAwsAccountId,
       contentType: "template",
       templateId: "",
       htmlContent: "",

@@ -107,9 +107,17 @@ const paletteItems: NodePaletteItem[] = [
 
 type NodePaletteProps = {
   onAddNode: (type: WorkflowStepType) => void;
+  smsEnabled?: boolean;
 };
 
-export function NodePalette({ onAddNode }: NodePaletteProps) {
+export function NodePalette({
+  onAddNode,
+  smsEnabled = false,
+}: NodePaletteProps) {
+  // Filter out SMS node if SMS is not enabled
+  const visibleItems = smsEnabled
+    ? paletteItems
+    : paletteItems.filter((item) => item.type !== "send_sms");
   const onDragStart = (event: React.DragEvent, nodeType: WorkflowStepType) => {
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
@@ -121,7 +129,7 @@ export function NodePalette({ onAddNode }: NodePaletteProps) {
         Nodes
       </div>
       <div className="space-y-2">
-        {paletteItems.map((item) => (
+        {visibleItems.map((item) => (
           <div
             className={cn(
               "flex cursor-grab items-center gap-3 rounded-md border p-2",

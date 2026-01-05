@@ -57,7 +57,11 @@ const edgeTypes: EdgeTypes = {
   labeled: LabeledEdge,
 };
 
-export function WorkflowCanvas() {
+type WorkflowCanvasProps = {
+  smsEnabled?: boolean;
+};
+
+export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
@@ -173,7 +177,7 @@ export function WorkflowCanvas() {
           nodeStrokeWidth={3}
         />
       </ReactFlow>
-      <NodePalette onAddNode={handleAddNode} />
+      <NodePalette onAddNode={handleAddNode} smsEnabled={smsEnabled} />
     </div>
   );
 }

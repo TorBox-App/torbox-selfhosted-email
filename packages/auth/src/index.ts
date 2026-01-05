@@ -1,9 +1,9 @@
 import { passkey } from "@better-auth/passkey";
 import { stripe } from "@better-auth/stripe";
-import { createPlatformClient } from "@wraps.dev/client";
 import { db, eq } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import { getWrapsClient } from "@wraps/email";
+import { createPlatformClient } from "@wraps.dev/client";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";

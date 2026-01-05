@@ -1,5 +1,11 @@
 import { auth } from "@wraps/auth";
-import { awsAccount, db, segment, topic } from "@wraps/db";
+import {
+  awsAccount,
+  db,
+  organizationExtension,
+  segment,
+  topic,
+} from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getWorkflow } from "@/actions/workflows";
@@ -49,6 +55,7 @@ export default async function WorkflowBuilderPage({
       id: true,
       name: true,
       region: true,
+      smsEnabled: true,
     },
   });
 
@@ -72,11 +79,24 @@ export default async function WorkflowBuilderPage({
     orderBy: (s, { asc }) => [asc(s.name)],
   });
 
+  // Fetch organization sender defaults
+  const orgDefaults = await db.query.organizationExtension.findFirst({
+    where: eq(organizationExtension.organizationId, orgWithMembership.id),
+    columns: {
+      defaultAwsAccountId: true,
+      defaultFrom: true,
+      defaultFromName: true,
+      defaultReplyTo: true,
+      defaultSenderId: true,
+    },
+  });
+
   return (
     <div className="flex h-[calc(100vh-60px)] flex-col">
       <WorkflowBuilder
         awsAccounts={awsAccounts}
         organizationId={orgWithMembership.id}
+        orgDefaults={orgDefaults ?? null}
         orgSlug={orgSlug}
         segments={segments}
         topics={topics}

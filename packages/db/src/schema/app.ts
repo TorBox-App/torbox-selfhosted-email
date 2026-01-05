@@ -26,6 +26,16 @@ export const organizationExtension = pgTable("organization_extension", {
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   onboardingCompletedAt: timestamp("onboarding_completed_at"),
 
+  // Sender Defaults (pre-fill for new workflows/broadcasts)
+  defaultAwsAccountId: text("default_aws_account_id").references(
+    () => awsAccount.id,
+    { onDelete: "set null" }
+  ),
+  defaultFrom: text("default_from"), // e.g., "hello@example.com"
+  defaultFromName: text("default_from_name"), // e.g., "Acme Inc"
+  defaultReplyTo: text("default_reply_to"), // e.g., "support@example.com"
+  defaultSenderId: text("default_sender_id"), // SMS: phone number or alphanumeric ID
+
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

@@ -1,4 +1,6 @@
 import { auth } from "@wraps/auth";
+import { db, organizationExtension } from "@wraps/db";
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getVerifiedDomains, listAWSAccounts } from "@/actions/aws-accounts";
 import {
@@ -41,12 +43,13 @@ export default async function NewBatchPage({ params }: NewBatchPageProps) {
     redirect(`/${orgSlug}/emails/broadcasts`);
   }
 
-  // Fetch AWS accounts, templates, topics, segments, and feature access in parallel
+  // Fetch AWS accounts, templates, topics, segments, org defaults, and feature access in parallel
   const [
     awsAccountsResult,
     templatesResult,
     topicsResult,
     segmentsResult,
+    orgDefaults,
     topicsFeature,
     segmentsFeature,
     campaignsFeature,
@@ -55,6 +58,15 @@ export default async function NewBatchPage({ params }: NewBatchPageProps) {
     listTemplatesForBatch(orgWithMembership.id),
     listTopicsForBatch(orgWithMembership.id),
     listSegmentsForBatch(orgWithMembership.id),
+    db.query.organizationExtension.findFirst({
+      where: eq(organizationExtension.organizationId, orgWithMembership.id),
+      columns: {
+        defaultAwsAccountId: true,
+        defaultFrom: true,
+        defaultFromName: true,
+        defaultReplyTo: true,
+      },
+    }),
     checkFeatureAccess(orgWithMembership.id, "topics"),
     checkFeatureAccess(orgWithMembership.id, "segments"),
     checkFeatureAccess(orgWithMembership.id, "campaigns"),
@@ -72,14 +84,21 @@ export default async function NewBatchPage({ params }: NewBatchPageProps) {
   const topics = topicsResult.success ? topicsResult.topics : [];
   const segments = segmentsResult.success ? segmentsResult.segments : [];
 
-  // Fetch verified domains for the first AWS account
+  // Determine initial AWS account: org default, or first account
+  const initialAwsAccountId =
+    orgDefaults?.defaultAwsAccountId &&
+    awsAccounts.some((a) => a.id === orgDefaults.defaultAwsAccountId)
+      ? orgDefaults.defaultAwsAccountId
+      : awsAccounts[0]?.id;
+
+  // Fetch verified domains for the initial AWS account
   let initialVerifiedDomains: {
     identity: string;
     type: "DOMAIN" | "EMAIL_ADDRESS";
   }[] = [];
-  if (awsAccounts.length > 0) {
+  if (initialAwsAccountId) {
     const domainsResult = await getVerifiedDomains(
-      awsAccounts[0].id,
+      initialAwsAccountId,
       orgWithMembership.id
     );
     if (domainsResult.success) {
@@ -93,6 +112,7 @@ export default async function NewBatchPage({ params }: NewBatchPageProps) {
         awsAccounts={awsAccounts}
         initialVerifiedDomains={initialVerifiedDomains}
         organizationId={orgWithMembership.id}
+        orgDefaults={orgDefaults ?? null}
         orgSlug={orgSlug}
         schedulingEnabled={campaignsFeature.allowed}
         segments={segments}

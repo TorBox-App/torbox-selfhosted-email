@@ -183,7 +183,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
         const matchesDescription = template.description
           ?.toLowerCase()
           .includes(query);
-        if (!matchesName && !matchesDescription) return false;
+        if (!(matchesName || matchesDescription)) return false;
       }
 
       // Type filter
@@ -193,15 +193,14 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
       }
 
       // Status filter
-      if (filters.statuses.size > 0) {
-        if (!filters.statuses.has(template.status)) return false;
-      }
+      if (filters.statuses.size > 0 && !filters.statuses.has(template.status))
+        return false;
 
       // Usage filter
       if (filters.usage.size > 0) {
         const inBroadcasts = template.broadcastCount > 0;
         const inAutomations = template.automationCount > 0;
-        const isUnused = !inBroadcasts && !inAutomations;
+        const isUnused = !(inBroadcasts || inAutomations);
 
         const matchesBroadcasts =
           filters.usage.has("broadcasts") && inBroadcasts;
@@ -209,7 +208,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
           filters.usage.has("automations") && inAutomations;
         const matchesUnused = filters.usage.has("unused") && isUnused;
 
-        if (!matchesBroadcasts && !matchesAutomations && !matchesUnused)
+        if (!(matchesBroadcasts || matchesAutomations || matchesUnused))
           return false;
       }
 
@@ -329,7 +328,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
           <div className="flex flex-1 items-center gap-2">
             {/* Search */}
             <div className="relative max-w-sm flex-1">
-              <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-9"
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -617,7 +616,10 @@ function TemplateRow({
 
       {/* Type */}
       <TableCell>
-        <Badge className={cn("text-xs", typeConfig.className)} variant="outline">
+        <Badge
+          className={cn("text-xs", typeConfig.className)}
+          variant="outline"
+        >
           {typeConfig.label}
         </Badge>
       </TableCell>

@@ -2,7 +2,9 @@
 
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
+import { organizationExtension } from "@wraps/db/schema/app";
 import { organization } from "@wraps/db/schema/auth";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   type CreateOrganizationInput,
@@ -268,6 +270,188 @@ export async function updateOrganizationAction(
   } catch (error) {
     const log = createActionLogger("updateOrganizationAction", { orgSlug });
     log.error({ err: serializeError(error) }, "Failed to update organization");
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "An unexpected error occurred",
+    };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SENDER DEFAULTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type SenderDefaults = {
+  defaultAwsAccountId: string | null;
+  defaultFrom: string | null;
+  defaultFromName: string | null;
+  defaultReplyTo: string | null;
+  defaultSenderId: string | null;
+};
+
+export type GetSenderDefaultsResult =
+  | {
+      success: true;
+      defaults: SenderDefaults;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+export async function getSenderDefaultsAction(
+  orgSlug: string
+): Promise<GetSenderDefaultsResult> {
+  try {
+    // 1. Get session
+    const session = await auth.api.getSession({
+      headers: await import("next/headers").then((mod) => mod.headers()),
+    });
+
+    if (!session?.user) {
+      return {
+        success: false,
+        error: "You must be logged in",
+      };
+    }
+
+    // 2. Get organization with membership
+    const orgWithMembership = await getOrganizationWithMembership(
+      orgSlug,
+      session.user.id
+    );
+
+    if (!orgWithMembership) {
+      return {
+        success: false,
+        error: "Organization not found",
+      };
+    }
+
+    // 3. Get organization extension (sender defaults)
+    const extension = await db.query.organizationExtension.findFirst({
+      where: (ext, { eq: eqOp }) =>
+        eqOp(ext.organizationId, orgWithMembership.id),
+    });
+
+    return {
+      success: true,
+      defaults: {
+        defaultAwsAccountId: extension?.defaultAwsAccountId ?? null,
+        defaultFrom: extension?.defaultFrom ?? null,
+        defaultFromName: extension?.defaultFromName ?? null,
+        defaultReplyTo: extension?.defaultReplyTo ?? null,
+        defaultSenderId: extension?.defaultSenderId ?? null,
+      },
+    };
+  } catch (error) {
+    const log = createActionLogger("getSenderDefaultsAction", { orgSlug });
+    log.error({ err: serializeError(error) }, "Failed to get sender defaults");
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "An unexpected error occurred",
+    };
+  }
+}
+
+export type UpdateSenderDefaultsInput = {
+  defaultAwsAccountId?: string | null;
+  defaultFrom?: string | null;
+  defaultFromName?: string | null;
+  defaultReplyTo?: string | null;
+  defaultSenderId?: string | null;
+};
+
+export type UpdateSenderDefaultsResult =
+  | {
+      success: true;
+      defaults: SenderDefaults;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+export async function updateSenderDefaultsAction(
+  orgSlug: string,
+  data: UpdateSenderDefaultsInput
+): Promise<UpdateSenderDefaultsResult> {
+  try {
+    // 1. Get session
+    const session = await auth.api.getSession({
+      headers: await import("next/headers").then((mod) => mod.headers()),
+    });
+
+    if (!session?.user) {
+      return {
+        success: false,
+        error: "You must be logged in",
+      };
+    }
+
+    // 2. Get organization with membership
+    const orgWithMembership = await getOrganizationWithMembership(
+      orgSlug,
+      session.user.id
+    );
+
+    if (!orgWithMembership) {
+      return {
+        success: false,
+        error: "Organization not found",
+      };
+    }
+
+    // 3. Check permissions (only owner and admin can update sender defaults)
+    if (!["owner", "admin"].includes(orgWithMembership.userRole)) {
+      return {
+        success: false,
+        error: "You do not have permission to update sender defaults",
+      };
+    }
+
+    // 4. Update organization extension
+    const [updated] = await db
+      .update(organizationExtension)
+      .set({
+        defaultAwsAccountId: data.defaultAwsAccountId ?? null,
+        defaultFrom: data.defaultFrom ?? null,
+        defaultFromName: data.defaultFromName ?? null,
+        defaultReplyTo: data.defaultReplyTo ?? null,
+        defaultSenderId: data.defaultSenderId ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(organizationExtension.organizationId, orgWithMembership.id))
+      .returning();
+
+    if (!updated) {
+      return {
+        success: false,
+        error: "Failed to update sender defaults",
+      };
+    }
+
+    // 5. Revalidate paths
+    revalidatePath(`/${orgSlug}/settings/sender-defaults`);
+
+    return {
+      success: true,
+      defaults: {
+        defaultAwsAccountId: updated.defaultAwsAccountId,
+        defaultFrom: updated.defaultFrom,
+        defaultFromName: updated.defaultFromName,
+        defaultReplyTo: updated.defaultReplyTo,
+        defaultSenderId: updated.defaultSenderId,
+      },
+    };
+  } catch (error) {
+    const log = createActionLogger("updateSenderDefaultsAction", { orgSlug });
+    log.error(
+      { err: serializeError(error) },
+      "Failed to update sender defaults"
+    );
     return {
       success: false,
       error:

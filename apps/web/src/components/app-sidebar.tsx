@@ -6,8 +6,8 @@ import type * as React from "react";
 import { Logo } from "@/components/logo";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
-import { SidebarUpgrade } from "@/components/sidebar-upgrade";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
+import { SidebarUpgrade } from "@/components/sidebar-upgrade";
 import {
   Sidebar,
   SidebarContent,
@@ -149,6 +149,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           {
             title: "General",
             url: `/${orgSlug}/settings`,
+          },
+          {
+            title: "Sender Defaults",
+            url: `/${orgSlug}/settings/sender-defaults`,
           },
           {
             title: "AWS Accounts",

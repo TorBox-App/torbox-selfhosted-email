@@ -4,10 +4,11 @@ import type { Workflow } from "@wraps/db";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 import { AIDesignPanel } from "./ai-design-panel";
-import { useWorkflowStore } from "./use-workflow-store";
+import { useSettingsPanelOpen, useWorkflowStore } from "./use-workflow-store";
 import { WorkflowCanvas } from "./workflow-canvas";
 import { WorkflowDataProvider } from "./workflow-data-context";
 import { WorkflowPropertiesPanel } from "./workflow-properties-panel";
+import { WorkflowSettingsPanel } from "./workflow-settings-panel";
 import { WorkflowToolbar } from "./workflow-toolbar";
 
 type Topic = {
@@ -24,7 +25,16 @@ type AwsAccount = {
   id: string;
   name: string;
   region: string;
+  smsEnabled?: boolean;
 };
+
+type OrgDefaults = {
+  defaultAwsAccountId: string | null;
+  defaultFrom: string | null;
+  defaultFromName: string | null;
+  defaultReplyTo: string | null;
+  defaultSenderId: string | null;
+} | null;
 
 type WorkflowBuilderProps = {
   workflow: Workflow;
@@ -33,6 +43,7 @@ type WorkflowBuilderProps = {
   topics: Topic[];
   segments: Segment[];
   awsAccounts: AwsAccount[];
+  orgDefaults: OrgDefaults;
   userRole: string;
 };
 
@@ -43,9 +54,14 @@ export function WorkflowBuilder({
   topics,
   segments,
   awsAccounts,
+  orgDefaults,
   userRole,
 }: WorkflowBuilderProps) {
   const setWorkflow = useWorkflowStore((state) => state.setWorkflow);
+  const settingsPanelOpen = useSettingsPanelOpen();
+  const setSettingsPanelOpen = useWorkflowStore(
+    (state) => state.setSettingsPanelOpen
+  );
 
   useEffect(() => {
     setWorkflow(workflow);
@@ -62,12 +78,25 @@ export function WorkflowBuilder({
           />
           <div className="flex flex-1 overflow-hidden">
             <AIDesignPanel orgSlug={orgSlug} workflowId={workflow.id} />
-            <WorkflowCanvas />
-            <WorkflowPropertiesPanel
-              orgSlug={orgSlug}
-              segments={segments}
-              topics={topics}
+            <WorkflowCanvas
+              smsEnabled={awsAccounts.some((a) => a.smsEnabled)}
             />
+            {settingsPanelOpen ? (
+              <WorkflowSettingsPanel
+                awsAccounts={awsAccounts}
+                onClose={() => setSettingsPanelOpen(false)}
+                organizationId={organizationId}
+                orgDefaults={orgDefaults}
+                orgSlug={orgSlug}
+                workflow={workflow}
+              />
+            ) : (
+              <WorkflowPropertiesPanel
+                orgSlug={orgSlug}
+                segments={segments}
+                topics={topics}
+              />
+            )}
           </div>
         </div>
       </WorkflowDataProvider>

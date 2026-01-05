@@ -918,174 +918,176 @@ describe("Segment Evaluator", () => {
   });
 
   describe("Event-Based Operators", () => {
-  /**
-   * Tests for the async event-based operators.
-   * These operators check the contact_event table for event history.
-   */
+    /**
+     * Tests for the async event-based operators.
+     * These operators check the contact_event table for event history.
+     */
 
-  // Helper to check if an operator is async (event-based)
-  function isAsyncOperator(operator: string): boolean {
-    return ["triggered", "triggeredWithin", "notTriggered"].includes(operator);
-  }
+    // Helper to check if an operator is async (event-based)
+    function isAsyncOperator(operator: string): boolean {
+      return ["triggered", "triggeredWithin", "notTriggered"].includes(
+        operator
+      );
+    }
 
-  describe("Operator Classification", () => {
-    it("should identify triggered as async operator", () => {
-      expect(isAsyncOperator("triggered")).toBe(true);
+    describe("Operator Classification", () => {
+      it("should identify triggered as async operator", () => {
+        expect(isAsyncOperator("triggered")).toBe(true);
+      });
+
+      it("should identify triggeredWithin as async operator", () => {
+        expect(isAsyncOperator("triggeredWithin")).toBe(true);
+      });
+
+      it("should identify notTriggered as async operator", () => {
+        expect(isAsyncOperator("notTriggered")).toBe(true);
+      });
+
+      it("should not identify equals as async operator", () => {
+        expect(isAsyncOperator("equals")).toBe(false);
+      });
+
+      it("should not identify contains as async operator", () => {
+        expect(isAsyncOperator("contains")).toBe(false);
+      });
     });
 
-    it("should identify triggeredWithin as async operator", () => {
-      expect(isAsyncOperator("triggeredWithin")).toBe(true);
+    describe("triggered Operator", () => {
+      it("should have correct filter structure for triggered", () => {
+        const filter: SegmentFilter = {
+          field: "purchase_made", // event name
+          operator: "triggered",
+        };
+        expect(filter.field).toBe("purchase_made");
+        expect(filter.operator).toBe("triggered");
+      });
+
+      it("should not require value for triggered", () => {
+        const filter: SegmentFilter = {
+          field: "signup_completed",
+          operator: "triggered",
+        };
+        expect(filter.value).toBeUndefined();
+      });
     });
 
-    it("should identify notTriggered as async operator", () => {
-      expect(isAsyncOperator("notTriggered")).toBe(true);
+    describe("triggeredWithin Operator", () => {
+      it("should have correct filter structure for triggeredWithin", () => {
+        const filter: SegmentFilter = {
+          field: "email_opened",
+          operator: "triggeredWithin",
+          value: 7,
+          unit: "days",
+        };
+        expect(filter.field).toBe("email_opened");
+        expect(filter.operator).toBe("triggeredWithin");
+        expect(filter.value).toBe(7);
+        expect(filter.unit).toBe("days");
+      });
+
+      it("should support hours unit", () => {
+        const filter: SegmentFilter = {
+          field: "page_viewed",
+          operator: "triggeredWithin",
+          value: 24,
+          unit: "hours",
+        };
+        expect(filter.unit).toBe("hours");
+      });
+
+      it("should support minutes unit", () => {
+        const filter: SegmentFilter = {
+          field: "form_submitted",
+          operator: "triggeredWithin",
+          value: 30,
+          unit: "minutes",
+        };
+        expect(filter.unit).toBe("minutes");
+      });
     });
 
-    it("should not identify equals as async operator", () => {
-      expect(isAsyncOperator("equals")).toBe(false);
+    describe("notTriggered Operator", () => {
+      it("should have correct filter structure for notTriggered", () => {
+        const filter: SegmentFilter = {
+          field: "cart_abandoned",
+          operator: "notTriggered",
+        };
+        expect(filter.field).toBe("cart_abandoned");
+        expect(filter.operator).toBe("notTriggered");
+      });
+
+      it("should be useful for targeting contacts without activity", () => {
+        // This operator is useful for re-engagement campaigns
+        const filter: SegmentFilter = {
+          field: "purchase_made",
+          operator: "notTriggered",
+        };
+        expect(filter.operator).toBe("notTriggered");
+      });
     });
 
-    it("should not identify contains as async operator", () => {
-      expect(isAsyncOperator("contains")).toBe(false);
+    describe("Event-based Segment Use Cases", () => {
+      it("should support purchase history segmentation", () => {
+        // Segment: Customers who made a purchase
+        const filter: SegmentFilter = {
+          field: "purchase_made",
+          operator: "triggered",
+        };
+        expect(isAsyncOperator(filter.operator)).toBe(true);
+      });
+
+      it("should support recent engagement segmentation", () => {
+        // Segment: Users who logged in within the last 30 days
+        const filter: SegmentFilter = {
+          field: "user_login",
+          operator: "triggeredWithin",
+          value: 30,
+          unit: "days",
+        };
+        expect(filter.value).toBe(30);
+        expect(filter.unit).toBe("days");
+      });
+
+      it("should support inactive user segmentation", () => {
+        // Segment: Users who have never made a purchase
+        const filter: SegmentFilter = {
+          field: "purchase_made",
+          operator: "notTriggered",
+        };
+        expect(filter.operator).toBe("notTriggered");
+      });
+
+      it("should support combining event and property filters", () => {
+        // Complex segment: Pro users who haven't purchased in 30 days
+        const condition: FilterCondition = {
+          logic: "AND",
+          groups: [
+            {
+              filters: [
+                {
+                  field: "properties.plan",
+                  operator: "equals",
+                  value: "pro",
+                },
+              ],
+            },
+            {
+              filters: [
+                {
+                  field: "purchase_made",
+                  operator: "notTriggered",
+                },
+              ],
+            },
+          ],
+        };
+        expect(condition.groups).toHaveLength(2);
+        expect(condition.logic).toBe("AND");
+      });
     });
   });
 
-  describe("triggered Operator", () => {
-    it("should have correct filter structure for triggered", () => {
-      const filter: SegmentFilter = {
-        field: "purchase_made", // event name
-        operator: "triggered",
-      };
-      expect(filter.field).toBe("purchase_made");
-      expect(filter.operator).toBe("triggered");
-    });
-
-    it("should not require value for triggered", () => {
-      const filter: SegmentFilter = {
-        field: "signup_completed",
-        operator: "triggered",
-      };
-      expect(filter.value).toBeUndefined();
-    });
-  });
-
-  describe("triggeredWithin Operator", () => {
-    it("should have correct filter structure for triggeredWithin", () => {
-      const filter: SegmentFilter = {
-        field: "email_opened",
-        operator: "triggeredWithin",
-        value: 7,
-        unit: "days",
-      };
-      expect(filter.field).toBe("email_opened");
-      expect(filter.operator).toBe("triggeredWithin");
-      expect(filter.value).toBe(7);
-      expect(filter.unit).toBe("days");
-    });
-
-    it("should support hours unit", () => {
-      const filter: SegmentFilter = {
-        field: "page_viewed",
-        operator: "triggeredWithin",
-        value: 24,
-        unit: "hours",
-      };
-      expect(filter.unit).toBe("hours");
-    });
-
-    it("should support minutes unit", () => {
-      const filter: SegmentFilter = {
-        field: "form_submitted",
-        operator: "triggeredWithin",
-        value: 30,
-        unit: "minutes",
-      };
-      expect(filter.unit).toBe("minutes");
-    });
-  });
-
-  describe("notTriggered Operator", () => {
-    it("should have correct filter structure for notTriggered", () => {
-      const filter: SegmentFilter = {
-        field: "cart_abandoned",
-        operator: "notTriggered",
-      };
-      expect(filter.field).toBe("cart_abandoned");
-      expect(filter.operator).toBe("notTriggered");
-    });
-
-    it("should be useful for targeting contacts without activity", () => {
-      // This operator is useful for re-engagement campaigns
-      const filter: SegmentFilter = {
-        field: "purchase_made",
-        operator: "notTriggered",
-      };
-      expect(filter.operator).toBe("notTriggered");
-    });
-  });
-
-  describe("Event-based Segment Use Cases", () => {
-    it("should support purchase history segmentation", () => {
-      // Segment: Customers who made a purchase
-      const filter: SegmentFilter = {
-        field: "purchase_made",
-        operator: "triggered",
-      };
-      expect(isAsyncOperator(filter.operator)).toBe(true);
-    });
-
-    it("should support recent engagement segmentation", () => {
-      // Segment: Users who logged in within the last 30 days
-      const filter: SegmentFilter = {
-        field: "user_login",
-        operator: "triggeredWithin",
-        value: 30,
-        unit: "days",
-      };
-      expect(filter.value).toBe(30);
-      expect(filter.unit).toBe("days");
-    });
-
-    it("should support inactive user segmentation", () => {
-      // Segment: Users who have never made a purchase
-      const filter: SegmentFilter = {
-        field: "purchase_made",
-        operator: "notTriggered",
-      };
-      expect(filter.operator).toBe("notTriggered");
-    });
-
-    it("should support combining event and property filters", () => {
-      // Complex segment: Pro users who haven't purchased in 30 days
-      const condition: FilterCondition = {
-        logic: "AND",
-        groups: [
-          {
-            filters: [
-              {
-                field: "properties.plan",
-                operator: "equals",
-                value: "pro",
-              },
-            ],
-          },
-          {
-            filters: [
-              {
-                field: "purchase_made",
-                operator: "notTriggered",
-              },
-            ],
-          },
-        ],
-      };
-      expect(condition.groups).toHaveLength(2);
-      expect(condition.logic).toBe("AND");
-    });
-  });
-});
-
-describe("Complex Real-world Scenarios", () => {
+  describe("Complex Real-world Scenarios", () => {
     it("should match: active US pro users who subscribed to newsletter", () => {
       const condition: FilterCondition = {
         logic: "AND",

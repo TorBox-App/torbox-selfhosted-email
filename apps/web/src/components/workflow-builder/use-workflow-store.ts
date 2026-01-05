@@ -60,6 +60,7 @@ type WorkflowStoreState = {
 
   // UI state
   selectedNodeId: string | null;
+  settingsPanelOpen: boolean;
 
   // Validation state
   validationResult: ValidationResult | null;
@@ -86,6 +87,8 @@ type WorkflowStoreState = {
   deleteNode: (nodeId: string) => void;
 
   selectNode: (nodeId: string | null) => void;
+  toggleSettingsPanel: () => void;
+  setSettingsPanelOpen: (open: boolean) => void;
 
   // Workflow actions
   updateWorkflowSettings: (settings: {
@@ -260,6 +263,7 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
+  settingsPanelOpen: false,
   validationResult: null,
 
   // Actions
@@ -400,6 +404,14 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
     set({ selectedNodeId: nodeId });
   },
 
+  toggleSettingsPanel: () => {
+    set((state) => ({ settingsPanelOpen: !state.settingsPanelOpen }));
+  },
+
+  setSettingsPanelOpen: (open) => {
+    set({ settingsPanelOpen: open });
+  },
+
   updateWorkflowSettings: (settings) => {
     set((state) => {
       if (!state.workflow) {
@@ -479,6 +491,8 @@ export const useSelectedNode = () => {
 
 export const useIsDirty = () => useWorkflowStore((state) => state.isDirty);
 export const useIsSaving = () => useWorkflowStore((state) => state.isSaving);
+export const useSettingsPanelOpen = () =>
+  useWorkflowStore((state) => state.settingsPanelOpen);
 export const useValidationResult = () =>
   useWorkflowStore((state) => state.validationResult);
 
