@@ -75,10 +75,14 @@ export function WorkflowToolbar({
   const [editedName, setEditedName] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Run validation on mount and when nodes/edges change
+  // Run validation when nodes/edges change
+  // Note: _nodes and _edges are used as dependencies to re-run validation
   useEffect(() => {
-    runValidation();
-  }, [runValidation]);
+    // Only run validation if we have nodes (workflow is loaded)
+    if (_nodes.length > 0) {
+      runValidation();
+    }
+  }, [runValidation, _nodes, _edges]);
 
   // Focus input when editing starts
   useEffect(() => {
