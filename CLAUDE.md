@@ -41,7 +41,7 @@
     "bundler": "vite",
     "styling": "tailwindcss 4.x + shadcn/ui",
     "components": "radix-ui",
-    "forms": "react-hook-form + zod",
+    "forms": "@tanstack/react-form + zod (server actions)",
     "routing": "react-router-dom",
     "state": "zustand"
   },
@@ -599,3 +599,41 @@ pnpm fix
 - Keep CLI commands simple and focused
 - run `pnpm check:all` before comitting
 - you can use `pnpm check` and `pnpm fix` from the root of our repo.
+
+## Skills (Auto-Trigger Rules)
+
+Claude MUST automatically apply these skills when the task matches:
+
+### Forms (`/.claude/skills/create-form.md`)
+**Trigger when**: Creating, editing, or refactoring any form component
+**Key rules**:
+- ALWAYS use `@tanstack/react-form` - NEVER use `react-hook-form`
+- Use shadcn/ui Field components (`Field`, `FieldLabel`, `FieldContent`, `FieldError`)
+- Zod validation with type inference
+- Server actions for form submissions (see server action skill)
+
+### Server Actions (`/.claude/skills/create-server-action.md`)
+**Trigger when**: Creating form submission handlers or API mutations from client components
+**Key rules**:
+- Use `@tanstack/react-form/nextjs` utilities (`createServerValidate`, `ServerValidateError`)
+- Share validation logic between client and server via `formOpts`
+- Always catch `ServerValidateError` and return `e.formState`
+- Return structured responses with `success` flag
+
+### API Routes (`/.claude/skills/wraps-api-developer.md`)
+**Trigger when**: Creating or editing API routes in `apps/api/`
+**Key rules**:
+- ALWAYS await async operations (Lambda terminates when handler returns)
+- No fire-and-forget promises
+- Scope all queries by `organizationId`
+- Use correct REST semantics (PATCH adds, PUT replaces)
+
+### Migration Backlog (Forms to Migrate)
+These files still use `react-hook-form` and should be migrated when touched:
+- `apps/web/src/components/template-editor/new-template-form.tsx`
+- `apps/web/src/components/template-editor/save-block-modal.tsx`
+- `apps/web/src/components/template-editor/send-test-modal.tsx`
+- `apps/web/src/components/template-editor/wrappers/template-name-dialog.tsx`
+- `apps/website/src/app/landing/components/contact-section.tsx`
+- `apps/web/src/app/(dashboard)/[orgSlug]/topics/components/preference-center-settings.tsx`
+- `apps/web/src/app/(dashboard)/[orgSlug]/topics/components/double-opt-in-settings.tsx`
