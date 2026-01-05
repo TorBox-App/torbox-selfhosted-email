@@ -6,7 +6,8 @@
  * GET /v1/contacts - List contacts with pagination
  * GET /v1/contacts/:id - Get a single contact
  * POST /v1/contacts - Create a new contact
- * PATCH /v1/contacts/:id - Update a contact
+ * PATCH /v1/contacts/:id - Update a contact (adds topics, doesn't replace)
+ * PUT /v1/contacts/:id/topics - Replace all topic subscriptions
  * DELETE /v1/contacts/:id - Delete a contact
  * DELETE /v1/contacts - Bulk delete contacts
  */
@@ -622,7 +623,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         .where(eq(contact.id, params.id))
         .returning();
 
-      // Update topic subscriptions if specified
+      // Add topic subscriptions if specified (PATCH adds, doesn't replace)
       const pendingTopics: string[] = [];
       if (body.topicIds !== undefined || body.topicSlugs !== undefined) {
         // Resolve topic slugs to IDs if provided
@@ -632,10 +633,14 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             body.topicSlugs,
             authContext.organizationId
           );
+          console.log("[contacts] PATCH topics - resolved slugs:", {
+            slugs: body.topicSlugs,
+            resolvedIds,
+          });
           topicIds = [...topicIds, ...resolvedIds];
         }
 
-        // Get existing subscriptions to check for previously confirmed
+        // Get existing subscriptions to check which topics are already subscribed
         const existingSubscriptions = await db
           .select({
             topicId: contactTopic.topicId,
@@ -644,19 +649,25 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           .from(contactTopic)
           .where(eq(contactTopic.contactId, params.id));
 
+        const existingTopicIds = new Set(
+          existingSubscriptions.map((s) => s.topicId)
+        );
         const confirmedTopics = new Map(
           existingSubscriptions
             .filter((s) => s.confirmedAt !== null)
             .map((s) => [s.topicId, s.confirmedAt])
         );
 
-        // Remove all existing subscriptions
-        await db
-          .delete(contactTopic)
-          .where(eq(contactTopic.contactId, params.id));
+        // Filter to only new topics (PATCH semantics: add, don't replace)
+        const newTopicIds = topicIds.filter((id) => !existingTopicIds.has(id));
+        console.log("[contacts] PATCH topics - filtering:", {
+          topicIds,
+          existingTopicIds: [...existingTopicIds],
+          newTopicIds,
+        });
 
         // Add new subscriptions with double opt-in check
-        if (topicIds.length > 0) {
+        if (newTopicIds.length > 0) {
           // Get topic info to check for double opt-in
           const topicInfos = await db
             .select({
@@ -669,7 +680,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             .where(
               and(
                 eq(topic.organizationId, authContext.organizationId),
-                inArray(topic.id, topicIds)
+                inArray(topic.id, newTopicIds)
               )
             );
 
@@ -677,7 +688,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           const now = new Date();
 
           await db.insert(contactTopic).values(
-            topicIds.map((topicId) => {
+            newTopicIds.map((topicId) => {
               const topicInfo = topicMap.get(topicId);
               const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
               const previouslyConfirmed = confirmedTopics.has(topicId);
@@ -731,15 +742,12 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             );
           }
 
-          // Emit topic_subscribed events for newly subscribed topics (not pending, not previously subscribed)
-          const existingTopicIds = new Set(
-            existingSubscriptions.map((s) => s.topicId)
-          );
-          const newlySubscribedTopics = topicIds.filter(
-            (tid) => !pendingTopics.includes(tid) && !existingTopicIds.has(tid)
+          // Emit topic_subscribed events for newly subscribed topics (not pending)
+          const immediateTopics = newTopicIds.filter(
+            (tid) => !pendingTopics.includes(tid)
           );
 
-          for (const topicId of newlySubscribedTopics) {
+          for (const topicId of immediateTopics) {
             const topicInfo = topicMap.get(topicId);
             emitTopicSubscribed({
               contactId: params.id,
@@ -814,6 +822,203 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         tags: ["contacts"],
         summary: "Update contact",
         description: "Updates an existing contact",
+      },
+    }
+  )
+  // Replace all topic subscriptions
+  .put(
+    "/:id/topics",
+    async (ctx) => {
+      const { params, body } = ctx;
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+
+      // Check contact exists
+      const [existing] = await db
+        .select({ id: contact.id })
+        .from(contact)
+        .where(
+          and(
+            eq(contact.id, params.id),
+            eq(contact.organizationId, authContext.organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        ctx.set.status = 404;
+        return { error: "Contact not found" };
+      }
+
+      // Resolve topic slugs to IDs if provided
+      let topicIds = body.topicIds || [];
+      if (body.topicSlugs && body.topicSlugs.length > 0) {
+        const resolvedIds = await resolveTopicSlugs(
+          body.topicSlugs,
+          authContext.organizationId
+        );
+        topicIds = [...topicIds, ...resolvedIds];
+      }
+
+      // Get existing subscriptions to preserve confirmation dates
+      const existingSubscriptions = await db
+        .select({
+          topicId: contactTopic.topicId,
+          confirmedAt: contactTopic.confirmedAt,
+        })
+        .from(contactTopic)
+        .where(eq(contactTopic.contactId, params.id));
+
+      const existingTopicIds = new Set(
+        existingSubscriptions.map((s) => s.topicId)
+      );
+      const confirmedTopics = new Map(
+        existingSubscriptions
+          .filter((s) => s.confirmedAt !== null)
+          .map((s) => [s.topicId, s.confirmedAt])
+      );
+
+      // Remove all existing subscriptions
+      await db
+        .delete(contactTopic)
+        .where(eq(contactTopic.contactId, params.id));
+
+      // Add new subscriptions with double opt-in check
+      const pendingTopics: string[] = [];
+      if (topicIds.length > 0) {
+        // Get topic info to check for double opt-in
+        const topicInfos = await db
+          .select({
+            id: topic.id,
+            name: topic.name,
+            description: topic.description,
+            doubleOptIn: topic.doubleOptIn,
+          })
+          .from(topic)
+          .where(
+            and(
+              eq(topic.organizationId, authContext.organizationId),
+              inArray(topic.id, topicIds)
+            )
+          );
+
+        const topicMap = new Map(topicInfos.map((t) => [t.id, t]));
+        const now = new Date();
+
+        // Get contact email for confirmation emails
+        const [contactData] = await db
+          .select({ email: contact.email })
+          .from(contact)
+          .where(eq(contact.id, params.id))
+          .limit(1);
+
+        await db.insert(contactTopic).values(
+          topicIds.map((topicId) => {
+            const topicInfo = topicMap.get(topicId);
+            const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
+            const previouslyConfirmed = confirmedTopics.has(topicId);
+
+            // Skip confirmation if previously confirmed (re-subscription)
+            const needsConfirmation =
+              requiresConfirmation && !previouslyConfirmed;
+
+            if (needsConfirmation) {
+              pendingTopics.push(topicId);
+            }
+
+            return {
+              contactId: params.id,
+              topicId,
+              status: needsConfirmation ? "pending" : "subscribed",
+              subscribedAt: needsConfirmation ? null : now,
+              confirmedAt: needsConfirmation
+                ? null
+                : previouslyConfirmed
+                  ? confirmedTopics.get(topicId)
+                  : now,
+            };
+          })
+        );
+
+        // Send confirmation emails for newly pending topics
+        if (pendingTopics.length > 0 && contactData?.email) {
+          await Promise.all(
+            pendingTopics.map(async (topicId) => {
+              const topicInfo = topicMap.get(topicId);
+              if (topicInfo) {
+                try {
+                  await sendTopicConfirmationEmail({
+                    contactId: params.id,
+                    contactEmail: contactData.email!,
+                    topicId,
+                    topicName: topicInfo.name,
+                    topicDescription: topicInfo.description,
+                    organizationId: authContext.organizationId,
+                  });
+                } catch (err) {
+                  console.error(
+                    `Failed to send confirmation email for topic ${topicId}:`,
+                    err
+                  );
+                }
+              }
+            })
+          );
+        }
+
+        // Emit topic_subscribed events for newly subscribed topics (not pending, not previously subscribed)
+        const newlySubscribedTopics = topicIds.filter(
+          (tid) => !pendingTopics.includes(tid) && !existingTopicIds.has(tid)
+        );
+
+        for (const topicId of newlySubscribedTopics) {
+          const topicInfo = topicMap.get(topicId);
+          emitTopicSubscribed({
+            contactId: params.id,
+            organizationId: authContext.organizationId,
+            topicId,
+            topicName: topicInfo?.name,
+          }).catch((err) => {
+            console.error(
+              "[contacts] Failed to emit topic_subscribed event:",
+              err
+            );
+          });
+        }
+      }
+
+      // Get updated topics to return
+      const updatedTopics = await db
+        .select({
+          topicId: contactTopic.topicId,
+          topicName: topic.name,
+          status: contactTopic.status,
+          subscribedAt: contactTopic.subscribedAt,
+        })
+        .from(contactTopic)
+        .innerJoin(topic, eq(topic.id, contactTopic.topicId))
+        .where(eq(contactTopic.contactId, params.id));
+
+      return {
+        topics: updatedTopics.map((t) => ({
+          ...t,
+          subscribedAt: t.subscribedAt?.toISOString() ?? null,
+        })),
+        pendingTopics: pendingTopics.length > 0 ? pendingTopics : undefined,
+      };
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        topicIds: t.Optional(t.Array(t.String())),
+        topicSlugs: t.Optional(t.Array(t.String())),
+      }),
+      detail: {
+        tags: ["contacts"],
+        summary: "Replace contact topics",
+        description:
+          "Replaces all topic subscriptions for a contact. Use PATCH to add topics without removing existing ones.",
       },
     }
   )
