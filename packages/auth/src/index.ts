@@ -1,10 +1,12 @@
 import { passkey } from "@better-auth/passkey";
 import { stripe } from "@better-auth/stripe";
+import { createPlatformClient } from "@wraps.dev/client";
 import { db, eq } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import { getWrapsClient } from "@wraps/email";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import {
   haveIBeenPwned,
@@ -13,6 +15,61 @@ import {
   twoFactor,
 } from "better-auth/plugins";
 import Stripe from "stripe";
+
+/**
+ * Track user signup event for welcome automation.
+ * Creates the contact if needed, then emits the user.signup event.
+ * Non-blocking - failures are logged but don't affect auth flow.
+ */
+async function trackUserSignup(user: { email: string; name: string | null }) {
+  try {
+    const apiKey = process.env.WRAPS_API_KEY;
+    if (!apiKey) {
+      console.warn("WRAPS_API_KEY not configured, skipping signup event");
+      return;
+    }
+
+    const client = createPlatformClient({ apiKey });
+    const normalizedEmail = user.email.toLowerCase().trim();
+
+    // Create/upsert the contact first (required for events)
+    const { error: contactError } = await client.POST("/v1/contacts/", {
+      body: {
+        email: normalizedEmail,
+        emailStatus: "active",
+        properties: {
+          name: user.name || undefined,
+          signupAt: new Date().toISOString(),
+          source: "web",
+        },
+      },
+    });
+
+    if (contactError) {
+      // Contact might already exist (e.g., from waitlist), that's OK
+      console.log("Contact create result:", contactError);
+    }
+
+    // Now emit the signup event
+    const { error: eventError } = await client.POST("/v1/events/", {
+      body: {
+        name: "user.signup",
+        contactEmail: normalizedEmail,
+        properties: {
+          name: user.name || undefined,
+          signupAt: new Date().toISOString(),
+          source: "web",
+        },
+      },
+    });
+
+    if (eventError) {
+      console.error("Failed to track user.signup event:", eventError);
+    }
+  } catch (err) {
+    console.error("Error tracking user.signup event:", err);
+  }
+}
 
 // Only initialize Stripe client if the secret key is available
 // This prevents build-time errors when env vars aren't set (e.g., during Next.js static generation)
@@ -286,6 +343,21 @@ export const auth = betterAuth<BetterAuthOptions>({
         ]
       : []),
   ],
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      // Track user signup for welcome automation
+      if (ctx.path.startsWith("/sign-up")) {
+        const newSession = ctx.context.newSession;
+        if (newSession) {
+          // Fire and forget - don't block auth flow
+          trackUserSignup({
+            email: newSession.user.email,
+            name: newSession.user.name,
+          });
+        }
+      }
+    }),
+  },
   databaseHooks: {
     session: {
       create: {
