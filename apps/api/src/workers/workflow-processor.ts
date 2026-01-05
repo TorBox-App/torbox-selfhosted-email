@@ -10,6 +10,7 @@ import {
   SendTextMessageCommand,
 } from "@aws-sdk/client-pinpoint-sms-voice-v2";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
+import { toPlainText } from "@react-email/render";
 import {
   awsAccount,
   contact,
@@ -664,7 +665,7 @@ async function handleSendEmail(
           Subject: { Data: subject },
           Body: {
             Html: { Data: html },
-            Text: { Data: stripHtml(html) },
+            Text: { Data: htmlToPlainText(html) },
           },
           Headers: headers.length > 0 ? headers : undefined,
         },
@@ -777,19 +778,11 @@ function sanitizeEmailSubject(subject: string): string {
 }
 
 /**
- * Strip HTML tags for plain text version
+ * Convert HTML to plain text for email fallback
+ * Uses react-email's toPlainText for robust HTML-to-text conversion
  */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
+function htmlToPlainText(html: string): string {
+  return toPlainText(html);
 }
 
 /**

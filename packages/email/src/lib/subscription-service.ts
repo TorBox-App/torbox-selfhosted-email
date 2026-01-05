@@ -7,6 +7,7 @@
 
 import { ListEmailIdentitiesCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
+import { toPlainText } from "@react-email/render";
 import {
   awsAccount,
   db,
@@ -35,18 +36,10 @@ function substituteVariables(
 
 /**
  * Convert HTML to plain text for email fallback
+ * Uses react-email's toPlainText for robust HTML-to-text conversion
  */
-function stripHtmlForPlainText(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
+function htmlToPlainText(html: string): string {
+  return toPlainText(html);
 }
 
 export type CreateSubscriptionParams = {
@@ -234,7 +227,7 @@ export async function sendTopicConfirmationEmail(
       html = substituteVariables(customTemplate.compiledHtml, variables);
       text = customTemplate.compiledText
         ? substituteVariables(customTemplate.compiledText, variables)
-        : stripHtmlForPlainText(html);
+        : htmlToPlainText(html);
     } else {
       console.log(
         `[CONFIRMATION_EMAIL] Custom template ${settings.confirmationTemplateId} not found or not compiled, using default`

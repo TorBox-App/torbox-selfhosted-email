@@ -1,4 +1,4 @@
-import { render } from "@react-email/render";
+import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import { brandKit, db, template } from "@wraps/db";
@@ -150,13 +150,8 @@ export async function POST(request: Request, context: RouteContext) {
     // Render to HTML
     const html = await render(emailComponent);
 
-    // Generate plain text version (simple strip of HTML tags)
-    const text = html
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    // Generate plain text version using react-email's robust converter
+    const text = toPlainText(html);
 
     // Initialize Wraps SDK with proper configuration
     const region = process.env.AWS_REGION || "us-east-1";

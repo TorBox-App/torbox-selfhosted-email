@@ -2,6 +2,7 @@
 
 import { auth } from "@wraps/auth";
 import { batchSend, contact, contactTopic, db, template } from "@wraps/db";
+import { z } from "zod";
 import {
   and,
   desc,
@@ -32,6 +33,9 @@ import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
 import { publishTemplateToSES } from "./templates";
+
+// UUID validation schema for input sanitization
+const uuidSchema = z.string().uuid();
 
 // Re-export types for convenience
 export type {
@@ -191,6 +195,14 @@ export async function getBatchSend(
   batchId: string,
   organizationId: string
 ): Promise<GetBatchResult> {
+  // Validate UUID format before any database operations
+  if (!uuidSchema.safeParse(batchId).success) {
+    return { success: false, error: "Invalid batch ID" };
+  }
+  if (!uuidSchema.safeParse(organizationId).success) {
+    return { success: false, error: "Invalid organization ID" };
+  }
+
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -516,6 +528,14 @@ export async function cancelBatchSend(
   batchId: string,
   organizationId: string
 ): Promise<CancelBatchResult> {
+  // Validate UUID format before any database operations
+  if (!uuidSchema.safeParse(batchId).success) {
+    return { success: false, error: "Invalid batch ID" };
+  }
+  if (!uuidSchema.safeParse(organizationId).success) {
+    return { success: false, error: "Invalid organization ID" };
+  }
+
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -533,6 +553,26 @@ export async function cancelBatchSend(
       };
     }
 
+    // Verify batch exists and belongs to this organization before making API call
+    // This prevents SSRF by ensuring we only use validated IDs from the database
+    const batch = await db.query.batchSend.findFirst({
+      where: (b, { and, eq }) =>
+        and(eq(b.id, batchId), eq(b.organizationId, organizationId)),
+      columns: { id: true, status: true },
+    });
+
+    if (!batch) {
+      return { success: false, error: "Batch not found" };
+    }
+
+    // Check if batch can be cancelled (only scheduled/queued)
+    if (!["scheduled", "queued"].includes(batch.status)) {
+      return {
+        success: false,
+        error: `Cannot cancel batch with status "${batch.status}"`,
+      };
+    }
+
     // Get session for API auth
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -543,14 +583,13 @@ export async function cancelBatchSend(
     }
 
     // Call the API to cancel batch (handles EventBridge schedule deletion)
-    // Security: apiUrl comes from trusted environment variable, not user input
-    // codeql[js/request-forgery]
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
       return { success: false, error: "API URL not configured" };
     }
 
-    const response = await fetch(`${apiUrl}/v1/batch/${batchId}`, {
+    // Use validated batch.id from database, not raw user input
+    const response = await fetch(`${apiUrl}/v1/batch/${batch.id}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${session.session.token}`,

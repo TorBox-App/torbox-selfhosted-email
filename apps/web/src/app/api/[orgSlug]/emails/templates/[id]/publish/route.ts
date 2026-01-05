@@ -1,4 +1,4 @@
-import { render } from "@react-email/render";
+import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import { awsAccount, brandKit, db, template } from "@wraps/db";
@@ -147,13 +147,8 @@ export async function POST(request: Request, context: RouteContext) {
     // Render to HTML
     const rawHtml = await render(emailComponent);
 
-    // Generate plain text version
-    const rawText = rawHtml
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    // Generate plain text version using react-email's robust converter
+    const rawText = toPlainText(rawHtml);
 
     // Transform variables for SES compatibility
     // {{contact.email}} → {{contactEmail}}
