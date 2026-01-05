@@ -704,19 +704,21 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             topicInfosForResub.map((t) => [t.id, t.name])
           );
 
-          for (const topicId of resubscribeTopicIds) {
-            emitTopicSubscribed({
-              contactId: params.id,
-              organizationId: authContext.organizationId,
-              topicId,
-              topicName: resubTopicMap.get(topicId),
-            }).catch((err) => {
-              console.error(
-                "[contacts] Failed to emit topic_subscribed event:",
-                err
-              );
-            });
-          }
+          await Promise.all(
+            resubscribeTopicIds.map((topicId) =>
+              emitTopicSubscribed({
+                contactId: params.id,
+                organizationId: authContext.organizationId,
+                topicId,
+                topicName: resubTopicMap.get(topicId),
+              }).catch((err) => {
+                console.error(
+                  "[contacts] Failed to emit topic_subscribed event:",
+                  err
+                );
+              })
+            )
+          );
         }
 
         // Add new subscriptions with double opt-in check
@@ -800,20 +802,22 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             (tid) => !pendingTopics.includes(tid)
           );
 
-          for (const topicId of immediateTopics) {
-            const topicInfo = topicMap.get(topicId);
-            emitTopicSubscribed({
-              contactId: params.id,
-              organizationId: authContext.organizationId,
-              topicId,
-              topicName: topicInfo?.name,
-            }).catch((err) => {
-              console.error(
-                "[contacts] Failed to emit topic_subscribed event:",
-                err
-              );
-            });
-          }
+          await Promise.all(
+            immediateTopics.map((topicId) => {
+              const topicInfo = topicMap.get(topicId);
+              return emitTopicSubscribed({
+                contactId: params.id,
+                organizationId: authContext.organizationId,
+                topicId,
+                topicName: topicInfo?.name,
+              }).catch((err) => {
+                console.error(
+                  "[contacts] Failed to emit topic_subscribed event:",
+                  err
+                );
+              });
+            })
+          );
         }
       }
 
