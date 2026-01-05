@@ -45,7 +45,9 @@
       "@types/react": "19.2.4",
       "@types/react-dom": "19.2.3",
       "hono": "^4.11.3",
-      "@modelcontextprotocol/sdk": "^1.25.1"
+      "@modelcontextprotocol/sdk": "^1.25.1",
+      "nodemailer": "^7.0.12",
+      "path-to-regexp@6": "^6.3.0"
     }
   }
 }
