@@ -543,6 +543,8 @@ export async function cancelBatchSend(
     }
 
     // Call the API to cancel batch (handles EventBridge schedule deletion)
+    // Security: apiUrl comes from trusted environment variable, not user input
+    // codeql[js/request-forgery]
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
       return { success: false, error: "API URL not configured" };

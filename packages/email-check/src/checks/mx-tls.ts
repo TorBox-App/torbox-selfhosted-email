@@ -295,11 +295,15 @@ function upgradeToTls(
         session.socket.removeListener("data", onData);
 
         // Upgrade to TLS
+        // Security: rejectUnauthorized:false is intentional - this is a TLS inspection tool
+        // that needs to connect to potentially misconfigured mail servers to report their status.
+        // We check tlsSocket.authorized separately and report it in the results.
+        // codeql[js/disabling-certificate-validation]
         const tlsSocket = tls.connect(
           {
             socket: session.socket,
             servername: hostname,
-            rejectUnauthorized: false, // We'll check manually
+            rejectUnauthorized: false,
             minVersion: "TLSv1.2",
           },
           () => {
