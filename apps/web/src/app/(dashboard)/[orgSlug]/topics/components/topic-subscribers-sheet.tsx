@@ -49,6 +49,19 @@ export function TopicSubscribersSheet({
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
+  // Stable reference for dependency arrays
+  const topicId = topic?.id ?? null;
+
+  // Reset state when topic changes or sheet opens with new topic
+  useEffect(() => {
+    if (open && topicId) {
+      // Reset pagination and clear stale data
+      setPage(1);
+      setSubscribers([]);
+      setTotal(0);
+    }
+  }, [open, topicId]);
+
   // Load subscribers when sheet opens or page changes
   useEffect(() => {
     if (open && topic) {
@@ -64,12 +77,7 @@ export function TopicSubscribersSheet({
         }
       });
     }
-  }, [open, topic, organizationId, page]);
-
-  // Reset page when topic changes
-  useEffect(() => {
-    setPage(1);
-  }, []);
+  }, [open, topicId, organizationId, page, topic]);
 
   if (!topic) {
     return null;
@@ -90,7 +98,7 @@ export function TopicSubscribersSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
+        <div className="space-y-4 px-4 pb-4">
           {/* Topic Info */}
           <div className="flex items-center gap-2">
             <Badge variant="outline">/{topic.slug}</Badge>
