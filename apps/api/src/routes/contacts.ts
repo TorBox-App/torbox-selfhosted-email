@@ -730,6 +730,29 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
               })
             );
           }
+
+          // Emit topic_subscribed events for newly subscribed topics (not pending, not previously subscribed)
+          const existingTopicIds = new Set(
+            existingSubscriptions.map((s) => s.topicId)
+          );
+          const newlySubscribedTopics = topicIds.filter(
+            (tid) => !pendingTopics.includes(tid) && !existingTopicIds.has(tid)
+          );
+
+          for (const topicId of newlySubscribedTopics) {
+            const topicInfo = topicMap.get(topicId);
+            emitTopicSubscribed({
+              contactId: params.id,
+              organizationId: authContext.organizationId,
+              topicId,
+              topicName: topicInfo?.name,
+            }).catch((err) => {
+              console.error(
+                "[contacts] Failed to emit topic_subscribed event:",
+                err
+              );
+            });
+          }
         }
       }
 
