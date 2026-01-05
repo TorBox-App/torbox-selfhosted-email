@@ -80,10 +80,7 @@ export function NavMain({
             <HoverCard closeDelay={100} key={item.title} openDelay={0}>
               <HoverCardTrigger asChild>
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={isGroupActive(item)}
-                    tooltip={item.title}
-                  >
+                  <SidebarMenuButton isActive={isGroupActive(item)}>
                     <item.icon />
                     <span>{item.title}</span>
                   </SidebarMenuButton>

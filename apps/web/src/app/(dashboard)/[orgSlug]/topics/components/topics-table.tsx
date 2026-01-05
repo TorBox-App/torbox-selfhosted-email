@@ -418,9 +418,18 @@ export function TopicsTable({
 
       {/* Subscribers Sheet */}
       <TopicSubscribersSheet
+        canEdit={canEdit}
         onClose={() => {
           setSubscribersSheetOpen(false);
           setSelectedTopic(null);
+        }}
+        onDelete={() => {
+          setSubscribersSheetOpen(false);
+          setDeleteDialogOpen(true);
+        }}
+        onEdit={() => {
+          setSubscribersSheetOpen(false);
+          setEditDialogOpen(true);
         }}
         open={subscribersSheetOpen}
         organizationId={organizationId}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { Pencil, Trash2, Users } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { getTopicSubscribers } from "@/actions/topics";
 import { Badge } from "@/components/ui/badge";
@@ -31,14 +31,20 @@ type Subscriber = {
 };
 
 type TopicSubscribersSheetProps = {
+  canEdit: boolean;
   onClose: () => void;
+  onDelete: () => void;
+  onEdit: () => void;
   open: boolean;
   organizationId: string;
   topic: TopicWithMeta | null;
 };
 
 export function TopicSubscribersSheet({
+  canEdit,
   onClose,
+  onDelete,
+  onEdit,
   open,
   organizationId,
   topic,
@@ -87,8 +93,8 @@ export function TopicSubscribersSheet({
 
   return (
     <Sheet onOpenChange={(isOpen) => !isOpen && onClose()} open={open}>
-      <SheetContent className="sm:max-w-lg">
-        <SheetHeader>
+      <SheetContent className="flex flex-col overflow-hidden sm:max-w-lg">
+        <SheetHeader className="px-4">
           <SheetTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             {topic.name}
@@ -98,7 +104,7 @@ export function TopicSubscribersSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-4 px-4 pb-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
           {/* Topic Info */}
           <div className="flex items-center gap-2">
             <Badge variant="outline">/{topic.slug}</Badge>
@@ -182,6 +188,19 @@ export function TopicSubscribersSheet({
             </div>
           )}
         </div>
+
+        {/* Actions Footer */}
+        {canEdit && (
+          <div className="flex items-center gap-2 border-t px-4 py-3">
+            <Button className="flex-1" onClick={onEdit} variant="outline">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Topic
+            </Button>
+            <Button onClick={onDelete} size="icon" variant="ghost">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
