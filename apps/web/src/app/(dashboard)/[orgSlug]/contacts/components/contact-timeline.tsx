@@ -6,12 +6,9 @@ import {
   ChevronRight,
   Clock,
   Mail,
-  MailOpen,
   Megaphone,
   MessageSquare,
-  MousePointerClick,
   Play,
-  Send,
   UserPlus,
   Workflow,
   XCircle,
@@ -22,7 +19,13 @@ import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   getContactTimeline,
+  type MessageStatusTimestamps,
   type TimelineEvent,
   type TimelineEventType,
 } from "@/actions/contacts";
@@ -34,9 +37,9 @@ type ContactTimelineProps = {
   orgSlug: string;
 };
 
-// Base config for event types (used for non-email events and fallback)
+// Config for non-message event types
 const EVENT_CONFIG: Record<
-  TimelineEventType,
+  Exclude<TimelineEventType, "message">,
   {
     icon: React.ElementType;
     label: string;
@@ -44,66 +47,6 @@ const EVENT_CONFIG: Record<
     bgColor: string;
   }
 > = {
-  email_sent: {
-    icon: Send,
-    label: "Email sent",
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
-  },
-  email_delivered: {
-    icon: Mail,
-    label: "Email delivered",
-    color: "text-green-600",
-    bgColor: "bg-green-100",
-  },
-  email_opened: {
-    icon: MailOpen,
-    label: "Email opened",
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
-  },
-  email_clicked: {
-    icon: MousePointerClick,
-    label: "Email clicked",
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-100",
-  },
-  email_bounced: {
-    icon: XCircle,
-    label: "Email bounced",
-    color: "text-red-600",
-    bgColor: "bg-red-100",
-  },
-  email_complained: {
-    icon: AlertTriangle,
-    label: "Spam complaint",
-    color: "text-orange-600",
-    bgColor: "bg-orange-100",
-  },
-  sms_sent: {
-    icon: Send,
-    label: "SMS sent",
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
-  },
-  sms_delivered: {
-    icon: MessageSquare,
-    label: "SMS delivered",
-    color: "text-green-600",
-    bgColor: "bg-green-100",
-  },
-  sms_clicked: {
-    icon: MousePointerClick,
-    label: "SMS clicked",
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-100",
-  },
-  sms_opted_out: {
-    icon: XCircle,
-    label: "SMS opt-out",
-    color: "text-red-600",
-    bgColor: "bg-red-100",
-  },
   workflow_started: {
     icon: Play,
     label: "Automation started",
@@ -130,47 +73,139 @@ const EVENT_CONFIG: Record<
   },
 };
 
-// Get icon and label based on source type for email/SMS events
-function getEventDisplay(event: TimelineEvent): {
+// Status dot configuration for message events
+const STATUS_DOT_CONFIG = {
+  sent: {
+    color: "bg-blue-500",
+    label: "Sent",
+  },
+  delivered: {
+    color: "bg-green-500",
+    label: "Delivered",
+  },
+  opened: {
+    color: "bg-purple-500",
+    label: "Opened",
+  },
+  clicked: {
+    color: "bg-indigo-500",
+    label: "Clicked",
+  },
+  bounced: {
+    color: "bg-red-500",
+    label: "Bounced",
+  },
+  complained: {
+    color: "bg-orange-500",
+    label: "Spam complaint",
+  },
+  optedOut: {
+    color: "bg-red-500",
+    label: "Opted out",
+  },
+} as const;
+
+// Get display config for message events based on source type
+function getMessageDisplay(event: TimelineEvent): {
   icon: React.ElementType;
   label: string;
   color: string;
   bgColor: string;
 } {
-  const baseConfig = EVENT_CONFIG[event.type];
+  const isEmail = event.channel === "email";
+  const channelLabel = isEmail ? "Email" : "SMS";
 
-  // For email events, customize based on source type
-  if (event.type.startsWith("email_")) {
-    const action = event.type.replace("email_", ""); // sent, delivered, opened, etc.
-    const actionLabel =
-      action === "complained"
-        ? "Spam complaint"
-        : action.charAt(0).toUpperCase() + action.slice(1);
-
-    if (event.sourceType === "batch") {
-      return {
-        icon: Megaphone,
-        label: `Broadcast ${actionLabel.toLowerCase()}`,
-        color: baseConfig.color,
-        bgColor: "bg-violet-100",
-      };
-    }
-    if (event.sourceType === "workflow") {
-      return {
-        icon: Workflow,
-        label: `Automation email ${actionLabel.toLowerCase()}`,
-        color: baseConfig.color,
-        bgColor: "bg-amber-100",
-      };
-    }
-    // Transactional - use mail icon
+  if (event.sourceType === "batch") {
     return {
-      ...baseConfig,
-      label: `Email ${actionLabel.toLowerCase()}`,
+      icon: Megaphone,
+      label: "Broadcast",
+      color: "text-violet-600",
+      bgColor: "bg-violet-100",
     };
   }
+  if (event.sourceType === "workflow") {
+    return {
+      icon: Workflow,
+      label: `Automation ${channelLabel.toLowerCase()}`,
+      color: "text-amber-600",
+      bgColor: "bg-amber-100",
+    };
+  }
+  // Transactional
+  return {
+    icon: isEmail ? Mail : MessageSquare,
+    label: channelLabel,
+    color: isEmail ? "text-blue-600" : "text-emerald-600",
+    bgColor: isEmail ? "bg-blue-100" : "bg-emerald-100",
+  };
+}
 
-  return baseConfig;
+function formatTimestampShort(date: Date): string {
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+// Status dots component for message delivery status
+function StatusDots({
+  status,
+  channel,
+}: {
+  status: MessageStatusTimestamps;
+  channel: "email" | "sms";
+}) {
+  // Determine which statuses to show based on channel
+  const emailStatuses = [
+    { key: "sent", timestamp: status.sentAt },
+    { key: "delivered", timestamp: status.deliveredAt },
+    { key: "opened", timestamp: status.openedAt },
+    { key: "clicked", timestamp: status.clickedAt },
+    { key: "bounced", timestamp: status.bouncedAt },
+    { key: "complained", timestamp: status.complainedAt },
+  ] as const;
+
+  const smsStatuses = [
+    { key: "sent", timestamp: status.sentAt },
+    { key: "delivered", timestamp: status.deliveredAt },
+    { key: "clicked", timestamp: status.clickedAt },
+    { key: "optedOut", timestamp: status.optedOutAt },
+  ] as const;
+
+  const statuses = channel === "email" ? emailStatuses : smsStatuses;
+  const activeStatuses = statuses.filter((s) => s.timestamp);
+
+  if (activeStatuses.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1">
+      {activeStatuses.map(({ key, timestamp }) => {
+        const config = STATUS_DOT_CONFIG[key];
+        return (
+          <Tooltip key={key}>
+            <TooltipTrigger asChild>
+              <span
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  config.color
+                )}
+              />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              <span className="font-medium">{config.label}</span>
+              {timestamp && (
+                <span className="text-muted-foreground ml-1">
+                  {formatTimestampShort(new Date(timestamp))}
+                </span>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
 }
 
 function formatTimestamp(date: Date): string {
@@ -203,17 +238,21 @@ function TimelineEventRow({
   event: TimelineEvent;
   orgSlug: string;
 }) {
-  const config = getEventDisplay(event);
-  const Icon = config.icon;
+  // Handle message events differently
+  if (event.type === "message" && event.channel && event.status) {
+    const config = getMessageDisplay(event);
+    const Icon = config.icon;
 
-  // Build the detail text and link
-  let detailText: string | null = null;
-  let detailLink: string | null = null;
+    // Build detail text and link
+    let detailText: string | null = null;
+    let detailLink: string | null = null;
 
-  if (event.type.startsWith("email_") || event.type.startsWith("sms_")) {
-    // Default to subject
-    if (event.subject) {
-      detailText = `"${event.subject}"`;
+    if (event.sourceType === "batch" && event.batchName) {
+      detailText = event.batchName;
+    } else if (event.sourceType === "workflow" && event.workflowName) {
+      detailText = event.workflowName;
+    } else if (event.subject) {
+      detailText = event.subject;
     }
 
     // Link to individual email if we have a messageId
@@ -221,15 +260,61 @@ function TimelineEventRow({
       detailLink = `/${orgSlug}/emails/${event.messageId}`;
     }
 
-    // Override detail text with source context
-    if (event.sourceType === "batch" && event.batchName) {
-      detailText = event.batchName;
-    } else if (event.sourceType === "workflow" && event.workflowName) {
-      detailText = event.workflowName;
-    } else if (event.sourceType === "transactional") {
-      detailText = event.subject || "Transactional";
-    }
-  } else if (event.type.startsWith("workflow_")) {
+    return (
+      <div className="group flex items-start gap-3 py-2">
+        {/* Icon */}
+        <div
+          className={cn(
+            "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+            config.bgColor
+          )}
+        >
+          <Icon className={cn("h-3.5 w-3.5", config.color)} />
+        </div>
+
+        {/* Content */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm">{config.label}</span>
+            <StatusDots status={event.status} channel={event.channel} />
+            <span className="text-muted-foreground text-xs">
+              {formatTimestamp(new Date(event.timestamp))}
+            </span>
+          </div>
+
+          {detailText && (
+            <div className="mt-0.5 flex items-center gap-1">
+              {detailLink ? (
+                <Link
+                  className="flex items-center gap-1 truncate text-muted-foreground text-xs hover:text-foreground hover:underline"
+                  href={detailLink}
+                >
+                  <span className="truncate">{detailText}</span>
+                  <ChevronRight className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                </Link>
+              ) : (
+                <span className="truncate text-muted-foreground text-xs">
+                  {detailText}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Handle workflow and contact_created events
+  const config = EVENT_CONFIG[event.type as Exclude<TimelineEventType, "message">];
+  if (!config) return null;
+
+  const Icon = config.icon;
+
+  // Build detail text and link for workflow events
+  let detailText: string | null = null;
+  let detailLink: string | null = null;
+
+  if (event.type.startsWith("workflow_")) {
     detailText = event.workflowName || "Workflow";
     if (event.workflowId) {
       detailLink = `/${orgSlug}/automations/${event.workflowId}`;

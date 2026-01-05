@@ -1131,26 +1131,27 @@ export async function unsubscribeContactFromTopics(
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type TimelineEventType =
-  | "email_sent"
-  | "email_delivered"
-  | "email_opened"
-  | "email_clicked"
-  | "email_bounced"
-  | "email_complained"
-  | "sms_sent"
-  | "sms_delivered"
-  | "sms_clicked"
-  | "sms_opted_out"
+  | "message" // Consolidated message event (email or SMS)
   | "workflow_started"
   | "workflow_completed"
   | "workflow_failed"
   | "contact_created";
 
+export type MessageStatusTimestamps = {
+  sentAt?: Date | null;
+  deliveredAt?: Date | null;
+  openedAt?: Date | null;
+  clickedAt?: Date | null;
+  bouncedAt?: Date | null;
+  complainedAt?: Date | null;
+  optedOutAt?: Date | null; // SMS only
+};
+
 export type TimelineEvent = {
   id: string;
   type: TimelineEventType;
   timestamp: Date;
-  // Message-specific
+  // Message-specific (type: "message")
   channel?: "email" | "sms";
   subject?: string | null;
   recipient?: string | null;
@@ -1158,6 +1159,7 @@ export type TimelineEvent = {
   batchId?: string | null;
   batchName?: string | null;
   messageId?: string | null;
+  status?: MessageStatusTimestamps; // Consolidated status timestamps
   // Workflow-specific
   workflowId?: string | null;
   workflowName?: string | null;
@@ -1238,11 +1240,17 @@ export async function getContactTimeline(
         )
       )
       .orderBy(desc(messageSend.createdAt))
-      .limit(50); // Get more than needed since we'll expand into multiple events
+      .limit(50);
 
-    // Convert messages to timeline events (most recent status first)
+    // Convert messages to consolidated timeline events (one event per message)
     for (const msg of messages) {
-      const baseEvent = {
+      // Use sentAt as the primary timestamp, fallback to createdAt
+      const timestamp = msg.sentAt ?? msg.createdAt;
+
+      events.push({
+        id: msg.id,
+        type: "message",
+        timestamp,
         channel: msg.channel as "email" | "sms",
         subject: msg.subject,
         recipient: msg.recipient,
@@ -1250,93 +1258,16 @@ export async function getContactTimeline(
         batchId: msg.batchSendId,
         batchName: msg.batchName,
         messageId: msg.messageId,
-      };
-
-      // Add events in reverse chronological order (most recent first)
-      if (msg.channel === "email") {
-        if (msg.complainedAt) {
-          events.push({
-            id: `${msg.id}_complained`,
-            type: "email_complained",
-            timestamp: msg.complainedAt,
-            ...baseEvent,
-          });
-        }
-        if (msg.bouncedAt) {
-          events.push({
-            id: `${msg.id}_bounced`,
-            type: "email_bounced",
-            timestamp: msg.bouncedAt,
-            ...baseEvent,
-          });
-        }
-        if (msg.clickedAt) {
-          events.push({
-            id: `${msg.id}_clicked`,
-            type: "email_clicked",
-            timestamp: msg.clickedAt,
-            ...baseEvent,
-          });
-        }
-        if (msg.openedAt) {
-          events.push({
-            id: `${msg.id}_opened`,
-            type: "email_opened",
-            timestamp: msg.openedAt,
-            ...baseEvent,
-          });
-        }
-        if (msg.deliveredAt) {
-          events.push({
-            id: `${msg.id}_delivered`,
-            type: "email_delivered",
-            timestamp: msg.deliveredAt,
-            ...baseEvent,
-          });
-        }
-        if (msg.sentAt) {
-          events.push({
-            id: `${msg.id}_sent`,
-            type: "email_sent",
-            timestamp: msg.sentAt,
-            ...baseEvent,
-          });
-        }
-      } else {
-        // SMS events
-        if (msg.optedOutAt) {
-          events.push({
-            id: `${msg.id}_opted_out`,
-            type: "sms_opted_out",
-            timestamp: msg.optedOutAt,
-            ...baseEvent,
-          });
-        }
-        if (msg.clickedAt) {
-          events.push({
-            id: `${msg.id}_clicked`,
-            type: "sms_clicked",
-            timestamp: msg.clickedAt,
-            ...baseEvent,
-          });
-        }
-        if (msg.deliveredAt) {
-          events.push({
-            id: `${msg.id}_delivered`,
-            type: "sms_delivered",
-            timestamp: msg.deliveredAt,
-            ...baseEvent,
-          });
-        }
-        if (msg.sentAt) {
-          events.push({
-            id: `${msg.id}_sent`,
-            type: "sms_sent",
-            timestamp: msg.sentAt,
-            ...baseEvent,
-          });
-        }
-      }
+        status: {
+          sentAt: msg.sentAt,
+          deliveredAt: msg.deliveredAt,
+          openedAt: msg.openedAt,
+          clickedAt: msg.clickedAt,
+          bouncedAt: msg.bouncedAt,
+          complainedAt: msg.complainedAt,
+          optedOutAt: msg.optedOutAt,
+        },
+      });
     }
 
     // Fetch workflow executions for this contact
