@@ -34,6 +34,7 @@ import {
   type SmsStatus,
 } from "@/lib/contacts";
 import type { TopicWithMeta } from "@/lib/topics";
+import { ContactTimeline } from "./contact-timeline";
 
 type PropertyEntry = {
   id: string;
@@ -59,6 +60,7 @@ type ContactDetailsSheetProps = {
     topicIds?: string[];
   }) => void;
   open: boolean;
+  organizationId: string;
   orgSlug: string;
   proFeaturesEnabled?: boolean;
   topics: TopicWithMeta[];
@@ -71,6 +73,7 @@ export function ContactDetailsSheet({
   onClose,
   onSave,
   open,
+  organizationId,
   orgSlug,
   proFeaturesEnabled = true,
   topics,
@@ -666,83 +669,13 @@ export function ContactDetailsSheet({
               </div>
             ) : null}
 
-            {/* Activity - only show in view mode */}
+            {/* Activity Timeline - only show in view mode */}
             {!isEditing && (
-              <div className="space-y-3">
-                <h3 className="font-medium text-sm">Activity</h3>
-                <div className="space-y-2 text-sm">
-                  {contact.lastEmailClickedAt && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Last email clicked
-                      </span>
-                      <span>
-                        {new Date(
-                          contact.lastEmailClickedAt
-                        ).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  {contact.lastEmailOpenedAt && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Last email opened
-                      </span>
-                      <span>
-                        {new Date(
-                          contact.lastEmailOpenedAt
-                        ).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  {contact.lastEmailSentAt && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Last email sent
-                      </span>
-                      <span>
-                        {new Date(contact.lastEmailSentAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  {contact.lastSmsClickedAt && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Last SMS clicked
-                      </span>
-                      <span>
-                        {new Date(
-                          contact.lastSmsClickedAt
-                        ).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  {contact.lastSmsSentAt && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Last SMS sent
-                      </span>
-                      <span>
-                        {new Date(contact.lastSmsSentAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Created</span>
-                    <span>
-                      {new Date(contact.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  {contact.createdBy && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Created by</span>
-                      <span>
-                        {contact.createdBy.name || contact.createdBy.email}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ContactTimeline
+                contactId={contact.id}
+                organizationId={organizationId}
+                orgSlug={orgSlug}
+              />
             )}
           </div>
         </div>

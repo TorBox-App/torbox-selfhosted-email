@@ -2,7 +2,15 @@
 
 import crypto from "node:crypto";
 import { auth } from "@wraps/auth";
-import { contact, contactTopic, db } from "@wraps/db";
+import {
+  batchSend,
+  contact,
+  contactTopic,
+  db,
+  messageSend,
+  workflow,
+  workflowExecution,
+} from "@wraps/db";
 import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -1115,6 +1123,308 @@ export async function unsubscribeContactFromTopics(
       "Failed to unsubscribe contact from topics"
     );
     return { success: false, error: "Failed to unsubscribe from topics" };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TIMELINE TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type TimelineEventType =
+  | "email_sent"
+  | "email_delivered"
+  | "email_opened"
+  | "email_clicked"
+  | "email_bounced"
+  | "email_complained"
+  | "sms_sent"
+  | "sms_delivered"
+  | "sms_clicked"
+  | "sms_opted_out"
+  | "workflow_started"
+  | "workflow_completed"
+  | "workflow_failed"
+  | "contact_created";
+
+export type TimelineEvent = {
+  id: string;
+  type: TimelineEventType;
+  timestamp: Date;
+  // Message-specific
+  channel?: "email" | "sms";
+  subject?: string | null;
+  recipient?: string | null;
+  sourceType?: "transactional" | "batch" | "campaign" | "workflow" | null;
+  batchId?: string | null;
+  batchName?: string | null;
+  messageId?: string | null;
+  // Workflow-specific
+  workflowId?: string | null;
+  workflowName?: string | null;
+  executionId?: string | null;
+  triggerType?: string | null;
+  eventName?: string | null;
+  eventData?: Record<string, unknown> | null;
+};
+
+export type GetContactTimelineResult =
+  | { success: true; events: TimelineEvent[]; hasMore: boolean }
+  | { success: false; error: string };
+
+/**
+ * Get timeline events for a contact
+ */
+export async function getContactTimeline(
+  contactId: string,
+  organizationId: string,
+  options: { limit?: number; offset?: number } = {}
+): Promise<GetContactTimelineResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    const { limit = 20, offset = 0 } = options;
+    const events: TimelineEvent[] = [];
+
+    // Verify contact exists and get created date
+    const contactRecord = await db.query.contact.findFirst({
+      where: (c, { and, eq }) =>
+        and(eq(c.id, contactId), eq(c.organizationId, organizationId)),
+    });
+
+    if (!contactRecord) {
+      return { success: false, error: "Contact not found" };
+    }
+
+    // Add contact created event
+    events.push({
+      id: `contact_created_${contactRecord.id}`,
+      type: "contact_created",
+      timestamp: contactRecord.createdAt,
+    });
+
+    // Fetch messages sent to this contact
+    const messages = await db
+      .select({
+        id: messageSend.id,
+        channel: messageSend.channel,
+        subject: messageSend.subject,
+        recipient: messageSend.recipient,
+        sourceType: messageSend.sourceType,
+        batchSendId: messageSend.batchSendId,
+        batchName: batchSend.name,
+        messageId: messageSend.messageId,
+        status: messageSend.status,
+        sentAt: messageSend.sentAt,
+        deliveredAt: messageSend.deliveredAt,
+        openedAt: messageSend.openedAt,
+        clickedAt: messageSend.clickedAt,
+        bouncedAt: messageSend.bouncedAt,
+        complainedAt: messageSend.complainedAt,
+        optedOutAt: messageSend.optedOutAt,
+        createdAt: messageSend.createdAt,
+      })
+      .from(messageSend)
+      .leftJoin(batchSend, eq(messageSend.batchSendId, batchSend.id))
+      .where(
+        and(
+          eq(messageSend.contactId, contactId),
+          eq(messageSend.organizationId, organizationId)
+        )
+      )
+      .orderBy(desc(messageSend.createdAt))
+      .limit(50); // Get more than needed since we'll expand into multiple events
+
+    // Convert messages to timeline events (most recent status first)
+    for (const msg of messages) {
+      const baseEvent = {
+        channel: msg.channel as "email" | "sms",
+        subject: msg.subject,
+        recipient: msg.recipient,
+        sourceType: msg.sourceType,
+        batchId: msg.batchSendId,
+        batchName: msg.batchName,
+        messageId: msg.messageId,
+      };
+
+      // Add events in reverse chronological order (most recent first)
+      if (msg.channel === "email") {
+        if (msg.complainedAt) {
+          events.push({
+            id: `${msg.id}_complained`,
+            type: "email_complained",
+            timestamp: msg.complainedAt,
+            ...baseEvent,
+          });
+        }
+        if (msg.bouncedAt) {
+          events.push({
+            id: `${msg.id}_bounced`,
+            type: "email_bounced",
+            timestamp: msg.bouncedAt,
+            ...baseEvent,
+          });
+        }
+        if (msg.clickedAt) {
+          events.push({
+            id: `${msg.id}_clicked`,
+            type: "email_clicked",
+            timestamp: msg.clickedAt,
+            ...baseEvent,
+          });
+        }
+        if (msg.openedAt) {
+          events.push({
+            id: `${msg.id}_opened`,
+            type: "email_opened",
+            timestamp: msg.openedAt,
+            ...baseEvent,
+          });
+        }
+        if (msg.deliveredAt) {
+          events.push({
+            id: `${msg.id}_delivered`,
+            type: "email_delivered",
+            timestamp: msg.deliveredAt,
+            ...baseEvent,
+          });
+        }
+        if (msg.sentAt) {
+          events.push({
+            id: `${msg.id}_sent`,
+            type: "email_sent",
+            timestamp: msg.sentAt,
+            ...baseEvent,
+          });
+        }
+      } else {
+        // SMS events
+        if (msg.optedOutAt) {
+          events.push({
+            id: `${msg.id}_opted_out`,
+            type: "sms_opted_out",
+            timestamp: msg.optedOutAt,
+            ...baseEvent,
+          });
+        }
+        if (msg.clickedAt) {
+          events.push({
+            id: `${msg.id}_clicked`,
+            type: "sms_clicked",
+            timestamp: msg.clickedAt,
+            ...baseEvent,
+          });
+        }
+        if (msg.deliveredAt) {
+          events.push({
+            id: `${msg.id}_delivered`,
+            type: "sms_delivered",
+            timestamp: msg.deliveredAt,
+            ...baseEvent,
+          });
+        }
+        if (msg.sentAt) {
+          events.push({
+            id: `${msg.id}_sent`,
+            type: "sms_sent",
+            timestamp: msg.sentAt,
+            ...baseEvent,
+          });
+        }
+      }
+    }
+
+    // Fetch workflow executions for this contact
+    const executions = await db
+      .select({
+        id: workflowExecution.id,
+        workflowId: workflowExecution.workflowId,
+        workflowName: workflow.name,
+        status: workflowExecution.status,
+        triggerType: workflow.triggerType,
+        triggerConfig: workflow.triggerConfig,
+        triggerData: workflowExecution.triggerData,
+        startedAt: workflowExecution.startedAt,
+        completedAt: workflowExecution.completedAt,
+        createdAt: workflowExecution.createdAt,
+      })
+      .from(workflowExecution)
+      .innerJoin(workflow, eq(workflowExecution.workflowId, workflow.id))
+      .where(
+        and(
+          eq(workflowExecution.contactId, contactId),
+          eq(workflowExecution.organizationId, organizationId)
+        )
+      )
+      .orderBy(desc(workflowExecution.createdAt))
+      .limit(20);
+
+    // Convert workflow executions to timeline events
+    for (const exec of executions) {
+      const triggerConfig = exec.triggerConfig as { eventName?: string } | null;
+      const baseEvent = {
+        workflowId: exec.workflowId,
+        workflowName: exec.workflowName,
+        executionId: exec.id,
+        triggerType: exec.triggerType,
+        eventName: triggerConfig?.eventName ?? null,
+        eventData: exec.triggerData as Record<string, unknown> | null,
+      };
+
+      // Add completion/failure event
+      if (exec.status === "completed" && exec.completedAt) {
+        events.push({
+          id: `${exec.id}_completed`,
+          type: "workflow_completed",
+          timestamp: exec.completedAt,
+          ...baseEvent,
+        });
+      } else if (exec.status === "failed" && exec.completedAt) {
+        events.push({
+          id: `${exec.id}_failed`,
+          type: "workflow_failed",
+          timestamp: exec.completedAt,
+          ...baseEvent,
+        });
+      }
+
+      // Add started event
+      if (exec.startedAt) {
+        events.push({
+          id: `${exec.id}_started`,
+          type: "workflow_started",
+          timestamp: exec.startedAt,
+          ...baseEvent,
+        });
+      }
+    }
+
+    // Sort all events by timestamp descending
+    events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    // Apply pagination
+    const paginatedEvents = events.slice(offset, offset + limit);
+    const hasMore = events.length > offset + limit;
+
+    return {
+      success: true,
+      events: paginatedEvents,
+      hasMore,
+    };
+  } catch (error) {
+    const log = createActionLogger("getContactTimeline", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), contactId },
+      "Failed to get contact timeline"
+    );
+    return { success: false, error: "Failed to fetch timeline" };
   }
 }
 

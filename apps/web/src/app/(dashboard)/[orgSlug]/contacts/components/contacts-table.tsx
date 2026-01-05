@@ -776,6 +776,7 @@ export function ContactsTable({
         }}
         onSave={handleUpdateContact}
         open={detailsSheetOpen}
+        organizationId={organizationId}
         orgSlug={orgSlug}
         proFeaturesEnabled={proFeaturesEnabled}
         topics={topics}
