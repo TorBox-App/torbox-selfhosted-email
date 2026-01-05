@@ -128,6 +128,12 @@ export async function emitTopicSubscribed(params: {
   topicId: string;
   topicName?: string;
 }): Promise<{ workflowsTriggered: number }> {
+  console.log("[workflow-events] emitTopicSubscribed called:", {
+    contactId: params.contactId,
+    organizationId: params.organizationId,
+    topicId: params.topicId,
+  });
+
   // Also check for topic_subscribed trigger type
   const matchingByEvent = await emitWorkflowEvent({
     eventName: "topic_subscribed",
@@ -152,6 +158,12 @@ export async function emitTopicSubscribed(params: {
         sql`${workflow.triggerConfig}->>'topicId' = ${params.topicId}`
       )
     );
+
+  console.log("[workflow-events] topic_subscribed query result:", {
+    organizationId: params.organizationId,
+    topicId: params.topicId,
+    matchingWorkflows: matchingByTrigger.map((w) => w.id),
+  });
 
   for (const wf of matchingByTrigger) {
     await enqueueWorkflowStep({

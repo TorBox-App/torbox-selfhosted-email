@@ -54,6 +54,14 @@ export function getTriggerDescription(workflow: Workflow): string {
         : "Scheduled (not configured)";
     case "api":
       return "Manual API trigger";
+    case "topic_subscribed":
+      return config?.topicName
+        ? `When subscribed to "${config.topicName}"`
+        : "When subscribed to topic";
+    case "topic_unsubscribed":
+      return config?.topicName
+        ? `When unsubscribed from "${config.topicName}"`
+        : "When unsubscribed from topic";
     default:
       return "Unknown trigger";
   }
