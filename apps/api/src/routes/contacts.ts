@@ -644,11 +644,18 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         const existingSubscriptions = await db
           .select({
             topicId: contactTopic.topicId,
+            status: contactTopic.status,
             confirmedAt: contactTopic.confirmedAt,
           })
           .from(contactTopic)
           .where(eq(contactTopic.contactId, params.id));
 
+        // Only consider actively subscribed topics as "existing"
+        const activelySubscribedIds = new Set(
+          existingSubscriptions
+            .filter((s) => s.status === "subscribed")
+            .map((s) => s.topicId)
+        );
         const existingTopicIds = new Set(
           existingSubscriptions.map((s) => s.topicId)
         );
@@ -658,13 +665,59 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             .map((s) => [s.topicId, s.confirmedAt])
         );
 
-        // Filter to only new topics (PATCH semantics: add, don't replace)
+        // Topics to add: not in database at all
         const newTopicIds = topicIds.filter((id) => !existingTopicIds.has(id));
+        // Topics to re-subscribe: in database but not actively subscribed
+        const resubscribeTopicIds = topicIds.filter(
+          (id) => existingTopicIds.has(id) && !activelySubscribedIds.has(id)
+        );
+
         console.log("[contacts] PATCH topics - filtering:", {
           topicIds,
-          existingTopicIds: [...existingTopicIds],
+          activelySubscribedIds: [...activelySubscribedIds],
           newTopicIds,
+          resubscribeTopicIds,
         });
+
+        // Re-subscribe inactive topics
+        if (resubscribeTopicIds.length > 0) {
+          const now = new Date();
+          await db
+            .update(contactTopic)
+            .set({
+              status: "subscribed",
+              subscribedAt: now,
+            })
+            .where(
+              and(
+                eq(contactTopic.contactId, params.id),
+                inArray(contactTopic.topicId, resubscribeTopicIds)
+              )
+            );
+
+          // Emit topic_subscribed events for re-subscribed topics
+          const topicInfosForResub = await db
+            .select({ id: topic.id, name: topic.name })
+            .from(topic)
+            .where(inArray(topic.id, resubscribeTopicIds));
+          const resubTopicMap = new Map(
+            topicInfosForResub.map((t) => [t.id, t.name])
+          );
+
+          for (const topicId of resubscribeTopicIds) {
+            emitTopicSubscribed({
+              contactId: params.id,
+              organizationId: authContext.organizationId,
+              topicId,
+              topicName: resubTopicMap.get(topicId),
+            }).catch((err) => {
+              console.error(
+                "[contacts] Failed to emit topic_subscribed event:",
+                err
+              );
+            });
+          }
+        }
 
         // Add new subscriptions with double opt-in check
         if (newTopicIds.length > 0) {
