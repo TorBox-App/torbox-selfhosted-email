@@ -40,6 +40,7 @@ import {
 import type { FilterCondition, SegmentWithMeta } from "@/lib/segments";
 import type { TopicWithMeta } from "@/lib/topics";
 import { createColumns } from "./columns";
+import { SegmentDetailsSheet } from "./segment-details-sheet";
 import { SegmentFormDialog } from "./segment-form-dialog";
 
 type SegmentsTableProps = {
@@ -70,10 +71,11 @@ export function SegmentsTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
 
-  // Dialog state
+  // Dialog/sheet state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
   const [selectedSegment, setSelectedSegment] =
     useState<SegmentWithMeta | null>(null);
 
@@ -244,7 +246,7 @@ export function SegmentsTable({
                   key={row.id}
                   onClick={() => {
                     setSelectedSegment(row.original);
-                    setEditDialogOpen(true);
+                    setDetailsSheetOpen(true);
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
@@ -340,6 +342,27 @@ export function SegmentsTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Details Sheet */}
+      <SegmentDetailsSheet
+        canEdit={canEdit}
+        onClose={() => {
+          setDetailsSheetOpen(false);
+          setSelectedSegment(null);
+        }}
+        onDelete={() => {
+          setDetailsSheetOpen(false);
+          setDeleteDialogOpen(true);
+        }}
+        onEdit={() => {
+          setDetailsSheetOpen(false);
+          setEditDialogOpen(true);
+        }}
+        open={detailsSheetOpen}
+        organizationId={organizationId}
+        segment={selectedSegment}
+        topics={topics}
+      />
     </div>
   );
 }
