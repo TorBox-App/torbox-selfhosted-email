@@ -339,6 +339,21 @@ function TemplateEditorContent({
     }
   }, [deleteMutation, templateId, router, orgSlug]);
 
+  // Handle rename
+  const handleRename = useCallback(
+    async (name: string, description?: string) => {
+      try {
+        await updateMutation.mutateAsync({ name, description });
+        toast.success("Template renamed");
+      } catch (error) {
+        toast.error("Failed to rename template", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+    [updateMutation]
+  );
+
   // Editor not ready yet
   if (!editor) {
     return (
@@ -374,6 +389,7 @@ function TemplateEditorContent({
             onDuplicate={handleDuplicate}
             onImport={() => setShowImportModal(true)}
             onPublish={handlePublish}
+            onRename={handleRename}
             onSave={handleManualSave}
             onSaveBlock={() => setShowSaveBlockModal(true)}
             onSendTest={() => setShowSendTestModal(true)}
@@ -383,6 +399,7 @@ function TemplateEditorContent({
             previewText={previewText}
             status={template.status}
             subject={subject}
+            templateDescription={template.description ?? undefined}
             templateName={template.name}
           />
 

@@ -1,6 +1,7 @@
 import { auth } from "@wraps/auth";
-import { db, template } from "@wraps/db";
-import { and, desc, eq } from "drizzle-orm";
+import { batchSend, db, template, workflow } from "@wraps/db";
+import type { WorkflowStep } from "@wraps/db";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -63,7 +64,64 @@ export async function GET(request: Request, context: RouteContext) {
       },
     });
 
-    return NextResponse.json(templates);
+    // Get broadcast (batchSend) counts per template
+    const broadcastCounts = await db
+      .select({
+        templateId: batchSend.emailTemplateId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(batchSend)
+      .where(eq(batchSend.organizationId, orgWithMembership.id))
+      .groupBy(batchSend.emailTemplateId);
+
+    const broadcastCountMap = new Map(
+      broadcastCounts.map((b) => [b.templateId, b.count])
+    );
+
+    // Get all workflows for this org and count which use each template
+    const workflows = await db.query.workflow.findMany({
+      where: eq(workflow.organizationId, orgWithMembership.id),
+      columns: {
+        id: true,
+        name: true,
+        steps: true,
+      },
+    });
+
+    // Count automation usage per template
+    const automationCountMap = new Map<string, number>();
+    const automationNamesMap = new Map<string, string[]>();
+
+    for (const wf of workflows) {
+      const steps = (wf.steps || []) as WorkflowStep[];
+      const usedTemplateIds = new Set<string>();
+
+      for (const step of steps) {
+        if (
+          step.config.type === "send_email" &&
+          step.config.templateId &&
+          !usedTemplateIds.has(step.config.templateId)
+        ) {
+          usedTemplateIds.add(step.config.templateId);
+          const current = automationCountMap.get(step.config.templateId) || 0;
+          automationCountMap.set(step.config.templateId, current + 1);
+
+          const names = automationNamesMap.get(step.config.templateId) || [];
+          names.push(wf.name);
+          automationNamesMap.set(step.config.templateId, names);
+        }
+      }
+    }
+
+    // Enhance templates with usage data
+    const templatesWithUsage = templates.map((t) => ({
+      ...t,
+      broadcastCount: broadcastCountMap.get(t.id) || 0,
+      automationCount: automationCountMap.get(t.id) || 0,
+      automationNames: automationNamesMap.get(t.id) || [],
+    }));
+
+    return NextResponse.json(templatesWithUsage);
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({

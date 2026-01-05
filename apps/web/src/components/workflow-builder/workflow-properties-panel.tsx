@@ -251,7 +251,7 @@ export function WorkflowPropertiesPanel({
         open={showEditorDialog}
         orgSlug={orgSlug}
         templateId={editingTemplateId}
-        templateName={editingTemplateId ? undefined : "New Template"}
+        templateName={editingTemplateId ? undefined : `${selectedNode.data.name} Email`}
         title={editingTemplateId ? "Edit Template" : "Create Template"}
         variableContext="automation"
       />

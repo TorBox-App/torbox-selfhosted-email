@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,11 @@ export type TemplateNameDialogProps = {
    * Placeholder for the name input
    */
   namePlaceholder?: string;
+
+  /**
+   * Submit button label
+   */
+  submitLabel?: string;
 };
 
 /**
@@ -103,6 +109,7 @@ export function TemplateNameDialog({
   defaultName = "",
   defaultDescription = "",
   namePlaceholder = "e.g., Welcome Email, Newsletter Header",
+  submitLabel = "Create & Edit",
 }: TemplateNameDialogProps) {
   const form = useForm<TemplateNameFormValues>({
     resolver: zodResolver(templateNameSchema),
@@ -111,6 +118,16 @@ export function TemplateNameDialog({
       description: defaultDescription,
     },
   });
+
+  // Reset form values when defaults change (e.g., when opening for different template)
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: defaultName,
+        description: defaultDescription,
+      });
+    }
+  }, [open, defaultName, defaultDescription, form]);
 
   const handleSubmit = (values: TemplateNameFormValues) => {
     onConfirm(values.name, values.description);
@@ -182,7 +199,7 @@ export function TemplateNameDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit">Create & Edit</Button>
+              <Button type="submit">{submitLabel}</Button>
             </DialogFooter>
           </form>
         </Form>

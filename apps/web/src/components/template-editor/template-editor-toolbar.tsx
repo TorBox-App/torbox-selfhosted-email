@@ -3,6 +3,7 @@
 import type { Editor } from "@tiptap/react";
 import type { EmailType } from "@wraps/db";
 import {
+  ArrowLeft,
   BookOpen,
   Braces,
   Cloud,
@@ -10,6 +11,7 @@ import {
   Code2,
   Copy,
   Eye,
+  FileSignature,
   History,
   Import,
   LayoutGrid,
@@ -25,6 +27,7 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,11 +50,13 @@ import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { BrandKitSelector } from "./brand-kit-selector";
 import { SubjectEditDialog } from "./subject-edit-dialog";
+import { TemplateNameDialog } from "./wrappers/template-name-dialog";
 
 type TemplateEditorToolbarProps = {
   editor: Editor | null;
   orgSlug: string;
   templateName?: string;
+  templateDescription?: string;
   isSaving?: boolean;
   isPublishing?: boolean;
   subject?: string | null;
@@ -70,6 +75,7 @@ type TemplateEditorToolbarProps = {
   onPublish?: () => void;
   onUnpublish?: () => void;
   onDuplicate?: () => void;
+  onRename?: (name: string, description?: string) => void;
   onDelete?: () => void;
 };
 
@@ -94,6 +100,7 @@ export function TemplateEditorToolbar({
   editor,
   orgSlug,
   templateName,
+  templateDescription,
   isSaving,
   isPublishing,
   subject,
@@ -108,6 +115,7 @@ export function TemplateEditorToolbar({
   onPublish,
   onUnpublish,
   onDuplicate,
+  onRename,
   onDelete,
 }: TemplateEditorToolbarProps) {
   const {
@@ -125,6 +133,7 @@ export function TemplateEditorToolbar({
   } = useTemplateStore((state) => state.actions);
 
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
 
   if (!editor) {
     return null;
@@ -136,8 +145,22 @@ export function TemplateEditorToolbar({
   return (
     <TooltipProvider>
       <div className="border-b">
-        {/* Row 1: Brand Kit + Subject/Preview + Status */}
+        {/* Row 1: Back + Brand Kit + Subject/Preview + Status */}
         <div className="flex items-center gap-3 border-b px-3 py-2">
+          {/* Back to templates */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button asChild className="h-8 w-8 p-0" size="sm" variant="ghost">
+                <Link href={`/${orgSlug}/emails/templates`}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Back to templates</TooltipContent>
+          </Tooltip>
+
+          <Separator className="h-5" orientation="vertical" />
+
           {/* Brand Kit Selector */}
           <BrandKitSelector orgSlug={orgSlug} />
 
@@ -349,6 +372,12 @@ export function TemplateEditorToolbar({
                 )}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              {onRename && (
+                <DropdownMenuItem onClick={() => setShowRenameDialog(true)}>
+                  <FileSignature className="mr-2 h-4 w-4" />
+                  Rename Template
+                </DropdownMenuItem>
+              )}
               {onImport && view === "edit" && (
                 <DropdownMenuItem onClick={onImport}>
                   <Import className="mr-2 h-4 w-4" />
@@ -494,6 +523,20 @@ export function TemplateEditorToolbar({
         }}
         previewText={previewText ?? ""}
         subject={subject ?? ""}
+      />
+
+      {/* Rename Template Dialog */}
+      <TemplateNameDialog
+        defaultDescription={templateDescription}
+        defaultName={templateName}
+        description="Update the name and description of your template."
+        onConfirm={(name, description) => {
+          onRename?.(name, description);
+        }}
+        onOpenChange={setShowRenameDialog}
+        open={showRenameDialog}
+        submitLabel="Save"
+        title="Rename Template"
       />
     </TooltipProvider>
   );
