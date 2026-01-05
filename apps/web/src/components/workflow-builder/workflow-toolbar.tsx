@@ -138,6 +138,7 @@ export function WorkflowToolbar({
               ? {
                   eventName: triggerConfig.eventName,
                   segmentId: triggerConfig.segmentId,
+                  topicId: triggerConfig.topicId,
                   schedule: triggerConfig.schedule,
                   timezone: triggerConfig.timezone,
                 }

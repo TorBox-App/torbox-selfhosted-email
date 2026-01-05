@@ -289,16 +289,31 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
   },
 
   onNodesChange: (changes) => {
+    // Only mark dirty for meaningful changes (position, remove, add)
+    // Skip selection and dimension changes which happen during initialization
+    const meaningfulChange = changes.some(
+      (change) =>
+        change.type === "position" ||
+        change.type === "remove" ||
+        change.type === "add"
+    );
+
     set((state) => ({
       nodes: applyNodeChanges(changes, state.nodes),
-      isDirty: true,
+      isDirty: meaningfulChange ? true : state.isDirty,
     }));
   },
 
   onEdgesChange: (changes) => {
+    // Only mark dirty for meaningful changes (remove, add)
+    // Skip selection changes
+    const meaningfulChange = changes.some(
+      (change) => change.type === "remove" || change.type === "add"
+    );
+
     set((state) => ({
       edges: applyEdgeChanges(changes, state.edges),
-      isDirty: true,
+      isDirty: meaningfulChange ? true : state.isDirty,
     }));
   },
 
