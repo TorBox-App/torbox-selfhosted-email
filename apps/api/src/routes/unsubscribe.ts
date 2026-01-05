@@ -11,6 +11,7 @@ import { contact, contactTopic, db, eq, topic } from "@wraps/db";
 import { and } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { verifyUnsubscribeToken } from "../lib/unsubscribe-token";
+import { emitTopicUnsubscribed } from "../services/workflow-events";
 
 export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
   /**
@@ -72,6 +73,13 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
 
       if (topicId) {
         // Topic-specific unsubscribe
+        // Get topic name for event
+        const [topicRecord] = await db
+          .select({ name: topic.name })
+          .from(topic)
+          .where(eq(topic.id, topicId))
+          .limit(1);
+
         await db
           .update(contactTopic)
           .set({
@@ -85,11 +93,39 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
             )
           );
 
+        // Emit topic_unsubscribed event to trigger workflows
+        await emitTopicUnsubscribed({
+          contactId,
+          organizationId,
+          topicId,
+          topicName: topicRecord?.name,
+        }).catch((err) => {
+          console.error(
+            "[unsubscribe] Failed to emit topic_unsubscribed event:",
+            err
+          );
+        });
+
         console.log(
           `[UNSUBSCRIBE] Contact ${contactId} unsubscribed from topic ${topicId}`
         );
       } else {
         // Global unsubscribe - unsubscribe from all email communications
+        // Get all subscribed topics before unsubscribing (for event emission)
+        const subscribedTopics = await db
+          .select({
+            topicId: contactTopic.topicId,
+            topicName: topic.name,
+          })
+          .from(contactTopic)
+          .innerJoin(topic, eq(topic.id, contactTopic.topicId))
+          .where(
+            and(
+              eq(contactTopic.contactId, contactId),
+              eq(contactTopic.status, "subscribed")
+            )
+          );
+
         await db
           .update(contact)
           .set({
@@ -107,7 +143,26 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
           })
           .where(eq(contactTopic.contactId, contactId));
 
-        console.log(`[UNSUBSCRIBE] Contact ${contactId} unsubscribed globally`);
+        // Emit topic_unsubscribed events for all previously subscribed topics
+        await Promise.all(
+          subscribedTopics.map((t) =>
+            emitTopicUnsubscribed({
+              contactId,
+              organizationId,
+              topicId: t.topicId,
+              topicName: t.topicName,
+            }).catch((err) => {
+              console.error(
+                `[unsubscribe] Failed to emit topic_unsubscribed for topic ${t.topicId}:`,
+                err
+              );
+            })
+          )
+        );
+
+        console.log(
+          `[UNSUBSCRIBE] Contact ${contactId} unsubscribed globally from ${subscribedTopics.length} topic(s)`
+        );
       }
 
       // 5. Return success (no redirect per RFC 8058)

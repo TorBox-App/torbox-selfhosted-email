@@ -32,9 +32,11 @@ import {
 } from "../middleware/auth";
 import {
   checkSegmentEntry,
+  checkSegmentExit,
   emitContactCreated,
   emitContactUpdated,
   emitTopicSubscribed,
+  emitTopicUnsubscribed,
 } from "../services/workflow-events";
 
 // Schemas
@@ -850,6 +852,14 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         console.error("[contacts] Failed to check segment entry:", err);
       });
 
+      // Check segment exit triggers (contact may no longer match a segment)
+      await checkSegmentExit({
+        contactId: params.id,
+        organizationId: authContext.organizationId,
+      }).catch((err) => {
+        console.error("[contacts] Failed to check segment exit:", err);
+      });
+
       return {
         id: updated.id,
         email: updated.email,
@@ -917,13 +927,16 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         topicIds = [...topicIds, ...resolvedIds];
       }
 
-      // Get existing subscriptions to preserve confirmation dates
+      // Get existing subscriptions to preserve confirmation dates and for event emission
       const existingSubscriptions = await db
         .select({
           topicId: contactTopic.topicId,
+          topicName: topic.name,
+          status: contactTopic.status,
           confirmedAt: contactTopic.confirmedAt,
         })
         .from(contactTopic)
+        .innerJoin(topic, eq(topic.id, contactTopic.topicId))
         .where(eq(contactTopic.contactId, params.id));
 
       const existingTopicIds = new Set(
@@ -933,6 +946,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         existingSubscriptions
           .filter((s) => s.confirmedAt !== null)
           .map((s) => [s.topicId, s.confirmedAt])
+      );
+      // Track actively subscribed topics for unsubscribe events
+      const activelySubscribedTopics = existingSubscriptions.filter(
+        (s) => s.status === "subscribed"
       );
 
       // Remove all existing subscriptions
@@ -1045,6 +1062,45 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           })
         );
       }
+
+      // Emit topic_unsubscribed events for removed topics (were actively subscribed, not in new list)
+      const removedTopics = activelySubscribedTopics.filter(
+        (t) => !topicIds.includes(t.topicId)
+      );
+
+      if (removedTopics.length > 0) {
+        await Promise.all(
+          removedTopics.map((t) =>
+            emitTopicUnsubscribed({
+              contactId: params.id,
+              organizationId: authContext.organizationId,
+              topicId: t.topicId,
+              topicName: t.topicName,
+            }).catch((err) => {
+              console.error(
+                "[contacts] Failed to emit topic_unsubscribed event:",
+                err
+              );
+            })
+          )
+        );
+      }
+
+      // Check segment triggers (topic changes may affect segment membership)
+      await Promise.all([
+        checkSegmentEntry({
+          contactId: params.id,
+          organizationId: authContext.organizationId,
+        }).catch((err) => {
+          console.error("[contacts] Failed to check segment entry:", err);
+        }),
+        checkSegmentExit({
+          contactId: params.id,
+          organizationId: authContext.organizationId,
+        }).catch((err) => {
+          console.error("[contacts] Failed to check segment exit:", err);
+        }),
+      ]);
 
       // Get updated topics to return
       const updatedTopics = await db
