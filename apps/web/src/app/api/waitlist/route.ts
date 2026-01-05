@@ -88,6 +88,69 @@ export async function POST(request: Request) {
     });
 
     if (error) {
+      // If contact already exists, try to subscribe them to the topic
+      const errorMessage =
+        error && typeof error === "object" && "error" in error
+          ? String((error as { error: unknown }).error)
+          : "";
+
+      if (errorMessage.includes("already exists")) {
+        log.info(
+          { email: normalizedEmail },
+          "Contact exists, subscribing to topic"
+        );
+
+        // Find existing contact by email (use search param which does ILIKE on email)
+        const searchResult = await client.GET("/v1/contacts/", {
+          params: { query: { search: normalizedEmail, pageSize: "1" } },
+        });
+
+        const contactsData = searchResult.data as
+          | { contacts: Array<{ id: string }> }
+          | undefined;
+        const searchError = searchResult.error;
+        const existingContact = contactsData?.contacts?.[0];
+
+        if (searchError || !existingContact) {
+          log.error(
+            { error: searchError, email: normalizedEmail },
+            "Failed to find existing contact"
+          );
+          return NextResponse.json(
+            { error: "Failed to join waitlist" },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+
+        // Subscribe existing contact to the topic
+        const { error: updateError } = await client.PATCH(
+          "/v1/contacts/{id}",
+          {
+            params: { path: { id: existingContact.id } },
+            body: {
+              topicSlugs: [topicSlug],
+            },
+          }
+        );
+
+        if (updateError) {
+          log.error(
+            { error: updateError, email: normalizedEmail },
+            "Failed to subscribe existing contact to topic"
+          );
+          return NextResponse.json(
+            { error: "Failed to join waitlist" },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+
+        log.info(
+          { email: normalizedEmail, product, contactId: existingContact.id },
+          "Existing contact subscribed to waitlist"
+        );
+        return NextResponse.json({ success: true }, { headers: corsHeaders });
+      }
+
       log.error(
         { error, email: normalizedEmail },
         "API error creating contact"
