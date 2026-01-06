@@ -22,6 +22,7 @@ import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { fromEnv, fromIni } from "@aws-sdk/credential-providers";
 import {
   contact,
+  contactTopic,
   db,
   member,
   organization,
@@ -493,6 +494,180 @@ function createMultiStepWorkflow() {
   };
 }
 
+function createWaitForEventWorkflow(eventName: string, timeoutSeconds = 86400) {
+  const triggerId = "trigger-1";
+  const waitId = "wait-1";
+  const exitYesId = "exit-yes";
+  const exitTimeoutId = "exit-timeout";
+
+  const steps: WorkflowStep[] = [
+    { id: triggerId, type: "trigger", name: "Trigger", position: { x: 0, y: 0 }, config: { type: "trigger", triggerType: "api" } },
+    {
+      id: waitId,
+      type: "wait_for_event",
+      name: "Wait for Event",
+      position: { x: 0, y: 100 },
+      config: {
+        type: "wait_for_event",
+        eventName,
+        timeoutSeconds,
+      },
+    },
+    { id: exitYesId, type: "exit", name: "Event Received", position: { x: -100, y: 200 }, config: { type: "exit" } },
+    { id: exitTimeoutId, type: "exit", name: "Timeout", position: { x: 100, y: 200 }, config: { type: "exit" } },
+  ];
+
+  const transitions: WorkflowTransition[] = [
+    { id: "t1", fromStepId: triggerId, toStepId: waitId },
+    { id: "t2", fromStepId: waitId, toStepId: exitYesId, condition: { branch: "yes" } },
+    { id: "t3", fromStepId: waitId, toStepId: exitTimeoutId, condition: { branch: "timeout" } },
+  ];
+
+  return {
+    id: `${TEST_PREFIX}-wf-wait-event-${Date.now()}`,
+    organizationId: testOrg.id,
+    name: "Wait for Event Test Workflow",
+    status: "enabled" as const,
+    triggerType: "api" as const,
+    triggerConfig: {},
+    steps,
+    transitions,
+    allowReentry: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: testUser.id,
+  };
+}
+
+function createWaitForEmailEngagementWorkflow(timeoutSeconds = 86400) {
+  const triggerId = "trigger-1";
+  const waitId = "wait-1";
+  const exitOpenedId = "exit-opened";
+  const exitTimeoutId = "exit-timeout";
+
+  const steps: WorkflowStep[] = [
+    { id: triggerId, type: "trigger", name: "Trigger", position: { x: 0, y: 0 }, config: { type: "trigger", triggerType: "api" } },
+    {
+      id: waitId,
+      type: "wait_for_email_engagement",
+      name: "Wait for Email Engagement",
+      position: { x: 0, y: 100 },
+      config: {
+        type: "wait_for_email_engagement",
+        timeoutSeconds,
+      },
+    },
+    { id: exitOpenedId, type: "exit", name: "Opened", position: { x: -100, y: 200 }, config: { type: "exit" } },
+    { id: exitTimeoutId, type: "exit", name: "Timeout", position: { x: 100, y: 200 }, config: { type: "exit" } },
+  ];
+
+  // Branch is determined by the engagement event type (opened, clicked, bounced)
+  const transitions: WorkflowTransition[] = [
+    { id: "t1", fromStepId: triggerId, toStepId: waitId },
+    { id: "t2", fromStepId: waitId, toStepId: exitOpenedId, condition: { branch: "opened" } },
+    { id: "t3", fromStepId: waitId, toStepId: exitTimeoutId, condition: { branch: "timeout" } },
+  ];
+
+  return {
+    id: `${TEST_PREFIX}-wf-wait-email-${Date.now()}`,
+    organizationId: testOrg.id,
+    name: "Wait for Email Engagement Test Workflow",
+    status: "enabled" as const,
+    triggerType: "api" as const,
+    triggerConfig: {},
+    steps,
+    transitions,
+    allowReentry: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: testUser.id,
+  };
+}
+
+function createSubscribeTopicWorkflow(topicId: string) {
+  const triggerId = "trigger-1";
+  const subscribeId = "subscribe-1";
+  const exitId = "exit-1";
+
+  const steps: WorkflowStep[] = [
+    { id: triggerId, type: "trigger", name: "Trigger", position: { x: 0, y: 0 }, config: { type: "trigger", triggerType: "api" } },
+    {
+      id: subscribeId,
+      type: "subscribe_topic",
+      name: "Subscribe to Topic",
+      position: { x: 0, y: 100 },
+      config: {
+        type: "subscribe_topic",
+        topicId,
+        channel: "email",
+      },
+    },
+    { id: exitId, type: "exit", name: "Exit", position: { x: 0, y: 200 }, config: { type: "exit" } },
+  ];
+
+  const transitions: WorkflowTransition[] = [
+    { id: "t1", fromStepId: triggerId, toStepId: subscribeId },
+    { id: "t2", fromStepId: subscribeId, toStepId: exitId },
+  ];
+
+  return {
+    id: `${TEST_PREFIX}-wf-subscribe-${Date.now()}`,
+    organizationId: testOrg.id,
+    name: "Subscribe Topic Test Workflow",
+    status: "enabled" as const,
+    triggerType: "api" as const,
+    triggerConfig: {},
+    steps,
+    transitions,
+    allowReentry: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: testUser.id,
+  };
+}
+
+function createUnsubscribeTopicWorkflow(topicId: string) {
+  const triggerId = "trigger-1";
+  const unsubscribeId = "unsubscribe-1";
+  const exitId = "exit-1";
+
+  const steps: WorkflowStep[] = [
+    { id: triggerId, type: "trigger", name: "Trigger", position: { x: 0, y: 0 }, config: { type: "trigger", triggerType: "api" } },
+    {
+      id: unsubscribeId,
+      type: "unsubscribe_topic",
+      name: "Unsubscribe from Topic",
+      position: { x: 0, y: 100 },
+      config: {
+        type: "unsubscribe_topic",
+        topicId,
+        channel: "email",
+      },
+    },
+    { id: exitId, type: "exit", name: "Exit", position: { x: 0, y: 200 }, config: { type: "exit" } },
+  ];
+
+  const transitions: WorkflowTransition[] = [
+    { id: "t1", fromStepId: triggerId, toStepId: unsubscribeId },
+    { id: "t2", fromStepId: unsubscribeId, toStepId: exitId },
+  ];
+
+  return {
+    id: `${TEST_PREFIX}-wf-unsubscribe-${Date.now()}`,
+    organizationId: testOrg.id,
+    name: "Unsubscribe Topic Test Workflow",
+    status: "enabled" as const,
+    triggerType: "api" as const,
+    triggerConfig: {},
+    steps,
+    transitions,
+    allowReentry: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: testUser.id,
+  };
+}
+
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
@@ -552,6 +727,11 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
         .delete(workflowExecution)
         .where(eq(workflowExecution.organizationId, testOrg.id));
 
+      // Clean up contact topic subscriptions
+      await db
+        .delete(contactTopic)
+        .where(eq(contactTopic.contactId, testContact.id));
+
       // Reset contact properties before each test
       await db
         .update(contact)
@@ -578,6 +758,11 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
       await db
         .delete(workflowExecution)
         .where(eq(workflowExecution.organizationId, testOrg.id));
+
+      // Clean up contact topic subscriptions
+      await db
+        .delete(contactTopic)
+        .where(eq(contactTopic.contactId, testContact.id));
 
       // Clean up test data
       await db.delete(contact).where(eq(contact.id, testContact.id));
@@ -977,6 +1162,321 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           .where(eq(workflowExecution.workflowId, wf.id));
 
         expect(executions.length).toBe(0);
+      });
+    });
+
+    describe("Wait for Event Step", () => {
+      it("should enter waiting state when wait_for_event step is reached", { timeout: 30000 }, async () => {
+        // Create workflow with wait_for_event step
+        const wf = createWaitForEventWorkflow("purchase_completed");
+        await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+        createdWorkflowIds.push(wf.id);
+
+        // Trigger workflow
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: wf.id,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        // Wait for execution to be created and enter waiting state
+        const execution = await waitForExecutionCreated(wf.id, testContact.id);
+        expect(execution).not.toBeNull();
+
+        // Wait for execution to enter waiting state
+        const waitingExecution = await waitForExecutionStatus(
+          execution!.id,
+          "waiting",
+          15000
+        );
+
+        expect(waitingExecution?.status).toBe("waiting");
+        expect(waitingExecution?.waitingForEvent).toBe("purchase_completed");
+        expect(waitingExecution?.waitTimeoutAt).not.toBeNull();
+      });
+
+      it("should resume execution when event is received", { timeout: 30000 }, async () => {
+        // Create workflow
+        const wf = createWaitForEventWorkflow("purchase_completed");
+        await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+        createdWorkflowIds.push(wf.id);
+
+        // Trigger workflow
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: wf.id,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        // Wait for execution to enter waiting state
+        const execution = await waitForExecutionCreated(wf.id, testContact.id);
+        expect(execution).not.toBeNull();
+
+        await waitForExecutionStatus(execution!.id, "waiting", 15000);
+
+        // Send resume event (simulating event received)
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "resume",
+          executionId: execution!.id,
+          branch: "yes",
+          organizationId: testOrg.id,
+        });
+
+        // Wait for execution to complete
+        const completedExecution = await waitForExecutionStatus(
+          execution!.id,
+          "completed",
+          15000
+        );
+
+        expect(completedExecution?.status).toBe("completed");
+        expect(completedExecution?.waitingForEvent).toBeNull();
+      });
+    });
+
+    describe("Wait for Email Engagement Step", () => {
+      it("should enter waiting state for email engagement", { timeout: 30000 }, async () => {
+        // Create workflow with wait_for_email_engagement step
+        // Note: Without a previous send_email step, it will wait for "email_engagement:unknown"
+        const wf = createWaitForEmailEngagementWorkflow();
+        await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+        createdWorkflowIds.push(wf.id);
+
+        // Trigger workflow
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: wf.id,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        // Wait for execution to enter waiting state
+        const execution = await waitForExecutionCreated(wf.id, testContact.id);
+        expect(execution).not.toBeNull();
+
+        const waitingExecution = await waitForExecutionStatus(
+          execution!.id,
+          "waiting",
+          15000
+        );
+
+        expect(waitingExecution?.status).toBe("waiting");
+        // Without a previous send_email step, it will wait for "email_engagement:unknown"
+        expect(waitingExecution?.waitingForEvent).toMatch(/^email_engagement:/);
+        expect(waitingExecution?.waitTimeoutAt).not.toBeNull();
+      });
+
+      it("should resume when email engagement is received", { timeout: 30000 }, async () => {
+        const wf = createWaitForEmailEngagementWorkflow();
+        await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+        createdWorkflowIds.push(wf.id);
+
+        // Trigger workflow
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: wf.id,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        // Wait for waiting state
+        const execution = await waitForExecutionCreated(wf.id, testContact.id);
+        expect(execution).not.toBeNull();
+
+        await waitForExecutionStatus(execution!.id, "waiting", 15000);
+
+        // Send resume with "opened" branch
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "resume",
+          executionId: execution!.id,
+          branch: "opened",
+          organizationId: testOrg.id,
+        });
+
+        // Should complete
+        const completedExecution = await waitForExecutionStatus(
+          execution!.id,
+          "completed",
+          15000
+        );
+
+        expect(completedExecution?.status).toBe("completed");
+      });
+    });
+
+    describe("Subscribe Topic Step", () => {
+      it("should subscribe contact to topic", { timeout: 30000 }, async () => {
+        // Create workflow that subscribes to the test topic
+        const wf = createSubscribeTopicWorkflow(testTopic.id);
+        await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+        createdWorkflowIds.push(wf.id);
+
+        // Verify no subscription exists initially
+        const initialSubscription = await db
+          .select()
+          .from(contactTopic)
+          .where(
+            and(
+              eq(contactTopic.contactId, testContact.id),
+              eq(contactTopic.topicId, testTopic.id)
+            )
+          );
+        expect(initialSubscription.length).toBe(0);
+
+        // Trigger workflow
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: wf.id,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        // Wait for execution to complete
+        const execution = await waitForExecutionCreated(wf.id, testContact.id);
+        expect(execution).not.toBeNull();
+
+        await waitForExecutionStatus(execution!.id, "completed", 15000);
+
+        // Verify subscription was created
+        const [subscription] = await db
+          .select()
+          .from(contactTopic)
+          .where(
+            and(
+              eq(contactTopic.contactId, testContact.id),
+              eq(contactTopic.topicId, testTopic.id)
+            )
+          );
+
+        expect(subscription).toBeDefined();
+        expect(subscription.status).toBe("subscribed");
+        expect(subscription.subscribedAt).not.toBeNull();
+      });
+
+      it("should re-subscribe contact to topic if previously unsubscribed", { timeout: 30000 }, async () => {
+        // Create an existing unsubscribed record
+        await db.insert(contactTopic).values({
+          contactId: testContact.id,
+          topicId: testTopic.id,
+          status: "unsubscribed",
+          unsubscribedAt: new Date(),
+        });
+
+        // Create and trigger workflow
+        const wf = createSubscribeTopicWorkflow(testTopic.id);
+        await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+        createdWorkflowIds.push(wf.id);
+
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: wf.id,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        const execution = await waitForExecutionCreated(wf.id, testContact.id);
+        await waitForExecutionStatus(execution!.id, "completed", 15000);
+
+        // Verify subscription was updated
+        const [subscription] = await db
+          .select()
+          .from(contactTopic)
+          .where(
+            and(
+              eq(contactTopic.contactId, testContact.id),
+              eq(contactTopic.topicId, testTopic.id)
+            )
+          );
+
+        expect(subscription.status).toBe("subscribed");
+        expect(subscription.unsubscribedAt).toBeNull();
+      });
+    });
+
+    describe("Unsubscribe Topic Step", () => {
+      it("should unsubscribe contact from topic", { timeout: 30000 }, async () => {
+        // First, create a subscription
+        await db.insert(contactTopic).values({
+          contactId: testContact.id,
+          topicId: testTopic.id,
+          status: "subscribed",
+          subscribedAt: new Date(),
+        });
+
+        // Create workflow that unsubscribes
+        const wf = createUnsubscribeTopicWorkflow(testTopic.id);
+        await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+        createdWorkflowIds.push(wf.id);
+
+        // Trigger workflow
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: wf.id,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        // Wait for completion
+        const execution = await waitForExecutionCreated(wf.id, testContact.id);
+        expect(execution).not.toBeNull();
+
+        await waitForExecutionStatus(execution!.id, "completed", 15000);
+
+        // Verify subscription was updated to unsubscribed
+        const [subscription] = await db
+          .select()
+          .from(contactTopic)
+          .where(
+            and(
+              eq(contactTopic.contactId, testContact.id),
+              eq(contactTopic.topicId, testTopic.id)
+            )
+          );
+
+        expect(subscription.status).toBe("unsubscribed");
+        expect(subscription.unsubscribedAt).not.toBeNull();
+      });
+
+      it("should handle unsubscribe when no subscription exists (no-op)", { timeout: 30000 }, async () => {
+        // Don't create any subscription - workflow should complete without error
+
+        const wf = createUnsubscribeTopicWorkflow(testTopic.id);
+        await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+        createdWorkflowIds.push(wf.id);
+
+        await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+          type: "trigger",
+          workflowId: wf.id,
+          contactId: testContact.id,
+          organizationId: testOrg.id,
+        });
+
+        const execution = await waitForExecutionCreated(wf.id, testContact.id);
+        expect(execution).not.toBeNull();
+
+        // Should complete (unsubscribe with no existing record is a no-op)
+        const completedExecution = await waitForExecutionStatus(
+          execution!.id,
+          "completed",
+          15000
+        );
+
+        expect(completedExecution?.status).toBe("completed");
+
+        // Verify no subscription record was created
+        const subscriptions = await db
+          .select()
+          .from(contactTopic)
+          .where(
+            and(
+              eq(contactTopic.contactId, testContact.id),
+              eq(contactTopic.topicId, testTopic.id)
+            )
+          );
+
+        expect(subscriptions.length).toBe(0);
       });
     });
   }

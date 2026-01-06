@@ -409,12 +409,13 @@ describe("cancelExecutionsForTopicUnsubscribe", () => {
   });
 
   it("should cancel multiple executions for same contact", async () => {
-    // Create multiple active executions (if allowReentry was true)
+    // Create multiple active executions (allowReentry must be true to bypass unique index)
     await db.insert(workflowExecution).values([
       {
         workflowId: testWorkflowData.id,
         contactId: testContact.id,
         organizationId: testOrg.id,
+        allowReentry: true,
         status: "active",
         currentStepId: "delay1",
         startedAt: new Date(),
@@ -423,6 +424,7 @@ describe("cancelExecutionsForTopicUnsubscribe", () => {
         workflowId: testWorkflowData.id,
         contactId: testContact.id,
         organizationId: testOrg.id,
+        allowReentry: true,
         status: "paused",
         currentStepId: "delay1",
         startedAt: new Date(),
