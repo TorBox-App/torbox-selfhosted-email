@@ -5,11 +5,18 @@
  * Used for contact lifecycle events, topic subscriptions, etc.
  */
 
-import { contactEvent, db, eq, segment, workflow } from "@wraps/db";
-import { and, sql } from "drizzle-orm";
+import {
+  contactEvent,
+  db,
+  eq,
+  segment,
+  workflow,
+  workflowExecution,
+} from "@wraps/db";
+import { and, inArray, sql } from "drizzle-orm";
 
 import { contactMatchesSegment } from "./segment-evaluator";
-import { enqueueWorkflowStep } from "./workflow-queue";
+import { deleteScheduledStep, enqueueWorkflowStep } from "./workflow-queue";
 
 /**
  * Emit an internal event that may trigger workflows
@@ -193,13 +200,23 @@ export async function emitTopicSubscribed(params: {
 
 /**
  * Emit topic_unsubscribed event
+ *
+ * Also cancels any active workflow executions that were triggered by
+ * topic_subscribed for this topic.
  */
 export async function emitTopicUnsubscribed(params: {
   contactId: string;
   organizationId: string;
   topicId: string;
   topicName?: string;
-}): Promise<{ workflowsTriggered: number }> {
+}): Promise<{ workflowsTriggered: number; executionsCancelled: number }> {
+  // Cancel any active executions for topic_subscribed workflows
+  const { executionsCancelled } = await cancelExecutionsForTopicUnsubscribe({
+    contactId: params.contactId,
+    organizationId: params.organizationId,
+    topicId: params.topicId,
+  });
+
   // Check for event-based triggers
   const matchingByEvent = await emitWorkflowEvent({
     eventName: "topic_unsubscribed",
@@ -248,6 +265,7 @@ export async function emitTopicUnsubscribed(params: {
   return {
     workflowsTriggered:
       matchingByEvent.workflowsTriggered + matchingByTrigger.length,
+    executionsCancelled,
   };
 }
 
@@ -422,4 +440,111 @@ export async function checkSegmentExit(params: {
   }
 
   return { workflowsTriggered: triggered };
+}
+
+/**
+ * Cancel active workflow executions when a contact unsubscribes from a topic.
+ *
+ * This finds all active executions for workflows triggered by topic_subscribed
+ * with the matching topicId and cancels them.
+ */
+export async function cancelExecutionsForTopicUnsubscribe(params: {
+  contactId: string;
+  organizationId: string;
+  topicId: string;
+}): Promise<{ executionsCancelled: number }> {
+  const { contactId, organizationId, topicId } = params;
+
+  // Find workflows triggered by topic_subscribed for this topic
+  const matchingWorkflows = await db
+    .select({ id: workflow.id })
+    .from(workflow)
+    .where(
+      and(
+        eq(workflow.organizationId, organizationId),
+        eq(workflow.triggerType, "topic_subscribed"),
+        sql`${workflow.triggerConfig}->>'topicId' = ${topicId}`
+      )
+    );
+
+  if (matchingWorkflows.length === 0) {
+    return { executionsCancelled: 0 };
+  }
+
+  const workflowIds = matchingWorkflows.map((w) => w.id);
+
+  // Find active executions for this contact in these workflows
+  const activeExecutions = await db
+    .select({
+      id: workflowExecution.id,
+      workflowId: workflowExecution.workflowId,
+      delaySchedulerName: workflowExecution.delaySchedulerName,
+      waitTimeoutSchedulerName: workflowExecution.waitTimeoutSchedulerName,
+    })
+    .from(workflowExecution)
+    .where(
+      and(
+        eq(workflowExecution.contactId, contactId),
+        inArray(workflowExecution.workflowId, workflowIds),
+        sql`${workflowExecution.status} IN ('pending', 'active', 'paused', 'waiting')`
+      )
+    );
+
+  if (activeExecutions.length === 0) {
+    return { executionsCancelled: 0 };
+  }
+
+  // Cancel each execution
+  for (const execution of activeExecutions) {
+    // Clean up any scheduled steps
+    const schedulerCleanups: Promise<void>[] = [];
+
+    if (execution.delaySchedulerName) {
+      schedulerCleanups.push(
+        deleteScheduledStep(execution.delaySchedulerName).catch((err) => {
+          console.error(
+            `[workflow-events] Failed to delete delay scheduler ${execution.delaySchedulerName}:`,
+            err
+          );
+        })
+      );
+    }
+
+    if (execution.waitTimeoutSchedulerName) {
+      schedulerCleanups.push(
+        deleteScheduledStep(execution.waitTimeoutSchedulerName).catch((err) => {
+          console.error(
+            `[workflow-events] Failed to delete timeout scheduler ${execution.waitTimeoutSchedulerName}:`,
+            err
+          );
+        })
+      );
+    }
+
+    await Promise.all(schedulerCleanups);
+
+    // Mark execution as cancelled
+    await db
+      .update(workflowExecution)
+      .set({
+        status: "cancelled",
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(workflowExecution.id, execution.id));
+
+    // Decrement active execution count on workflow
+    await db
+      .update(workflow)
+      .set({
+        activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - 1)`,
+      })
+      .where(eq(workflow.id, execution.workflowId));
+  }
+
+  console.log(
+    `[workflow-events] Cancelled ${activeExecutions.length} execution(s) for contact ${contactId} unsubscribing from topic ${topicId}`
+  );
+
+  return { executionsCancelled: activeExecutions.length };
 }
