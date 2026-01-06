@@ -14,6 +14,30 @@ import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 const sqs = new SQSClient({});
 const scheduler = new SchedulerClient({});
 
+/**
+ * Format a date for EventBridge Scheduler at() expression.
+ * Must be in format: at(yyyy-MM-ddTHH:mm:ss) without milliseconds or timezone.
+ */
+function formatScheduleExpression(date: Date): string {
+  const iso = date.toISOString(); // 2026-01-08T04:37:29.148Z
+  const withoutMs = iso.split(".")[0]; // 2026-01-08T04:37:29
+  return `at(${withoutMs})`;
+}
+
+/**
+ * Generate a short schedule name that fits within the 64-char limit.
+ * Uses first 8 chars of each UUID to create unique but short names.
+ */
+function generateScheduleName(
+  prefix: string,
+  executionId: string,
+  stepId: string
+): string {
+  const shortExecId = executionId.slice(0, 8);
+  const shortStepId = stepId.slice(0, 8);
+  return `${prefix}-${shortExecId}-${shortStepId}`;
+}
+
 const WORKFLOW_QUEUE_URL = process.env.WORKFLOW_QUEUE_URL;
 const WORKFLOW_QUEUE_ARN = process.env.WORKFLOW_QUEUE_ARN;
 const SCHEDULE_GROUP = process.env.SCHEDULER_GROUP_NAME || "wraps-workflows";
@@ -76,7 +100,11 @@ export async function scheduleWorkflowStep(params: {
   organizationId: string;
   delaySeconds: number;
 }): Promise<string> {
-  const scheduleName = `wraps-wf-${params.executionId}-${params.stepId}`;
+  const scheduleName = generateScheduleName(
+    "wraps-wf",
+    params.executionId,
+    params.stepId
+  );
 
   if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_ARN)) {
     if (IS_PRODUCTION) {
@@ -89,7 +117,7 @@ export async function scheduleWorkflowStep(params: {
   }
 
   const executeAt = new Date(Date.now() + params.delaySeconds * 1000);
-  const scheduleExpression = `at(${executeAt.toISOString().replace(".000Z", "").replace("Z", "")})`;
+  const scheduleExpression = formatScheduleExpression(executeAt);
 
   await scheduler.send(
     new CreateScheduleCommand({
@@ -124,7 +152,11 @@ export async function scheduleWaitTimeout(params: {
   organizationId: string;
   timeoutSeconds: number;
 }): Promise<string> {
-  const scheduleName = `wraps-wf-timeout-${params.executionId}-${params.stepId}`;
+  const scheduleName = generateScheduleName(
+    "wraps-wf-to",
+    params.executionId,
+    params.stepId
+  );
 
   if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_ARN)) {
     if (IS_PRODUCTION) {
@@ -135,7 +167,7 @@ export async function scheduleWaitTimeout(params: {
   }
 
   const timeoutAt = new Date(Date.now() + params.timeoutSeconds * 1000);
-  const scheduleExpression = `at(${timeoutAt.toISOString().replace(".000Z", "").replace("Z", "")})`;
+  const scheduleExpression = formatScheduleExpression(timeoutAt);
 
   await scheduler.send(
     new CreateScheduleCommand({
