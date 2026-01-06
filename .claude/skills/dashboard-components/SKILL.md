@@ -1,3 +1,8 @@
+---
+name: dashboard-components
+description: Build dashboard pages and components for the Next.js web app. Use when creating pages in apps/web dashboard.
+---
+
 # Dashboard Components Skill
 
 You are an expert at building dashboard pages and components for the Next.js web app.

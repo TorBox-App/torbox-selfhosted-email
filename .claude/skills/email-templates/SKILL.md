@@ -1,3 +1,8 @@
+---
+name: email-templates
+description: Work with email template system using TipTap, React Email, and AWS SES. Use when editing or creating email templates.
+---
+
 # Email Templates Skill
 
 You are an expert at working with the email template system built on TipTap, React Email, and AWS SES.

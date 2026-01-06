@@ -23,7 +23,7 @@ export function SidebarConfigProvider({
   children: React.ReactNode;
 }) {
   const [config, setConfig] = React.useState<SidebarConfig>({
-    variant: "sidebar",
+    variant: "inset",
     collapsible: "icon",
     side: "left",
   });

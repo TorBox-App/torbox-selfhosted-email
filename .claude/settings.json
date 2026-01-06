@@ -1,5 +1,52 @@
 {
   "hooks": {
     "PostToolUse": []
-  }
+  },
+  "skills": [
+    {
+      "name": "create-form",
+      "description": "Create forms using TanStack Form and shadcn/ui Field components",
+      "path": ".claude/skills/create-form.md"
+    },
+    {
+      "name": "create-server-action",
+      "description": "Create Next.js server actions with TanStack Form validation",
+      "path": ".claude/skills/create-server-action.md"
+    },
+    {
+      "name": "api",
+      "description": "Build API routes for Lambda/Elysia with proper async handling",
+      "path": ".claude/skills/wraps-api-developer.md"
+    },
+    {
+      "name": "drizzle",
+      "description": "Create and modify Drizzle ORM schemas and migrations",
+      "path": ".claude/skills/drizzle-migrations.md"
+    },
+    {
+      "name": "workflow",
+      "description": "Build workflow automation nodes and triggers",
+      "path": ".claude/skills/workflow-builder.md"
+    },
+    {
+      "name": "email-template",
+      "description": "Work with TipTap email templates and SES rendering",
+      "path": ".claude/skills/email-templates.md"
+    },
+    {
+      "name": "cli",
+      "description": "Build CLI commands with Clack prompts and Pulumi",
+      "path": ".claude/skills/cli-commands.md"
+    },
+    {
+      "name": "test",
+      "description": "Write Vitest tests with mocking and database integration",
+      "path": ".claude/skills/testing-patterns.md"
+    },
+    {
+      "name": "dashboard",
+      "description": "Build dashboard pages with server components and data tables",
+      "path": ".claude/skills/dashboard-components.md"
+    }
+  ]
 }

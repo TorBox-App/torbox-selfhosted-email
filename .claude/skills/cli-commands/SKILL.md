@@ -1,3 +1,8 @@
+---
+name: cli-commands
+description: Build CLI commands using Clack prompts and Pulumi. Use when creating or modifying commands in packages/cli.
+---
+
 # CLI Commands Skill
 
 You are an expert at building CLI commands for the Wraps CLI using Clack prompts and Pulumi.

@@ -1,3 +1,8 @@
+---
+name: testing-patterns
+description: Write tests using Vitest patterns for the Wraps codebase. Use when creating or editing test files.
+---
+
 # Testing Patterns Skill
 
 You are an expert at writing tests for the Wraps codebase using Vitest.

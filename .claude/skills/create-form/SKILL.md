@@ -1,3 +1,8 @@
+---
+name: create-form
+description: Create forms using TanStack Form and shadcn/ui Field components. Use when building or editing form components.
+---
+
 # Create Form Skill
 
 You are an expert at building forms using TanStack Form with shadcn/ui components in the Wraps monorepo.

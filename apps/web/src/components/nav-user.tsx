@@ -55,20 +55,18 @@ export function NavUser() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:overflow-visible!"
               size="lg"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg">
-                <Avatar className="ring-1">
-                  <AvatarFallback>
-                    {user.name
-                      .split(" ")
-                      .map((word) => word[0]?.toUpperCase() || "")
-                      .join("")
-                      .slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+              <Avatar className="size-8 ring-1 ring-sidebar-ring">
+                <AvatarFallback>
+                  {user.name
+                    .split(" ")
+                    .map((word) => word[0]?.toUpperCase() || "")
+                    .join("")
+                    .slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-muted-foreground text-xs">
@@ -86,17 +84,15 @@ export function NavUser() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg">
-                  <Avatar className="ring-1">
-                    <AvatarFallback>
-                      {user.name
-                        .split(" ")
-                        .map((word) => word[0]?.toUpperCase() || "")
-                        .join("")
-                        .slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
+                <Avatar className="size-8 ring-1 ring-sidebar-ring">
+                  <AvatarFallback>
+                    {user.name
+                      .split(" ")
+                      .map((word) => word[0]?.toUpperCase() || "")
+                      .join("")
+                      .slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-muted-foreground text-xs">

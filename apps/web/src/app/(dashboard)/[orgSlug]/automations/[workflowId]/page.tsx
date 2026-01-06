@@ -91,8 +91,9 @@ export default async function WorkflowBuilderPage({
     },
   });
 
+  // Negative margins cancel out the dashboard layout padding
   return (
-    <div className="flex h-[calc(100vh-60px)] flex-col">
+    <div className="-my-4 flex h-[calc(100dvh-var(--header-height)-1rem)] flex-col md:-my-6 md:h-[calc(100dvh-var(--header-height)-1.5rem)]">
       <WorkflowBuilder
         awsAccounts={awsAccounts}
         organizationId={orgWithMembership.id}

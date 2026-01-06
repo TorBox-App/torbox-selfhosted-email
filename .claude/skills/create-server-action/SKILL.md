@@ -1,3 +1,8 @@
+---
+name: create-server-action
+description: Create Next.js server actions with TanStack Form validation. Use when building form submission handlers or API mutations.
+---
+
 # Create Server Action Skill
 
 You are an expert at building Next.js server actions with TanStack Form validation for the Wraps monorepo.

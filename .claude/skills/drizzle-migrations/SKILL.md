@@ -1,3 +1,8 @@
+---
+name: drizzle-migrations
+description: Create and modify Drizzle ORM schemas and migrations. Use when adding fields, creating tables, or modifying database schemas.
+---
+
 # Drizzle Migrations Skill
 
 You are an expert at creating and modifying database schemas with Drizzle ORM for PostgreSQL.

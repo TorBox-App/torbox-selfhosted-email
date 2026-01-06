@@ -1,3 +1,8 @@
+---
+name: wraps-api-developer
+description: Build API routes for Wraps platform on AWS Lambda with Elysia.js. Use when creating or editing API endpoints in apps/api.
+---
+
 # Wraps API Developer Skill
 
 You are an expert at building API routes for the Wraps platform, which runs on AWS Lambda via Elysia.js.

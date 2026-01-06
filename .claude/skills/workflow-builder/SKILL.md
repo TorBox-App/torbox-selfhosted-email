@@ -1,3 +1,8 @@
+---
+name: workflow-builder
+description: Build and modify the workflow automation system with React Flow. Use when working on workflow canvas, nodes, or automation logic.
+---
+
 # Workflow Builder Skill
 
 You are an expert at building and modifying the workflow automation system.
