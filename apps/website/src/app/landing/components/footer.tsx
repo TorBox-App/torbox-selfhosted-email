@@ -8,25 +8,16 @@ import { Separator } from "@/components/ui/separator";
 
 const footerLinks = {
   product: [
-    { name: "Features", href: "#features" },
-    { name: "Pricing", href: "#pricing" },
+    { name: "CLI & SDK", href: "/cli" },
+    { name: "Platform", href: "/platform" },
     { name: "Cost Calculator", href: "/calculator" },
-    { name: "Quickstart", href: "/docs/quickstart" },
-    { name: "CLI Reference", href: "/docs/cli-reference" },
-    { name: "SDK Reference", href: "/docs/sdk-reference" },
+    { name: "Pricing", href: "#pricing" },
   ],
   developers: [
     { name: "Documentation", href: "/docs" },
-    {
-      name: "TypeScript SDK",
-      href: "https://github.com/wraps-team/wraps-js",
-      external: true,
-    },
-    {
-      name: "npm Package",
-      href: "https://www.npmjs.com/package/@wraps.dev/email",
-      external: true,
-    },
+    { name: "Quickstart", href: "/docs/quickstart" },
+    { name: "CLI Reference", href: "/docs/cli-reference" },
+    { name: "SDK Reference", href: "/docs/sdk-reference" },
     {
       name: "GitHub",
       href: "https://github.com/wraps-team/wraps",

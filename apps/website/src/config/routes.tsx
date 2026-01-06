@@ -43,6 +43,11 @@ const Privacy = lazy(() => import("@/app/privacy/page"));
 const Terms = lazy(() => import("@/app/terms/page"));
 const NotFound = lazy(() => import("@/app/not-found/page"));
 
+// Product pages
+const Cli = lazy(() => import("@/app/cli/page"));
+const Platform = lazy(() => import("@/app/platform/page"));
+const Changelog = lazy(() => import("@/app/changelog/page"));
+
 export type RouteConfig = {
   path: string;
   element: React.ReactNode;
@@ -138,6 +143,20 @@ export const routes: RouteConfig[] = [
   {
     path: "/docs/guides/aws-setup/troubleshooting",
     element: <AWSSetupTroubleshootingGuide />,
+  },
+
+  // Product pages
+  {
+    path: "/cli",
+    element: <Cli />,
+  },
+  {
+    path: "/platform",
+    element: <Platform />,
+  },
+  {
+    path: "/changelog",
+    element: <Changelog />,
   },
 
   // Legal pages

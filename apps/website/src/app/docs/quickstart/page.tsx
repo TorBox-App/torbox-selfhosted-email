@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const quickstartGuides = [
+const cliGuides = [
   {
     title: "Email",
     description:
@@ -24,19 +24,6 @@ const quickstartGuides = [
       "Domain verification",
       "TypeScript SDK",
       "Analytics dashboard",
-    ],
-  },
-  {
-    title: "Platform",
-    description:
-      "Use the type-safe Platform SDK to manage contacts, segments, and send batch emails programmatically.",
-    href: "/docs/quickstart/platform",
-    icon: Blocks,
-    features: [
-      "Contact management",
-      "Batch email sends",
-      "Type-safe API client",
-      "Full TypeScript support",
     ],
   },
   {
@@ -53,6 +40,20 @@ const quickstartGuides = [
     ],
   },
 ];
+
+const platformGuide = {
+  title: "Platform",
+  description:
+    "Use the type-safe Platform SDK to manage contacts, segments, and send batch emails programmatically.",
+  href: "/docs/quickstart/platform",
+  icon: Blocks,
+  features: [
+    "Contact management",
+    "Batch email sends",
+    "Type-safe API client",
+    "Full TypeScript support",
+  ],
+};
 
 export default function QuickstartPage() {
   return (
@@ -72,9 +73,9 @@ export default function QuickstartPage() {
         </p>
       </div>
 
-      {/* Quickstart Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {quickstartGuides.map((guide) => {
+      {/* CLI Quickstart Cards - Email & SMS */}
+      <div className="mb-6 grid gap-6 md:grid-cols-2">
+        {cliGuides.map((guide) => {
           const Icon = guide.icon;
           return (
             <Card
@@ -97,32 +98,51 @@ export default function QuickstartPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="flex flex-col gap-2">
-                  <Button asChild className="w-full">
-                    <a href={guide.href}>
-                      Get Started with {guide.title}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                  <Button
-                    asChild
-                    className="w-full bg-orange-500 text-white hover:bg-orange-600"
-                  >
-                    <a
-                      href="https://app.wraps.dev/auth?mode=signup&plan=starter"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      Subscribe to Premium
-                      <Sparkles className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
+                <Button asChild className="w-full">
+                  <a href={guide.href}>
+                    Get Started with {guide.title}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {/* Platform Card */}
+      <Card className="group relative overflow-hidden transition-all hover:border-orange-500/50 hover:shadow-lg">
+        <CardHeader>
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/10">
+            <Blocks className="h-6 w-6 text-orange-500" />
+          </div>
+          <CardTitle className="text-2xl">{platformGuide.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">{platformGuide.description}</p>
+          <ul className="grid grid-cols-2 gap-2 text-muted-foreground text-sm md:grid-cols-4">
+            {platformGuide.features.map((feature) => (
+              <li className="flex items-center gap-2" key={feature}>
+                <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+          <Button
+            asChild
+            className="w-full bg-orange-500 text-white hover:bg-orange-600 md:w-auto"
+          >
+            <a
+              href="https://app.wraps.dev/auth?mode=signup&plan=starter"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Subscribe to Platform
+              <Sparkles className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Help Section */}
       <Card className="mt-12 bg-muted/50">

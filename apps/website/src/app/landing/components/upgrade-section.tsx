@@ -14,7 +14,7 @@ const comparisonFeatures = [
     starter: true,
     pro: true,
   },
-  { feature: "Hosted dashboard", free: false, starter: true, pro: true },
+  { feature: "Wraps Platform", free: false, starter: true, pro: true },
   { feature: "Contacts", free: false, starter: "5,000", pro: "25,000" },
   { feature: "Templates", free: false, starter: "Unlimited", pro: "Unlimited" },
   { feature: "AI generations", free: false, starter: "50/mo", pro: "250/mo" },
@@ -50,7 +50,7 @@ export function UpgradeSection() {
             Unlock the Full Platform
           </h2>
           <p className="mx-auto max-w-2xl text-pretty text-muted-foreground">
-            Everything in the free tier, plus a hosted dashboard, template
+            Everything in the free tier, plus the Wraps Platform with template
             editor, AI generation, and more coming soon.
           </p>
         </div>

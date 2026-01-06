@@ -359,13 +359,13 @@ export default function CostCalculatorPage() {
                         <div className="space-y-2">
                           <Label htmlFor="retention">Retention Period</Label>
                           <Select
-                            onValueChange={(value) =>
-                              setRetention(value as RetentionPeriod)
-                            }
                             value={retention}
+                            onValueChange={(value: RetentionPeriod) => {
+                              setRetention(value);
+                            }}
                           >
                             <SelectTrigger id="retention">
-                              <SelectValue />
+                              <SelectValue placeholder="Select retention" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="7days">7 Days</SelectItem>

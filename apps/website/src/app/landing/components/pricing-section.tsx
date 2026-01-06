@@ -41,7 +41,7 @@ const plans = [
     features: [
       "5,000 contacts",
       "Transactional + batch sending",
-      "Hosted dashboard at wraps.dev",
+      "Wraps Platform at wraps.dev",
       "Unlimited templates",
       "50 AI generations/month",
       "1 AWS account",
@@ -102,7 +102,7 @@ export function PricingSection() {
   return (
     <SectionWrapper
       badge="Pricing"
-      description="Use the CLI and SDK free forever. Add the hosted dashboard starting at $10/month."
+      description="Use the CLI and SDK free forever. Add the Wraps Platform starting at $10/month."
       id="pricing"
       title="Simple, Transparent Pricing"
     >

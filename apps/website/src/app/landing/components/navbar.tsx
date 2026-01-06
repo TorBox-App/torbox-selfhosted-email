@@ -29,14 +29,13 @@ import { useTheme } from "@/hooks/use-theme";
 const navigationItems = [
   { name: "Home", href: "/" },
   {
-    name: "Features",
+    name: "Products",
     href: "#features",
     hasSubmenu: true,
     submenuType: "features",
   },
   { name: "Docs", href: "/docs", hasSubmenu: true, submenuType: "docs" },
   { name: "Pricing", href: "#pricing" },
-  { name: "FAQ", href: "#faq" },
   { name: "SMS", href: "/sms", badge: "Soon" },
 ];
 
@@ -44,18 +43,18 @@ const navigationItems = [
 const featuresItems = [
   {
     name: "CLI & SDK",
-    href: "#quickstart",
-    description: "Deploy infrastructure and send emails with code",
+    href: "/cli",
+    description: "Free tools to deploy and send emails",
   },
   {
-    name: "Templates",
-    href: "#template-editor",
-    description: "Drag-and-drop email builder with AI",
+    name: "Platform",
+    href: "/platform",
+    description: "Hosted platform for templates & broadcasts",
   },
   {
-    name: "Broadcasts",
-    href: "#broadcasts",
-    description: "Send to audiences with scheduling",
+    name: "Calculator",
+    href: "/calculator",
+    description: "Estimate your AWS email costs",
   },
 ];
 
@@ -128,10 +127,6 @@ export function LandingNavbar() {
                               <a
                                 className="block cursor-pointer select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                                 href={featureItem.href}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  smoothScrollTo(featureItem.href);
-                                }}
                               >
                                 <div className="mb-1 font-medium text-sm leading-none">
                                   {featureItem.name}
@@ -321,14 +316,7 @@ export function LandingNavbar() {
                                   className="flex cursor-pointer flex-col rounded-lg px-4 py-2 transition-colors hover:bg-accent hover:text-accent-foreground"
                                   href={featureItem.href}
                                   key={featureItem.name}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    setIsOpen(false);
-                                    setTimeout(
-                                      () => smoothScrollTo(featureItem.href),
-                                      100
-                                    );
-                                  }}
+                                  onClick={() => setIsOpen(false)}
                                 >
                                   <span className="font-medium text-sm">
                                     {featureItem.name}

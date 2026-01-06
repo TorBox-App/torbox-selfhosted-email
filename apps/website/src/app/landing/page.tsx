@@ -1,17 +1,14 @@
-import { ArchitectureSection } from "./components/architecture-section";
-import { BroadcastsSection } from "./components/broadcasts-section";
+import { CliTabbedSection } from "./components/cli-tabbed-section";
 import { CTASection } from "./components/cta-section";
 import { ExistingSesSection } from "./components/existing-ses-section";
 import { FaqSection } from "./components/faq-section";
-import { FeaturesSection } from "./components/features-section";
 import { LandingFooter } from "./components/footer";
 import { HeroSection } from "./components/hero-section";
 import { LandingNavbar } from "./components/navbar";
 import { PricingSection } from "./components/pricing-section";
-import { QuickStartSection } from "./components/quick-start-section";
+import { ProductTabbedSection } from "./components/product-tabbed-section";
 import { SmsTeaserSection } from "./components/sms-teaser-section";
 import { StatsSection } from "./components/stats-section";
-import { TemplateEditorSection } from "./components/template-editor-section";
 import { TrustedBySection } from "./components/trusted-by-section";
 import { premiumBgClass, UpgradeSection } from "./components/upgrade-section";
 
@@ -31,19 +28,16 @@ export default function LandingPage() {
         {/* SMS Coming Soon Teaser */}
         <SmsTeaserSection />
 
-        {/* Free Tier - CLI + SDK + Local Console */}
-        <QuickStartSection />
-        <ArchitectureSection />
-        <FeaturesSection />
+        {/* Free Tier - CLI + SDK + Local Console (Tabbed) */}
+        <CliTabbedSection />
         <ExistingSesSection />
 
-        {/* Transition to Premium (slant happens midway through this section) */}
+        {/* Transition to Premium */}
         <UpgradeSection />
 
-        {/* Premium Tier - Hosted Dashboard (continues the premium background) */}
+        {/* Premium Tier - Hosted Dashboard (Tabbed) */}
         <div className={premiumBgClass}>
-          <TemplateEditorSection />
-          <BroadcastsSection />
+          <ProductTabbedSection />
           <PricingSection />
           <FaqSection />
           <CTASection />

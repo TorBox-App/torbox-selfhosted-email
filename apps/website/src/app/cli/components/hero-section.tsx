@@ -45,14 +45,15 @@ export function CliHeroSection() {
           {/* Main Headline */}
           <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-6xl lg:text-7xl">
             <span className="flex flex-col items-center justify-center sm:flex-row sm:gap-3">
-              <span>Deploy AWS</span>
+              <span>Deploy </span>
               <WordRotate
                 className="text-green-500"
                 duration={3000}
-                words={["Email", "SMS"]}
+                words={["Email", "SMS", "CDN"]}
               />
+              <span> to </span>
             </span>
-            <span className="text-pretty">in one command.</span>
+            <span className="text-pretty">your AWS in one command.</span>
           </h1>
 
           {/* Subheading */}
@@ -103,13 +104,13 @@ export function CliHeroSection() {
                   </SnippetTabsList>
                 </div>
                 <SnippetCopyButton
-                  className="opacity-100 text-green-400/70 hover:bg-green-500/10 hover:text-green-400"
+                  className="text-green-400/70 opacity-100 hover:bg-green-500/10 hover:text-green-400"
                   value={installCommands.npm}
                 />
               </SnippetHeader>
               {Object.entries(installCommands).map(([key, command]) => (
                 <SnippetTabsContent
-                  className="bg-[#0a0a0a] font-mono text-green-400 text-left"
+                  className="bg-[#0a0a0a] text-left font-mono text-green-400"
                   key={key}
                   value={key}
                 >

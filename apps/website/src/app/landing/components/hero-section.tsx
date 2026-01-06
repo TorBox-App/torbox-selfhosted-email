@@ -5,6 +5,7 @@ import { AsciinemaPlayer } from "@/components/asciinema-player";
 import { DotPattern } from "@/components/dot-pattern";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { WordRotate } from "@/components/ui/word-rotate";
 import { assetUrl } from "@/lib/utils";
 
 export function HeroSection() {
@@ -21,19 +22,27 @@ export function HeroSection() {
           {/* Announcement Badge */}
           <div className="mb-8 flex justify-center">
             <Badge className="border-foreground px-4 py-2" variant="outline">
-              Free CLI + SDK · Hosted Dashboard $10/mo
+              Free CLI + SDK · Platform $10/mo
             </Badge>
           </div>
 
           {/* Main Headline */}
           <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-6xl lg:text-7xl">
-            AWS email, simplified.
+            <span className="flex flex-col items-center justify-center sm:flex-row sm:gap-3">
+              <span>AWS</span>
+              <WordRotate
+                className="text-orange-500"
+                duration={3000}
+                words={["Email", "SMS", "CDN"]}
+              />
+              <span>simplified.</span>
+            </span>
           </h1>
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            Start free with our CLI and SDK. Upgrade to the hosted dashboard
-            when you're ready.
+            Start free with our CLI and SDK. Upgrade to the Wraps Platform when
+            you're ready.
           </p>
 
           {/* CTA */}
@@ -75,7 +84,7 @@ export function HeroSection() {
         <div className="mx-auto mt-16 max-w-4xl">
           <div className="group relative">
             {/* Top background glow effect */}
-            <div className="absolute top-0 left-1/2 mx-auto h-16 w-[70%] -translate-x-1/2 transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
+            <div className="-translate-x-1/2 absolute top-0 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
 
             {/* Terminal */}
             <div className="relative overflow-hidden rounded-xl border-2 shadow-2xl">
