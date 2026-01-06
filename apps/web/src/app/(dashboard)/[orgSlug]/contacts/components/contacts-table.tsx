@@ -285,6 +285,10 @@ export function ContactsTable({
   const handleUpdateContact = async (data: {
     email?: string;
     phone?: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    company?: string | null;
+    jobTitle?: string | null;
     emailStatus?: EmailStatus;
     smsStatus?: SmsStatus;
     status?: ContactStatus;
@@ -296,11 +300,15 @@ export function ContactsTable({
     }
 
     startTransition(async () => {
-      // Update contact fields (email, phone, status, properties)
+      // Update contact fields (email, phone, name, status, properties)
       const { topicIds, ...contactData } = data;
       const hasContactChanges =
         contactData.email !== undefined ||
         contactData.phone !== undefined ||
+        contactData.firstName !== undefined ||
+        contactData.lastName !== undefined ||
+        contactData.company !== undefined ||
+        contactData.jobTitle !== undefined ||
         contactData.emailStatus !== undefined ||
         contactData.smsStatus !== undefined ||
         contactData.status !== undefined ||
