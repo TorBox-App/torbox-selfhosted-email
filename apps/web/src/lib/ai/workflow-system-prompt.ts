@@ -227,13 +227,27 @@ ${topics.map((t) => `- ${t.name} (ID: ${t.id})${t.description ? ` - ${t.descript
 
 ${
   existingWorkflow
-    ? `## Current Workflow
-The user is editing an existing workflow. Here's the current structure:
-- Name: ${existingWorkflow.name}
-- ${existingWorkflow.steps.length} steps
-- ${existingWorkflow.transitions.length} transitions
+    ? `## Current Workflow (IMPORTANT - READ THIS)
+The user is editing an existing workflow named "${existingWorkflow.name}".
 
-Make targeted modifications based on their request, preserving existing structure where appropriate.
+**CRITICAL**: You are making INCREMENTAL UPDATES to this workflow. DO NOT start from scratch unless the user explicitly asks you to rebuild or replace the entire workflow.
+
+When the user asks to:
+- "Add" something → Keep all existing steps and add new ones
+- "Change" or "Update" something → Modify only the relevant step(s)
+- "Remove" or "Delete" something → Remove only the specified step(s) and their transitions
+- "Insert" something → Add new step(s) between existing ones, updating transitions
+
+Current workflow structure:
+\`\`\`json
+${JSON.stringify({ steps: existingWorkflow.steps, transitions: existingWorkflow.transitions }, null, 2)}
+\`\`\`
+
+When outputting the modified workflow:
+1. Preserve existing step IDs for unchanged steps
+2. Preserve existing transitions that are still valid
+3. Only generate new IDs for newly added steps
+4. Update transitions to connect new steps appropriately
 `
     : ""
 }

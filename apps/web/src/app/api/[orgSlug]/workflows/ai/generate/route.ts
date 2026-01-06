@@ -58,9 +58,15 @@ export async function POST(request: Request, context: RouteContext) {
     const {
       messages,
       workflowId,
+      existingWorkflow,
     }: {
       messages: UIMessage[];
       workflowId?: string;
+      existingWorkflow?: {
+        name: string;
+        steps: unknown[];
+        transitions: unknown[];
+      };
     } = await request.json();
 
     if (!(messages && Array.isArray(messages)) || messages.length === 0) {
@@ -109,7 +115,8 @@ export async function POST(request: Request, context: RouteContext) {
       }),
     ]);
 
-    // Build system prompt with organization context
+    // Build system prompt with organization context and existing workflow
+    // existingWorkflow is sent from the client (like Template AI with editor.getJSON())
     const systemPrompt = buildWorkflowSystemPrompt({
       templates: templates.map((t) => ({
         id: t.id,
@@ -128,6 +135,8 @@ export async function POST(request: Request, context: RouteContext) {
         name: t.name,
         description: t.description,
       })),
+      // Pass existing workflow for incremental updates (sent from client)
+      existingWorkflow,
     });
 
     // Stream the response with Claude via AI Gateway

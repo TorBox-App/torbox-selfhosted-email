@@ -38,6 +38,12 @@ import { extractWorkflowFromMessage } from "@/lib/ai/workflow-parser";
 import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "./use-workflow-store";
 
+type ExistingWorkflow = {
+  name: string;
+  steps: unknown[];
+  transitions: unknown[];
+};
+
 type AIDesignPanelProps = {
   orgSlug: string;
   workflowId: string;
@@ -85,8 +91,26 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
   // Fetch AI usage to show warnings
   const { data: aiUsage, refetch: refetchUsage } = useAiUsage(orgSlug);
 
-  // Get the applyAIFlow action from the workflow store
+  // Get the applyAIFlow action and workflow definition from the store
   const applyAIFlow = useWorkflowStore((state) => state.applyAIFlow);
+  const getWorkflowDefinition = useWorkflowStore(
+    (state) => state.getWorkflowDefinition
+  );
+  const workflowName = useWorkflowStore((state) => state.workflow?.name ?? "");
+
+  // Get existing workflow content from the store (like Template AI does with editor.getJSON())
+  const getExistingWorkflow = (): ExistingWorkflow | undefined => {
+    const definition = getWorkflowDefinition();
+    // Only include if there are steps beyond the default trigger
+    if (definition.steps.length <= 1) {
+      return undefined;
+    }
+    return {
+      name: workflowName,
+      steps: definition.steps,
+      transitions: definition.transitions,
+    };
+  };
 
   // Use the Vercel AI SDK's useChat hook
   const { messages, sendMessage, status, stop, error } = useChat({
@@ -94,6 +118,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
       api: `/api/${orgSlug}/workflows/ai/generate`,
       body: {
         workflowId,
+        existingWorkflow: getExistingWorkflow(),
       },
     }),
     onError: (error) => {
