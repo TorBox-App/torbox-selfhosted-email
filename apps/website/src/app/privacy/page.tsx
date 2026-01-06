@@ -74,7 +74,7 @@ export default function PrivacyPolicy() {
 
         <h3>1.2 Dashboard Usage Data</h3>
         <p>
-          When you use the Wraps hosted dashboard (if applicable), we may
+          When you use the Wraps Platform (if applicable), we may
           collect:
         </p>
         <ul>

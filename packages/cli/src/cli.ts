@@ -8,8 +8,9 @@ import pc from "picocolors";
 // AWS commands
 import { doctor as awsDoctor } from "./commands/aws/doctor.js";
 import { setup as awsSetup } from "./commands/aws/setup.js";
-// Dashboard commands
-import { updateRole } from "./commands/dashboard/update-role.js";
+// Platform commands
+import { platform as platformInfo } from "./commands/platform/index.js";
+import { updateRole } from "./commands/platform/update-role.js";
 // Email commands
 import { check } from "./commands/email/check.js";
 import { config } from "./commands/email/config.js";
@@ -30,6 +31,9 @@ import { upgrade } from "./commands/email/upgrade.js";
 import { dashboard } from "./commands/shared/dashboard.js";
 import { destroy } from "./commands/shared/destroy.js";
 import { status } from "./commands/shared/status.js";
+// Info commands
+import { news } from "./commands/news.js";
+import { support } from "./commands/support.js";
 // SMS commands
 import { smsDestroy } from "./commands/sms/destroy.js";
 import { init as smsInit } from "./commands/sms/init.js";
@@ -124,10 +128,12 @@ function showHelp() {
   console.log(
     `  ${pc.cyan("sms destroy")}          Remove SMS infrastructure\n`
   );
-  console.log("Console & Dashboard:");
-  console.log(`  ${pc.cyan("console")}               Start local web console`);
+  console.log("Local Development:");
+  console.log(`  ${pc.cyan("console")}               Start local web console\n`);
+  console.log("Platform:");
+  console.log(`  ${pc.cyan("platform")}              Show platform info and pricing`);
   console.log(
-    `  ${pc.cyan("dashboard update-role")} Update hosted dashboard IAM permissions\n`
+    `  ${pc.cyan("platform update-role")} Update platform IAM permissions\n`
   );
   console.log("AWS Setup:");
   console.log(
@@ -141,8 +147,10 @@ function showHelp() {
   console.log(`  ${pc.cyan("destroy")}      Remove deployed infrastructure`);
   console.log(`  ${pc.cyan("completion")}   Generate shell completion script`);
   console.log(
-    `  ${pc.cyan("telemetry")}    Manage anonymous telemetry settings\n`
+    `  ${pc.cyan("telemetry")}    Manage anonymous telemetry settings`
   );
+  console.log(`  ${pc.cyan("news")}         Show recent Wraps updates`);
+  console.log(`  ${pc.cyan("support")}      Get help and support contact info\n`);
   console.log("Options:");
   console.log(
     `  ${pc.dim("-p, --provider")}  Hosting provider (vercel, aws, railway, other)`
@@ -306,27 +314,54 @@ args.options([
 const flags = args.parse(process.argv);
 const [primaryCommand, subCommand] = args.sub;
 
-// If no command provided, show interactive service selection
+// If no command provided, show interactive menu
 if (!primaryCommand) {
-  async function selectService() {
+  async function interactiveMenu() {
     clack.intro(pc.bold(`WRAPS CLI v${VERSION}`));
-    console.log(
-      "Welcome! Let's get started deploying your email infrastructure.\n"
-    );
+    console.log("  Deploy AWS infrastructure to your account.\n");
 
-    // Ask what action they want to take
     const action = await clack.select({
       message: "What would you like to do?",
       options: [
         {
-          value: "init",
-          label: "Deploy new infrastructure",
-          hint: "Create new AWS SES infrastructure",
+          value: "email-init",
+          label: "Deploy Email",
+          hint: "AWS SES with tracking & analytics",
         },
         {
-          value: "connect",
-          label: "Connect existing infrastructure",
-          hint: "Connect to existing AWS SES setup",
+          value: "sms-init",
+          label: "Deploy SMS",
+          hint: "AWS End User Messaging",
+        },
+        {
+          value: "status",
+          label: "View Status",
+          hint: "Check deployed infrastructure",
+        },
+        {
+          value: "console",
+          label: "Local Console",
+          hint: "Start web dashboard locally",
+        },
+        {
+          value: "platform",
+          label: "Wraps Platform",
+          hint: "Templates, broadcasts, automations",
+        },
+        {
+          value: "news",
+          label: "What's New",
+          hint: "Recent updates & changelog",
+        },
+        {
+          value: "support",
+          label: "Get Help",
+          hint: "Contact & documentation",
+        },
+        {
+          value: "help",
+          label: "All Commands",
+          hint: "Show CLI reference",
         },
       ],
     });
@@ -336,32 +371,56 @@ if (!primaryCommand) {
       process.exit(0);
     }
 
-    // Run the appropriate command
-    if (action === "init") {
-      await init({
-        provider: flags.provider,
-        region: flags.region,
-        domain: flags.domain,
-        preset: flags.preset,
-        yes: flags.yes,
-        preview: flags.preview,
-      });
-    } else {
-      await connect({
-        provider: flags.provider,
-        region: flags.region,
-        yes: flags.yes,
-        preview: flags.preview,
-      });
+    switch (action) {
+      case "email-init":
+        await init({
+          provider: flags.provider,
+          region: flags.region,
+          domain: flags.domain,
+          preset: flags.preset,
+          yes: flags.yes,
+          preview: flags.preview,
+        });
+        break;
+      case "sms-init":
+        await smsInit({
+          provider: flags.provider,
+          region: flags.region,
+          preset: flags.preset,
+          yes: flags.yes,
+        });
+        break;
+      case "status":
+        await status({ account: flags.account });
+        break;
+      case "console":
+        await dashboard({ port: flags.port, noOpen: flags.noOpen });
+        break;
+      case "platform":
+        await platformInfo();
+        break;
+      case "news":
+        await news();
+        break;
+      case "support":
+        await support();
+        break;
+      case "help":
+        showHelp();
+        break;
     }
   }
 
-  selectService().catch(handleCLIError);
-  // Early exit - don't run the main run() function
-  process.exit(0);
+  // Run interactive menu and exit when done
+  interactiveMenu()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      handleCLIError(err);
+      process.exit(1);
+    });
 }
 
-// Route to appropriate command
+// Route to appropriate command (only runs if primaryCommand exists)
 async function run() {
   const startTime = Date.now();
   const telemetry = getTelemetryClient();
@@ -382,7 +441,7 @@ async function run() {
     console.log();
     console.log(`  Opt-out anytime: ${pc.cyan("wraps telemetry disable")}`);
     console.log(`  Or set: ${pc.cyan("WRAPS_TELEMETRY_DISABLED=1")}`);
-    console.log(`  Learn more: ${pc.cyan("https://wraps.dev/docs/telemetry")}`);
+    console.log(`  Learn more: ${pc.cyan("https://wraps.dev/docs")}`);
     console.log();
 
     telemetry.markNotificationShown();
@@ -648,8 +707,19 @@ async function run() {
       return;
     }
 
-    // Handle Dashboard subcommands
-    if (primaryCommand === "dashboard" && subCommand) {
+    // Handle Platform subcommands
+    if (primaryCommand === "platform") {
+      if (!subCommand) {
+        // Show platform info when no subcommand
+        await platformInfo();
+        const platformDuration = Date.now() - startTime;
+        trackCommand("platform", {
+          success: true,
+          duration_ms: platformDuration,
+        });
+        return;
+      }
+
       switch (subCommand) {
         case "update-role":
           await updateRole({
@@ -659,17 +729,17 @@ async function run() {
           break;
 
         default:
-          clack.log.error(`Unknown dashboard command: ${subCommand}`);
+          clack.log.error(`Unknown platform command: ${subCommand}`);
           console.log(`\nAvailable commands: ${pc.cyan("update-role")}\n`);
-          console.log(`Run ${pc.cyan("wraps --help")} for more information.\n`);
+          console.log(`Run ${pc.cyan("wraps platform")} for more information.\n`);
           process.exit(1);
       }
-      // Track dashboard commands (they return early, so track here)
-      const dashboardDuration = Date.now() - startTime;
-      const dashboardCommandName = `dashboard:${subCommand}`;
-      trackCommand(dashboardCommandName, {
+      // Track platform commands (they return early, so track here)
+      const platformDuration = Date.now() - startTime;
+      const platformCommandName = `platform:${subCommand}`;
+      trackCommand(platformCommandName, {
         success: true,
-        duration_ms: dashboardDuration,
+        duration_ms: platformDuration,
       });
       return;
     }
@@ -721,19 +791,6 @@ async function run() {
         });
         break;
 
-      case "dashboard":
-        // Deprecated: 'wraps dashboard' without subcommand redirects to 'wraps console'
-        if (!subCommand) {
-          clack.log.warn(
-            `'wraps dashboard' is deprecated. Use ${pc.cyan("wraps console")} instead.`
-          );
-          await dashboard({
-            port: flags.port,
-            noOpen: flags.noOpen,
-          });
-        }
-        break;
-
       case "destroy":
         await destroy({
           force: flags.force,
@@ -743,6 +800,14 @@ async function run() {
 
       case "completion":
         printCompletionScript();
+        break;
+
+      case "news":
+        await news();
+        break;
+
+      case "support":
+        await support();
         break;
 
       case "telemetry": {
@@ -817,4 +882,8 @@ async function run() {
   }
 }
 
-run();
+// Only run main command router if a command was provided
+// (interactive menu handles its own flow when no command)
+if (primaryCommand) {
+  run();
+}

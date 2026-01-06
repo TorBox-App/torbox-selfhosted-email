@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart3,
   Blocks,
   Book,
   Cloud,
@@ -58,6 +59,11 @@ const navItems: NavSection[] = [
             icon: MessageSquare,
           },
         ],
+      },
+      {
+        title: "Telemetry",
+        href: "/docs/telemetry",
+        icon: BarChart3,
       },
     ],
   },

@@ -2,6 +2,7 @@ import { Resolver } from "node:dns/promises";
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand, trackFeature } from "../../telemetry/events.js";
 import type { EmailVerifyOptions } from "../../types/index.js";
 import { getAWSRegion } from "../../utils/shared/aws.js";
@@ -432,6 +433,9 @@ export async function listDomains(): Promise<void> {
       success: true,
       domain_count: domains.length,
     });
+
+    // Show promotional footer (once per session)
+    getTelemetryClient().showFooterOnce();
   } catch (error: any) {
     progress.stop();
     trackCommand("email:domains:list", { success: false });

@@ -10,7 +10,7 @@ Parameters:
 
   WrapsBackendAccountId:
     Type: String
-    Description: "AWS Account ID of Wraps hosted backend"
+    Description: "AWS Account ID of Wraps Platform"
     Default: "123456789012"
     AllowedPattern: "^[0-9]{12}$"
 

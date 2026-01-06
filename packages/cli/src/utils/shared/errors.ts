@@ -62,7 +62,7 @@ export const errors = {
       "AWS credentials not found",
       "NO_AWS_CREDENTIALS",
       "Run: aws configure\nOr set AWS_PROFILE environment variable",
-      "https://wraps.dev/docs/setup/aws-credentials"
+      "https://wraps.dev/docs/guides/aws-setup"
     ),
 
   stackExists: (stackName: string) =>
@@ -70,7 +70,7 @@ export const errors = {
       `Stack "${stackName}" already exists`,
       "STACK_EXISTS",
       `To update: wraps email upgrade\nTo remove: wraps destroy --stack ${stackName}`,
-      "https://wraps.dev/docs/cli/upgrade"
+      "https://wraps.dev/docs/cli-reference"
     ),
 
   invalidRegion: (region: string) =>
@@ -86,7 +86,7 @@ export const errors = {
       `Infrastructure deployment failed: ${message}`,
       "PULUMI_ERROR",
       "Check your AWS permissions and try again",
-      "https://wraps.dev/docs/troubleshooting"
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 
   noStack: () =>
@@ -94,7 +94,7 @@ export const errors = {
       "No Wraps infrastructure found in this AWS account",
       "NO_STACK",
       "Run: wraps email init\nTo deploy new infrastructure",
-      "https://wraps.dev/docs/cli/init"
+      "https://wraps.dev/docs/quickstart/email"
     ),
 
   pulumiNotInstalled: () =>
@@ -110,7 +110,7 @@ export const errors = {
       "The Pulumi stack is locked from a previous run",
       "STACK_LOCKED",
       "This happens when a previous deployment was interrupted.\n\nTo unlock, run:\n  rm -rf ~/.wraps/pulumi/.pulumi/locks\n\nThen try your command again.",
-      "https://wraps.dev/docs/troubleshooting"
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 
   // SMS-specific errors
@@ -119,7 +119,7 @@ export const errors = {
       "SMS infrastructure not found",
       "SMS_NOT_CONFIGURED",
       "Run: wraps sms init\nTo deploy SMS infrastructure",
-      "https://wraps.dev/docs/sms/init"
+      "https://wraps.dev/docs/quickstart/sms"
     ),
 
   smsPhoneNotVerified: () =>
@@ -127,7 +127,7 @@ export const errors = {
       "Phone number registration not complete",
       "SMS_PHONE_NOT_VERIFIED",
       "Toll-free numbers require registration (15+ days).\nCheck status in AWS console.",
-      "https://wraps.dev/docs/sms/registration"
+      "https://wraps.dev/docs/quickstart/sms"
     ),
 
   smsOptedOut: (phoneNumber: string) =>
@@ -135,7 +135,7 @@ export const errors = {
       `Destination number ${phoneNumber} has opted out`,
       "SMS_OPTED_OUT",
       "The recipient has opted out of receiving messages.\nThey can opt back in by texting START to your number.",
-      "https://wraps.dev/docs/sms/opt-out"
+      "https://wraps.dev/docs/quickstart/sms"
     ),
 
   smsSpendingLimit: () =>
@@ -151,7 +151,7 @@ export const errors = {
       `Invalid phone number format: ${phoneNumber}`,
       "SMS_INVALID_PHONE_NUMBER",
       "Phone numbers must be in E.164 format:\n  Example: +14155551234 (US)\n  Example: +447911123456 (UK)",
-      "https://wraps.dev/docs/sms/phone-format"
+      "https://wraps.dev/docs/sms-sdk-reference"
     ),
 
   smsSimulatorLimit: () =>
@@ -159,6 +159,6 @@ export const errors = {
       "Simulator daily message limit reached (100 messages)",
       "SMS_SIMULATOR_LIMIT",
       "Upgrade to a toll-free number for production use:\n  wraps sms upgrade --phone-type toll-free",
-      "https://wraps.dev/docs/sms/upgrade"
+      "https://wraps.dev/docs/cli-reference"
     ),
 };

@@ -39,6 +39,7 @@ const AWSSetupFullGuide = lazy(
 const AWSSetupTroubleshootingGuide = lazy(
   () => import("@/app/docs/guides/aws-setup/troubleshooting/page")
 );
+const TelemetryDocs = lazy(() => import("@/app/docs/telemetry/page"));
 const Privacy = lazy(() => import("@/app/privacy/page"));
 const Terms = lazy(() => import("@/app/terms/page"));
 const NotFound = lazy(() => import("@/app/not-found/page"));
@@ -143,6 +144,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/docs/guides/aws-setup/troubleshooting",
     element: <AWSSetupTroubleshootingGuide />,
+  },
+  {
+    path: "/docs/telemetry",
+    element: <TelemetryDocs />,
   },
 
   // Product pages

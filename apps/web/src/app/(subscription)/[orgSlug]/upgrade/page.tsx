@@ -126,7 +126,7 @@ export default function UpgradePage() {
           </div>
           <h1 className="font-bold text-2xl">Choose Your Plan</h1>
           <p className="mt-2 text-muted-foreground">
-            Get full access to the Wraps hosted dashboard
+            Get full access to the Wraps Platform
           </p>
         </div>
 

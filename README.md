@@ -61,7 +61,7 @@ Wraps deploys email infrastructure **to your AWS account** with SaaS-quality dev
 | 500K emails/mo | **~$54/mo** |
 | 1M emails/mo | **~$106/mo** |
 
-Add our [hosted platform](#pricing) for templates, contact management, and campaigns.
+Add our [wraps platform](#pricing) for templates, contact management, broadcasts, and automations.
 
 ---
 
@@ -109,14 +109,13 @@ All resources use the `wraps-email-*` namespace prefix.
 
 **CLI + SDK are free and open source.** Deploy to your AWS account and send emails with zero platform fees.
 
-**Hosted platform** adds visual tools on top of your infrastructure:
+**Wraps Platform** adds visual tools on top of your infrastructure:
 
 | Tier | Price | Contacts | Features |
 |------|-------|----------|----------|
 | **Starter** | $19/mo | 5K | Template editor, dashboard, analytics, batch sending |
 | **Pro** | $49/mo | 25K | + Topics, Segments, Campaigns |
 | **Growth** | $149/mo | 100K | + Workflows, Event tracking, Advanced segments |
-| **Scale** | $299/mo | 500K | + Custom retention, Priority SLA |
 
 **All tiers include:** Unlimited team members, unlimited templates, AI generation.
 

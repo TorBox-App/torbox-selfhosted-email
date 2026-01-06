@@ -10,12 +10,12 @@ import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 
 /**
- * Update hosted dashboard access role command
+ * Update platform access role command
  *
  * Updates the wraps-console-access-role IAM role with the latest permissions
- * needed for feature detection in the hosted dashboard app (e.g., dynamodb:DescribeTable).
+ * needed for feature detection in the wraps platform (e.g., dynamodb:DescribeTable).
  *
- * This role is created when you connect AWS accounts through the hosted dashboard.
+ * This role is created when you connect AWS accounts through the Wraps Platform.
  * This command updates its permissions to match your current infrastructure setup.
  *
  * This command:
@@ -24,7 +24,7 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
  * - Preserves the trust policy (AssumeRole configuration)
  */
 export async function updateRole(options: UpdateRoleOptions): Promise<void> {
-  intro(pc.bold("Update Hosted Dashboard Access Role"));
+  intro(pc.bold("Update Platform Access Role"));
 
   const progress = new DeploymentProgress();
 
@@ -73,10 +73,10 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     progress.stop();
     log.warn(`IAM role ${pc.cyan(roleName)} does not exist`);
     console.log(
-      "\nThis role is created when you connect AWS accounts through the hosted dashboard."
+      "\nThis role is created when you connect AWS accounts through the Wraps Platform."
     );
     console.log(
-      "If you haven't connected an AWS account to the hosted dashboard yet, there's nothing to update.\n"
+      "If you haven't connected an AWS account to the platform yet, there's nothing to update.\n"
     );
     process.exit(0);
   }
@@ -135,7 +135,7 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
   progress.stop();
 
   // Success
-  outro(pc.green("✓ Hosted dashboard access role updated successfully"));
+  outro(pc.green("✓ Platform access role updated successfully"));
 
   console.log(`\n${pc.bold("Updated Permissions:")}`);
 
@@ -185,15 +185,15 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
   }
 
   console.log(
-    `\n${pc.dim("The hosted dashboard will now have updated permissions for feature detection.")}\n`
+    `\n${pc.dim("The Wraps Platform will now have updated permissions for feature detection.")}\n`
   );
 }
 
 /**
- * Build IAM policy document for hosted dashboard access role
+ * Build IAM policy document for platform access role
  *
  * This mirrors the permissions from the main wraps-email-role and wraps-sms-role
- * but is used for the hosted dashboard app (not for SDK sending or local console).
+ * but is used for the Wraps Platform (not for SDK sending or local console).
  */
 type PolicyStatement = {
   Effect: string;

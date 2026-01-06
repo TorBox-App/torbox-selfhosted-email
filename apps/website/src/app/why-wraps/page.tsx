@@ -249,7 +249,7 @@ export default function WhyWrapsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">
-                    Free local console for development. Hosted dashboard
+                    Free local console for development. Wraps Platform is
                     optional.
                   </p>
                 </CardContent>

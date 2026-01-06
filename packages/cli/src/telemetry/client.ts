@@ -3,6 +3,7 @@
  * @module telemetry/client
  */
 
+import pc from "picocolors";
 import { isCI } from "../utils/shared/ci-detection.js";
 import { TelemetryConfigManager } from "./config.js";
 import type {
@@ -44,6 +45,7 @@ export class TelemetryClient {
   private enabled: boolean;
   private eventQueue: TelemetryEvent[] = [];
   private flushTimer?: NodeJS.Timeout;
+  private hasShownFooter = false;
 
   constructor(options: TelemetryClientOptions = {}) {
     this.config = new TelemetryConfigManager();
@@ -240,6 +242,26 @@ export class TelemetryClient {
    */
   markNotificationShown(): void {
     this.config.markNotificationShown();
+  }
+
+  /**
+   * Show promotional footer once per CLI session.
+   * Call this after successful completion of status/list commands.
+   * Returns true if footer was shown, false if already shown this session.
+   */
+  showFooterOnce(): boolean {
+    if (this.hasShownFooter) return false;
+    this.hasShownFooter = true;
+
+    console.log();
+    console.log(pc.dim("─────────────────────────────────────"));
+    console.log("📊 Wraps Platform — analytics, templates, automations");
+    console.log(`   From $10/mo → ${pc.cyan("https://wraps.dev/platform")}`);
+    console.log();
+    console.log(`💬 ${pc.cyan("hey@wraps.sh")}`);
+    console.log(pc.dim("─────────────────────────────────────"));
+
+    return true;
   }
 
   /**

@@ -26,6 +26,7 @@ const footerLinks = {
   ],
   resources: [
     { name: "Why Wraps", href: "/why-wraps" },
+    { name: "Changelog", href: "/changelog" },
     { name: "FAQ", href: "#faq" },
     {
       name: "AWS SES Docs",

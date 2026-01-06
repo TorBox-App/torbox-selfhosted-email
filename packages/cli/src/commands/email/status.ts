@@ -1,6 +1,7 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
+import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
 import type { StatusOptions } from "../../types/index.js";
 import {
@@ -164,4 +165,7 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
     integration_level: integrationLevel,
     duration_ms: Date.now() - startTime,
   });
+
+  // 8. Show promotional footer (once per session)
+  getTelemetryClient().showFooterOnce();
 }

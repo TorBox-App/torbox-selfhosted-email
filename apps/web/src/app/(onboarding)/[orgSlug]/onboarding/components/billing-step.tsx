@@ -87,7 +87,7 @@ export function BillingStep({
         </div>
         <CardTitle>Choose Your Plan</CardTitle>
         <CardDescription>
-          Get full access to the Wraps hosted dashboard.
+          Get full access to the Wraps Platform.
         </CardDescription>
       </CardHeader>
 

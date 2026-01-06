@@ -62,7 +62,7 @@ const secondaryFeatures = [
     icon: Terminal,
     title: "Local-First Dashboard",
     description:
-      "Run the console locally with zero setup. Upgrade to hosted when you're ready.",
+      "Run the console locally with zero setup. Upgrade to the Platform when you're ready.",
   },
   {
     icon: Workflow,

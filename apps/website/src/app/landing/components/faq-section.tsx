@@ -50,7 +50,7 @@ const faqItems: FaqItem[] = [
     value: "item-4",
     question: "What happens if I stop paying for Wraps?",
     answer:
-      "Your infrastructure keeps running! All resources are in your AWS account. You lose access to the hosted dashboard (if you had it) but can still use the free local console. Your SDK code keeps working, emails keep sending, and you keep paying AWS directly. Zero vendor lock-in.",
+      "Your infrastructure keeps running! All resources are in your AWS account. You lose access to the Wraps Platform (if you had it) but can still use the free local console. Your SDK code keeps working, emails keep sending, and you keep paying AWS directly. Zero vendor lock-in.",
   },
   {
     value: "item-5",

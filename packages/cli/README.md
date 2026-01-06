@@ -599,7 +599,7 @@ wraps init
 - [x] `wraps completion` - Shell completion
 
 ### Dashboard Commands ✅
-- [x] `wraps dashboard update-role` - Update hosted dashboard IAM permissions
+- [x] `wraps dashboard update-role` - Update platform IAM permissions
 
 ### Email Commands ✅
 - [x] `wraps email init` - Deploy new infrastructure

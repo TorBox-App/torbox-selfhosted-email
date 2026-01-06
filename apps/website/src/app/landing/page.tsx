@@ -35,7 +35,7 @@ export default function LandingPage() {
         {/* Transition to Premium */}
         <UpgradeSection />
 
-        {/* Premium Tier - Hosted Dashboard (Tabbed) */}
+        {/* Premium Tier - Wraps Platform (Tabbed) */}
         <div className={premiumBgClass}>
           <ProductTabbedSection />
           <PricingSection />

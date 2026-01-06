@@ -4,6 +4,7 @@ import getPort from "get-port";
 import open from "open";
 import pc from "picocolors";
 import { startConsoleServer } from "../../console/server.js";
+import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
 import type { DashboardOptions } from "../../types/index.js";
 import {
@@ -150,18 +151,21 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
   console.log(`\\n${pc.bold("Dashboard:")} ${pc.cyan(url)}`);
   console.log(`${pc.dim("Press Ctrl+C to stop")}\\n`);
 
-  // 6. Open browser (unless --no-open)
+  // 6. Show promotional footer once per session
+  getTelemetryClient().showFooterOnce();
+
+  // 7. Open browser (unless --no-open)
   if (!options.noOpen) {
     await open(url);
   }
 
-  // 7. Track console launch
+  // 8. Track console launch
   trackCommand("console", {
     success: true,
     port,
     no_open: options.noOpen ?? false,
   });
 
-  // Keep process alive
+  // 9. Keep process alive
   await new Promise(() => {});
 }

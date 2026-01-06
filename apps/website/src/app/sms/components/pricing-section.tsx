@@ -61,7 +61,7 @@ export function SmsPricingSection() {
             </table>
             <p className="mt-4 text-muted-foreground text-xs">
               * Includes toll-free number ($2/mo), carrier fees, and message
-              costs. Wraps hosted dashboard sold separately.
+              costs. Wraps Platform sold separately.
             </p>
           </div>
         </div>

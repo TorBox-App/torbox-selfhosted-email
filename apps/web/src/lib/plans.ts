@@ -12,7 +12,7 @@
  * - What we DON'T limit: team members, templates (they're just database rows)
  *
  * Note: The CLI/SDK is free forever and doesn't require a subscription.
- * These plans are only for the hosted dashboard at wraps.dev
+ * These plans are only for the Platform at app.wraps.dev
  */
 
 // ═══════════════════════════════════════════════════════════════════════════

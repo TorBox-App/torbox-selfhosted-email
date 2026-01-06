@@ -1177,16 +1177,16 @@ export default function CLIReferencePage() {
         </Card>
       </section>
 
-      {/* wraps dashboard update-role */}
+      {/* wraps platform update-role */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <Terminal className="h-6 w-6 text-primary" />
-          wraps dashboard update-role
+          wraps platform update-role
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Update IAM role permissions for the hosted Wraps dashboard. Use this
-          after upgrading your deployment to ensure the dashboard has access to
-          new features.
+          Update IAM role permissions for the Wraps Platform. Use this after
+          upgrading your deployment to ensure the platform has access to new
+          features.
         </p>
 
         <Card className="mb-4">
@@ -1194,7 +1194,7 @@ export default function CLIReferencePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <CLICommand command="npx @wraps.dev/cli dashboard update-role [options]" />
+            <CLICommand command="npx @wraps.dev/cli platform update-role [options]" />
           </CardContent>
         </Card>
 

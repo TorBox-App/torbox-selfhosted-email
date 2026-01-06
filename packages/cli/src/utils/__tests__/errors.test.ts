@@ -161,7 +161,7 @@ describe("error factory functions", () => {
       expect(error.code).toBe("NO_AWS_CREDENTIALS");
       expect(error.suggestion).toContain("aws configure");
       expect(error.docsUrl).toBe(
-        "https://wraps.dev/docs/setup/aws-credentials"
+        "https://wraps.dev/docs/guides/aws-setup"
       );
     });
   });
@@ -177,7 +177,7 @@ describe("error factory functions", () => {
       expect(error.suggestion).toContain(
         "wraps destroy --stack wraps-123456789-us-east-1"
       );
-      expect(error.docsUrl).toBe("https://wraps.dev/docs/cli/upgrade");
+      expect(error.docsUrl).toBe("https://wraps.dev/docs/cli-reference");
     });
   });
 
@@ -201,7 +201,7 @@ describe("error factory functions", () => {
       expect(error.message).toContain("Failed to create IAM role");
       expect(error.code).toBe("PULUMI_ERROR");
       expect(error.suggestion).toContain("AWS permissions");
-      expect(error.docsUrl).toBe("https://wraps.dev/docs/troubleshooting");
+      expect(error.docsUrl).toBe("https://wraps.dev/docs/guides/aws-setup/troubleshooting");
     });
   });
 
@@ -213,7 +213,7 @@ describe("error factory functions", () => {
       expect(error.message).toContain("No Wraps infrastructure found");
       expect(error.code).toBe("NO_STACK");
       expect(error.suggestion).toContain("wraps email init");
-      expect(error.docsUrl).toBe("https://wraps.dev/docs/cli/init");
+      expect(error.docsUrl).toBe("https://wraps.dev/docs/quickstart/email");
     });
   });
 

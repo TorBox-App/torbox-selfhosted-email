@@ -49,7 +49,7 @@ const featuresItems = [
   {
     name: "Platform",
     href: "/platform",
-    description: "Hosted platform for templates & broadcasts",
+    description: "Wraps Platform for templates & broadcasts",
   },
   {
     name: "Calculator",
@@ -65,6 +65,7 @@ const docsItems = [
   { name: "CLI Reference", href: "/docs/cli-reference" },
   { name: "SDK Reference", href: "/docs/sdk-reference" },
   { title: "Resources" },
+  { name: "Changelog", href: "/changelog" },
   { name: "GitHub Repository", href: "https://github.com/wraps-team/wraps" },
   { name: "TypeScript SDK", href: "https://github.com/wraps-team/wraps-js" },
   {
@@ -263,7 +264,7 @@ export function LandingNavbar() {
                       size="icon"
                       variant="ghost"
                     >
-                      <Moon className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                      <Moon className="dark:-rotate-90 h-4 w-4 rotate-0 scale-100 transition-all dark:scale-0" />
                       <Sun className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                     </Button>
                     <Button
