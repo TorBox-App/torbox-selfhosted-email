@@ -1,11 +1,14 @@
 "use client";
 
+import { useForm } from "@tanstack/react-form";
+import { useStore } from "@tanstack/react-store";
 import { Lock, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,6 +36,10 @@ import {
   SMS_STATUSES,
   type SmsStatus,
 } from "@/lib/contacts";
+import {
+  contactDetailsFormOpts,
+  type ContactDetailsInput,
+} from "@/lib/forms/contact-details";
 import type { TopicWithMeta } from "@/lib/topics";
 import { ContactTimeline } from "./contact-timeline";
 
@@ -80,30 +87,36 @@ export function ContactDetailsSheet({
   userRole,
 }: ContactDetailsSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
-
-  // Form state
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [company, setCompany] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [emailStatus, setEmailStatus] = useState<EmailStatus>("active");
-  const [smsStatus, setSmsStatus] = useState<SmsStatus>("pending_consent");
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [properties, setProperties] = useState<PropertyEntry[]>([]);
+
+  // TanStack Form for contact details
+  const form = useForm({
+    ...contactDetailsFormOpts,
+    defaultValues: {
+      email: contact?.email || "",
+      phone: contact?.phone || "",
+      firstName: contact?.firstName || "",
+      lastName: contact?.lastName || "",
+      company: contact?.company || "",
+      jobTitle: contact?.jobTitle || "",
+      emailStatus: (contact?.emailStatus || "active") as ContactDetailsInput["emailStatus"],
+      smsStatus: (contact?.smsStatus || "pending_consent") as ContactDetailsInput["smsStatus"],
+    },
+  });
 
   // Reset form and exit edit mode when contact changes or sheet opens
   useEffect(() => {
     if (open && contact) {
-      setEmail(contact.email || "");
-      setPhone(contact.phone || "");
-      setFirstName(contact.firstName || "");
-      setLastName(contact.lastName || "");
-      setCompany(contact.company || "");
-      setJobTitle(contact.jobTitle || "");
-      setEmailStatus(contact.emailStatus || "active");
-      setSmsStatus(contact.smsStatus || "pending_consent");
+      form.reset();
+      form.setFieldValue("email", contact.email || "");
+      form.setFieldValue("phone", contact.phone || "");
+      form.setFieldValue("firstName", contact.firstName || "");
+      form.setFieldValue("lastName", contact.lastName || "");
+      form.setFieldValue("company", contact.company || "");
+      form.setFieldValue("jobTitle", contact.jobTitle || "");
+      form.setFieldValue("emailStatus", (contact.emailStatus || "active") as ContactDetailsInput["emailStatus"]);
+      form.setFieldValue("smsStatus", (contact.smsStatus || "pending_consent") as ContactDetailsInput["smsStatus"]);
       setSelectedTopicIds(
         contact.topics
           ?.filter((t) => t.status === "subscribed")
@@ -118,7 +131,98 @@ export function ContactDetailsSheet({
       );
       setIsEditing(false);
     }
-  }, [open, contact]);
+  }, [open, contact, form]);
+
+  const handleSave = useCallback(() => {
+    if (!contact) return;
+
+    const values = form.state.values;
+    const propertiesObj = properties.reduce(
+      (acc, { key, value }) => {
+        if (key.trim()) {
+          acc[key.trim()] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, string>
+    );
+
+    const oldPropertiesStr = JSON.stringify(contact.properties || {});
+    const newPropertiesStr = JSON.stringify(propertiesObj);
+    const propertiesChanged = oldPropertiesStr !== newPropertiesStr;
+
+    const currentTopicIds = new Set(
+      contact.topics
+        ?.filter((t) => t.status === "subscribed")
+        .map((t) => t.topicId) || []
+    );
+    const newTopicIds = new Set(selectedTopicIds);
+    const topicsChanged =
+      currentTopicIds.size !== newTopicIds.size ||
+      [...currentTopicIds].some((id) => !newTopicIds.has(id));
+
+    // Only send changed fields
+    onSave({
+      email: values.email !== (contact.email || "") ? values.email : undefined,
+      phone: values.phone !== (contact.phone || "") ? values.phone : undefined,
+      firstName:
+        values.firstName !== (contact.firstName || "")
+          ? values.firstName || null
+          : undefined,
+      lastName:
+        values.lastName !== (contact.lastName || "")
+          ? values.lastName || null
+          : undefined,
+      company:
+        values.company !== (contact.company || "")
+          ? values.company || null
+          : undefined,
+      jobTitle:
+        values.jobTitle !== (contact.jobTitle || "")
+          ? values.jobTitle || null
+          : undefined,
+      emailStatus:
+        values.emailStatus !== contact.emailStatus ? values.emailStatus : undefined,
+      smsStatus:
+        values.smsStatus !== contact.smsStatus ? values.smsStatus : undefined,
+      properties: propertiesChanged ? propertiesObj : undefined,
+      topicIds: topicsChanged ? selectedTopicIds : undefined,
+    });
+
+    setIsEditing(false);
+  }, [contact, form.state.values, properties, selectedTopicIds, onSave]);
+
+  const handleCancel = useCallback(() => {
+    if (!contact) return;
+
+    // Reset form to original values
+    form.setFieldValue("email", contact.email || "");
+    form.setFieldValue("phone", contact.phone || "");
+    form.setFieldValue("firstName", contact.firstName || "");
+    form.setFieldValue("lastName", contact.lastName || "");
+    form.setFieldValue("company", contact.company || "");
+    form.setFieldValue("jobTitle", contact.jobTitle || "");
+    form.setFieldValue("emailStatus", (contact.emailStatus || "active") as ContactDetailsInput["emailStatus"]);
+    form.setFieldValue("smsStatus", (contact.smsStatus || "pending_consent") as ContactDetailsInput["smsStatus"]);
+    setSelectedTopicIds(
+      contact.topics
+        ?.filter((t) => t.status === "subscribed")
+        .map((t) => t.topicId) || []
+    );
+    setProperties(
+      Object.entries(contact.properties || {}).map(([key, value]) => ({
+        id: crypto.randomUUID(),
+        key,
+        value: String(value),
+      }))
+    );
+    setIsEditing(false);
+  }, [contact, form]);
+
+  // Get current form values for validation (must be before early return)
+  const emailValue = useStore(form.store, (state) => state.values.email);
+  const phoneValue = useStore(form.store, (state) => state.values.phone);
+  const hasValidContact = !!(emailValue || phoneValue);
 
   if (!contact) {
     return null;
@@ -141,79 +245,6 @@ export function ContactDetailsSheet({
     contact.smsSent > 0
       ? ((contact.smsClicked / contact.smsSent) * 100).toFixed(0)
       : "0";
-
-  const handleSave = () => {
-    const propertiesObj = properties.reduce(
-      (acc, { key, value }) => {
-        if (key.trim()) {
-          acc[key.trim()] = value;
-        }
-        return acc;
-      },
-      {} as Record<string, string>
-    );
-
-    const oldPropertiesStr = JSON.stringify(contact?.properties || {});
-    const newPropertiesStr = JSON.stringify(propertiesObj);
-    const propertiesChanged = oldPropertiesStr !== newPropertiesStr;
-
-    const currentTopicIds = new Set(
-      contact?.topics
-        ?.filter((t) => t.status === "subscribed")
-        .map((t) => t.topicId) || []
-    );
-    const newTopicIds = new Set(selectedTopicIds);
-    const topicsChanged =
-      currentTopicIds.size !== newTopicIds.size ||
-      [...currentTopicIds].some((id) => !newTopicIds.has(id));
-
-    onSave({
-      email: email !== (contact?.email || "") ? email : undefined,
-      phone: phone !== (contact?.phone || "") ? phone : undefined,
-      firstName:
-        firstName !== (contact?.firstName || "")
-          ? firstName || null
-          : undefined,
-      lastName:
-        lastName !== (contact?.lastName || "") ? lastName || null : undefined,
-      company:
-        company !== (contact?.company || "") ? company || null : undefined,
-      jobTitle:
-        jobTitle !== (contact?.jobTitle || "") ? jobTitle || null : undefined,
-      emailStatus:
-        emailStatus !== contact?.emailStatus ? emailStatus : undefined,
-      smsStatus: smsStatus !== contact?.smsStatus ? smsStatus : undefined,
-      properties: propertiesChanged ? propertiesObj : undefined,
-      topicIds: topicsChanged ? selectedTopicIds : undefined,
-    });
-
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    // Reset form to original values
-    setEmail(contact.email || "");
-    setPhone(contact.phone || "");
-    setFirstName(contact.firstName || "");
-    setLastName(contact.lastName || "");
-    setCompany(contact.company || "");
-    setJobTitle(contact.jobTitle || "");
-    setEmailStatus(contact.emailStatus || "active");
-    setSmsStatus(contact.smsStatus || "pending_consent");
-    setSelectedTopicIds(
-      contact.topics
-        ?.filter((t) => t.status === "subscribed")
-        .map((t) => t.topicId) || []
-    );
-    setProperties(
-      Object.entries(contact.properties || {}).map(([key, value]) => ({
-        id: crypto.randomUUID(),
-        key,
-        value: String(value),
-      }))
-    );
-    setIsEditing(false);
-  };
 
   const toggleTopic = (topicId: string) => {
     setSelectedTopicIds((prev) =>
@@ -273,7 +304,7 @@ export function ContactDetailsSheet({
                     Cancel
                   </Button>
                   <Button
-                    disabled={isPending || !(email || phone)}
+                    disabled={isPending || !hasValidContact}
                     onClick={handleSave}
                     size="sm"
                   >
@@ -300,117 +331,177 @@ export function ContactDetailsSheet({
             {isEditing ? (
               <div className="space-y-4">
                 {/* Email */}
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email address</Label>
-                  <Input
-                    id="edit-email"
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="contact@example.com"
-                    type="email"
-                    value={email}
-                  />
-                  {email && (
-                    <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground text-xs">
-                        Status:
-                      </Label>
-                      <Select
-                        onValueChange={(v) => setEmailStatus(v as EmailStatus)}
-                        value={emailStatus}
-                      >
-                        <SelectTrigger className="h-7 w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {EMAIL_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {EMAIL_STATUS_LABELS[s]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <form.Field name="email">
+                  {(field) => (
+                    <Field>
+                      <FieldLabel htmlFor={field.name}>Email address</FieldLabel>
+                      <FieldContent>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="contact@example.com"
+                          type="email"
+                          value={field.state.value}
+                        />
+                      </FieldContent>
+                    </Field>
                   )}
-                </div>
+                </form.Field>
+
+                {emailValue && (
+                  <form.Field name="emailStatus">
+                    {(field) => (
+                      <div className="flex items-center gap-2">
+                        <Label className="text-muted-foreground text-xs">
+                          Status:
+                        </Label>
+                        <Select
+                          onValueChange={(v) => field.handleChange(v as ContactDetailsInput["emailStatus"])}
+                          value={field.state.value}
+                        >
+                          <SelectTrigger className="h-7 w-[140px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EMAIL_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {EMAIL_STATUS_LABELS[s]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </form.Field>
+                )}
 
                 {/* Phone */}
-                <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Phone number</Label>
-                  <Input
-                    id="edit-phone"
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1 555 123 4567"
-                    type="tel"
-                    value={phone}
-                  />
-                  {phone && (
-                    <div className="flex items-center gap-2">
-                      <Label className="text-muted-foreground text-xs">
-                        Status:
-                      </Label>
-                      <Select
-                        onValueChange={(v) => setSmsStatus(v as SmsStatus)}
-                        value={smsStatus}
-                      >
-                        <SelectTrigger className="h-7 w-[160px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SMS_STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {SMS_STATUS_LABELS[s]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <form.Field name="phone">
+                  {(field) => (
+                    <Field>
+                      <FieldLabel htmlFor={field.name}>Phone number</FieldLabel>
+                      <FieldContent>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="+1 555 123 4567"
+                          type="tel"
+                          value={field.state.value}
+                        />
+                        <p className="text-muted-foreground text-xs">
+                          E.164 format (e.g., +15551234567)
+                        </p>
+                      </FieldContent>
+                    </Field>
                   )}
-                  <p className="text-muted-foreground text-xs">
-                    E.164 format (e.g., +15551234567)
-                  </p>
-                </div>
+                </form.Field>
+
+                {phoneValue && (
+                  <form.Field name="smsStatus">
+                    {(field) => (
+                      <div className="flex items-center gap-2">
+                        <Label className="text-muted-foreground text-xs">
+                          Status:
+                        </Label>
+                        <Select
+                          onValueChange={(v) => field.handleChange(v as ContactDetailsInput["smsStatus"])}
+                          value={field.state.value}
+                        >
+                          <SelectTrigger className="h-7 w-[160px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SMS_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {SMS_STATUS_LABELS[s]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </form.Field>
+                )}
 
                 {/* Contact Details */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-firstName">First name</Label>
-                    <Input
-                      id="edit-firstName"
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="John"
-                      value={firstName}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-lastName">Last name</Label>
-                    <Input
-                      id="edit-lastName"
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Doe"
-                      value={lastName}
-                    />
-                  </div>
+                  <form.Field name="firstName">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>First name</FieldLabel>
+                        <FieldContent>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="John"
+                            value={field.state.value}
+                          />
+                        </FieldContent>
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="lastName">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>Last name</FieldLabel>
+                        <FieldContent>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Doe"
+                            value={field.state.value}
+                          />
+                        </FieldContent>
+                      </Field>
+                    )}
+                  </form.Field>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-company">Company</Label>
-                    <Input
-                      id="edit-company"
-                      onChange={(e) => setCompany(e.target.value)}
-                      placeholder="Acme Inc."
-                      value={company}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-jobTitle">Job title</Label>
-                    <Input
-                      id="edit-jobTitle"
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      placeholder="Software Engineer"
-                      value={jobTitle}
-                    />
-                  </div>
+                  <form.Field name="company">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>Company</FieldLabel>
+                        <FieldContent>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Acme Inc."
+                            value={field.state.value}
+                          />
+                        </FieldContent>
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="jobTitle">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>Job title</FieldLabel>
+                        <FieldContent>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Software Engineer"
+                            value={field.state.value}
+                          />
+                        </FieldContent>
+                      </Field>
+                    )}
+                  </form.Field>
                 </div>
               </div>
             ) : (

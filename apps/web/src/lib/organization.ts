@@ -15,6 +15,17 @@ export const getOrganizationBySlug = cache(async (slug: string) => {
 });
 
 /**
+ * Get organization by ID (cached for request)
+ */
+export const getOrganizationById = cache(async (id: string) => {
+  const org = await db.query.organization.findFirst({
+    where: eq(organization.id, id),
+  });
+
+  return org ?? null;
+});
+
+/**
  * Get organization with user's membership
  */
 export const getOrganizationWithMembership = cache(

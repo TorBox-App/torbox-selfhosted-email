@@ -60,11 +60,18 @@ function hashPhone(phone: string): string {
 }
 
 /**
+ * Revalidate contacts page using the org slug
+ */
+function revalidateContacts(orgSlug: string): void {
+  revalidatePath(`/${orgSlug}/contacts`, "page");
+}
+
+/**
  * Verify user has access to organization
  */
 async function verifyOrgAccess(
   organizationId: string
-): Promise<{ userId: string; role: string } | null> {
+): Promise<{ userId: string; role: string; orgSlug: string } | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -76,13 +83,22 @@ async function verifyOrgAccess(
   const membership = await db.query.member.findFirst({
     where: (m, { and, eq }) =>
       and(eq(m.organizationId, organizationId), eq(m.userId, session.user.id)),
+    with: {
+      organization: {
+        columns: { slug: true },
+      },
+    },
   });
 
-  if (!membership) {
+  if (!membership || !membership.organization.slug) {
     return null;
   }
 
-  return { userId: session.user.id, role: membership.role };
+  return {
+    userId: session.user.id,
+    role: membership.role,
+    orgSlug: membership.organization.slug,
+  };
 }
 
 /**
@@ -364,6 +380,7 @@ export async function createContact(
     status?: ContactStatus;
   }
 ): Promise<CreateContactResult> {
+  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -372,6 +389,7 @@ export async function createContact(
         error: "You don't have access to this organization",
       };
     }
+    orgSlug = access.orgSlug;
 
     // Check contact limit
     const limitCheck = await checkContactLimit(organizationId);
@@ -497,14 +515,12 @@ export async function createContact(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/contacts", "page");
+    revalidateContacts(orgSlug);
 
     // Return the created contact
     return await getContact(newContact.id, organizationId);
   } catch (error) {
-    const log = createActionLogger("createContact", {
-      orgSlug: organizationId,
-    });
+    const log = createActionLogger("createContact", { orgSlug });
     log.error({ err: serializeError(error) }, "Failed to create contact");
     return { success: false, error: "Failed to create contact" };
   }
@@ -530,6 +546,7 @@ export async function updateContact(
     status?: ContactStatus;
   }
 ): Promise<UpdateContactResult> {
+  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -538,6 +555,7 @@ export async function updateContact(
         error: "You don't have access to this organization",
       };
     }
+    orgSlug = access.orgSlug;
 
     // Verify contact exists
     const existing = await db.query.contact.findFirst({
@@ -727,14 +745,12 @@ export async function updateContact(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/contacts", "page");
+    revalidateContacts(orgSlug);
 
     // Return updated contact
     return await getContact(contactId, organizationId);
   } catch (error) {
-    const log = createActionLogger("updateContact", {
-      orgSlug: organizationId,
-    });
+    const log = createActionLogger("updateContact", { orgSlug });
     log.error(
       { err: serializeError(error), contactId },
       "Failed to update contact"
@@ -750,6 +766,7 @@ export async function deleteContact(
   contactId: string,
   organizationId: string
 ): Promise<DeleteContactResult> {
+  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -758,6 +775,7 @@ export async function deleteContact(
         error: "You don't have access to this organization",
       };
     }
+    orgSlug = access.orgSlug;
 
     // Verify contact exists
     const existing = await db.query.contact.findFirst({
@@ -783,13 +801,11 @@ export async function deleteContact(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/contacts", "page");
+    revalidateContacts(orgSlug);
 
     return { success: true };
   } catch (error) {
-    const log = createActionLogger("deleteContact", {
-      orgSlug: organizationId,
-    });
+    const log = createActionLogger("deleteContact", { orgSlug });
     log.error(
       { err: serializeError(error), contactId },
       "Failed to delete contact"
@@ -806,6 +822,7 @@ export async function subscribeContactToTopics(
   organizationId: string,
   topicIds: string[]
 ): Promise<{ success: boolean; error?: string }> {
+  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -814,6 +831,7 @@ export async function subscribeContactToTopics(
         error: "You don't have access to this organization",
       };
     }
+    orgSlug = access.orgSlug;
 
     // Verify contact exists
     const existing = await db.query.contact.findFirst({
@@ -883,13 +901,11 @@ export async function subscribeContactToTopics(
     }
 
     // Revalidate
-    revalidatePath("/[orgSlug]/contacts", "page");
+    revalidateContacts(orgSlug);
 
     return { success: true };
   } catch (error) {
-    const log = createActionLogger("subscribeContactToTopics", {
-      orgSlug: organizationId,
-    });
+    const log = createActionLogger("subscribeContactToTopics", { orgSlug });
     log.error(
       { err: serializeError(error), contactId, topicIds },
       "Failed to subscribe contact to topics"
@@ -906,6 +922,7 @@ export async function bulkSubscribeContactsToTopics(
   contactIds: string[],
   topicIds: string[]
 ): Promise<{ success: boolean; error?: string; count?: number }> {
+  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -914,6 +931,7 @@ export async function bulkSubscribeContactsToTopics(
         error: "You don't have access to this organization",
       };
     }
+    orgSlug = access.orgSlug;
 
     if (!["owner", "admin"].includes(access.role)) {
       return {
@@ -985,11 +1003,11 @@ export async function bulkSubscribeContactsToTopics(
       subscribed++;
     }
 
-    revalidatePath("/[orgSlug]/contacts", "page");
+    revalidateContacts(orgSlug);
     return { success: true, count: subscribed };
   } catch (error) {
     const log = createActionLogger("bulkSubscribeContactsToTopics", {
-      orgSlug: organizationId,
+      orgSlug,
     });
     log.error(
       { err: serializeError(error), contactCount: contactIds.length, topicIds },
@@ -1007,6 +1025,7 @@ export async function bulkUnsubscribeContactsFromTopics(
   contactIds: string[],
   topicIds: string[]
 ): Promise<{ success: boolean; error?: string; count?: number }> {
+  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -1015,6 +1034,7 @@ export async function bulkUnsubscribeContactsFromTopics(
         error: "You don't have access to this organization",
       };
     }
+    orgSlug = access.orgSlug;
 
     if (!["owner", "admin"].includes(access.role)) {
       return {
@@ -1054,11 +1074,11 @@ export async function bulkUnsubscribeContactsFromTopics(
         );
     }
 
-    revalidatePath("/[orgSlug]/contacts", "page");
+    revalidateContacts(orgSlug);
     return { success: true, count: unsubscribedCount };
   } catch (error) {
     const log = createActionLogger("bulkUnsubscribeContactsFromTopics", {
-      orgSlug: organizationId,
+      orgSlug,
     });
     log.error(
       { err: serializeError(error), contactCount: contactIds.length, topicIds },
@@ -1076,6 +1096,7 @@ export async function unsubscribeContactFromTopics(
   organizationId: string,
   topicIds: string[]
 ): Promise<{ success: boolean; error?: string }> {
+  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -1084,6 +1105,7 @@ export async function unsubscribeContactFromTopics(
         error: "You don't have access to this organization",
       };
     }
+    orgSlug = access.orgSlug;
 
     // Verify contact exists
     const existing = await db.query.contact.findFirst({
@@ -1111,13 +1133,11 @@ export async function unsubscribeContactFromTopics(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/contacts", "page");
+    revalidateContacts(orgSlug);
 
     return { success: true };
   } catch (error) {
-    const log = createActionLogger("unsubscribeContactFromTopics", {
-      orgSlug: organizationId,
-    });
+    const log = createActionLogger("unsubscribeContactFromTopics", { orgSlug });
     log.error(
       { err: serializeError(error), contactId, topicIds },
       "Failed to unsubscribe contact from topics"
@@ -1368,6 +1388,7 @@ export async function bulkDeleteContacts(
 ): Promise<
   { success: true; count: number } | { success: false; error: string }
 > {
+  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -1376,6 +1397,7 @@ export async function bulkDeleteContacts(
         error: "You don't have access to this organization",
       };
     }
+    orgSlug = access.orgSlug;
 
     // Only owners and admins can bulk delete
     if (!["owner", "admin"].includes(access.role)) {
@@ -1400,13 +1422,11 @@ export async function bulkDeleteContacts(
       );
 
     // Revalidate
-    revalidatePath("/[orgSlug]/contacts", "page");
+    revalidateContacts(orgSlug);
 
     return { success: true, count: contactIds.length };
   } catch (error) {
-    const log = createActionLogger("bulkDeleteContacts", {
-      orgSlug: organizationId,
-    });
+    const log = createActionLogger("bulkDeleteContacts", { orgSlug });
     log.error(
       { err: serializeError(error), count: contactIds.length },
       "Failed to bulk delete contacts"
