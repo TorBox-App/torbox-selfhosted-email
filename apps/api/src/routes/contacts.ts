@@ -682,46 +682,116 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           resubscribeTopicIds,
         });
 
-        // Re-subscribe inactive topics
+        // Re-subscribe inactive topics (with DOI check)
         if (resubscribeTopicIds.length > 0) {
           const now = new Date();
-          await db
-            .update(contactTopic)
-            .set({
-              status: "subscribed",
-              subscribedAt: now,
-            })
-            .where(
-              and(
-                eq(contactTopic.contactId, params.id),
-                inArray(contactTopic.topicId, resubscribeTopicIds)
-              )
-            );
 
-          // Emit topic_subscribed events for re-subscribed topics
+          // Get topic info to check for double opt-in
           const topicInfosForResub = await db
-            .select({ id: topic.id, name: topic.name })
+            .select({
+              id: topic.id,
+              name: topic.name,
+              description: topic.description,
+              doubleOptIn: topic.doubleOptIn,
+            })
             .from(topic)
             .where(inArray(topic.id, resubscribeTopicIds));
           const resubTopicMap = new Map(
-            topicInfosForResub.map((t) => [t.id, t.name])
+            topicInfosForResub.map((t) => [t.id, t])
           );
 
-          await Promise.all(
-            resubscribeTopicIds.map((topicId) =>
-              emitTopicSubscribed({
-                contactId: params.id,
-                organizationId: authContext.organizationId,
-                topicId,
-                topicName: resubTopicMap.get(topicId),
-              }).catch((err) => {
-                console.error(
-                  "[contacts] Failed to emit topic_subscribed event:",
-                  err
-                );
+          // Separate topics by DOI requirement and confirmation status
+          const directResubscribeIds: string[] = [];
+          const pendingResubscribeIds: string[] = [];
+
+          for (const topicId of resubscribeTopicIds) {
+            const topicInfo = resubTopicMap.get(topicId);
+            const requiresConfirmation = topicInfo?.doubleOptIn ?? false;
+            const previouslyConfirmed = confirmedTopics.has(topicId);
+
+            if (requiresConfirmation && !previouslyConfirmed) {
+              pendingResubscribeIds.push(topicId);
+              pendingTopics.push(topicId);
+            } else {
+              directResubscribeIds.push(topicId);
+            }
+          }
+
+          // Update topics that can be directly resubscribed
+          if (directResubscribeIds.length > 0) {
+            await db
+              .update(contactTopic)
+              .set({
+                status: "subscribed",
+                subscribedAt: now,
               })
-            )
-          );
+              .where(
+                and(
+                  eq(contactTopic.contactId, params.id),
+                  inArray(contactTopic.topicId, directResubscribeIds)
+                )
+              );
+
+            // Emit topic_subscribed events for directly re-subscribed topics
+            await Promise.all(
+              directResubscribeIds.map((topicId) =>
+                emitTopicSubscribed({
+                  contactId: params.id,
+                  organizationId: authContext.organizationId,
+                  topicId,
+                  topicName: resubTopicMap.get(topicId)?.name,
+                }).catch((err) => {
+                  console.error(
+                    "[contacts] Failed to emit topic_subscribed event:",
+                    err
+                  );
+                })
+              )
+            );
+          }
+
+          // Update topics that require confirmation to pending status
+          if (pendingResubscribeIds.length > 0) {
+            await db
+              .update(contactTopic)
+              .set({
+                status: "pending",
+                subscribedAt: null,
+              })
+              .where(
+                and(
+                  eq(contactTopic.contactId, params.id),
+                  inArray(contactTopic.topicId, pendingResubscribeIds)
+                )
+              );
+
+            // Send confirmation emails for pending re-subscriptions
+            const updatedEmailForConfirmation = updated.email;
+            if (updatedEmailForConfirmation) {
+              await Promise.all(
+                pendingResubscribeIds.map(async (topicId) => {
+                  const topicInfo = resubTopicMap.get(topicId);
+                  if (topicInfo) {
+                    try {
+                      await sendTopicConfirmationEmail({
+                        contactId: params.id,
+                        contactEmail: updatedEmailForConfirmation,
+                        topicId,
+                        topicName: topicInfo.name,
+                        topicDescription: topicInfo.description,
+                        organizationId: authContext.organizationId,
+                      });
+                    } catch (err) {
+                      console.error(
+                        `Failed to send confirmation email for topic ${topicId}:`,
+                        err
+                      );
+                    }
+                  }
+                })
+              );
+            }
+          }
         }
 
         // Add new subscriptions with double opt-in check
@@ -1042,7 +1112,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
         // Emit topic_subscribed events for newly subscribed topics (not pending, not previously subscribed)
         const newlySubscribedTopics = topicIds.filter(
-          (tid) => !pendingTopics.includes(tid) && !existingTopicIds.has(tid)
+          (tid) => !(pendingTopics.includes(tid) || existingTopicIds.has(tid))
         );
 
         await Promise.all(

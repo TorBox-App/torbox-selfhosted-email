@@ -1,5 +1,6 @@
 import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
 import {
+  awsAccount,
   contact,
   db,
   member,
@@ -72,6 +73,19 @@ const testOwnerMember = {
   userId: testUser.id,
   role: "owner" as const,
   createdAt: new Date(),
+};
+
+const testAwsAccount = {
+  id: "test-workflows-aws-account-1",
+  organizationId: testOrganization.id,
+  accountId: "123456789012",
+  region: "us-east-1",
+  roleArn: "arn:aws:iam::123456789012:role/test-role",
+  externalId: "test-workflows-external-id-unique",
+  name: "Test AWS Account",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: testUser.id,
 };
 
 const testRegularMember = {
@@ -194,6 +208,15 @@ beforeAll(async () => {
     .onConflictDoUpdate({
       target: member.id,
       set: { role: testRegularMember.role },
+    });
+
+  // Insert test AWS account (required for enabling workflows)
+  await db
+    .insert(awsAccount)
+    .values(testAwsAccount)
+    .onConflictDoUpdate({
+      target: awsAccount.id,
+      set: { name: testAwsAccount.name },
     });
 });
 
@@ -359,9 +382,10 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Add action step and enable
+      // Add action step, awsAccountId, and enable
       const wf = listResult.workflows[0];
       await updateWorkflow(wf.id, testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
         triggerConfig: { eventName: "signup" },
         steps: [
           ...(wf.steps as WorkflowStep[]),
@@ -683,9 +707,10 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Add required config
+      // Add required config including awsAccountId
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
         triggerConfig: { eventName: "signup" },
+        awsAccountId: testAwsAccount.id,
         steps: [
           ...(createResult.workflow.steps as WorkflowStep[]),
           {
@@ -716,6 +741,27 @@ describe("Workflows Server Actions", () => {
       }
     });
 
+    it("should reject enabling workflow without AWS account", async () => {
+      const createResult = await createWorkflow(testOrganization.id, {
+        name: "No AWS Account Test",
+      });
+      expect(createResult.success).toBe(true);
+      if (!createResult.success) {
+        return;
+      }
+
+      // Try to enable without awsAccountId
+      const result = await enableWorkflow(
+        createResult.workflow.id,
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toMatch(/AWS account/i);
+      }
+    });
+
     it("should reject enabling workflow without trigger", async () => {
       const createResult = await createWorkflow(testOrganization.id, {
         name: "No Trigger Test",
@@ -725,8 +771,11 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Remove trigger by updating with empty steps (this is blocked by validation)
-      // Instead, just try to enable without eventName
+      // Set AWS account but no eventName or action step
+      await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
+      });
+
       const result = await enableWorkflow(
         createResult.workflow.id,
         testOrganization.id
@@ -747,8 +796,9 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Add event name but no action step
+      // Add awsAccountId and event name but no action step
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
         triggerConfig: { eventName: "signup" },
       });
 
@@ -772,8 +822,9 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Add action step but no eventName
+      // Add awsAccountId and action step but no eventName
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
         steps: [
           ...(createResult.workflow.steps as WorkflowStep[]),
           {
@@ -831,8 +882,9 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Set up and enable
+      // Set up and enable with awsAccountId
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
         triggerConfig: { eventName: "signup" },
         steps: [
           ...(createResult.workflow.steps as WorkflowStep[]),
@@ -1057,8 +1109,9 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Enable the original
+      // Enable the original with awsAccountId
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
+        awsAccountId: testAwsAccount.id,
         triggerConfig: { eventName: "signup" },
         steps: [
           ...(createResult.workflow.steps as WorkflowStep[]),

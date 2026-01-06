@@ -816,7 +816,7 @@ describe("Contacts API Integration", () => {
       expect(subscriptions[0].topicId).toBe(testTopic.id);
     });
 
-    it("replaces existing subscriptions when updating with topicSlugs", async () => {
+    it("adds topics without removing existing subscriptions when using topicSlugs", async () => {
       // Create a second topic
       const secondTopic = {
         id: `${TEST_PREFIX}-topic-3`,
@@ -843,8 +843,8 @@ describe("Contacts API Integration", () => {
         .insert(contact)
         .values({
           organizationId: testOrg.id,
-          email: "replace-slugs@example.com",
-          emailHash: "hash-replace-slugs",
+          email: "add-slugs@example.com",
+          emailHash: "hash-add-slugs",
           properties: {},
         })
         .returning();
@@ -855,7 +855,7 @@ describe("Contacts API Integration", () => {
         status: "subscribed",
       });
 
-      // Update to second topic only
+      // Add second topic via PATCH (should keep existing)
       const app = createTestApp();
       const response = await app.handle(
         new Request(`http://localhost/v1/contacts/${existing.id}`, {
@@ -869,13 +869,15 @@ describe("Contacts API Integration", () => {
 
       expect(response.status).toBe(200);
 
-      // Verify only second topic subscription exists
+      // Verify both topic subscriptions exist (PATCH adds, doesn't replace)
       const subscriptions = await db
         .select()
         .from(contactTopic)
         .where(eq(contactTopic.contactId, existing.id));
-      expect(subscriptions).toHaveLength(1);
-      expect(subscriptions[0].topicId).toBe(secondTopic.id);
+      expect(subscriptions).toHaveLength(2);
+      const topicIds = subscriptions.map((s) => s.topicId);
+      expect(topicIds).toContain(testTopic.id);
+      expect(topicIds).toContain(secondTopic.id);
 
       // Clean up
       await db.delete(topic).where(eq(topic.id, secondTopic.id));

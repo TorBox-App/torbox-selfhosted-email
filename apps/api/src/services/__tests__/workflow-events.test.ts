@@ -75,6 +75,11 @@ vi.mock("@wraps/db", () => ({
         }),
       })),
     })),
+    update: vi.fn().mockImplementation(() => ({
+      set: vi.fn().mockImplementation(() => ({
+        where: vi.fn().mockImplementation(() => Promise.resolve()),
+      })),
+    })),
   },
   contact: { id: "id" },
   segment: { id: "id", name: "name" },
@@ -85,7 +90,18 @@ vi.mock("@wraps/db", () => ({
     triggerType: "trigger_type",
     triggerConfig: "trigger_config",
   },
+  workflowExecution: {
+    id: "id",
+    contactId: "contact_id",
+    workflowId: "workflow_id",
+    status: "status",
+    delaySchedulerName: "delay_scheduler_name",
+    waitTimeoutSchedulerName: "wait_timeout_scheduler_name",
+  },
   eq: vi.fn((a, b) => ({ eq: [a, b] })),
+  and: vi.fn((...args) => ({ and: args })),
+  inArray: vi.fn((field, values) => ({ inArray: [field, values] })),
+  sql: vi.fn((template) => template),
 }));
 
 // Import after mocking
