@@ -7,6 +7,8 @@
  * - Failed messages go to DLQ for investigation
  */
 
+import { schedulerGroup, schedulerRole } from "./scheduler-resources";
+
 // Dead Letter Queue for failed batch jobs
 export const batchDlq = new sst.aws.Queue("BatchDlq", {
   transform: {
@@ -120,8 +122,6 @@ export const workflowQueue = new sst.aws.Queue("WorkflowQueue", {
 
 // Subscribe workflow processor to the queue
 // The worker is defined in apps/api/src/workers/workflow-processor.ts
-// Note: schedulerRole/schedulerGroup imported after queues.ts in sst.config.ts
-// Permissions for scheduler are added via link + inline permissions
 workflowQueue.subscribe(
   {
     handler: "apps/api/src/workers/workflow-processor.handler",
@@ -131,6 +131,10 @@ workflowQueue.subscribe(
     environment: {
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       WORKFLOW_QUEUE_URL: workflowQueue.url,
+      WORKFLOW_QUEUE_ARN: workflowQueue.arn,
+      // EventBridge Scheduler config for delays
+      SCHEDULER_ROLE_ARN: schedulerRole.arn,
+      SCHEDULER_GROUP_NAME: schedulerGroup.name,
       // Base URLs for unsubscribe/preferences links
       API_BASE_URL:
         $app.stage === "production"
@@ -156,6 +160,22 @@ workflowQueue.subscribe(
       {
         actions: ["sqs:SendMessage"],
         resources: [workflowQueue.arn],
+      },
+      // Allow creating/deleting EventBridge schedules for delays
+      {
+        actions: [
+          "scheduler:CreateSchedule",
+          "scheduler:DeleteSchedule",
+          "scheduler:GetSchedule",
+        ],
+        resources: [
+          $interpolate`arn:aws:scheduler:*:*:schedule/${schedulerGroup.name}/*`,
+        ],
+      },
+      // Allow passing the scheduler role
+      {
+        actions: ["iam:PassRole"],
+        resources: [schedulerRole.arn],
       },
     ],
   },

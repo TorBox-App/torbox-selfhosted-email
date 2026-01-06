@@ -11,40 +11,13 @@
  */
 
 import { batchQueue, workflowQueue } from "./queues";
+import {
+  schedulerGroup,
+  schedulerRole,
+} from "./scheduler-resources";
 
-// Schedule Group for organizing broadcast schedules
-// Using aws.scheduler.ScheduleGroup from the Pulumi AWS provider
-export const schedulerGroup = new aws.scheduler.ScheduleGroup(
-  "BroadcastSchedules",
-  {
-    name: $interpolate`wraps-broadcasts-${$app.stage}`,
-    tags: {
-      ManagedBy: "sst",
-      Service: "wraps-api",
-    },
-  }
-);
-
-// IAM Role for EventBridge Scheduler to send messages to SQS
-export const schedulerRole = new aws.iam.Role("SchedulerRole", {
-  name: $interpolate`wraps-scheduler-role-${$app.stage}`,
-  assumeRolePolicy: JSON.stringify({
-    Version: "2012-10-17",
-    Statement: [
-      {
-        Effect: "Allow",
-        Principal: {
-          Service: "scheduler.amazonaws.com",
-        },
-        Action: "sts:AssumeRole",
-      },
-    ],
-  }),
-  tags: {
-    ManagedBy: "sst",
-    Service: "wraps-api",
-  },
-});
+// Re-export for backwards compatibility
+export { schedulerGroup, schedulerRole };
 
 // Policy to allow Scheduler to send messages to queues (batch + workflow)
 new aws.iam.RolePolicy("SchedulerSqsPolicy", {
