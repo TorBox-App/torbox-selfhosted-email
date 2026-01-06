@@ -16,7 +16,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-type TabKey = "send" | "track" | "deploy";
+export type ArchitectureTabKey = "send" | "track" | "deploy";
 
 type TabContent = {
   title: string;
@@ -25,7 +25,7 @@ type TabContent = {
   ctaLink: string;
 };
 
-const tabContent: Record<TabKey, TabContent> = {
+const tabContent: Record<ArchitectureTabKey, TabContent> = {
   send: {
     title: "Send Emails",
     description:
@@ -54,25 +54,29 @@ function IconBox({
   icon: Icon,
   highlighted = false,
   label,
+  compact = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   highlighted?: boolean;
   label?: string;
+  compact?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-0.5">
       <div
-        className={`flex aspect-square size-10 items-center justify-center rounded-full border-2 bg-background transition-all ${
+        className={`flex aspect-square items-center justify-center rounded-full border-2 bg-background transition-all ${
+          compact ? "size-7" : "size-10"
+        } ${
           highlighted
             ? "border-orange-500 bg-orange-500/5 text-orange-500"
             : "border-border text-muted-foreground"
         }`}
       >
-        <Icon className="size-4" />
+        <Icon className={compact ? "size-3.5" : "size-4"} />
       </div>
       {label && (
         <span
-          className={`text-[10px] ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
+          className={`${compact ? "text-[9px]" : "text-[10px]"} ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
         >
           {label}
         </span>
@@ -87,6 +91,7 @@ type SimpleNodeProps = {
   icon: React.ComponentType<{ className?: string }>;
   highlighted?: boolean;
   nodeRef?: React.RefObject<HTMLDivElement | null>;
+  compact?: boolean;
 };
 
 function SimpleNode({
@@ -94,20 +99,26 @@ function SimpleNode({
   icon: Icon,
   highlighted = false,
   nodeRef,
+  compact = false,
 }: SimpleNodeProps) {
   return (
-    <div className="flex flex-col items-center gap-2" ref={nodeRef}>
+    <div
+      className={`flex flex-col items-center ${compact ? "gap-1.5" : "gap-2"}`}
+      ref={nodeRef}
+    >
       <div
-        className={`flex aspect-square size-14 items-center justify-center rounded-full border-2 bg-background transition-all ${
+        className={`flex aspect-square items-center justify-center rounded-full border-2 bg-background transition-all ${
+          compact ? "size-11" : "size-14"
+        } ${
           highlighted
             ? "border-orange-500 bg-orange-500/5 text-orange-500"
             : "border-border text-muted-foreground"
         }`}
       >
-        <Icon className="size-6" />
+        <Icon className={compact ? "size-5" : "size-6"} />
       </div>
       <span
-        className={`font-medium text-xs ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
+        className={`font-medium ${compact ? "text-xs" : "text-xs"} ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
       >
         {label}
       </span>
@@ -117,35 +128,52 @@ function SimpleNode({
 
 // AWS Account container with SES and Wraps infrastructure boxes
 type AWSAccountBoxProps = {
-  activeTab: TabKey;
+  activeTab: ArchitectureTabKey;
   sesRef?: React.RefObject<HTMLDivElement | null>;
   wrapsRef?: React.RefObject<HTMLDivElement | null>;
+  compact?: boolean;
 };
 
-function AWSAccountBox({ activeTab, sesRef, wrapsRef }: AWSAccountBoxProps) {
+function AWSAccountBox({
+  activeTab,
+  sesRef,
+  wrapsRef,
+  compact = false,
+}: AWSAccountBoxProps) {
   const sesHighlighted =
     activeTab === "send" || activeTab === "deploy" || activeTab === "track";
   const wrapsHighlighted = activeTab === "track" || activeTab === "deploy";
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="rounded-lg bg-muted/50 px-3 py-1 text-muted-foreground text-xs">
+    <div
+      className={`flex flex-col items-center ${compact ? "gap-1.5" : "gap-2"}`}
+    >
+      <div
+        className={`rounded-lg bg-muted/50 px-2 py-0.5 text-muted-foreground ${compact ? "text-xs" : "text-xs"}`}
+      >
         Your AWS Account
       </div>
-      <div className="flex flex-col gap-4 rounded-xl border-2 border-muted-foreground/30 border-dashed bg-muted/10 p-4">
+      <div
+        className={`flex flex-col rounded-xl border-2 border-muted-foreground/30 border-dashed bg-muted/10 ${compact ? "gap-2 p-3" : "gap-4 p-4"}`}
+      >
         {/* SES Box - Top Row */}
-        <div className="flex flex-col items-center gap-2" ref={sesRef}>
+        <div
+          className={`flex flex-col items-center ${compact ? "gap-1" : "gap-2"}`}
+          ref={sesRef}
+        >
           <div
-            className={`flex h-12 w-12 items-center justify-center rounded-lg border-2 transition-all ${
+            className={`flex items-center justify-center rounded-lg border-2 transition-all ${
+              compact ? "h-9 w-9" : "h-12 w-12"
+            } ${
               sesHighlighted
                 ? "border-orange-500 bg-orange-500/5 text-orange-500"
                 : "border-border bg-background text-muted-foreground"
             }`}
           >
-            <Mail className="h-6 w-6" />
+            <Mail className={compact ? "h-4 w-4" : "h-6 w-6"} />
           </div>
           <span
-            className={`font-medium text-xs ${
+            className={`font-medium ${compact ? "text-xs" : "text-xs"} ${
               sesHighlighted ? "text-orange-500" : "text-muted-foreground"
             }`}
           >
@@ -154,25 +182,46 @@ function AWSAccountBox({ activeTab, sesRef, wrapsRef }: AWSAccountBoxProps) {
         </div>
 
         {/* Wraps Infrastructure Box - Bottom Row */}
-        <div className="flex flex-col items-center gap-2" ref={wrapsRef}>
+        <div
+          className={`flex flex-col items-center ${compact ? "gap-1" : "gap-2"}`}
+          ref={wrapsRef}
+        >
           <div
-            className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all ${
+            className={`flex items-center rounded-lg border-2 transition-all ${
+              compact ? "gap-1.5 px-2 py-1.5" : "gap-2 px-3 py-2"
+            } ${
               wrapsHighlighted
                 ? "border-orange-500 bg-orange-500/5"
                 : "border-border bg-background"
             }`}
           >
-            <IconBox highlighted={wrapsHighlighted} icon={Zap} label="EB" />
-            <IconBox highlighted={wrapsHighlighted} icon={Radio} label="SQS" />
-            <IconBox highlighted={wrapsHighlighted} icon={Code2} label="λ" />
             <IconBox
+              compact={compact}
+              highlighted={wrapsHighlighted}
+              icon={Zap}
+              label="EB"
+            />
+            <IconBox
+              compact={compact}
+              highlighted={wrapsHighlighted}
+              icon={Radio}
+              label="SQS"
+            />
+            <IconBox
+              compact={compact}
+              highlighted={wrapsHighlighted}
+              icon={Code2}
+              label="λ"
+            />
+            <IconBox
+              compact={compact}
               highlighted={wrapsHighlighted}
               icon={Database}
               label="DB"
             />
           </div>
           <span
-            className={`font-medium text-xs ${
+            className={`font-medium ${compact ? "text-xs" : "text-xs"} ${
               wrapsHighlighted ? "text-orange-500" : "text-muted-foreground"
             }`}
           >
@@ -248,7 +297,7 @@ function MobileAWSBox({
 }
 
 // Mobile simplified flow component
-function MobileFlow({ activeTab }: { activeTab: TabKey }) {
+function MobileFlow({ activeTab }: { activeTab: ArchitectureTabKey }) {
   // Shared offset to align external nodes with AWS box content (accounting for "Your AWS Account" label)
   const nodeOffset = "mb-5";
   const arrowOffset = "mb-12";
@@ -331,15 +380,21 @@ function createCurvedPath(from: Point, to: Point, curvature = 0.5): string {
 function ConnectionLines({
   activeTab,
   positions,
+  compact = false,
 }: {
-  activeTab: TabKey;
+  activeTab: ArchitectureTabKey;
   positions: NodePositions | null;
+  compact?: boolean;
 }) {
   if (!positions) {
     return null;
   }
 
   const { yourApp, cli, ses, wraps, recipients } = positions;
+
+  // Adjust offsets based on compact mode
+  const nodeOffset = compact ? 28 : 35;
+  const wrapsXOffset = compact ? 70 : 120;
 
   return (
     <svg
@@ -378,8 +433,8 @@ function ConnectionLines({
           <path
             className="animate-dash"
             d={createCurvedPath(
-              { x: yourApp.x + 35, y: yourApp.y - 12 },
-              { x: ses.x - 35, y: ses.y - 12 }
+              { x: yourApp.x + nodeOffset, y: yourApp.y - 12 },
+              { x: ses.x - nodeOffset, y: ses.y - 12 }
             )}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
@@ -391,11 +446,37 @@ function ConnectionLines({
           <path
             className="animate-dash"
             d={createCurvedPath(
-              { x: ses.x + 35, y: ses.y - 12 },
-              { x: recipients.x - 35, y: recipients.y - 12 }
+              { x: ses.x + nodeOffset, y: ses.y - 12 },
+              { x: recipients.x - nodeOffset, y: recipients.y - 12 }
             )}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
+            stroke="#ff6b00"
+            strokeDasharray="8 6"
+            strokeWidth="2"
+          />
+          {/* Feedback loop: Recipients back to SES (opens/clicks) */}
+          <path
+            className="animate-dash"
+            d={createCurvedPath(
+              { x: recipients.x - nodeOffset, y: recipients.y + 12 },
+              { x: ses.x + nodeOffset, y: ses.y + 12 },
+              0.4
+            )}
+            fill="none"
+            markerEnd="url(#arrowhead-orange)"
+            opacity={0.6}
+            stroke="#ff6b00"
+            strokeDasharray="8 6"
+            strokeWidth="2"
+          />
+          {/* SES to Wraps (event tracking) */}
+          <path
+            className="animate-dash"
+            d={`M ${ses.x - nodeOffset} ${ses.y + 12} C ${ses.x - nodeOffset - 30} ${ses.y + 12}, ${wraps.x - wrapsXOffset + 15} ${ses.y + 30}, ${wraps.x - wrapsXOffset + 15} ${wraps.y - (compact ? 40 : 58)}`}
+            fill="none"
+            markerEnd="url(#arrowhead-orange)"
+            opacity={0.6}
             stroke="#ff6b00"
             strokeDasharray="8 6"
             strokeWidth="2"
@@ -410,8 +491,8 @@ function ConnectionLines({
           <path
             className="animate-dash"
             d={createCurvedPath(
-              { x: recipients.x - 35, y: recipients.y - 12 },
-              { x: ses.x + 35, y: ses.y - 12 },
+              { x: recipients.x - nodeOffset, y: recipients.y - 12 },
+              { x: ses.x + nodeOffset, y: ses.y - 12 },
               0.4
             )}
             fill="none"
@@ -423,7 +504,7 @@ function ConnectionLines({
           {/* SES to Wraps - curve from left side of SES down to EB icon */}
           <path
             className="animate-dash"
-            d={`M ${ses.x - 35} ${ses.y - 12} C ${ses.x - 65} ${ses.y - 12}, ${wraps.x - 75} ${ses.y + 20}, ${wraps.x - 75} ${wraps.y - 58}`}
+            d={`M ${ses.x - nodeOffset} ${ses.y - 12} C ${ses.x - nodeOffset - 30} ${ses.y - 12}, ${wraps.x - wrapsXOffset + 45} ${ses.y + 20}, ${wraps.x - wrapsXOffset + 45} ${wraps.y - (compact ? 40 : 58)}`}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
             stroke="#ff6b00"
@@ -440,8 +521,8 @@ function ConnectionLines({
           <path
             className="animate-dash"
             d={createCurvedPath(
-              { x: cli.x + 35, y: cli.y - 12 },
-              { x: ses.x - 35, y: ses.y - 12 },
+              { x: cli.x + nodeOffset, y: cli.y - 12 },
+              { x: ses.x - nodeOffset, y: ses.y - 12 },
               0.5
             )}
             fill="none"
@@ -454,8 +535,8 @@ function ConnectionLines({
           <path
             className="animate-dash"
             d={createCurvedPath(
-              { x: cli.x + 35, y: cli.y + 12 },
-              { x: wraps.x - 120, y: wraps.y - 12 },
+              { x: cli.x + nodeOffset, y: cli.y + 12 },
+              { x: wraps.x - wrapsXOffset, y: wraps.y - 12 },
               0.5
             )}
             fill="none"
@@ -470,8 +551,17 @@ function ConnectionLines({
   );
 }
 
-export function ArchitectureSection() {
-  const [activeTab, setActiveTab] = useState<TabKey>("send");
+// Reusable interactive diagram component (without section wrapper)
+export function InteractiveArchitectureDiagram({
+  defaultTab = "send",
+  showTabBar = true,
+  compact = false,
+}: {
+  defaultTab?: ArchitectureTabKey;
+  showTabBar?: boolean;
+  compact?: boolean;
+} = {}) {
+  const [activeTab, setActiveTab] = useState<ArchitectureTabKey>(defaultTab);
   const [positions, setPositions] = useState<NodePositions | null>(null);
 
   // Refs for all nodes
@@ -529,22 +619,11 @@ export function ArchitectureSection() {
   }, [updatePositions]);
 
   return (
-    <section className="py-24">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        {/* Section header */}
-        <div className="mb-12 text-center">
-          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-            How Wraps Works
-          </h2>
-          <p className="mx-auto max-w-2xl text-muted-foreground">
-            Deploy email infrastructure to your AWS account with one command.
-            Send emails with our SDK. Track everything automatically.
-          </p>
-        </div>
-
-        {/* Main diagram container */}
-        <div className="overflow-hidden rounded-2xl border bg-muted/20">
-          {/* Tab bar */}
+    <>
+      {/* Main diagram container */}
+      <div className="overflow-hidden rounded-md border bg-muted/20">
+        {/* Tab bar - optional */}
+        {showTabBar && (
           <div className="flex justify-center border-b bg-background/50 py-4">
             <div className="inline-flex rounded-full border bg-background p-1">
               {(["send", "track", "deploy"] as const).map((tab) => (
@@ -556,6 +635,7 @@ export function ArchitectureSection() {
                   }`}
                   key={tab}
                   onClick={() => setActiveTab(tab)}
+                  type="button"
                 >
                   {tab === "send" && "Send Email"}
                   {tab === "track" && "Track Events"}
@@ -564,55 +644,93 @@ export function ArchitectureSection() {
               ))}
             </div>
           </div>
+        )}
 
-          {/* Mobile: Simplified vertical flow */}
+        {/* Mobile: Simplified vertical flow */}
+        {!compact && (
           <div className="block p-6 md:hidden">
             <MobileFlow activeTab={activeTab} />
           </div>
+        )}
 
-          {/* Desktop: Full diagram */}
+        {/* Desktop: Full diagram */}
+        <div
+          className={`relative ${compact ? "min-h-[240px] px-6 py-6" : "hidden min-h-[380px] p-8 md:block"}`}
+          ref={containerRef}
+        >
+          {/* Connection lines SVG */}
+          <ConnectionLines
+            activeTab={activeTab}
+            compact={compact}
+            positions={positions}
+          />
+
+          {/* Node layout - horizontal flow */}
           <div
-            className="relative hidden min-h-[380px] p-8 md:block"
-            ref={containerRef}
+            className={`relative z-10 flex items-center justify-center ${compact ? "gap-8 md:gap-20" : "gap-12 lg:gap-16"}`}
           >
-            {/* Connection lines SVG */}
-            <ConnectionLines activeTab={activeTab} positions={positions} />
-
-            {/* Node layout - horizontal flow */}
-            <div className="relative z-10 flex items-center justify-center gap-12 lg:gap-16">
-              {/* Left side - Your App / CLI */}
-              <div className="flex flex-col gap-6">
+            {/* Left side - Your App / CLI */}
+            <div className={`flex flex-col ${compact ? "gap-3" : "gap-6"}`}>
+              {/* Your App - hidden in deploy tab when compact */}
+              {!(compact && activeTab === "deploy") && (
                 <SimpleNode
+                  compact={compact}
                   highlighted={activeTab === "send"}
                   icon={Code2}
                   label="Your App"
                   nodeRef={yourAppRef}
                 />
+              )}
+              {/* Wraps CLI - hidden in send tab when compact */}
+              {!(compact && activeTab === "send") && (
                 <SimpleNode
+                  compact={compact}
                   highlighted={activeTab === "deploy"}
                   icon={Terminal}
                   label="Wraps CLI"
                   nodeRef={cliRef}
                 />
-              </div>
+              )}
+            </div>
 
-              {/* Center - AWS Account with SES and Wraps boxes */}
-              <AWSAccountBox
-                activeTab={activeTab}
-                sesRef={sesRef}
-                wrapsRef={wrapsRef}
-              />
+            {/* Center - AWS Account with SES and Wraps boxes */}
+            <AWSAccountBox
+              activeTab={activeTab}
+              compact={compact}
+              sesRef={sesRef}
+              wrapsRef={wrapsRef}
+            />
 
-              {/* Right side - Recipients */}
-              <div className="flex flex-col items-center gap-4">
+            {/* Right side - Recipients - hidden in deploy tab when compact */}
+            {!(compact && activeTab === "deploy") && (
+              <div
+                className={`flex flex-col items-center ${compact ? "gap-2" : "gap-4"}`}
+              >
                 <SimpleNode
+                  compact={compact}
                   highlighted={activeTab === "send" || activeTab === "track"}
                   icon={Users}
                   label="Recipients"
                   nodeRef={recipientsRef}
                 />
-                {/* Event types shown below recipients for track tab */}
-                {activeTab === "track" && (
+                {/* Event types shown below recipients for send tab in compact mode */}
+                {activeTab === "send" && compact && (
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex gap-1">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                        <Eye className="h-2.5 w-2.5" />
+                      </div>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
+                        <MousePointerClick className="h-2.5 w-2.5" />
+                      </div>
+                    </div>
+                    <span className="text-[9px] text-orange-500/70">
+                      opens · clicks
+                    </span>
+                  </div>
+                )}
+                {/* Event types shown below recipients for track tab - hidden in compact */}
+                {activeTab === "track" && !compact && (
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex gap-1.5">
                       <div className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-500/50 bg-orange-500/10 text-orange-500">
@@ -631,10 +749,12 @@ export function ArchitectureSection() {
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
+        </div>
 
-          {/* Bottom description bar */}
+        {/* Bottom description bar - hidden in compact mode */}
+        {!compact && (
           <div className="flex flex-col gap-4 border-t bg-foreground px-6 py-5 text-background md:flex-row md:items-center md:justify-between md:px-8 md:py-6">
             <div className="max-w-xl">
               <h3 className="mb-1 font-semibold text-base md:text-lg">
@@ -655,9 +775,11 @@ export function ArchitectureSection() {
               </a>
             </Button>
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Legend - hidden on mobile */}
+      {/* Legend - hidden on mobile and in compact mode */}
+      {!compact && (
         <div className="mt-6 hidden flex-wrap items-center justify-center gap-6 text-muted-foreground text-sm md:flex">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded border-2 border-orange-500 bg-orange-500/20" />
@@ -672,7 +794,7 @@ export function ArchitectureSection() {
             <span>Data Path</span>
           </div>
         </div>
-      </div>
+      )}
 
       {/* CSS for dash animation */}
       <style>{`
@@ -685,6 +807,28 @@ export function ArchitectureSection() {
           animation: dash 1s linear infinite;
         }
       `}</style>
+    </>
+  );
+}
+
+// Full standalone section (for use as a separate page section)
+export function ArchitectureSection() {
+  return (
+    <section className="py-24">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {/* Section header */}
+        <div className="mb-12 text-center">
+          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+            How Wraps Works
+          </h2>
+          <p className="mx-auto max-w-2xl text-muted-foreground">
+            Deploy email infrastructure to your AWS account with one command.
+            Send emails with our SDK. Track everything automatically.
+          </p>
+        </div>
+
+        <InteractiveArchitectureDiagram />
+      </div>
     </section>
   );
 }
