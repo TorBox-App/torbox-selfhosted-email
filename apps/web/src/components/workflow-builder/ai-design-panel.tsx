@@ -4,9 +4,11 @@ import { useChat } from "@ai-sdk/react";
 import { useThrottler } from "@tanstack/react-pacer";
 import { useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
+import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
 import {
   AlertTriangle,
   Bot,
+  Check,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -15,6 +17,7 @@ import {
   Square,
   User,
   Wand2,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -42,6 +45,11 @@ type ExistingWorkflow = {
   name: string;
   steps: unknown[];
   transitions: unknown[];
+};
+
+type PendingWorkflow = {
+  steps: WorkflowStep[];
+  transitions: WorkflowTransition[];
 };
 
 type AIDesignPanelProps = {
@@ -81,6 +89,9 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
   const [input, setInput] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
+  const [pendingWorkflow, setPendingWorkflow] = useState<PendingWorkflow | null>(
+    null
+  );
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 44,
@@ -165,7 +176,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
     }
   }, [aiUsage?.warning, hasShownWarningToast]);
 
-  // Extract and apply workflow from the latest assistant message
+  // Extract workflow from the latest assistant message and store as pending
   useEffect(() => {
     const lastMessage = messages.at(-1);
     if (lastMessage?.role === "assistant" && !isLoading) {
@@ -178,13 +189,30 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
 
       const workflow = extractWorkflowFromMessage(textContent);
       if (workflow) {
-        applyAIFlow(workflow.steps, workflow.transitions);
-        toast.success("Workflow applied to canvas", {
-          description: `Created ${workflow.steps.length} steps with ${workflow.transitions.length} connections.`,
+        // Store as pending instead of auto-applying
+        setPendingWorkflow({
+          steps: workflow.steps,
+          transitions: workflow.transitions,
         });
       }
     }
-  }, [messages, isLoading, applyAIFlow]);
+  }, [messages, isLoading]);
+
+  // Handle applying the pending workflow
+  const handleApplyWorkflow = useCallback(() => {
+    if (!pendingWorkflow) return;
+
+    applyAIFlow(pendingWorkflow.steps, pendingWorkflow.transitions);
+    toast.success("Workflow applied to canvas", {
+      description: `Created ${pendingWorkflow.steps.length} steps with ${pendingWorkflow.transitions.length} connections.`,
+    });
+    setPendingWorkflow(null);
+  }, [pendingWorkflow, applyAIFlow]);
+
+  // Handle discarding the pending workflow
+  const handleDiscardWorkflow = useCallback(() => {
+    setPendingWorkflow(null);
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -247,7 +275,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">
-            <p>Open AI Designer</p>
+            <p>Open AI Assistant</p>
           </TooltipContent>
         </Tooltip>
         <div className="mt-2">
@@ -263,7 +291,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
       <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-2">
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <Sparkles className="h-4 w-4 text-primary" />
-          <span className="font-medium">AI Designer</span>
+          <span className="font-medium">AI Assistant</span>
           {aiUsage && aiUsage.limit !== -1 && (
             <span className="text-muted-foreground text-xs">
               ({aiUsage.current}/{aiUsage.limit})
@@ -327,7 +355,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
                 <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                   <Wand2 className="h-5 w-5 text-primary" />
                 </div>
-                <h4 className="mb-1 font-medium text-sm">AI Flow Designer</h4>
+                <h4 className="mb-1 font-medium text-sm">AI Assistant</h4>
                 <p className="text-muted-foreground text-xs">
                   Describe your automation and I'll build it
                 </p>
@@ -405,7 +433,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
                     <div className="whitespace-pre-wrap break-words">
                       {getMessageText(message).replace(
                         /```json[\s\S]*?```/g,
-                        "[Workflow applied to canvas]"
+                        "[Workflow generated]"
                       )}
                     </div>
                   </div>
@@ -427,6 +455,38 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
           )}
         </div>
       </ScrollArea>
+
+      {/* Pending Workflow Actions */}
+      {pendingWorkflow && !isLoading && (
+        <div className="border-t bg-muted/50 px-3 py-2">
+          <p className="mb-1.5 font-medium text-xs">Apply generated workflow?</p>
+          <p className="mb-2 text-muted-foreground text-xs">
+            {pendingWorkflow.steps.length} step
+            {pendingWorkflow.steps.length !== 1 ? "s" : ""},{" "}
+            {pendingWorkflow.transitions.length} connection
+            {pendingWorkflow.transitions.length !== 1 ? "s" : ""}
+          </p>
+          <div className="flex gap-1.5">
+            <Button
+              className="h-7 flex-1 text-xs"
+              onClick={handleApplyWorkflow}
+              size="sm"
+            >
+              <Check className="mr-1 h-3 w-3" />
+              Apply
+            </Button>
+            <Button
+              className="h-7 flex-1 text-xs"
+              onClick={handleDiscardWorkflow}
+              size="sm"
+              variant="outline"
+            >
+              <X className="mr-1 h-3 w-3" />
+              Discard
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Input */}
       <form className="border-t p-3" onSubmit={handleSubmit}>
