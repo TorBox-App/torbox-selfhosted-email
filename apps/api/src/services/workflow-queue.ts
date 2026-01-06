@@ -15,6 +15,7 @@ const sqs = new SQSClient({});
 const scheduler = new SchedulerClient({});
 
 const WORKFLOW_QUEUE_URL = process.env.WORKFLOW_QUEUE_URL;
+const WORKFLOW_QUEUE_ARN = process.env.WORKFLOW_QUEUE_ARN;
 const SCHEDULE_GROUP = process.env.SCHEDULER_GROUP_NAME || "wraps-workflows";
 const SCHEDULER_ROLE_ARN = process.env.SCHEDULER_ROLE_ARN;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -77,7 +78,7 @@ export async function scheduleWorkflowStep(params: {
 }): Promise<string> {
   const scheduleName = `wraps-wf-${params.executionId}-${params.stepId}`;
 
-  if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_URL)) {
+  if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_ARN)) {
     if (IS_PRODUCTION) {
       throw new Error("EventBridge Scheduler not configured for workflows");
     }
@@ -99,7 +100,7 @@ export async function scheduleWorkflowStep(params: {
       FlexibleTimeWindow: { Mode: "OFF" },
       ActionAfterCompletion: "DELETE",
       Target: {
-        Arn: WORKFLOW_QUEUE_URL,
+        Arn: WORKFLOW_QUEUE_ARN,
         RoleArn: SCHEDULER_ROLE_ARN,
         Input: JSON.stringify({
           type: "execute",
@@ -125,7 +126,7 @@ export async function scheduleWaitTimeout(params: {
 }): Promise<string> {
   const scheduleName = `wraps-wf-timeout-${params.executionId}-${params.stepId}`;
 
-  if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_URL)) {
+  if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_ARN)) {
     if (IS_PRODUCTION) {
       throw new Error("EventBridge Scheduler not configured for workflows");
     }
@@ -145,7 +146,7 @@ export async function scheduleWaitTimeout(params: {
       FlexibleTimeWindow: { Mode: "OFF" },
       ActionAfterCompletion: "DELETE",
       Target: {
-        Arn: WORKFLOW_QUEUE_URL,
+        Arn: WORKFLOW_QUEUE_ARN,
         RoleArn: SCHEDULER_ROLE_ARN,
         Input: JSON.stringify({
           type: "resume",
