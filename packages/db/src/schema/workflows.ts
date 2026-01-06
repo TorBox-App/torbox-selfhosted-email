@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -328,6 +328,10 @@ export const workflowExecution = pgTable(
       .references(() => organization.id, { onDelete: "cascade" })
       .notNull(),
 
+    // Denormalized from workflow for partial unique index constraint
+    // This enables atomic INSERT with ON CONFLICT to prevent race conditions
+    allowReentry: boolean("allow_reentry").default(false).notNull(),
+
     // ═══════════════════════════════════════════════════════════════════════
     // EXECUTION STATE
     // ═══════════════════════════════════════════════════════════════════════
@@ -389,6 +393,13 @@ export const workflowExecution = pgTable(
       table.organizationId,
       table.waitingForEvent
     ),
+    // Partial unique index for atomic reentry prevention
+    // Prevents duplicate active executions when allowReentry=false
+    uniqueIndex("workflow_execution_no_reentry_idx")
+      .on(table.workflowId, table.contactId)
+      .where(
+        sql`${table.status} IN ('pending', 'active', 'paused', 'waiting') AND ${table.allowReentry} = false`
+      ),
   ]
 );
 

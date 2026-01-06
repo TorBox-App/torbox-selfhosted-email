@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "workflow_execution_no_reentry_idx" ON "workflow_execution" USING btree ("workflow_id","contact_id") WHERE "workflow_execution"."status" IN ('pending', 'active', 'paused', 'waiting') AND "workflow_execution"."allow_reentry" = false;

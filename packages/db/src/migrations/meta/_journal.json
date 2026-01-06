@@ -162,6 +162,20 @@
       "when": 1767645707704,
       "tag": "0022_sour_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1767682134833,
+      "tag": "0023_flawless_psynapse",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1767710620113,
+      "tag": "0024_premium_blindfold",
+      "breakpoints": true
     }
   ]
 }

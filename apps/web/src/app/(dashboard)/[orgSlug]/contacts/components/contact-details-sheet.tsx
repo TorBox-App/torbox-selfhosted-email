@@ -37,8 +37,8 @@ import {
   type SmsStatus,
 } from "@/lib/contacts";
 import {
-  contactDetailsFormOpts,
   type ContactDetailsInput,
+  contactDetailsFormOpts,
 } from "@/lib/forms/contact-details";
 import type { TopicWithMeta } from "@/lib/topics";
 import { ContactTimeline } from "./contact-timeline";
@@ -100,8 +100,10 @@ export function ContactDetailsSheet({
       lastName: contact?.lastName || "",
       company: contact?.company || "",
       jobTitle: contact?.jobTitle || "",
-      emailStatus: (contact?.emailStatus || "active") as ContactDetailsInput["emailStatus"],
-      smsStatus: (contact?.smsStatus || "pending_consent") as ContactDetailsInput["smsStatus"],
+      emailStatus: (contact?.emailStatus ||
+        "active") as ContactDetailsInput["emailStatus"],
+      smsStatus: (contact?.smsStatus ||
+        "pending_consent") as ContactDetailsInput["smsStatus"],
     },
   });
 
@@ -115,8 +117,15 @@ export function ContactDetailsSheet({
       form.setFieldValue("lastName", contact.lastName || "");
       form.setFieldValue("company", contact.company || "");
       form.setFieldValue("jobTitle", contact.jobTitle || "");
-      form.setFieldValue("emailStatus", (contact.emailStatus || "active") as ContactDetailsInput["emailStatus"]);
-      form.setFieldValue("smsStatus", (contact.smsStatus || "pending_consent") as ContactDetailsInput["smsStatus"]);
+      form.setFieldValue(
+        "emailStatus",
+        (contact.emailStatus || "active") as ContactDetailsInput["emailStatus"]
+      );
+      form.setFieldValue(
+        "smsStatus",
+        (contact.smsStatus ||
+          "pending_consent") as ContactDetailsInput["smsStatus"]
+      );
       setSelectedTopicIds(
         contact.topics
           ?.filter((t) => t.status === "subscribed")
@@ -182,7 +191,9 @@ export function ContactDetailsSheet({
           ? values.jobTitle || null
           : undefined,
       emailStatus:
-        values.emailStatus !== contact.emailStatus ? values.emailStatus : undefined,
+        values.emailStatus !== contact.emailStatus
+          ? values.emailStatus
+          : undefined,
       smsStatus:
         values.smsStatus !== contact.smsStatus ? values.smsStatus : undefined,
       properties: propertiesChanged ? propertiesObj : undefined,
@@ -202,8 +213,15 @@ export function ContactDetailsSheet({
     form.setFieldValue("lastName", contact.lastName || "");
     form.setFieldValue("company", contact.company || "");
     form.setFieldValue("jobTitle", contact.jobTitle || "");
-    form.setFieldValue("emailStatus", (contact.emailStatus || "active") as ContactDetailsInput["emailStatus"]);
-    form.setFieldValue("smsStatus", (contact.smsStatus || "pending_consent") as ContactDetailsInput["smsStatus"]);
+    form.setFieldValue(
+      "emailStatus",
+      (contact.emailStatus || "active") as ContactDetailsInput["emailStatus"]
+    );
+    form.setFieldValue(
+      "smsStatus",
+      (contact.smsStatus ||
+        "pending_consent") as ContactDetailsInput["smsStatus"]
+    );
     setSelectedTopicIds(
       contact.topics
         ?.filter((t) => t.status === "subscribed")
@@ -334,7 +352,9 @@ export function ContactDetailsSheet({
                 <form.Field name="email">
                   {(field) => (
                     <Field>
-                      <FieldLabel htmlFor={field.name}>Email address</FieldLabel>
+                      <FieldLabel htmlFor={field.name}>
+                        Email address
+                      </FieldLabel>
                       <FieldContent>
                         <Input
                           id={field.name}
@@ -358,7 +378,11 @@ export function ContactDetailsSheet({
                           Status:
                         </Label>
                         <Select
-                          onValueChange={(v) => field.handleChange(v as ContactDetailsInput["emailStatus"])}
+                          onValueChange={(v) =>
+                            field.handleChange(
+                              v as ContactDetailsInput["emailStatus"]
+                            )
+                          }
                           value={field.state.value}
                         >
                           <SelectTrigger className="h-7 w-[140px]">
@@ -408,7 +432,11 @@ export function ContactDetailsSheet({
                           Status:
                         </Label>
                         <Select
-                          onValueChange={(v) => field.handleChange(v as ContactDetailsInput["smsStatus"])}
+                          onValueChange={(v) =>
+                            field.handleChange(
+                              v as ContactDetailsInput["smsStatus"]
+                            )
+                          }
                           value={field.state.value}
                         >
                           <SelectTrigger className="h-7 w-[160px]">

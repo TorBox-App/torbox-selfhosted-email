@@ -458,7 +458,10 @@ export function ContactsTable({
     }
 
     startTransition(async () => {
-      const result = await bulkDeleteContacts(organizationId, selectedContactIds);
+      const result = await bulkDeleteContacts(
+        organizationId,
+        selectedContactIds
+      );
       if (result.success) {
         toast.success("Contacts deleted", {
           description: `${result.count} contact${result.count === 1 ? "" : "s"} deleted.`,

@@ -17,7 +17,15 @@ import {
   workflowExecution,
 } from "@wraps/db";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 // Mock the workflow-queue module to avoid actual AWS calls
 vi.mock("../services/workflow-queue", () => ({
@@ -25,11 +33,11 @@ vi.mock("../services/workflow-queue", () => ({
   deleteScheduledStep: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { deleteScheduledStep } from "../services/workflow-queue";
 import {
   cancelExecutionsForTopicUnsubscribe,
   emitTopicUnsubscribed,
 } from "../services/workflow-events";
+import { deleteScheduledStep } from "../services/workflow-queue";
 
 // Test data IDs (unique to avoid conflicts with other tests)
 const TEST_PREFIX = "api-wf-cancel-test";
@@ -140,13 +148,19 @@ describe("cancelExecutionsForTopicUnsubscribe", () => {
     await db
       .insert(organization)
       .values(testOrg)
-      .onConflictDoUpdate({ target: organization.id, set: { name: testOrg.name } });
+      .onConflictDoUpdate({
+        target: organization.id,
+        set: { name: testOrg.name },
+      });
 
     // Insert test member
     await db
       .insert(member)
       .values(testMember)
-      .onConflictDoUpdate({ target: member.id, set: { role: testMember.role } });
+      .onConflictDoUpdate({
+        target: member.id,
+        set: { role: testMember.role },
+      });
 
     // Insert test topic
     await db
@@ -158,23 +172,35 @@ describe("cancelExecutionsForTopicUnsubscribe", () => {
     await db
       .insert(contact)
       .values(testContact)
-      .onConflictDoUpdate({ target: contact.id, set: { updatedAt: new Date() } });
+      .onConflictDoUpdate({
+        target: contact.id,
+        set: { updatedAt: new Date() },
+      });
 
     await db
       .insert(contact)
       .values(testOtherContact)
-      .onConflictDoUpdate({ target: contact.id, set: { updatedAt: new Date() } });
+      .onConflictDoUpdate({
+        target: contact.id,
+        set: { updatedAt: new Date() },
+      });
 
     // Insert test workflows (use type assertion for test data)
     await db
       .insert(workflow)
       .values(testWorkflowData as typeof workflow.$inferInsert)
-      .onConflictDoUpdate({ target: workflow.id, set: { updatedAt: new Date() } });
+      .onConflictDoUpdate({
+        target: workflow.id,
+        set: { updatedAt: new Date() },
+      });
 
     await db
       .insert(workflow)
       .values(testEventWorkflowData as typeof workflow.$inferInsert)
-      .onConflictDoUpdate({ target: workflow.id, set: { updatedAt: new Date() } });
+      .onConflictDoUpdate({
+        target: workflow.id,
+        set: { updatedAt: new Date() },
+      });
   });
 
   beforeEach(async () => {
@@ -194,9 +220,15 @@ describe("cancelExecutionsForTopicUnsubscribe", () => {
 
   afterAll(async () => {
     // Clean up in reverse order of dependencies
-    await db.delete(workflowExecution).where(eq(workflowExecution.organizationId, testOrg.id));
-    await db.delete(contactTopic).where(eq(contactTopic.contactId, testContact.id));
-    await db.delete(contactTopic).where(eq(contactTopic.contactId, testOtherContact.id));
+    await db
+      .delete(workflowExecution)
+      .where(eq(workflowExecution.organizationId, testOrg.id));
+    await db
+      .delete(contactTopic)
+      .where(eq(contactTopic.contactId, testContact.id));
+    await db
+      .delete(contactTopic)
+      .where(eq(contactTopic.contactId, testOtherContact.id));
     await db.delete(contact).where(eq(contact.id, testContact.id));
     await db.delete(contact).where(eq(contact.id, testOtherContact.id));
     await db.delete(workflow).where(eq(workflow.organizationId, testOrg.id));
@@ -441,12 +473,18 @@ describe("emitTopicUnsubscribed with cancellation", () => {
     await db
       .insert(organization)
       .values(testOrg)
-      .onConflictDoUpdate({ target: organization.id, set: { name: testOrg.name } });
+      .onConflictDoUpdate({
+        target: organization.id,
+        set: { name: testOrg.name },
+      });
 
     await db
       .insert(member)
       .values(testMember)
-      .onConflictDoUpdate({ target: member.id, set: { role: testMember.role } });
+      .onConflictDoUpdate({
+        target: member.id,
+        set: { role: testMember.role },
+      });
 
     await db
       .insert(topic)
@@ -456,12 +494,18 @@ describe("emitTopicUnsubscribed with cancellation", () => {
     await db
       .insert(contact)
       .values(testContact)
-      .onConflictDoUpdate({ target: contact.id, set: { updatedAt: new Date() } });
+      .onConflictDoUpdate({
+        target: contact.id,
+        set: { updatedAt: new Date() },
+      });
 
     await db
       .insert(workflow)
       .values(testWorkflowData as typeof workflow.$inferInsert)
-      .onConflictDoUpdate({ target: workflow.id, set: { updatedAt: new Date() } });
+      .onConflictDoUpdate({
+        target: workflow.id,
+        set: { updatedAt: new Date() },
+      });
   });
 
   beforeEach(async () => {
@@ -478,8 +522,12 @@ describe("emitTopicUnsubscribed with cancellation", () => {
   });
 
   afterAll(async () => {
-    await db.delete(workflowExecution).where(eq(workflowExecution.organizationId, testOrg.id));
-    await db.delete(contactTopic).where(eq(contactTopic.contactId, testContact.id));
+    await db
+      .delete(workflowExecution)
+      .where(eq(workflowExecution.organizationId, testOrg.id));
+    await db
+      .delete(contactTopic)
+      .where(eq(contactTopic.contactId, testContact.id));
     await db.delete(contact).where(eq(contact.id, testContact.id));
     await db.delete(contact).where(eq(contact.id, testOtherContact.id));
     await db.delete(workflow).where(eq(workflow.organizationId, testOrg.id));

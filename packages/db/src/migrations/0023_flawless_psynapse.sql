@@ -1,0 +1,1 @@
+ALTER TABLE "workflow_execution" ADD COLUMN "allow_reentry" boolean DEFAULT false NOT NULL;

@@ -133,15 +133,12 @@ export default async function handler(
         }
 
         // Subscribe existing contact to the topic
-        const { error: updateError } = await client.PATCH(
-          "/v1/contacts/{id}",
-          {
-            params: { path: { id: existingContact.id } },
-            body: {
-              topicSlugs: [topicSlug],
-            },
-          }
-        );
+        const { error: updateError } = await client.PATCH("/v1/contacts/{id}", {
+          params: { path: { id: existingContact.id } },
+          body: {
+            topicSlugs: [topicSlug],
+          },
+        });
 
         if (updateError) {
           console.error(

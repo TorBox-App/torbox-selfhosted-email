@@ -3,8 +3,8 @@
 import { useChat } from "@ai-sdk/react";
 import { useThrottler } from "@tanstack/react-pacer";
 import { useQueryClient } from "@tanstack/react-query";
-import { DefaultChatTransport } from "ai";
 import type { WorkflowStep, WorkflowTransition } from "@wraps/db";
+import { DefaultChatTransport } from "ai";
 import {
   AlertTriangle,
   Bot,
@@ -89,9 +89,8 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
   const [input, setInput] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
-  const [pendingWorkflow, setPendingWorkflow] = useState<PendingWorkflow | null>(
-    null
-  );
+  const [pendingWorkflow, setPendingWorkflow] =
+    useState<PendingWorkflow | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight: 44,
@@ -114,7 +113,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
     const definition = getWorkflowDefinition();
     // Only include if there are steps beyond the default trigger
     if (definition.steps.length <= 1) {
-      return undefined;
+      return;
     }
     return {
       name: workflowName,
@@ -459,7 +458,9 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
       {/* Pending Workflow Actions */}
       {pendingWorkflow && !isLoading && (
         <div className="border-t bg-muted/50 px-3 py-2">
-          <p className="mb-1.5 font-medium text-xs">Apply generated workflow?</p>
+          <p className="mb-1.5 font-medium text-xs">
+            Apply generated workflow?
+          </p>
           <p className="mb-2 text-muted-foreground text-xs">
             {pendingWorkflow.steps.length} step
             {pendingWorkflow.steps.length !== 1 ? "s" : ""},{" "}

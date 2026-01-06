@@ -90,40 +90,22 @@ async function triggerWorkflow(
     return;
   }
 
-  // Check for existing active execution (if reentry not allowed)
-  if (!wf.allowReentry) {
-    const existing = await db.query.workflowExecution.findFirst({
+  // Check reentry delay for completed executions (only when reentry not allowed)
+  if (!wf.allowReentry && wf.reentryDelaySeconds && wf.reentryDelaySeconds > 0) {
+    const recentlyCompleted = await db.query.workflowExecution.findFirst({
       where: and(
         eq(workflowExecution.workflowId, workflowId),
         eq(workflowExecution.contactId, contactId),
-        sql`${workflowExecution.status} IN ('pending', 'active', 'paused', 'waiting')`
+        eq(workflowExecution.status, "completed"),
+        sql`${workflowExecution.completedAt} > NOW() - INTERVAL '${sql.raw(String(wf.reentryDelaySeconds))} seconds'`
       ),
     });
 
-    if (existing) {
+    if (recentlyCompleted) {
       console.log(
-        `Skipping - contact ${contactId} already in workflow ${workflowId}`
+        `Skipping - contact ${contactId} completed workflow recently (reentry delay: ${wf.reentryDelaySeconds}s)`
       );
       return;
-    }
-
-    // Check reentry delay for completed executions
-    if (wf.reentryDelaySeconds && wf.reentryDelaySeconds > 0) {
-      const recentlyCompleted = await db.query.workflowExecution.findFirst({
-        where: and(
-          eq(workflowExecution.workflowId, workflowId),
-          eq(workflowExecution.contactId, contactId),
-          eq(workflowExecution.status, "completed"),
-          sql`${workflowExecution.completedAt} > NOW() - INTERVAL '${sql.raw(String(wf.reentryDelaySeconds))} seconds'`
-        ),
-      });
-
-      if (recentlyCompleted) {
-        console.log(
-          `Skipping - contact ${contactId} completed workflow recently (reentry delay: ${wf.reentryDelaySeconds}s)`
-        );
-        return;
-      }
     }
   }
 
@@ -186,19 +168,31 @@ async function triggerWorkflow(
     return;
   }
 
-  // Create execution record
+  // Create execution record atomically
+  // Uses ON CONFLICT DO NOTHING with partial unique index to prevent race conditions
+  // when allowReentry=false. The index only applies to active statuses.
   const [execution] = await db
     .insert(workflowExecution)
     .values({
       workflowId,
       contactId,
       organizationId,
+      allowReentry: wf.allowReentry, // Denormalized for partial unique index
       status: "active",
       currentStepId: firstStepId,
       triggerData: eventData ?? {},
       startedAt: new Date(),
     })
+    .onConflictDoNothing()
     .returning();
+
+  // If no row returned, a conflict occurred (contact already in workflow)
+  if (!execution) {
+    console.log(
+      `Skipping - contact ${contactId} already in workflow ${workflowId} (conflict)`
+    );
+    return;
+  }
 
   // Update workflow stats
   await db

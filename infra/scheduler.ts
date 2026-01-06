@@ -11,10 +11,7 @@
  */
 
 import { batchQueue, workflowQueue } from "./queues";
-import {
-  schedulerGroup,
-  schedulerRole,
-} from "./scheduler-resources";
+import { schedulerGroup, schedulerRole } from "./scheduler-resources";
 
 // Re-export for backwards compatibility
 export { schedulerGroup, schedulerRole };
