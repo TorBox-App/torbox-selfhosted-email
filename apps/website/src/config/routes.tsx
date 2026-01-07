@@ -49,6 +49,13 @@ const Cli = lazy(() => import("@/app/cli/page"));
 const Platform = lazy(() => import("@/app/platform/page"));
 const Changelog = lazy(() => import("@/app/changelog/page"));
 
+// Blog
+const Blog = lazy(() => import("@/app/blog/page"));
+const BlogDmarcSucks = lazy(() => import("@/app/blog/dmarc-sucks/page"));
+
+// Tools
+const Tools = lazy(() => import("@/app/tools/page"));
+
 export type RouteConfig = {
   path: string;
   element: React.ReactNode;
@@ -66,6 +73,12 @@ export const routes: RouteConfig[] = [
   {
     path: "/calculator",
     element: <Calculator />,
+  },
+
+  // Email Tools
+  {
+    path: "/tools",
+    element: <Tools />,
   },
 
   // Why Wraps (for internal champions)
@@ -162,6 +175,16 @@ export const routes: RouteConfig[] = [
   {
     path: "/changelog",
     element: <Changelog />,
+  },
+
+  // Blog
+  {
+    path: "/blog",
+    element: <Blog />,
+  },
+  {
+    path: "/blog/dmarc-sucks",
+    element: <BlogDmarcSucks />,
   },
 
   // Legal pages

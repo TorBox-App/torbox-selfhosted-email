@@ -35,6 +35,7 @@ const navigationItems = [
     submenuType: "features",
   },
   { name: "Docs", href: "/docs", hasSubmenu: true, submenuType: "docs" },
+  { name: "Blog", href: "/blog" },
   { name: "Pricing", href: "#pricing" },
   { name: "SMS", href: "/sms", badge: "Soon" },
 ];
@@ -50,6 +51,11 @@ const featuresItems = [
     name: "Platform",
     href: "/platform",
     description: "Wraps Platform for templates & broadcasts",
+  },
+  {
+    name: "Email Tools",
+    href: "/tools",
+    description: "Check your email deliverability setup",
   },
   {
     name: "Calculator",

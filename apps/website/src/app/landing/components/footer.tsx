@@ -10,7 +10,6 @@ const footerLinks = {
   product: [
     { name: "CLI & SDK", href: "/cli" },
     { name: "Platform", href: "/platform" },
-    { name: "Cost Calculator", href: "/calculator" },
     { name: "Pricing", href: "#pricing" },
   ],
   developers: [
@@ -25,14 +24,9 @@ const footerLinks = {
     },
   ],
   resources: [
+    { name: "Email Tools", href: "/tools" },
     { name: "Why Wraps", href: "/why-wraps" },
     { name: "Changelog", href: "/changelog" },
-    { name: "FAQ", href: "#faq" },
-    {
-      name: "AWS SES Docs",
-      href: "https://docs.aws.amazon.com/ses/",
-      external: true,
-    },
     {
       name: "Community",
       href: "https://github.com/wraps-team/wraps/discussions",
@@ -43,6 +37,7 @@ const footerLinks = {
       href: "https://github.com/wraps-team/wraps/issues",
       external: true,
     },
+    { name: "Cost Calculator", href: "/calculator" },
   ],
   legal: [
     { name: "Privacy Policy", href: "/privacy" },

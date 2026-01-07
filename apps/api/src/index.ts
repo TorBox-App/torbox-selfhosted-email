@@ -13,6 +13,7 @@ import { batchRoutes } from "./routes/batch";
 import { contactsRoutes } from "./routes/contacts";
 import { eventsRoutes } from "./routes/events";
 import { healthRoutes } from "./routes/health";
+import { toolsRoutes } from "./routes/tools";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
 import { workflowsRoutes } from "./routes/workflows";
@@ -66,7 +67,8 @@ export const app = new Elysia()
   .use(eventsRoutes)
   .use(workflowsRoutes)
   .use(webhooksRoutes)
-  .use(unsubscribeRoutes);
+  .use(unsubscribeRoutes)
+  .use(toolsRoutes);
 
 // Export type for Eden Treaty client
 export type App = typeof app;

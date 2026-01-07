@@ -32,6 +32,7 @@
     "@wraps/auth": "workspace:*",
     "@wraps/db": "workspace:*",
     "@wraps/email": "workspace:*",
+    "@wraps/email-check": "workspace:*",
     "croner": "9.1.0",
     "drizzle-orm": "0.44.7",
     "elysia": "^1.4.19",
