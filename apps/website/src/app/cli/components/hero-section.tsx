@@ -44,7 +44,7 @@ export function CliHeroSection() {
 
           {/* Main Headline */}
           <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-6xl lg:text-7xl">
-            <span className="flex flex-col items-center justify-center sm:flex-row sm:gap-3">
+            <span className="flex flex-row items-center justify-center gap-2 sm:gap-3">
               <span>Deploy </span>
               <WordRotate
                 className="text-green-500"
