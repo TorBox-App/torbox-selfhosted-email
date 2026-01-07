@@ -3,8 +3,120 @@
  * Free email deliverability tools - no authentication required
  */
 
-import { runEmailCheck } from "@wraps/email-check";
+import { runEmailCheck, type EmailCheckResult } from "@wraps/email-check";
 import { Elysia, t } from "elysia";
+
+/**
+ * Transform EmailCheckResult to API response format
+ */
+function formatEmailCheckResult(result: EmailCheckResult) {
+  return {
+    success: true,
+    domain: result.domain,
+    checkedAt: result.checkedAt,
+    duration: result.duration,
+    score: {
+      grade: result.score.grade,
+      score: result.score.finalScore,
+      maxScore: 100,
+      breakdown: result.score.breakdown,
+    },
+    spf: {
+      exists: result.spf.exists,
+      valid: result.spf.valid,
+      record: result.spf.record,
+      lookupCount: result.spf.lookupCount,
+      lookupLimit: result.spf.lookupLimit,
+      allMechanism: result.spf.allMechanism,
+      includes: result.spf.includes,
+      hasPtr: result.spf.hasPtr,
+      warnings: result.spf.warnings,
+    },
+    dkim: {
+      found: result.dkim.found,
+      selectorsFound: result.dkim.selectors
+        .filter((s) => s.valid && !s.revoked)
+        .map((s) => ({
+          selector: s.selector,
+          keyType: s.keyType,
+          keyBits: s.keyBits,
+          testMode: s.testMode,
+        })),
+      selectorsChecked: result.dkim.selectorsChecked,
+      warnings: result.dkim.warnings,
+    },
+    dmarc: {
+      exists: result.dmarc.exists,
+      valid: result.dmarc.valid,
+      record: result.dmarc.record,
+      policy: result.dmarc.policy,
+      subdomainPolicy: result.dmarc.subdomainPolicy,
+      reportingEnabled: result.dmarc.reportingEnabled,
+      pct: result.dmarc.percentage,
+      alignmentSpf: result.dmarc.alignmentSpf,
+      alignmentDkim: result.dmarc.alignmentDkim,
+      ruaAddresses: result.dmarc.ruaAddresses,
+      warnings: result.dmarc.warnings,
+    },
+    mx: {
+      exists: result.mx.exists,
+      hasRedundancy: result.mx.hasRedundancy,
+      records: result.mx.records.map((r) => ({
+        exchange: r.exchange,
+        priority: r.priority,
+        resolves: r.resolves,
+        ipv4Count: r.ipv4Addresses.length,
+        ipv6Count: r.ipv6Addresses.length,
+      })),
+    },
+    domainAge: {
+      ageInDays: result.domainAge.ageInDays,
+      createdAt: result.domainAge.createdAt,
+      expiresAt: result.domainAge.expiresAt,
+      daysUntilExpiry: result.domainAge.daysUntilExpiry,
+      registrar: result.domainAge.registrar,
+      source: result.domainAge.source,
+      privacyEnabled: result.domainAge.privacyEnabled,
+    },
+    ipv6: {
+      mxHasIpv6: result.ipv6.mxHasIpv6,
+      spfIncludesIpv6: result.ipv6.spfIncludesIpv6,
+      mxIpv6Count: result.ipv6.mxIpv6Addresses.length,
+    },
+    reverseDns: {
+      allHavePtr: result.reverseDns.allHavePtr,
+      allConfirm: result.reverseDns.allConfirm,
+      count: result.reverseDns.results.length,
+    },
+    blacklist: {
+      checked: !result.blacklist.quickMode,
+      overallClean: result.blacklist.overallClean,
+      domainListings: result.blacklist.domainChecks.listed.map((l) => ({
+        blacklist: l.blacklist,
+        priority: l.priority,
+        delistUrl: l.delistUrl,
+      })),
+      ipListings: result.blacklist.ipChecks.listed.map((l) => ({
+        blacklist: l.blacklist,
+        priority: l.priority,
+        target: l.target,
+        delistUrl: l.delistUrl,
+      })),
+    },
+    issues: result.score.deductions.map((d) => ({
+      check: d.check,
+      reason: d.reason,
+      points: d.points,
+      severity:
+        d.points >= 20 ? "critical" : d.points >= 10 ? "warning" : "info",
+    })),
+    bonuses: result.score.bonuses.map((b) => ({
+      check: b.check,
+      reason: b.reason,
+      points: b.points,
+    })),
+  };
+}
 
 export const toolsRoutes = new Elysia({ prefix: "/tools" })
   .post(
@@ -35,60 +147,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
           dkimSelectors: selectors, // Custom DKIM selectors (useful for AWS SES)
         });
 
-        // Return a simplified result for the frontend
-        return {
-          success: true,
-          domain: result.domain,
-          checkedAt: result.checkedAt,
-          duration: result.duration,
-          score: {
-            grade: result.score.grade,
-            score: result.score.finalScore,
-            maxScore: 100,
-          },
-          spf: {
-            exists: result.spf.exists,
-            valid: result.spf.valid,
-            record: result.spf.record,
-            lookupCount: result.spf.lookupCount,
-            allMechanism: result.spf.allMechanism,
-          },
-          dkim: {
-            found: result.dkim.found,
-            selectorsFound: result.dkim.selectors
-              .filter((s) => s.valid && !s.revoked)
-              .map((s) => ({
-                selector: s.selector,
-                keyType: s.keyType,
-                keyBits: s.keyBits,
-              })),
-            warnings: result.dkim.warnings,
-          },
-          dmarc: {
-            exists: result.dmarc.exists,
-            valid: result.dmarc.valid,
-            record: result.dmarc.record,
-            policy: result.dmarc.policy,
-            subdomainPolicy: result.dmarc.subdomainPolicy,
-            reportingEnabled: result.dmarc.reportingEnabled,
-            pct: result.dmarc.percentage,
-          },
-          mx: {
-            exists: result.mx.exists,
-            records: result.mx.records.map((r) => ({
-              exchange: r.exchange,
-              priority: r.priority,
-              resolves: r.resolves,
-            })),
-          },
-          issues: result.score.deductions.map((d) => ({
-            check: d.check,
-            reason: d.reason,
-            points: d.points,
-            severity:
-              d.points >= 20 ? "critical" : d.points >= 10 ? "warning" : "info",
-          })),
-        };
+        return formatEmailCheckResult(result);
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
@@ -134,59 +193,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
           skipTls: true,
         });
 
-        return {
-          success: true,
-          domain: result.domain,
-          checkedAt: result.checkedAt,
-          duration: result.duration,
-          score: {
-            grade: result.score.grade,
-            score: result.score.finalScore,
-            maxScore: 100,
-          },
-          spf: {
-            exists: result.spf.exists,
-            valid: result.spf.valid,
-            record: result.spf.record,
-            lookupCount: result.spf.lookupCount,
-            allMechanism: result.spf.allMechanism,
-          },
-          dkim: {
-            found: result.dkim.found,
-            selectorsFound: result.dkim.selectors
-              .filter((s) => s.valid && !s.revoked)
-              .map((s) => ({
-                selector: s.selector,
-                keyType: s.keyType,
-                keyBits: s.keyBits,
-              })),
-            warnings: result.dkim.warnings,
-          },
-          dmarc: {
-            exists: result.dmarc.exists,
-            valid: result.dmarc.valid,
-            record: result.dmarc.record,
-            policy: result.dmarc.policy,
-            subdomainPolicy: result.dmarc.subdomainPolicy,
-            reportingEnabled: result.dmarc.reportingEnabled,
-            pct: result.dmarc.percentage,
-          },
-          mx: {
-            exists: result.mx.exists,
-            records: result.mx.records.map((r) => ({
-              exchange: r.exchange,
-              priority: r.priority,
-              resolves: r.resolves,
-            })),
-          },
-          issues: result.score.deductions.map((d) => ({
-            check: d.check,
-            reason: d.reason,
-            points: d.points,
-            severity:
-              d.points >= 20 ? "critical" : d.points >= 10 ? "warning" : "info",
-          })),
-        };
+        return formatEmailCheckResult(result);
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Unknown error";

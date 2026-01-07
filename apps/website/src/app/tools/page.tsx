@@ -3,16 +3,20 @@
 import {
   AlertTriangle,
   ArrowRight,
+  Calendar,
   Check,
   ChevronDown,
+  Globe,
   Key,
   Loader2,
   Mail,
   Search,
+  Server,
   Settings2,
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -38,13 +42,25 @@ type EmailCheckResult = {
     grade: string;
     score: number;
     maxScore: number;
+    breakdown: {
+      spf: { max: number; score: number };
+      dkim: { max: number; score: number };
+      dmarc: { max: number; score: number };
+      mx: { max: number; score: number };
+      blacklist: { max: number; score: number };
+      bonus: { earned: number; possible: number };
+    };
   };
   spf: {
     exists: boolean;
     valid: boolean;
     record: string | null;
     lookupCount: number;
+    lookupLimit: number;
     allMechanism: string | null;
+    includes: string[];
+    hasPtr: boolean;
+    warnings: string[];
   };
   dkim: {
     found: boolean;
@@ -52,7 +68,9 @@ type EmailCheckResult = {
       selector: string;
       keyType: string;
       keyBits: number;
+      testMode: boolean;
     }>;
+    selectorsChecked: number;
     warnings: string[];
   };
   dmarc: {
@@ -63,13 +81,54 @@ type EmailCheckResult = {
     subdomainPolicy: string | null;
     reportingEnabled: boolean;
     pct: number | null;
+    alignmentSpf: string;
+    alignmentDkim: string;
+    ruaAddresses: string[];
+    warnings: string[];
   };
   mx: {
     exists: boolean;
+    hasRedundancy: boolean;
     records: Array<{
       exchange: string;
       priority: number;
       resolves: boolean;
+      ipv4Count: number;
+      ipv6Count: number;
+    }>;
+  };
+  domainAge: {
+    ageInDays: number | null;
+    createdAt: string | null;
+    expiresAt: string | null;
+    daysUntilExpiry: number | null;
+    registrar: string | null;
+    source: string;
+    privacyEnabled: boolean;
+  };
+  ipv6: {
+    mxHasIpv6: boolean;
+    spfIncludesIpv6: boolean;
+    mxIpv6Count: number;
+  };
+  reverseDns: {
+    allHavePtr: boolean;
+    allConfirm: boolean;
+    count: number;
+  };
+  blacklist: {
+    checked: boolean;
+    overallClean: boolean;
+    domainListings: Array<{
+      blacklist: string;
+      priority: string;
+      delistUrl: string | null;
+    }>;
+    ipListings: Array<{
+      blacklist: string;
+      priority: string;
+      target: string;
+      delistUrl: string | null;
     }>;
   };
   issues: Array<{
@@ -77,6 +136,11 @@ type EmailCheckResult = {
     reason: string;
     points: number;
     severity: "critical" | "warning" | "info";
+  }>;
+  bonuses: Array<{
+    check: string;
+    reason: string;
+    points: number;
   }>;
   error?: string;
 };
@@ -479,6 +543,71 @@ export default function ToolsPage() {
                 </Card>
               )}
 
+              {/* Score Breakdown - only show if new API format */}
+              {result.score?.breakdown && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Score Breakdown
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {[
+                        { key: "spf", label: "SPF", data: result.score.breakdown.spf },
+                        { key: "dkim", label: "DKIM", data: result.score.breakdown.dkim },
+                        { key: "dmarc", label: "DMARC", data: result.score.breakdown.dmarc },
+                        { key: "mx", label: "MX", data: result.score.breakdown.mx },
+                        { key: "blacklist", label: "Blacklist", data: result.score.breakdown.blacklist },
+                      ].map(({ key, label, data }) => (
+                        <div key={key} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>{label}</span>
+                            <span className="text-muted-foreground">
+                              {data.score}/{data.max}
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={`h-full transition-all ${
+                                data.score === data.max
+                                  ? "bg-green-500"
+                                  : data.score >= data.max * 0.5
+                                    ? "bg-yellow-500"
+                                    : "bg-red-500"
+                              }`}
+                              style={{ width: `${(data.score / data.max) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {result.score.breakdown.bonus.earned > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1">
+                              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                              Bonus Points
+                            </span>
+                            <span className="text-muted-foreground">
+                              +{result.score.breakdown.bonus.earned}/{result.score.breakdown.bonus.possible}
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full bg-purple-500 transition-all"
+                              style={{
+                                width: `${(result.score.breakdown.bonus.earned / result.score.breakdown.bonus.possible) * 100}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Issues */}
               {result.issues.length > 0 && (
                 <Card>
@@ -522,6 +651,36 @@ export default function ToolsPage() {
                               -{issue.points} pts
                             </Badge>
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Bonuses */}
+              {result.bonuses && result.bonuses.length > 0 && (
+                <Card className="border-purple-500/20 bg-purple-500/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-500" />
+                      Bonus Points Earned ({result.bonuses.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {result.bonuses.map((bonus, i) => (
+                        <div
+                          key={`bonus-${i}`}
+                          className="flex items-center justify-between rounded-lg border border-purple-500/20 bg-background p-3"
+                        >
+                          <div>
+                            <span className="font-medium">{bonus.check}</span>
+                            <span className="text-muted-foreground"> - {bonus.reason}</span>
+                          </div>
+                          <Badge variant="outline" className="border-purple-500/50 text-purple-600">
+                            +{bonus.points} pts
+                          </Badge>
                         </div>
                       ))}
                     </div>
@@ -643,6 +802,174 @@ export default function ToolsPage() {
                             : "Disabled"}
                         </div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Infrastructure Details - only show if new API format */}
+              {result.domainAge && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Server className="h-5 w-5" />
+                      Infrastructure Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      {/* Domain Age */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 font-medium">
+                          <Calendar className="h-4 w-4" />
+                          Domain Age
+                        </div>
+                        {result.domainAge.ageInDays !== null ? (
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Age</span>
+                              <span>
+                                {result.domainAge.ageInDays > 365
+                                  ? `${Math.floor(result.domainAge.ageInDays / 365)} years`
+                                  : `${result.domainAge.ageInDays} days`}
+                              </span>
+                            </div>
+                            {result.domainAge.createdAt && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Created</span>
+                                <span>{new Date(result.domainAge.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {result.domainAge.daysUntilExpiry !== null && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Expires in</span>
+                                <span
+                                  className={
+                                    result.domainAge.daysUntilExpiry < 30
+                                      ? "text-red-500"
+                                      : result.domainAge.daysUntilExpiry < 90
+                                        ? "text-yellow-500"
+                                        : ""
+                                  }
+                                >
+                                  {result.domainAge.daysUntilExpiry} days
+                                </span>
+                              </div>
+                            )}
+                            {result.domainAge.registrar && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Registrar</span>
+                                <span className="max-w-[180px] truncate text-right">
+                                  {result.domainAge.registrar}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">
+                            {result.domainAge.privacyEnabled
+                              ? "WHOIS privacy enabled"
+                              : "Data unavailable"}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* IPv6 & Reverse DNS */}
+                      {result.ipv6 && result.reverseDns && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 font-medium">
+                            <Globe className="h-4 w-4" />
+                            Network
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">IPv6 on MX</span>
+                              <StatusBadge
+                                status={result.ipv6.mxHasIpv6 ? "pass" : "none"}
+                                label={result.ipv6.mxHasIpv6 ? "Supported" : "No"}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">IPv6 in SPF</span>
+                              <StatusBadge
+                                status={result.ipv6.spfIncludesIpv6 ? "pass" : "none"}
+                                label={result.ipv6.spfIncludesIpv6 ? "Yes" : "No"}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Reverse DNS (PTR)</span>
+                              <StatusBadge
+                                status={
+                                  result.reverseDns.allHavePtr
+                                    ? result.reverseDns.allConfirm
+                                      ? "pass"
+                                      : "warn"
+                                    : "fail"
+                                }
+                                label={
+                                  result.reverseDns.allHavePtr
+                                    ? result.reverseDns.allConfirm
+                                      ? "Valid"
+                                      : "Partial"
+                                    : "Missing"
+                                }
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">MX Redundancy</span>
+                              <StatusBadge
+                                status={result.mx.hasRedundancy ? "pass" : "warn"}
+                                label={result.mx.hasRedundancy ? "Yes" : "Single"}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Blacklist Status */}
+                      {result.blacklist && (
+                        <div className="space-y-3 md:col-span-2">
+                          <div className="flex items-center gap-2 font-medium">
+                            <ShieldAlert className="h-4 w-4" />
+                            Blacklist Status
+                          </div>
+                          {result.blacklist.checked ? (
+                            result.blacklist.overallClean ? (
+                              <div className="flex items-center gap-2 text-green-600 text-sm">
+                                <Check className="h-4 w-4" />
+                                Not listed on any monitored blacklists
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {[...(result.blacklist.domainListings || []), ...(result.blacklist.ipListings || [])].map(
+                                  (listing, i) => (
+                                    <div
+                                      key={`bl-${i}`}
+                                      className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/5 p-2 text-sm"
+                                    >
+                                      <span className="text-red-600">Listed on {listing.blacklist}</span>
+                                      {listing.delistUrl && (
+                                        <a
+                                          href={listing.delistUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-500 hover:underline"
+                                        >
+                                          Request removal
+                                        </a>
+                                      )}
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            )
+                          ) : (
+                            <p className="text-muted-foreground text-sm">
+                              Skipped in quick mode. Run a full scan to check blacklists.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
