@@ -81,6 +81,7 @@ export async function deployEmailStack(
       region: config.region,
       certificateArn,
       hostedZoneId: hostedZone?.id, // Pass hosted zone ID for automatic DNS record creation
+      wafEnabled: emailConfig.tracking.wafEnabled,
     });
   }
 

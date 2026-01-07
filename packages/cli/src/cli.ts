@@ -43,6 +43,13 @@ import { smsSync } from "./commands/sms/sync.js";
 import { smsTest } from "./commands/sms/test.js";
 import { smsUpgrade } from "./commands/sms/upgrade.js";
 import { smsVerifyNumber } from "./commands/sms/verify-number.js";
+// Storage commands
+import { storageDestroy } from "./commands/storage/destroy.js";
+import { init as storageInit } from "./commands/storage/init.js";
+import { storageStatus } from "./commands/storage/status.js";
+import { storageSync } from "./commands/storage/sync.js";
+import { storageUpgrade } from "./commands/storage/upgrade.js";
+import { storageVerify } from "./commands/storage/verify.js";
 // Telemetry commands
 import {
   telemetryDisable,
@@ -81,8 +88,9 @@ function showHelp() {
   console.log("Usage: wraps [service] <command> [options]\n");
   console.log("Services:");
   console.log(`  ${pc.cyan("email")}       Email infrastructure (AWS SES)`);
+  console.log(`  ${pc.cyan("sms")}         SMS infrastructure (AWS End User Messaging)`);
   console.log(
-    `  ${pc.cyan("sms")}         SMS infrastructure (AWS End User Messaging)\n`
+    `  ${pc.cyan("storage")}     File storage infrastructure (AWS S3 + CloudFront)\n`
   );
   console.log("Email Commands:");
   console.log(
@@ -127,6 +135,25 @@ function showHelp() {
   console.log(`  ${pc.cyan("sms register")}         Register toll-free number`);
   console.log(
     `  ${pc.cyan("sms destroy")}          Remove SMS infrastructure\n`
+  );
+  console.log("Storage Commands:");
+  console.log(
+    `  ${pc.cyan("storage init")}         Deploy storage infrastructure (S3 + CDN)`
+  );
+  console.log(
+    `  ${pc.cyan("storage status")}       Show storage infrastructure details`
+  );
+  console.log(
+    `  ${pc.cyan("storage verify")}       Check DNS and certificate status`
+  );
+  console.log(
+    `  ${pc.cyan("storage upgrade")}      Add custom domain after cert validation`
+  );
+  console.log(
+    `  ${pc.cyan("storage sync")}         Sync infrastructure with current config`
+  );
+  console.log(
+    `  ${pc.cyan("storage destroy")}      Remove storage infrastructure\n`
   );
   console.log("Local Development:");
   console.log(`  ${pc.cyan("console")}               Start local web console\n`);
@@ -334,6 +361,11 @@ if (!primaryCommand) {
           hint: "AWS End User Messaging",
         },
         {
+          value: "storage-init",
+          label: "Deploy Storage",
+          hint: "AWS S3 + CloudFront CDN",
+        },
+        {
           value: "status",
           label: "View Status",
           hint: "Check deployed infrastructure",
@@ -388,6 +420,15 @@ if (!primaryCommand) {
           region: flags.region,
           preset: flags.preset,
           yes: flags.yes,
+        });
+        break;
+      case "storage-init":
+        await storageInit({
+          provider: flags.provider,
+          region: flags.region,
+          preset: flags.preset,
+          yes: flags.yes,
+          preview: flags.preview,
         });
         break;
       case "status":
@@ -707,6 +748,72 @@ async function run() {
       return;
     }
 
+    // Handle Storage subcommands (e.g., wraps storage init)
+    if (primaryCommand === "storage" && subCommand) {
+      switch (subCommand) {
+        case "init":
+          await storageInit({
+            provider: flags.provider,
+            region: flags.region,
+            preset: flags.preset,
+            domain: flags.domain,
+            yes: flags.yes,
+            preview: flags.preview,
+          });
+          break;
+
+        case "status":
+          await storageStatus({
+            region: flags.region,
+          });
+          break;
+
+        case "verify":
+          await storageVerify({
+            region: flags.region,
+          });
+          break;
+
+        case "upgrade":
+          await storageUpgrade({
+            region: flags.region,
+            yes: flags.yes,
+            preview: flags.preview,
+          });
+          break;
+
+        case "sync":
+          await storageSync({
+            region: flags.region,
+          });
+          break;
+
+        case "destroy":
+          await storageDestroy({
+            force: flags.force,
+            region: flags.region,
+            preview: flags.preview,
+          });
+          break;
+
+        default:
+          clack.log.error(`Unknown storage command: ${subCommand}`);
+          console.log(
+            `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
+          );
+          process.exit(1);
+      }
+      // Track storage commands
+      const storageDuration = Date.now() - startTime;
+      const storageCommandName = `storage:${subCommand}`;
+      trackCommand(storageCommandName, {
+        success: true,
+        duration_ms: storageDuration,
+        service: "storage",
+      });
+      return;
+    }
+
     // Handle Platform subcommands
     if (primaryCommand === "platform") {
       if (!subCommand) {
@@ -839,6 +946,7 @@ async function run() {
       // Show help for service without subcommand
       case "email":
       case "sms":
+      case "storage":
       case "aws":
         console.log(
           `\nPlease specify a command for ${primaryCommand} service.\n`

@@ -14,6 +14,9 @@ export default defineConfig({
     outDir: "../cli/dist/console",
     emptyOutDir: true,
   },
+  worker: {
+    format: "es",
+  },
   server: {
     port: 3000,
     proxy: {

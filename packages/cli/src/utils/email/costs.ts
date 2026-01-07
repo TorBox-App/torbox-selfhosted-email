@@ -40,6 +40,11 @@ const AWS_PRICING = {
   // SES Mail Manager Archiving
   MAIL_MANAGER_INGESTION_PER_GB: 2.0, // $2.00 per GB ingested
   MAIL_MANAGER_STORAGE_PER_GB: 0.19, // $0.19 per GB-month
+
+  // WAF pricing (for HTTPS tracking CDN protection)
+  WAF_WEB_ACL_PER_MONTH: 5.0, // $5.00 per Web ACL per month
+  WAF_RULE_PER_MONTH: 1.0, // $1.00 per rule per month
+  WAF_REQUESTS_PER_MILLION: 0.6, // $0.60 per million requests
 } as const;
 
 /**
@@ -275,6 +280,34 @@ function calculateTrackingCost(
 }
 
 /**
+ * Calculate cost for WAF protection on HTTPS tracking CDN
+ * Only applies when both HTTPS tracking and WAF are enabled
+ */
+function calculateWafCost(
+  config: WrapsEmailConfig,
+  emailsPerMonth: number
+): FeatureCost | undefined {
+  if (!config.tracking?.httpsEnabled || !config.tracking?.wafEnabled) {
+    return;
+  }
+
+  // Base WAF costs: 1 Web ACL + 1 rate limit rule
+  const baseCost =
+    AWS_PRICING.WAF_WEB_ACL_PER_MONTH + AWS_PRICING.WAF_RULE_PER_MONTH;
+
+  // Request costs: estimate ~2 requests per email (open + click)
+  // This is a rough estimate - actual varies based on engagement rates
+  const estimatedRequests = emailsPerMonth * 2;
+  const requestCost =
+    (estimatedRequests / 1_000_000) * AWS_PRICING.WAF_REQUESTS_PER_MILLION;
+
+  return {
+    monthly: baseCost + requestCost,
+    description: "WAF rate limiting for HTTPS tracking CDN",
+  };
+}
+
+/**
  * Calculate cost for reputation metrics
  */
 function calculateReputationMetricsCost(
@@ -353,6 +386,7 @@ export function calculateCosts(
   const dynamoDBHistory = calculateDynamoDBCost(config, emailsPerMonth);
   const emailArchiving = calculateEmailArchivingCost(config, emailsPerMonth);
   const dedicatedIp = calculateDedicatedIpCost(config);
+  const waf = calculateWafCost(config, emailsPerMonth);
 
   // Calculate SES base costs (always present)
   const sesEmailCost =
@@ -367,7 +401,8 @@ export function calculateCosts(
     (eventTracking?.monthly || 0) +
     (dynamoDBHistory?.monthly || 0) +
     (emailArchiving?.monthly || 0) +
-    (dedicatedIp?.monthly || 0);
+    (dedicatedIp?.monthly || 0) +
+    (waf?.monthly || 0);
 
   return {
     tracking,
@@ -376,6 +411,7 @@ export function calculateCosts(
     dynamoDBHistory,
     emailArchiving,
     dedicatedIp,
+    waf,
     total: {
       monthly: totalMonthlyCost,
       perEmail: AWS_PRICING.SES_PER_EMAIL,
@@ -442,6 +478,11 @@ export function getCostSummary(
   if (costs.dedicatedIp) {
     lines.push(
       `  - ${costs.dedicatedIp.description}: ${formatCost(costs.dedicatedIp.monthly)}`
+    );
+  }
+  if (costs.waf) {
+    lines.push(
+      `  - ${costs.waf.description}: ${formatCost(costs.waf.monthly)}`
     );
   }
 

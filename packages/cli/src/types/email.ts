@@ -40,6 +40,7 @@ export type WrapsEmailConfig = {
     clicks?: boolean;
     customRedirectDomain?: string;
     httpsEnabled?: boolean; // Enable HTTPS with CloudFront + ACM
+    wafEnabled?: boolean; // Enable WAF with rate limiting for HTTPS tracking CDN
   };
 
   // Security
@@ -92,6 +93,7 @@ export type EmailFeatureCostBreakdown = {
   dynamoDBHistory?: FeatureCost;
   emailArchiving?: FeatureCost;
   dedicatedIp?: FeatureCost;
+  waf?: FeatureCost;
   total: FeatureCost;
 };
 

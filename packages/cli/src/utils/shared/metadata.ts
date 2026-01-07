@@ -7,8 +7,10 @@ import type {
   Provider,
   ServiceType,
   SMSConfigPreset,
+  StorageConfigPreset,
   WrapsEmailConfig,
   WrapsSMSConfig,
+  WrapsStorageConfig,
 } from "../../types/index.js";
 import { ensureWrapsDir, getWrapsDir } from "./fs.js";
 
@@ -42,6 +44,7 @@ export type ConnectionMetadata = {
   services: {
     email?: ServiceConfig<WrapsEmailConfig, EmailConfigPreset>;
     sms?: ServiceConfig<WrapsSMSConfig, SMSConfigPreset>;
+    storage?: ServiceConfig<WrapsStorageConfig, StorageConfigPreset>;
   };
 };
 
@@ -360,8 +363,8 @@ export function addServiceToConnection(
   region: string,
   provider: Provider,
   service: ServiceType,
-  config: WrapsEmailConfig | WrapsSMSConfig,
-  preset?: EmailConfigPreset | SMSConfigPreset,
+  config: WrapsEmailConfig | WrapsSMSConfig | WrapsStorageConfig,
+  preset?: EmailConfigPreset | SMSConfigPreset | StorageConfigPreset,
   existingMetadata?: ConnectionMetadata
 ): ConnectionMetadata {
   const timestamp = new Date().toISOString();
@@ -378,6 +381,12 @@ export function addServiceToConnection(
       existingMetadata.services.sms = {
         preset: preset as SMSConfigPreset,
         config: config as WrapsSMSConfig,
+        deployedAt: timestamp,
+      };
+    } else if (service === "storage") {
+      existingMetadata.services.storage = {
+        preset: preset as StorageConfigPreset,
+        config: config as WrapsStorageConfig,
         deployedAt: timestamp,
       };
     }
@@ -407,6 +416,12 @@ export function addServiceToConnection(
       config: config as WrapsSMSConfig,
       deployedAt: timestamp,
     };
+  } else if (service === "storage") {
+    metadata.services.storage = {
+      preset: preset as StorageConfigPreset,
+      config: config as WrapsStorageConfig,
+      deployedAt: timestamp,
+    };
   }
 
   return metadata;
@@ -422,7 +437,9 @@ export function updateServiceConfig<T extends ServiceType>(
     ? Partial<WrapsEmailConfig>
     : T extends "sms"
       ? Partial<WrapsSMSConfig>
-      : never
+      : T extends "storage"
+        ? Partial<WrapsStorageConfig>
+        : never
 ): void {
   if (service === "email" && metadata.services.email) {
     metadata.services.email.config = {
@@ -433,6 +450,11 @@ export function updateServiceConfig<T extends ServiceType>(
     metadata.services.sms.config = {
       ...metadata.services.sms.config,
       ...(config as Partial<WrapsSMSConfig>),
+    };
+  } else if (service === "storage" && metadata.services.storage) {
+    metadata.services.storage.config = {
+      ...metadata.services.storage.config,
+      ...(config as Partial<WrapsStorageConfig>),
     };
   } else {
     throw new Error(`${service} service not configured in metadata`);
@@ -454,6 +476,9 @@ export function removeServiceFromConnection(
   } else if (service === "sms") {
     const { sms, ...rest } = metadata.services;
     metadata.services = rest;
+  } else if (service === "storage") {
+    const { storage, ...rest } = metadata.services;
+    metadata.services = rest;
   }
   metadata.timestamp = new Date().toISOString();
 }
@@ -471,6 +496,9 @@ export function hasService(
   if (service === "sms") {
     return metadata.services.sms !== undefined;
   }
+  if (service === "storage") {
+    return metadata.services.storage !== undefined;
+  }
   return false;
 }
 
@@ -486,6 +514,9 @@ export function getConfiguredServices(
   }
   if (metadata.services.sms) {
     services.push("sms");
+  }
+  if (metadata.services.storage) {
+    services.push("storage");
   }
   return services;
 }

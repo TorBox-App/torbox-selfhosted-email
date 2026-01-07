@@ -15,6 +15,9 @@ import { SMSDetail } from "@/components/SMSDetail";
 import { SMSLogs } from "@/components/SMSLogs";
 import { SMSMetrics } from "@/components/SMSMetrics";
 import { SMSSettings } from "@/components/SMSSettings";
+import { StorageFiles } from "@/components/StorageFiles";
+import { StorageMetrics } from "@/components/StorageMetrics";
+import { StorageSettings } from "@/components/StorageSettings";
 import { ThemeProvider } from "@/components/theme-provider";
 import {
   Breadcrumb,
@@ -73,6 +76,15 @@ function AppContent() {
       return "SMS Details";
     }
 
+    // Handle dynamic storage detail route
+    if (
+      location.pathname.startsWith("/storage/") &&
+      location.pathname !== "/storage/metrics" &&
+      location.pathname !== "/storage/settings"
+    ) {
+      return "File Details";
+    }
+
     switch (location.pathname) {
       case "/":
       case "/email":
@@ -87,6 +99,12 @@ function AppContent() {
         return "SMS Metrics";
       case "/sms/settings":
         return "SMS Settings";
+      case "/storage":
+        return "Storage";
+      case "/storage/metrics":
+        return "Storage Metrics";
+      case "/storage/settings":
+        return "Storage Settings";
       default:
         return "Emails";
     }
@@ -122,6 +140,9 @@ function AppContent() {
               <Route element={<SMSDetail />} path="/sms/:id" />
               <Route element={<SMSMetrics />} path="/sms/metrics" />
               <Route element={<SMSSettings />} path="/sms/settings" />
+              <Route element={<StorageFiles />} path="/storage" />
+              <Route element={<StorageMetrics />} path="/storage/metrics" />
+              <Route element={<StorageSettings />} path="/storage/settings" />
             </Routes>
           ) : (
             <div className="flex items-center justify-center p-8">

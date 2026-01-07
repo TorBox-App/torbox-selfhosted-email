@@ -57,6 +57,25 @@ export type {
   WrapsSMSFeatureMetadata,
 } from "./sms.js";
 
+// Re-export Storage types
+export type {
+  CloudFrontPriceClass,
+  GeoRestriction,
+  StorageConfigPreset,
+  StorageDestroyOptions,
+  StorageFeatureCostBreakdown,
+  StorageInitOptions,
+  StorageRetention,
+  StorageStackConfig,
+  StorageStackOutputs,
+  StorageStatusOptions,
+  StorageUpgradeOptions,
+  StorageVerifyOptions,
+  WrapsStorageConfig,
+  WrapsStorageFeature,
+  WrapsStorageFeatureMetadata,
+} from "./storage.js";
+
 // Backwards compatibility aliases (deprecated, use specific types instead)
 // Import specific types for legacy aliases
 import type {

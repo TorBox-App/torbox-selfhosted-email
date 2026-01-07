@@ -9,6 +9,7 @@ export type CloudFrontTrackingConfig = {
   region: string; // SES region for the origin
   certificateArn: pulumi.Output<string>;
   hostedZoneId?: string; // Optional Route53 hosted zone for automatic DNS record creation
+  wafEnabled?: boolean; // Enable WAF Web ACL with rate limiting (default: false)
 };
 
 /**
@@ -41,7 +42,7 @@ async function findDistributionByAlias(alias: string): Promise<string | null> {
 export type CloudFrontResources = {
   distribution: aws.cloudfront.Distribution;
   domainName: pulumi.Output<string>;
-  webAcl: aws.wafv2.WebAcl;
+  webAcl?: aws.wafv2.WebAcl;
 };
 
 /**
@@ -111,15 +112,15 @@ async function createWAFWebACL(): Promise<aws.wafv2.WebAcl> {
  *
  * This creates a CloudFront distribution that sits in front of AWS SES's tracking endpoint
  * (r.{region}.awstrack.me) and provides HTTPS support with a custom domain and SSL certificate.
- * Also creates a WAF Web ACL with rate limiting for security.
+ * Optionally creates a WAF Web ACL with rate limiting for security.
  */
 export async function createCloudFrontTracking(
   config: CloudFrontTrackingConfig
 ): Promise<CloudFrontResources> {
   const sesTrackingOrigin = `r.${config.region}.awstrack.me`;
 
-  // Create WAF Web ACL with rate limiting protection
-  const webAcl = await createWAFWebACL();
+  // Create WAF Web ACL with rate limiting protection (only if enabled)
+  const webAcl = config.wafEnabled ? await createWAFWebACL() : undefined;
 
   // Check if CloudFront distribution already exists with this alias
   const existingDistributionId = await findDistributionByAlias(
@@ -127,13 +128,13 @@ export async function createCloudFrontTracking(
   );
 
   // CloudFront distribution configuration
-  const distributionConfig = {
+  const distributionConfig: aws.cloudfront.DistributionArgs = {
     enabled: true,
     comment: "Wraps email tracking with HTTPS support",
     aliases: [config.customTrackingDomain],
 
-    // Attach WAF Web ACL for rate limiting protection
-    webAclId: webAcl.arn,
+    // Attach WAF Web ACL for rate limiting protection (only if enabled)
+    webAclId: webAcl?.arn,
 
     // Origin: SES tracking endpoint
     origins: [

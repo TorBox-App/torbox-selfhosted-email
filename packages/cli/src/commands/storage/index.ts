@@ -1,0 +1,12 @@
+export { init } from "./init.js";
+export type { StorageInitOptions } from "./init.js";
+export { storageStatus } from "./status.js";
+export type { StorageStatusOptions } from "./status.js";
+export { storageVerify } from "./verify.js";
+export type { StorageVerifyOptions } from "./verify.js";
+export { storageUpgrade } from "./upgrade.js";
+export type { StorageUpgradeOptions } from "../../types/index.js";
+export { storageSync } from "./sync.js";
+export type { StorageSyncOptions } from "./sync.js";
+export { storageDestroy } from "./destroy.js";
+export type { StorageDestroyOptions } from "./destroy.js";

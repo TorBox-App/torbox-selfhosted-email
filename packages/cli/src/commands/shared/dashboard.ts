@@ -38,6 +38,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
   // 3. Load stack outputs to get configuration
   let emailStackOutputs: any = {};
   let smsStackOutputs: any = {};
+  let storageStackOutputs: any = {};
 
   try {
     // Ensure Pulumi workspace is configured (sets backend URL)
@@ -65,10 +66,22 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
       // SMS stack not found, continue
     }
 
-    // If neither stack found, show error
+    // Try to load storage stack
+    try {
+      const storageStack = await pulumi.automation.LocalWorkspace.selectStack({
+        stackName: `wraps-storage-${identity.accountId}-${region}`,
+        workDir: getPulumiWorkDir(),
+      });
+      storageStackOutputs = await storageStack.outputs();
+    } catch (_storageError: unknown) {
+      // Storage stack not found, continue
+    }
+
+    // If no stack found, show error
     if (
       Object.keys(emailStackOutputs).length === 0 &&
-      Object.keys(smsStackOutputs).length === 0
+      Object.keys(smsStackOutputs).length === 0 &&
+      Object.keys(storageStackOutputs).length === 0
     ) {
       throw new Error("No infrastructure found");
     }
@@ -76,7 +89,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
     progress.stop();
     clack.log.error("No Wraps infrastructure found");
     console.log(
-      `\\nRun ${pc.cyan("wraps email init")} or ${pc.cyan("wraps sms init")} to deploy infrastructure first.\\n`
+      `\\nRun ${pc.cyan("wraps email init")}, ${pc.cyan("wraps sms init")}, or ${pc.cyan("wraps storage init")} to deploy infrastructure first.\\n`
     );
     process.exit(1);
   }
@@ -93,11 +106,19 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
   const smsPhoneNumberType = smsStackOutputs.phoneNumberType?.value;
   const smsConfigSetName = smsStackOutputs.configSetName?.value;
 
-  // Load SMS config from metadata for protect configuration and event tracking
+  // Extract storage outputs
+  const storageBucketName = storageStackOutputs.bucketName?.value;
+  const storageRoleArn = storageStackOutputs.roleArn?.value;
+  const storageDistributionId = storageStackOutputs.distributionId?.value;
+  const storageDistributionDomain = storageStackOutputs.distributionDomain?.value;
+  const storageCertificateArn = storageStackOutputs.acmCertificateArn?.value;
+
+  // Load SMS and storage config from metadata
   let smsProtectEnabled = false;
   let smsAllowedCountries: string[] | undefined;
   let smsAitFiltering: boolean | undefined;
   let smsArchiveRetention: string | undefined;
+  let storageCustomDomain: string | undefined;
 
   try {
     const metadata = await loadConnectionMetadata(identity.accountId, region);
@@ -111,6 +132,9 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
       if (smsConfig.eventTracking?.archiveRetention) {
         smsArchiveRetention = smsConfig.eventTracking.archiveRetention;
       }
+    }
+    if (metadata?.services?.storage?.config?.cdn?.customDomain) {
+      storageCustomDomain = metadata.services.storage.config.cdn.customDomain;
     }
   } catch {
     // Metadata load failed, continue with defaults
@@ -146,6 +170,13 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
     smsAllowedCountries,
     smsAitFiltering,
     smsArchiveRetention,
+    // Storage config (don't pass roleArn - use current credentials like email)
+    storageBucketName,
+    storageRoleArn: undefined, // Use current credentials instead of assuming role
+    storageDistributionId,
+    storageDistributionDomain,
+    storageCustomDomain,
+    storageCertificateArn,
   });
 
   console.log(`\\n${pc.bold("Dashboard:")} ${pc.cyan(url)}`);

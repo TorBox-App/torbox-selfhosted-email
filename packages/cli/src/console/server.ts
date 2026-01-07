@@ -10,6 +10,7 @@ import { createEmailsRouter } from "./routes/emails.js";
 import { createMetricsRouter } from "./routes/metrics.js";
 import { createSettingsRouter } from "./routes/settings.js";
 import { createSMSRouter } from "./routes/sms.js";
+import { createStorageRouter } from "./routes/storage.js";
 import { createUserRouter } from "./routes/user.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,6 +34,13 @@ export type ServerConfig = {
   smsAllowedCountries?: string[];
   smsAitFiltering?: boolean;
   smsArchiveRetention?: string;
+  // Storage config
+  storageBucketName?: string;
+  storageRoleArn?: string;
+  storageDistributionId?: string;
+  storageDistributionDomain?: string;
+  storageCustomDomain?: string;
+  storageCertificateArn?: string;
 };
 
 export type ServerInfo = {
@@ -87,12 +95,18 @@ export async function startConsoleServer(
   app.use((_req, res, next) => {
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("X-Content-Type-Options", "nosniff");
+
+    // Build CSP with optional custom domain for storage CDN
+    const customDomainSrc = config.storageCustomDomain
+      ? ` https://${config.storageCustomDomain}`
+      : "";
     res.setHeader(
       "Content-Security-Policy",
       "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
         "font-src 'self' https://fonts.gstatic.com; " +
-        "connect-src 'self'"
+        `img-src 'self' data: blob: https://*.amazonaws.com https://*.cloudfront.net${customDomainSrc}; ` +
+        `connect-src 'self' https://*.amazonaws.com https://*.cloudfront.net${customDomainSrc}`
     );
     next();
   });
@@ -126,6 +140,11 @@ export async function startConsoleServer(
   );
   app.use("/api/user", authenticateToken(authToken), createUserRouter(config));
   app.use("/api/sms", authenticateToken(authToken), createSMSRouter(config));
+  app.use(
+    "/api/storage",
+    authenticateToken(authToken),
+    createStorageRouter(config)
+  );
 
   // Serve static files from console-ui build
   // __dirname will be dist/ after compilation, console UI is in dist/console/
