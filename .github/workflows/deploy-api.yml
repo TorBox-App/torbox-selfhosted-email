@@ -7,6 +7,7 @@ on:
       - 'apps/api/**'
       - 'packages/db/**'
       - 'packages/email/**'
+      - 'packages/email-check/**'
       - 'infra/**'
       - 'sst.config.ts'
       - '.github/workflows/deploy-api.yml'
@@ -54,6 +55,7 @@ jobs:
           pnpm --filter @wraps/db build
           pnpm --filter @wraps/auth build
           pnpm --filter @wraps/email build
+          pnpm --filter @wraps/email-check build
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
