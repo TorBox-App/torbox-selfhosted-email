@@ -170,8 +170,8 @@ export async function runEmailCheck(
     warnings: [],
   };
 
-  // Check domain age via RDAP
-  const domainAgeResult = await checkDomainAge(normalizedDomain, { quick });
+  // Check domain age via RDAP (always run - it's a single fast HTTP request)
+  const domainAgeResult = await checkDomainAge(normalizedDomain);
 
   const dnssecResult: DnssecResult = {
     enabled: false,

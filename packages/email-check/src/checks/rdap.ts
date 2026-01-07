@@ -48,9 +48,9 @@ type RdapEntity = {
  */
 export async function checkDomainAge(
   domain: string,
-  options: { quick?: boolean; timeout?: number } = {}
+  options: { skip?: boolean; timeout?: number } = {}
 ): Promise<DomainAgeResult> {
-  const { quick = false, timeout = 10_000 } = options;
+  const { skip = false, timeout = 10_000 } = options;
 
   const result: DomainAgeResult = {
     createdAt: null,
@@ -68,8 +68,8 @@ export async function checkDomainAge(
     errors: [],
   };
 
-  if (quick) {
-    result.errors.push("Skipped in quick mode");
+  if (skip) {
+    result.errors.push("Skipped");
     return result;
   }
 
