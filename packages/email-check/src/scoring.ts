@@ -111,6 +111,11 @@ export function calculateScore(checks: AllCheckResults): ScoreResult {
   }
 
   // === DKIM (25 points max) ===
+  // Check if domain uses AWS SES (which has random DKIM selectors we can't discover)
+  const usesAwsSes = checks.spf.includes.some(
+    (inc) => inc.includes("amazonses.com") || inc.includes("amazon.com")
+  );
+
   if (checks.dkim.found) {
     const validSelector = checks.dkim.selectors.find(
       (s) => s.valid && !s.revoked
@@ -166,6 +171,16 @@ export function calculateScore(checks: AllCheckResults): ScoreResult {
         reason: "No valid DKIM record",
       });
     }
+  } else if (usesAwsSes) {
+    // AWS SES uses random DKIM selectors that can't be discovered via DNS scanning
+    // Reduce penalty since DKIM likely exists but we can't verify it
+    score -= 5;
+    deductions.push({
+      check: "dkim",
+      points: 5,
+      reason:
+        "DKIM not verifiable (AWS SES uses random selectors). Send a test email to verify DKIM configuration.",
+    });
   } else {
     score -= 25;
     deductions.push({
