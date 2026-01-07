@@ -10,7 +10,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
   .post(
     "/email-check",
     async ({ body }) => {
-      const { domain, quick = true } = body;
+      const { domain, quick = true, dkimSelector } = body;
 
       // Validate domain format
       if (!/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(domain)) {
@@ -25,6 +25,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
           quick,
           skipBlacklists: quick, // Skip blacklists in quick mode for speed
           skipTls: true, // Skip TLS checks (port 25 often blocked)
+          dkimSelector, // Custom DKIM selector (useful for AWS SES)
         });
 
         // Return a simplified result for the frontend
@@ -95,12 +96,13 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
       body: t.Object({
         domain: t.String({ minLength: 3 }),
         quick: t.Optional(t.Boolean()),
+        dkimSelector: t.Optional(t.String()),
       }),
       detail: {
         tags: ["tools"],
         summary: "Check email deliverability",
         description:
-          "Comprehensive email deliverability check for any domain. Returns SPF, DKIM, DMARC status and a grade.",
+          "Comprehensive email deliverability check for any domain. Returns SPF, DKIM, DMARC status and a grade. Optionally provide a DKIM selector for providers like AWS SES that use random selectors.",
       },
     }
   )

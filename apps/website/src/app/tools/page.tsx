@@ -5,9 +5,11 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
+  Key,
   Loader2,
   Mail,
   Search,
+  Settings2,
   Shield,
   ShieldAlert,
   ShieldCheck,
@@ -188,6 +190,8 @@ function RecordDisplay({
 
 export default function ToolsPage() {
   const [domain, setDomain] = useState("");
+  const [dkimSelector, setDkimSelector] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<EmailCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -205,7 +209,11 @@ export default function ToolsPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ domain: domain.trim(), quick: true }),
+        body: JSON.stringify({
+          domain: domain.trim(),
+          quick: true,
+          ...(dkimSelector.trim() && { dkimSelector: dkimSelector.trim() }),
+        }),
       });
 
       const data = await response.json();
@@ -322,6 +330,39 @@ export default function ToolsPage() {
                   )}
                 </Button>
               </div>
+
+              {/* Advanced Options */}
+              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                <CollapsibleTrigger className="mt-4 flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground">
+                  <Settings2 className="h-4 w-4" />
+                  Advanced Options
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="mb-1.5 flex items-center gap-2 font-medium text-sm">
+                          <Key className="h-4 w-4" />
+                          DKIM Selector
+                        </label>
+                        <Input
+                          placeholder="e.g., google, selector1, or your AWS SES selector"
+                          value={dkimSelector}
+                          onChange={(e) => setDkimSelector(e.target.value)}
+                          disabled={isLoading}
+                        />
+                        <p className="mt-1.5 text-muted-foreground text-xs">
+                          AWS SES uses random selectors that we can't discover automatically.
+                          Find yours in the SES console under "View DNS records" for your domain.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </CardContent>
           </Card>
 
