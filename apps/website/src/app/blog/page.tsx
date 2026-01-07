@@ -29,7 +29,7 @@ const posts: BlogPost[] = [
     slug: "your-dmarc-policy-is-useless",
     title: "Your DMARC policy is useless",
     description:
-      "82% of domains have no DMARC. Of those that do, most set p=none—which does exactly nothing. An interactive deep-dive into email authentication failures and the real cost of weak policies.",
+      "82% of domains have no DMARC. Of those that do, most set p=none—which tells receivers not to enforce. An interactive deep-dive into email authentication.",
     category: "Security",
     date: "January 2025",
     readTime: "12 min read",

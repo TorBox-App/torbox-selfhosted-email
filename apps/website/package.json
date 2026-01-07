@@ -46,6 +46,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/zod-form-adapter": "0.42.1",
     "@vercel/analytics": "1.6.1",
+    "@vercel/edge": "1.2.2",
     "@wraps.dev/client": "0.2.0",
     "add": "^2.0.6",
     "asciinema-player": "3.13.4",
