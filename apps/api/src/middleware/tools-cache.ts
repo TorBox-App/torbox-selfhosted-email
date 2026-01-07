@@ -1,76 +1,80 @@
 /**
  * Tools Response Cache
  *
- * Simple in-memory cache for email check results.
- * Works well with Lambda instance reuse - provides benefit without external dependencies.
+ * DynamoDB-based cache for email check results.
+ * Shared across all Lambda instances with TTL-based expiration.
  */
 
-// Cache entry with TTL
-type CacheEntry<T> = {
-  data: T;
-  expiresAt: number;
-};
+import {
+  DynamoDBClient,
+  GetItemCommand,
+  PutItemCommand,
+} from "@aws-sdk/client-dynamodb";
 
-// In-memory cache (persists across Lambda invocations in warm instances)
-const cache = new Map<string, CacheEntry<unknown>>();
+// DynamoDB client (reuse across invocations)
+const dynamoClient = new DynamoDBClient({});
+const TABLE_NAME = process.env.RATE_LIMIT_TABLE_NAME ?? "RateLimitTable";
 
-// Cache TTL in milliseconds (5 minutes)
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-// Max cache size to prevent memory issues
-const MAX_CACHE_SIZE = 1000;
+// Cache TTL in seconds (5 minutes)
+const CACHE_TTL_SECONDS = 5 * 60;
 
 /**
- * Get cached value if it exists and hasn't expired
+ * Get cached value from DynamoDB
  */
-export function getCached<T>(key: string): T | null {
-  const entry = cache.get(key) as CacheEntry<T> | undefined;
+export async function getCached<T>(key: string): Promise<T | null> {
+  try {
+    const result = await dynamoClient.send(
+      new GetItemCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          pk: { S: `cache:${key}` },
+          sk: { S: "data" },
+        },
+      })
+    );
 
-  if (!entry) {
+    if (!result.Item?.data?.S) {
+      return null;
+    }
+
+    // Check if expired (DynamoDB TTL is eventually consistent)
+    const expiresAt = Number(result.Item.expiresAt?.N ?? 0);
+    if (Date.now() / 1000 > expiresAt) {
+      return null;
+    }
+
+    return JSON.parse(result.Item.data.S) as T;
+  } catch (error) {
+    console.error("Cache get failed:", error);
     return null;
   }
-
-  // Check if expired
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(key);
-    return null;
-  }
-
-  return entry.data;
 }
 
 /**
- * Set cached value with TTL
+ * Set cached value in DynamoDB with TTL
  */
-export function setCache<T>(key: string, data: T, ttlMs: number = CACHE_TTL_MS): void {
-  // Evict old entries if cache is too large
-  if (cache.size >= MAX_CACHE_SIZE) {
-    evictExpired();
+export async function setCache<T>(
+  key: string,
+  data: T,
+  ttlSeconds: number = CACHE_TTL_SECONDS
+): Promise<void> {
+  const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
 
-    // If still too large, remove oldest entries
-    if (cache.size >= MAX_CACHE_SIZE) {
-      const keysToDelete = Array.from(cache.keys()).slice(0, 100);
-      for (const k of keysToDelete) {
-        cache.delete(k);
-      }
-    }
-  }
-
-  cache.set(key, {
-    data,
-    expiresAt: Date.now() + ttlMs,
-  });
-}
-
-/**
- * Remove expired entries from cache
- */
-function evictExpired(): void {
-  const now = Date.now();
-  for (const [key, entry] of cache.entries()) {
-    if (now > entry.expiresAt) {
-      cache.delete(key);
-    }
+  try {
+    await dynamoClient.send(
+      new PutItemCommand({
+        TableName: TABLE_NAME,
+        Item: {
+          pk: { S: `cache:${key}` },
+          sk: { S: "data" },
+          data: { S: JSON.stringify(data) },
+          expiresAt: { N: String(expiresAt) },
+        },
+      })
+    );
+  } catch (error) {
+    // Don't fail the request if caching fails
+    console.error("Cache set failed:", error);
   }
 }
 
@@ -92,14 +96,4 @@ export function getEmailCheckCacheKey(
   }
 
   return parts.join(":");
-}
-
-/**
- * Get cache stats (for debugging/monitoring)
- */
-export function getCacheStats(): { size: number; maxSize: number } {
-  return {
-    size: cache.size,
-    maxSize: MAX_CACHE_SIZE,
-  };
 }

@@ -150,7 +150,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
 
       // Check cache first
       const cacheKey = getEmailCheckCacheKey(domain, { quick, dkimSelectors: selectors });
-      const cached = getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
+      const cached = await getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
       if (cached) {
         set.headers["X-Cache"] = "HIT";
         return cached;
@@ -167,7 +167,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
         const formatted = formatEmailCheckResult(result);
 
         // Cache successful results for 5 minutes
-        setCache(cacheKey, formatted);
+        await setCache(cacheKey, formatted);
         set.headers["X-Cache"] = "MISS";
 
         return formatted;
@@ -211,7 +211,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
 
       // Check cache first
       const cacheKey = getEmailCheckCacheKey(domain, { quick: true });
-      const cached = getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
+      const cached = await getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
       if (cached) {
         set.headers["X-Cache"] = "HIT";
         return cached;
@@ -227,7 +227,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
         const formatted = formatEmailCheckResult(result);
 
         // Cache successful results for 5 minutes
-        setCache(cacheKey, formatted);
+        await setCache(cacheKey, formatted);
         set.headers["X-Cache"] = "MISS";
 
         return formatted;
