@@ -1617,30 +1617,6 @@ export default function DMARCSucks() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="py-12">
-          <div className="rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-purple-500/10 p-8 md:p-12">
-            <div className="prose prose-neutral dark:prose-invert mx-auto max-w-2xl text-center">
-              <h2 className="mb-4 font-bold text-3xl">
-                Stop being part of the 82%
-              </h2>
-              <p className="text-foreground/80 text-lg">
-                Wraps deploys email infrastructure to your AWS account with
-                proper SPF, DKIM, and DMARC enforcement from day one. No stored
-                credentials, transparent AWS pricing, and you own everything.
-              </p>
-            </div>
-            <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-              <Button asChild size="lg">
-                <a href="https://wraps.dev">Get Started with Wraps</a>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <a href="https://github.com/wraps-team/wraps">View on GitHub</a>
-              </Button>
-            </div>
-          </div>
-        </section>
-
         {/* Footer */}
         <footer className="space-y-4 text-center text-sm">
           <Card className="p-6">
