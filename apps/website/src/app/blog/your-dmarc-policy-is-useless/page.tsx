@@ -792,12 +792,21 @@ type EmailCheckResult = {
     grade: string;
     score: number;
     maxScore: number;
+    breakdown?: {
+      spf: { max: number; score: number };
+      dkim: { max: number; score: number };
+      dmarc: { max: number; score: number };
+      mx: { max: number; score: number };
+      blacklist: { max: number; score: number };
+      bonus: { earned: number; possible: number };
+    };
   };
   spf: {
     exists: boolean;
     valid: boolean;
     record: string | null;
     allMechanism: string | null;
+    lookupCount?: number;
   };
   dkim: {
     found: boolean;
@@ -806,6 +815,7 @@ type EmailCheckResult = {
       keyType: string;
       keyBits: number;
     }>;
+    warnings?: string[];
   };
   dmarc: {
     exists: boolean;
@@ -813,11 +823,21 @@ type EmailCheckResult = {
     record: string | null;
     policy: string | null;
     reportingEnabled: boolean;
+    subdomainPolicy?: string | null;
+  };
+  domainAge?: {
+    ageInDays: number | null;
+    createdAt: string | null;
   };
   issues: Array<{
     check: string;
     reason: string;
     severity: "critical" | "warning" | "info";
+  }>;
+  bonuses?: Array<{
+    check: string;
+    reason: string;
+    points: number;
   }>;
   error?: string;
 };
@@ -966,13 +986,48 @@ const DomainChecker = () => {
       {result && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Security Grade</span>
+            <div>
+              <span className="text-muted-foreground">Security Grade</span>
+              <div className="font-mono text-muted-foreground text-sm">
+                {result.score.score}/{result.score.maxScore} points
+              </div>
+            </div>
             <span
               className={`rounded px-4 py-1 font-bold text-4xl ${gradeColors[result.score.grade] || gradeColors.F}`}
             >
               {result.score.grade}
             </span>
           </div>
+
+          {/* Score Breakdown Bars */}
+          {result.score.breakdown && (
+            <div className="space-y-2">
+              {[
+                { key: "spf", label: "SPF", data: result.score.breakdown.spf },
+                { key: "dkim", label: "DKIM", data: result.score.breakdown.dkim },
+                { key: "dmarc", label: "DMARC", data: result.score.breakdown.dmarc },
+              ].map(({ key, label, data }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <span className="w-14 text-muted-foreground text-xs">{label}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full transition-all ${
+                        data.score === data.max
+                          ? "bg-green-500"
+                          : data.score >= data.max * 0.5
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                      }`}
+                      style={{ width: `${(data.score / data.max) * 100}%` }}
+                    />
+                  </div>
+                  <span className="w-10 text-right font-mono text-muted-foreground text-xs">
+                    {data.score}/{data.max}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="grid gap-3">
             <div className="flex items-center justify-between rounded-lg bg-muted p-3">
@@ -986,6 +1041,7 @@ const DomainChecker = () => {
                 {result.spf.exists
                   ? result.spf.allMechanism || "configured"
                   : "missing"}
+                {result.spf.lookupCount ? ` (${result.spf.lookupCount}/10 lookups)` : ""}
               </span>
             </div>
 
@@ -1014,7 +1070,7 @@ const DomainChecker = () => {
               </div>
               <span className="font-mono text-muted-foreground text-sm">
                 {result.dmarc.exists
-                  ? `p=${result.dmarc.policy}`
+                  ? `p=${result.dmarc.policy}${result.dmarc.subdomainPolicy ? ` sp=${result.dmarc.subdomainPolicy}` : ""}`
                   : "missing"}
               </span>
             </div>
@@ -1043,6 +1099,26 @@ const DomainChecker = () => {
                   {issue.reason}
                 </div>
               ))}
+              {result.issues.length > 3 && (
+                <a
+                  href="/tools"
+                  className="block text-center text-primary text-sm hover:underline"
+                >
+                  +{result.issues.length - 3} more issues - View full report
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Domain Age */}
+          {result.domainAge?.ageInDays !== null && result.domainAge?.ageInDays !== undefined && (
+            <div className="flex items-center justify-between border-t pt-3 text-sm">
+              <span className="text-muted-foreground">Domain Age</span>
+              <span className="font-mono text-foreground">
+                {result.domainAge.ageInDays > 365
+                  ? `${Math.floor(result.domainAge.ageInDays / 365)} years`
+                  : `${result.domainAge.ageInDays} days`}
+              </span>
             </div>
           )}
         </div>
