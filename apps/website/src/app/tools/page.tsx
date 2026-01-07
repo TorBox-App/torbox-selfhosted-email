@@ -275,7 +275,7 @@ export default function ToolsPage() {
         },
         body: JSON.stringify({
           domain: domain.trim(),
-          quick: true,
+          quick: false,
           ...(dkimSelector.trim() && {
             dkimSelectors: dkimSelector
               .split(",")
@@ -1025,7 +1025,7 @@ export default function ToolsPage() {
                           fetch(`${API_URL}/tools/email-check`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ domain: d, quick: true }),
+                            body: JSON.stringify({ domain: d, quick: false }),
                           })
                             .then((r) => r.json())
                             .then((data) => {
