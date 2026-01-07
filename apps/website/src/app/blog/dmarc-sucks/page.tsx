@@ -782,74 +782,159 @@ const BreachTimeline = () => {
   );
 };
 
-// Domain Checker Simulation
+// Real Domain Checker using Wraps API
+const API_URL = "https://api.wraps.dev";
+
+type EmailCheckResult = {
+  success: boolean;
+  domain: string;
+  score: {
+    grade: string;
+    score: number;
+    maxScore: number;
+  };
+  spf: {
+    exists: boolean;
+    valid: boolean;
+    record: string | null;
+    allMechanism: string | null;
+  };
+  dkim: {
+    found: boolean;
+    selectorsFound: Array<{
+      selector: string;
+      keyType: string;
+      keyBits: number;
+    }>;
+  };
+  dmarc: {
+    exists: boolean;
+    valid: boolean;
+    record: string | null;
+    policy: string | null;
+    reportingEnabled: boolean;
+  };
+  issues: Array<{
+    check: string;
+    reason: string;
+    severity: "critical" | "warning" | "info";
+  }>;
+  error?: string;
+};
+
 const DomainChecker = () => {
   const [domain, setDomain] = useState("");
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<{
-    spf: { status: string; record?: string; keySize?: number };
-    dkim: { status: string; keySize: number };
-    dmarc: { status: string; policy: string; rua: string | null };
-    grade: string;
-    message: string;
-  } | null>(null);
+  const [result, setResult] = useState<EmailCheckResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const sampleResults = {
-    protected: {
-      spf: { status: "pass", record: "v=spf1 include:_spf.google.com -all" },
-      dkim: { status: "pass", keySize: 2048 },
-      dmarc: {
-        status: "pass",
-        policy: "reject",
-        rua: "dmarc-reports@company.com",
-      },
-      grade: "A",
-      message: "Fully protected. Spoofed emails will be rejected.",
-    },
-    vulnerable: {
-      spf: { status: "pass", record: "v=spf1 include:_spf.google.com ~all" },
-      dkim: { status: "pass", keySize: 1024 },
-      dmarc: { status: "fail", policy: "none", rua: null },
-      grade: "F",
-      message:
-        "CRITICAL: p=none provides zero protection. Attackers can spoof your domain.",
-    },
-    partial: {
-      spf: { status: "pass", record: "v=spf1 include:amazonses.com ~all" },
-      dkim: { status: "pass", keySize: 2048 },
-      dmarc: {
-        status: "partial",
-        policy: "quarantine",
-        rua: "reports@company.com",
-      },
-      grade: "C",
-      message:
-        "Partial protection. Spoofed emails go to spam, but may still be seen.",
-    },
+  const checkDomain = async () => {
+    if (!domain.trim()) return;
+    setChecking(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const response = await fetch(`${API_URL}/tools/email-check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: domain.trim(), quick: true }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setResult(data);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to check domain");
+    } finally {
+      setChecking(false);
+    }
   };
 
-  const checkDomain = () => {
-    if (!domain) return;
-    setChecking(true);
-    setTimeout(() => {
-      const results: Array<keyof typeof sampleResults> = [
-        "vulnerable",
-        "vulnerable",
-        "vulnerable",
-        "partial",
-        "protected",
-      ];
-      setResult(
-        sampleResults[results[Math.floor(Math.random() * results.length)]]
-      );
-      setChecking(false);
-    }, 1500);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      checkDomain();
+    }
+  };
+
+  const getSpfStatus = (): "pass" | "warn" | "fail" => {
+    if (!result?.spf.exists) return "fail";
+    if (!result.spf.valid) return "fail";
+    if (result.spf.allMechanism === "+all") return "fail";
+    if (result.spf.allMechanism === "~all") return "warn";
+    return "pass";
+  };
+
+  const getDkimStatus = (): "pass" | "warn" | "fail" => {
+    if (!result?.dkim.found) return "fail";
+    // Check for weak keys
+    const hasWeakKey = result.dkim.selectorsFound.some((s) => s.keyBits < 2048);
+    if (hasWeakKey) return "warn";
+    return "pass";
+  };
+
+  const getDmarcStatus = (): "pass" | "warn" | "fail" => {
+    if (!result?.dmarc.exists) return "fail";
+    if (!result.dmarc.valid) return "fail";
+    if (result.dmarc.policy === "none") return "warn";
+    if (result.dmarc.policy === "quarantine") return "warn";
+    return "pass";
   };
 
   const gradeColors: Record<string, string> = {
+    "A+": "text-green-600 bg-green-500/20 dark:text-green-400",
     A: "text-green-600 bg-green-500/20 dark:text-green-400",
-    C: "text-yellow-600 bg-yellow-500/20 dark:text-yellow-400",
+    "A-": "text-green-600 bg-green-500/20 dark:text-green-400",
+    "B+": "text-lime-600 bg-lime-500/20 dark:text-lime-400",
+    B: "text-lime-600 bg-lime-500/20 dark:text-lime-400",
+    "B-": "text-yellow-600 bg-yellow-500/20 dark:text-yellow-400",
+    "C+": "text-yellow-600 bg-yellow-500/20 dark:text-yellow-400",
+    C: "text-orange-600 bg-orange-500/20 dark:text-orange-400",
+    "C-": "text-orange-600 bg-orange-500/20 dark:text-orange-400",
+    D: "text-red-600 bg-red-500/20 dark:text-red-400",
     F: "text-red-600 bg-red-500/20 dark:text-red-400",
+  };
+
+  const getStatusIcon = (status: "pass" | "warn" | "fail") => {
+    if (status === "pass")
+      return <CheckCircle className="h-5 w-5 text-green-500" />;
+    if (status === "warn")
+      return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+    return <XCircle className="h-5 w-5 text-red-500" />;
+  };
+
+  const getMessage = () => {
+    if (!result) return "";
+    const dmarcPolicy = result.dmarc.policy;
+    if (!result.dmarc.exists) {
+      return "CRITICAL: No DMARC record found. Anyone can spoof your domain.";
+    }
+    if (dmarcPolicy === "none") {
+      return "CRITICAL: p=none provides zero protection. Attackers can spoof your domain right now.";
+    }
+    if (dmarcPolicy === "quarantine") {
+      return "Partial protection. Spoofed emails go to spam, but may still be seen.";
+    }
+    if (dmarcPolicy === "reject") {
+      return "Full protection active. Spoofed emails are rejected before reaching inboxes.";
+    }
+    return "Check your email authentication configuration.";
+  };
+
+  const getMessageStyle = () => {
+    if (!result) return "";
+    const policy = result.dmarc.policy;
+    if (!result.dmarc.exists || policy === "none") {
+      return "border border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400";
+    }
+    if (policy === "quarantine") {
+      return "border border-yellow-500/50 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
+    }
+    return "border border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400";
   };
 
   return (
@@ -862,6 +947,7 @@ const DomainChecker = () => {
         <input
           className="flex-1 rounded-lg border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none"
           onChange={(e) => setDomain(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="yourcompany.com"
           type="text"
           value={domain}
@@ -871,64 +957,103 @@ const DomainChecker = () => {
         </Button>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 p-4">
+          <p className="text-red-600 text-sm dark:text-red-400">{error}</p>
+        </div>
+      )}
+
       {result && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Security Grade</span>
             <span
-              className={`rounded px-4 py-1 font-bold text-4xl ${gradeColors[result.grade]}`}
+              className={`rounded px-4 py-1 font-bold text-4xl ${gradeColors[result.score.grade] || gradeColors.F}`}
             >
-              {result.grade}
+              {result.score.grade}
             </span>
           </div>
 
           <div className="grid gap-3">
-            {(["spf", "dkim", "dmarc"] as const).map((type) => {
-              const r = result[type];
-              return (
-                <div
-                  className="flex items-center justify-between rounded-lg bg-muted p-3"
-                  key={type}
-                >
-                  <div className="flex items-center gap-2">
-                    {r.status === "pass" ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    ) : r.status === "partial" ? (
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                    <span className="font-medium text-foreground uppercase">
-                      {type}
-                    </span>
-                  </div>
-                  <span className="font-mono text-muted-foreground text-sm">
-                    {type === "dmarc"
-                      ? `p=${(r as typeof result.dmarc).policy}`
-                      : type === "dkim"
-                        ? `${(r as typeof result.dkim).keySize}-bit`
-                        : r.status}
-                  </span>
-                </div>
-              );
-            })}
+            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(getSpfStatus())}
+                <span className="font-medium text-foreground uppercase">
+                  SPF
+                </span>
+              </div>
+              <span className="font-mono text-muted-foreground text-sm">
+                {result.spf.exists
+                  ? result.spf.allMechanism || "configured"
+                  : "missing"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(getDkimStatus())}
+                <span className="font-medium text-foreground uppercase">
+                  DKIM
+                </span>
+              </div>
+              <span className="font-mono text-muted-foreground text-sm">
+                {result.dkim.found
+                  ? result.dkim.selectorsFound.length > 0
+                    ? `${result.dkim.selectorsFound[0].keyBits}-bit`
+                    : "found"
+                  : "not found"}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(getDmarcStatus())}
+                <span className="font-medium text-foreground uppercase">
+                  DMARC
+                </span>
+              </div>
+              <span className="font-mono text-muted-foreground text-sm">
+                {result.dmarc.exists
+                  ? `p=${result.dmarc.policy}`
+                  : "missing"}
+              </span>
+            </div>
           </div>
 
-          <div
-            className={`rounded-lg p-4 ${result.grade === "A" ? "border border-green-500/50 bg-green-500/10" : result.grade === "C" ? "border border-yellow-500/50 bg-yellow-500/10" : "border border-red-500/50 bg-red-500/10"}`}
-          >
-            <p
-              className={`text-sm ${result.grade === "A" ? "text-green-600 dark:text-green-400" : result.grade === "C" ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"}`}
-            >
-              {result.message}
-            </p>
+          <div className={`rounded-lg p-4 ${getMessageStyle()}`}>
+            <p className="text-sm">{getMessage()}</p>
           </div>
+
+          {result.issues.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-muted-foreground text-sm">
+                Issues Found:
+              </h4>
+              {result.issues.slice(0, 3).map((issue, i) => (
+                <div
+                  className={`rounded p-2 text-sm ${
+                    issue.severity === "critical"
+                      ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                      : issue.severity === "warning"
+                        ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                        : "bg-muted text-muted-foreground"
+                  }`}
+                  key={i}
+                >
+                  {issue.reason}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       <p className="mt-4 text-muted-foreground text-xs">
-        * This is a simulation. For real results, check your DNS records or use
-        a DMARC monitoring service.
+        Real-time DNS analysis powered by{" "}
+        <a className="text-primary hover:underline" href="/tools">
+          Wraps Email Tools
+        </a>
+        .
       </p>
     </Card>
   );
