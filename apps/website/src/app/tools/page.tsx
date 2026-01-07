@@ -257,6 +257,12 @@ export default function ToolsPage() {
     return "pass";
   };
 
+  // Check if AWS SES is detected but DKIM wasn't found (user should provide selectors)
+  const isAwsSesWithoutDkim =
+    result &&
+    !result.dkim.found &&
+    result.dkim.warnings.some((w) => w.toLowerCase().includes("aws ses"));
+
   const getDmarcStatus = (): "pass" | "warn" | "fail" | "none" => {
     if (!result?.dmarc.exists) return "none";
     if (!result.dmarc.valid) return "fail";
@@ -443,6 +449,35 @@ export default function ToolsPage() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* AWS SES DKIM Prompt */}
+              {isAwsSesWithoutDkim && (
+                <Card className="border-blue-500/20 bg-blue-500/5">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-start gap-3">
+                        <Key className="mt-0.5 h-5 w-5 text-blue-500" />
+                        <div>
+                          <h3 className="font-semibold">AWS SES Detected</h3>
+                          <p className="text-muted-foreground text-sm">
+                            AWS SES uses random DKIM selectors that we can't auto-discover.
+                            Expand "Advanced Options" above and enter your 3 DKIM selectors
+                            to verify your DKIM setup.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAdvanced(true)}
+                      >
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        Show Advanced Options
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Issues */}
               {result.issues.length > 0 && (
