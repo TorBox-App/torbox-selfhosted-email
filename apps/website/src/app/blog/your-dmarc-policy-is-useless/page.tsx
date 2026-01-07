@@ -11,7 +11,6 @@ import {
   Shield,
   ShieldAlert,
   ShieldOff,
-  Users,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -330,8 +329,8 @@ const DMARCSimulator = () => {
           <p className="text-red-600 text-sm dark:text-red-400">
             <AlertTriangle className="mr-2 inline h-4 w-4" />
             <strong>{stats.spoofed} spoofed emails delivered.</strong> Your
-            p=none policy provides zero protection. Attackers are sending emails
-            as your company right now.
+            p=none policy tells receivers not to enforce authentication failures.
+            While some providers may still filter, your domain is easier to spoof.
           </p>
         </div>
       )}
@@ -340,8 +339,8 @@ const DMARCSimulator = () => {
         <div className="mt-4 rounded-lg border border-green-500/50 bg-green-500/10 p-3">
           <p className="text-green-600 text-sm dark:text-green-400">
             <Shield className="mr-2 inline h-4 w-4" />
-            <strong>Full protection active.</strong> Spoofed emails are rejected
-            before reaching inboxes.
+            <strong>Full protection requested.</strong> Major email providers
+            will reject spoofed emails.
           </p>
         </div>
       )}
@@ -516,7 +515,7 @@ const AuthExplainer = () => {
         "Tells receivers what to do when SPF/DKIM fail, and where to send reports.",
       record: "v=DMARC1; p=reject; rua=mailto:dmarc@company.com",
       problem:
-        "Most domains set p=none (monitoring only), providing ZERO actual protection.",
+        "Most domains set p=none (monitoring only), telling receivers not to enforce failures.",
       color: "green",
     },
   };
@@ -628,21 +627,6 @@ const BreachTimeline = () => {
       sourceLabel: "NSA/FBI Advisory",
       icon: ShieldAlert,
       color: "purple",
-    },
-    {
-      year: "Jan 2025",
-      company: "ManageMyHealth NZ",
-      loss: "126K patients",
-      method: "Ransomware exfiltration + ongoing phishing risk",
-      dmarcIssue:
-        "p=none, 1024-bit DKIM, broken MTA-STS, 19 unprotected subdomains",
-      details:
-        "108GB of medical records stolen including prescriptions, psychiatric docs, intimate photos. Attackers can now spoof the domain to phish all affected patients.",
-      source:
-        "https://blackveil.co.nz/blog/managemyhealth-breach-analysis-2025",
-      sourceLabel: "BlackVeil Security",
-      icon: Users,
-      color: "red",
     },
   ];
 
@@ -931,16 +915,16 @@ const DomainChecker = () => {
     if (!result) return "";
     const dmarcPolicy = result.dmarc.policy;
     if (!result.dmarc.exists) {
-      return "CRITICAL: No DMARC record found. Anyone can spoof your domain.";
+      return "CRITICAL: No DMARC record found. Your domain is vulnerable to spoofing.";
     }
     if (dmarcPolicy === "none") {
-      return "CRITICAL: p=none provides zero protection. Attackers can spoof your domain right now.";
+      return "WARNING: p=none tells receivers not to enforce authentication failures. Your domain is easier to spoof.";
     }
     if (dmarcPolicy === "quarantine") {
       return "Partial protection. Spoofed emails go to spam, but may still be seen.";
     }
     if (dmarcPolicy === "reject") {
-      return "Full protection active. Spoofed emails are rejected before reaching inboxes.";
+      return "Full protection requested. Major email providers will reject spoofed emails.";
     }
     return "Check your email authentication configuration.";
   };
@@ -1210,7 +1194,7 @@ export default function DMARCSucks() {
             <code className="rounded bg-red-500/20 px-2 py-0.5 text-red-600 dark:text-red-400">
               p=none
             </code>
-            &mdash;which does exactly nothing.
+            &mdash;which tells receivers not to enforce.
           </p>
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <ChevronDown className="h-5 w-5 animate-bounce" />
@@ -1238,148 +1222,11 @@ export default function DMARCSucks() {
               <span className="font-semibold text-red-600 dark:text-red-400">
                 $2.77 billion
               </span>{" "}
-              was stolen this way in 2024 alone. Google and Facebook lost $122
-              million. Toyota lost $37 million. A New Zealand healthcare company
-              just exposed 126,000 patient records&mdash;and because their DMARC
-              was set to{" "}
-              <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
-                p=none
-              </code>
-              , attackers can now send perfect phishing emails to every single
-              one of those patients.
-            </p>
-          </div>
-        </section>
-
-        {/* ManageMyHealth Deep Dive */}
-        <section>
-          <h2 className="mb-6 font-bold text-3xl">
-            Case Study: How{" "}
-            <code className="rounded bg-red-500/20 px-2 py-1 text-red-600 dark:text-red-400">
-              p=none
-            </code>{" "}
-            turns a breach into a catastrophe
-          </h2>
-
-          <div className="prose prose-neutral dark:prose-invert max-w-none">
-            <p className="text-foreground/80 text-xl leading-relaxed">
-              In January 2025, a ransomware group called "Kazu" breached{" "}
-              <span className="font-semibold text-foreground">
-                ManageMyHealth
-              </span>
-              , a New Zealand healthcare platform. They exfiltrated{" "}
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                108GB of medical records
-              </span>
-              —prescriptions, test results, psychiatric documents, intimate
-              medical photographs—affecting over 126,000 patients.
-            </p>
-
-            <p className="text-foreground/80 text-xl leading-relaxed">
-              Cybersecurity expert Daniel Ayers called it{" "}
-              <em>
-                "probably the worst data breach I recall seeing in New Zealand."
-              </em>
-            </p>
-
-            <p className="text-foreground/80 text-xl leading-relaxed">
-              But here's what makes it catastrophic: the breach wasn't the end.
-              It was the beginning.
-            </p>
-
-            <p className="text-foreground/80 text-xl leading-relaxed">
-              When{" "}
-              <a
-                className="text-primary hover:underline"
-                href="https://blackveil.co.nz/blog/managemyhealth-breach-analysis-2025"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                BlackVeil Security analyzed
-              </a>{" "}
-              ManageMyHealth's email configuration after the breach, they found:
-            </p>
-          </div>
-
-          {/* DNS Lookup Results - Terminal Style */}
-          <div className="my-8 overflow-hidden rounded-lg border bg-muted/30">
-            <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2">
-              <div className="h-3 w-3 rounded-full bg-red-500" />
-              <div className="h-3 w-3 rounded-full bg-yellow-500" />
-              <div className="h-3 w-3 rounded-full bg-green-500" />
-              <span className="ml-2 font-mono text-muted-foreground text-xs">
-                dig _dmarc.managemyhealth.co.nz TXT
-              </span>
-            </div>
-            <div className="space-y-3 p-4 font-mono text-sm">
-              <div className="flex items-start gap-3">
-                <span className="shrink-0 text-muted-foreground">DMARC:</span>
-                <span className="text-red-600 dark:text-red-400">
-                  p=none{" "}
-                  <span className="text-muted-foreground">
-                    (monitoring only, no protection)
-                  </span>
-                </span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="shrink-0 text-muted-foreground">DKIM:</span>
-                <span className="text-yellow-600 dark:text-yellow-400">
-                  1024-bit keys{" "}
-                  <span className="text-muted-foreground">
-                    (weak, should be 2048+)
-                  </span>
-                </span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="shrink-0 text-muted-foreground">MTA-STS:</span>
-                <span className="text-red-600 dark:text-red-400">
-                  Broken{" "}
-                  <span className="text-muted-foreground">
-                    (misconfigured, non-functional)
-                  </span>
-                </span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="shrink-0 text-muted-foreground">
-                  Subdomains:
-                </span>
-                <span className="text-red-600 dark:text-red-400">
-                  19 exposed{" "}
-                  <span className="text-muted-foreground">
-                    (0% DNSSEC coverage)
-                  </span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="prose prose-neutral dark:prose-invert max-w-none">
-            <p className="text-foreground/80 text-xl leading-relaxed">
-              The attackers now have email addresses and personal details for
-              126,000+ patients. Because ManageMyHealth's domain has{" "}
-              <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
-                p=none
-              </code>
-              , those attackers can send perfectly spoofed emails that appear to
-              come from ManageMyHealth—password reset requests, "verify your
-              identity" scams, fake medical bills.
-            </p>
-
-            <p className="text-foreground/80 text-xl leading-relaxed">
-              Every patient's inbox is now a potential attack vector.{" "}
-              <span className="font-semibold text-foreground">
-                Four days after the breach was disclosed, no DNS or email
-                security improvements had been made.
-              </span>
-            </p>
-
-            <p className="text-foreground/80 text-xl leading-relaxed">
-              This is what{" "}
-              <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
-                p=none
-              </code>{" "}
-              actually means: a data breach becomes an{" "}
-              <em>ongoing attack platform</em>.
+              was stolen through BEC attacks in 2024 alone. Google and Facebook
+              lost $122 million to a single spoofed vendor. Toyota lost $37
+              million. Ubiquiti lost $46.7 million. In every case, the attack
+              relied on domain impersonation that proper DMARC enforcement would
+              have prevented.
             </p>
           </div>
         </section>
@@ -1390,7 +1237,7 @@ export default function DMARCSucks() {
 
           <div className="prose prose-neutral dark:prose-invert max-w-none">
             <p className="text-foreground/80 text-xl leading-relaxed">
-              ManageMyHealth isn't an outlier. It's the norm.
+              These cases aren't outliers. They're the norm.
             </p>
 
             <p className="text-foreground/80 text-xl leading-relaxed">
@@ -1613,16 +1460,13 @@ export default function DMARCSucks() {
         <section>
           <div className="prose prose-neutral dark:prose-invert mb-6 max-w-none">
             <h2 className="mb-4 font-bold text-3xl">
-              The attacks that exploited these gaps
+              Real-world email security incidents
             </h2>
             <p className="text-foreground/80 text-xl leading-relaxed">
-              These aren't hypothetical scenarios. Every one of these incidents
-              involved either missing DMARC records or policies set to{" "}
-              <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
-                p=none
-              </code>
-              . The pattern is consistent: the technology to prevent these
-              attacks existed, but organizations hadn't turned it on.
+              These aren't hypothetical scenarios. Each involved BEC attacks
+              where weak or missing DMARC enabled domain spoofing—and proper
+              enforcement would have prevented them. Click each incident for
+              details.
             </p>
           </div>
           <BreachTimeline />
@@ -1660,9 +1504,10 @@ export default function DMARCSucks() {
               <code className="rounded bg-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400">
                 p=none
               </code>
-              , they know spoofed emails will be delivered even when they fail
-              authentication. The advisory included actual email headers from
-              these attacks:
+              , they know the domain owner won't request enforcement of
+              authentication failures—increasing their chances of successful
+              delivery. The advisory included actual email headers from these
+              attacks:
             </p>
           </div>
 
@@ -1968,14 +1813,6 @@ export default function DMARCSucks() {
                 target="_blank"
               >
                 Red Sift DMARC Report 2025
-              </a>
-              <a
-                className="text-primary hover:underline"
-                href="https://blackveil.co.nz/blog/managemyhealth-breach-analysis-2025"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                BlackVeil Security Analysis
               </a>
               <a
                 className="text-primary hover:underline"
