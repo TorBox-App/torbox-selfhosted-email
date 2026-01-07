@@ -35,6 +35,10 @@ const AWS_PRICING = {
   SQS_REQUESTS_PER_MILLION: 0.5,
   EVENTBRIDGE_EVENTS_PER_MILLION: 1.0,
   DEDICATED_IP_PER_MONTH: 24.95,
+  // WAF pricing (for HTTPS tracking CDN protection)
+  WAF_WEB_ACL_PER_MONTH: 5.0, // $5.00 per Web ACL per month
+  WAF_RULE_PER_MONTH: 1.0, // $1.00 per rule per month
+  WAF_REQUESTS_PER_MILLION: 0.6, // $0.60 per million requests
 } as const;
 
 const FREE_TIER = {
@@ -110,6 +114,8 @@ export default function CostCalculatorPage() {
   const [numEventTypes, setNumEventTypes] = useState(8);
   const [dedicatedIp, setDedicatedIp] = useState(false);
   const [customDomain, setCustomDomain] = useState(false);
+  const [httpsTracking, setHttpsTracking] = useState(false);
+  const [wafEnabled, setWafEnabled] = useState(false);
 
   // Calculate costs
   const calculateCosts = () => {
@@ -220,6 +226,22 @@ export default function CostCalculatorPage() {
     // Custom tracking domain (no additional cost - DNS managed where user manages DNS)
     if (customDomain) {
       // No cost to add
+    }
+
+    // WAF protection for HTTPS tracking CDN
+    if (httpsTracking && wafEnabled) {
+      // Estimate ~2 requests per email (open tracking pixel + click tracking)
+      const estimatedWafRequests = emailsPerMonth * 2;
+      const wafCost =
+        AWS_PRICING.WAF_WEB_ACL_PER_MONTH +
+        AWS_PRICING.WAF_RULE_PER_MONTH +
+        (estimatedWafRequests / 1_000_000) * AWS_PRICING.WAF_REQUESTS_PER_MILLION;
+      total += wafCost;
+      breakdown.push({
+        name: "WAF Rate Limiting",
+        cost: wafCost,
+        details: `$${AWS_PRICING.WAF_WEB_ACL_PER_MONTH}/mo Web ACL + $${AWS_PRICING.WAF_RULE_PER_MONTH}/mo rule + requests`,
+      });
     }
 
     return { total, breakdown };
@@ -444,6 +466,41 @@ export default function CostCalculatorPage() {
                       onCheckedChange={setCustomDomain}
                     />
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="https-tracking">
+                        HTTPS Tracking (CloudFront)
+                      </Label>
+                      <p className="text-muted-foreground text-sm">
+                        SSL for custom tracking domain
+                      </p>
+                    </div>
+                    <Switch
+                      checked={httpsTracking}
+                      id="https-tracking"
+                      onCheckedChange={(checked) => {
+                        setHttpsTracking(checked);
+                        if (!checked) setWafEnabled(false);
+                      }}
+                    />
+                  </div>
+
+                  {httpsTracking && (
+                    <div className="ml-6 flex items-center justify-between border-l-2 pl-4">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="waf-enabled">WAF Rate Limiting</Label>
+                        <p className="text-muted-foreground text-sm">
+                          ~$6/mo base + $0.60/M requests
+                        </p>
+                      </div>
+                      <Switch
+                        checked={wafEnabled}
+                        id="waf-enabled"
+                        onCheckedChange={setWafEnabled}
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
