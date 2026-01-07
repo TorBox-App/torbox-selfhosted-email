@@ -212,7 +212,12 @@ export default function ToolsPage() {
         body: JSON.stringify({
           domain: domain.trim(),
           quick: true,
-          ...(dkimSelector.trim() && { dkimSelector: dkimSelector.trim() }),
+          ...(dkimSelector.trim() && {
+            dkimSelectors: dkimSelector
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          }),
         }),
       });
 
@@ -346,17 +351,17 @@ export default function ToolsPage() {
                       <div>
                         <label className="mb-1.5 flex items-center gap-2 font-medium text-sm">
                           <Key className="h-4 w-4" />
-                          DKIM Selector
+                          DKIM Selectors
                         </label>
                         <Input
-                          placeholder="e.g., google, selector1, or your AWS SES selector"
+                          placeholder="e.g., selector1, selector2, selector3"
                           value={dkimSelector}
                           onChange={(e) => setDkimSelector(e.target.value)}
                           disabled={isLoading}
                         />
                         <p className="mt-1.5 text-muted-foreground text-xs">
-                          AWS SES uses random selectors that we can't discover automatically.
-                          Find yours in the SES console under "View DNS records" for your domain.
+                          Enter selector names separated by commas (the part before <code className="rounded bg-muted px-1">._domainkey</code>).
+                          AWS SES creates 3 selectors - find them in the SES console under "View DNS records" and enter all 3.
                         </p>
                       </div>
                     </div>

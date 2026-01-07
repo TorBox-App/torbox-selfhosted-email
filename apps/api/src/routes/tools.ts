@@ -10,7 +10,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
   .post(
     "/email-check",
     async ({ body }) => {
-      const { domain, quick = true, dkimSelector } = body;
+      const { domain, quick = true, dkimSelector, dkimSelectors } = body;
 
       // Validate domain format
       if (!/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(domain)) {
@@ -20,12 +20,19 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
         };
       }
 
+      // Build selectors array from either single selector or array
+      const selectors = dkimSelectors?.length
+        ? dkimSelectors
+        : dkimSelector
+          ? [dkimSelector]
+          : undefined;
+
       try {
         const result = await runEmailCheck(domain, {
           quick,
           skipBlacklists: quick, // Skip blacklists in quick mode for speed
           skipTls: true, // Skip TLS checks (port 25 often blocked)
-          dkimSelector, // Custom DKIM selector (useful for AWS SES)
+          dkimSelectors: selectors, // Custom DKIM selectors (useful for AWS SES)
         });
 
         // Return a simplified result for the frontend
@@ -97,12 +104,13 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
         domain: t.String({ minLength: 3 }),
         quick: t.Optional(t.Boolean()),
         dkimSelector: t.Optional(t.String()),
+        dkimSelectors: t.Optional(t.Array(t.String())),
       }),
       detail: {
         tags: ["tools"],
         summary: "Check email deliverability",
         description:
-          "Comprehensive email deliverability check for any domain. Returns SPF, DKIM, DMARC status and a grade. Optionally provide a DKIM selector for providers like AWS SES that use random selectors.",
+          "Comprehensive email deliverability check for any domain. Returns SPF, DKIM, DMARC status and a grade. Optionally provide DKIM selectors for providers like AWS SES that use random selectors.",
       },
     }
   )
