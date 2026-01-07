@@ -1,0 +1,131 @@
+/**
+ * Public Rate Limiting Middleware
+ *
+ * IP-based rate limiting for public endpoints (no auth required).
+ * Uses DynamoDB for distributed rate limiting across Lambda instances.
+ */
+
+import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
+import { Elysia } from "elysia";
+
+// Rate limits for public endpoints
+const PUBLIC_LIMITS = {
+  minute: 10, // 10 requests per minute per IP
+  hour: 100, // 100 requests per hour per IP
+};
+
+// DynamoDB client (reuse across invocations)
+const dynamoClient = new DynamoDBClient({});
+const TABLE_NAME = process.env.RATE_LIMIT_TABLE_NAME ?? "RateLimitTable";
+
+/**
+ * Get client IP from request headers
+ */
+function getClientIp(request: Request): string {
+  // Check common proxy headers
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    // Take the first IP (original client)
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) {
+    return realIp.trim();
+  }
+
+  // Fallback - should not happen in production behind API Gateway
+  return "unknown";
+}
+
+/**
+ * Increment counter and return new value
+ */
+async function incrementCounter(
+  key: string,
+  ttlSeconds: number
+): Promise<number> {
+  const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
+
+  try {
+    const result = await dynamoClient.send(
+      new UpdateItemCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          pk: { S: `public-ip:${key}` },
+          sk: { S: "rate-limit" },
+        },
+        UpdateExpression:
+          "SET #count = if_not_exists(#count, :zero) + :inc, #exp = :exp",
+        ExpressionAttributeNames: {
+          "#count": "count",
+          "#exp": "expiresAt",
+        },
+        ExpressionAttributeValues: {
+          ":inc": { N: "1" },
+          ":zero": { N: "0" },
+          ":exp": { N: String(expiresAt) },
+        },
+        ReturnValues: "UPDATED_NEW",
+      })
+    );
+
+    return Number(result.Attributes?.count?.N ?? 1);
+  } catch (error) {
+    // Fail open - if DynamoDB is down, allow the request
+    console.error("Rate limit check failed:", error);
+    return 0;
+  }
+}
+
+/**
+ * Format time window key
+ */
+function getMinuteKey(ip: string): string {
+  const now = new Date();
+  const minute = now.toISOString().slice(0, 16).replace("T", "-").replace(":", "-");
+  return `${ip}:minute:${minute}`;
+}
+
+function getHourKey(ip: string): string {
+  const now = new Date();
+  const hour = now.toISOString().slice(0, 13).replace("T", "-");
+  return `${ip}:hour:${hour}`;
+}
+
+/**
+ * Public rate limit middleware
+ */
+export const publicRateLimitMiddleware = new Elysia({ name: "public-rate-limit" })
+  .derive(async ({ request, set }) => {
+    const clientIp = getClientIp(request);
+
+    // Check minute limit
+    const minuteCount = await incrementCounter(getMinuteKey(clientIp), 60);
+    if (minuteCount > PUBLIC_LIMITS.minute) {
+      set.status = 429;
+      set.headers["Retry-After"] = "60";
+      set.headers["X-RateLimit-Limit"] = String(PUBLIC_LIMITS.minute);
+      set.headers["X-RateLimit-Remaining"] = "0";
+      set.headers["X-RateLimit-Reset"] = String(Math.floor(Date.now() / 1000) + 60);
+      throw new Error("Rate limit exceeded. Please wait a minute before trying again.");
+    }
+
+    // Check hourly limit
+    const hourCount = await incrementCounter(getHourKey(clientIp), 3600);
+    if (hourCount > PUBLIC_LIMITS.hour) {
+      set.status = 429;
+      set.headers["Retry-After"] = "3600";
+      set.headers["X-RateLimit-Limit"] = String(PUBLIC_LIMITS.hour);
+      set.headers["X-RateLimit-Remaining"] = "0";
+      throw new Error("Hourly rate limit exceeded. Please try again later.");
+    }
+
+    // Set rate limit headers
+    set.headers["X-RateLimit-Limit"] = String(PUBLIC_LIMITS.minute);
+    set.headers["X-RateLimit-Remaining"] = String(
+      Math.max(0, PUBLIC_LIMITS.minute - minuteCount)
+    );
+
+    return { clientIp };
+  });

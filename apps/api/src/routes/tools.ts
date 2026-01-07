@@ -6,6 +6,13 @@
 import { runEmailCheck, type EmailCheckResult } from "@wraps/email-check";
 import { Elysia, t } from "elysia";
 
+import { publicRateLimitMiddleware } from "../middleware/public-rate-limit";
+import {
+  getCached,
+  setCache,
+  getEmailCheckCacheKey,
+} from "../middleware/tools-cache";
+
 /**
  * Transform EmailCheckResult to API response format
  */
@@ -119,9 +126,11 @@ function formatEmailCheckResult(result: EmailCheckResult) {
 }
 
 export const toolsRoutes = new Elysia({ prefix: "/tools" })
+  // Apply IP-based rate limiting to all tools routes
+  .use(publicRateLimitMiddleware)
   .post(
     "/email-check",
-    async ({ body }) => {
+    async ({ body, set }) => {
       const { domain, quick = true, dkimSelector, dkimSelectors } = body;
 
       // Validate domain format
@@ -139,6 +148,14 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
           ? [dkimSelector]
           : undefined;
 
+      // Check cache first
+      const cacheKey = getEmailCheckCacheKey(domain, { quick, dkimSelectors: selectors });
+      const cached = getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
+      if (cached) {
+        set.headers["X-Cache"] = "HIT";
+        return cached;
+      }
+
       try {
         const result = await runEmailCheck(domain, {
           quick,
@@ -147,7 +164,13 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
           dkimSelectors: selectors, // Custom DKIM selectors (useful for AWS SES)
         });
 
-        return formatEmailCheckResult(result);
+        const formatted = formatEmailCheckResult(result);
+
+        // Cache successful results for 5 minutes
+        setCache(cacheKey, formatted);
+        set.headers["X-Cache"] = "MISS";
+
+        return formatted;
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
@@ -175,7 +198,7 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
   )
   .get(
     "/email-check/:domain",
-    async ({ params }) => {
+    async ({ params, set }) => {
       const { domain } = params;
 
       // Validate domain format
@@ -186,6 +209,14 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
         };
       }
 
+      // Check cache first
+      const cacheKey = getEmailCheckCacheKey(domain, { quick: true });
+      const cached = getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
+      if (cached) {
+        set.headers["X-Cache"] = "HIT";
+        return cached;
+      }
+
       try {
         const result = await runEmailCheck(domain, {
           quick: true,
@@ -193,7 +224,13 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
           skipTls: true,
         });
 
-        return formatEmailCheckResult(result);
+        const formatted = formatEmailCheckResult(result);
+
+        // Cache successful results for 5 minutes
+        setCache(cacheKey, formatted);
+        set.headers["X-Cache"] = "MISS";
+
+        return formatted;
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Unknown error";
