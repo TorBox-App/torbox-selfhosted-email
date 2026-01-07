@@ -47,6 +47,7 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
   environment: {
     DATABASE_URL: process.env.DATABASE_URL ?? "",
     BATCH_QUEUE_URL: batchQueue.url,
+    RATE_LIMIT_TABLE_NAME: rateLimitTable.name,
     // EventBridge Scheduler config for scheduled broadcasts
     BATCH_QUEUE_ARN: batchQueue.arn,
     SCHEDULER_ROLE_ARN: schedulerRole.arn,
