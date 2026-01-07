@@ -12,7 +12,7 @@ const BLOG_META: Record<
     title: "Your DMARC policy is useless",
     description:
       "82% of domains have no DMARC. Of those that do, most set p=none—which tells receivers not to enforce. An interactive deep-dive into email authentication.",
-    image: "https://wraps.dev/blog/dmarc-policy-is-useless.webp",
+    image: "https://wraps.dev/blog/dmarc-policy-is-useless.png",
   },
 };
 
