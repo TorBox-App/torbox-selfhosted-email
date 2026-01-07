@@ -765,7 +765,7 @@ export default function ToolsPage() {
               Want to learn more about email authentication?
             </p>
             <Button asChild variant="outline">
-              <a href="/blog/dmarc-sucks">
+              <a href="/blog/your-dmarc-policy-is-useless">
                 Read: Why DMARC Is Broken
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>

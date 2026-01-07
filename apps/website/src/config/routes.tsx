@@ -51,7 +51,7 @@ const Changelog = lazy(() => import("@/app/changelog/page"));
 
 // Blog
 const Blog = lazy(() => import("@/app/blog/page"));
-const BlogDmarcSucks = lazy(() => import("@/app/blog/dmarc-sucks/page"));
+const BlogDmarcSucks = lazy(() => import("@/app/blog/your-dmarc-policy-is-useless/page"));
 
 // Tools
 const Tools = lazy(() => import("@/app/tools/page"));
@@ -183,7 +183,7 @@ export const routes: RouteConfig[] = [
     element: <Blog />,
   },
   {
-    path: "/blog/dmarc-sucks",
+    path: "/blog/your-dmarc-policy-is-useless",
     element: <BlogDmarcSucks />,
   },
 
