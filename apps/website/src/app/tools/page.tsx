@@ -314,16 +314,16 @@ export default function ToolsPage() {
   };
 
   const getDkimStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.dkim.found) return "none";
-    if (result.dkim.warnings.length > 0) return "warn";
+    if (!result?.dkim?.found) return "none";
+    if ((result.dkim?.warnings?.length ?? 0) > 0) return "warn";
     return "pass";
   };
 
   // Check if AWS SES is detected but DKIM wasn't found (user should provide selectors)
   const isAwsSesWithoutDkim =
     result &&
-    !result.dkim.found &&
-    result.dkim.warnings.some((w) => w.toLowerCase().includes("aws ses"));
+    !result.dkim?.found &&
+    result.dkim?.warnings?.some((w) => w.toLowerCase().includes("aws ses"));
 
   const getDmarcStatus = (): "pass" | "warn" | "fail" | "none" => {
     if (!result?.dmarc.exists) return "none";
@@ -494,7 +494,7 @@ export default function ToolsPage() {
                   <CardContent className="pt-4 pb-4">
                     <div className="mb-2 font-semibold text-sm">DKIM</div>
                     <StatusBadge
-                      label={result.dkim.found ? "Found" : "Missing"}
+                      label={result.dkim?.found ? "Found" : "Missing"}
                       status={getDkimStatus()}
                     />
                   </CardContent>
@@ -739,17 +739,17 @@ export default function ToolsPage() {
                     record={result.dmarc.record}
                     status={getDmarcStatus()}
                   />
-                  {result.dkim.selectorsFound.length > 0 && (
+                  {(result.dkim?.selectorsFound?.length ?? 0) > 0 && (
                     <div className="rounded-lg border bg-card">
                       <div className="flex items-center justify-between p-4">
                         <StatusBadge label="DKIM" status={getDkimStatus()} />
                         <span className="text-muted-foreground text-sm">
-                          {result.dkim.selectorsFound.length} selector(s) found
+                          {result.dkim?.selectorsFound?.length ?? 0} selector(s) found
                         </span>
                       </div>
                       <div className="border-t bg-muted/30 p-4">
                         <div className="space-y-2">
-                          {result.dkim.selectorsFound.map((sel) => (
+                          {result.dkim?.selectorsFound?.map((sel) => (
                             <div
                               className="flex items-center justify-between rounded bg-background p-2 text-sm"
                               key={sel.selector}

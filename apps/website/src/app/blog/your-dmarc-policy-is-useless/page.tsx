@@ -740,9 +740,9 @@ const DomainChecker = () => {
   };
 
   const getDkimStatus = (): "pass" | "warn" | "fail" => {
-    if (!result?.dkim.found) return "fail";
+    if (!result?.dkim?.found) return "fail";
     // Check for weak keys
-    const hasWeakKey = result.dkim.selectorsFound.some((s) => s.keyBits < 2048);
+    const hasWeakKey = result.dkim?.selectorsFound?.some((s) => s.keyBits < 2048);
     if (hasWeakKey) return "warn";
     return "pass";
   };
@@ -915,9 +915,9 @@ const DomainChecker = () => {
                 </span>
               </div>
               <span className="font-mono text-muted-foreground text-sm">
-                {result.dkim.found
-                  ? result.dkim.selectorsFound.length > 0
-                    ? `${result.dkim.selectorsFound[0].keyBits}-bit`
+                {result.dkim?.found
+                  ? (result.dkim?.selectorsFound?.length ?? 0) > 0
+                    ? `${result.dkim?.selectorsFound?.[0]?.keyBits}-bit`
                     : "found"
                   : "not found"}
               </span>
