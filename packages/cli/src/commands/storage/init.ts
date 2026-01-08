@@ -14,12 +14,6 @@ import type {
   StorageStackConfig,
   WrapsStorageConfig,
 } from "../../types/index.js";
-import { getCostSummary } from "../../utils/storage/costs.js";
-import {
-  getPreset,
-  getPresetInfo,
-  validateConfig,
-} from "../../utils/storage/presets.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -49,6 +43,12 @@ import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
 } from "../../utils/shared/pulumi.js";
+import { getCostSummary } from "../../utils/storage/costs.js";
+import {
+  getPreset,
+  getPresetInfo,
+  validateConfig,
+} from "../../utils/storage/presets.js";
 
 /**
  * Storage init command options
@@ -164,7 +164,10 @@ async function promptCustomStorageConfig(): Promise<WrapsStorageConfig> {
     const geoRestrictionType = await clack.select({
       message: "Restrict access by country?",
       options: [
-        { value: "none" as const, label: "No restrictions (accessible globally)" },
+        {
+          value: "none" as const,
+          label: "No restrictions (accessible globally)",
+        },
         { value: "whitelist" as const, label: "Allow only specific countries" },
         { value: "blacklist" as const, label: "Block specific countries" },
       ],
@@ -191,7 +194,7 @@ async function promptCustomStorageConfig(): Promise<WrapsStorageConfig> {
           if (invalidCodes.length > 0) {
             return `Invalid country codes: ${invalidCodes.join(", ")} (use ISO 3166-1 alpha-2)`;
           }
-          return undefined;
+          return;
         },
       });
 
@@ -264,7 +267,7 @@ async function promptCustomDomain(): Promise<string | undefined> {
   }
 
   if (!wantCustomDomain) {
-    return undefined;
+    return;
   }
 
   const domain = await clack.text({
@@ -274,10 +277,14 @@ async function promptCustomDomain(): Promise<string | undefined> {
       if (!value.trim()) {
         return "Domain is required";
       }
-      if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i.test(value)) {
+      if (
+        !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i.test(
+          value
+        )
+      ) {
         return "Invalid domain format";
       }
-      return undefined;
+      return;
     },
   });
 
@@ -292,13 +299,28 @@ async function promptCustomDomain(): Promise<string | undefined> {
 /**
  * Prompt for estimated storage usage
  */
-async function promptEstimatedUsage(): Promise<{ storageGB: number; bandwidthGB: number }> {
+async function promptEstimatedUsage(): Promise<{
+  storageGB: number;
+  bandwidthGB: number;
+}> {
   const usage = await clack.select({
     message: "Estimated monthly usage (for cost estimate):",
     options: [
-      { value: "small", label: "Small (5GB storage, 20GB bandwidth)", hint: "Side projects" },
-      { value: "medium", label: "Medium (25GB storage, 100GB bandwidth)", hint: "Production apps" },
-      { value: "large", label: "Large (100GB storage, 500GB bandwidth)", hint: "High-traffic apps" },
+      {
+        value: "small",
+        label: "Small (5GB storage, 20GB bandwidth)",
+        hint: "Side projects",
+      },
+      {
+        value: "medium",
+        label: "Medium (25GB storage, 100GB bandwidth)",
+        hint: "Production apps",
+      },
+      {
+        value: "large",
+        label: "Large (100GB storage, 500GB bandwidth)",
+        hint: "High-traffic apps",
+      },
     ],
   });
 
@@ -381,8 +403,12 @@ export async function init(options: StorageInitOptions): Promise<void> {
     clack.log.warn(
       `Storage service already exists for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
     );
-    clack.log.info(`Created: ${existingConnection.services.storage?.deployedAt}`);
-    clack.log.info(`Use ${pc.cyan("wraps storage status")} to view current setup`);
+    clack.log.info(
+      `Created: ${existingConnection.services.storage?.deployedAt}`
+    );
+    clack.log.info(
+      `Use ${pc.cyan("wraps storage status")} to view current setup`
+    );
     process.exit(0);
   }
 
@@ -569,7 +595,8 @@ export async function init(options: StorageInitOptions): Promise<void> {
                   customDomain: result.customDomain,
                   customDomainPending: result.customDomainPending,
                   acmCertificateArn: result.acmCertificateArn,
-                  acmCertificateValidationRecords: result.acmCertificateValidationRecords,
+                  acmCertificateValidationRecords:
+                    result.acmCertificateValidationRecords,
                   versioning: result.versioning,
                   retention: result.retention,
                 };
@@ -604,12 +631,21 @@ export async function init(options: StorageInitOptions): Promise<void> {
           bucketName: pulumiOutputs.bucketName?.value as string,
           bucketArn: pulumiOutputs.bucketArn?.value as string,
           region: pulumiOutputs.region?.value as string,
-          distributionId: pulumiOutputs.distributionId?.value as string | undefined,
-          distributionDomain: pulumiOutputs.distributionDomain?.value as string | undefined,
+          distributionId: pulumiOutputs.distributionId?.value as
+            | string
+            | undefined,
+          distributionDomain: pulumiOutputs.distributionDomain?.value as
+            | string
+            | undefined,
           customDomain: pulumiOutputs.customDomain?.value as string | undefined,
-          customDomainPending: pulumiOutputs.customDomainPending?.value as string | undefined,
-          acmCertificateArn: pulumiOutputs.acmCertificateArn?.value as string | undefined,
-          acmCertificateValidationRecords: pulumiOutputs.acmCertificateValidationRecords?.value as
+          customDomainPending: pulumiOutputs.customDomainPending?.value as
+            | string
+            | undefined,
+          acmCertificateArn: pulumiOutputs.acmCertificateArn?.value as
+            | string
+            | undefined,
+          acmCertificateValidationRecords: pulumiOutputs
+            .acmCertificateValidationRecords?.value as
             | Array<{ name: string; type: string; value: string }>
             | undefined,
           versioning: pulumiOutputs.versioning?.value as boolean,
@@ -650,7 +686,9 @@ export async function init(options: StorageInitOptions): Promise<void> {
 
   if (outputs.customDomain && outputs.distributionDomain) {
     const { findHostedZone } = await import("../../utils/route53.js");
-    const { promptDNSManagement } = await import("../../utils/shared/prompts.js");
+    const { promptDNSManagement } = await import(
+      "../../utils/shared/prompts.js"
+    );
 
     // Extract root domain from custom domain (e.g., cdn.example.com -> example.com)
     const domainParts = outputs.customDomain.split(".");
@@ -710,7 +748,8 @@ export async function init(options: StorageInitOptions): Promise<void> {
           const dnsRecords: StorageDNSRecord[] = [];
 
           // Custom domain CNAME
-          const existingValue = existingCname?.ResourceRecords?.[0]?.Value || null;
+          const existingValue =
+            existingCname?.ResourceRecords?.[0]?.Value || null;
           let cdnStatus: StorageDNSRecord["status"] = "new";
           let cdnConflictReason: string | undefined;
 
@@ -742,13 +781,19 @@ export async function init(options: StorageInitOptions): Promise<void> {
           console.log();
 
           const newCount = dnsRecords.filter((r) => r.status === "new").length;
-          const conflictCount = dnsRecords.filter((r) => r.status === "conflict").length;
-          const noChangeCount = dnsRecords.filter((r) => r.status === "no_change").length;
+          const conflictCount = dnsRecords.filter(
+            (r) => r.status === "conflict"
+          ).length;
+          const noChangeCount = dnsRecords.filter(
+            (r) => r.status === "no_change"
+          ).length;
 
           const summaryParts: string[] = [];
           if (newCount > 0) summaryParts.push(pc.green(`${newCount} new`));
-          if (conflictCount > 0) summaryParts.push(pc.red(`${conflictCount} conflicts`));
-          if (noChangeCount > 0) summaryParts.push(pc.dim(`${noChangeCount} unchanged`));
+          if (conflictCount > 0)
+            summaryParts.push(pc.red(`${conflictCount} conflicts`));
+          if (noChangeCount > 0)
+            summaryParts.push(pc.dim(`${noChangeCount} unchanged`));
           console.log(`  ${summaryParts.join(" | ")}\n`);
 
           for (const record of dnsRecords) {
@@ -814,7 +859,9 @@ export async function init(options: StorageInitOptions): Promise<void> {
               );
             }
 
-            progress.succeed(`Created ${changes.length} DNS record(s) in Route53`);
+            progress.succeed(
+              `Created ${changes.length} DNS record(s) in Route53`
+            );
             dnsAutoCreated = true;
           } else {
             clack.log.info(
@@ -885,7 +932,11 @@ function displayStorageSuccess(options: {
   versioning: boolean;
   dnsAutoCreated: boolean;
   hostedZoneFound: boolean; // If true, cert validation records were auto-created by Pulumi
-  acmCertificateValidationRecords?: Array<{ name: string; type: string; value: string }>;
+  acmCertificateValidationRecords?: Array<{
+    name: string;
+    type: string;
+    value: string;
+  }>;
 }): void {
   clack.log.success(pc.green(pc.bold("Storage infrastructure deployed!")));
 
@@ -895,17 +946,25 @@ function displayStorageSuccess(options: {
   clack.log.info(`  Region: ${pc.cyan(options.region)}`);
 
   if (options.distributionDomain) {
-    clack.log.info(`  CloudFront: ${pc.cyan(`https://${options.distributionDomain}`)}`);
+    clack.log.info(
+      `  CloudFront: ${pc.cyan(`https://${options.distributionDomain}`)}`
+    );
   }
 
   if (options.customDomain) {
-    clack.log.info(`  Custom Domain: ${pc.cyan(`https://${options.customDomain}`)}`);
+    clack.log.info(
+      `  Custom Domain: ${pc.cyan(`https://${options.customDomain}`)}`
+    );
   } else if (options.customDomainPending) {
-    clack.log.info(`  Custom Domain: ${pc.yellow(`${options.customDomainPending} (pending cert validation)`)}`);
+    clack.log.info(
+      `  Custom Domain: ${pc.yellow(`${options.customDomainPending} (pending cert validation)`)}`
+    );
   }
 
   clack.log.info(`  IAM Role: ${pc.dim(options.roleArn)}`);
-  clack.log.info(`  Versioning: ${options.versioning ? pc.green("Enabled") : pc.dim("Disabled")}`);
+  clack.log.info(
+    `  Versioning: ${options.versioning ? pc.green("Enabled") : pc.dim("Disabled")}`
+  );
 
   // DNS records needed for pending custom domain (no Route53 hosted zone)
   if (options.customDomainPending && options.acmCertificateValidationRecords) {
@@ -928,14 +987,18 @@ function displayStorageSuccess(options: {
 
     clack.log.warn(
       "Custom domain requires manual setup:\n" +
-      "  1. Add the SSL certificate validation DNS record above\n" +
-      "  2. Wait for certificate to be validated (check AWS ACM console)\n" +
-      "  3. Run 'wraps storage upgrade' to add custom domain to CloudFront\n" +
-      "  4. Add the CDN CNAME record to point your domain to CloudFront"
+        "  1. Add the SSL certificate validation DNS record above\n" +
+        "  2. Wait for certificate to be validated (check AWS ACM console)\n" +
+        "  3. Run 'wraps storage upgrade' to add custom domain to CloudFront\n" +
+        "  4. Add the CDN CNAME record to point your domain to CloudFront"
     );
   }
   // DNS records if custom domain is active but CNAME wasn't auto-created
-  else if (options.customDomain && !options.dnsAutoCreated && options.distributionDomain) {
+  else if (
+    options.customDomain &&
+    !options.dnsAutoCreated &&
+    options.distributionDomain
+  ) {
     clack.log.info(`\n${pc.yellow(pc.bold("DNS Record Required:"))}`);
     clack.log.info("Add this record to your DNS provider:\n");
 
@@ -946,14 +1009,22 @@ function displayStorageSuccess(options: {
 
   // Next steps
   clack.log.info(`\n${pc.bold("Next Steps:")}`);
-  clack.log.info(`  1. ${pc.cyan("wraps storage status")} - View your storage setup`);
+  clack.log.info(
+    `  1. ${pc.cyan("wraps storage status")} - View your storage setup`
+  );
 
   if (options.customDomainPending) {
-    clack.log.info(`  2. Add DNS records above and validate SSL certificate`);
-    clack.log.info(`  3. ${pc.cyan("wraps storage upgrade")} - Add custom domain to CloudFront`);
+    clack.log.info("  2. Add DNS records above and validate SSL certificate");
+    clack.log.info(
+      `  3. ${pc.cyan("wraps storage upgrade")} - Add custom domain to CloudFront`
+    );
   } else if (options.customDomain && !options.dnsAutoCreated) {
-    clack.log.info(`  2. Add DNS record above to point your domain to CloudFront`);
-    clack.log.info(`  3. ${pc.cyan("wraps storage verify")} - Check DNS propagation`);
+    clack.log.info(
+      "  2. Add DNS record above to point your domain to CloudFront"
+    );
+    clack.log.info(
+      `  3. ${pc.cyan("wraps storage verify")} - Check DNS propagation`
+    );
   }
 
   // CDN URL
@@ -969,7 +1040,11 @@ function displayStorageSuccess(options: {
   }
 
   if (options.customDomainPending) {
-    clack.outro(pc.yellow("Storage deployed! Custom domain pending certificate validation."));
+    clack.outro(
+      pc.yellow(
+        "Storage deployed! Custom domain pending certificate validation."
+      )
+    );
   } else {
     clack.outro(pc.green("Storage is ready!"));
   }

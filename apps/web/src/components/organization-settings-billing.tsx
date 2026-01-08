@@ -71,7 +71,7 @@ export function OrganizationSettingsBilling({
       authClient.subscription.cancel({
         referenceId: organization.id,
         subscriptionId,
-        returnUrl: `${window.location.origin}/${organization.slug}/settings?tab=billing`,
+        returnUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -110,8 +110,8 @@ export function OrganizationSettingsBilling({
       const upgradeParams: any = {
         plan,
         referenceId: organization.id,
-        successUrl: `${window.location.origin}/${organization.slug}/settings?tab=billing&subscribed=true`,
-        cancelUrl: `${window.location.origin}/${organization.slug}/settings?tab=billing`,
+        successUrl: `${window.location.origin}/${organization.slug}/settings/billing&subscribed=true`,
+        cancelUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
       };
 
       // If user has an existing subscription, pass it to avoid duplicate charges
@@ -168,7 +168,7 @@ export function OrganizationSettingsBilling({
     try {
       const { data, error } = await authClient.subscription.billingPortal({
         referenceId: organization.id,
-        returnUrl: `${window.location.origin}/${organization.slug}/settings?tab=billing`,
+        returnUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
       });
 
       if (error) {

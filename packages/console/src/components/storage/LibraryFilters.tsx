@@ -1,6 +1,6 @@
 import { Filter, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -22,8 +22,7 @@ export function LibraryFilters({
   onFiltersChange,
   availableFormats,
 }: LibraryFiltersProps) {
-  const activeFilterCount =
-    (filters.starred ? 1 : 0) + filters.formats.length;
+  const activeFilterCount = (filters.starred ? 1 : 0) + filters.formats.length;
 
   return (
     <div className="flex items-center gap-2">
@@ -36,9 +35,7 @@ export function LibraryFilters({
         size="sm"
         variant={filters.starred ? "secondary" : "outline"}
       >
-        <Star
-          className={`h-4 w-4 ${filters.starred ? "fill-current" : ""}`}
-        />
+        <Star className={`h-4 w-4 ${filters.starred ? "fill-current" : ""}`} />
         Starred
       </Button>
 

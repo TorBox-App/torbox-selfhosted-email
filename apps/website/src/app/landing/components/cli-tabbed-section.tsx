@@ -118,8 +118,12 @@ function DeployContent() {
         <div className="flex items-center gap-3">
           <IconBox highlighted icon={Terminal} />
           <div>
-            <h3 className="font-semibold text-orange-500">Deploy Infrastructure</h3>
-            <p className="text-muted-foreground text-sm">One command deploys everything to AWS</p>
+            <h3 className="font-semibold text-orange-500">
+              Deploy Infrastructure
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              One command deploys everything to AWS
+            </p>
           </div>
         </div>
 
@@ -140,15 +144,26 @@ function DeployContent() {
           </CodeBlockHeader>
           <CodeBlockBody>
             {(item) => (
-              <CodeBlockItem key={item.language} lineNumbers={false} value={item.language}>
-                <CodeBlockContent language={item.language}>{item.code}</CodeBlockContent>
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
               </CodeBlockItem>
             )}
           </CodeBlockBody>
         </CodeBlock>
 
         <div className="grid gap-2 rounded-lg bg-muted/50 p-4 sm:grid-cols-2">
-          {["Validates AWS credentials", "Shows cost estimates", "Deploys automatically", "Zero stored credentials"].map((item) => (
+          {[
+            "Validates AWS credentials",
+            "Shows cost estimates",
+            "Deploys automatically",
+            "Zero stored credentials",
+          ].map((item) => (
             <div className="flex items-center gap-2" key={item}>
               <Check className="size-4 text-orange-500" />
               <span className="text-sm">{item}</span>
@@ -159,7 +174,11 @@ function DeployContent() {
 
       {/* Architecture diagram showing deploy flow */}
       <div className="mx-auto max-w-2xl">
-        <InteractiveArchitectureDiagram compact defaultTab="deploy" showTabBar={false} />
+        <InteractiveArchitectureDiagram
+          compact
+          defaultTab="deploy"
+          showTabBar={false}
+        />
       </div>
 
       <div className="flex justify-center gap-4">
@@ -185,8 +204,12 @@ function SendContent() {
         <div className="flex items-center gap-3">
           <IconBox highlighted icon={Code2} />
           <div>
-            <h3 className="font-semibold text-orange-500">Install SDK & Send</h3>
-            <p className="text-muted-foreground text-sm">Add the package and start sending</p>
+            <h3 className="font-semibold text-orange-500">
+              Install SDK & Send
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              Add the package and start sending
+            </p>
           </div>
         </div>
 
@@ -198,7 +221,10 @@ function SendContent() {
               <SnippetTabsTrigger value="yarn">yarn</SnippetTabsTrigger>
               <SnippetTabsTrigger value="bun">bun</SnippetTabsTrigger>
             </SnippetTabsList>
-            <SnippetCopyButton className="opacity-100" value={installCommands.npm} />
+            <SnippetCopyButton
+              className="opacity-100"
+              value={installCommands.npm}
+            />
           </SnippetHeader>
           {Object.entries(installCommands).map(([key, command]) => (
             <SnippetTabsContent key={key} value={key}>
@@ -209,7 +235,13 @@ function SendContent() {
 
         <CodeBlock
           className="h-auto"
-          data={[{ language: "typescript", filename: "send-email.ts", code: sdkExample }]}
+          data={[
+            {
+              language: "typescript",
+              filename: "send-email.ts",
+              code: sdkExample,
+            },
+          ]}
           defaultValue="typescript"
         >
           <CodeBlockHeader>
@@ -224,8 +256,14 @@ function SendContent() {
           </CodeBlockHeader>
           <CodeBlockBody>
             {(item) => (
-              <CodeBlockItem key={item.language} lineNumbers={false} value={item.language}>
-                <CodeBlockContent language={item.language}>{item.code}</CodeBlockContent>
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
               </CodeBlockItem>
             )}
           </CodeBlockBody>
@@ -234,7 +272,11 @@ function SendContent() {
 
       {/* Architecture diagram showing send flow */}
       <div className="mx-auto max-w-2xl">
-        <InteractiveArchitectureDiagram compact defaultTab="send" showTabBar={false} />
+        <InteractiveArchitectureDiagram
+          compact
+          defaultTab="send"
+          showTabBar={false}
+        />
       </div>
 
       <div className="flex justify-center gap-4">
@@ -271,7 +313,9 @@ function FeaturesContent() {
                 <IconBox highlighted icon={feature.icon} size="sm" />
                 <div>
                   <h4 className="font-medium text-sm">{feature.title}</h4>
-                  <p className="text-muted-foreground text-xs">{feature.description}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {feature.description}
+                  </p>
                 </div>
               </li>
             ))}
@@ -289,7 +333,9 @@ function FeaturesContent() {
                 <IconBox highlighted icon={feature.icon} size="sm" />
                 <div>
                   <h4 className="font-medium text-sm">{feature.title}</h4>
-                  <p className="text-muted-foreground text-xs">{feature.description}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {feature.description}
+                  </p>
                 </div>
               </li>
             ))}
@@ -312,7 +358,11 @@ function FeaturesContent() {
           </a>
         </Button>
         <Button asChild size="lg" variant="outline">
-          <a href="https://github.com/wraps-team/wraps" rel="noopener noreferrer" target="_blank">
+          <a
+            href="https://github.com/wraps-team/wraps"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             View on GitHub
           </a>
         </Button>

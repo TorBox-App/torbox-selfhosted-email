@@ -88,7 +88,7 @@ function formatBytes(bytes: number): string {
  * Format number with K/M suffix
  */
 function formatNumber(num: number): string {
-  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
   return num.toString();
 }
@@ -112,15 +112,15 @@ function StatCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="font-medium text-muted-foreground text-sm">
           {title}
         </CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="font-bold text-2xl">{value}</div>
         <div className="flex items-center gap-2">
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-xs">{description}</p>
           {trend !== undefined && trend !== 0 && (
             <span
               className={`flex items-center text-xs ${trend > 0 ? "text-green-500" : "text-red-500"}`}
@@ -392,7 +392,7 @@ function NoStorageSetup() {
   return (
     <div className="flex flex-col items-center justify-center py-12">
       <HardDrive className="mb-4 h-16 w-16 text-muted-foreground opacity-50" />
-      <h2 className="mb-2 text-xl font-semibold">No Storage Configured</h2>
+      <h2 className="mb-2 font-semibold text-xl">No Storage Configured</h2>
       <p className="mb-6 max-w-md text-center text-muted-foreground">
         Storage infrastructure has not been deployed yet. Run{" "}
         <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
@@ -466,7 +466,7 @@ export function StorageMetrics() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Storage Metrics</h1>
+          <h1 className="font-bold text-2xl">Storage Metrics</h1>
           <p className="text-muted-foreground">
             Monitor your storage usage and CDN traffic
           </p>

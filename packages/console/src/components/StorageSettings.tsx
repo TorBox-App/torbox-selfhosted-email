@@ -140,7 +140,7 @@ function BucketSection({ settings }: { settings: StorageSettings }) {
       <CardContent className="space-y-4">
         <div className="grid gap-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Bucket Name</span>
+            <span className="text-muted-foreground text-sm">Bucket Name</span>
             <div className="flex items-center gap-2">
               <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
                 {settings.bucketName}
@@ -150,21 +150,21 @@ function BucketSection({ settings }: { settings: StorageSettings }) {
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Region</span>
+            <span className="text-muted-foreground text-sm">Region</span>
             <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
               {settings.region}
             </code>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Versioning</span>
+            <span className="text-muted-foreground text-sm">Versioning</span>
             <Badge variant={settings.versioning ? "default" : "secondary"}>
               {settings.versioning ? "Enabled" : "Disabled"}
             </Badge>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Encryption</span>
+            <span className="text-muted-foreground text-sm">Encryption</span>
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-green-500" />
               <span className="text-sm">AES-256</span>
@@ -174,7 +174,7 @@ function BucketSection({ settings }: { settings: StorageSettings }) {
             <>
               <Separator />
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   Auto-Cleanup
                 </span>
                 <span className="text-sm">{settings.retention}</span>
@@ -238,7 +238,7 @@ function CDNSection({ settings }: { settings: StorageSettings }) {
           {settings.cdn.distributionId && (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   Distribution ID
                 </span>
                 <div className="flex items-center gap-2">
@@ -254,12 +254,12 @@ function CDNSection({ settings }: { settings: StorageSettings }) {
           {settings.cdn.distributionDomain && (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   CloudFront URL
                 </span>
                 <div className="flex items-center gap-2">
                   <a
-                    className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                    className="text-blue-600 text-sm hover:underline dark:text-blue-400"
                     href={`https://${settings.cdn.distributionDomain}`}
                     rel="noopener noreferrer"
                     target="_blank"
@@ -278,12 +278,12 @@ function CDNSection({ settings }: { settings: StorageSettings }) {
           {settings.cdn.customDomain && (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-muted-foreground text-sm">
                   Custom Domain
                 </span>
                 <div className="flex items-center gap-2">
                   <a
-                    className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                    className="text-blue-600 text-sm hover:underline dark:text-blue-400"
                     href={`https://${settings.cdn.customDomain}`}
                     rel="noopener noreferrer"
                     target="_blank"
@@ -370,7 +370,7 @@ function IAMRoleSection({ settings }: { settings: StorageSettings }) {
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Role ARN</span>
+          <span className="text-muted-foreground text-sm">Role ARN</span>
           <div className="flex items-center gap-2">
             <code className="max-w-[300px] truncate rounded bg-muted px-2 py-1 font-mono text-xs">
               {settings.roleArn}
@@ -425,7 +425,7 @@ function NoStorageSetup() {
   return (
     <div className="flex flex-col items-center justify-center py-12">
       <HardDrive className="mb-4 h-16 w-16 text-muted-foreground opacity-50" />
-      <h2 className="mb-2 text-xl font-semibold">No Storage Configured</h2>
+      <h2 className="mb-2 font-semibold text-xl">No Storage Configured</h2>
       <p className="mb-6 max-w-md text-center text-muted-foreground">
         Storage infrastructure has not been deployed yet. Run{" "}
         <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
@@ -496,7 +496,7 @@ export function StorageSettings() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Storage Settings</h1>
+          <h1 className="font-bold text-2xl">Storage Settings</h1>
           <p className="text-muted-foreground">
             Manage your S3 bucket and CloudFront CDN configuration
           </p>

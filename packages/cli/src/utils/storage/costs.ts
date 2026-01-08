@@ -35,9 +35,9 @@ const PRICING = {
  */
 export function calculateCosts(
   config: WrapsStorageConfig,
-  estimatedStorageGB: number = 10,
-  estimatedBandwidthGB: number = 50,
-  estimatedRequests: number = 100_000
+  estimatedStorageGB = 10,
+  estimatedBandwidthGB = 50,
+  estimatedRequests = 100_000
 ): StorageFeatureCostBreakdown {
   // Storage cost
   const storageCost = estimatedStorageGB * PRICING.s3Storage;
@@ -53,7 +53,7 @@ export function calculateCosts(
 
   const requestCost = config.cdn.enabled
     ? (uploadRequests / 1000) * PRICING.s3PutRequests +
-      (downloadRequests / 10000) * PRICING.cloudFrontHttpsRequests
+      (downloadRequests / 10_000) * PRICING.cloudFrontHttpsRequests
     : (uploadRequests / 1000) * PRICING.s3PutRequests +
       (downloadRequests / 1000) * PRICING.s3GetRequests;
 
@@ -116,10 +116,14 @@ export function formatCost(amount: number): string {
  */
 export function getCostSummary(
   config: WrapsStorageConfig,
-  estimatedStorageGB: number = 10,
-  estimatedBandwidthGB: number = 50
+  estimatedStorageGB = 10,
+  estimatedBandwidthGB = 50
 ): string {
-  const costs = calculateCosts(config, estimatedStorageGB, estimatedBandwidthGB);
+  const costs = calculateCosts(
+    config,
+    estimatedStorageGB,
+    estimatedBandwidthGB
+  );
 
   const lines = [
     `Storage:   ${formatCost(costs.storage?.monthly || 0)} (${estimatedStorageGB}GB)`,
@@ -131,7 +135,7 @@ export function getCostSummary(
     lines.push(`WAF:       ${formatCost(costs.waf.monthly)} (rate limiting)`);
   }
 
-  lines.push(`───────────────────────`);
+  lines.push("───────────────────────");
   lines.push(`Total:     ${formatCost(costs.total.monthly)}`);
 
   return lines.join("\n");

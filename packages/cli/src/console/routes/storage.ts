@@ -28,7 +28,8 @@ export function createStorageRouter(config: ServerConfig): Router {
 
       // Get storage info from metadata
       const settings = {
-        bucketName: config.storageBucketName || `wraps-storage-${config.accountId}`,
+        bucketName:
+          config.storageBucketName || `wraps-storage-${config.accountId}`,
         bucketArn: `arn:aws:s3:::${config.storageBucketName || `wraps-storage-${config.accountId}`}`,
         region: config.region,
         roleArn: config.storageRoleArn || config.roleArn,
@@ -42,7 +43,9 @@ export function createStorageRouter(config: ServerConfig): Router {
         certificate: storageConfig.cdn?.customDomain
           ? {
               arn: config.storageCertificateArn,
-              status: config.storageCertificateArn ? "ISSUED" : "PENDING_VALIDATION",
+              status: config.storageCertificateArn
+                ? "ISSUED"
+                : "PENDING_VALIDATION",
             }
           : undefined,
         versioning: storageConfig.versioning ?? false,
@@ -79,14 +82,17 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.storageBucketName || `wraps-storage-${config.accountId}`;
 
       // List objects from S3
-      const { S3Client, ListObjectsV2Command, GetObjectTaggingCommand } = await import(
-        "@aws-sdk/client-s3"
-      );
+      const { S3Client, ListObjectsV2Command, GetObjectTaggingCommand } =
+        await import("@aws-sdk/client-s3");
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
-      const credentials = config.storageRoleArn || config.roleArn
-        ? await assumeRole(config.storageRoleArn || config.roleArn!, config.region)
-        : undefined;
+      const credentials =
+        config.storageRoleArn || config.roleArn
+          ? await assumeRole(
+              config.storageRoleArn || config.roleArn!,
+              config.region
+            )
+          : undefined;
       const s3Client = new S3Client({ region: config.region, credentials });
 
       const response = await s3Client.send(
@@ -149,7 +155,9 @@ export function createStorageRouter(config: ServerConfig): Router {
               key: t.Key || "",
               value: t.Value || "",
             }));
-            starred = tags.some((t) => t.key === "starred" && t.value === "true");
+            starred = tags.some(
+              (t) => t.key === "starred" && t.value === "true"
+            );
           } catch {
             // Tags not available or error - continue without tags
           }
@@ -215,9 +223,13 @@ export function createStorageRouter(config: ServerConfig): Router {
       );
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
-      const credentials = config.storageRoleArn || config.roleArn
-        ? await assumeRole(config.storageRoleArn || config.roleArn!, config.region)
-        : undefined;
+      const credentials =
+        config.storageRoleArn || config.roleArn
+          ? await assumeRole(
+              config.storageRoleArn || config.roleArn!,
+              config.region
+            )
+          : undefined;
       const cloudWatchClient = new CloudWatchClient({
         region: config.region,
         credentials,
@@ -240,7 +252,7 @@ export function createStorageRouter(config: ServerConfig): Router {
             ],
             StartTime: new Date(endTime.getTime() - 24 * 60 * 60 * 1000),
             EndTime: endTime,
-            Period: 86400,
+            Period: 86_400,
             Statistics: ["Average"],
           })
         );
@@ -256,7 +268,7 @@ export function createStorageRouter(config: ServerConfig): Router {
             ],
             StartTime: new Date(endTime.getTime() - 24 * 60 * 60 * 1000),
             EndTime: endTime,
-            Period: 86400,
+            Period: 86_400,
             Statistics: ["Average"],
           })
         );
@@ -334,9 +346,7 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.storageBucketName || `wraps-storage-${config.accountId}`;
 
       // Generate presigned PUT URL
-      const { S3Client, PutObjectCommand } = await import(
-        "@aws-sdk/client-s3"
-      );
+      const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
       const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
@@ -528,8 +538,10 @@ export function createStorageRouter(config: ServerConfig): Router {
     try {
       const { oldKey, newKey } = req.body;
 
-      if (!oldKey || !newKey) {
-        return res.status(400).json({ error: "oldKey and newKey are required" });
+      if (!(oldKey && newKey)) {
+        return res
+          .status(400)
+          .json({ error: "oldKey and newKey are required" });
       }
 
       if (oldKey === newKey) {

@@ -5,14 +5,25 @@
 
 /// <reference lib="webworker" />
 
-import type { OptimizeOptions, OptimizedResult, WorkerMessage } from "./types";
+import type { OptimizedResult, OptimizeOptions, WorkerMessage } from "./types";
 
 // Lazy-loaded codec functions
-let webpEncode: ((data: ImageData, options?: { quality?: number }) => Promise<Uint8Array>) | null = null;
-let avifEncode: ((data: ImageData, options?: { quality?: number }) => Promise<Uint8Array>) | null = null;
-let jpegEncode: ((data: ImageData, options?: { quality?: number }) => Promise<Uint8Array>) | null = null;
+let webpEncode:
+  | ((data: ImageData, options?: { quality?: number }) => Promise<Uint8Array>)
+  | null = null;
+let avifEncode:
+  | ((data: ImageData, options?: { quality?: number }) => Promise<Uint8Array>)
+  | null = null;
+let jpegEncode:
+  | ((data: ImageData, options?: { quality?: number }) => Promise<Uint8Array>)
+  | null = null;
 let pngEncode: ((data: ImageData) => Promise<Uint8Array>) | null = null;
-let resizeImage: ((data: ImageData, options: { width: number; height: number }) => Promise<ImageData>) | null = null;
+let resizeImage:
+  | ((
+      data: ImageData,
+      options: { width: number; height: number }
+    ) => Promise<ImageData>)
+  | null = null;
 
 /**
  * Load codec on demand
@@ -98,11 +109,16 @@ function blobToDataUrl(blob: Blob): Promise<string> {
  */
 function getMimeType(format: string): string {
   switch (format) {
-    case "webp": return "image/webp";
-    case "avif": return "image/avif";
-    case "jpeg": return "image/jpeg";
-    case "png": return "image/png";
-    default: return "application/octet-stream";
+    case "webp":
+      return "image/webp";
+    case "avif":
+      return "image/avif";
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    default:
+      return "application/octet-stream";
   }
 }
 
@@ -250,6 +266,3 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
     });
   }
 };
-
-// Export empty object for TypeScript module resolution
-export {};

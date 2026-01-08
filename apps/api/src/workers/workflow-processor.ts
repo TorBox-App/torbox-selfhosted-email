@@ -91,7 +91,11 @@ async function triggerWorkflow(
   }
 
   // Check reentry delay for completed executions (only when reentry not allowed)
-  if (!wf.allowReentry && wf.reentryDelaySeconds && wf.reentryDelaySeconds > 0) {
+  if (
+    !wf.allowReentry &&
+    wf.reentryDelaySeconds &&
+    wf.reentryDelaySeconds > 0
+  ) {
     const recentlyCompleted = await db.query.workflowExecution.findFirst({
       where: and(
         eq(workflowExecution.workflowId, workflowId),

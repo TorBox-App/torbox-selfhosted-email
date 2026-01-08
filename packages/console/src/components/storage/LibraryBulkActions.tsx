@@ -37,7 +37,12 @@ export function LibraryBulkActions({
           Delete
         </Button>
       </div>
-      <Button className="gap-2" onClick={onClearSelection} size="sm" variant="ghost">
+      <Button
+        className="gap-2"
+        onClick={onClearSelection}
+        size="sm"
+        variant="ghost"
+      >
         <X className="h-4 w-4" />
         Clear
       </Button>

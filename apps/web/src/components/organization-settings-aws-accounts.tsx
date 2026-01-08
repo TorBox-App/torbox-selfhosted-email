@@ -224,7 +224,7 @@ export function OrganizationSettingsAwsAccounts({
                     You've reached your plan's AWS account limit.{" "}
                     <Link
                       className="underline hover:no-underline"
-                      href={`/${orgSlug}/settings?tab=billing`}
+                      href={`/${orgSlug}/settings/billing`}
                     >
                       Upgrade your plan
                     </Link>{" "}

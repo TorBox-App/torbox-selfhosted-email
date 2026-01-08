@@ -329,8 +329,9 @@ const DMARCSimulator = () => {
           <p className="text-red-600 text-sm dark:text-red-400">
             <AlertTriangle className="mr-2 inline h-4 w-4" />
             <strong>{stats.spoofed} spoofed emails delivered.</strong> Your
-            p=none policy tells receivers not to enforce authentication failures.
-            While some providers may still filter, your domain is easier to spoof.
+            p=none policy tells receivers not to enforce authentication
+            failures. While some providers may still filter, your domain is
+            easier to spoof.
           </p>
         </div>
       )}
@@ -347,7 +348,6 @@ const DMARCSimulator = () => {
     </Card>
   );
 };
-
 
 // Email Authentication Explainer
 const AuthExplainer = () => {
@@ -854,11 +854,21 @@ const DomainChecker = () => {
             <div className="space-y-2">
               {[
                 { key: "spf", label: "SPF", data: result.score.breakdown.spf },
-                { key: "dkim", label: "DKIM", data: result.score.breakdown.dkim },
-                { key: "dmarc", label: "DMARC", data: result.score.breakdown.dmarc },
+                {
+                  key: "dkim",
+                  label: "DKIM",
+                  data: result.score.breakdown.dkim,
+                },
+                {
+                  key: "dmarc",
+                  label: "DMARC",
+                  data: result.score.breakdown.dmarc,
+                },
               ].map(({ key, label, data }) => (
-                <div key={key} className="flex items-center gap-2">
-                  <span className="w-14 text-muted-foreground text-xs">{label}</span>
+                <div className="flex items-center gap-2" key={key}>
+                  <span className="w-14 text-muted-foreground text-xs">
+                    {label}
+                  </span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className={`h-full transition-all ${
@@ -891,7 +901,9 @@ const DomainChecker = () => {
                 {result.spf.exists
                   ? result.spf.allMechanism || "configured"
                   : "missing"}
-                {result.spf.lookupCount ? ` (${result.spf.lookupCount}/10 lookups)` : ""}
+                {result.spf.lookupCount
+                  ? ` (${result.spf.lookupCount}/10 lookups)`
+                  : ""}
               </span>
             </div>
 
@@ -951,8 +963,8 @@ const DomainChecker = () => {
               ))}
               {result.issues.length > 3 && (
                 <a
-                  href="/tools"
                   className="block text-center text-primary text-sm hover:underline"
+                  href="/tools"
                 >
                   +{result.issues.length - 3} more issues - View full report
                 </a>
@@ -961,16 +973,17 @@ const DomainChecker = () => {
           )}
 
           {/* Domain Age */}
-          {result.domainAge?.ageInDays !== null && result.domainAge?.ageInDays !== undefined && (
-            <div className="flex items-center justify-between border-t pt-3 text-sm">
-              <span className="text-muted-foreground">Domain Age</span>
-              <span className="font-mono text-foreground">
-                {result.domainAge.ageInDays > 365
-                  ? `${Math.floor(result.domainAge.ageInDays / 365)} years`
-                  : `${result.domainAge.ageInDays} days`}
-              </span>
-            </div>
-          )}
+          {result.domainAge?.ageInDays !== null &&
+            result.domainAge?.ageInDays !== undefined && (
+              <div className="flex items-center justify-between border-t pt-3 text-sm">
+                <span className="text-muted-foreground">Domain Age</span>
+                <span className="font-mono text-foreground">
+                  {result.domainAge.ageInDays > 365
+                    ? `${Math.floor(result.domainAge.ageInDays / 365)} years`
+                    : `${result.domainAge.ageInDays} days`}
+                </span>
+              </div>
+            )}
         </div>
       )}
 

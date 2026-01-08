@@ -18,19 +18,23 @@
  * ```
  */
 
-// Types
-export type {
-  ImageFormat,
-  OptimizeOptions,
-  OptimizedResult,
-  PreviewResult,
-  Preset,
-  SizeWarning,
-  SizeWarningLevel,
-  BrowserSupport,
-  GifInfo,
-} from "./types";
-
+// Browser compatibility
+export {
+  canUseOptimizer,
+  detectBrowserSupport,
+  getBrowserSupport,
+  getFallbackStrategy,
+  getSupportedFormats,
+  getSupportMessage,
+  isFormatSupported,
+} from "./compat";
+// GIF handling
+export {
+  analyzeGif,
+  getGifRecommendation,
+  isGifFile,
+  shouldSkipOptimization,
+} from "./gif";
 // Main optimizer
 export {
   ImageOptimizer,
@@ -38,60 +42,50 @@ export {
   optimizeImage,
   previewOptimization,
 } from "./optimizer";
-
 // Presets
 export {
-  PRESETS,
   DEFAULT_OPTIONS,
+  FORMAT_OPTIONS,
   getPreset,
   getPresetNames,
-  mergeWithDefaults,
-  TARGET_SIZE_OPTIONS,
-  FORMAT_OPTIONS,
   MAX_WIDTH_OPTIONS,
+  mergeWithDefaults,
   PIXEL_DENSITY_OPTIONS,
+  PRESETS,
+  TARGET_SIZE_OPTIONS,
 } from "./presets";
-
+// Types
+export type {
+  BrowserSupport,
+  GifInfo,
+  ImageFormat,
+  OptimizedResult,
+  OptimizeOptions,
+  Preset,
+  PreviewResult,
+  SizeWarning,
+  SizeWarningLevel,
+} from "./types";
+// Utilities
+export {
+  blobToDataUrl,
+  calculateDimensions,
+  calculateSavings,
+  fileToDataUrl,
+  formatBytes,
+  getExtension,
+  getImageDimensions,
+  getMimeType,
+  ImageSizeError,
+  isImageFile,
+  validateImageSize,
+} from "./utils";
 // Size warnings
 export {
   getEmailSizeWarning,
-  getWarningColor,
-  getWarningBgColor,
-  shouldBlockUpload,
   getRecommendedTargetSize,
   getSizeStatus,
+  getWarningBgColor,
+  getWarningColor,
+  shouldBlockUpload,
 } from "./warnings";
-
-// GIF handling
-export {
-  analyzeGif,
-  isGifFile,
-  getGifRecommendation,
-  shouldSkipOptimization,
-} from "./gif";
-
-// Browser compatibility
-export {
-  detectBrowserSupport,
-  canUseOptimizer,
-  getFallbackStrategy,
-  getSupportedFormats,
-  getSupportMessage,
-  getBrowserSupport,
-  isFormatSupported,
-} from "./compat";
-
-// Utilities
-export {
-  validateImageSize,
-  calculateDimensions,
-  blobToDataUrl,
-  fileToDataUrl,
-  formatBytes,
-  getMimeType,
-  getExtension,
-  calculateSavings,
-  isImageFile,
-  getImageDimensions,
-  ImageSizeError,
-} from "./utils";

@@ -108,9 +108,10 @@ export function getRecommendedTargetSize(currentSizeKb: number): number {
 /**
  * Get size status label
  */
-export function getSizeStatus(
-  sizeBytes: number
-): { label: string; color: string } {
+export function getSizeStatus(sizeBytes: number): {
+  label: string;
+  color: string;
+} {
   const warning = getEmailSizeWarning(sizeBytes);
 
   if (!warning) {

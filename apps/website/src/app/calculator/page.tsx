@@ -235,7 +235,8 @@ export default function CostCalculatorPage() {
       const wafCost =
         AWS_PRICING.WAF_WEB_ACL_PER_MONTH +
         AWS_PRICING.WAF_RULE_PER_MONTH +
-        (estimatedWafRequests / 1_000_000) * AWS_PRICING.WAF_REQUESTS_PER_MILLION;
+        (estimatedWafRequests / 1_000_000) *
+          AWS_PRICING.WAF_REQUESTS_PER_MILLION;
       total += wafCost;
       breakdown.push({
         name: "WAF Rate Limiting",
@@ -381,10 +382,10 @@ export default function CostCalculatorPage() {
                         <div className="space-y-2">
                           <Label htmlFor="retention">Retention Period</Label>
                           <Select
-                            value={retention}
                             onValueChange={(value: RetentionPeriod) => {
                               setRetention(value);
                             }}
+                            value={retention}
                           >
                             <SelectTrigger id="retention">
                               <SelectValue placeholder="Select retention" />

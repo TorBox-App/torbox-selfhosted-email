@@ -287,7 +287,7 @@ function calculateWafCost(
   config: WrapsEmailConfig,
   emailsPerMonth: number
 ): FeatureCost | undefined {
-  if (!config.tracking?.httpsEnabled || !config.tracking?.wafEnabled) {
+  if (!(config.tracking?.httpsEnabled && config.tracking?.wafEnabled)) {
     return;
   }
 

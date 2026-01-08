@@ -51,7 +51,9 @@ const Changelog = lazy(() => import("@/app/changelog/page"));
 
 // Blog
 const Blog = lazy(() => import("@/app/blog/page"));
-const BlogDmarcSucks = lazy(() => import("@/app/blog/your-dmarc-policy-is-useless/page"));
+const BlogDmarcSucks = lazy(
+  () => import("@/app/blog/your-dmarc-policy-is-useless/page")
+);
 
 // Tools
 const Tools = lazy(() => import("@/app/tools/page"));

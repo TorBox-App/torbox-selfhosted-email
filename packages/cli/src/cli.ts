@@ -8,9 +8,6 @@ import pc from "picocolors";
 // AWS commands
 import { doctor as awsDoctor } from "./commands/aws/doctor.js";
 import { setup as awsSetup } from "./commands/aws/setup.js";
-// Platform commands
-import { platform as platformInfo } from "./commands/platform/index.js";
-import { updateRole } from "./commands/platform/update-role.js";
 // Email commands
 import { check } from "./commands/email/check.js";
 import { config } from "./commands/email/config.js";
@@ -27,13 +24,15 @@ import { init } from "./commands/email/init.js";
 import { restore } from "./commands/email/restore.js";
 import { emailStatus } from "./commands/email/status.js";
 import { upgrade } from "./commands/email/upgrade.js";
+// Info commands
+import { news } from "./commands/news.js";
+// Platform commands
+import { platform as platformInfo } from "./commands/platform/index.js";
+import { updateRole } from "./commands/platform/update-role.js";
 // Shared commands
 import { dashboard } from "./commands/shared/dashboard.js";
 import { destroy } from "./commands/shared/destroy.js";
 import { status } from "./commands/shared/status.js";
-// Info commands
-import { news } from "./commands/news.js";
-import { support } from "./commands/support.js";
 // SMS commands
 import { smsDestroy } from "./commands/sms/destroy.js";
 import { init as smsInit } from "./commands/sms/init.js";
@@ -50,6 +49,7 @@ import { storageStatus } from "./commands/storage/status.js";
 import { storageSync } from "./commands/storage/sync.js";
 import { storageUpgrade } from "./commands/storage/upgrade.js";
 import { storageVerify } from "./commands/storage/verify.js";
+import { support } from "./commands/support.js";
 // Telemetry commands
 import {
   telemetryDisable,
@@ -88,7 +88,9 @@ function showHelp() {
   console.log("Usage: wraps [service] <command> [options]\n");
   console.log("Services:");
   console.log(`  ${pc.cyan("email")}       Email infrastructure (AWS SES)`);
-  console.log(`  ${pc.cyan("sms")}         SMS infrastructure (AWS End User Messaging)`);
+  console.log(
+    `  ${pc.cyan("sms")}         SMS infrastructure (AWS End User Messaging)`
+  );
   console.log(
     `  ${pc.cyan("storage")}     File storage infrastructure (AWS S3 + CloudFront)\n`
   );
@@ -156,9 +158,13 @@ function showHelp() {
     `  ${pc.cyan("storage destroy")}      Remove storage infrastructure\n`
   );
   console.log("Local Development:");
-  console.log(`  ${pc.cyan("console")}               Start local web console\n`);
+  console.log(
+    `  ${pc.cyan("console")}               Start local web console\n`
+  );
   console.log("Platform:");
-  console.log(`  ${pc.cyan("platform")}              Show platform info and pricing`);
+  console.log(
+    `  ${pc.cyan("platform")}              Show platform info and pricing`
+  );
   console.log(
     `  ${pc.cyan("platform update-role")} Update platform IAM permissions\n`
   );
@@ -177,7 +183,9 @@ function showHelp() {
     `  ${pc.cyan("telemetry")}    Manage anonymous telemetry settings`
   );
   console.log(`  ${pc.cyan("news")}         Show recent Wraps updates`);
-  console.log(`  ${pc.cyan("support")}      Get help and support contact info\n`);
+  console.log(
+    `  ${pc.cyan("support")}      Get help and support contact info\n`
+  );
   console.log("Options:");
   console.log(
     `  ${pc.dim("-p, --provider")}  Hosting provider (vercel, aws, railway, other)`
@@ -838,7 +846,9 @@ async function run() {
         default:
           clack.log.error(`Unknown platform command: ${subCommand}`);
           console.log(`\nAvailable commands: ${pc.cyan("update-role")}\n`);
-          console.log(`Run ${pc.cyan("wraps platform")} for more information.\n`);
+          console.log(
+            `Run ${pc.cyan("wraps platform")} for more information.\n`
+          );
           process.exit(1);
       }
       // Track platform commands (they return early, so track here)

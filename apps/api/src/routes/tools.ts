@@ -3,14 +3,14 @@
  * Free email deliverability tools - no authentication required
  */
 
-import { runEmailCheck, type EmailCheckResult } from "@wraps/email-check";
+import { type EmailCheckResult, runEmailCheck } from "@wraps/email-check";
 import { Elysia, t } from "elysia";
 
 import { publicRateLimitMiddleware } from "../middleware/public-rate-limit";
 import {
   getCached,
-  setCache,
   getEmailCheckCacheKey,
+  setCache,
 } from "../middleware/tools-cache";
 
 /**
@@ -149,8 +149,12 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
           : undefined;
 
       // Check cache first
-      const cacheKey = getEmailCheckCacheKey(domain, { quick, dkimSelectors: selectors });
-      const cached = await getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
+      const cacheKey = getEmailCheckCacheKey(domain, {
+        quick,
+        dkimSelectors: selectors,
+      });
+      const cached =
+        await getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
       if (cached) {
         set.headers["X-Cache"] = "HIT";
         return cached;
@@ -211,7 +215,8 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
 
       // Check cache first
       const cacheKey = getEmailCheckCacheKey(domain, { quick: true });
-      const cached = await getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
+      const cached =
+        await getCached<ReturnType<typeof formatEmailCheckResult>>(cacheKey);
       if (cached) {
         set.headers["X-Cache"] = "HIT";
         return cached;

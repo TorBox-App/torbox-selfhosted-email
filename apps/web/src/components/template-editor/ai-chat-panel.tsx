@@ -299,7 +299,7 @@ export function AIChatPanel({
                 your plan for more AI assistance.
               </p>
               <Button asChild className="h-8 text-xs" size="sm">
-                <a href={`/${orgSlug}/settings?tab=billing`}>Upgrade Plan</a>
+                <a href={`/${orgSlug}/settings/billing`}>Upgrade Plan</a>
               </Button>
               <p className="mt-3 text-muted-foreground text-xs">
                 Resets on the 1st of next month.

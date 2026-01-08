@@ -5,7 +5,10 @@ import { SectionWrapper } from "@/app/landing/components/section-card";
 const emailCommands = [
   { command: "email init", description: "Deploy new email infrastructure" },
   { command: "email status", description: "Show infrastructure details" },
-  { command: "email check <domain>", description: "Check email deliverability" },
+  {
+    command: "email check <domain>",
+    description: "Check email deliverability",
+  },
   { command: "email domains add", description: "Add a domain to SES" },
   { command: "email domains list", description: "List all domains" },
   { command: "email domains verify", description: "Verify DNS records" },
@@ -46,7 +49,10 @@ export function CliCommandsSection() {
           <div className="p-4">
             <ul className="space-y-2">
               {emailCommands.map((cmd) => (
-                <li className="flex items-start gap-2 text-sm" key={cmd.command}>
+                <li
+                  className="flex items-start gap-2 text-sm"
+                  key={cmd.command}
+                >
                   <code className="shrink-0 rounded bg-muted px-2 py-0.5 font-mono text-xs">
                     {cmd.command}
                   </code>
@@ -67,7 +73,10 @@ export function CliCommandsSection() {
           <div className="p-4">
             <ul className="space-y-2">
               {globalCommands.map((cmd) => (
-                <li className="flex items-start gap-2 text-sm" key={cmd.command}>
+                <li
+                  className="flex items-start gap-2 text-sm"
+                  key={cmd.command}
+                >
                   <code className="shrink-0 rounded bg-muted px-2 py-0.5 font-mono text-xs">
                     {cmd.command}
                   </code>
@@ -88,7 +97,10 @@ export function CliCommandsSection() {
           <div className="p-4">
             <ul className="space-y-2">
               {smsCommands.map((cmd) => (
-                <li className="flex items-start gap-2 text-sm" key={cmd.command}>
+                <li
+                  className="flex items-start gap-2 text-sm"
+                  key={cmd.command}
+                >
                   <code className="shrink-0 rounded bg-muted px-2 py-0.5 font-mono text-xs">
                     {cmd.command}
                   </code>
@@ -99,8 +111,8 @@ export function CliCommandsSection() {
               ))}
             </ul>
             <p className="mt-4 text-muted-foreground text-xs">
-              Run <code className="rounded bg-muted px-1">wraps --help</code> for
-              the full command list.
+              Run <code className="rounded bg-muted px-1">wraps --help</code>{" "}
+              for the full command list.
             </p>
           </div>
         </div>

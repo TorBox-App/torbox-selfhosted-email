@@ -4,7 +4,7 @@
  */
 
 // Browser limits vary, but 16384x16384 is a safe max for most browsers
-const MAX_DIMENSION = 16384;
+const MAX_DIMENSION = 16_384;
 const MAX_PIXELS = MAX_DIMENSION * MAX_DIMENSION;
 // Conservative memory limit for image processing (512MB)
 const MAX_MEMORY_MB = 512;

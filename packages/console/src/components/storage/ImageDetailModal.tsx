@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import {
   Copy,
   Download,
@@ -8,7 +9,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,17 @@ function getFileExtension(filename: string): string {
 function isImageFile(contentType?: string, filename?: string): boolean {
   if (contentType?.startsWith("image/")) return true;
   const ext = filename ? getFileExtension(filename) : "";
-  return ["jpg", "jpeg", "png", "gif", "webp", "avif", "svg", "bmp", "ico"].includes(ext);
+  return [
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "avif",
+    "svg",
+    "bmp",
+    "ico",
+  ].includes(ext);
 }
 
 export function ImageDetailModal({
@@ -116,7 +126,9 @@ export function ImageDetailModal({
                 ) : (
                   <FileIcon className="h-16 w-16 text-muted-foreground/50" />
                 )}
-                <p className="text-muted-foreground text-sm">Preview not available</p>
+                <p className="text-muted-foreground text-sm">
+                  Preview not available
+                </p>
               </div>
             )}
           </div>
@@ -180,12 +192,17 @@ export function ImageDetailModal({
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Last Modified</dt>
                     <dd className="font-medium">
-                      {format(new Date(file.lastModified), "MMM d, yyyy 'at' h:mm a")}
+                      {format(
+                        new Date(file.lastModified),
+                        "MMM d, yyyy 'at' h:mm a"
+                      )}
                     </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Starred</dt>
-                    <dd className="font-medium">{file.starred ? "Yes" : "No"}</dd>
+                    <dd className="font-medium">
+                      {file.starred ? "Yes" : "No"}
+                    </dd>
                   </div>
                   {file.tags.length > 0 && (
                     <div>

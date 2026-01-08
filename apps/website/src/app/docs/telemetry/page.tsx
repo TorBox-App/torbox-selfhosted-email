@@ -123,7 +123,7 @@ export default function TelemetryPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg text-destructive">
+            <CardTitle className="text-destructive text-lg">
               What We Never Collect
             </CardTitle>
           </CardHeader>

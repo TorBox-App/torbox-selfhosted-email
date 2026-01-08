@@ -1,6 +1,12 @@
-import type React from "react";
-import { Copy, ExternalLink, File as FileIcon, FileImage, Star } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import {
+  Copy,
+  ExternalLink,
+  File as FileIcon,
+  FileImage,
+  Star,
+} from "lucide-react";
+import type React from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +44,17 @@ function getFileExtension(filename: string): string {
 function isImageFile(contentType?: string, filename?: string): boolean {
   if (contentType?.startsWith("image/")) return true;
   const ext = filename ? getFileExtension(filename) : "";
-  return ["jpg", "jpeg", "png", "gif", "webp", "avif", "svg", "bmp", "ico"].includes(ext);
+  return [
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "avif",
+    "svg",
+    "bmp",
+    "ico",
+  ].includes(ext);
 }
 
 export function LibraryTableView({
@@ -67,7 +83,9 @@ export function LibraryTableView({
           <TableRow className="bg-muted/50">
             <TableHead className="w-12">
               <Checkbox
-                checked={selectedFiles.length === files.length && files.length > 0}
+                checked={
+                  selectedFiles.length === files.length && files.length > 0
+                }
                 onCheckedChange={onSelectAll}
               />
             </TableHead>

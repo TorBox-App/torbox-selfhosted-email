@@ -1,5 +1,5 @@
 /**
- * Structured logging with Pino + Axiom
+ * Structured logging with Pino
  *
  * Usage:
  * ```typescript
@@ -13,19 +13,22 @@
  * log.info('Processing request');
  * log.error({ err }, 'Operation failed');
  * ```
+ *
+ * Logs go to stdout. Use Vercel Log Drains to forward to Axiom/Datadog.
  */
 
 import pino from "pino";
 
 const isDev = process.env.NODE_ENV !== "production";
-const axiomDataset = process.env.AXIOM_DATASET || "wraps-web";
-const axiomToken = process.env.AXIOM_TOKEN;
 
 /**
  * Create the base logger
+ *
+ * Logs to stdout in all environments. In production on Vercel,
+ * use Log Drains to forward logs to Axiom/Datadog/etc.
  */
 function createLogger(): pino.Logger {
-  const baseConfig: pino.LoggerOptions = {
+  return pino({
     level: isDev ? "debug" : "info",
     base: {
       service: "wraps-web",
@@ -35,23 +38,7 @@ function createLogger(): pino.Logger {
       level: (label) => ({ level: label }),
     },
     timestamp: pino.stdTimeFunctions.isoTime,
-  };
-
-  // In production with Axiom token, send to Axiom
-  if (!isDev && axiomToken) {
-    const transport = pino.transport({
-      target: "@axiomhq/pino",
-      options: {
-        dataset: axiomDataset,
-        token: axiomToken,
-      },
-    });
-    return pino(baseConfig, transport);
-  }
-
-  // In dev or without token, just use stdout with pretty printing
-  // Note: pino-pretty not installed, using default JSON output
-  return pino(baseConfig);
+  });
 }
 
 /**

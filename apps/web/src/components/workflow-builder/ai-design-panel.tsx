@@ -344,7 +344,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
                 You've used all {aiUsage.limit} AI messages this month.
               </p>
               <Button asChild className="h-8 text-xs" size="sm">
-                <a href={`/${orgSlug}/settings?tab=billing`}>Upgrade Plan</a>
+                <a href={`/${orgSlug}/settings/billing`}>Upgrade Plan</a>
               </Button>
             </div>
           ) : messages.length === 0 ? (

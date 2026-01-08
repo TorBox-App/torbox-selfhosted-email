@@ -15,7 +15,9 @@ export async function news(): Promise<void> {
   console.log();
   console.log("  See the latest updates, features, and improvements:");
   console.log();
-  console.log(`  ${pc.cyan("→")} ${pc.bold("Changelog:")} ${pc.cyan("https://wraps.dev/changelog")}`);
+  console.log(
+    `  ${pc.cyan("→")} ${pc.bold("Changelog:")} ${pc.cyan("https://wraps.dev/changelog")}`
+  );
   console.log();
   console.log(pc.dim("  Subscribe to get notified about new releases."));
   console.log();

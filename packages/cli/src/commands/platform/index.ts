@@ -32,10 +32,14 @@ export async function platform(): Promise<void> {
   console.log(`    ${pc.cyan("Scale")}        $50/mo   100,000 contacts`);
   console.log(`    ${pc.cyan("Enterprise")}   Custom   Unlimited contacts`);
   console.log();
-  console.log(pc.dim("  + AWS costs at $0.10 per 1,000 emails (paid directly to AWS)"));
+  console.log(
+    pc.dim("  + AWS costs at $0.10 per 1,000 emails (paid directly to AWS)")
+  );
   console.log();
 
-  console.log(`  ${pc.bold("Learn more:")} ${pc.cyan("https://wraps.dev/platform")}`);
+  console.log(
+    `  ${pc.bold("Learn more:")} ${pc.cyan("https://wraps.dev/platform")}`
+  );
   console.log();
 
   console.log(pc.dim("─────────────────────────────────────────────────────"));
@@ -47,9 +51,7 @@ export async function platform(): Promise<void> {
   );
   console.log();
   console.log(
-    pc.dim(
-      "  Run this after deploying new infrastructure to grant the hosted"
-    )
+    pc.dim("  Run this after deploying new infrastructure to grant the hosted")
   );
   console.log(pc.dim("  dashboard access to your AWS resources."));
   console.log();

@@ -160,9 +160,7 @@ describe("error factory functions", () => {
       expect(error.message).toBe("AWS credentials not found");
       expect(error.code).toBe("NO_AWS_CREDENTIALS");
       expect(error.suggestion).toContain("aws configure");
-      expect(error.docsUrl).toBe(
-        "https://wraps.dev/docs/guides/aws-setup"
-      );
+      expect(error.docsUrl).toBe("https://wraps.dev/docs/guides/aws-setup");
     });
   });
 
@@ -201,7 +199,9 @@ describe("error factory functions", () => {
       expect(error.message).toContain("Failed to create IAM role");
       expect(error.code).toBe("PULUMI_ERROR");
       expect(error.suggestion).toContain("AWS permissions");
-      expect(error.docsUrl).toBe("https://wraps.dev/docs/guides/aws-setup/troubleshooting");
+      expect(error.docsUrl).toBe(
+        "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
+      );
     });
   });
 

@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  BarChart3,
-  Globe,
-  History,
-  Shield,
-  Users,
-  Zap,
-} from "lucide-react";
+import { BarChart3, Globe, History, Shield, Users, Zap } from "lucide-react";
 import {
   FeatureItem,
   SectionWrapper,

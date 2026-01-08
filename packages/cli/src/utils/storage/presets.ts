@@ -44,7 +44,9 @@ export const PRODUCTION_PRESET: WrapsStorageConfig = {
 /**
  * Get preset configuration by name
  */
-export function getPreset(preset: StorageConfigPreset): WrapsStorageConfig | null {
+export function getPreset(
+  preset: StorageConfigPreset
+): WrapsStorageConfig | null {
   switch (preset) {
     case "starter":
       return { ...STARTER_PRESET };

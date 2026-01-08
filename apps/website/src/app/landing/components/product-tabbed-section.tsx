@@ -87,7 +87,10 @@ function TemplatesContent() {
             <feature.icon className="size-4 text-orange-500" />
             <span className="font-medium text-sm">{feature.title}</span>
             {feature.badge && (
-              <Badge className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400" variant="secondary">
+              <Badge
+                className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                variant="secondary"
+              >
                 {feature.badge}
               </Badge>
             )}
@@ -137,7 +140,10 @@ function BroadcastsContent() {
             <feature.icon className="size-4 text-orange-500" />
             <span className="font-medium text-sm">{feature.title}</span>
             {feature.badge && (
-              <Badge className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400" variant="secondary">
+              <Badge
+                className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                variant="secondary"
+              >
                 {feature.badge}
               </Badge>
             )}
@@ -146,7 +152,8 @@ function BroadcastsContent() {
       </div>
 
       <p className="text-center text-muted-foreground text-sm">
-        Basic broadcasts in Starter ($10/mo). Scheduling & segments in Pro ($30/mo).
+        Basic broadcasts in Starter ($10/mo). Scheduling & segments in Pro
+        ($30/mo).
       </p>
     </div>
   );
@@ -157,7 +164,10 @@ function AutomationsContent() {
     <div className="space-y-8">
       {/* Coming Soon Badge */}
       <div className="flex justify-center">
-        <Badge className="bg-blue-500/10 px-4 py-1 text-blue-600 dark:text-blue-400" variant="secondary">
+        <Badge
+          className="bg-blue-500/10 px-4 py-1 text-blue-600 dark:text-blue-400"
+          variant="secondary"
+        >
           <Play className="mr-2 size-3" />
           Coming Soon in Growth
         </Badge>

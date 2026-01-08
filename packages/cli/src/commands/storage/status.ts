@@ -24,7 +24,9 @@ export type StorageStatusOptions = {
 /**
  * Storage Status command - Show current storage infrastructure setup
  */
-export async function storageStatus(options: StorageStatusOptions): Promise<void> {
+export async function storageStatus(
+  options: StorageStatusOptions
+): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
@@ -106,7 +108,8 @@ export async function storageStatus(options: StorageStatusOptions): Promise<void
     customDomain: stackOutputs.customDomain?.value,
     customDomainPending: stackOutputs.customDomainPending?.value,
     acmCertificateArn: stackOutputs.acmCertificateArn?.value,
-    acmCertificateValidationRecords: stackOutputs.acmCertificateValidationRecords?.value,
+    acmCertificateValidationRecords:
+      stackOutputs.acmCertificateValidationRecords?.value,
     roleArn: stackOutputs.roleArn?.value,
     versioning: stackOutputs.versioning?.value,
     retention: stackOutputs.retention?.value,
@@ -136,7 +139,11 @@ function displayStorageStatus(options: {
   customDomain?: string;
   customDomainPending?: string;
   acmCertificateArn?: string;
-  acmCertificateValidationRecords?: Array<{ name: string; type: string; value: string }>;
+  acmCertificateValidationRecords?: Array<{
+    name: string;
+    type: string;
+    value: string;
+  }>;
   roleArn: string;
   versioning?: boolean;
   retention?: string;
@@ -162,9 +169,12 @@ function displayStorageStatus(options: {
   // Determine if there's a pending certificate (cert exists but not active on CloudFront)
   const hasPendingCert = options.acmCertificateArn && !options.customDomain;
   // Extract domain from validation record name: _hash.cdn.wraps.dev. -> cdn.wraps.dev
-  const pendingDomain = options.customDomainPending ||
+  const pendingDomain =
+    options.customDomainPending ||
     (hasPendingCert && options.acmCertificateValidationRecords?.[0]?.name
-      ? options.acmCertificateValidationRecords[0].name.replace(/^_[^.]+\./, '').replace(/\.$/, '')
+      ? options.acmCertificateValidationRecords[0].name
+          .replace(/^_[^.]+\./, "")
+          .replace(/\.$/, "")
       : undefined);
 
   // CloudFront CDN
@@ -173,16 +183,24 @@ function displayStorageStatus(options: {
     clack.log.info(`  Distribution ID: ${pc.cyan(options.distributionId)}`);
 
     if (options.distributionDomain) {
-      clack.log.info(`  Default URL: ${pc.cyan(`https://${options.distributionDomain}`)}`);
+      clack.log.info(
+        `  Default URL: ${pc.cyan(`https://${options.distributionDomain}`)}`
+      );
     }
 
     if (options.customDomain) {
-      clack.log.info(`  Custom Domain: ${pc.green(`https://${options.customDomain}`)}`);
+      clack.log.info(
+        `  Custom Domain: ${pc.green(`https://${options.customDomain}`)}`
+      );
     } else if (pendingDomain) {
-      clack.log.info(`  Custom Domain: ${pc.yellow(`${pendingDomain} (pending)`)}`);
+      clack.log.info(
+        `  Custom Domain: ${pc.yellow(`${pendingDomain} (pending)`)}`
+      );
     }
   } else {
-    clack.log.info(`\n${pc.dim("CDN: Disabled (files served directly from S3)")}`);
+    clack.log.info(
+      `\n${pc.dim("CDN: Disabled (files served directly from S3)")}`
+    );
   }
 
   // SSL Certificate (if pending custom domain or unvalidated cert)
@@ -226,10 +244,16 @@ function displayStorageStatus(options: {
   // Next steps
   clack.log.info(`\n${pc.bold("Commands:")}`);
   if (hasPendingCert) {
-    clack.log.info(`  ${pc.cyan("wraps storage upgrade")} - Add custom domain after cert validation`);
+    clack.log.info(
+      `  ${pc.cyan("wraps storage upgrade")} - Add custom domain after cert validation`
+    );
   }
-  clack.log.info(`  ${pc.cyan("wraps storage verify")} - Check DNS and certificate status`);
-  clack.log.info(`  ${pc.cyan("wraps storage destroy")} - Remove storage infrastructure`);
+  clack.log.info(
+    `  ${pc.cyan("wraps storage verify")} - Check DNS and certificate status`
+  );
+  clack.log.info(
+    `  ${pc.cyan("wraps storage destroy")} - Remove storage infrastructure`
+  );
 
   clack.outro("");
 }

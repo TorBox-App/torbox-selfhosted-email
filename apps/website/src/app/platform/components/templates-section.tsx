@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Code,
-  Eye,
-  LayoutGrid,
-  Palette,
-  Sparkles,
-} from "lucide-react";
+import { Code, Eye, LayoutGrid, Palette, Sparkles } from "lucide-react";
 import { SectionWrapper } from "@/app/landing/components/section-card";
 import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/utils";
@@ -89,7 +83,10 @@ export function DashboardTemplatesSection() {
             <feature.icon className="size-4 text-orange-500" />
             <span className="font-medium text-sm">{feature.title}</span>
             {feature.badge && (
-              <Badge className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400" variant="secondary">
+              <Badge
+                className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                variant="secondary"
+              >
                 {feature.badge}
               </Badge>
             )}

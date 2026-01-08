@@ -4,8 +4,8 @@
  */
 
 import type {
-  OptimizeOptions,
   OptimizedResult,
+  OptimizeOptions,
   PreviewResult,
   WorkerResponse,
 } from "./types";

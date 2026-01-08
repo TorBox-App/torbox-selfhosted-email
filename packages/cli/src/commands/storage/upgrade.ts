@@ -131,8 +131,11 @@ export async function storageUpgrade(
           Id: stackOutputs.distributionId.value,
         })
       );
-      const aliases = cfResponse.Distribution?.DistributionConfig?.Aliases?.Items || [];
-      cloudFrontHasCustomDomain = aliases.includes(storageConfig.cdn.customDomain);
+      const aliases =
+        cfResponse.Distribution?.DistributionConfig?.Aliases?.Items || [];
+      cloudFrontHasCustomDomain = aliases.includes(
+        storageConfig.cdn.customDomain
+      );
     } catch {
       // Ignore errors checking CloudFront
     }
@@ -144,7 +147,8 @@ export async function storageUpgrade(
     !cloudFrontHasCustomDomain;
   const pendingDomain =
     stackOutputs.customDomainPending?.value ||
-    (hasPendingCert && stackOutputs.acmCertificateValidationRecords?.value?.[0]?.name
+    (hasPendingCert &&
+    stackOutputs.acmCertificateValidationRecords?.value?.[0]?.name
       ? stackOutputs.acmCertificateValidationRecords.value[0].name
           .replace(/^_[^.]+\./, "")
           .replace(/\.$/, "")
@@ -158,7 +162,7 @@ export async function storageUpgrade(
   if (!hasPendingCert) {
     clack.log.info("No pending upgrades found for storage infrastructure.");
     clack.log.info(
-      `\nCurrent configuration:\n` +
+      "\nCurrent configuration:\n" +
         `  S3 Bucket: ${pc.cyan(stackOutputs.bucketName?.value)}\n` +
         `  Region: ${pc.cyan(stackOutputs.region?.value || region)}\n` +
         `  CDN: ${stackOutputs.distributionId?.value ? pc.green("Enabled") : pc.dim("Disabled")}\n` +
@@ -197,7 +201,7 @@ export async function storageUpgrade(
     );
     clack.log.info(`\nPending domain: ${pc.cyan(pendingDomain)}`);
     clack.log.info(
-      `\nTo complete certificate validation, add this DNS record:\n`
+      "\nTo complete certificate validation, add this DNS record:\n"
     );
 
     if (stackOutputs.acmCertificateValidationRecords?.value?.length) {
@@ -208,7 +212,7 @@ export async function storageUpgrade(
     }
 
     clack.log.info(
-      `After adding the DNS record, wait for validation (typically 5-30 minutes).`
+      "After adding the DNS record, wait for validation (typically 5-30 minutes)."
     );
     clack.log.info(`Then run ${pc.cyan("wraps storage upgrade")} again.\n`);
     process.exit(0);
@@ -222,7 +226,7 @@ export async function storageUpgrade(
   );
 
   // 7. Confirm upgrade
-  if (!options.yes && !options.preview) {
+  if (!(options.yes || options.preview)) {
     const confirmed = await clack.confirm({
       message: "Proceed with adding custom domain to CloudFront?",
       initialValue: true,
@@ -283,39 +287,40 @@ export async function storageUpgrade(
       async () => {
         await ensurePulumiWorkDir();
 
-        const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
-          {
-            stackName: `wraps-storage-${identity.accountId}-${region}`,
-            projectName: "wraps-storage",
-            program: async () => {
-              const result = await deployStorageStack(stackConfig);
+        const stack =
+          await pulumi.automation.LocalWorkspace.createOrSelectStack(
+            {
+              stackName: `wraps-storage-${identity.accountId}-${region}`,
+              projectName: "wraps-storage",
+              program: async () => {
+                const result = await deployStorageStack(stackConfig);
 
-              return {
-                roleArn: result.roleArn,
-                bucketName: result.bucketName,
-                bucketArn: result.bucketArn,
-                region: result.region,
-                distributionId: result.distributionId,
-                distributionDomain: result.distributionDomain,
-                customDomain: result.customDomain,
-                customDomainPending: result.customDomainPending,
-                acmCertificateArn: result.acmCertificateArn,
-                acmCertificateValidationRecords:
-                  result.acmCertificateValidationRecords,
-                versioning: result.versioning,
-                retention: result.retention,
-              };
+                return {
+                  roleArn: result.roleArn,
+                  bucketName: result.bucketName,
+                  bucketArn: result.bucketArn,
+                  region: result.region,
+                  distributionId: result.distributionId,
+                  distributionDomain: result.distributionDomain,
+                  customDomain: result.customDomain,
+                  customDomainPending: result.customDomainPending,
+                  acmCertificateArn: result.acmCertificateArn,
+                  acmCertificateValidationRecords:
+                    result.acmCertificateValidationRecords,
+                  versioning: result.versioning,
+                  retention: result.retention,
+                };
+              },
             },
-          },
-          {
-            workDir: getPulumiWorkDir(),
-            envVars: {
-              PULUMI_CONFIG_PASSPHRASE: "",
-              AWS_REGION: region,
-            },
-            secretsProvider: "passphrase",
-          }
-        );
+            {
+              workDir: getPulumiWorkDir(),
+              envVars: {
+                PULUMI_CONFIG_PASSPHRASE: "",
+                AWS_REGION: region,
+              },
+              secretsProvider: "passphrase",
+            }
+          );
 
         await stack.setConfig("aws:region", { value: region });
 
@@ -347,9 +352,13 @@ export async function storageUpgrade(
   // 12. Display success
   clack.log.success(`\n${pc.green("")} ${pc.bold("Upgrade complete!")}\n`);
   clack.log.info(`Custom domain ${pc.cyan(pendingDomain)} is now active.\n`);
-  clack.log.info(`${pc.bold("Final Step:")} Add this CNAME record to your DNS:\n`);
+  clack.log.info(
+    `${pc.bold("Final Step:")} Add this CNAME record to your DNS:\n`
+  );
   clack.log.info(`  ${pc.cyan("CNAME")} ${pendingDomain}`);
-  clack.log.info(`  ${pc.dim(">")} ${stackOutputs.distributionDomain?.value}\n`);
+  clack.log.info(
+    `  ${pc.dim(">")} ${stackOutputs.distributionDomain?.value}\n`
+  );
   clack.log.info(
     `Your files will be available at: ${pc.cyan(`https://${pendingDomain}/your-file.jpg`)}\n`
   );

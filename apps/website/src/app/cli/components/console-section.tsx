@@ -16,22 +16,26 @@ const consoleFeatures = [
   {
     icon: BarChart3,
     title: "Real-time Analytics",
-    description: "Track sends, deliveries, opens, clicks, bounces, and complaints as they happen.",
+    description:
+      "Track sends, deliveries, opens, clicks, bounces, and complaints as they happen.",
   },
   {
     icon: History,
     title: "Message History",
-    description: "Search and filter through your email and SMS history with full event timelines.",
+    description:
+      "Search and filter through your email and SMS history with full event timelines.",
   },
   {
     icon: Globe,
     title: "Domain Management",
-    description: "View domain verification status, DKIM records, and DNS configuration.",
+    description:
+      "View domain verification status, DKIM records, and DNS configuration.",
   },
   {
     icon: Shield,
     title: "Reputation Metrics",
-    description: "Monitor your sender reputation, bounce rates, and complaint ratios.",
+    description:
+      "Monitor your sender reputation, bounce rates, and complaint ratios.",
   },
 ];
 
@@ -107,7 +111,9 @@ export function CliConsoleSection() {
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2.5 rounded-md bg-green-500/10 px-2.5 py-1.5">
                 <Mail className="size-4 text-green-500" />
-                <span className="font-medium text-green-600 text-sm dark:text-green-400">Email</span>
+                <span className="font-medium text-green-600 text-sm dark:text-green-400">
+                  Email
+                </span>
               </div>
               <div className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-muted/50">
                 <MessageSquare className="size-4" />
@@ -127,14 +133,17 @@ export function CliConsoleSection() {
                 <span className="text-green-400">$</span> wraps console
               </div>
               <div className="text-green-400">
-                Dashboard: <span className="text-cyan-400">http://localhost:5555</span>
+                Dashboard:{" "}
+                <span className="text-cyan-400">http://localhost:5555</span>
               </div>
             </div>
           </div>
 
           {/* Floating stats card */}
           <div className="absolute -top-4 -right-4 hidden rounded-xl border bg-background p-4 shadow-xl sm:block lg:-right-8">
-            <div className="mb-2 font-medium text-muted-foreground text-xs">Today's Stats</div>
+            <div className="mb-2 font-medium text-muted-foreground text-xs">
+              Today's Stats
+            </div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
               <div className="flex items-center gap-2">
                 <div className="size-2 rounded-full bg-green-500" />

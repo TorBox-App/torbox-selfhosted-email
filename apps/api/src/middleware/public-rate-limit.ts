@@ -83,7 +83,11 @@ async function incrementCounter(
  */
 function getMinuteKey(ip: string): string {
   const now = new Date();
-  const minute = now.toISOString().slice(0, 16).replace("T", "-").replace(":", "-");
+  const minute = now
+    .toISOString()
+    .slice(0, 16)
+    .replace("T", "-")
+    .replace(":", "-");
   return `${ip}:minute:${minute}`;
 }
 
@@ -96,36 +100,41 @@ function getHourKey(ip: string): string {
 /**
  * Public rate limit middleware
  */
-export const publicRateLimitMiddleware = new Elysia({ name: "public-rate-limit" })
-  .derive(async ({ request, set }) => {
-    const clientIp = getClientIp(request);
+export const publicRateLimitMiddleware = new Elysia({
+  name: "public-rate-limit",
+}).derive(async ({ request, set }) => {
+  const clientIp = getClientIp(request);
 
-    // Check minute limit
-    const minuteCount = await incrementCounter(getMinuteKey(clientIp), 60);
-    if (minuteCount > PUBLIC_LIMITS.minute) {
-      set.status = 429;
-      set.headers["Retry-After"] = "60";
-      set.headers["X-RateLimit-Limit"] = String(PUBLIC_LIMITS.minute);
-      set.headers["X-RateLimit-Remaining"] = "0";
-      set.headers["X-RateLimit-Reset"] = String(Math.floor(Date.now() / 1000) + 60);
-      throw new Error("Rate limit exceeded. Please wait a minute before trying again.");
-    }
-
-    // Check hourly limit
-    const hourCount = await incrementCounter(getHourKey(clientIp), 3600);
-    if (hourCount > PUBLIC_LIMITS.hour) {
-      set.status = 429;
-      set.headers["Retry-After"] = "3600";
-      set.headers["X-RateLimit-Limit"] = String(PUBLIC_LIMITS.hour);
-      set.headers["X-RateLimit-Remaining"] = "0";
-      throw new Error("Hourly rate limit exceeded. Please try again later.");
-    }
-
-    // Set rate limit headers
+  // Check minute limit
+  const minuteCount = await incrementCounter(getMinuteKey(clientIp), 60);
+  if (minuteCount > PUBLIC_LIMITS.minute) {
+    set.status = 429;
+    set.headers["Retry-After"] = "60";
     set.headers["X-RateLimit-Limit"] = String(PUBLIC_LIMITS.minute);
-    set.headers["X-RateLimit-Remaining"] = String(
-      Math.max(0, PUBLIC_LIMITS.minute - minuteCount)
+    set.headers["X-RateLimit-Remaining"] = "0";
+    set.headers["X-RateLimit-Reset"] = String(
+      Math.floor(Date.now() / 1000) + 60
     );
+    throw new Error(
+      "Rate limit exceeded. Please wait a minute before trying again."
+    );
+  }
 
-    return { clientIp };
-  });
+  // Check hourly limit
+  const hourCount = await incrementCounter(getHourKey(clientIp), 3600);
+  if (hourCount > PUBLIC_LIMITS.hour) {
+    set.status = 429;
+    set.headers["Retry-After"] = "3600";
+    set.headers["X-RateLimit-Limit"] = String(PUBLIC_LIMITS.hour);
+    set.headers["X-RateLimit-Remaining"] = "0";
+    throw new Error("Hourly rate limit exceeded. Please try again later.");
+  }
+
+  // Set rate limit headers
+  set.headers["X-RateLimit-Limit"] = String(PUBLIC_LIMITS.minute);
+  set.headers["X-RateLimit-Remaining"] = String(
+    Math.max(0, PUBLIC_LIMITS.minute - minuteCount)
+  );
+
+  return { clientIp };
+});

@@ -284,7 +284,7 @@ export function ChangelogReleasesSection() {
           {/* Origin card - where it all began */}
           <div className="relative mt-12 pl-16">
             {/* Line connecting from releases to lightbulb center */}
-            <div className="-top-12 absolute left-[24px] h-[72px] w-[1.5px] bg-border" />
+            <div className="absolute -top-12 left-[24px] h-[72px] w-[1.5px] bg-border" />
 
             {/* Timeline terminator dot - covers end of line */}
             <div className="absolute left-0 flex size-12 items-center justify-center rounded-full bg-background shadow-md">

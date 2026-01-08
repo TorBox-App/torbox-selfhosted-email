@@ -101,7 +101,9 @@ async function checkDistributionStatus(
 /**
  * Storage Verify command - Check DNS and certificate status
  */
-export async function storageVerify(options: StorageVerifyOptions): Promise<void> {
+export async function storageVerify(
+  options: StorageVerifyOptions
+): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
@@ -176,9 +178,8 @@ export async function storageVerify(options: StorageVerifyOptions): Promise<void
   const distributionId = stackOutputs.distributionId?.value;
   const distributionDomain = stackOutputs.distributionDomain?.value;
   const acmCertificateArn = stackOutputs.acmCertificateArn?.value;
-  const validationRecords = stackOutputs.acmCertificateValidationRecords?.value as
-    | Array<{ name: string; type: string; value: string }>
-    | undefined;
+  const validationRecords = stackOutputs.acmCertificateValidationRecords
+    ?.value as Array<{ name: string; type: string; value: string }> | undefined;
 
   // Derive pending domain from validation records if not explicitly set
   const pendingDomain =
@@ -197,7 +198,9 @@ export async function storageVerify(options: StorageVerifyOptions): Promise<void
     if (distStatus.status === "Deployed" && distStatus.enabled) {
       clack.log.success(`  Status: ${pc.green("Deployed and enabled")}`);
     } else if (distStatus.status === "InProgress") {
-      clack.log.warn(`  Status: ${pc.yellow("Deploying...")} (this can take 5-10 minutes)`);
+      clack.log.warn(
+        `  Status: ${pc.yellow("Deploying...")} (this can take 5-10 minutes)`
+      );
       allPassed = false;
     } else {
       clack.log.error(`  Status: ${pc.red(distStatus.status)}`);
@@ -210,7 +213,9 @@ export async function storageVerify(options: StorageVerifyOptions): Promise<void
     clack.log.info(`\n${pc.bold("SSL Certificate:")}`);
 
     if (pendingDomain && !customDomain) {
-      clack.log.info(`  Domain: ${pc.yellow(pendingDomain)} ${pc.dim("(pending)")}`);
+      clack.log.info(
+        `  Domain: ${pc.yellow(pendingDomain)} ${pc.dim("(pending)")}`
+      );
     }
 
     const certStatus = await checkCertificateStatus(acmCertificateArn);
@@ -255,7 +260,9 @@ export async function storageVerify(options: StorageVerifyOptions): Promise<void
 
     const domainCheck = await checkDNSRecord(customDomain, distributionDomain);
     if (domainCheck.found) {
-      clack.log.success(`  ${pc.green("OK")} ${customDomain} → ${distributionDomain}`);
+      clack.log.success(
+        `  ${pc.green("OK")} ${customDomain} → ${distributionDomain}`
+      );
     } else {
       clack.log.error(`  ${pc.red("MISSING")} ${customDomain}`);
       clack.log.info(`    ${pc.dim("→")} Add CNAME: ${distributionDomain}`);
@@ -281,8 +288,10 @@ export async function storageVerify(options: StorageVerifyOptions): Promise<void
     clack.log.warn(pc.yellow("Some checks failed. See details above."));
 
     if (validationRecords && validationRecords.length > 0) {
-      clack.log.info(`\nDNS records may take up to 48 hours to propagate.`);
-      clack.log.info(`Run ${pc.cyan("wraps storage verify")} again to check status.`);
+      clack.log.info("\nDNS records may take up to 48 hours to propagate.");
+      clack.log.info(
+        `Run ${pc.cyan("wraps storage verify")} again to check status.`
+      );
     }
   }
 

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Calendar,
-  Filter,
-  Send,
-  Tag,
-  Users,
-} from "lucide-react";
+import { Calendar, Filter, Send, Tag, Users } from "lucide-react";
 import { SectionWrapper } from "@/app/landing/components/section-card";
 import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/utils";
@@ -92,7 +86,10 @@ export function DashboardBroadcastsSection() {
             <feature.icon className="size-4 text-orange-500" />
             <span className="font-medium text-sm">{feature.title}</span>
             {feature.badge && (
-              <Badge className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400" variant="secondary">
+              <Badge
+                className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                variant="secondary"
+              >
                 {feature.badge}
               </Badge>
             )}
@@ -101,7 +98,8 @@ export function DashboardBroadcastsSection() {
       </div>
 
       <p className="mt-8 text-center text-muted-foreground text-sm">
-        Basic broadcasts in Starter ($10/mo). Scheduling & segments in Pro ($30/mo).
+        Basic broadcasts in Starter ($10/mo). Scheduling & segments in Pro
+        ($30/mo).
       </p>
     </SectionWrapper>
   );

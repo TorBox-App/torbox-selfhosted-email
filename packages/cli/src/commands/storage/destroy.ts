@@ -36,7 +36,9 @@ export type StorageDestroyOptions = {
 /**
  * Storage Destroy command - Remove storage infrastructure
  */
-export async function storageDestroy(options: StorageDestroyOptions): Promise<void> {
+export async function storageDestroy(
+  options: StorageDestroyOptions
+): Promise<void> {
   const startTime = Date.now();
 
   clack.intro(
@@ -300,8 +302,7 @@ export async function storageDestroy(options: StorageDestroyOptions): Promise<vo
   if (metadata) {
     removeServiceFromConnection(metadata, "storage");
     // Save or delete based on remaining services
-    const hasOtherServices =
-      Object.keys(metadata.services).length > 0;
+    const hasOtherServices = Object.keys(metadata.services).length > 0;
     if (hasOtherServices) {
       await saveConnectionMetadata(metadata);
     } else {
@@ -344,12 +345,12 @@ export async function storageDestroy(options: StorageDestroyOptions): Promise<vo
 /**
  * Empty all objects from an S3 bucket
  */
-async function emptyS3Bucket(bucketName: string, region: string): Promise<void> {
-  const {
-    S3Client,
-    ListObjectVersionsCommand,
-    DeleteObjectsCommand,
-  } = await import("@aws-sdk/client-s3");
+async function emptyS3Bucket(
+  bucketName: string,
+  region: string
+): Promise<void> {
+  const { S3Client, ListObjectVersionsCommand, DeleteObjectsCommand } =
+    await import("@aws-sdk/client-s3");
 
   const s3 = new S3Client({ region });
 

@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, Copy, Globe, Mail, MessageSquare, Sparkles, Terminal } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Globe,
+  Mail,
+  MessageSquare,
+  Sparkles,
+  Terminal,
+} from "lucide-react";
 import { useState } from "react";
 import { SectionWrapper } from "@/app/landing/components/section-card";
 
@@ -115,7 +123,9 @@ export function CliServicesSection() {
               {/* Header */}
               <div className={`border-b ${service.bgColor} px-6 py-6`}>
                 <div className="mb-3 flex items-center gap-3">
-                  <div className={`flex size-10 items-center justify-center rounded-lg ${service.bgColor}`}>
+                  <div
+                    className={`flex size-10 items-center justify-center rounded-lg ${service.bgColor}`}
+                  >
                     <Icon className={`size-5 ${service.color}`} />
                   </div>
                   <h3 className={`font-bold text-xl ${service.color}`}>
@@ -145,7 +155,9 @@ export function CliServicesSection() {
                       className="flex items-start gap-2 text-sm"
                       key={feature}
                     >
-                      <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${service.color.replace("text-", "bg-")}`} />
+                      <span
+                        className={`mt-1.5 size-1.5 shrink-0 rounded-full ${service.color.replace("text-", "bg-")}`}
+                      />
                       <span>{feature}</span>
                     </li>
                   ))}

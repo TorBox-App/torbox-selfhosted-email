@@ -227,7 +227,7 @@ export const auth = betterAuth<BetterAuthOptions>({
                   // Build billing URL
                   const appUrl =
                     process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev";
-                  const billingUrl = `${appUrl}/${org.slug}/settings?tab=billing`;
+                  const billingUrl = `${appUrl}/${org.slug}/settings/billing`;
 
                   // Send payment failed email to all admins
                   const wraps = await getWrapsClient();

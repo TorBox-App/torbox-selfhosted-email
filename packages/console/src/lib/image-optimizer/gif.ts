@@ -59,9 +59,7 @@ export function isGifFile(file: File): boolean {
 /**
  * Get recommendation for GIF handling
  */
-export function getGifRecommendation(
-  gifInfo: GifInfo
-): {
+export function getGifRecommendation(gifInfo: GifInfo): {
   canOptimize: boolean;
   message: string;
   suggestion?: string;

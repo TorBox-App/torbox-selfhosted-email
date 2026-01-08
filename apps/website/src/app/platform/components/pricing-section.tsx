@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowRight, Check, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { SectionWrapper } from "@/app/landing/components/section-card";
+import { Button } from "@/components/ui/button";
 
 const tiers = [
   {
@@ -75,9 +75,7 @@ export function DashboardPricingSection() {
         {tiers.map((tier) => (
           <div
             className={`relative overflow-hidden rounded-2xl border-2 bg-background ${
-              tier.highlighted
-                ? "border-orange-500"
-                : "border-border"
+              tier.highlighted ? "border-orange-500" : "border-border"
             }`}
             key={tier.name}
           >
@@ -145,9 +143,11 @@ export function DashboardPricingSection() {
               <ul className="mb-6 space-y-2.5">
                 {tier.features.map((feature) => (
                   <li className="flex items-start gap-2 text-sm" key={feature}>
-                    <Check className={`mt-0.5 size-4 shrink-0 ${
-                      tier.highlighted ? "text-orange-500" : "text-green-500"
-                    }`} />
+                    <Check
+                      className={`mt-0.5 size-4 shrink-0 ${
+                        tier.highlighted ? "text-orange-500" : "text-green-500"
+                      }`}
+                    />
                     <span>{feature}</span>
                   </li>
                 ))}

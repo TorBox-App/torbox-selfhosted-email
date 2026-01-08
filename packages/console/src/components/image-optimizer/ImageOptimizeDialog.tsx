@@ -45,19 +45,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  type ImageFormat,
-  type OptimizeOptions,
-  type PreviewResult,
-  FORMAT_OPTIONS,
-  PIXEL_DENSITY_OPTIONS,
   analyzeGif,
+  FORMAT_OPTIONS,
   fileToDataUrl,
   formatBytes,
   getBrowserSupport,
   getEmailSizeWarning,
   getImageDimensions,
   getSizeStatus,
+  type ImageFormat,
   isGifFile,
+  type OptimizeOptions,
+  PIXEL_DENSITY_OPTIONS,
+  type PreviewResult,
   previewOptimization,
 } from "@/lib/image-optimizer";
 
@@ -66,7 +66,11 @@ import {
  * These are CSS pixel widths - multiply by pixel density for actual output
  */
 const WIDTH_PRESETS = [
-  { value: "none", label: "Original size", description: "Keep original dimensions" },
+  {
+    value: "none",
+    label: "Original size",
+    description: "Keep original dimensions",
+  },
   { value: "600", label: "Email (600px)", description: "Standard email width" },
   { value: "800", label: "Medium (800px)", description: "Blog posts, cards" },
   { value: "1200", label: "Large (1200px)", description: "Full-width content" },
@@ -76,7 +80,9 @@ const WIDTH_PRESETS = [
 
 interface ImageOptimizeDialogProps {
   files: File[];
-  onComplete: (results: Array<{ file: File | Blob; cdnFilename: string }>) => void;
+  onComplete: (
+    results: Array<{ file: File | Blob; cdnFilename: string }>
+  ) => void;
   onClose: () => void;
   open: boolean;
 }
@@ -109,14 +115,17 @@ export function ImageOptimizeDialog({
     (sum, e) => sum + (e.preview?.optimizedSize ?? e.file.size),
     0
   );
-  const totalSavings = totalOriginalSize > 0
-    ? Math.round((1 - totalOptimizedSize / totalOriginalSize) * 100)
-    : 0;
+  const totalSavings =
+    totalOriginalSize > 0
+      ? Math.round((1 - totalOptimizedSize / totalOriginalSize) * 100)
+      : 0;
 
   // Check if all files are optimized (ready or animated gif)
-  const allOptimized = entries.length > 0 && entries.every(
-    (e) => e.status === "ready" || e.status === "done" || e.isAnimatedGif
-  );
+  const allOptimized =
+    entries.length > 0 &&
+    entries.every(
+      (e) => e.status === "ready" || e.status === "done" || e.isAnimatedGif
+    );
 
   // Check if any files need optimization (pending, not animated gif)
   const hasFilesToOptimize = entries.some(
@@ -143,7 +152,9 @@ export function ImageOptimizeDialog({
 
   React.useEffect(() => {
     getBrowserSupport().then((support) => {
-      setCanOptimize(support.wasm && support.webWorker && support.offscreenCanvas);
+      setCanOptimize(
+        support.wasm && support.webWorker && support.offscreenCanvas
+      );
     });
   }, []);
 
@@ -176,7 +187,9 @@ export function ImageOptimizeDialog({
           if (info.isAnimated) {
             setEntries((prev) =>
               prev.map((e) =>
-                e.id === entry.id ? { ...e, isAnimatedGif: true, status: "ready" } : e
+                e.id === entry.id
+                  ? { ...e, isAnimatedGif: true, status: "ready" }
+                  : e
               )
             );
           }
@@ -201,7 +214,9 @@ export function ImageOptimizeDialog({
     for (const entry of entriesToProcess) {
       // Mark as processing
       setEntries((prev) =>
-        prev.map((e) => (e.id === entry.id ? { ...e, status: "processing" } : e))
+        prev.map((e) =>
+          e.id === entry.id ? { ...e, status: "processing" } : e
+        )
       );
 
       try {
@@ -262,7 +277,10 @@ export function ImageOptimizeDialog({
   // === Helpers ===
   const getOutputFilename = (file: File) => {
     const baseName = file.name.replace(/\.[^/.]+$/, "");
-    const ext = options.format === "original" ? file.name.split(".").pop() : options.format;
+    const ext =
+      options.format === "original"
+        ? file.name.split(".").pop()
+        : options.format;
     return `${baseName}.${ext}`;
   };
 
@@ -302,7 +320,7 @@ export function ImageOptimizeDialog({
   const singleEntry = isSingleFile ? entries[0] : null;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog onOpenChange={(o) => !o && onClose()} open={open}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -334,9 +352,9 @@ export function ImageOptimizeDialog({
                     >
                       {entry.thumbnailUrl ? (
                         <img
-                          src={entry.thumbnailUrl}
                           alt={entry.file.name}
                           className="h-full w-full object-cover"
+                          src={entry.thumbnailUrl}
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">
@@ -354,17 +372,18 @@ export function ImageOptimizeDialog({
                         </div>
                       )}
                       {entry.isAnimatedGif && (
-                        <Badge className="absolute bottom-0.5 right-0.5 h-4 px-1 text-[10px]">
+                        <Badge className="absolute right-0.5 bottom-0.5 h-4 px-1 text-[10px]">
                           GIF
                         </Badge>
                       )}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    <p className="text-xs font-medium">{entry.file.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-medium text-xs">{entry.file.name}</p>
+                    <p className="text-muted-foreground text-xs">
                       {formatBytes(entry.file.size)}
-                      {entry.preview && ` → ${formatBytes(entry.preview.optimizedSize)}`}
+                      {entry.preview &&
+                        ` → ${formatBytes(entry.preview.optimizedSize)}`}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -382,9 +401,9 @@ export function ImageOptimizeDialog({
             <div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
               {singleEntry.thumbnailUrl ? (
                 <img
-                  src={singleEntry.thumbnailUrl}
                   alt={singleEntry.file.name}
                   className="h-full w-full object-contain"
+                  src={singleEntry.thumbnailUrl}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center">
@@ -408,31 +427,45 @@ export function ImageOptimizeDialog({
           <div className="rounded-lg border bg-muted/30 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   <span className={getSizeStatus(totalOriginalSize).color}>
                     {formatBytes(totalOriginalSize)}
                   </span>
                   {optimizeEnabled && allOptimized && totalSavings > 0 && (
                     <>
                       <span className="mx-2">→</span>
-                      <span className={`font-medium ${getSizeStatus(totalOptimizedSize).color}`}>
+                      <span
+                        className={`font-medium ${getSizeStatus(totalOptimizedSize).color}`}
+                      >
                         {formatBytes(totalOptimizedSize)}
                       </span>
                     </>
                   )}
                 </p>
                 {someProcessing && (
-                  <p className="text-xs text-muted-foreground">Optimizing...</p>
+                  <p className="text-muted-foreground text-xs">Optimizing...</p>
                 )}
                 {/* Size warning hint */}
-                {!someProcessing && getEmailSizeWarning(allOptimized ? totalOptimizedSize : totalOriginalSize) && (
-                  <p className={`text-xs ${getSizeStatus(allOptimized ? totalOptimizedSize : totalOriginalSize).color}`}>
-                    {getEmailSizeWarning(allOptimized ? totalOptimizedSize : totalOriginalSize)?.suggestion}
-                  </p>
-                )}
+                {!someProcessing &&
+                  getEmailSizeWarning(
+                    allOptimized ? totalOptimizedSize : totalOriginalSize
+                  ) && (
+                    <p
+                      className={`text-xs ${getSizeStatus(allOptimized ? totalOptimizedSize : totalOriginalSize).color}`}
+                    >
+                      {
+                        getEmailSizeWarning(
+                          allOptimized ? totalOptimizedSize : totalOriginalSize
+                        )?.suggestion
+                      }
+                    </p>
+                  )}
               </div>
               {optimizeEnabled && allOptimized && totalSavings > 0 && (
-                <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                <Badge
+                  className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                  variant="secondary"
+                >
                   <Sparkles className="mr-1 h-3 w-3" />
                   Save {totalSavings}%
                 </Badge>
@@ -442,8 +475,14 @@ export function ImageOptimizeDialog({
             {/* Progress bar while processing */}
             {someProcessing && (
               <Progress
-                value={(entries.filter((e) => e.status === "ready" || e.isAnimatedGif).length / entries.length) * 100}
                 className="mt-3 h-1"
+                value={
+                  (entries.filter(
+                    (e) => e.status === "ready" || e.isAnimatedGif
+                  ).length /
+                    entries.length) *
+                  100
+                }
               />
             )}
           </div>
@@ -451,12 +490,12 @@ export function ImageOptimizeDialog({
           {/* Optimize Toggle */}
           {canOptimize && (
             <div className="flex items-center justify-between">
-              <Label htmlFor="optimize-toggle" className="cursor-pointer">
+              <Label className="cursor-pointer" htmlFor="optimize-toggle">
                 Optimize before uploading
               </Label>
               <Switch
-                id="optimize-toggle"
                 checked={optimizeEnabled}
+                id="optimize-toggle"
                 onCheckedChange={setOptimizeEnabled}
               />
             </div>
@@ -464,9 +503,13 @@ export function ImageOptimizeDialog({
 
           {/* Options (Collapsible) */}
           {optimizeEnabled && canOptimize && (
-            <Collapsible open={showOptions} onOpenChange={setShowOptions}>
+            <Collapsible onOpenChange={setShowOptions} open={showOptions}>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
+                <Button
+                  className="w-full justify-start text-muted-foreground"
+                  size="sm"
+                  variant="ghost"
+                >
                   {showOptions ? (
                     <ChevronDown className="mr-2 h-4 w-4" />
                   ) : (
@@ -479,10 +522,14 @@ export function ImageOptimizeDialog({
                 {/* Format and Quality Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Format</Label>
+                    <Label className="text-muted-foreground text-xs">
+                      Format
+                    </Label>
                     <Select
+                      onValueChange={(v) =>
+                        setOptions({ ...options, format: v as ImageFormat })
+                      }
                       value={options.format || "webp"}
-                      onValueChange={(v) => setOptions({ ...options, format: v as ImageFormat })}
                     >
                       <SelectTrigger className="h-9">
                         <SelectValue />
@@ -500,17 +547,23 @@ export function ImageOptimizeDialog({
                   {/* Quality */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">Quality</Label>
-                      <span className="text-xs text-muted-foreground">{qualityDisplay}%</span>
+                      <Label className="text-muted-foreground text-xs">
+                        Quality
+                      </Label>
+                      <span className="text-muted-foreground text-xs">
+                        {qualityDisplay}%
+                      </span>
                     </div>
                     <Slider
-                      value={[qualityDisplay]}
-                      onValueChange={([v]) => setQualityDisplay(v)}
-                      onValueCommit={([v]) => setOptions({ ...options, quality: v })}
-                      min={50}
-                      max={100}
-                      step={5}
                       className="mt-2"
+                      max={100}
+                      min={50}
+                      onValueChange={([v]) => setQualityDisplay(v)}
+                      onValueCommit={([v]) =>
+                        setOptions({ ...options, quality: v })
+                      }
+                      step={5}
+                      value={[qualityDisplay]}
                     />
                   </div>
                 </div>
@@ -518,7 +571,7 @@ export function ImageOptimizeDialog({
                 {/* Resize Section */}
                 <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Resize Image</Label>
+                    <Label className="font-medium text-xs">Resize Image</Label>
                     <span className="text-muted-foreground text-xs">
                       Maintains aspect ratio
                     </span>
@@ -527,8 +580,13 @@ export function ImageOptimizeDialog({
                   {/* Width Preset + Pixel Density Row */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs">Max Width</Label>
-                      <Select value={widthPreset} onValueChange={setWidthPreset}>
+                      <Label className="text-muted-foreground text-xs">
+                        Max Width
+                      </Label>
+                      <Select
+                        onValueChange={setWidthPreset}
+                        value={widthPreset}
+                      >
                         <SelectTrigger className="h-9">
                           <SelectValue />
                         </SelectTrigger>
@@ -548,17 +606,22 @@ export function ImageOptimizeDialog({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs">Pixel Density</Label>
+                      <Label className="text-muted-foreground text-xs">
+                        Pixel Density
+                      </Label>
                       <Select
-                        value={String(pixelDensity)}
                         onValueChange={(v) => setPixelDensity(Number(v))}
+                        value={String(pixelDensity)}
                       >
                         <SelectTrigger className="h-9">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {PIXEL_DENSITY_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={String(opt.value)}>
+                            <SelectItem
+                              key={opt.value}
+                              value={String(opt.value)}
+                            >
                               <div className="flex flex-col">
                                 <span>{opt.label}</span>
                                 <span className="text-muted-foreground text-xs">
@@ -587,12 +650,12 @@ export function ImageOptimizeDialog({
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" onClick={onClose}>
+          <Button onClick={onClose} variant="ghost">
             Cancel
           </Button>
           {optimizeEnabled && canOptimize ? (
             <>
-              <Button variant="outline" onClick={handleSkipOptimization}>
+              <Button onClick={handleSkipOptimization} variant="outline">
                 Upload originals
               </Button>
               {allOptimized ? (
@@ -601,7 +664,10 @@ export function ImageOptimizeDialog({
                   Upload{totalSavings > 0 && ` (save ${totalSavings}%)`}
                 </Button>
               ) : (
-                <Button onClick={handleOptimize} disabled={isOptimizing || !hasFilesToOptimize}>
+                <Button
+                  disabled={isOptimizing || !hasFilesToOptimize}
+                  onClick={handleOptimize}
+                >
                   {isOptimizing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (

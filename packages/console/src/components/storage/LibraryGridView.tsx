@@ -1,5 +1,11 @@
+import {
+  Copy,
+  ExternalLink,
+  File as FileIcon,
+  FileImage,
+  Star,
+} from "lucide-react";
 import type React from "react";
-import { Copy, ExternalLink, File as FileIcon, FileImage, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +35,17 @@ function getFileExtension(filename: string): string {
 function isImageFile(contentType?: string, filename?: string): boolean {
   if (contentType?.startsWith("image/")) return true;
   const ext = filename ? getFileExtension(filename) : "";
-  return ["jpg", "jpeg", "png", "gif", "webp", "avif", "svg", "bmp", "ico"].includes(ext);
+  return [
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "avif",
+    "svg",
+    "bmp",
+    "ico",
+  ].includes(ext);
 }
 
 export function LibraryGridView({
@@ -134,7 +150,9 @@ export function LibraryGridView({
             {/* File Info */}
             <div className="space-y-2 p-3">
               <div className="flex items-start justify-between gap-2">
-                <p className="flex-1 truncate font-medium text-sm">{filename}</p>
+                <p className="flex-1 truncate font-medium text-sm">
+                  {filename}
+                </p>
                 <Badge className="shrink-0 text-xs" variant="secondary">
                   {ext.toUpperCase()}
                 </Badge>

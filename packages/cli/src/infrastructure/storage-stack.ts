@@ -139,10 +139,7 @@ async function createStorageIAMRole(
         "s3:GetObjectTagging",
         "s3:PutObjectTagging",
       ],
-      Resource: [
-        config.bucketArn,
-        pulumi.interpolate`${config.bucketArn}/*`,
-      ],
+      Resource: [config.bucketArn, pulumi.interpolate`${config.bucketArn}/*`],
     },
   ];
 
@@ -274,9 +271,13 @@ export async function deployStorageStack(
   // Custom domain is active if: Route53 auto-validated OR manually validated via upgrade
   const hasAutoValidation = acmResources?.certificateValidation;
   const hasCertFromUpgrade = config.certValidated && config.existingCertArn;
-  const customDomainActive = config.storageConfig.cdn.customDomain && (hasAutoValidation || hasCertFromUpgrade);
+  const customDomainActive =
+    config.storageConfig.cdn.customDomain &&
+    (hasAutoValidation || hasCertFromUpgrade);
   const customDomainPending =
-    config.storageConfig.cdn.customDomain && !hasAutoValidation && !hasCertFromUpgrade;
+    config.storageConfig.cdn.customDomain &&
+    !hasAutoValidation &&
+    !hasCertFromUpgrade;
 
   // Return outputs
   return {
@@ -343,9 +344,12 @@ export async function runStoragePulumiProgram(
     distributionId: outputs.distributionId?.value as string | undefined,
     distributionDomain: outputs.distributionDomain?.value as string | undefined,
     customDomain: outputs.customDomain?.value as string | undefined,
-    customDomainPending: outputs.customDomainPending?.value as string | undefined,
+    customDomainPending: outputs.customDomainPending?.value as
+      | string
+      | undefined,
     acmCertificateArn: outputs.acmCertificateArn?.value as string | undefined,
-    acmCertificateValidationRecords: outputs.acmCertificateValidationRecords?.value as
+    acmCertificateValidationRecords: outputs.acmCertificateValidationRecords
+      ?.value as
       | Array<{ name: string; type: string; value: string }>
       | undefined,
     versioning: outputs.versioning?.value as boolean,

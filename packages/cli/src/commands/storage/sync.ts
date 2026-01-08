@@ -4,7 +4,10 @@ import pc from "picocolors";
 import { deployStorageStack } from "../../infrastructure/storage-stack.js";
 import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
-import type { StorageStackConfig, WrapsStorageConfig } from "../../types/index.js";
+import type {
+  StorageStackConfig,
+  WrapsStorageConfig,
+} from "../../types/index.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -127,7 +130,9 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
         if (certResponse.Certificate?.Status === "ISSUED") {
           certValidated = true;
           existingCertArn = stackOutputs.acmCertificateArn.value;
-          progress.info(`Certificate validated for ${pc.cyan(storageConfig.cdn.customDomain)}`);
+          progress.info(
+            `Certificate validated for ${pc.cyan(storageConfig.cdn.customDomain)}`
+          );
         }
       }
     } catch (_error) {
@@ -149,55 +154,52 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
 
   // 5. Run Pulumi refresh + up
   try {
-    await progress.execute(
-      "Syncing storage infrastructure",
-      async () => {
-        await ensurePulumiWorkDir();
+    await progress.execute("Syncing storage infrastructure", async () => {
+      await ensurePulumiWorkDir();
 
-        const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
-          {
-            stackName: `wraps-storage-${identity.accountId}-${region}`,
-            projectName: "wraps-storage",
-            program: async () => {
-              const result = await deployStorageStack(stackConfig);
-              return {
-                roleArn: result.roleArn,
-                bucketName: result.bucketName,
-                bucketArn: result.bucketArn,
-                region: result.region,
-                distributionId: result.distributionId,
-                distributionDomain: result.distributionDomain,
-                customDomain: result.customDomain,
-                customDomainPending: result.customDomainPending,
-                acmCertificateArn: result.acmCertificateArn,
-                acmCertificateValidationRecords:
-                  result.acmCertificateValidationRecords,
-                versioning: result.versioning,
-                retention: result.retention,
-              };
-            },
+      const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
+        {
+          stackName: `wraps-storage-${identity.accountId}-${region}`,
+          projectName: "wraps-storage",
+          program: async () => {
+            const result = await deployStorageStack(stackConfig);
+            return {
+              roleArn: result.roleArn,
+              bucketName: result.bucketName,
+              bucketArn: result.bucketArn,
+              region: result.region,
+              distributionId: result.distributionId,
+              distributionDomain: result.distributionDomain,
+              customDomain: result.customDomain,
+              customDomainPending: result.customDomainPending,
+              acmCertificateArn: result.acmCertificateArn,
+              acmCertificateValidationRecords:
+                result.acmCertificateValidationRecords,
+              versioning: result.versioning,
+              retention: result.retention,
+            };
           },
-          {
-            workDir: getPulumiWorkDir(),
-            envVars: {
-              PULUMI_CONFIG_PASSPHRASE: "",
-              AWS_REGION: region,
-            },
-            secretsProvider: "passphrase",
-          }
-        );
+        },
+        {
+          workDir: getPulumiWorkDir(),
+          envVars: {
+            PULUMI_CONFIG_PASSPHRASE: "",
+            AWS_REGION: region,
+          },
+          secretsProvider: "passphrase",
+        }
+      );
 
-        await stack.setConfig("aws:region", { value: region });
+      await stack.setConfig("aws:region", { value: region });
 
-        // Refresh to sync state with AWS
-        await stack.refresh({ onOutput: () => {} });
+      // Refresh to sync state with AWS
+      await stack.refresh({ onOutput: () => {} });
 
-        // Apply any changes
-        const result = await stack.up({ onOutput: () => {} });
+      // Apply any changes
+      const result = await stack.up({ onOutput: () => {} });
 
-        return result.summary;
-      }
-    );
+      return result.summary;
+    });
   } catch (error: any) {
     trackCommand("storage:sync", {
       success: false,

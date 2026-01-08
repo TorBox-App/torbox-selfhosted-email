@@ -35,17 +35,20 @@ export function DashboardHeroSection() {
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            Analytics, templates, automations, and contacts management for teams. All built on your self-hosted AWS infrastructure.
+            Analytics, templates, automations, and contacts management for
+            teams. All built on your self-hosted AWS infrastructure.
           </p>
 
           {/* Pricing */}
           <div className="mb-8">
             <span className="text-muted-foreground">Starting at </span>
             <span className="font-bold text-4xl">$10</span>
-            <span className="ml-2 text-lg text-muted-foreground line-through">$19</span>
+            <span className="ml-2 text-lg text-muted-foreground line-through">
+              $19
+            </span>
             <span className="text-muted-foreground">/month</span>
             <div className="mt-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 font-medium text-white text-sm">
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 font-medium text-sm text-white">
                 Early Adopter Pricing
               </span>
             </div>

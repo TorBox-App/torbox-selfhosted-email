@@ -1,6 +1,9 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import type { StorageRetention, WrapsStorageConfig } from "../../types/index.js";
+import type {
+  StorageRetention,
+  WrapsStorageConfig,
+} from "../../types/index.js";
 
 /**
  * S3 storage bucket configuration
@@ -288,12 +291,14 @@ export async function createStorageCDN(
 
   // Build geo restriction config
   const geoRestrictionConfig: aws.types.input.cloudfront.DistributionRestrictionsGeoRestriction =
-    config.geoRestriction?.type === "whitelist" && config.geoRestriction.countries?.length
+    config.geoRestriction?.type === "whitelist" &&
+    config.geoRestriction.countries?.length
       ? {
           restrictionType: "whitelist",
           locations: config.geoRestriction.countries,
         }
-      : config.geoRestriction?.type === "blacklist" && config.geoRestriction.countries?.length
+      : config.geoRestriction?.type === "blacklist" &&
+          config.geoRestriction.countries?.length
         ? {
             restrictionType: "blacklist",
             locations: config.geoRestriction.countries,
