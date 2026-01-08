@@ -3,6 +3,7 @@
 import {
   ArrowRight,
   Blocks,
+  HardDrive,
   Mail,
   MessageSquare,
   Sparkles,
@@ -24,6 +25,19 @@ const cliGuides = [
       "Domain verification",
       "TypeScript SDK",
       "Analytics dashboard",
+    ],
+  },
+  {
+    title: "Storage",
+    description:
+      "Deploy S3 + CloudFront CDN for global file delivery with browser-based image optimization.",
+    href: "/docs/quickstart/storage",
+    icon: HardDrive,
+    features: [
+      "S3 bucket + CDN",
+      "Custom domain",
+      "Image optimization",
+      "AWS pricing",
     ],
   },
   {
@@ -73,8 +87,8 @@ export default function QuickstartPage() {
         </p>
       </div>
 
-      {/* CLI Quickstart Cards - Email & SMS */}
-      <div className="mb-6 grid gap-6 md:grid-cols-2">
+      {/* CLI Quickstart Cards - Email, Storage & SMS */}
+      <div className="mb-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {cliGuides.map((guide) => {
           const Icon = guide.icon;
           return (

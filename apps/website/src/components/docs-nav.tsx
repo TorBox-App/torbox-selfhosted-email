@@ -7,6 +7,7 @@ import {
   Cloud,
   FileText,
   Globe,
+  HardDrive,
   Mail,
   MessageSquare,
   Rocket,
@@ -49,14 +50,19 @@ const navItems: NavSection[] = [
             icon: Mail,
           },
           {
-            title: "Platform",
-            href: "/docs/quickstart/platform",
-            icon: Blocks,
+            title: "Storage",
+            href: "/docs/quickstart/storage",
+            icon: HardDrive,
           },
           {
             title: "SMS",
             href: "/docs/quickstart/sms",
             icon: MessageSquare,
+          },
+          {
+            title: "Platform",
+            href: "/docs/quickstart/platform",
+            icon: Blocks,
           },
         ],
       },
@@ -74,6 +80,23 @@ const navItems: NavSection[] = [
         title: "CLI Reference",
         href: "/docs/cli-reference",
         icon: Terminal,
+        children: [
+          {
+            title: "Email",
+            href: "/docs/cli-reference/email",
+            icon: Mail,
+          },
+          {
+            title: "Storage",
+            href: "/docs/cli-reference/storage",
+            icon: HardDrive,
+          },
+          {
+            title: "SMS",
+            href: "/docs/cli-reference/sms",
+            icon: MessageSquare,
+          },
+        ],
       },
       {
         title: "Platform SDK",
