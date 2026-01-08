@@ -106,20 +106,13 @@ export function OrganizationSettingsBilling({
   // Upgrade subscription mutation
   const upgradeMutation = useMutation({
     mutationFn: async (plan: string) => {
-      const activeSubscription = (subscriptions as any)?.data?.[0];
-      const upgradeParams: any = {
+      // Don't pass subscriptionId - let the plugin find the subscription by referenceId
+      return authClient.subscription.upgrade({
         plan,
         referenceId: organization.id,
-        successUrl: `${window.location.origin}/${organization.slug}/settings/billing&subscribed=true`,
+        successUrl: `${window.location.origin}/${organization.slug}/settings/billing?subscribed=true`,
         cancelUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
-      };
-
-      // If user has an existing subscription, pass it to avoid duplicate charges
-      if (activeSubscription?.id) {
-        upgradeParams.subscriptionId = activeSubscription.id;
-      }
-
-      return authClient.subscription.upgrade(upgradeParams);
+      });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to upgrade subscription");

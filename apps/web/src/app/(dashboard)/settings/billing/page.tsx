@@ -40,7 +40,7 @@ export default function BillingSettings() {
       if (!organization?.id) {
         return { data: [] };
       }
-      return authClient.subscription.list({
+      return await authClient.subscription.list({
         query: {
           referenceId: organization.id,
         },
@@ -72,12 +72,12 @@ export default function BillingSettings() {
         throw new Error("Organization not found");
       }
 
-      return authClient.subscription.upgrade({
+      // Don't pass subscriptionId - let the plugin find the subscription by referenceId
+      return await authClient.subscription.upgrade({
         plan,
         referenceId: organization.id,
         successUrl: `${window.location.origin}/settings/billing?success=true`,
         cancelUrl: `${window.location.origin}/settings/billing`,
-        subscriptionId: activeSubscription?.stripeSubscriptionId,
       });
     },
     onError: (error: Error) => {
@@ -92,7 +92,7 @@ export default function BillingSettings() {
         throw new Error("No active subscription");
       }
 
-      return authClient.subscription.cancel({
+      return await authClient.subscription.cancel({
         subscriptionId: activeSubscription.id,
         returnUrl: `${window.location.origin}/settings/billing`,
       });
@@ -186,7 +186,9 @@ export default function BillingSettings() {
                 <p className="text-sm text-yellow-600 dark:text-yellow-400">
                   Your subscription will be canceled at the end of the current
                   billing period on{" "}
-                  {new Date(activeSubscription.periodEnd!).toLocaleDateString()}
+                  {new Date(
+                    activeSubscription.periodEnd ?? ""
+                  ).toLocaleDateString()}
                 </p>
               </div>
             )}
