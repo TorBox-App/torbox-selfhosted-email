@@ -73,12 +73,12 @@ async function checkCertificateStatus(
 }
 
 /**
- * Check CloudFront distribution status
+ * Check CloudFront distribution status and configured aliases
  */
 async function checkDistributionStatus(
   distributionId: string,
   region: string
-): Promise<{ status: string; enabled: boolean }> {
+): Promise<{ status: string; enabled: boolean; aliases: string[] }> {
   try {
     const { CloudFrontClient, GetDistributionCommand } = await import(
       "@aws-sdk/client-cloudfront"
@@ -89,12 +89,16 @@ async function checkDistributionStatus(
       new GetDistributionCommand({ Id: distributionId })
     );
 
+    const aliases =
+      result.Distribution?.DistributionConfig?.Aliases?.Items || [];
+
     return {
       status: result.Distribution?.Status || "UNKNOWN",
       enabled: result.Distribution?.DistributionConfig?.Enabled ?? false,
+      aliases,
     };
   } catch (_error: any) {
-    return { status: "ERROR", enabled: false };
+    return { status: "ERROR", enabled: false, aliases: [] };
   }
 }
 
@@ -173,28 +177,29 @@ export async function storageVerify(
 
   progress.stop();
 
-  const customDomain = stackOutputs.customDomain?.value;
-  const customDomainPending = stackOutputs.customDomainPending?.value;
+  // Get stack outputs - note: customDomain vs customDomainPending reflects deployment state,
+  // not current reality. We need to check actual certificate and DNS status.
+  const stackCustomDomain = stackOutputs.customDomain?.value;
+  const stackCustomDomainPending = stackOutputs.customDomainPending?.value;
   const distributionId = stackOutputs.distributionId?.value;
   const distributionDomain = stackOutputs.distributionDomain?.value;
   const acmCertificateArn = stackOutputs.acmCertificateArn?.value;
   const validationRecords = stackOutputs.acmCertificateValidationRecords
     ?.value as Array<{ name: string; type: string; value: string }> | undefined;
 
-  // Derive pending domain from validation records if not explicitly set
-  const pendingDomain =
-    customDomainPending ||
-    (!customDomain && validationRecords?.[0]?.name
-      ? validationRecords[0].name.replace(/^_[^.]+\./, "").replace(/\.$/, "")
-      : undefined);
+  // The domain we're checking - either active or pending in stack outputs
+  const targetDomain = stackCustomDomain || stackCustomDomainPending;
 
   let allPassed = true;
+  let cloudFrontAliases: string[] = [];
 
   // 4. Check CloudFront status
   if (distributionId) {
     clack.log.info(`\n${pc.bold("CloudFront Distribution:")}`);
 
     const distStatus = await checkDistributionStatus(distributionId, region);
+    cloudFrontAliases = distStatus.aliases;
+
     if (distStatus.status === "Deployed" && distStatus.enabled) {
       clack.log.success(`  Status: ${pc.green("Deployed and enabled")}`);
     } else if (distStatus.status === "InProgress") {
@@ -208,27 +213,21 @@ export async function storageVerify(
     }
   }
 
-  // 5. Check certificate status (if custom domain is active OR pending)
-  if (acmCertificateArn && (customDomain || pendingDomain)) {
-    clack.log.info(`\n${pc.bold("SSL Certificate:")}`);
-
-    if (pendingDomain && !customDomain) {
-      clack.log.info(
-        `  Domain: ${pc.yellow(pendingDomain)} ${pc.dim("(pending)")}`
-      );
-    }
-
+  // 5. Check certificate and custom domain status
+  // We check actual state (cert issued + DNS configured) rather than relying on stack outputs
+  if (acmCertificateArn && targetDomain && distributionDomain) {
     const certStatus = await checkCertificateStatus(acmCertificateArn);
+    const domainCheck = await checkDNSRecord(targetDomain, distributionDomain);
+
+    // Check if domain is already configured as a CloudFront alias
+    const domainInCloudFrontAliases = cloudFrontAliases.some(
+      (alias) => alias.toLowerCase() === targetDomain.toLowerCase()
+    );
+
+    clack.log.info(`\n${pc.bold("SSL Certificate:")}`);
 
     if (certStatus.status === "ISSUED") {
       clack.log.success(`  Certificate: ${pc.green("Issued and valid")}`);
-
-      // If cert is issued but domain is still pending, suggest upgrade
-      if (pendingDomain && !customDomain) {
-        clack.log.info(
-          `\n  ${pc.green("!")} Certificate validated! Run ${pc.cyan("wraps storage upgrade")} to add custom domain to CloudFront.`
-        );
-      }
     } else if (certStatus.status === "PENDING_VALIDATION") {
       clack.log.warn(`  Certificate: ${pc.yellow("Pending validation")}`);
       allPassed = false;
@@ -252,37 +251,96 @@ export async function storageVerify(
       clack.log.error(`  Certificate: ${pc.red(certStatus.status)}`);
       allPassed = false;
     }
-  }
 
-  // 6. Check custom domain CNAME (only if domain is active on CloudFront)
-  if (customDomain && distributionDomain) {
+    // Check custom domain CNAME
     clack.log.info(`\n${pc.bold("Custom Domain DNS:")}`);
 
-    const domainCheck = await checkDNSRecord(customDomain, distributionDomain);
     if (domainCheck.found) {
       clack.log.success(
-        `  ${pc.green("OK")} ${customDomain} → ${distributionDomain}`
+        `  ${pc.green("OK")} ${targetDomain} → ${distributionDomain}`
       );
     } else {
-      clack.log.error(`  ${pc.red("MISSING")} ${customDomain}`);
+      clack.log.error(`  ${pc.red("MISSING")} ${targetDomain}`);
       clack.log.info(`    ${pc.dim("→")} Add CNAME: ${distributionDomain}`);
       allPassed = false;
     }
+
+    // Check CloudFront alias configuration
+    if (domainInCloudFrontAliases) {
+      clack.log.success(
+        `  ${pc.green("OK")} CloudFront alias configured for ${targetDomain}`
+      );
+    } else if (certStatus.status === "ISSUED" && domainCheck.found) {
+      // Cert is valid and DNS is configured, but CloudFront doesn't have the alias yet
+      clack.log.warn(
+        `  ${pc.yellow("!")} CloudFront alias not configured for ${targetDomain}`
+      );
+      clack.log.info(
+        `    Run ${pc.cyan("wraps storage upgrade")} to add the custom domain to CloudFront.`
+      );
+      allPassed = false;
+    }
+  } else if (acmCertificateArn && targetDomain) {
+    // Has certificate but no distribution domain yet
+    clack.log.info(`\n${pc.bold("SSL Certificate:")}`);
+    const certStatus = await checkCertificateStatus(acmCertificateArn);
+
+    if (certStatus.status === "ISSUED") {
+      clack.log.success(`  Certificate: ${pc.green("Issued and valid")}`);
+    } else if (certStatus.status === "PENDING_VALIDATION") {
+      clack.log.warn(`  Certificate: ${pc.yellow("Pending validation")}`);
+      allPassed = false;
+
+      if (validationRecords && validationRecords.length > 0) {
+        clack.log.info(`\n${pc.bold("Certificate Validation DNS:")}`);
+
+        for (const record of validationRecords) {
+          const dnsCheck = await checkDNSRecord(record.name, record.value);
+          if (dnsCheck.found) {
+            clack.log.success(`  ${pc.green("OK")} ${record.name}`);
+          } else {
+            clack.log.error(`  ${pc.red("MISSING")} ${record.name}`);
+            clack.log.info(`    ${pc.dim("→")} Add CNAME: ${record.value}`);
+            allPassed = false;
+          }
+        }
+      }
+    } else {
+      clack.log.error(`  Certificate: ${pc.red(certStatus.status)}`);
+      allPassed = false;
+    }
   }
+
+  // Check if stack outputs are stale (everything working but stack shows pending)
+  const stackOutputsStale =
+    allPassed &&
+    stackCustomDomainPending &&
+    !stackCustomDomain &&
+    targetDomain &&
+    cloudFrontAliases.some(
+      (alias) => alias.toLowerCase() === targetDomain.toLowerCase()
+    );
 
   // 7. Summary
   clack.log.info("");
   if (allPassed) {
     clack.log.success(pc.green(pc.bold("All checks passed!")));
 
-    const cdnUrl = customDomain
-      ? `https://${customDomain}`
+    const cdnUrl = targetDomain
+      ? `https://${targetDomain}`
       : distributionDomain
         ? `https://${distributionDomain}`
         : null;
 
     if (cdnUrl) {
       clack.log.info(`\nYour storage is accessible at: ${pc.cyan(cdnUrl)}`);
+    }
+
+    // Suggest sync if stack outputs are stale
+    if (stackOutputsStale) {
+      clack.log.info(
+        `\n${pc.dim("Tip:")} Run ${pc.cyan("wraps storage sync")} to update infrastructure state.`
+      );
     }
   } else {
     clack.log.warn(pc.yellow("Some checks failed. See details above."));
@@ -299,7 +357,7 @@ export async function storageVerify(
   trackCommand("storage:verify", {
     success: allPassed,
     region,
-    has_custom_domain: !!customDomain,
+    has_custom_domain: !!targetDomain,
     duration_ms: Date.now() - startTime,
   });
 
