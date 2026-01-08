@@ -1,23 +1,31 @@
 import { Analytics } from "@vercel/analytics/react";
+import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { PostHogProvider } from "posthog-js/react";
 import "./index.css";
 import App from "./App.tsx";
 
+const posthogKey = import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <PostHogProvider
-      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-      options={{
-        api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-        defaults: '2025-05-24',
-        capture_exceptions: true, // This enables capturing exceptions using Error Tracking
-        debug: import.meta.env.MODE === "development",
-      }}
-    >
+    {posthogKey ? (
+      <PostHogProvider
+        apiKey={posthogKey}
+        options={{
+          api_host: posthogHost,
+          ui_host: "https://us.posthog.com",
+          defaults: "2025-05-24",
+          capture_exceptions: true,
+          debug: import.meta.env.MODE === "development",
+        }}
+      >
+        <App />
+      </PostHogProvider>
+    ) : (
       <App />
-    </PostHogProvider>
+    )}
     <Analytics />
   </StrictMode>
 );
