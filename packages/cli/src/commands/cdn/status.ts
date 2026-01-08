@@ -17,24 +17,24 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
 /**
  * Storage status command options
  */
-export type StorageStatusOptions = {
+export type CdnStatusOptions = {
   region?: string;
 };
 
 /**
- * Storage Status command - Show current storage infrastructure setup
+ * Storage Status command - Show current CDN infrastructure setup
  */
-export async function storageStatus(
-  options: StorageStatusOptions
+export async function cdnStatus(
+  options: CdnStatusOptions
 ): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps Storage Status"));
+  clack.intro(pc.bold("Wraps CDN Status"));
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
-    "Loading storage infrastructure status",
+    "Loading CDN infrastructure status",
     async () => validateAWSCredentials()
   );
 
@@ -49,19 +49,19 @@ export async function storageStatus(
       process.env.AWS_DEFAULT_REGION
     )
   ) {
-    const storageConnections = await findConnectionsWithService(
+    const cdnConnections = await findConnectionsWithService(
       identity.accountId,
-      "storage"
+      "cdn"
     );
 
-    if (storageConnections.length === 1) {
+    if (cdnConnections.length === 1) {
       // Auto-select the only available region
-      region = storageConnections[0].region;
-    } else if (storageConnections.length > 1) {
+      region = cdnConnections[0].region;
+    } else if (cdnConnections.length > 1) {
       // Multiple regions found - prompt user to select
       const selectedRegion = await clack.select({
-        message: "Multiple storage deployments found. Which region?",
-        options: storageConnections.map((conn) => ({
+        message: "Multiple CDN deployments found. Which region?",
+        options: cdnConnections.map((conn) => ({
           value: conn.region,
           label: conn.region,
         })),
@@ -83,16 +83,16 @@ export async function storageStatus(
     await ensurePulumiWorkDir();
 
     const stack = await pulumi.automation.LocalWorkspace.selectStack({
-      stackName: `wraps-storage-${identity.accountId}-${region}`,
+      stackName: `wraps-cdn-${identity.accountId}-${region}`,
       workDir: getPulumiWorkDir(),
     });
 
     stackOutputs = await stack.outputs();
   } catch (_error: any) {
     progress.stop();
-    clack.log.error("No storage infrastructure found");
+    clack.log.error("No CDN infrastructure found");
     console.log(
-      `\nRun ${pc.cyan("wraps storage init")} to deploy storage infrastructure.\n`
+      `\nRun ${pc.cyan("wraps cdn init")} to deploy CDN infrastructure.\n`
     );
     process.exit(1);
   }
@@ -100,7 +100,7 @@ export async function storageStatus(
   progress.stop();
 
   // 4. Display status
-  displayStorageStatus({
+  displayCdnStatus({
     bucketName: stackOutputs.bucketName?.value,
     region: stackOutputs.region?.value || region,
     distributionId: stackOutputs.distributionId?.value,
@@ -131,7 +131,7 @@ export async function storageStatus(
 /**
  * Display storage status information
  */
-function displayStorageStatus(options: {
+function displayCdnStatus(options: {
   bucketName: string;
   region: string;
   distributionId?: string;
@@ -148,7 +148,7 @@ function displayStorageStatus(options: {
   versioning?: boolean;
   retention?: string;
 }): void {
-  clack.log.info(`\n${pc.bold("Storage Infrastructure:")}`);
+  clack.log.info(`\n${pc.bold("CDN Infrastructure:")}`);
 
   // S3 Bucket
   clack.log.info(`  S3 Bucket: ${pc.cyan(options.bucketName)}`);
@@ -245,14 +245,14 @@ function displayStorageStatus(options: {
   clack.log.info(`\n${pc.bold("Commands:")}`);
   if (hasPendingCert) {
     clack.log.info(
-      `  ${pc.cyan("wraps storage upgrade")} - Add custom domain after cert validation`
+      `  ${pc.cyan("wraps cdn upgrade")} - Add custom domain after cert validation`
     );
   }
   clack.log.info(
-    `  ${pc.cyan("wraps storage verify")} - Check DNS and certificate status`
+    `  ${pc.cyan("wraps cdn verify")} - Check DNS and certificate status`
   );
   clack.log.info(
-    `  ${pc.cyan("wraps storage destroy")} - Remove storage infrastructure`
+    `  ${pc.cyan("wraps cdn destroy")} - Remove CDN infrastructure`
   );
 
   clack.outro("");

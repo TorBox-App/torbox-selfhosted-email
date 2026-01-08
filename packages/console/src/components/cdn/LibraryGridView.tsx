@@ -11,14 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { StorageFile } from "./types";
+import type { CdnFile } from "./types";
 
 interface LibraryGridViewProps {
-  files: StorageFile[];
+  files: CdnFile[];
   selectedFiles: string[];
   onSelectFile: (key: string) => void;
   onToggleStar: (key: string, starred: boolean) => void;
-  onFileClick: (file: StorageFile) => void;
+  onFileClick: (file: CdnFile) => void;
 }
 
 function formatSize(bytes: number): string {

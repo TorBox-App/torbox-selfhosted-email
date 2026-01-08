@@ -1,6 +1,6 @@
 import type {
-  StorageFeatureCostBreakdown,
-  WrapsStorageConfig,
+  CdnFeatureCostBreakdown,
+  WrapsCdnConfig,
 } from "../../types/index.js";
 
 /**
@@ -31,14 +31,14 @@ const PRICING = {
 };
 
 /**
- * Calculate estimated monthly costs for storage configuration
+ * Calculate estimated monthly costs for CDN configuration
  */
 export function calculateCosts(
-  config: WrapsStorageConfig,
+  config: WrapsCdnConfig,
   estimatedStorageGB = 10,
   estimatedBandwidthGB = 50,
   estimatedRequests = 100_000
-): StorageFeatureCostBreakdown {
+): CdnFeatureCostBreakdown {
   // Storage cost
   const storageCost = estimatedStorageGB * PRICING.s3Storage;
 
@@ -115,7 +115,7 @@ export function formatCost(amount: number): string {
  * Get cost summary string for display
  */
 export function getCostSummary(
-  config: WrapsStorageConfig,
+  config: WrapsCdnConfig,
   estimatedStorageGB = 10,
   estimatedBandwidthGB = 50
 ): string {
@@ -145,8 +145,8 @@ export function getCostSummary(
  * Compare costs between configurations
  */
 export function compareCosts(
-  current: StorageFeatureCostBreakdown,
-  updated: StorageFeatureCostBreakdown
+  current: CdnFeatureCostBreakdown,
+  updated: CdnFeatureCostBreakdown
 ): {
   difference: number;
   percentChange: number;

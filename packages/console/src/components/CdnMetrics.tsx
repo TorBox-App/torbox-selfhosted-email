@@ -43,7 +43,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 /**
  * Storage metrics from API
  */
-type StorageMetrics = {
+type CdnMetrics = {
   summary: {
     totalSize: number;
     fileCount: number;
@@ -407,8 +407,8 @@ function NoStorageSetup() {
 /**
  * Storage Metrics Component
  */
-export function StorageMetrics() {
-  const [metrics, setMetrics] = React.useState<StorageMetrics | null>(null);
+export function CdnMetrics() {
+  const [metrics, setMetrics] = React.useState<CdnMetrics | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [timeRange, setTimeRange] = React.useState("7d");
@@ -420,7 +420,7 @@ export function StorageMetrics() {
 
       const token = sessionStorage.getItem("wraps-auth-token");
       const response = await fetch(
-        `/api/storage/metrics?token=${token}&range=${timeRange}`
+        `/api/cdn/metrics?token=${token}&range=${timeRange}`
       );
 
       if (!response.ok) {

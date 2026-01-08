@@ -1,23 +1,23 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import type {
-  StorageRetention,
-  WrapsStorageConfig,
+  CdnRetention,
+  WrapsCdnConfig,
 } from "../../types/index.js";
 
 /**
  * S3 storage bucket configuration
  */
-export type S3StorageConfig = {
+export type S3CdnConfig = {
   accountId: string;
   region: string;
-  storageConfig: WrapsStorageConfig;
+  cdnConfig: WrapsCdnConfig;
 };
 
 /**
  * S3 storage resources output
  */
-export type S3StorageResources = {
+export type S3CdnResources = {
   bucket: aws.s3.BucketV2;
   bucketName: pulumi.Output<string>;
   bucketArn: pulumi.Output<string>;
@@ -26,7 +26,7 @@ export type S3StorageResources = {
 /**
  * Convert retention string to days
  */
-function retentionToDays(retention: StorageRetention): number | null {
+function retentionToDays(retention: CdnRetention): number | null {
   switch (retention) {
     case "none":
       return null;
@@ -46,26 +46,26 @@ function retentionToDays(retention: StorageRetention): number | null {
 }
 
 /**
- * Create S3 bucket for Wraps storage
+ * Create S3 bucket for Wraps CDN
  */
-export async function createStorageBucket(
-  config: S3StorageConfig
-): Promise<S3StorageResources> {
+export async function createCdnBucket(
+  config: S3CdnConfig
+): Promise<S3CdnResources> {
   const bucketName =
-    config.storageConfig.bucketName || `wraps-storage-${config.accountId}`;
+    config.cdnConfig.bucketName || `wraps-cdn-${config.accountId}`;
 
   // Create the S3 bucket
-  const bucket = new aws.s3.BucketV2("wraps-storage-bucket", {
+  const bucket = new aws.s3.BucketV2("wraps-cdn-bucket", {
     bucket: bucketName,
     tags: {
       ManagedBy: "wraps-cli",
-      Service: "storage",
+      Service: "cdn",
     },
   });
 
   // Enable versioning if configured
-  if (config.storageConfig.versioning) {
-    new aws.s3.BucketVersioningV2("wraps-storage-versioning", {
+  if (config.cdnConfig.versioning) {
+    new aws.s3.BucketVersioningV2("wraps-cdn-versioning", {
       bucket: bucket.id,
       versioningConfiguration: {
         status: "Enabled",
@@ -75,7 +75,7 @@ export async function createStorageBucket(
 
   // Enable AES-256 encryption (always on)
   new aws.s3.BucketServerSideEncryptionConfigurationV2(
-    "wraps-storage-encryption",
+    "wraps-cdn-encryption",
     {
       bucket: bucket.id,
       rules: [
@@ -101,10 +101,10 @@ export async function createStorageBucket(
     "http://localhost:5555",
     "http://localhost:5556",
     "http://localhost:8080",
-    ...(config.storageConfig.additionalOrigins || []),
+    ...(config.cdnConfig.additionalOrigins || []),
   ];
 
-  new aws.s3.BucketCorsConfigurationV2("wraps-storage-cors", {
+  new aws.s3.BucketCorsConfigurationV2("wraps-cdn-cors", {
     bucket: bucket.id,
     corsRules: [
       {
@@ -118,12 +118,12 @@ export async function createStorageBucket(
   });
 
   // Configure lifecycle rules for auto-cleanup if retention is set
-  const retentionDays = config.storageConfig.retention
-    ? retentionToDays(config.storageConfig.retention)
+  const retentionDays = config.cdnConfig.retention
+    ? retentionToDays(config.cdnConfig.retention)
     : null;
 
   if (retentionDays) {
-    new aws.s3.BucketLifecycleConfigurationV2("wraps-storage-lifecycle", {
+    new aws.s3.BucketLifecycleConfigurationV2("wraps-cdn-lifecycle", {
       bucket: bucket.id,
       rules: [
         {
@@ -138,7 +138,7 @@ export async function createStorageBucket(
   }
 
   // Block public access - files are only accessible via CloudFront
-  new aws.s3.BucketPublicAccessBlock("wraps-storage-public-access", {
+  new aws.s3.BucketPublicAccessBlock("wraps-cdn-public-access", {
     bucket: bucket.id,
     blockPublicAcls: true,
     blockPublicPolicy: true,
@@ -154,9 +154,9 @@ export async function createStorageBucket(
 }
 
 /**
- * CloudFront storage CDN configuration
+ * CloudFront CDN configuration
  */
-export type CloudFrontStorageConfig = {
+export type CloudFrontCdnConfig = {
   bucket: aws.s3.BucketV2;
   bucketRegion: string; // For Origin Shield region
   customDomain?: string;
@@ -173,7 +173,7 @@ export type CloudFrontStorageConfig = {
 /**
  * CloudFront storage resources output
  */
-export type CloudFrontStorageResources = {
+export type CloudFrontCdnResources = {
   distribution: aws.cloudfront.Distribution;
   domainName: pulumi.Output<string>;
   distributionId: pulumi.Output<string>;
@@ -182,19 +182,19 @@ export type CloudFrontStorageResources = {
 };
 
 /**
- * Create WAF Web ACL with rate limiting for storage CDN
+ * Create WAF Web ACL with rate limiting for CDN
  */
-async function createStorageWAF(): Promise<aws.wafv2.WebAcl> {
+async function createCdnWAF(): Promise<aws.wafv2.WebAcl> {
   // WAF for CloudFront must be created in us-east-1
   const usEast1Provider = new aws.Provider("storage-waf-us-east-1", {
     region: "us-east-1",
   });
 
   const webAcl = new aws.wafv2.WebAcl(
-    "wraps-storage-waf",
+    "wraps-cdn-waf",
     {
       scope: "CLOUDFRONT", // WAF for CloudFront must use CLOUDFRONT scope
-      description: "Rate limiting protection for Wraps storage CDN",
+      description: "Rate limiting protection for Wraps CDN",
 
       defaultAction: {
         allow: {}, // Allow by default
@@ -216,7 +216,7 @@ async function createStorageWAF(): Promise<aws.wafv2.WebAcl> {
           visibilityConfig: {
             sampledRequestsEnabled: true,
             cloudwatchMetricsEnabled: true,
-            metricName: "StorageRateLimitRule",
+            metricName: "CdnRateLimitRule",
           },
         },
       ],
@@ -224,14 +224,14 @@ async function createStorageWAF(): Promise<aws.wafv2.WebAcl> {
       visibilityConfig: {
         sampledRequestsEnabled: true,
         cloudwatchMetricsEnabled: true,
-        metricName: "wraps-storage-waf",
+        metricName: "wraps-cdn-waf",
       },
 
       tags: {
-        Name: "wraps-storage-waf",
+        Name: "wraps-cdn-waf",
         ManagedBy: "wraps-cli",
-        Service: "storage",
-        Description: "WAF for Wraps storage CDN with rate limiting",
+        Service: "cdn",
+        Description: "WAF for Wraps CDN with rate limiting",
       },
     },
     {
@@ -243,18 +243,18 @@ async function createStorageWAF(): Promise<aws.wafv2.WebAcl> {
 }
 
 /**
- * Create CloudFront distribution for storage CDN
+ * Create CloudFront distribution for CDN
  */
-export async function createStorageCDN(
-  config: CloudFrontStorageConfig
-): Promise<CloudFrontStorageResources> {
+export async function createCdnDistribution(
+  config: CloudFrontCdnConfig
+): Promise<CloudFrontCdnResources> {
   // Create WAF Web ACL with rate limiting protection (only if enabled)
-  const webAcl = config.wafEnabled ? await createStorageWAF() : undefined;
+  const webAcl = config.wafEnabled ? await createCdnWAF() : undefined;
 
   // Create Origin Access Control for S3
-  const oac = new aws.cloudfront.OriginAccessControl("wraps-storage-oac", {
-    name: "wraps-storage-oac",
-    description: "OAC for Wraps storage S3 bucket",
+  const oac = new aws.cloudfront.OriginAccessControl("wraps-cdn-oac", {
+    name: "wraps-cdn-oac",
+    description: "OAC for Wraps CDN S3 bucket",
     originAccessControlOriginType: "s3",
     signingBehavior: "always",
     signingProtocol: "sigv4",
@@ -277,7 +277,7 @@ export async function createStorageCDN(
   // Build origin with optional Origin Shield
   const originConfig: aws.types.input.cloudfront.DistributionOrigin = {
     domainName: config.bucket.bucketRegionalDomainName,
-    originId: "s3-storage",
+    originId: "s3-cdn",
     originAccessControlId: oac.id,
   };
 
@@ -308,9 +308,9 @@ export async function createStorageCDN(
           };
 
   // Create CloudFront distribution
-  const distribution = new aws.cloudfront.Distribution("wraps-storage-cdn", {
+  const distribution = new aws.cloudfront.Distribution("wraps-cdn-cdn", {
     enabled: true,
-    comment: "Wraps storage CDN",
+    comment: "Wraps CDN",
     aliases,
 
     // Attach WAF Web ACL for rate limiting protection (only if enabled)
@@ -321,7 +321,7 @@ export async function createStorageCDN(
 
     // Default cache behavior for static assets
     defaultCacheBehavior: {
-      targetOriginId: "s3-storage",
+      targetOriginId: "s3-cdn",
       viewerProtocolPolicy: "redirect-to-https",
 
       // Allow GET, HEAD, OPTIONS only (uploads go direct to S3 via presigned URLs)
@@ -356,14 +356,14 @@ export async function createStorageCDN(
     viewerCertificate,
 
     tags: {
-      Name: "wraps-storage",
+      Name: "wraps-cdn",
       ManagedBy: "wraps-cli",
-      Service: "storage",
+      Service: "cdn",
     },
   });
 
   // Create bucket policy to allow CloudFront access
-  new aws.s3.BucketPolicy("wraps-storage-bucket-policy", {
+  new aws.s3.BucketPolicy("wraps-cdn-bucket-policy", {
     bucket: config.bucket.id,
     policy: pulumi.interpolate`{
       "Version": "2012-10-17",
@@ -396,7 +396,7 @@ export async function createStorageCDN(
 /**
  * ACM certificate configuration for storage
  */
-export type ACMStorageCertificateConfig = {
+export type ACMCdnCertificateConfig = {
   domain: string;
   hostedZoneId?: string;
 };
@@ -404,7 +404,7 @@ export type ACMStorageCertificateConfig = {
 /**
  * ACM storage certificate resources output
  */
-export type ACMStorageCertificateResources = {
+export type ACMCdnCertificateResources = {
   certificate: aws.acm.Certificate;
   certificateValidation?: aws.acm.CertificateValidation;
   validationRecords: pulumi.Output<
@@ -421,9 +421,9 @@ export type ACMStorageCertificateResources = {
  *
  * IMPORTANT: CloudFront requires ACM certificates to be created in us-east-1 region.
  */
-export async function createStorageACMCertificate(
-  config: ACMStorageCertificateConfig
-): Promise<ACMStorageCertificateResources> {
+export async function createCdnACMCertificate(
+  config: ACMCdnCertificateConfig
+): Promise<ACMCdnCertificateResources> {
   // ACM for CloudFront must be in us-east-1
   const usEast1Provider = new aws.Provider("storage-acm-us-east-1", {
     region: "us-east-1",
@@ -431,14 +431,14 @@ export async function createStorageACMCertificate(
 
   // Create ACM certificate in us-east-1 (required for CloudFront)
   const certificate = new aws.acm.Certificate(
-    "wraps-storage-cert",
+    "wraps-cdn-cert",
     {
       domainName: config.domain,
       validationMethod: "DNS",
       tags: {
         ManagedBy: "wraps-cli",
-        Service: "storage",
-        Description: "SSL certificate for Wraps storage CDN domain",
+        Service: "cdn",
+        Description: "SSL certificate for Wraps CDN domain",
       },
     },
     {
@@ -462,7 +462,7 @@ export async function createStorageACMCertificate(
   if (config.hostedZoneId) {
     // Create validation record in Route53
     const validationRecord = new aws.route53.Record(
-      "wraps-storage-cert-validation",
+      "wraps-cdn-cert-validation",
       {
         zoneId: config.hostedZoneId,
         name: certificate.domainValidationOptions[0].resourceRecordName,
@@ -474,7 +474,7 @@ export async function createStorageACMCertificate(
 
     // Wait for certificate validation to complete
     certificateValidation = new aws.acm.CertificateValidation(
-      "wraps-storage-cert-validation-waiter",
+      "wraps-cdn-cert-validation-waiter",
       {
         certificateArn: certificate.arn,
         validationRecordFqdns: [validationRecord.fqdn],

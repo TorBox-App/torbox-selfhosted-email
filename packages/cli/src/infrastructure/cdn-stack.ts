@@ -2,20 +2,20 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import type {
   Provider,
-  StorageStackConfig,
-  StorageStackOutputs,
+  CdnStackConfig,
+  CdnStackOutputs,
 } from "../types/index.js";
 import {
-  createStorageACMCertificate,
-  createStorageBucket,
-  createStorageCDN,
-} from "./resources/s3-storage.js";
+  createCdnACMCertificate,
+  createCdnBucket,
+  createCdnDistribution,
+} from "./resources/s3-cdn.js";
 import { createVercelOIDC } from "./vercel-oidc.js";
 
 /**
  * IAM role configuration for storage
  */
-type StorageIAMConfig = {
+type CdnIAMConfig = {
   provider: Provider;
   oidcProvider?: aws.iam.OpenIdConnectProvider;
   vercelTeamSlug?: string;
@@ -52,8 +52,8 @@ async function roleExists(roleName: string): Promise<boolean> {
 /**
  * Create IAM role for storage infrastructure
  */
-async function createStorageIAMRole(
-  config: StorageIAMConfig
+async function createCdnIAMRole(
+  config: CdnIAMConfig
 ): Promise<aws.iam.Role> {
   // Build assume role policy based on provider
   let assumeRolePolicy: pulumi.Output<string>;
@@ -95,7 +95,7 @@ async function createStorageIAMRole(
   }
 
   // Check if role already exists
-  const roleName = "wraps-storage-role";
+  const roleName = "wraps-cdn-role";
   const exists = await roleExists(roleName);
 
   const role = exists
@@ -106,7 +106,7 @@ async function createStorageIAMRole(
           assumeRolePolicy,
           tags: {
             ManagedBy: "wraps-cli",
-            Service: "storage",
+            Service: "cdn",
             Provider: config.provider,
           },
         },
@@ -119,7 +119,7 @@ async function createStorageIAMRole(
         assumeRolePolicy,
         tags: {
           ManagedBy: "wraps-cli",
-          Service: "storage",
+          Service: "cdn",
           Provider: config.provider,
         },
       });
@@ -158,7 +158,7 @@ async function createStorageIAMRole(
   }
 
   // Attach policy to role
-  new aws.iam.RolePolicy("wraps-storage-policy", {
+  new aws.iam.RolePolicy("wraps-cdn-policy", {
     role: role.name,
     policy: pulumi.all([statements]).apply(([stmts]) =>
       JSON.stringify({
@@ -174,9 +174,9 @@ async function createStorageIAMRole(
 /**
  * Deploy storage infrastructure stack using Pulumi
  */
-export async function deployStorageStack(
-  config: StorageStackConfig
-): Promise<StorageStackOutputs> {
+export async function deployCdnStack(
+  config: CdnStackConfig
+): Promise<CdnStackOutputs> {
   // Use account ID from config (already validated by CLI)
   const accountId = config.accountId;
 
@@ -191,38 +191,38 @@ export async function deployStorageStack(
   }
 
   // 2. Create S3 bucket
-  const bucketResources = await createStorageBucket({
+  const bucketResources = await createCdnBucket({
     accountId,
     region: config.region,
-    storageConfig: config.storageConfig,
+    cdnConfig: config.cdnConfig,
   });
 
   // 3. Create ACM certificate if custom domain is configured
   let acmResources;
   let hostedZone: { id: string } | null = null;
 
-  if (config.storageConfig.cdn.customDomain) {
+  if (config.cdnConfig.cdn.customDomain) {
     // Extract root domain from custom domain (e.g., cdn.example.com -> example.com)
-    const domainParts = config.storageConfig.cdn.customDomain.split(".");
+    const domainParts = config.cdnConfig.cdn.customDomain.split(".");
     const rootDomain =
       domainParts.length > 2
         ? domainParts.slice(-2).join(".")
-        : config.storageConfig.cdn.customDomain;
+        : config.cdnConfig.cdn.customDomain;
 
     // Check for Route53 hosted zone (for automatic DNS validation)
     const { findHostedZone } = await import("../utils/route53.js");
     hostedZone = await findHostedZone(rootDomain, config.region);
 
     // Create ACM certificate (in us-east-1 for CloudFront)
-    acmResources = await createStorageACMCertificate({
-      domain: config.storageConfig.cdn.customDomain,
+    acmResources = await createCdnACMCertificate({
+      domain: config.cdnConfig.cdn.customDomain,
       hostedZoneId: hostedZone?.id,
     });
   }
 
   // 4. Create CloudFront distribution (if CDN enabled)
   let cdnResources;
-  if (config.storageConfig.cdn.enabled) {
+  if (config.cdnConfig.cdn.enabled) {
     // Determine which certificate ARN to use:
     // - certValidated: Use existing cert (manual validation completed via upgrade)
     // - Route53: Use certificateValidation.certificateArn (waits for validation)
@@ -242,23 +242,23 @@ export async function deployStorageStack(
     // Custom domain: use if cert is available (either from upgrade or auto-validation)
     const customDomainForCdn =
       useCertFromUpgrade || hasAutoValidation
-        ? config.storageConfig.cdn.customDomain
+        ? config.cdnConfig.cdn.customDomain
         : undefined;
 
-    cdnResources = await createStorageCDN({
+    cdnResources = await createCdnDistribution({
       bucket: bucketResources.bucket,
       bucketRegion: config.region, // For Origin Shield
       customDomain: customDomainForCdn,
       certificateArn,
-      priceClass: config.storageConfig.cdn.priceClass,
-      originShield: config.storageConfig.cdn.originShield,
-      geoRestriction: config.storageConfig.cdn.geoRestriction,
-      wafEnabled: config.storageConfig.cdn.wafEnabled,
+      priceClass: config.cdnConfig.cdn.priceClass,
+      originShield: config.cdnConfig.cdn.originShield,
+      geoRestriction: config.cdnConfig.cdn.geoRestriction,
+      wafEnabled: config.cdnConfig.cdn.wafEnabled,
     });
   }
 
   // 5. Create IAM role with S3 and CloudFront permissions
-  const role = await createStorageIAMRole({
+  const role = await createCdnIAMRole({
     provider: config.provider,
     oidcProvider,
     vercelTeamSlug: config.vercel?.teamSlug,
@@ -272,10 +272,10 @@ export async function deployStorageStack(
   const hasAutoValidation = acmResources?.certificateValidation;
   const hasCertFromUpgrade = config.certValidated && config.existingCertArn;
   const customDomainActive =
-    config.storageConfig.cdn.customDomain &&
+    config.cdnConfig.cdn.customDomain &&
     (hasAutoValidation || hasCertFromUpgrade);
   const customDomainPending =
-    config.storageConfig.cdn.customDomain &&
+    config.cdnConfig.cdn.customDomain &&
     !hasAutoValidation &&
     !hasCertFromUpgrade;
 
@@ -289,11 +289,11 @@ export async function deployStorageStack(
     distributionDomain: cdnResources?.domainName as any as string | undefined,
     // Report custom domain if it's actually configured on CloudFront (auto or manual validation)
     customDomain: customDomainActive
-      ? config.storageConfig.cdn.customDomain
+      ? config.cdnConfig.cdn.customDomain
       : undefined,
     // Report pending custom domain that needs manual cert validation
     customDomainPending: customDomainPending
-      ? config.storageConfig.cdn.customDomain
+      ? config.cdnConfig.cdn.customDomain
       : undefined,
     acmCertificateArn: acmResources?.certificate.arn as any as
       | string
@@ -301,23 +301,23 @@ export async function deployStorageStack(
     acmCertificateValidationRecords: acmResources?.validationRecords as any as
       | Array<{ name: string; type: string; value: string }>
       | undefined,
-    versioning: config.storageConfig.versioning ?? false,
-    retention: config.storageConfig.retention,
+    versioning: config.cdnConfig.versioning ?? false,
+    retention: config.cdnConfig.retention,
   };
 }
 
 /**
  * Run Pulumi program inline for storage
  */
-export async function runStoragePulumiProgram(
+export async function runCdnPulumiProgram(
   stackName: string,
   region: string,
-  program: () => Promise<StorageStackOutputs>
-): Promise<StorageStackOutputs> {
+  program: () => Promise<CdnStackOutputs>
+): Promise<CdnStackOutputs> {
   const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
     {
       stackName,
-      projectName: "wraps-storage",
+      projectName: "wraps-cdn",
       program,
     },
     {
@@ -360,15 +360,15 @@ export async function runStoragePulumiProgram(
 /**
  * Preview storage stack changes
  */
-export async function previewStorageStack(
+export async function previewCdnStack(
   stackName: string,
   region: string,
-  program: () => Promise<StorageStackOutputs>
+  program: () => Promise<CdnStackOutputs>
 ): Promise<pulumi.automation.PreviewResult> {
   const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
     {
       stackName,
-      projectName: "wraps-storage",
+      projectName: "wraps-cdn",
       program,
     },
     {
@@ -388,14 +388,14 @@ export async function previewStorageStack(
 /**
  * Destroy storage stack
  */
-export async function destroyStorageStack(
+export async function destroyCdnStack(
   stackName: string,
   region: string
 ): Promise<void> {
   const stack = await pulumi.automation.LocalWorkspace.selectStack(
     {
       stackName,
-      projectName: "wraps-storage",
+      projectName: "wraps-cdn",
       program: async () => ({}),
     },
     {

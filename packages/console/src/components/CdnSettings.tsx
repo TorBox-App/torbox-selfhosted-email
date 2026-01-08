@@ -33,7 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 /**
  * Storage settings from API
  */
-type StorageSettings = {
+type CdnSettings = {
   bucketName: string;
   bucketArn: string;
   region: string;
@@ -122,7 +122,7 @@ function CopyButton({ text }: { text: string }) {
 /**
  * S3 Bucket Section
  */
-function BucketSection({ settings }: { settings: StorageSettings }) {
+function BucketSection({ settings }: { settings: CdnSettings }) {
   return (
     <Card>
       <CardHeader>
@@ -190,7 +190,7 @@ function BucketSection({ settings }: { settings: StorageSettings }) {
 /**
  * CloudFront CDN Section
  */
-function CDNSection({ settings }: { settings: StorageSettings }) {
+function CDNSection({ settings }: { settings: CdnSettings }) {
   const [dnsOpen, setDnsOpen] = React.useState(false);
 
   if (!settings.cdn?.enabled) {
@@ -353,7 +353,7 @@ function CDNSection({ settings }: { settings: StorageSettings }) {
 /**
  * IAM Role Section
  */
-function IAMRoleSection({ settings }: { settings: StorageSettings }) {
+function IAMRoleSection({ settings }: { settings: CdnSettings }) {
   return (
     <Card>
       <CardHeader>
@@ -440,8 +440,8 @@ function NoStorageSetup() {
 /**
  * Storage Settings Component
  */
-export function StorageSettings() {
-  const [settings, setSettings] = React.useState<StorageSettings | null>(null);
+export function CdnSettings() {
+  const [settings, setSettings] = React.useState<CdnSettings | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -451,7 +451,7 @@ export function StorageSettings() {
       setError(null);
 
       const token = sessionStorage.getItem("wraps-auth-token");
-      const response = await fetch(`/api/storage/settings?token=${token}`);
+      const response = await fetch(`/api/cdn/settings?token=${token}`);
 
       if (!response.ok) {
         if (response.status === 404) {

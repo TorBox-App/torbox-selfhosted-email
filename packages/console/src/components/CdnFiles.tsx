@@ -21,10 +21,10 @@ import {
   LibrarySearch,
   LibraryTableView,
   LibraryViewToggle,
-  type StorageFile,
-  type StorageInfo,
+  type CdnFile,
+  type CdnInfo,
   type ViewMode,
-} from "@/components/storage";
+} from "@/components/cdn";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -322,9 +322,9 @@ function UploadArea({
 /**
  * Storage Files Component - CDN Library
  */
-export function StorageFiles() {
+export function CdnFiles() {
   // Data state
-  const [info, setInfo] = React.useState<StorageInfo | null>(null);
+  const [info, setInfo] = React.useState<CdnInfo | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -338,7 +338,7 @@ export function StorageFiles() {
 
   // Selection state
   const [selectedFiles, setSelectedFiles] = React.useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = React.useState<StorageFile | null>(
+  const [selectedFile, setSelectedFile] = React.useState<CdnFile | null>(
     null
   );
 
@@ -365,7 +365,7 @@ export function StorageFiles() {
       setError(null);
 
       const token = sessionStorage.getItem("wraps-auth-token");
-      const response = await fetch(`/api/storage/files?token=${token}`);
+      const response = await fetch(`/api/cdn/files?token=${token}`);
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -395,7 +395,7 @@ export function StorageFiles() {
 
       try {
         const response = await fetch(
-          `/api/storage/files/${encodeURIComponent(key)}/star?token=${token}`,
+          `/api/cdn/files/${encodeURIComponent(key)}/star?token=${token}`,
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -440,7 +440,7 @@ export function StorageFiles() {
         await Promise.all(
           keys.map((key) =>
             fetch(
-              `/api/storage/files/${encodeURIComponent(key)}?token=${token}`,
+              `/api/cdn/files/${encodeURIComponent(key)}?token=${token}`,
               {
                 method: "DELETE",
               }
@@ -480,7 +480,7 @@ export function StorageFiles() {
         );
 
         const urlResponse = await fetch(
-          `/api/storage/upload-url?token=${token}`,
+          `/api/cdn/upload-url?token=${token}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

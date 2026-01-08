@@ -107,18 +107,18 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
   const smsConfigSetName = smsStackOutputs.configSetName?.value;
 
   // Extract storage outputs
-  const storageBucketName = storageStackOutputs.bucketName?.value;
-  const storageDistributionId = storageStackOutputs.distributionId?.value;
-  const storageDistributionDomain =
+  const cdnBucketName = storageStackOutputs.bucketName?.value;
+  const cdnDistributionId = storageStackOutputs.distributionId?.value;
+  const cdnDistributionDomain =
     storageStackOutputs.distributionDomain?.value;
-  const storageCertificateArn = storageStackOutputs.acmCertificateArn?.value;
+  const cdnCertificateArn = storageStackOutputs.acmCertificateArn?.value;
 
   // Load SMS and storage config from metadata
   let smsProtectEnabled = false;
   let smsAllowedCountries: string[] | undefined;
   let smsAitFiltering: boolean | undefined;
   let smsArchiveRetention: string | undefined;
-  let storageCustomDomain: string | undefined;
+  let cdnCustomDomain: string | undefined;
 
   try {
     const metadata = await loadConnectionMetadata(identity.accountId, region);
@@ -133,8 +133,8 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
         smsArchiveRetention = smsConfig.eventTracking.archiveRetention;
       }
     }
-    if (metadata?.services?.storage?.config?.cdn?.customDomain) {
-      storageCustomDomain = metadata.services.storage.config.cdn.customDomain;
+    if (metadata?.services?.cdn?.config?.cdn?.customDomain) {
+      cdnCustomDomain = metadata.services.cdn.config.cdn.customDomain;
     }
   } catch {
     // Metadata load failed, continue with defaults
@@ -171,12 +171,12 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
     smsAitFiltering,
     smsArchiveRetention,
     // Storage config (don't pass roleArn - use current credentials like email)
-    storageBucketName,
-    storageRoleArn: undefined, // Use current credentials instead of assuming role
-    storageDistributionId,
-    storageDistributionDomain,
-    storageCustomDomain,
-    storageCertificateArn,
+    cdnBucketName,
+    cdnRoleArn: undefined, // Use current credentials instead of assuming role
+    cdnDistributionId,
+    cdnDistributionDomain,
+    cdnCustomDomain,
+    cdnCertificateArn,
   });
 
   console.log(`\\n${pc.bold("Dashboard:")} ${pc.cyan(url)}`);

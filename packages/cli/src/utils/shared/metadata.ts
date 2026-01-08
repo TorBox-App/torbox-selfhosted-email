@@ -7,10 +7,10 @@ import type {
   Provider,
   ServiceType,
   SMSConfigPreset,
-  StorageConfigPreset,
+  CdnConfigPreset,
   WrapsEmailConfig,
   WrapsSMSConfig,
-  WrapsStorageConfig,
+  WrapsCdnConfig,
 } from "../../types/index.js";
 import { ensureWrapsDir, getWrapsDir } from "./fs.js";
 
@@ -55,7 +55,7 @@ export type ConnectionMetadata = {
   services: {
     email?: ServiceConfig<WrapsEmailConfig, EmailConfigPreset>;
     sms?: ServiceConfig<WrapsSMSConfig, SMSConfigPreset>;
-    storage?: ServiceConfig<WrapsStorageConfig, StorageConfigPreset>;
+    cdn?: ServiceConfig<WrapsCdnConfig, CdnConfigPreset>;
   };
 };
 
@@ -380,8 +380,8 @@ export function addServiceToConnection(
   region: string,
   provider: Provider,
   service: ServiceType,
-  config: WrapsEmailConfig | WrapsSMSConfig | WrapsStorageConfig,
-  preset?: EmailConfigPreset | SMSConfigPreset | StorageConfigPreset,
+  config: WrapsEmailConfig | WrapsSMSConfig | WrapsCdnConfig,
+  preset?: EmailConfigPreset | SMSConfigPreset | CdnConfigPreset,
   existingMetadata?: ConnectionMetadata
 ): ConnectionMetadata {
   const timestamp = new Date().toISOString();
@@ -400,10 +400,10 @@ export function addServiceToConnection(
         config: config as WrapsSMSConfig,
         deployedAt: timestamp,
       };
-    } else if (service === "storage") {
-      existingMetadata.services.storage = {
-        preset: preset as StorageConfigPreset,
-        config: config as WrapsStorageConfig,
+    } else if (service === "cdn") {
+      existingMetadata.services.cdn = {
+        preset: preset as CdnConfigPreset,
+        config: config as WrapsCdnConfig,
         deployedAt: timestamp,
       };
     }
@@ -433,10 +433,10 @@ export function addServiceToConnection(
       config: config as WrapsSMSConfig,
       deployedAt: timestamp,
     };
-  } else if (service === "storage") {
-    metadata.services.storage = {
-      preset: preset as StorageConfigPreset,
-      config: config as WrapsStorageConfig,
+  } else if (service === "cdn") {
+    metadata.services.cdn = {
+      preset: preset as CdnConfigPreset,
+      config: config as WrapsCdnConfig,
       deployedAt: timestamp,
     };
   }
@@ -454,8 +454,8 @@ export function updateServiceConfig<T extends ServiceType>(
     ? Partial<WrapsEmailConfig>
     : T extends "sms"
       ? Partial<WrapsSMSConfig>
-      : T extends "storage"
-        ? Partial<WrapsStorageConfig>
+      : T extends "cdn"
+        ? Partial<WrapsCdnConfig>
         : never
 ): void {
   if (service === "email" && metadata.services.email) {
@@ -468,10 +468,10 @@ export function updateServiceConfig<T extends ServiceType>(
       ...metadata.services.sms.config,
       ...(config as Partial<WrapsSMSConfig>),
     };
-  } else if (service === "storage" && metadata.services.storage) {
-    metadata.services.storage.config = {
-      ...metadata.services.storage.config,
-      ...(config as Partial<WrapsStorageConfig>),
+  } else if (service === "cdn" && metadata.services.cdn) {
+    metadata.services.cdn.config = {
+      ...metadata.services.cdn.config,
+      ...(config as Partial<WrapsCdnConfig>),
     };
   } else {
     throw new Error(`${service} service not configured in metadata`);
@@ -493,8 +493,8 @@ export function removeServiceFromConnection(
   } else if (service === "sms") {
     const { sms, ...rest } = metadata.services;
     metadata.services = rest;
-  } else if (service === "storage") {
-    const { storage, ...rest } = metadata.services;
+  } else if (service === "cdn") {
+    const { cdn, ...rest } = metadata.services;
     metadata.services = rest;
   }
   metadata.timestamp = new Date().toISOString();
@@ -513,8 +513,8 @@ export function hasService(
   if (service === "sms") {
     return metadata.services.sms !== undefined;
   }
-  if (service === "storage") {
-    return metadata.services.storage !== undefined;
+  if (service === "cdn") {
+    return metadata.services.cdn !== undefined;
   }
   return false;
 }
@@ -532,8 +532,8 @@ export function getConfiguredServices(
   if (metadata.services.sms) {
     services.push("sms");
   }
-  if (metadata.services.storage) {
-    services.push("storage");
+  if (metadata.services.cdn) {
+    services.push("cdn");
   }
   return services;
 }

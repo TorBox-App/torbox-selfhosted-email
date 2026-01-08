@@ -46,7 +46,7 @@ export type FeatureCost = {
 /**
  * Service type identifier
  */
-export type ServiceType = "email" | "sms" | "storage" | "queue";
+export type ServiceType = "email" | "sms" | "cdn" | "queue";
 
 /**
  * Command options for console

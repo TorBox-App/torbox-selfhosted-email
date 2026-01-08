@@ -50,7 +50,7 @@ function CLICommand({ command }: { command: string }) {
   );
 }
 
-export default function CLIReferenceStoragePage() {
+export default function CLIReferenceCdnPage() {
   return (
     <DocsLayout>
       {/* Breadcrumb */}
@@ -66,10 +66,10 @@ export default function CLIReferenceStoragePage() {
       {/* Page Header */}
       <div className="mb-12">
         <Badge className="mb-4" variant="outline">
-          CLI Reference / Storage
+          CLI Reference / CDN
         </Badge>
         <h1 className="mb-4 font-bold text-4xl tracking-tight">
-          Storage Commands
+          CDN Commands
         </h1>
         <p className="text-lg text-muted-foreground">
           Deploy S3 + CloudFront CDN infrastructure to your AWS account with browser-based image optimization.
@@ -82,14 +82,14 @@ export default function CLIReferenceStoragePage() {
         </div>
       </div>
 
-      {/* wraps storage init */}
+      {/* wraps cdn init */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <Terminal className="h-6 w-6 text-primary" />
-          wraps storage init
+          wraps cdn init
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Deploy storage infrastructure (S3 bucket + CloudFront CDN) to your AWS account.
+          Deploy CDN infrastructure (S3 bucket + CloudFront CDN) to your AWS account.
           Optionally configure a custom domain for your CDN.
         </p>
 
@@ -98,7 +98,7 @@ export default function CLIReferenceStoragePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <CLICommand command="npx @wraps.dev/cli storage init [options]" />
+            <CLICommand command="npx @wraps.dev/cli cdn init [options]" />
           </CardContent>
         </Card>
 
@@ -155,7 +155,7 @@ export default function CLIReferenceStoragePage() {
           </CardHeader>
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
-              <li>S3 bucket (<code className="rounded bg-muted px-1 py-0.5">wraps-storage-{'{accountId}'}</code>) with CORS configured</li>
+              <li>S3 bucket (<code className="rounded bg-muted px-1 py-0.5">wraps-cdn-{'{accountId}'}</code>) with CORS configured</li>
               <li>CloudFront distribution for global CDN delivery</li>
               <li>ACM SSL certificate (if custom domain specified)</li>
               <li>IAM permissions for console/dashboard uploads</li>
@@ -173,26 +173,26 @@ export default function CLIReferenceStoragePage() {
               <p className="mb-2 text-muted-foreground text-sm">
                 Interactive setup:
               </p>
-              <CLICommand command="npx @wraps.dev/cli storage init" />
+              <CLICommand command="npx @wraps.dev/cli cdn init" />
             </div>
             <div className="mt-4">
               <p className="mb-2 text-muted-foreground text-sm">
                 With custom domain:
               </p>
-              <CLICommand command="npx @wraps.dev/cli storage init --domain cdn.yourdomain.com" />
+              <CLICommand command="npx @wraps.dev/cli cdn init --domain cdn.yourdomain.com" />
             </div>
           </CardContent>
         </Card>
       </section>
 
-      {/* wraps storage status */}
+      {/* wraps cdn status */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <Terminal className="h-6 w-6 text-primary" />
-          wraps storage status
+          wraps cdn status
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Display the current status of your storage infrastructure, including CDN domain, S3 bucket, and usage statistics.
+          Display the current status of your CDN infrastructure, including CDN domain, S3 bucket, and usage statistics.
         </p>
 
         <Card className="mb-4">
@@ -200,7 +200,7 @@ export default function CLIReferenceStoragePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <CLICommand command="npx @wraps.dev/cli storage status" />
+            <CLICommand command="npx @wraps.dev/cli cdn status" />
           </CardContent>
         </Card>
 
@@ -221,11 +221,11 @@ export default function CLIReferenceStoragePage() {
         </Card>
       </section>
 
-      {/* wraps storage verify */}
+      {/* wraps cdn verify */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <Terminal className="h-6 w-6 text-primary" />
-          wraps storage verify
+          wraps cdn verify
         </h2>
         <p className="mb-4 text-muted-foreground">
           Verify DNS configuration and certificate status for your custom domain.
@@ -237,7 +237,7 @@ export default function CLIReferenceStoragePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <CLICommand command="npx @wraps.dev/cli storage verify" />
+            <CLICommand command="npx @wraps.dev/cli cdn verify" />
           </CardContent>
         </Card>
 
@@ -275,15 +275,15 @@ export default function CLIReferenceStoragePage() {
         </Card>
       </section>
 
-      {/* wraps storage upgrade */}
+      {/* wraps cdn upgrade */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <Terminal className="h-6 w-6 text-primary" />
-          wraps storage upgrade
+          wraps cdn upgrade
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Add a custom domain to your storage CDN after the SSL certificate has been validated.
-          Run this after <code className="rounded bg-muted px-1 py-0.5">storage verify</code> shows the certificate is issued.
+          Add a custom domain to your CDN after the SSL certificate has been validated.
+          Run this after <code className="rounded bg-muted px-1 py-0.5">cdn verify</code> shows the certificate is issued.
         </p>
 
         <Card className="mb-4">
@@ -291,7 +291,7 @@ export default function CLIReferenceStoragePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <CLICommand command="npx @wraps.dev/cli storage upgrade" />
+            <CLICommand command="npx @wraps.dev/cli cdn upgrade" />
           </CardContent>
         </Card>
 
@@ -309,11 +309,11 @@ export default function CLIReferenceStoragePage() {
         </Card>
       </section>
 
-      {/* wraps storage sync */}
+      {/* wraps cdn sync */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <Terminal className="h-6 w-6 text-primary" />
-          wraps storage sync
+          wraps cdn sync
         </h2>
         <p className="mb-4 text-muted-foreground">
           Synchronize your local configuration with deployed infrastructure.
@@ -325,7 +325,7 @@ export default function CLIReferenceStoragePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <CLICommand command="npx @wraps.dev/cli storage sync" />
+            <CLICommand command="npx @wraps.dev/cli cdn sync" />
           </CardContent>
         </Card>
 
@@ -343,14 +343,14 @@ export default function CLIReferenceStoragePage() {
         </Card>
       </section>
 
-      {/* wraps storage destroy */}
+      {/* wraps cdn destroy */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
           <Terminal className="h-6 w-6 text-primary" />
-          wraps storage destroy
+          wraps cdn destroy
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Remove all storage infrastructure from your AWS account. This is a destructive operation.
+          Remove all CDN infrastructure from your AWS account. This is a destructive operation.
         </p>
 
         <Card className="mb-4">
@@ -358,7 +358,7 @@ export default function CLIReferenceStoragePage() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <CLICommand command="npx @wraps.dev/cli storage destroy [options]" />
+            <CLICommand command="npx @wraps.dev/cli cdn destroy [options]" />
           </CardContent>
         </Card>
 
@@ -393,7 +393,7 @@ export default function CLIReferenceStoragePage() {
               <li>S3 bucket and all stored files</li>
               <li>CloudFront distribution</li>
               <li>ACM certificate (if custom domain was configured)</li>
-              <li>IAM permissions for storage access</li>
+              <li>IAM permissions for CDN access</li>
               <li>Local metadata and Pulumi state</li>
             </ul>
             <p className="mt-4 text-muted-foreground text-sm">
@@ -426,7 +426,7 @@ const s3 = new S3Client({ region: 'us-east-1' });
 
 // Upload a file
 await s3.send(new PutObjectCommand({
-  Bucket: 'wraps-storage-123456789012', // From wraps storage status
+  Bucket: 'wraps-cdn-123456789012', // From wraps cdn status
   Key: 'images/hero.webp',
   Body: buffer,
   ContentType: 'image/webp',

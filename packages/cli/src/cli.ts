@@ -42,13 +42,13 @@ import { smsSync } from "./commands/sms/sync.js";
 import { smsTest } from "./commands/sms/test.js";
 import { smsUpgrade } from "./commands/sms/upgrade.js";
 import { smsVerifyNumber } from "./commands/sms/verify-number.js";
-// Storage commands
-import { storageDestroy } from "./commands/storage/destroy.js";
-import { init as storageInit } from "./commands/storage/init.js";
-import { storageStatus } from "./commands/storage/status.js";
-import { storageSync } from "./commands/storage/sync.js";
-import { storageUpgrade } from "./commands/storage/upgrade.js";
-import { storageVerify } from "./commands/storage/verify.js";
+// CDN commands
+import { cdnDestroy } from "./commands/cdn/destroy.js";
+import { init as cdnInit } from "./commands/cdn/init.js";
+import { cdnStatus } from "./commands/cdn/status.js";
+import { cdnSync } from "./commands/cdn/sync.js";
+import { cdnUpgrade } from "./commands/cdn/upgrade.js";
+import { cdnVerify } from "./commands/cdn/verify.js";
 import { support } from "./commands/support.js";
 // Telemetry commands
 import {
@@ -92,7 +92,7 @@ function showHelp() {
     `  ${pc.cyan("sms")}         SMS infrastructure (AWS End User Messaging)`
   );
   console.log(
-    `  ${pc.cyan("storage")}     File storage infrastructure (AWS S3 + CloudFront)\n`
+    `  ${pc.cyan("cdn")}         CDN infrastructure (AWS S3 + CloudFront)\n`
   );
   console.log("Email Commands:");
   console.log(
@@ -138,24 +138,24 @@ function showHelp() {
   console.log(
     `  ${pc.cyan("sms destroy")}          Remove SMS infrastructure\n`
   );
-  console.log("Storage Commands:");
+  console.log("CDN Commands:");
   console.log(
-    `  ${pc.cyan("storage init")}         Deploy storage infrastructure (S3 + CDN)`
+    `  ${pc.cyan("cdn init")}             Deploy CDN infrastructure (S3 + CloudFront)`
   );
   console.log(
-    `  ${pc.cyan("storage status")}       Show storage infrastructure details`
+    `  ${pc.cyan("cdn status")}           Show CDN infrastructure details`
   );
   console.log(
-    `  ${pc.cyan("storage verify")}       Check DNS and certificate status`
+    `  ${pc.cyan("cdn verify")}           Check DNS and certificate status`
   );
   console.log(
-    `  ${pc.cyan("storage upgrade")}      Add custom domain after cert validation`
+    `  ${pc.cyan("cdn upgrade")}          Add custom domain after cert validation`
   );
   console.log(
-    `  ${pc.cyan("storage sync")}         Sync infrastructure with current config`
+    `  ${pc.cyan("cdn sync")}             Sync infrastructure with current config`
   );
   console.log(
-    `  ${pc.cyan("storage destroy")}      Remove storage infrastructure\n`
+    `  ${pc.cyan("cdn destroy")}          Remove CDN infrastructure\n`
   );
   console.log("Local Development:");
   console.log(
@@ -369,8 +369,8 @@ if (!primaryCommand) {
           hint: "AWS End User Messaging",
         },
         {
-          value: "storage-init",
-          label: "Deploy Storage",
+          value: "cdn-init",
+          label: "Deploy CDN",
           hint: "AWS S3 + CloudFront CDN",
         },
         {
@@ -430,8 +430,8 @@ if (!primaryCommand) {
           yes: flags.yes,
         });
         break;
-      case "storage-init":
-        await storageInit({
+      case "cdn-init":
+        await cdnInit({
           provider: flags.provider,
           region: flags.region,
           preset: flags.preset,
@@ -756,11 +756,11 @@ async function run() {
       return;
     }
 
-    // Handle Storage subcommands (e.g., wraps storage init)
-    if (primaryCommand === "storage" && subCommand) {
+    // Handle CDN subcommands (e.g., wraps cdn init)
+    if (primaryCommand === "cdn" && subCommand) {
       switch (subCommand) {
         case "init":
-          await storageInit({
+          await cdnInit({
             provider: flags.provider,
             region: flags.region,
             preset: flags.preset,
@@ -771,19 +771,19 @@ async function run() {
           break;
 
         case "status":
-          await storageStatus({
+          await cdnStatus({
             region: flags.region,
           });
           break;
 
         case "verify":
-          await storageVerify({
+          await cdnVerify({
             region: flags.region,
           });
           break;
 
         case "upgrade":
-          await storageUpgrade({
+          await cdnUpgrade({
             region: flags.region,
             yes: flags.yes,
             preview: flags.preview,
@@ -791,13 +791,13 @@ async function run() {
           break;
 
         case "sync":
-          await storageSync({
+          await cdnSync({
             region: flags.region,
           });
           break;
 
         case "destroy":
-          await storageDestroy({
+          await cdnDestroy({
             force: flags.force,
             region: flags.region,
             preview: flags.preview,
@@ -805,19 +805,19 @@ async function run() {
           break;
 
         default:
-          clack.log.error(`Unknown storage command: ${subCommand}`);
+          clack.log.error(`Unknown cdn command: ${subCommand}`);
           console.log(
             `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
           );
           process.exit(1);
       }
-      // Track storage commands
-      const storageDuration = Date.now() - startTime;
-      const storageCommandName = `storage:${subCommand}`;
-      trackCommand(storageCommandName, {
+      // Track CDN commands
+      const cdnDuration = Date.now() - startTime;
+      const cdnCommandName = `cdn:${subCommand}`;
+      trackCommand(cdnCommandName, {
         success: true,
-        duration_ms: storageDuration,
-        service: "storage",
+        duration_ms: cdnDuration,
+        service: "cdn",
       });
       return;
     }
@@ -956,7 +956,7 @@ async function run() {
       // Show help for service without subcommand
       case "email":
       case "sms":
-      case "storage":
+      case "cdn":
       case "aws":
         console.log(
           `\nPlease specify a command for ${primaryCommand} service.\n`

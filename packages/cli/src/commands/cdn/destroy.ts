@@ -27,25 +27,25 @@ import { previewWithResourceChanges } from "../../utils/shared/pulumi.js";
 /**
  * Storage destroy command options
  */
-export type StorageDestroyOptions = {
+export type CdnDestroyOptions = {
   region?: string;
   force?: boolean;
   preview?: boolean;
 };
 
 /**
- * Storage Destroy command - Remove storage infrastructure
+ * Storage Destroy command - Remove CDN infrastructure
  */
-export async function storageDestroy(
-  options: StorageDestroyOptions
+export async function cdnDestroy(
+  options: CdnDestroyOptions
 ): Promise<void> {
   const startTime = Date.now();
 
   clack.intro(
     pc.bold(
       options.preview
-        ? "Storage Infrastructure Destruction Preview"
-        : "Storage Infrastructure Teardown"
+        ? "CDN Infrastructure Destruction Preview"
+        : "CDN Infrastructure Teardown"
     )
   );
 
@@ -68,17 +68,17 @@ export async function storageDestroy(
       process.env.AWS_DEFAULT_REGION
     )
   ) {
-    const storageConnections = await findConnectionsWithService(
+    const cdnConnections = await findConnectionsWithService(
       identity.accountId,
-      "storage"
+      "cdn"
     );
 
-    if (storageConnections.length === 1) {
-      region = storageConnections[0].region;
-    } else if (storageConnections.length > 1) {
+    if (cdnConnections.length === 1) {
+      region = cdnConnections[0].region;
+    } else if (cdnConnections.length > 1) {
       const selectedRegion = await clack.select({
-        message: "Multiple storage deployments found. Which region to destroy?",
-        options: storageConnections.map((conn) => ({
+        message: "Multiple CDN deployments found. Which region to destroy?",
+        options: cdnConnections.map((conn) => ({
           value: conn.region,
           label: conn.region,
         })),
@@ -95,10 +95,10 @@ export async function storageDestroy(
 
   // 3. Load connection metadata to get custom domain and stack name
   const metadata = await loadConnectionMetadata(identity.accountId, region);
-  const storageService = metadata?.services?.storage;
-  const storageConfig = storageService?.config;
-  const customDomain = storageConfig?.cdn?.customDomain;
-  const storedStackName = storageService?.pulumiStackName;
+  const cdnService = metadata?.services?.cdn;
+  const cdnConfig = cdnService?.config;
+  const customDomain = cdnConfig?.cdn?.customDomain;
+  const storedStackName = cdnService?.pulumiStackName;
 
   // 4. Confirm destruction (skip if --force or --preview)
   if (!(options.force || options.preview)) {
@@ -108,7 +108,7 @@ export async function storageDestroy(
 
     const confirmed = await clack.confirm({
       message: pc.red(
-        "Are you sure you want to destroy all storage infrastructure?"
+        "Are you sure you want to destroy all CDN infrastructure?"
       ),
       initialValue: false,
     });
@@ -156,7 +156,7 @@ export async function storageDestroy(
 
           // Use stored stack name from metadata, fallback to generated name
           const stackName =
-            storedStackName || `wraps-storage-${identity.accountId}-${region}`;
+            storedStackName || `wraps-cdn-${identity.accountId}-${region}`;
 
           // Try to select the stack
           let stack;
@@ -166,7 +166,7 @@ export async function storageDestroy(
               workDir: getPulumiWorkDir(),
             });
           } catch (_error) {
-            throw new Error("No storage infrastructure found to preview");
+            throw new Error("No CDN infrastructure found to preview");
           }
 
           // Run preview with resource change capture
@@ -182,7 +182,7 @@ export async function storageDestroy(
         changeSummary: previewResult.changeSummary,
         resourceChanges: previewResult.resourceChanges,
         costEstimate: "Monthly cost after destruction: $0.00",
-        commandName: "wraps storage destroy",
+        commandName: "wraps cdn destroy",
       });
 
       // Show DNS cleanup info
@@ -200,7 +200,7 @@ export async function storageDestroy(
       );
 
       // Track preview completion
-      trackServiceRemoved("storage", {
+      trackServiceRemoved("cdn", {
         preview: true,
         region,
         duration_ms: Date.now() - startTime,
@@ -208,8 +208,8 @@ export async function storageDestroy(
       return;
     } catch (error: any) {
       progress.stop();
-      if (error.message.includes("No storage infrastructure found")) {
-        clack.log.warn("No storage infrastructure found to preview");
+      if (error.message.includes("No CDN infrastructure found")) {
+        clack.log.warn("No CDN infrastructure found to preview");
         process.exit(0);
       }
       trackError("PREVIEW_FAILED", "storage destroy", { step: "preview" });
@@ -225,7 +225,7 @@ export async function storageDestroy(
       await progress.execute(
         `Deleting DNS records for ${customDomain}`,
         async () => {
-          await deleteStorageDNSRecords(hostedZone!.id, customDomain);
+          await deleteCdnDNSRecords(hostedZone!.id, customDomain);
         }
       );
     } catch (error: any) {
@@ -235,7 +235,7 @@ export async function storageDestroy(
   }
 
   // 8. Empty the S3 bucket first (required before deletion)
-  const bucketName = `wraps-storage-${identity.accountId}`;
+  const bucketName = `wraps-cdn-${identity.accountId}`;
   try {
     await progress.execute(
       "Emptying S3 bucket (this may take a while for large buckets)",
@@ -251,13 +251,13 @@ export async function storageDestroy(
   // 9. Destroy Pulumi infrastructure
   try {
     await progress.execute(
-      "Destroying storage infrastructure (this may take 2-3 minutes)",
+      "Destroying CDN infrastructure (this may take 2-3 minutes)",
       async () => {
         await ensurePulumiWorkDir();
 
         // Use stored stack name from metadata, fallback to generated name
         const stackName =
-          storedStackName || `wraps-storage-${identity.accountId}-${region}`;
+          storedStackName || `wraps-cdn-${identity.accountId}-${region}`;
 
         // Try to select the stack
         let stack;
@@ -267,7 +267,7 @@ export async function storageDestroy(
             workDir: getPulumiWorkDir(),
           });
         } catch (_error) {
-          throw new Error("No storage infrastructure found to destroy");
+          throw new Error("No CDN infrastructure found to destroy");
         }
 
         // Run destroy
@@ -279,11 +279,11 @@ export async function storageDestroy(
     );
   } catch (error: any) {
     progress.stop();
-    if (error.message.includes("No storage infrastructure found")) {
-      clack.log.warn("No storage infrastructure found");
+    if (error.message.includes("No CDN infrastructure found")) {
+      clack.log.warn("No CDN infrastructure found");
       // Still update metadata if it exists
       if (metadata) {
-        removeServiceFromConnection(metadata, "storage");
+        removeServiceFromConnection(metadata, "cdn");
         await saveConnectionMetadata(metadata);
       }
       process.exit(0);
@@ -294,13 +294,13 @@ export async function storageDestroy(
       throw errors.stackLocked();
     }
     trackError("DESTROY_FAILED", "storage destroy", { step: "destroy" });
-    clack.log.error("Storage infrastructure destruction failed");
+    clack.log.error("CDN infrastructure destruction failed");
     throw error;
   }
 
-  // 10. Update connection metadata (remove storage service)
+  // 10. Update connection metadata (remove CDN service)
   if (metadata) {
-    removeServiceFromConnection(metadata, "storage");
+    removeServiceFromConnection(metadata, "cdn");
     // Save or delete based on remaining services
     const hasOtherServices = Object.keys(metadata.services).length > 0;
     if (hasOtherServices) {
@@ -322,7 +322,7 @@ export async function storageDestroy(
     deletedItems.push("Route53 DNS records");
   }
 
-  clack.outro(pc.green("Storage infrastructure has been removed"));
+  clack.outro(pc.green("CDN infrastructure has been removed"));
 
   console.log(`\n${pc.bold("Cleaned up:")}`);
   for (const item of deletedItems) {
@@ -330,11 +330,11 @@ export async function storageDestroy(
   }
 
   console.log(
-    `\nRun ${pc.cyan("wraps storage init")} to deploy storage infrastructure again.\n`
+    `\nRun ${pc.cyan("wraps cdn init")} to deploy CDN infrastructure again.\n`
   );
 
   // 12. Track successful destruction
-  trackServiceRemoved("storage", {
+  trackServiceRemoved("cdn", {
     reason: "user_initiated",
     region,
     duration_ms: Date.now() - startTime,
@@ -392,7 +392,7 @@ async function emptyS3Bucket(
 /**
  * Delete DNS records for storage custom domain
  */
-async function deleteStorageDNSRecords(
+async function deleteCdnDNSRecords(
   hostedZoneId: string,
   customDomain: string
 ): Promise<void> {

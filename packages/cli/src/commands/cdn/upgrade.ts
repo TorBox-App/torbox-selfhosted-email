@@ -1,13 +1,13 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
-import { deployStorageStack } from "../../infrastructure/storage-stack.js";
+import { deployCdnStack } from "../../infrastructure/cdn-stack.js";
 import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
 import type {
-  StorageStackConfig,
-  StorageUpgradeOptions,
-  WrapsStorageConfig,
+  CdnStackConfig,
+  CdnUpgradeOptions,
+  WrapsCdnConfig,
 } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -27,8 +27,8 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
 /**
  * Storage Upgrade command - Add custom domain to CloudFront after certificate validation
  */
-export async function storageUpgrade(
-  options: StorageUpgradeOptions
+export async function cdnUpgrade(
+  options: CdnUpgradeOptions
 ): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
@@ -36,8 +36,8 @@ export async function storageUpgrade(
   clack.intro(
     pc.bold(
       options.preview
-        ? "Wraps Storage Upgrade Preview"
-        : "Wraps Storage Upgrade"
+        ? "Wraps CDN Upgrade Preview"
+        : "Wraps CDN Upgrade"
     )
   );
 
@@ -60,17 +60,17 @@ export async function storageUpgrade(
       process.env.AWS_DEFAULT_REGION
     )
   ) {
-    const storageConnections = await findConnectionsWithService(
+    const cdnConnections = await findConnectionsWithService(
       identity.accountId,
-      "storage"
+      "cdn"
     );
 
-    if (storageConnections.length === 1) {
-      region = storageConnections[0].region;
-    } else if (storageConnections.length > 1) {
+    if (cdnConnections.length === 1) {
+      region = cdnConnections[0].region;
+    } else if (cdnConnections.length > 1) {
       const selectedRegion = await clack.select({
-        message: "Multiple storage deployments found. Which region?",
-        options: storageConnections.map((conn) => ({
+        message: "Multiple CDN deployments found. Which region?",
+        options: cdnConnections.map((conn) => ({
           value: conn.region,
           label: conn.region,
         })),
@@ -88,18 +88,18 @@ export async function storageUpgrade(
   // 3. Load existing connection metadata
   const metadata = await loadConnectionMetadata(identity.accountId, region);
 
-  if (!metadata?.services.storage) {
+  if (!metadata?.services.cdn) {
     clack.log.error(
-      `No storage infrastructure found for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
+      `No CDN infrastructure found for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
     );
     clack.log.info(
-      `Use ${pc.cyan("wraps storage init")} to deploy storage infrastructure.`
+      `Use ${pc.cyan("wraps cdn init")} to deploy CDN infrastructure.`
     );
     process.exit(1);
   }
 
-  const storageService = metadata.services.storage;
-  const storageConfig = storageService.config as WrapsStorageConfig;
+  const cdnService = metadata.services.cdn;
+  const cdnConfig = cdnService.config as WrapsCdnConfig;
 
   // 4. Load current Pulumi stack to check state
   let stackOutputs: any = {};
@@ -107,7 +107,7 @@ export async function storageUpgrade(
     await ensurePulumiWorkDir();
 
     const stack = await pulumi.automation.LocalWorkspace.selectStack({
-      stackName: `wraps-storage-${identity.accountId}-${region}`,
+      stackName: `wraps-cdn-${identity.accountId}-${region}`,
       workDir: getPulumiWorkDir(),
     });
 
@@ -120,7 +120,7 @@ export async function storageUpgrade(
   // 5. Check what can be upgraded
   // First, check if custom domain is already on CloudFront (may not be in stack outputs)
   let cloudFrontHasCustomDomain = false;
-  if (stackOutputs.distributionId?.value && storageConfig.cdn?.customDomain) {
+  if (stackOutputs.distributionId?.value && cdnConfig.cdn?.customDomain) {
     try {
       const { CloudFrontClient, GetDistributionCommand } = await import(
         "@aws-sdk/client-cloudfront"
@@ -134,7 +134,7 @@ export async function storageUpgrade(
       const aliases =
         cfResponse.Distribution?.DistributionConfig?.Aliases?.Items || [];
       cloudFrontHasCustomDomain = aliases.includes(
-        storageConfig.cdn.customDomain
+        cdnConfig.cdn.customDomain
       );
     } catch {
       // Ignore errors checking CloudFront
@@ -156,11 +156,11 @@ export async function storageUpgrade(
 
   // Show custom domain status from actual CloudFront config or stack outputs
   const activeCustomDomain = cloudFrontHasCustomDomain
-    ? storageConfig.cdn?.customDomain
+    ? cdnConfig.cdn?.customDomain
     : stackOutputs.customDomain?.value;
 
   if (!hasPendingCert) {
-    clack.log.info("No pending upgrades found for storage infrastructure.");
+    clack.log.info("No pending upgrades found for CDN infrastructure.");
     clack.log.info(
       "\nCurrent configuration:\n" +
         `  S3 Bucket: ${pc.cyan(stackOutputs.bucketName?.value)}\n` +
@@ -214,7 +214,7 @@ export async function storageUpgrade(
     clack.log.info(
       "After adding the DNS record, wait for validation (typically 5-30 minutes)."
     );
-    clack.log.info(`Then run ${pc.cyan("wraps storage upgrade")} again.\n`);
+    clack.log.info(`Then run ${pc.cyan("wraps cdn upgrade")} again.\n`);
     process.exit(0);
   }
 
@@ -239,22 +239,22 @@ export async function storageUpgrade(
   }
 
   // 8. Update the storage config to include the custom domain
-  const updatedConfig: WrapsStorageConfig = {
-    ...storageConfig,
+  const updatedConfig: WrapsCdnConfig = {
+    ...cdnConfig,
     cdn: {
-      ...storageConfig.cdn,
+      ...cdnConfig.cdn,
       customDomain: pendingDomain,
     },
   };
 
   // 9. Build stack configuration with cert validation flags
-  const stackConfig: StorageStackConfig = {
+  const stackConfig: CdnStackConfig = {
     provider: metadata.provider,
     region,
     accountId: identity.accountId,
     vercel: metadata.vercel,
-    storageConfig: updatedConfig,
-    // Tell deployStorageStack that the cert is validated externally (manual DNS)
+    cdnConfig: updatedConfig,
+    // Tell deployCdnStack that the cert is validated externally (manual DNS)
     certValidated: true,
     existingCertArn: stackOutputs.acmCertificateArn.value,
   };
@@ -290,10 +290,10 @@ export async function storageUpgrade(
         const stack =
           await pulumi.automation.LocalWorkspace.createOrSelectStack(
             {
-              stackName: `wraps-storage-${identity.accountId}-${region}`,
-              projectName: "wraps-storage",
+              stackName: `wraps-cdn-${identity.accountId}-${region}`,
+              projectName: "wraps-cdn",
               program: async () => {
-                const result = await deployStorageStack(stackConfig);
+                const result = await deployCdnStack(stackConfig);
 
                 return {
                   roleArn: result.roleArn,
@@ -344,8 +344,8 @@ export async function storageUpgrade(
   }
 
   // 11. Update metadata
-  if (metadata.services.storage) {
-    metadata.services.storage.config = updatedConfig;
+  if (metadata.services.cdn) {
+    metadata.services.cdn.config = updatedConfig;
     await saveConnectionMetadata(metadata);
   }
 

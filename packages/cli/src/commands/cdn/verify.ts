@@ -16,7 +16,7 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
 /**
  * Storage verify command options
  */
-export type StorageVerifyOptions = {
+export type CdnVerifyOptions = {
   region?: string;
 };
 
@@ -105,17 +105,17 @@ async function checkDistributionStatus(
 /**
  * Storage Verify command - Check DNS and certificate status
  */
-export async function storageVerify(
-  options: StorageVerifyOptions
+export async function cdnVerify(
+  options: CdnVerifyOptions
 ): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps Storage Verification"));
+  clack.intro(pc.bold("Wraps CDN Verification"));
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
-    "Loading storage infrastructure",
+    "Loading CDN infrastructure",
     async () => validateAWSCredentials()
   );
 
@@ -130,17 +130,17 @@ export async function storageVerify(
       process.env.AWS_DEFAULT_REGION
     )
   ) {
-    const storageConnections = await findConnectionsWithService(
+    const cdnConnections = await findConnectionsWithService(
       identity.accountId,
-      "storage"
+      "cdn"
     );
 
-    if (storageConnections.length === 1) {
-      region = storageConnections[0].region;
-    } else if (storageConnections.length > 1) {
+    if (cdnConnections.length === 1) {
+      region = cdnConnections[0].region;
+    } else if (cdnConnections.length > 1) {
       const selectedRegion = await clack.select({
-        message: "Multiple storage deployments found. Which region?",
-        options: storageConnections.map((conn) => ({
+        message: "Multiple CDN deployments found. Which region?",
+        options: cdnConnections.map((conn) => ({
           value: conn.region,
           label: conn.region,
         })),
@@ -161,16 +161,16 @@ export async function storageVerify(
     await ensurePulumiWorkDir();
 
     const stack = await pulumi.automation.LocalWorkspace.selectStack({
-      stackName: `wraps-storage-${identity.accountId}-${region}`,
+      stackName: `wraps-cdn-${identity.accountId}-${region}`,
       workDir: getPulumiWorkDir(),
     });
 
     stackOutputs = await stack.outputs();
   } catch (_error: any) {
     progress.stop();
-    clack.log.error("No storage infrastructure found");
+    clack.log.error("No CDN infrastructure found");
     console.log(
-      `\nRun ${pc.cyan("wraps storage init")} to deploy storage infrastructure.\n`
+      `\nRun ${pc.cyan("wraps cdn init")} to deploy CDN infrastructure.\n`
     );
     process.exit(1);
   }
@@ -276,7 +276,7 @@ export async function storageVerify(
         `  ${pc.yellow("!")} CloudFront alias not configured for ${targetDomain}`
       );
       clack.log.info(
-        `    Run ${pc.cyan("wraps storage upgrade")} to add the custom domain to CloudFront.`
+        `    Run ${pc.cyan("wraps cdn upgrade")} to add the custom domain to CloudFront.`
       );
       allPassed = false;
     }
@@ -333,13 +333,13 @@ export async function storageVerify(
         : null;
 
     if (cdnUrl) {
-      clack.log.info(`\nYour storage is accessible at: ${pc.cyan(cdnUrl)}`);
+      clack.log.info(`\nYour CDN is accessible at: ${pc.cyan(cdnUrl)}`);
     }
 
     // Suggest sync if stack outputs are stale
     if (stackOutputsStale) {
       clack.log.info(
-        `\n${pc.dim("Tip:")} Run ${pc.cyan("wraps storage sync")} to update infrastructure state.`
+        `\n${pc.dim("Tip:")} Run ${pc.cyan("wraps cdn sync")} to update infrastructure state.`
       );
     }
   } else {
@@ -348,7 +348,7 @@ export async function storageVerify(
     if (validationRecords && validationRecords.length > 0) {
       clack.log.info("\nDNS records may take up to 48 hours to propagate.");
       clack.log.info(
-        `Run ${pc.cyan("wraps storage verify")} again to check status.`
+        `Run ${pc.cyan("wraps cdn verify")} again to check status.`
       );
     }
   }

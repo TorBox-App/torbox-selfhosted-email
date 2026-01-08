@@ -1,7 +1,7 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
-import { deployStorageStack } from "../../infrastructure/storage-stack.js";
+import { deployCdnStack } from "../../infrastructure/cdn-stack.js";
 import {
   trackError,
   trackServiceDeployed,
@@ -10,9 +10,9 @@ import {
 import type {
   CloudFrontPriceClass,
   GeoRestriction,
-  StorageConfigPreset,
-  StorageStackConfig,
-  WrapsStorageConfig,
+  CdnConfigPreset,
+  CdnStackConfig,
+  WrapsCdnConfig,
 } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -43,35 +43,35 @@ import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
 } from "../../utils/shared/pulumi.js";
-import { getCostSummary } from "../../utils/storage/costs.js";
+import { getCostSummary } from "../../utils/cdn/costs.js";
 import {
   getPreset,
   getPresetInfo,
   validateConfig,
-} from "../../utils/storage/presets.js";
+} from "../../utils/cdn/presets.js";
 
 /**
  * Storage init command options
  */
-export type StorageInitOptions = {
+export type CdnInitOptions = {
   provider?: "vercel" | "aws" | "railway" | "other";
   region?: string;
-  preset?: StorageConfigPreset;
+  preset?: CdnConfigPreset;
   domain?: string;
   yes?: boolean;
   preview?: boolean;
 };
 
 /**
- * Prompt for storage configuration preset
+ * Prompt for CDN configuration preset
  */
-async function promptStoragePreset(): Promise<StorageConfigPreset> {
+async function promptCdnPreset(): Promise<CdnConfigPreset> {
   const starterInfo = getPresetInfo("starter");
   const productionInfo = getPresetInfo("production");
   const customInfo = getPresetInfo("custom");
 
   const result = await clack.select({
-    message: "Select a storage configuration preset:",
+    message: "Select a CDN configuration preset:",
     options: [
       {
         value: "production" as const,
@@ -100,9 +100,9 @@ async function promptStoragePreset(): Promise<StorageConfigPreset> {
 }
 
 /**
- * Prompt for custom storage configuration
+ * Prompt for custom CDN configuration
  */
-async function promptCustomStorageConfig(): Promise<WrapsStorageConfig> {
+async function promptCustomCdnConfig(): Promise<WrapsCdnConfig> {
   // CDN enabled?
   const cdnEnabled = await clack.confirm({
     message: "Enable CloudFront CDN for fast global delivery?",
@@ -342,16 +342,16 @@ async function promptEstimatedUsage(): Promise<{
 }
 
 /**
- * Init command - Deploy new storage infrastructure
+ * Init command - Deploy new CDN infrastructure
  */
-export async function init(options: StorageInitOptions): Promise<void> {
+export async function init(options: CdnInitOptions): Promise<void> {
   const startTime = Date.now();
 
   clack.intro(
     pc.bold(
       options.preview
-        ? "Wraps Storage Infrastructure Preview"
-        : "Wraps Storage Infrastructure Setup"
+        ? "Wraps CDN Infrastructure Preview"
+        : "Wraps CDN Infrastructure Setup"
     )
   );
 
@@ -393,21 +393,21 @@ export async function init(options: StorageInitOptions): Promise<void> {
     vercelConfig = await promptVercelConfig();
   }
 
-  // 4. Check if storage service already exists for this account/region
+  // 4. Check if CDN service already exists for this account/region
   const existingConnection = await loadConnectionMetadata(
     identity.accountId,
     region
   );
 
-  if (existingConnection && hasService(existingConnection, "storage")) {
+  if (existingConnection && hasService(existingConnection, "cdn")) {
     clack.log.warn(
-      `Storage service already exists for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
+      `CDN service already exists for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
     );
     clack.log.info(
-      `Created: ${existingConnection.services.storage?.deployedAt}`
+      `Created: ${existingConnection.services.cdn?.deployedAt}`
     );
     clack.log.info(
-      `Use ${pc.cyan("wraps storage status")} to view current setup`
+      `Use ${pc.cyan("wraps cdn status")} to view current setup`
     );
     process.exit(0);
   }
@@ -415,24 +415,24 @@ export async function init(options: StorageInitOptions): Promise<void> {
   // 5. Configuration selection
   let preset = options.preset;
   if (!preset) {
-    preset = await promptStoragePreset();
+    preset = await promptCdnPreset();
   }
 
-  let storageConfig: WrapsStorageConfig;
+  let cdnConfig: WrapsCdnConfig;
   if (preset === "custom") {
-    storageConfig = await promptCustomStorageConfig();
+    cdnConfig = await promptCustomCdnConfig();
   } else {
-    storageConfig = getPreset(preset)!;
+    cdnConfig = getPreset(preset)!;
   }
 
   // 6. Custom domain configuration (whenever CDN is enabled)
   let customDomain = options.domain;
-  if (!customDomain && storageConfig.cdn.enabled) {
+  if (!customDomain && cdnConfig.cdn.enabled) {
     customDomain = await promptCustomDomain();
   }
 
   if (customDomain) {
-    storageConfig.cdn.customDomain = customDomain;
+    cdnConfig.cdn.customDomain = customDomain;
   }
 
   // 7. Get estimated usage for cost calculation
@@ -441,14 +441,14 @@ export async function init(options: StorageInitOptions): Promise<void> {
   // Display cost summary
   progress.info(`\n${pc.bold("Cost Estimate:")}`);
   const costSummary = getCostSummary(
-    storageConfig,
+    cdnConfig,
     estimatedUsage.storageGB,
     estimatedUsage.bandwidthGB
   );
   clack.log.info(costSummary);
 
   // Validate configuration and show warnings
-  const warnings = validateConfig(storageConfig);
+  const warnings = validateConfig(cdnConfig);
   if (warnings.length > 0) {
     progress.info(`\n${pc.yellow(pc.bold("Configuration Notes:"))}`);
     for (const warning of warnings) {
@@ -461,8 +461,8 @@ export async function init(options: StorageInitOptions): Promise<void> {
     identity.accountId,
     region,
     provider,
-    "storage",
-    storageConfig,
+    "cdn",
+    cdnConfig,
     preset === "custom" ? undefined : preset,
     existingConnection || undefined
   );
@@ -481,12 +481,12 @@ export async function init(options: StorageInitOptions): Promise<void> {
   }
 
   // 9. Build stack configuration
-  const stackConfig: StorageStackConfig = {
+  const stackConfig: CdnStackConfig = {
     provider,
     region,
     accountId: identity.accountId,
     vercel: vercelConfig,
-    storageConfig,
+    cdnConfig,
   };
 
   // 10. Preview or Deploy infrastructure using Pulumi
@@ -501,10 +501,10 @@ export async function init(options: StorageInitOptions): Promise<void> {
           const stack =
             await pulumi.automation.LocalWorkspace.createOrSelectStack(
               {
-                stackName: `wraps-storage-${identity.accountId}-${region}`,
-                projectName: "wraps-storage",
+                stackName: `wraps-cdn-${identity.accountId}-${region}`,
+                projectName: "wraps-cdn",
                 program: async () => {
-                  const result = await deployStorageStack(stackConfig);
+                  const result = await deployCdnStack(stackConfig);
                   return {
                     roleArn: result.roleArn,
                     bucketName: result.bucketName,
@@ -541,7 +541,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
         changeSummary: previewResult.changeSummary,
         resourceChanges: previewResult.resourceChanges,
         costEstimate: costSummary,
-        commandName: "wraps storage init",
+        commandName: "wraps cdn init",
       });
 
       clack.outro(
@@ -549,7 +549,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
       );
 
       // Track preview completion
-      trackServiceInit("storage", true, {
+      trackServiceInit("cdn", true, {
         preset,
         provider,
         region,
@@ -570,7 +570,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
   let outputs;
   try {
     outputs = await progress.execute(
-      "Deploying storage infrastructure (this may take 2-3 minutes)",
+      "Deploying CDN infrastructure (this may take 2-3 minutes)",
       async () => {
         // Ensure Pulumi workspace directory exists
         await ensurePulumiWorkDir();
@@ -579,10 +579,10 @@ export async function init(options: StorageInitOptions): Promise<void> {
         const stack =
           await pulumi.automation.LocalWorkspace.createOrSelectStack(
             {
-              stackName: `wraps-storage-${identity.accountId}-${region}`,
-              projectName: "wraps-storage",
+              stackName: `wraps-cdn-${identity.accountId}-${region}`,
+              projectName: "wraps-cdn",
               program: async () => {
-                const result = await deployStorageStack(stackConfig);
+                const result = await deployCdnStack(stackConfig);
 
                 // Export outputs
                 return {
@@ -614,7 +614,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
 
         // Set backend to local file system
         await stack.workspace.selectStack(
-          `wraps-storage-${identity.accountId}-${region}`
+          `wraps-cdn-${identity.accountId}-${region}`
         );
 
         // Set AWS region
@@ -655,7 +655,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
     );
   } catch (error: any) {
     // Track deployment failure
-    trackServiceInit("storage", false, {
+    trackServiceInit("cdn", false, {
       preset,
       provider,
       region,
@@ -673,8 +673,8 @@ export async function init(options: StorageInitOptions): Promise<void> {
   }
 
   // 11. Save metadata for future upgrades and restore
-  if (metadata.services.storage) {
-    metadata.services.storage.pulumiStackName = `wraps-storage-${identity.accountId}-${region}`;
+  if (metadata.services.cdn) {
+    metadata.services.cdn.pulumiStackName = `wraps-cdn-${identity.accountId}-${region}`;
   }
   await saveConnectionMetadata(metadata);
 
@@ -736,7 +736,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
           );
 
           // Build DNS preview
-          type StorageDNSRecord = {
+          type CdnDNSRecord = {
             name: string;
             type: "CNAME";
             proposedValue: string;
@@ -745,12 +745,12 @@ export async function init(options: StorageInitOptions): Promise<void> {
             conflictReason?: string;
           };
 
-          const dnsRecords: StorageDNSRecord[] = [];
+          const dnsRecords: CdnDNSRecord[] = [];
 
           // Custom domain CNAME
           const existingValue =
             existingCname?.ResourceRecords?.[0]?.Value || null;
-          let cdnStatus: StorageDNSRecord["status"] = "new";
+          let cdnStatus: CdnDNSRecord["status"] = "new";
           let cdnConflictReason: string | undefined;
 
           if (existingValue === outputs.distributionDomain) {
@@ -877,7 +877,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
   }
 
   // 13. Display success message
-  displayStorageSuccess({
+  displayCdnSuccess({
     bucketName: outputs.bucketName,
     region: outputs.region,
     distributionDomain: outputs.distributionDomain,
@@ -893,17 +893,17 @@ export async function init(options: StorageInitOptions): Promise<void> {
   // 14. Track successful deployment
   const duration = Date.now() - startTime;
   const enabledFeatures: string[] = [];
-  if (storageConfig.cdn.enabled) {
+  if (cdnConfig.cdn.enabled) {
     enabledFeatures.push("cdn");
   }
-  if (storageConfig.cdn.customDomain) {
+  if (cdnConfig.cdn.customDomain) {
     enabledFeatures.push("custom_domain");
   }
-  if (storageConfig.versioning) {
+  if (cdnConfig.versioning) {
     enabledFeatures.push("versioning");
   }
 
-  trackServiceInit("storage", true, {
+  trackServiceInit("cdn", true, {
     preset,
     provider,
     region,
@@ -911,7 +911,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
     duration_ms: duration,
   });
 
-  trackServiceDeployed("storage", {
+  trackServiceDeployed("cdn", {
     duration_ms: duration,
     region,
     features: enabledFeatures,
@@ -922,7 +922,7 @@ export async function init(options: StorageInitOptions): Promise<void> {
 /**
  * Display storage deployment success message
  */
-function displayStorageSuccess(options: {
+function displayCdnSuccess(options: {
   bucketName: string;
   region: string;
   distributionDomain?: string;
@@ -938,7 +938,7 @@ function displayStorageSuccess(options: {
     value: string;
   }>;
 }): void {
-  clack.log.success(pc.green(pc.bold("Storage infrastructure deployed!")));
+  clack.log.success(pc.green(pc.bold("CDN infrastructure deployed!")));
 
   // Infrastructure summary
   clack.log.info(`\n${pc.bold("Infrastructure:")}`);
@@ -989,7 +989,7 @@ function displayStorageSuccess(options: {
       "Custom domain requires manual setup:\n" +
         "  1. Add the SSL certificate validation DNS record above\n" +
         "  2. Wait for certificate to be validated (check AWS ACM console)\n" +
-        "  3. Run 'wraps storage upgrade' to add custom domain to CloudFront\n" +
+        "  3. Run 'wraps cdn upgrade' to add custom domain to CloudFront\n" +
         "  4. Add the CDN CNAME record to point your domain to CloudFront"
     );
   }
@@ -1010,20 +1010,20 @@ function displayStorageSuccess(options: {
   // Next steps
   clack.log.info(`\n${pc.bold("Next Steps:")}`);
   clack.log.info(
-    `  1. ${pc.cyan("wraps storage status")} - View your storage setup`
+    `  1. ${pc.cyan("wraps cdn status")} - View your CDN setup`
   );
 
   if (options.customDomainPending) {
     clack.log.info("  2. Add DNS records above and validate SSL certificate");
     clack.log.info(
-      `  3. ${pc.cyan("wraps storage upgrade")} - Add custom domain to CloudFront`
+      `  3. ${pc.cyan("wraps cdn upgrade")} - Add custom domain to CloudFront`
     );
   } else if (options.customDomain && !options.dnsAutoCreated) {
     clack.log.info(
       "  2. Add DNS record above to point your domain to CloudFront"
     );
     clack.log.info(
-      `  3. ${pc.cyan("wraps storage verify")} - Check DNS propagation`
+      `  3. ${pc.cyan("wraps cdn verify")} - Check DNS propagation`
     );
   }
 
@@ -1042,10 +1042,10 @@ function displayStorageSuccess(options: {
   if (options.customDomainPending) {
     clack.outro(
       pc.yellow(
-        "Storage deployed! Custom domain pending certificate validation."
+        "CDN deployed! Custom domain pending certificate validation."
       )
     );
   } else {
-    clack.outro(pc.green("Storage is ready!"));
+    clack.outro(pc.green("CDN is ready!"));
   }
 }

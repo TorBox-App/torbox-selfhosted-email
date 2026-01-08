@@ -1,14 +1,14 @@
 /**
- * Storage-specific types for Wraps
+ * CDN-specific types for Wraps
  * S3 + CloudFront infrastructure deployed to user's AWS account
  */
 
 import type { FeatureCost, Provider } from "./shared.js";
 
 /**
- * Storage retention periods for auto-cleanup
+ * CDN retention periods for auto-cleanup
  */
-export type StorageRetention =
+export type CdnRetention =
   | "none" // Keep forever
   | "30days"
   | "60days"
@@ -40,11 +40,11 @@ export type GeoRestriction = {
 };
 
 /**
- * Feature-based storage configuration
+ * Feature-based CDN configuration
  */
-export type WrapsStorageConfig = {
+export type WrapsCdnConfig = {
   // Bucket configuration
-  bucketName?: string; // Auto-generated if not provided: wraps-storage-{accountId}
+  bucketName?: string; // Auto-generated if not provided: wraps-cdn-{accountId}
 
   // CDN configuration
   cdn: {
@@ -82,21 +82,21 @@ export type WrapsStorageConfig = {
   encryption?: "aes256"; // AES-256 encryption (default)
 
   // Auto-cleanup (lifecycle rules)
-  retention?: StorageRetention;
+  retention?: CdnRetention;
 
   // CORS origins (in addition to defaults)
   additionalOrigins?: string[];
 };
 
 /**
- * Configuration preset types for storage
+ * Configuration preset types for CDN
  */
-export type StorageConfigPreset = "starter" | "production" | "custom";
+export type CdnConfigPreset = "starter" | "production" | "custom";
 
 /**
- * Feature cost breakdown for storage
+ * Feature cost breakdown for CDN
  */
-export type StorageFeatureCostBreakdown = {
+export type CdnFeatureCostBreakdown = {
   storage?: FeatureCost;
   bandwidth?: FeatureCost;
   requests?: FeatureCost;
@@ -105,9 +105,9 @@ export type StorageFeatureCostBreakdown = {
 };
 
 /**
- * Storage stack configuration (used by Pulumi)
+ * CDN stack configuration (used by Pulumi)
  */
-export type StorageStackConfig = {
+export type CdnStackConfig = {
   provider: Provider;
   region: string;
   accountId: string;
@@ -115,7 +115,7 @@ export type StorageStackConfig = {
     teamSlug: string;
     projectName: string;
   };
-  storageConfig: WrapsStorageConfig;
+  cdnConfig: WrapsCdnConfig;
   /**
    * If true, the ACM certificate has been validated externally (manual DNS).
    * This tells the stack to use the existing certificate even without Route53.
@@ -128,9 +128,9 @@ export type StorageStackConfig = {
 };
 
 /**
- * Storage stack outputs from Pulumi
+ * CDN stack outputs from Pulumi
  */
-export type StorageStackOutputs = {
+export type CdnStackOutputs = {
   roleArn: string;
   bucketName: string;
   bucketArn: string;
@@ -152,57 +152,57 @@ export type StorageStackOutputs = {
 
   // Configuration
   versioning: boolean;
-  retention?: StorageRetention;
+  retention?: CdnRetention;
 };
 
 /**
- * Command options for storage init
+ * Command options for cdn init
  */
-export type StorageInitOptions = {
+export type CdnInitOptions = {
   provider?: Provider;
   region?: string;
   domain?: string; // Custom CDN domain (e.g., cdn.example.com)
-  preset?: StorageConfigPreset;
+  preset?: CdnConfigPreset;
   yes?: boolean; // Skip confirmation prompts
   preview?: boolean;
 };
 
 /**
- * Command options for storage status
+ * Command options for cdn status
  */
-export type StorageStatusOptions = {
+export type CdnStatusOptions = {
   region?: string;
 };
 
 /**
- * Command options for storage verify
+ * Command options for cdn verify
  */
-export type StorageVerifyOptions = {
+export type CdnVerifyOptions = {
   region?: string;
 };
 
 /**
- * Command options for storage destroy
+ * Command options for cdn destroy
  */
-export type StorageDestroyOptions = {
+export type CdnDestroyOptions = {
   region?: string;
   force?: boolean; // Skip confirmation (destructive)
   preview?: boolean;
 };
 
 /**
- * Command options for storage upgrade
+ * Command options for cdn upgrade
  */
-export type StorageUpgradeOptions = {
+export type CdnUpgradeOptions = {
   region?: string;
   yes?: boolean;
   preview?: boolean;
 };
 
 /**
- * Available features for Wraps storage infrastructure
+ * Available features for Wraps CDN infrastructure
  */
-export type WrapsStorageFeature =
+export type WrapsCdnFeature =
   | "bucket"
   | "cdn"
   | "customDomain"
@@ -210,12 +210,12 @@ export type WrapsStorageFeature =
   | "retention";
 
 /**
- * Storage feature metadata
+ * CDN feature metadata
  */
-export type WrapsStorageFeatureMetadata = {
-  id: WrapsStorageFeature;
+export type WrapsCdnFeatureMetadata = {
+  id: WrapsCdnFeature;
   name: string;
   description: string;
-  requires?: WrapsStorageFeature[];
+  requires?: WrapsCdnFeature[];
   resources: string[];
 };

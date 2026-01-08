@@ -15,9 +15,9 @@ import { SMSDetail } from "@/components/SMSDetail";
 import { SMSLogs } from "@/components/SMSLogs";
 import { SMSMetrics } from "@/components/SMSMetrics";
 import { SMSSettings } from "@/components/SMSSettings";
-import { StorageFiles } from "@/components/StorageFiles";
-import { StorageMetrics } from "@/components/StorageMetrics";
-import { StorageSettings } from "@/components/StorageSettings";
+import { CdnFiles } from "@/components/CdnFiles";
+import { CdnMetrics } from "@/components/CdnMetrics";
+import { CdnSettings } from "@/components/CdnSettings";
 import { ThemeProvider } from "@/components/theme-provider";
 import {
   Breadcrumb,
@@ -78,9 +78,9 @@ function AppContent() {
 
     // Handle dynamic storage detail route
     if (
-      location.pathname.startsWith("/storage/") &&
-      location.pathname !== "/storage/metrics" &&
-      location.pathname !== "/storage/settings"
+      location.pathname.startsWith("/cdn/") &&
+      location.pathname !== "/cdn/metrics" &&
+      location.pathname !== "/cdn/settings"
     ) {
       return "File Details";
     }
@@ -99,12 +99,12 @@ function AppContent() {
         return "SMS Metrics";
       case "/sms/settings":
         return "SMS Settings";
-      case "/storage":
-        return "Storage";
-      case "/storage/metrics":
-        return "Storage Metrics";
-      case "/storage/settings":
-        return "Storage Settings";
+      case "/cdn":
+        return "CDN";
+      case "/cdn/metrics":
+        return "CDN Metrics";
+      case "/cdn/settings":
+        return "CDN Settings";
       default:
         return "Emails";
     }
@@ -140,9 +140,9 @@ function AppContent() {
               <Route element={<SMSDetail />} path="/sms/:id" />
               <Route element={<SMSMetrics />} path="/sms/metrics" />
               <Route element={<SMSSettings />} path="/sms/settings" />
-              <Route element={<StorageFiles />} path="/storage" />
-              <Route element={<StorageMetrics />} path="/storage/metrics" />
-              <Route element={<StorageSettings />} path="/storage/settings" />
+              <Route element={<CdnFiles />} path="/cdn" />
+              <Route element={<CdnMetrics />} path="/cdn/metrics" />
+              <Route element={<CdnSettings />} path="/cdn/settings" />
             </Routes>
           ) : (
             <div className="flex items-center justify-center p-8">

@@ -14,10 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import type { StorageFile } from "./types";
+import type { CdnFile } from "./types";
 
 interface ImageDetailModalProps {
-  file: StorageFile;
+  file: CdnFile;
   onClose: () => void;
   onToggleStar: (key: string, starred: boolean) => void;
   onDelete: (key: string) => void;

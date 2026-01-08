@@ -57,24 +57,24 @@ export type {
   WrapsSMSFeatureMetadata,
 } from "./sms.js";
 
-// Re-export Storage types
+// Re-export CDN types
 export type {
+  CdnConfigPreset,
+  CdnDestroyOptions,
+  CdnFeatureCostBreakdown,
+  CdnInitOptions,
+  CdnRetention,
+  CdnStackConfig,
+  CdnStackOutputs,
+  CdnStatusOptions,
+  CdnUpgradeOptions,
+  CdnVerifyOptions,
   CloudFrontPriceClass,
   GeoRestriction,
-  StorageConfigPreset,
-  StorageDestroyOptions,
-  StorageFeatureCostBreakdown,
-  StorageInitOptions,
-  StorageRetention,
-  StorageStackConfig,
-  StorageStackOutputs,
-  StorageStatusOptions,
-  StorageUpgradeOptions,
-  StorageVerifyOptions,
-  WrapsStorageConfig,
-  WrapsStorageFeature,
-  WrapsStorageFeatureMetadata,
-} from "./storage.js";
+  WrapsCdnConfig,
+  WrapsCdnFeature,
+  WrapsCdnFeatureMetadata,
+} from "./cdn.js";
 
 // Backwards compatibility aliases (deprecated, use specific types instead)
 // Import specific types for legacy aliases

@@ -11,8 +11,8 @@ const QuickstartEmailDocs = lazy(
   () => import("@/app/docs/quickstart/email/page")
 );
 const QuickstartSmsDocs = lazy(() => import("@/app/docs/quickstart/sms/page"));
-const QuickstartStorageDocs = lazy(
-  () => import("@/app/docs/quickstart/storage/page")
+const QuickstartCdnDocs = lazy(
+  () => import("@/app/docs/quickstart/cdn/page")
 );
 const QuickstartPlatformDocs = lazy(
   () => import("@/app/docs/quickstart/platform/page")
@@ -28,8 +28,8 @@ const CLIReferenceDocs = lazy(() => import("@/app/docs/cli-reference/page"));
 const CLIReferenceEmailDocs = lazy(
   () => import("@/app/docs/cli-reference/email/page")
 );
-const CLIReferenceStorageDocs = lazy(
-  () => import("@/app/docs/cli-reference/storage/page")
+const CLIReferenceCdnDocs = lazy(
+  () => import("@/app/docs/cli-reference/cdn/page")
 );
 const CLIReferenceSMSDocs = lazy(
   () => import("@/app/docs/cli-reference/sms/page")
@@ -125,8 +125,8 @@ export const routes: RouteConfig[] = [
     element: <QuickstartSmsDocs />,
   },
   {
-    path: "/docs/quickstart/storage",
-    element: <QuickstartStorageDocs />,
+    path: "/docs/quickstart/cdn",
+    element: <QuickstartCdnDocs />,
   },
   {
     path: "/docs/quickstart/platform",
@@ -153,8 +153,8 @@ export const routes: RouteConfig[] = [
     element: <CLIReferenceEmailDocs />,
   },
   {
-    path: "/docs/cli-reference/storage",
-    element: <CLIReferenceStorageDocs />,
+    path: "/docs/cli-reference/cdn",
+    element: <CLIReferenceCdnDocs />,
   },
   {
     path: "/docs/cli-reference/sms",

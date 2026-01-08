@@ -1,12 +1,12 @@
 import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
-import { deployStorageStack } from "../../infrastructure/storage-stack.js";
+import { deployCdnStack } from "../../infrastructure/cdn-stack.js";
 import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
 import type {
-  StorageStackConfig,
-  WrapsStorageConfig,
+  CdnStackConfig,
+  WrapsCdnConfig,
 } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -25,18 +25,18 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
 /**
  * Storage sync command options
  */
-export type StorageSyncOptions = {
+export type CdnSyncOptions = {
   region?: string;
 };
 
 /**
  * Storage Sync command - Update infrastructure to match current configuration
  */
-export async function storageSync(options: StorageSyncOptions): Promise<void> {
+export async function cdnSync(options: CdnSyncOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps Storage Sync"));
+  clack.intro(pc.bold("Wraps CDN Sync"));
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -54,17 +54,17 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
       process.env.AWS_DEFAULT_REGION
     )
   ) {
-    const storageConnections = await findConnectionsWithService(
+    const cdnConnections = await findConnectionsWithService(
       identity.accountId,
-      "storage"
+      "cdn"
     );
 
-    if (storageConnections.length === 1) {
-      region = storageConnections[0].region;
-    } else if (storageConnections.length > 1) {
+    if (cdnConnections.length === 1) {
+      region = cdnConnections[0].region;
+    } else if (cdnConnections.length > 1) {
       const selectedRegion = await clack.select({
-        message: "Multiple storage deployments found. Which region?",
-        options: storageConnections.map((conn) => ({
+        message: "Multiple CDN deployments found. Which region?",
+        options: cdnConnections.map((conn) => ({
           value: conn.region,
           label: conn.region,
         })),
@@ -82,18 +82,18 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
   // 3. Load existing metadata
   const metadata = await loadConnectionMetadata(identity.accountId, region);
 
-  if (!metadata?.services.storage) {
+  if (!metadata?.services.cdn) {
     clack.log.error(
-      `No storage infrastructure found for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
+      `No CDN infrastructure found for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
     );
     clack.log.info(
-      `Use ${pc.cyan("wraps storage init")} to deploy storage infrastructure.`
+      `Use ${pc.cyan("wraps cdn init")} to deploy CDN infrastructure.`
     );
     process.exit(1);
   }
 
-  const storageService = metadata.services.storage;
-  const storageConfig = storageService.config as WrapsStorageConfig;
+  const cdnService = metadata.services.cdn;
+  const cdnConfig = cdnService.config as WrapsCdnConfig;
 
   progress.info(`Found storage deployment in ${pc.cyan(region)}`);
 
@@ -102,13 +102,13 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
   let existingCertArn: string | undefined;
 
   // If config has a custom domain, we need to check if the cert is validated
-  if (storageConfig.cdn.customDomain) {
+  if (cdnConfig.cdn.customDomain) {
     try {
       // Load Pulumi stack to get cert ARN
       await ensurePulumiWorkDir();
 
       const checkStack = await pulumi.automation.LocalWorkspace.selectStack({
-        stackName: `wraps-storage-${identity.accountId}-${region}`,
+        stackName: `wraps-cdn-${identity.accountId}-${region}`,
         workDir: getPulumiWorkDir(),
       });
 
@@ -131,7 +131,7 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
           certValidated = true;
           existingCertArn = stackOutputs.acmCertificateArn.value;
           progress.info(
-            `Certificate validated for ${pc.cyan(storageConfig.cdn.customDomain)}`
+            `Certificate validated for ${pc.cyan(cdnConfig.cdn.customDomain)}`
           );
         }
       }
@@ -141,12 +141,12 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
   }
 
   // 4. Build stack config with cert validation flags
-  const stackConfig: StorageStackConfig = {
+  const stackConfig: CdnStackConfig = {
     provider: metadata.provider,
     region,
     accountId: identity.accountId,
     vercel: metadata.vercel,
-    storageConfig,
+    cdnConfig,
     // Pass cert validation flags if cert is validated externally
     certValidated,
     existingCertArn,
@@ -154,15 +154,15 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
 
   // 5. Run Pulumi refresh + up
   try {
-    await progress.execute("Syncing storage infrastructure", async () => {
+    await progress.execute("Syncing CDN infrastructure", async () => {
       await ensurePulumiWorkDir();
 
       const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
         {
-          stackName: `wraps-storage-${identity.accountId}-${region}`,
-          projectName: "wraps-storage",
+          stackName: `wraps-cdn-${identity.accountId}-${region}`,
+          projectName: "wraps-cdn",
           program: async () => {
-            const result = await deployStorageStack(stackConfig);
+            const result = await deployCdnStack(stackConfig);
             return {
               roleArn: result.roleArn,
               bucketName: result.bucketName,
@@ -213,7 +213,7 @@ export async function storageSync(options: StorageSyncOptions): Promise<void> {
   }
 
   // 6. Success
-  clack.log.success(pc.green("Storage infrastructure synced!"));
+  clack.log.success(pc.green("CDN infrastructure synced!"));
 
   trackCommand("storage:sync", {
     success: true,

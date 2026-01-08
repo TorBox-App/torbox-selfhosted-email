@@ -3,7 +3,7 @@ import { Router as createRouter } from "express";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import type { ServerConfig } from "../server.js";
 
-export function createStorageRouter(config: ServerConfig): Router {
+export function createCdnRouter(config: ServerConfig): Router {
   const router = createRouter();
 
   /**
@@ -17,46 +17,46 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.region
       );
 
-      if (!metadata?.services.storage) {
+      if (!metadata?.services.cdn) {
         return res.status(404).json({
-          error: "No storage infrastructure found for this account and region",
+          error: "No CDN infrastructure found for this account and region",
         });
       }
 
-      const storageService = metadata.services.storage;
-      const storageConfig = storageService.config;
+      const cdnService = metadata.services.cdn;
+      const cdnConfig = cdnService.config;
 
       // Get storage info from metadata
       const settings = {
         bucketName:
-          config.storageBucketName || `wraps-storage-${config.accountId}`,
-        bucketArn: `arn:aws:s3:::${config.storageBucketName || `wraps-storage-${config.accountId}`}`,
+          config.cdnBucketName || `wraps-cdn-${config.accountId}`,
+        bucketArn: `arn:aws:s3:::${config.cdnBucketName || `wraps-cdn-${config.accountId}`}`,
         region: config.region,
-        roleArn: config.storageRoleArn || config.roleArn,
+        roleArn: config.cdnRoleArn || config.roleArn,
         cdn: {
-          enabled: storageConfig.cdn?.enabled ?? false,
-          distributionId: config.storageDistributionId,
-          distributionDomain: config.storageDistributionDomain,
-          customDomain: storageConfig.cdn?.customDomain,
-          status: config.storageDistributionId ? "Deployed" : undefined,
+          enabled: cdnConfig.cdn?.enabled ?? false,
+          distributionId: config.cdnDistributionId,
+          distributionDomain: config.cdnDistributionDomain,
+          customDomain: cdnConfig.cdn?.customDomain,
+          status: config.cdnDistributionId ? "Deployed" : undefined,
         },
-        certificate: storageConfig.cdn?.customDomain
+        certificate: cdnConfig.cdn?.customDomain
           ? {
-              arn: config.storageCertificateArn,
-              status: config.storageCertificateArn
+              arn: config.cdnCertificateArn,
+              status: config.cdnCertificateArn
                 ? "ISSUED"
                 : "PENDING_VALIDATION",
             }
           : undefined,
-        versioning: storageConfig.versioning ?? false,
-        retention: storageConfig.retention,
+        versioning: cdnConfig.versioning ?? false,
+        retention: cdnConfig.retention,
       };
 
       res.json(settings);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("[Storage] Error fetching settings:", error);
+      console.error("[CDN] Error fetching settings:", error);
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -72,14 +72,14 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.region
       );
 
-      if (!metadata?.services.storage) {
+      if (!metadata?.services.cdn) {
         return res.status(404).json({
-          error: "No storage infrastructure found for this account and region",
+          error: "No CDN infrastructure found for this account and region",
         });
       }
 
       const bucketName =
-        config.storageBucketName || `wraps-storage-${config.accountId}`;
+        config.cdnBucketName || `wraps-cdn-${config.accountId}`;
 
       // List objects from S3
       const { S3Client, ListObjectsV2Command, GetObjectTaggingCommand } =
@@ -87,9 +87,9 @@ export function createStorageRouter(config: ServerConfig): Router {
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
       const credentials =
-        config.storageRoleArn || config.roleArn
+        config.cdnRoleArn || config.roleArn
           ? await assumeRole(
-              config.storageRoleArn || config.roleArn!,
+              config.cdnRoleArn || config.roleArn!,
               config.region
             )
           : undefined;
@@ -103,8 +103,8 @@ export function createStorageRouter(config: ServerConfig): Router {
       );
 
       // Build CDN URL for files
-      const cdnUrl = config.storageDistributionDomain
-        ? `https://${metadata.services.storage.config.cdn?.customDomain || config.storageDistributionDomain}`
+      const cdnUrl = config.cdnDistributionDomain
+        ? `https://${metadata.services.cdn.config.cdn?.customDomain || config.cdnDistributionDomain}`
         : null;
 
       // Infer content type from file extension
@@ -180,8 +180,8 @@ export function createStorageRouter(config: ServerConfig): Router {
       res.json({
         bucketName,
         region: config.region,
-        cdnDomain: config.storageDistributionDomain,
-        customDomain: metadata.services.storage.config.cdn?.customDomain,
+        cdnDomain: config.cdnDistributionDomain,
+        customDomain: metadata.services.cdn.config.cdn?.customDomain,
         files,
         totalSize,
         fileCount: files.length,
@@ -189,7 +189,7 @@ export function createStorageRouter(config: ServerConfig): Router {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("[Storage] Error fetching files:", error);
+      console.error("[CDN] Error fetching files:", error);
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -208,14 +208,14 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.region
       );
 
-      if (!metadata?.services.storage) {
+      if (!metadata?.services.cdn) {
         return res.status(404).json({
-          error: "No storage infrastructure found for this account and region",
+          error: "No CDN infrastructure found for this account and region",
         });
       }
 
       const bucketName =
-        config.storageBucketName || `wraps-storage-${config.accountId}`;
+        config.cdnBucketName || `wraps-cdn-${config.accountId}`;
 
       // Get CloudWatch metrics for the bucket
       const { CloudWatchClient, GetMetricStatisticsCommand } = await import(
@@ -224,9 +224,9 @@ export function createStorageRouter(config: ServerConfig): Router {
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
       const credentials =
-        config.storageRoleArn || config.roleArn
+        config.cdnRoleArn || config.roleArn
           ? await assumeRole(
-              config.storageRoleArn || config.roleArn!,
+              config.cdnRoleArn || config.roleArn!,
               config.region
             )
           : undefined;
@@ -274,7 +274,7 @@ export function createStorageRouter(config: ServerConfig): Router {
         );
         numberOfObjects = objectsResponse.Datapoints?.[0]?.Average || 0;
       } catch (err) {
-        console.log("[Storage] CloudWatch metrics not available yet");
+        console.log("[CDN] CloudWatch metrics not available yet");
       }
 
       // Generate sample data for charts (CloudWatch S3 metrics are daily)
@@ -314,7 +314,7 @@ export function createStorageRouter(config: ServerConfig): Router {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("[Storage] Error fetching metrics:", error);
+      console.error("[CDN] Error fetching metrics:", error);
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -336,14 +336,14 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.region
       );
 
-      if (!metadata?.services.storage) {
+      if (!metadata?.services.cdn) {
         return res.status(404).json({
-          error: "No storage infrastructure found for this account and region",
+          error: "No CDN infrastructure found for this account and region",
         });
       }
 
       const bucketName =
-        config.storageBucketName || `wraps-storage-${config.accountId}`;
+        config.cdnBucketName || `wraps-cdn-${config.accountId}`;
 
       // Generate presigned PUT URL
       const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
@@ -351,9 +351,9 @@ export function createStorageRouter(config: ServerConfig): Router {
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
       const credentials =
-        config.storageRoleArn || config.roleArn
+        config.cdnRoleArn || config.roleArn
           ? await assumeRole(
-              config.storageRoleArn || config.roleArn!,
+              config.cdnRoleArn || config.roleArn!,
               config.region
             )
           : undefined;
@@ -370,10 +370,10 @@ export function createStorageRouter(config: ServerConfig): Router {
       });
 
       // Build CDN URL for the file
-      const cdnUrl = metadata.services.storage.config.cdn?.customDomain
-        ? `https://${metadata.services.storage.config.cdn.customDomain}/${filename}`
-        : config.storageDistributionDomain
-          ? `https://${config.storageDistributionDomain}/${filename}`
+      const cdnUrl = metadata.services.cdn.config.cdn?.customDomain
+        ? `https://${metadata.services.cdn.config.cdn.customDomain}/${filename}`
+        : config.cdnDistributionDomain
+          ? `https://${config.cdnDistributionDomain}/${filename}`
           : `s3://${bucketName}/${filename}`;
 
       res.json({
@@ -385,7 +385,7 @@ export function createStorageRouter(config: ServerConfig): Router {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("[Storage] Error generating upload URL:", error);
+      console.error("[CDN] Error generating upload URL:", error);
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -412,23 +412,23 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.region
       );
 
-      if (!metadata?.services.storage) {
+      if (!metadata?.services.cdn) {
         return res.status(404).json({
-          error: "No storage infrastructure found for this account and region",
+          error: "No CDN infrastructure found for this account and region",
         });
       }
 
       const bucketName =
-        config.storageBucketName || `wraps-storage-${config.accountId}`;
+        config.cdnBucketName || `wraps-cdn-${config.accountId}`;
 
       const { S3Client, GetObjectTaggingCommand, PutObjectTaggingCommand } =
         await import("@aws-sdk/client-s3");
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
       const credentials =
-        config.storageRoleArn || config.roleArn
+        config.cdnRoleArn || config.roleArn
           ? await assumeRole(
-              config.storageRoleArn || config.roleArn!,
+              config.cdnRoleArn || config.roleArn!,
               config.region
             )
           : undefined;
@@ -470,7 +470,7 @@ export function createStorageRouter(config: ServerConfig): Router {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("[Storage] Error toggling star:", error);
+      console.error("[CDN] Error toggling star:", error);
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -492,14 +492,14 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.region
       );
 
-      if (!metadata?.services.storage) {
+      if (!metadata?.services.cdn) {
         return res.status(404).json({
-          error: "No storage infrastructure found for this account and region",
+          error: "No CDN infrastructure found for this account and region",
         });
       }
 
       const bucketName =
-        config.storageBucketName || `wraps-storage-${config.accountId}`;
+        config.cdnBucketName || `wraps-cdn-${config.accountId}`;
 
       const { S3Client, DeleteObjectCommand } = await import(
         "@aws-sdk/client-s3"
@@ -507,9 +507,9 @@ export function createStorageRouter(config: ServerConfig): Router {
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
       const credentials =
-        config.storageRoleArn || config.roleArn
+        config.cdnRoleArn || config.roleArn
           ? await assumeRole(
-              config.storageRoleArn || config.roleArn!,
+              config.cdnRoleArn || config.roleArn!,
               config.region
             )
           : undefined;
@@ -526,7 +526,7 @@ export function createStorageRouter(config: ServerConfig): Router {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("[Storage] Error deleting file:", error);
+      console.error("[CDN] Error deleting file:", error);
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -554,14 +554,14 @@ export function createStorageRouter(config: ServerConfig): Router {
         config.region
       );
 
-      if (!metadata?.services.storage) {
+      if (!metadata?.services.cdn) {
         return res.status(404).json({
-          error: "No storage infrastructure found for this account and region",
+          error: "No CDN infrastructure found for this account and region",
         });
       }
 
       const bucketName =
-        config.storageBucketName || `wraps-storage-${config.accountId}`;
+        config.cdnBucketName || `wraps-cdn-${config.accountId}`;
 
       const { S3Client, CopyObjectCommand, DeleteObjectCommand } = await import(
         "@aws-sdk/client-s3"
@@ -569,9 +569,9 @@ export function createStorageRouter(config: ServerConfig): Router {
       const { assumeRole } = await import("../../utils/shared/assume-role.js");
 
       const credentials =
-        config.storageRoleArn || config.roleArn
+        config.cdnRoleArn || config.roleArn
           ? await assumeRole(
-              config.storageRoleArn || config.roleArn!,
+              config.cdnRoleArn || config.roleArn!,
               config.region
             )
           : undefined;
@@ -595,17 +595,17 @@ export function createStorageRouter(config: ServerConfig): Router {
       );
 
       // Build new CDN URL
-      const cdnUrl = metadata.services.storage.config.cdn?.customDomain
-        ? `https://${metadata.services.storage.config.cdn.customDomain}/${newKey}`
-        : config.storageDistributionDomain
-          ? `https://${config.storageDistributionDomain}/${newKey}`
+      const cdnUrl = metadata.services.cdn.config.cdn?.customDomain
+        ? `https://${metadata.services.cdn.config.cdn.customDomain}/${newKey}`
+        : config.cdnDistributionDomain
+          ? `https://${config.cdnDistributionDomain}/${newKey}`
           : `s3://${bucketName}/${newKey}`;
 
       res.json({ success: true, oldKey, newKey, cdnUrl });
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("[Storage] Error renaming file:", error);
+      console.error("[CDN] Error renaming file:", error);
       res.status(500).json({ error: errorMessage });
     }
   });

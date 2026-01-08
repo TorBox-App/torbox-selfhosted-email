@@ -47,7 +47,7 @@ const navItems: NavSection[] = [
         icon: Rocket,
         children: [
           { title: "Email", href: "/docs/quickstart/email" },
-          { title: "Storage", href: "/docs/quickstart/storage" },
+          { title: "CDN", href: "/docs/quickstart/cdn" },
           { title: "SMS", href: "/docs/quickstart/sms" },
           { title: "Platform", href: "/docs/quickstart/platform" },
         ],
@@ -73,8 +73,8 @@ const navItems: NavSection[] = [
         icon: Mail,
       },
       {
-        title: "Storage Commands",
-        href: "/docs/cli-reference/storage",
+        title: "CDN Commands",
+        href: "/docs/cli-reference/cdn",
         icon: HardDrive,
       },
       {

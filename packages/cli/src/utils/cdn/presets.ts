@@ -1,6 +1,6 @@
 import type {
-  StorageConfigPreset,
-  WrapsStorageConfig,
+  CdnConfigPreset,
+  WrapsCdnConfig,
 } from "../../types/index.js";
 import { calculateCosts, formatCost } from "./costs.js";
 
@@ -10,7 +10,7 @@ import { calculateCosts, formatCost } from "./costs.js";
  * Storage: Up to 10GB
  * Cost: ~$5-7/month
  */
-export const STARTER_PRESET: WrapsStorageConfig = {
+export const STARTER_PRESET: WrapsCdnConfig = {
   cdn: {
     enabled: true,
     priceClass: "PriceClass_100", // US, Canada, Europe only (cheapest)
@@ -28,7 +28,7 @@ export const STARTER_PRESET: WrapsStorageConfig = {
  * Storage: 10GB-100GB
  * Cost: ~$10-50/month (depends on bandwidth)
  */
-export const PRODUCTION_PRESET: WrapsStorageConfig = {
+export const PRODUCTION_PRESET: WrapsCdnConfig = {
   cdn: {
     enabled: true,
     // customDomain will be set during init
@@ -45,8 +45,8 @@ export const PRODUCTION_PRESET: WrapsStorageConfig = {
  * Get preset configuration by name
  */
 export function getPreset(
-  preset: StorageConfigPreset
-): WrapsStorageConfig | null {
+  preset: CdnConfigPreset
+): WrapsCdnConfig | null {
   switch (preset) {
     case "starter":
       return { ...STARTER_PRESET };
@@ -71,7 +71,7 @@ export type StoragePresetInfo = {
 /**
  * Get preset information for display
  */
-export function getPresetInfo(preset: StorageConfigPreset): StoragePresetInfo {
+export function getPresetInfo(preset: CdnConfigPreset): StoragePresetInfo {
   const config = getPreset(preset);
 
   if (preset === "custom" || !config) {
@@ -135,9 +135,9 @@ export function getAllPresetInfo(): StoragePresetInfo[] {
 }
 
 /**
- * Validate storage configuration for common issues
+ * Validate CDN configuration for common issues
  */
-export function validateConfig(config: WrapsStorageConfig): string[] {
+export function validateConfig(config: WrapsCdnConfig): string[] {
   const warnings: string[] = [];
 
   // Warn about no CDN
@@ -175,9 +175,9 @@ export function validateConfig(config: WrapsStorageConfig): string[] {
  * Merge user configuration with preset defaults
  */
 export function mergeWithPreset(
-  preset: StorageConfigPreset,
-  overrides: Partial<WrapsStorageConfig>
-): WrapsStorageConfig {
+  preset: CdnConfigPreset,
+  overrides: Partial<WrapsCdnConfig>
+): WrapsCdnConfig {
   const base = getPreset(preset) || STARTER_PRESET;
 
   return {

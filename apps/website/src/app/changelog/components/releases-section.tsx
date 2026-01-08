@@ -38,14 +38,14 @@ const releases: Release[] = [
     icon: HardDrive,
     iconColor:
       "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400",
-    title: "Storage Infrastructure",
+    title: "CDN Infrastructure",
     items: [
       "S3 bucket + CloudFront CDN deployment",
       "Custom domain support with ACM SSL certificates",
       "Browser-based image optimization",
       "Origin Access Control for secure S3 access",
       <>
-        CLI: <Code>wraps storage init</Code>, <Code>verify</Code>,{" "}
+        CLI: <Code>wraps cdn init</Code>, <Code>verify</Code>,{" "}
         <Code>upgrade</Code>, and <Code>destroy</Code> commands
       </>,
       "Pay AWS directly (~$5-7/mo for typical usage)",

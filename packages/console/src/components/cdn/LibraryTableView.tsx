@@ -19,15 +19,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { StorageFile } from "./types";
+import type { CdnFile } from "./types";
 
 interface LibraryTableViewProps {
-  files: StorageFile[];
+  files: CdnFile[];
   selectedFiles: string[];
   onSelectFile: (key: string) => void;
   onSelectAll: () => void;
   onToggleStar: (key: string, starred: boolean) => void;
-  onFileClick: (file: StorageFile) => void;
+  onFileClick: (file: CdnFile) => void;
 }
 
 function formatSize(bytes: number): string {

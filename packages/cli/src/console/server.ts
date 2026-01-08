@@ -10,7 +10,7 @@ import { createEmailsRouter } from "./routes/emails.js";
 import { createMetricsRouter } from "./routes/metrics.js";
 import { createSettingsRouter } from "./routes/settings.js";
 import { createSMSRouter } from "./routes/sms.js";
-import { createStorageRouter } from "./routes/storage.js";
+import { createCdnRouter } from "./routes/cdn.js";
 import { createUserRouter } from "./routes/user.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -35,12 +35,12 @@ export type ServerConfig = {
   smsAitFiltering?: boolean;
   smsArchiveRetention?: string;
   // Storage config
-  storageBucketName?: string;
-  storageRoleArn?: string;
-  storageDistributionId?: string;
-  storageDistributionDomain?: string;
-  storageCustomDomain?: string;
-  storageCertificateArn?: string;
+  cdnBucketName?: string;
+  cdnRoleArn?: string;
+  cdnDistributionId?: string;
+  cdnDistributionDomain?: string;
+  cdnCustomDomain?: string;
+  cdnCertificateArn?: string;
 };
 
 export type ServerInfo = {
@@ -96,9 +96,9 @@ export async function startConsoleServer(
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("X-Content-Type-Options", "nosniff");
 
-    // Build CSP with optional custom domain for storage CDN
-    const customDomainSrc = config.storageCustomDomain
-      ? ` https://${config.storageCustomDomain}`
+    // Build CSP with optional custom domain for CDN
+    const customDomainSrc = config.cdnCustomDomain
+      ? ` https://${config.cdnCustomDomain}`
       : "";
     res.setHeader(
       "Content-Security-Policy",
@@ -141,9 +141,9 @@ export async function startConsoleServer(
   app.use("/api/user", authenticateToken(authToken), createUserRouter(config));
   app.use("/api/sms", authenticateToken(authToken), createSMSRouter(config));
   app.use(
-    "/api/storage",
+    "/api/cdn",
     authenticateToken(authToken),
-    createStorageRouter(config)
+    createCdnRouter(config)
   );
 
   // Serve static files from console-ui build

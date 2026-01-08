@@ -53,14 +53,14 @@ const services = [
     status: "available",
   },
   {
-    id: "storage",
-    name: "Storage",
+    id: "cdn",
+    name: "CDN",
     icon: HardDrive,
     color: "text-orange-500",
     bgColor: "bg-orange-500/10",
     borderColor: "border-orange-500/30",
     description: "S3 + CloudFront CDN for global asset delivery",
-    command: "wraps storage init",
+    command: "wraps cdn init",
     features: [
       "S3 bucket with CORS configured",
       "CloudFront CDN distribution",

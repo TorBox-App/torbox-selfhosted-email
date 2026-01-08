@@ -1,21 +1,21 @@
 /**
- * Storage Library Types
+ * Cdn Library Types
  */
 
 export type ViewMode = "grid" | "table";
 
-export type StorageTag = {
+export type CdnTag = {
   key: string;
   value: string;
 };
 
-export type StorageFile = {
+export type CdnFile = {
   key: string;
   size: number;
   lastModified: string;
   contentType?: string;
   url: string;
-  tags: StorageTag[];
+  tags: CdnTag[];
   starred: boolean;
 };
 
@@ -24,12 +24,12 @@ export type FilterOptions = {
   formats: string[];
 };
 
-export type StorageInfo = {
+export type CdnInfo = {
   bucketName: string;
   region: string;
   cdnDomain?: string;
   customDomain?: string;
-  files: StorageFile[];
+  files: CdnFile[];
   totalSize: number;
   fileCount: number;
 };

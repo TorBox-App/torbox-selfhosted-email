@@ -38,7 +38,7 @@ const s3 = new S3Client({ region: 'us-east-1' });
 
 // Upload a file
 const result = await s3.send(new PutObjectCommand({
-  Bucket: 'wraps-storage-123456789012', // From 'wraps storage status'
+  Bucket: 'wraps-cdn-123456789012', // From 'wraps cdn status'
   Key: 'images/hero.webp',
   Body: buffer,
   ContentType: 'image/webp',
@@ -75,16 +75,16 @@ const thumbnail = 'https://cdn.yourdomain.com/images/hero.webp?width=200&height=
   }
 />`;
 
-export default function StorageQuickstartPage() {
+export default function CdnQuickstartPage() {
   return (
     <DocsLayout>
       {/* Page Header */}
       <div className="mb-12">
         <Badge className="mb-4" variant="outline">
-          Storage Quickstart
+          CDN Quickstart
         </Badge>
         <h1 className="mb-4 font-bold text-4xl tracking-tight">
-          Get Started with Storage
+          Get Started with CDN
         </h1>
         <p className="text-lg text-muted-foreground">
           Deploy S3 + CloudFront CDN infrastructure to your AWS account in under 2 minutes.
@@ -131,7 +131,7 @@ export default function StorageQuickstartPage() {
           Deploy Infrastructure
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Run the Wraps CLI to deploy storage infrastructure to your AWS account:
+          Run the Wraps CLI to deploy CDN infrastructure to your AWS account:
         </p>
         <CodeBlock
           className="h-auto"
@@ -139,7 +139,7 @@ export default function StorageQuickstartPage() {
             {
               language: "bash",
               filename: "terminal.sh",
-              code: "npx @wraps.dev/cli storage init",
+              code: "npx @wraps.dev/cli cdn init",
             },
           ]}
           defaultValue="bash"
@@ -201,10 +201,10 @@ export default function StorageQuickstartPage() {
               language: "bash",
               filename: "terminal.sh",
               code: `# Verify DNS records are configured
-npx @wraps.dev/cli storage verify
+npx @wraps.dev/cli cdn verify
 
 # Once verified, add domain to CloudFront
-npx @wraps.dev/cli storage upgrade`,
+npx @wraps.dev/cli cdn upgrade`,
             },
           ]}
           defaultValue="bash"
@@ -316,7 +316,7 @@ npx @wraps.dev/cli storage upgrade`,
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">Tip: Get your bucket name</p>
           <p className="mt-2 text-muted-foreground text-sm">
-            Run <code className="rounded bg-muted px-1.5 py-0.5">npx @wraps.dev/cli storage status</code> to see your
+            Run <code className="rounded bg-muted px-1.5 py-0.5">npx @wraps.dev/cli cdn status</code> to see your
             S3 bucket name, CDN domain, and usage statistics.
           </p>
         </div>
@@ -383,14 +383,14 @@ npx @wraps.dev/cli storage upgrade`,
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="transition-colors hover:border-primary/50">
             <CardHeader>
-              <CardTitle className="text-lg">Storage CLI Reference</CardTitle>
+              <CardTitle className="text-lg">CDN CLI Reference</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground text-sm">
-                Learn about all storage commands: init, status, verify, upgrade, sync, and destroy.
+                Learn about all CDN commands: init, status, verify, upgrade, sync, and destroy.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/cli-reference/storage">
+                <a href="/docs/cli-reference/cdn">
                   View CLI Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>

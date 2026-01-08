@@ -80,14 +80,14 @@ const data = {
       ],
     },
     {
-      title: "Storage",
+      title: "CDN",
       url: "#",
       icon: HardDrive,
       isActive: false,
       subItems: [
-        { title: "Library", icon: FolderOpen, url: "/storage" },
-        { title: "Metrics", icon: BarChart3, url: "/storage/metrics" },
-        { title: "Settings", icon: Settings, url: "/storage/settings" },
+        { title: "Library", icon: FolderOpen, url: "/cdn" },
+        { title: "Metrics", icon: BarChart3, url: "/cdn/metrics" },
+        { title: "Settings", icon: Settings, url: "/cdn/settings" },
       ],
     },
   ] as NavItem[],
@@ -110,7 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (location.pathname.startsWith("/sms")) {
       return data.navMain[2];
     }
-    if (location.pathname.startsWith("/storage")) {
+    if (location.pathname.startsWith("/cdn")) {
       return data.navMain[3];
     }
     // Default to dashboard
@@ -239,10 +239,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           location.pathname.startsWith("/sms/") &&
                           location.pathname !== "/sms/metrics" &&
                           location.pathname !== "/sms/settings") ||
-                        (subItem.url === "/storage" &&
-                          location.pathname.startsWith("/storage/") &&
-                          location.pathname !== "/storage/metrics" &&
-                          location.pathname !== "/storage/settings");
+                        (subItem.url === "/cdn" &&
+                          location.pathname.startsWith("/cdn/") &&
+                          location.pathname !== "/cdn/metrics" &&
+                          location.pathname !== "/cdn/settings");
                       return (
                         <Link
                           className={`flex items-center gap-3 border-b p-4 text-sm leading-tight transition-colors last:border-b-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
