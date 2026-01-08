@@ -301,7 +301,7 @@ export const auth = betterAuth<BetterAuthOptions>({
               plans: [
                 {
                   name: "starter",
-                  priceId: process.env.STRIPE_STARTER_PRICE_ID || "",
+                  priceId: process.env.STRIPE_STARTER_PRICE_ID,
                   annualDiscountPriceId:
                     process.env.STRIPE_STARTER_ANNUAL_PRICE_ID,
                   limits: {
@@ -314,7 +314,7 @@ export const auth = betterAuth<BetterAuthOptions>({
                 },
                 {
                   name: "pro",
-                  priceId: process.env.STRIPE_PRO_PRICE_ID || "",
+                  priceId: process.env.STRIPE_PRO_PRICE_ID,
                   annualDiscountPriceId: process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
                   limits: {
                     emails: -1, // Unlimited (they pay AWS)
@@ -326,7 +326,7 @@ export const auth = betterAuth<BetterAuthOptions>({
                 },
                 {
                   name: "growth",
-                  priceId: process.env.STRIPE_GROWTH_PRICE_ID || "",
+                  priceId: process.env.STRIPE_GROWTH_PRICE_ID,
                   annualDiscountPriceId:
                     process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID,
                   limits: {

@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     "@wraps/email",
     "pino",
     "pino-pretty",
+    "@axiomhq/pino",
   ],
 
   // Image optimization
