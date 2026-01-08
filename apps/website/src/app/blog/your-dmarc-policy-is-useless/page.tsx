@@ -1075,15 +1075,26 @@ export default function DMARCSucks() {
             </code>
             &mdash;which tells receivers not to enforce.
           </p>
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <button
+            className="flex items-center justify-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => {
+              document
+                .getElementById("article-content")
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
+            type="button"
+          >
             <ChevronDown className="h-5 w-5 animate-bounce" />
             <span className="text-sm">Scroll to see why this matters</span>
-          </div>
+          </button>
         </div>
       </section>
 
       {/* Content */}
-      <div className="mx-auto max-w-4xl space-y-24 px-4 pt-24 pb-24">
+      <div
+        className="mx-auto max-w-4xl space-y-24 px-4 pt-24 pb-24"
+        id="article-content"
+      >
         {/* The Problem */}
         <section>
           <div className="prose prose-neutral dark:prose-invert max-w-none">
