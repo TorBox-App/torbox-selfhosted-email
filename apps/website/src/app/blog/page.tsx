@@ -73,17 +73,17 @@ export default function Blog() {
                   href={`/blog/${post.slug}`}
                   key={post.slug}
                 >
-                  <Card className="h-72 py-0 transition-all hover:border-primary/50 hover:shadow-lg md:flex-row md:gap-0">
-                    <CardContent className="h-full px-0 md:shrink-0">
+                  <Card className="flex flex-col overflow-hidden py-0 transition-all hover:border-primary/50 hover:shadow-lg md:h-72 md:flex-row">
+                    <div className="md:h-full md:shrink-0">
                       <img
                         alt={post.title}
-                        className="aspect-video h-full w-auto rounded-l-xl object-cover"
+                        className="aspect-video w-full rounded-t-xl object-cover md:h-full md:w-auto md:rounded-l-xl md:rounded-tr-none"
                         src={post.image || ""}
                       />
-                    </CardContent>
-                    <div className="flex-1">
+                    </div>
+                    <div className="flex flex-1 flex-col">
                       <CardHeader className="pt-4">
-                        <div className="mb-1 flex items-center gap-2">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
                           <Badge className="text-xs" variant="secondary">
                             {post.category}
                           </Badge>
