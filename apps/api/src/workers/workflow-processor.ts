@@ -11,6 +11,7 @@ import {
 } from "@aws-sdk/client-pinpoint-sms-voice-v2";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { toPlainText } from "@react-email/render";
+import Handlebars from "handlebars";
 import {
   awsAccount,
   contact,
@@ -733,39 +734,36 @@ async function handleSendEmail(
 
 /**
  * Substitute variables in text with values from a data object
- * Handles missing variables gracefully (empty string instead of leaving placeholder)
- * Optionally escapes HTML entities for safe embedding in HTML
+ * Uses Handlebars to properly evaluate conditional syntax like:
+ *   {{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}
+ *
+ * This is needed because compiledHtml contains SES-compatible Handlebars syntax
+ * from transformVariablesForSes, and workflow sends use direct HTML (not SES templates).
+ *
+ * Handlebars automatically escapes HTML in {{variable}} expressions for safety.
+ *
+ * @exported for testing
  */
-function substituteVariables(
+export function substituteVariables(
   text: string,
   data: Record<string, string>,
-  options: { escapeHtml?: boolean } = {}
+  _options: { escapeHtml?: boolean } = {}
 ): string {
-  // Match {{variable}} or {{contact.variable}} patterns
-  return text.replace(/\{\{\s*(?:contact\.)?([^}]+)\s*\}\}/g, (_match, key) => {
-    const trimmedKey = key.trim();
-    const value = data[trimmedKey];
-
-    if (value === undefined || value === null || value === "") {
-      // Use empty string for missing variables instead of leaving placeholder
-      console.warn(`[workflow] Missing variable in template: ${trimmedKey}`);
-      return "";
-    }
-
-    let stringValue = String(value);
-
-    // Escape HTML if needed (for email body, not subject)
-    if (options.escapeHtml) {
-      stringValue = stringValue
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#x27;");
-    }
-
-    return stringValue;
-  });
+  try {
+    // Compile and execute the Handlebars template
+    const template = Handlebars.compile(text, { noEscape: false });
+    return template(data);
+  } catch (error) {
+    // If Handlebars fails, fall back to simple regex replacement
+    console.warn("[workflow] Handlebars compilation failed, using fallback:", error);
+    return text.replace(
+      /\{\{\s*(?:contact\.)?([a-zA-Z0-9_]+)\s*\}\}/g,
+      (_match, key) => {
+        const value = data[key.trim()];
+        return value ?? "";
+      }
+    );
+  }
 }
 
 /**
