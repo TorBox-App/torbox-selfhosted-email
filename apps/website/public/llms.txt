@@ -1,0 +1,85 @@
+# Wraps
+
+> Deploy production-ready email infrastructure to your AWS account in 30 seconds.
+
+Wraps is a developer tool that deploys email sending infrastructure (AWS SES) directly to users' AWS accounts. No credentials stored, transparent AWS pricing ($0.10 per 1,000 emails), full data ownership.
+
+## What Wraps Does
+
+Wraps provides two products:
+
+1. **CLI (`@wraps.dev/cli`)** - One command deploys complete email infrastructure:
+   - AWS SES configuration with DKIM signing
+   - Event tracking (opens, clicks, bounces, complaints)
+   - Email history storage in DynamoDB
+   - OIDC integration for Vercel (zero stored credentials)
+   - IAM roles with least-privilege permissions
+
+2. **Platform (app.wraps.dev)** - Visual dashboard for email operations:
+   - Template editor with drag-and-drop blocks
+   - Broadcast campaigns with segmentation
+   - Workflow automation builder
+   - Contact management with topics/preferences
+   - Real-time analytics and deliverability metrics
+
+## TypeScript SDK
+
+```typescript
+import { Wraps } from '@wraps.dev/email';
+
+const wraps = new Wraps();
+
+await wraps.emails.send({
+  from: 'hello@yourapp.com',
+  to: 'user@example.com',
+  subject: 'Welcome!',
+  html: '<h1>Hello from Wraps!</h1>',
+});
+```
+
+## Key Differentiators
+
+- **Your AWS Account**: Infrastructure deploys to your account, not ours
+- **No Vendor Lock-in**: You own everything, data stays if you leave
+- **Transparent Pricing**: Pay AWS directly, no markup
+- **30-Second Setup**: `npx @wraps.dev/cli email init` and done
+- **Type-Safe**: Full TypeScript support with inference
+
+## Installation
+
+```bash
+# Deploy infrastructure
+npx @wraps.dev/cli email init
+
+# Install SDK
+npm install @wraps.dev/email
+```
+
+## Links
+
+- Website: https://wraps.dev
+- Documentation: https://wraps.dev/docs
+- Quickstart: https://wraps.dev/docs/quickstart/email
+- SDK Reference: https://wraps.dev/docs/sdk-reference
+- CLI Reference: https://wraps.dev/docs/cli-reference
+- GitHub (SDK): https://github.com/wraps-team/wraps-js
+- npm: https://www.npmjs.com/package/@wraps.dev/email
+
+## Use Cases
+
+- Transactional emails (welcome, password reset, receipts)
+- Marketing broadcasts with segmentation
+- Automated email workflows (drip campaigns, onboarding)
+- Developer applications needing email with full AWS control
+
+## Technical Stack
+
+- Infrastructure: Pulumi deploying to AWS (SES, DynamoDB, Lambda, EventBridge, SQS)
+- SDK: TypeScript, works with any Node.js framework
+- Platform: React 19, TailwindCSS, shadcn/ui
+- Auth: OIDC (Vercel), IAM roles (AWS native)
+
+## Contact
+
+- Support: support@wraps.dev
+- Twitter: @wraboratory
