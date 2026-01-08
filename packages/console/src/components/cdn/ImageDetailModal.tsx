@@ -1,19 +1,18 @@
 import { format } from "date-fns";
 import {
-  Copy,
   Download,
   ExternalLink,
   File as FileIcon,
   FileImage,
-  Star,
-  Trash2,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { CopyButton } from "./CopyButton";
+import { DeleteButton } from "./DeleteButton";
+import { StarButton } from "./StarButton";
 import type { CdnFile } from "./types";
 
 interface ImageDetailModalProps {
@@ -60,11 +59,6 @@ export function ImageDetailModal({
   const ext = getFileExtension(filename);
   const isImage = isImageFile(file.contentType, filename);
 
-  const handleCopyUrl = () => {
-    navigator.clipboard.writeText(file.url);
-    toast.success("URL copied to clipboard");
-  };
-
   const handleDownload = () => {
     const link = document.createElement("a");
     link.href = file.url;
@@ -75,7 +69,7 @@ export function ImageDetailModal({
 
   return (
     <Dialog onOpenChange={(open) => !open && onClose()} open>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto [&>button]:hidden">
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-start justify-between">
@@ -86,26 +80,15 @@ export function ImageDetailModal({
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={() => onToggleStar(file.key, !file.starred)}
-                size="icon"
+              <StarButton
+                starred={file.starred}
+                onToggle={() => onToggleStar(file.key, !file.starred)}
                 variant="outline"
-              >
-                <Star
-                  className={`h-4 w-4 ${
-                    file.starred ? "fill-yellow-500 text-yellow-500" : ""
-                  }`}
-                />
-              </Button>
-              <Button
-                className="text-destructive hover:text-destructive"
-                onClick={() => onDelete(file.key)}
-                size="icon"
-                variant="outline"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-              <Button onClick={onClose} size="icon" variant="ghost">
+              />
+              <DeleteButton
+                onDelete={() => onDelete(file.key)}
+              />
+              <Button onClick={onClose} size="icon" variant="outline">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -135,10 +118,13 @@ export function ImageDetailModal({
 
           {/* Actions */}
           <div className="flex gap-2">
-            <Button className="flex-1 gap-2" onClick={handleCopyUrl}>
-              <Copy className="h-4 w-4" />
-              Copy CDN URL
-            </Button>
+            <CopyButton
+              className="flex-1"
+              label="Copy CDN URL"
+              size="default"
+              value={file.url}
+              variant="default"
+            />
             <Button
               className="flex-1 gap-2 bg-transparent"
               onClick={() => window.open(file.url, "_blank")}
@@ -232,9 +218,7 @@ export function ImageDetailModal({
               <code className="flex-1 break-all rounded bg-muted px-3 py-2 text-sm">
                 {file.url}
               </code>
-              <Button onClick={handleCopyUrl} size="sm" variant="outline">
-                <Copy className="h-4 w-4" />
-              </Button>
+              <CopyButton size="sm" value={file.url} />
             </div>
           </div>
         </div>

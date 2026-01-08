@@ -1,16 +1,18 @@
 import { formatDistanceToNow } from "date-fns";
 import {
-  Copy,
   ExternalLink,
   File as FileIcon,
   FileImage,
-  Star,
 } from "lucide-react";
 import type React from "react";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import {
   Table,
   TableBody,
@@ -19,6 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CopyButton } from "./CopyButton";
+import { StarButton } from "./StarButton";
 import type { CdnFile } from "./types";
 
 interface LibraryTableViewProps {
@@ -65,12 +69,6 @@ export function LibraryTableView({
   onToggleStar,
   onFileClick,
 }: LibraryTableViewProps) {
-  const handleCopyUrl = (e: React.MouseEvent, url: string) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(url);
-    toast.success("URL copied to clipboard");
-  };
-
   const handleOpenExternal = (e: React.MouseEvent, url: string) => {
     e.stopPropagation();
     window.open(url, "_blank");
@@ -116,41 +114,49 @@ export function LibraryTableView({
                   />
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <Button
+                  <StarButton
                     className="h-8 w-8"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleStar(file.key, !file.starred);
-                    }}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <Star
-                      className={`h-4 w-4 ${
-                        file.starred ? "fill-yellow-500 text-yellow-500" : ""
-                      }`}
-                    />
-                  </Button>
+                    starred={file.starred}
+                    onToggle={() => onToggleStar(file.key, !file.starred)}
+                  />
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-14 shrink-0 overflow-hidden rounded border bg-muted">
-                      {isImage && file.url.startsWith("https://") ? (
-                        <img
-                          alt={filename}
-                          className="h-full w-full object-cover"
-                          src={file.url}
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          {isImage ? (
-                            <FileImage className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <FileIcon className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    {isImage && file.url.startsWith("https://") ? (
+                      <HoverCard closeDelay={200} openDelay={100}>
+                        <HoverCardTrigger asChild>
+                          <div className="h-10 w-14 shrink-0 cursor-pointer overflow-hidden rounded border bg-muted">
+                            <img
+                              alt={filename}
+                              className="h-full w-full object-cover"
+                              src={file.url}
+                            />
+                          </div>
+                        </HoverCardTrigger>
+                        <HoverCardContent
+                          align="start"
+                          className="w-auto p-3"
+                          side="right"
+                        >
+                          <img
+                            alt={filename}
+                            className="max-h-[min(400px,40vh)] max-w-[min(400px,25vw)] rounded object-contain"
+                            src={file.url}
+                          />
+                          <p className="mt-2 max-w-[min(400px,25vw)] truncate text-center text-muted-foreground text-sm">
+                            {filename}
+                          </p>
+                        </HoverCardContent>
+                      </HoverCard>
+                    ) : (
+                      <div className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded border bg-muted">
+                        {isImage ? (
+                          <FileImage className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <FileIcon className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    )}
                     <span className="truncate font-medium">{filename}</span>
                   </div>
                 </TableCell>
@@ -167,14 +173,12 @@ export function LibraryTableView({
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-1">
-                    <Button
+                    <CopyButton
                       className="h-8 w-8"
-                      onClick={(e) => handleCopyUrl(e, file.url)}
                       size="icon"
+                      value={file.url}
                       variant="ghost"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
+                    />
                     <Button
                       className="h-8 w-8"
                       onClick={(e) => handleOpenExternal(e, file.url)}

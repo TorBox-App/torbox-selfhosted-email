@@ -2,10 +2,15 @@ import {
   AlertCircle,
   Check,
   CheckCircle2,
+  Filter,
   FolderOpen,
+  Grid3X3,
   HardDrive,
+  List,
   Loader2,
   RefreshCw,
+  Search,
+  Star,
   Upload,
   X,
 } from "lucide-react";
@@ -13,14 +18,12 @@ import * as React from "react";
 import { toast } from "sonner";
 import { ImageOptimizeDialog } from "@/components/image-optimizer";
 import {
+  DeleteButton,
   type FilterOptions,
   ImageDetailModal,
-  LibraryBulkActions,
-  LibraryFilters,
   LibraryGridView,
-  LibrarySearch,
   LibraryTableView,
-  LibraryViewToggle,
+  StarButton,
   type CdnFile,
   type CdnInfo,
   type ViewMode,
@@ -36,6 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -44,8 +48,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -98,35 +112,44 @@ function CopyUrlButton({ url }: { url: string }) {
 function FilesSkeleton() {
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Skeleton className="mb-2 h-8 w-48" />
-          <Skeleton className="h-4 w-64" />
+          <Skeleton className="mb-2 h-8 w-36" />
+          <Skeleton className="h-4 w-48" />
         </div>
         <div className="flex gap-2">
-          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-9 w-9" />
           <Skeleton className="h-9 w-24" />
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-16" />
-            </CardHeader>
-          </Card>
-        ))}
+
+      {/* Toolbar */}
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-9 min-w-[200px] flex-1" />
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-9 w-20" />
       </div>
-      <div className="grid gap-4 md:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card className="overflow-hidden" key={i}>
-            <Skeleton className="aspect-video w-full" />
-            <div className="p-3">
-              <Skeleton className="mb-2 h-4 w-full" />
-              <Skeleton className="h-3 w-20" />
+
+      {/* Grid */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+          <div
+            className="overflow-hidden rounded-xl bg-muted shadow-sm"
+            key={i}
+          >
+            <Skeleton className="aspect-square w-full" />
+            <div className="space-y-2 p-3">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 flex-1" />
+              </div>
+              <div className="flex items-center gap-2 pl-6">
+                <Skeleton className="h-4 w-10" />
+                <Skeleton className="h-4 w-12" />
+              </div>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
     </div>
@@ -328,8 +351,21 @@ export function CdnFiles() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // View state
-  const [viewMode, setViewMode] = React.useState<ViewMode>("grid");
+  // View state (persisted to localStorage)
+  const [viewMode, setViewMode] = React.useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("cdn-library-view-mode");
+      if (saved === "grid" || saved === "table") {
+        return saved;
+      }
+    }
+    return "grid";
+  });
+
+  const handleViewModeChange = React.useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem("cdn-library-view-mode", mode);
+  }, []);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filters, setFilters] = React.useState<FilterOptions>({
     starred: false,
@@ -713,18 +749,14 @@ export function CdnFiles() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => setShowUpload(!showUpload)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Files
-          </Button>
+        <div className="flex items-center gap-2">
           <Button onClick={fetchFiles} size="icon" variant="outline">
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <LibraryViewToggle
-            onViewModeChange={setViewMode}
-            viewMode={viewMode}
-          />
+          <Button onClick={() => setShowUpload(!showUpload)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Upload
+          </Button>
         </div>
       </div>
 
@@ -739,28 +771,128 @@ export function CdnFiles() {
         />
       )}
 
-      {/* Search and Filters */}
+      {/* Unified Toolbar */}
       {info.files.length > 0 && (
-        <div className="flex flex-col gap-4 md:flex-row">
-          <div className="flex-1">
-            <LibrarySearch onChange={setSearchQuery} value={searchQuery} />
-          </div>
-          <LibraryFilters
-            availableFormats={availableFormats}
-            filters={filters}
-            onFiltersChange={setFilters}
-          />
-        </div>
-      )}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Selection Actions (left side when active) */}
+          {selectedFiles.length > 0 && (
+            <div className="flex items-center rounded-lg border">
+              <div className="flex items-center gap-1.5 border-r px-2.5 py-1.5 text-sm font-medium">
+                {selectedFiles.length} selected
+              </div>
+              <StarButton
+                className="rounded-none border-0"
+                onToggle={handleBulkStar}
+                size="sm"
+                label="Star"
+              />
+              <DeleteButton
+                className="rounded-none border-0 border-l"
+                onDelete={handleBulkDelete}
+                size="sm"
+                variant="ghost"
+                label="Delete"
+              />
+              <Button
+                className="rounded-l-none border-0 border-l"
+                onClick={() => setSelectedFiles([])}
+                size="sm"
+                variant="ghost"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
 
-      {/* Bulk Actions */}
-      {selectedFiles.length > 0 && (
-        <LibraryBulkActions
-          onClearSelection={() => setSelectedFiles([])}
-          onDelete={handleBulkDelete}
-          onStar={handleBulkStar}
-          selectedCount={selectedFiles.length}
-        />
+          {/* Search */}
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search files..."
+              type="search"
+              value={searchQuery}
+            />
+          </div>
+
+          {/* Filters */}
+          <div className="flex items-center rounded-lg border">
+            <Button
+              className="rounded-r-none border-0"
+              onClick={() =>
+                setFilters({ ...filters, starred: !filters.starred })
+              }
+              size="sm"
+              variant={filters.starred ? "secondary" : "ghost"}
+            >
+              <Star className={`mr-1.5 h-4 w-4 ${filters.starred ? "fill-current" : ""}`} />
+              Starred
+            </Button>
+            {availableFormats.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    className="rounded-l-none border-0 border-l"
+                    size="sm"
+                    variant="ghost"
+                  >
+                    <Filter className="mr-1.5 h-4 w-4" />
+                    Formats
+                    {filters.formats.length > 0 && (
+                      <Badge className="ml-1.5 px-1.5 py-0 text-xs" variant="secondary">
+                        {filters.formats.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>File Format</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {availableFormats.map((format) => (
+                    <DropdownMenuCheckboxItem
+                      checked={filters.formats.includes(format)}
+                      key={format}
+                      onCheckedChange={(checked) => {
+                        setFilters({
+                          ...filters,
+                          formats: checked
+                            ? [...filters.formats, format]
+                            : filters.formats.filter((f) => f !== format),
+                        });
+                      }}
+                    >
+                      {format.toUpperCase()}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {/* View Toggle */}
+          <ToggleGroup
+            className="rounded-lg border"
+            onValueChange={(value) => value && handleViewModeChange(value as ViewMode)}
+            type="single"
+            value={viewMode}
+          >
+            <ToggleGroupItem
+              className="rounded-r-none border-0"
+              value="grid"
+              aria-label="Grid view"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              className="rounded-l-none border-0 border-l"
+              value="table"
+              aria-label="Table view"
+            >
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       )}
 
       {/* Content */}

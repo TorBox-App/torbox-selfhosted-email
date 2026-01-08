@@ -66,15 +66,15 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
       // SMS stack not found, continue
     }
 
-    // Try to load storage stack
+    // Try to load CDN stack
     try {
-      const storageStack = await pulumi.automation.LocalWorkspace.selectStack({
-        stackName: `wraps-storage-${identity.accountId}-${region}`,
+      const cdnStack = await pulumi.automation.LocalWorkspace.selectStack({
+        stackName: `wraps-cdn-${identity.accountId}-${region}`,
         workDir: getPulumiWorkDir(),
       });
-      storageStackOutputs = await storageStack.outputs();
-    } catch (_storageError: unknown) {
-      // Storage stack not found, continue
+      storageStackOutputs = await cdnStack.outputs();
+    } catch (_cdnError: unknown) {
+      // CDN stack not found, continue
     }
 
     // If no stack found, show error
