@@ -1506,7 +1506,19 @@ export default function DMARCSucks() {
               <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">
                 yourcompany.com
               </code>{" "}
-              but don't set a subdomain policy, attackers simply spoof{" "}
+              but explicitly set{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">
+                sp=none
+              </code>{" "}
+              (missing{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">
+                sp=
+              </code>{" "}
+              inherits from{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">
+                p=
+              </code>
+              ), attackers simply spoof{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">
                 hr.yourcompany.com
               </code>{" "}
@@ -1571,7 +1583,7 @@ export default function DMARCSucks() {
                   result: "Cryptographically weak",
                 },
                 {
-                  issue: "No sp= subdomain policy",
+                  issue: "sp=none (explicit)",
                   result: "Subdomains unprotected",
                 },
                 {
