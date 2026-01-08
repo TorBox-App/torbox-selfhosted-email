@@ -18,6 +18,7 @@ createRoot(document.getElementById("root")!).render(
           ui_host: "https://us.posthog.com",
           defaults: "2025-05-24",
           capture_exceptions: true,
+          cross_subdomain_cookie: true,
           debug: import.meta.env.MODE === "development",
         }}
       >
@@ -26,6 +27,6 @@ createRoot(document.getElementById("root")!).render(
     ) : (
       <App />
     )}
-    <Analytics />
+    <Analytics framework="vite" />
   </StrictMode>
 );
