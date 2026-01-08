@@ -3,15 +3,15 @@
 import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { awsAccount, brandKit, db, template } from "@wraps/db";
-import { and, eq } from "drizzle-orm";
-import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import {
   generateSESTemplateName,
+  transformVariablesForSes,
   upsertSESTemplate,
-} from "@/lib/aws/ses-templates";
+} from "@wraps/email";
+import { and, eq } from "drizzle-orm";
+import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
-import { transformVariablesForSes } from "@/lib/ses-variables";
 
 export type PublishTemplateResult =
   | { success: true; sesTemplateName: string }

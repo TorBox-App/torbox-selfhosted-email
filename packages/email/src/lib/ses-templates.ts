@@ -5,7 +5,15 @@ import {
   SESClient,
   UpdateTemplateCommand,
 } from "@aws-sdk/client-ses";
-import type { AssumedRoleCredentials } from "./assume-role";
+
+/**
+ * AWS credentials for SES operations
+ */
+export type SESCredentials = {
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken?: string;
+};
 
 export type SESTemplateParams = {
   templateName: string;
@@ -15,12 +23,9 @@ export type SESTemplateParams = {
 };
 
 /**
- * Creates an SES client using assumed role credentials
+ * Creates an SES client using provided credentials
  */
-function createSESClient(
-  credentials: AssumedRoleCredentials,
-  region: string
-): SESClient {
+function createSESClient(credentials: SESCredentials, region: string): SESClient {
   return new SESClient({
     region,
     credentials: {
@@ -35,7 +40,7 @@ function createSESClient(
  * Check if a template exists in SES
  */
 export async function templateExists(
-  credentials: AssumedRoleCredentials,
+  credentials: SESCredentials,
   region: string,
   templateName: string
 ): Promise<boolean> {
@@ -61,7 +66,7 @@ export async function templateExists(
  * Creates or updates an SES template in the customer's AWS account
  */
 export async function upsertSESTemplate(
-  credentials: AssumedRoleCredentials,
+  credentials: SESCredentials,
   region: string,
   params: SESTemplateParams
 ): Promise<void> {
@@ -99,7 +104,7 @@ export async function upsertSESTemplate(
  * Deletes an SES template from the customer's AWS account
  */
 export async function deleteSESTemplate(
-  credentials: AssumedRoleCredentials,
+  credentials: SESCredentials,
   region: string,
   templateName: string
 ): Promise<void> {

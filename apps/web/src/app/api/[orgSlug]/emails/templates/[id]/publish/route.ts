@@ -2,19 +2,19 @@ import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import { awsAccount, brandKit, db, template } from "@wraps/db";
+import {
+  deleteSESTemplate,
+  generateSESTemplateName,
+  transformVariablesForSes,
+  upsertSESTemplate,
+} from "@wraps/email";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
-import {
-  deleteSESTemplate,
-  generateSESTemplateName,
-  upsertSESTemplate,
-} from "@/lib/aws/ses-templates";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
-import { transformVariablesForSes } from "@/lib/ses-variables";
 
 type RouteContext = {
   params: Promise<{

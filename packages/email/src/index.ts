@@ -19,3 +19,19 @@ export {
   determineSubscriptionStatus,
   sendTopicConfirmationEmail,
 } from "./lib/subscription-service";
+
+// SES templates
+export type { SESCredentials, SESTemplateParams } from "./lib/ses-templates";
+export {
+  generateSESTemplateName,
+  upsertSESTemplate,
+  deleteSESTemplate,
+  templateExists,
+} from "./lib/ses-templates";
+
+// SES variable transformation
+export {
+  toSesVariableName,
+  transformVariablesForSes,
+  flattenVariablesForSes,
+} from "./lib/ses-variables";

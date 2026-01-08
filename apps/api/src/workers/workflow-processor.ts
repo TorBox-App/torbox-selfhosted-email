@@ -11,7 +11,6 @@ import {
 } from "@aws-sdk/client-pinpoint-sms-voice-v2";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { toPlainText } from "@react-email/render";
-import Handlebars from "handlebars";
 import {
   awsAccount,
   contact,
@@ -28,8 +27,14 @@ import {
   workflowExecution,
   workflowStepExecution,
 } from "@wraps/db";
+import {
+  generateSESTemplateName,
+  transformVariablesForSes,
+  upsertSESTemplate,
+} from "@wraps/email";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, sql } from "drizzle-orm";
+import Handlebars from "handlebars";
 
 import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 
@@ -531,6 +536,7 @@ async function handleSendEmail(
       subject: template.subject,
       compiledHtml: template.compiledHtml,
       emailType: template.emailType,
+      sesTemplateName: template.sesTemplateName,
     })
     .from(template)
     .where(eq(template.id, config.templateId))
@@ -627,19 +633,6 @@ async function handleSendEmail(
     replacementData.preferencesUrl = preferencesUrl;
   }
 
-  // Apply variable substitution to HTML (with HTML escaping for user data)
-  const html = substituteVariables(tmpl.compiledHtml, replacementData, {
-    escapeHtml: true,
-  });
-
-  // Build subject with variable substitution
-  // Sanitize to prevent header injection (remove newlines) and limit length
-  const rawSubject = substituteVariables(
-    tmpl.subject || "Message",
-    replacementData
-  );
-  const subject = sanitizeEmailSubject(rawSubject);
-
   // Build from address (step config > workflow default > fallback)
   const fromAddress =
     config.from ||
@@ -658,40 +651,101 @@ async function handleSendEmail(
     );
   }
 
-  // Send email
-  const result = await sesClient.send(
-    new SendEmailCommand({
-      FromEmailAddress: fromDisplay,
-      ReplyToAddresses: replyTo ? [replyTo] : undefined,
-      Destination: {
-        ToAddresses: [contactRecord.email],
-      },
-      Content: {
-        Simple: {
-          Subject: { Data: subject },
-          Body: {
-            Html: { Data: html },
-            Text: { Data: htmlToPlainText(html) },
-          },
-          Headers: headers.length > 0 ? headers : undefined,
+  // Common email tags
+  const emailTags = [
+    { Name: "workflowId", Value: execution.workflowId },
+    { Name: "executionId", Value: execution.id },
+    { Name: "organizationId", Value: organizationId },
+    { Name: "templateId", Value: config.templateId },
+    { Name: "source", Value: "automation" },
+  ];
+
+  // Try to use SES template if available
+  let sesTemplateName = tmpl.sesTemplateName;
+
+  // Auto-publish if not published to SES (requires compiledHtml)
+  if (!sesTemplateName && tmpl.compiledHtml) {
+    sesTemplateName = await autoPublishTemplate(
+      tmpl as { id: string; name: string; subject: string | null; compiledHtml: string },
+      credentials,
+      account.region
+    );
+  }
+
+  let result: { MessageId?: string };
+  let subject: string;
+
+  if (sesTemplateName) {
+    // Use SES template - let SES handle variable substitution
+    // Transform subject for SES (handles both simple vars and fallbacks)
+    subject = sanitizeEmailSubject(tmpl.subject || "Message");
+
+    result = await sesClient.send(
+      new SendEmailCommand({
+        FromEmailAddress: fromDisplay,
+        ReplyToAddresses: replyTo ? [replyTo] : undefined,
+        Destination: {
+          ToAddresses: [contactRecord.email],
         },
-      },
-      ConfigurationSetName: "wraps-email-tracking",
-      EmailTags: [
-        { Name: "workflowId", Value: execution.workflowId },
-        { Name: "executionId", Value: execution.id },
-        { Name: "organizationId", Value: organizationId },
-        { Name: "templateId", Value: config.templateId },
-        { Name: "source", Value: "automation" },
-      ],
-    })
-  );
+        Content: {
+          Template: {
+            TemplateName: sesTemplateName,
+            TemplateData: JSON.stringify(replacementData),
+          },
+        },
+        ConfigurationSetName: "wraps-email-tracking",
+        EmailTags: emailTags,
+        ListManagementOptions:
+          isMarketing && headers.length > 0
+            ? undefined
+            : undefined,
+      })
+    );
+
+    console.log(
+      `[workflow] Sent email via SES template ${sesTemplateName} to ${contactRecord.email}`
+    );
+  } else {
+    // Fallback: Apply variable substitution locally and send raw HTML
+    const html = substituteVariables(tmpl.compiledHtml, replacementData, {
+      escapeHtml: true,
+    });
+
+    // Build subject with variable substitution
+    const rawSubject = substituteVariables(
+      tmpl.subject || "Message",
+      replacementData
+    );
+    subject = sanitizeEmailSubject(rawSubject);
+
+    result = await sesClient.send(
+      new SendEmailCommand({
+        FromEmailAddress: fromDisplay,
+        ReplyToAddresses: replyTo ? [replyTo] : undefined,
+        Destination: {
+          ToAddresses: [contactRecord.email],
+        },
+        Content: {
+          Simple: {
+            Subject: { Data: subject },
+            Body: {
+              Html: { Data: html },
+              Text: { Data: htmlToPlainText(html) },
+            },
+            Headers: headers.length > 0 ? headers : undefined,
+          },
+        },
+        ConfigurationSetName: "wraps-email-tracking",
+        EmailTags: emailTags,
+      })
+    );
+
+    console.log(
+      `[workflow] Sent email via raw HTML to ${contactRecord.email}`
+    );
+  }
 
   const messageId = result.MessageId ?? "";
-
-  console.log(
-    `[workflow] Sent email to ${contactRecord.email}, messageId: ${messageId}`
-  );
 
   // Record the send in messageSend table
   // Note: workflowExecutionId is not yet in schema, will be added later
@@ -786,6 +840,53 @@ function sanitizeEmailSubject(subject: string): string {
  */
 function htmlToPlainText(html: string): string {
   return toPlainText(html);
+}
+
+/**
+ * Auto-publish a template to SES if not already published.
+ * Uses the existing compiledHtml from the template.
+ * Returns the SES template name if successful, or null if publishing fails.
+ */
+async function autoPublishTemplate(
+  tmpl: { id: string; name: string; subject: string | null; compiledHtml: string },
+  credentials: { accessKeyId: string; secretAccessKey: string; sessionToken?: string },
+  region: string
+): Promise<string | null> {
+  try {
+    // 1. Transform variables for SES compatibility
+    // compiledHtml already has {{contact.firstName}} format
+    // We need to transform to {{contactFirstName}} format for SES
+    // Also handles fallbacks: {{name|fallback}} → {{#if name}}{{name}}{{else}}fallback{{/if}}
+    const sesHtml = transformVariablesForSes(tmpl.compiledHtml);
+    const sesText = htmlToPlainText(sesHtml);
+    const sesSubject = transformVariablesForSes(tmpl.subject || "Message");
+
+    // 2. Generate template name and publish to SES
+    const sesTemplateName = generateSESTemplateName(tmpl.id, tmpl.name);
+    await upsertSESTemplate(credentials, region, {
+      templateName: sesTemplateName,
+      subject: sesSubject,
+      htmlPart: sesHtml,
+      textPart: sesText,
+    });
+
+    // 3. Update template in DB with SES template name
+    await db
+      .update(template)
+      .set({
+        sesTemplateName,
+        publishedAt: new Date(),
+      })
+      .where(eq(template.id, tmpl.id));
+
+    console.log(
+      `[workflow] Auto-published template ${tmpl.id} as ${sesTemplateName}`
+    );
+    return sesTemplateName;
+  } catch (error) {
+    console.error("[workflow] Auto-publish failed:", error);
+    return null; // Fall back to raw HTML
+  }
 }
 
 /**

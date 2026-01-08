@@ -7,10 +7,10 @@
 
 import { render } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
+import { transformVariablesForSes } from "@wraps/email";
 import Handlebars from "handlebars";
 import { describe, expect, it } from "vitest";
 import { tiptapToReactEmail } from "../serializers/tiptap-to-react-email";
-import { transformVariablesForSes } from "../ses-variables";
 
 /**
  * Simulates SES Handlebars template rendering

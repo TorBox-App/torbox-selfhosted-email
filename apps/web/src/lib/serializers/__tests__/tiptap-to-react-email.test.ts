@@ -7,8 +7,8 @@
 
 import { render } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
+import { transformVariablesForSes } from "@wraps/email";
 import { describe, expect, it } from "vitest";
-import { transformVariablesForSes } from "../../ses-variables";
 import {
   generateReactEmailCode,
   tiptapToReactEmail,

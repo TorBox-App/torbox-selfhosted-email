@@ -4,12 +4,12 @@
  * Tests for transforming template variables to SES-compatible format.
  */
 
-import { describe, expect, it } from "vitest";
 import {
   flattenVariablesForSes,
   toSesVariableName,
   transformVariablesForSes,
-} from "../ses-variables";
+} from "@wraps/email";
+import { describe, expect, it } from "vitest";
 
 describe("toSesVariableName", () => {
   it("leaves simple names unchanged", () => {
