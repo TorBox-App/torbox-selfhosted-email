@@ -68,6 +68,12 @@ export type WrapsEmailConfig = {
     retention: ArchiveRetention;
   };
 
+  // SMTP credentials for legacy systems (PHP, WordPress, etc.)
+  smtpCredentials?: {
+    enabled: boolean;
+    createdAt?: string; // Track when credentials were created
+  };
+
   // Advanced options
   ipPool?: string;
   dedicatedIp?: boolean;
@@ -94,6 +100,7 @@ export type EmailFeatureCostBreakdown = {
   emailArchiving?: FeatureCost;
   dedicatedIp?: FeatureCost;
   waf?: FeatureCost;
+  smtpCredentials?: FeatureCost;
   total: FeatureCost;
 };
 
@@ -143,6 +150,11 @@ export type EmailStackOutputs = {
   archiveArn?: string;
   archivingEnabled?: boolean;
   archiveRetention?: ArchiveRetention;
+  // SMTP credentials (shown once, not stored)
+  smtpUserArn?: string;
+  smtpUsername?: string;
+  smtpPassword?: string;
+  smtpEndpoint?: string;
 };
 
 /**

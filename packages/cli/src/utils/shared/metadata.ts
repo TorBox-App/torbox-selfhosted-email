@@ -15,6 +15,15 @@ import type {
 import { ensureWrapsDir, getWrapsDir } from "./fs.js";
 
 /**
+ * SMTP credentials metadata (IAM user tracking, not actual credentials)
+ */
+export type SMTPCredentialsMetadata = {
+  enabled: boolean;
+  iamUserArn: string;
+  createdAt: string;
+};
+
+/**
  * Service-specific configuration with metadata
  */
 export type ServiceConfig<TConfig, TPreset> = {
@@ -24,6 +33,8 @@ export type ServiceConfig<TConfig, TPreset> = {
   deployedAt: string;
   // Webhook configuration for Wraps platform integration
   webhookSecret?: string; // API key for webhook authentication (uses metadata.accountId as AWS account number)
+  // SMTP credentials metadata (actual credentials shown once, only ARN stored)
+  smtpCredentials?: SMTPCredentialsMetadata;
 };
 
 /**
@@ -325,6 +336,12 @@ export function applyConfigUpdates(
         ...result.emailArchiving,
         ...(value as NonNullable<WrapsEmailConfig["emailArchiving"]>),
       } as NonNullable<WrapsEmailConfig["emailArchiving"]>;
+    } else if (key === "smtpCredentials" && typeof value === "object") {
+      // Deep merge smtpCredentials
+      result.smtpCredentials = {
+        ...result.smtpCredentials,
+        ...(value as NonNullable<WrapsEmailConfig["smtpCredentials"]>),
+      } as NonNullable<WrapsEmailConfig["smtpCredentials"]>;
     } else {
       // Direct assignment for primitives and other objects
       result[key as keyof WrapsEmailConfig] = value as any;

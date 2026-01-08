@@ -370,6 +370,24 @@ function calculateEmailArchivingCost(
 }
 
 /**
+ * Calculate cost for SMTP credentials
+ * SMTP is free - just uses existing SES per-email pricing
+ * IAM user/access keys have no cost
+ */
+function calculateSMTPCredentialsCost(
+  config: WrapsEmailConfig
+): FeatureCost | undefined {
+  if (!config.smtpCredentials?.enabled) {
+    return;
+  }
+
+  return {
+    monthly: 0,
+    description: "SMTP credentials (no additional cost)",
+  };
+}
+
+/**
  * Calculate total infrastructure costs
  *
  * @param config Email configuration
@@ -387,6 +405,7 @@ export function calculateCosts(
   const emailArchiving = calculateEmailArchivingCost(config, emailsPerMonth);
   const dedicatedIp = calculateDedicatedIpCost(config);
   const waf = calculateWafCost(config, emailsPerMonth);
+  const smtpCredentials = calculateSMTPCredentialsCost(config);
 
   // Calculate SES base costs (always present)
   const sesEmailCost =
@@ -402,7 +421,8 @@ export function calculateCosts(
     (dynamoDBHistory?.monthly || 0) +
     (emailArchiving?.monthly || 0) +
     (dedicatedIp?.monthly || 0) +
-    (waf?.monthly || 0);
+    (waf?.monthly || 0) +
+    (smtpCredentials?.monthly || 0);
 
   return {
     tracking,
@@ -412,6 +432,7 @@ export function calculateCosts(
     emailArchiving,
     dedicatedIp,
     waf,
+    smtpCredentials,
     total: {
       monthly: totalMonthlyCost,
       perEmail: AWS_PRICING.SES_PER_EMAIL,
@@ -483,6 +504,11 @@ export function getCostSummary(
   if (costs.waf) {
     lines.push(
       `  - ${costs.waf.description}: ${formatCost(costs.waf.monthly)}`
+    );
+  }
+  if (costs.smtpCredentials) {
+    lines.push(
+      `  - ${costs.smtpCredentials.description}: ${formatCost(costs.smtpCredentials.monthly)}`
     );
   }
 

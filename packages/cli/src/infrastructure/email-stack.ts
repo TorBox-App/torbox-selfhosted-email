@@ -6,6 +6,7 @@ import { createEventBridgeResources } from "./resources/eventbridge.js";
 import { createIAMRole } from "./resources/iam.js";
 import { deployLambdaFunctions } from "./resources/lambda.js";
 import { createSESResources, eventDestinationExists } from "./resources/ses.js";
+import { createSMTPCredentials } from "./resources/smtp-credentials.js";
 import { createSQSResources } from "./resources/sqs.js";
 import { createVercelOIDC } from "./vercel-oidc.js";
 
@@ -175,6 +176,15 @@ export async function deployEmailStack(
     });
   }
 
+  // 10. SMTP credentials (if enabled)
+  let smtpResources;
+  if (emailConfig.smtpCredentials?.enabled && sesResources) {
+    smtpResources = await createSMTPCredentials({
+      configSetName: "wraps-email-tracking",
+      region: config.region,
+    });
+  }
+
   // Return outputs
   return {
     roleArn: role.arn as any as string,
@@ -205,6 +215,13 @@ export async function deployEmailStack(
     archivingEnabled: emailConfig.emailArchiving?.enabled,
     archiveRetention: emailConfig.emailArchiving?.enabled
       ? emailConfig.emailArchiving.retention
+      : undefined,
+    // SMTP credentials (shown once, not stored)
+    smtpUserArn: smtpResources?.iamUser.arn as any as string | undefined,
+    smtpUsername: smtpResources?.accessKey.id as any as string | undefined,
+    smtpPassword: smtpResources?.smtpPassword as any as string | undefined,
+    smtpEndpoint: smtpResources
+      ? `email-smtp.${config.region}.amazonaws.com`
       : undefined,
   };
 }

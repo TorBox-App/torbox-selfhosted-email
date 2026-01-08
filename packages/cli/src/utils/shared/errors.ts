@@ -161,4 +161,21 @@ export const errors = {
       "Upgrade to a toll-free number for production use:\n  wraps sms upgrade --phone-type toll-free",
       "https://wraps.dev/docs/cli-reference"
     ),
+
+  // SMTP-specific errors
+  smtpRequiresSending: () =>
+    new WrapsError(
+      "SMTP credentials require email sending to be enabled",
+      "SMTP_REQUIRES_SENDING",
+      "Enable sending first:\n  wraps email upgrade\nAnd select 'Custom configuration' to enable sending.",
+      "https://wraps.dev/docs/cli-reference"
+    ),
+
+  smtpCredentialsNotFound: () =>
+    new WrapsError(
+      "SMTP credentials not found",
+      "SMTP_CREDENTIALS_NOT_FOUND",
+      "Enable SMTP credentials:\n  wraps email upgrade\nAnd select 'Enable SMTP credentials'",
+      "https://wraps.dev/docs/cli-reference"
+    ),
 };

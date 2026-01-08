@@ -306,6 +306,42 @@ Interactive wizard allows you to add:
   - Required for 50,000+ emails/day
   - Additional AWS charges apply (~$24.95/month)
 
+- **SMTP Credentials** - Generate SMTP username/password for legacy systems
+  - Works with PHP mail(), PHPMailer, WordPress, Nodemailer, and any SMTP client
+  - Creates IAM user with `ses:SendRawEmail` permission (scoped to your config set)
+  - Credentials shown once after creation - save them immediately!
+  - Supports rotation (invalidates old credentials) and disabling
+  - No additional AWS charges (uses existing SES pricing)
+
+  **SMTP Connection Details:**
+  ```
+  Server:     email-smtp.{region}.amazonaws.com
+  Port:       587 (STARTTLS) or 465 (TLS)
+  Encryption: TLS/STARTTLS required
+  ```
+
+  **Example - WordPress (WP Mail SMTP plugin):**
+  ```
+  SMTP Host:     email-smtp.us-east-1.amazonaws.com
+  SMTP Port:     587
+  Encryption:    TLS
+  SMTP Username: (from wraps email upgrade)
+  SMTP Password: (from wraps email upgrade)
+  ```
+
+  **Example - Nodemailer:**
+  ```javascript
+  const transporter = nodemailer.createTransport({
+    host: 'email-smtp.us-east-1.amazonaws.com',
+    port: 587,
+    secure: false, // STARTTLS
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  ```
+
 #### `wraps email restore`
 
 Restore infrastructure from saved metadata.

@@ -231,6 +231,15 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           ? "Regenerate secret or disconnect"
           : "Send events to dashboard for analytics",
       },
+      {
+        value: "smtp-credentials",
+        label: metadata.services.email?.smtpCredentials?.enabled
+          ? "Manage SMTP credentials"
+          : "Enable SMTP credentials",
+        hint: metadata.services.email?.smtpCredentials?.enabled
+          ? "Rotate or disable credentials"
+          : "Generate credentials for PHP, WordPress, etc.",
+      },
     ],
   });
 
@@ -928,6 +937,121 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       newPreset = undefined;
       break;
     }
+
+    case "smtp-credentials": {
+      // Check if already has SMTP credentials
+      if (metadata.services.email?.smtpCredentials?.enabled) {
+        clack.log.info(
+          `SMTP credentials are currently ${pc.green("enabled")} (created ${metadata.services.email.smtpCredentials.createdAt})`
+        );
+
+        const smtpAction = await clack.select({
+          message: "What would you like to do?",
+          options: [
+            {
+              value: "rotate",
+              label: "Rotate credentials",
+              hint: "Generate new credentials (invalidates old ones)",
+            },
+            {
+              value: "disable",
+              label: "Disable SMTP credentials",
+              hint: "Delete IAM user and credentials",
+            },
+            {
+              value: "cancel",
+              label: "Cancel",
+              hint: "Keep current credentials",
+            },
+          ],
+        });
+
+        if (clack.isCancel(smtpAction) || smtpAction === "cancel") {
+          clack.log.info("No changes made.");
+          process.exit(0);
+        }
+
+        if (smtpAction === "disable") {
+          const confirmDisable = await clack.confirm({
+            message:
+              "Are you sure? Any systems using these credentials will stop working immediately.",
+            initialValue: false,
+          });
+
+          if (clack.isCancel(confirmDisable) || !confirmDisable) {
+            clack.log.info("SMTP credentials not disabled.");
+            process.exit(0);
+          }
+
+          // Set enabled to false - Pulumi will delete resources
+          updatedConfig = {
+            ...config,
+            smtpCredentials: { enabled: false },
+          };
+
+          // Clear metadata after deployment will succeed
+          if (metadata.services.email) {
+            metadata.services.email.smtpCredentials = undefined;
+          }
+
+          newPreset = undefined;
+          break;
+        }
+
+        // For rotation, we'll generate new credentials by setting enabled: true
+        // Pulumi will create a new access key
+        clack.log.info(
+          "\nRotating credentials will invalidate your current SMTP password."
+        );
+        clack.log.warn("You will need to update all systems using the old credentials.");
+
+        const confirmRotate = await clack.confirm({
+          message: "Generate new SMTP credentials?",
+          initialValue: false,
+        });
+
+        if (clack.isCancel(confirmRotate) || !confirmRotate) {
+          clack.log.info("Credential rotation cancelled.");
+          process.exit(0);
+        }
+
+        // Continue with rotation
+      }
+
+      // Show info about SMTP
+      clack.log.info(`\n${pc.bold("SMTP Credentials for Legacy Systems")}\n`);
+      clack.log.info(pc.dim("Generate SMTP username/password that works with:"));
+      clack.log.info(pc.dim("  - PHP mail() and PHPMailer"));
+      clack.log.info(pc.dim("  - WordPress (WP Mail SMTP plugin)"));
+      clack.log.info(pc.dim("  - Nodemailer and other SMTP libraries"));
+      clack.log.info(pc.dim("  - Any SMTP-compatible email client"));
+      console.log("");
+
+      clack.log.warn(
+        "Credentials will be shown ONCE after deployment - save them immediately!"
+      );
+      console.log("");
+
+      const confirmCreate = await clack.confirm({
+        message: "Create SMTP credentials?",
+        initialValue: true,
+      });
+
+      if (clack.isCancel(confirmCreate) || !confirmCreate) {
+        clack.log.info("SMTP credentials not created.");
+        process.exit(0);
+      }
+
+      updatedConfig = {
+        ...config,
+        smtpCredentials: {
+          enabled: true,
+          createdAt: new Date().toISOString(),
+        },
+      };
+      newPreset = undefined;
+      break;
+    }
   }
 
   // 8. Show cost comparison
@@ -1121,6 +1245,11 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
                   archiveArn: result.archiveArn,
                   archivingEnabled: result.archivingEnabled,
                   archiveRetention: result.archiveRetention,
+                  // SMTP credentials (shown once)
+                  smtpUserArn: result.smtpUserArn,
+                  smtpUsername: result.smtpUsername,
+                  smtpPassword: result.smtpPassword,
+                  smtpEndpoint: result.smtpEndpoint,
                 };
               },
             },
@@ -1180,6 +1309,11 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           archiveRetention: pulumiOutputs.archiveRetention?.value as
             | string
             | undefined,
+          // SMTP credentials (shown once)
+          smtpUserArn: pulumiOutputs.smtpUserArn?.value as string | undefined,
+          smtpUsername: pulumiOutputs.smtpUsername?.value as string | undefined,
+          smtpPassword: pulumiOutputs.smtpPassword?.value as string | undefined,
+          smtpEndpoint: pulumiOutputs.smtpEndpoint?.value as string | undefined,
         };
       }
     );
@@ -1365,6 +1499,41 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     );
   }
 
+  // Show SMTP credentials if enabled
+  if (
+    upgradeAction === "smtp-credentials" &&
+    outputs.smtpUsername &&
+    outputs.smtpPassword
+  ) {
+    console.log(pc.bold("\n📧 SMTP Connection Details\n"));
+
+    console.log(`  ${pc.cyan("Server:")}     ${outputs.smtpEndpoint}`);
+    console.log(`  ${pc.cyan("Port:")}       587 (STARTTLS) or 465 (TLS)`);
+    console.log(`  ${pc.cyan("Username:")}   ${outputs.smtpUsername}`);
+    console.log(`  ${pc.cyan("Password:")}   ${outputs.smtpPassword}`);
+    console.log(`  ${pc.cyan("Encryption:")} TLS/STARTTLS required\n`);
+
+    console.log(pc.yellow("⚠️  IMPORTANT: Save these credentials NOW!"));
+    console.log(pc.yellow("   They cannot be retrieved later.\n"));
+
+    // Show as copiable env vars
+    console.log(pc.bold("  Environment Variables:\n"));
+    console.log(pc.dim(`  SMTP_HOST=${outputs.smtpEndpoint}`));
+    console.log(pc.dim(`  SMTP_PORT=587`));
+    console.log(pc.dim(`  SMTP_USER=${outputs.smtpUsername}`));
+    console.log(pc.dim(`  SMTP_PASS=${outputs.smtpPassword}\n`));
+
+    // Update metadata with SMTP credentials info (not the actual credentials)
+    if (metadata.services.email && outputs.smtpUserArn) {
+      metadata.services.email.smtpCredentials = {
+        enabled: true,
+        iamUserArn: outputs.smtpUserArn,
+        createdAt: new Date().toISOString(),
+      };
+      await saveConnectionMetadata(metadata);
+    }
+  }
+
   // 16. Track successful upgrade
   const enabledFeatures: string[] = [];
   if (updatedConfig.tracking?.enabled) {
@@ -1384,6 +1553,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   }
   if (updatedConfig.emailArchiving?.enabled) {
     enabledFeatures.push("email_archiving");
+  }
+  if (updatedConfig.smtpCredentials?.enabled) {
+    enabledFeatures.push("smtp_credentials");
   }
 
   trackServiceUpgrade("email", {

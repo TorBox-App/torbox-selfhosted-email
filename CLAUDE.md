@@ -422,7 +422,7 @@ Comprehensive domain management commands for AWS SES:
 - Prompts for additional features to enable
 - Deploys new resources incrementally
 - Updates IAM policies as needed
-- Options: upgrade preset, add custom tracking domain, change retention, enable dedicated IP
+- Options: upgrade preset, add custom tracking domain, change retention, enable dedicated IP, enable SMTP credentials
 
 #### 7. `wraps email restore` - Restore from Metadata
 - Restores email infrastructure from saved metadata
