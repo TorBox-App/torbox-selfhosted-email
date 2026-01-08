@@ -1,3 +1,5 @@
+import posthog from 'posthog-js';
+
 /**
  * Analytics utility for Google Tag Manager integration
  * Uses environment variables to conditionally load GTM in production
@@ -73,6 +75,13 @@ export const trackEvent = (
     event: eventName,
     ...parameters,
   });
+
+  // Send event to PostHog
+  try {
+    posthog.capture(eventName, parameters);
+  } catch {
+    // ignore if PostHog not initialized
+  }
 };
 
 /**
@@ -85,10 +94,21 @@ export const trackPageView = (path: string, title?: string): void => {
     return;
   }
 
+  const pageTitle = title || document.title;
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
     event: "page_view",
     page_path: path,
-    page_title: title || document.title,
+    page_title: pageTitle,
   });
+
+  // Send pageview to PostHog
+  try {
+    posthog.capture('$pageview', {
+      page_path: path,
+      page_title: pageTitle,
+    });
+  } catch {
+    // ignore if PostHog not initialized
+  }
 };
