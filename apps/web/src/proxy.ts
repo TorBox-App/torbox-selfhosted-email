@@ -13,6 +13,11 @@ const publicRoutes = [
   "/docs", // Documentation (if public)
   "/pricing", // Pricing page (if exists)
   "/about", // About page (if exists)
+  "/ingest", // PostHog ingest
+  "/ingest/static", // PostHog ingest static
+  "/ingest/static/:path*", // PostHog ingest static
+  "/ingest/:path*", // PostHog ingest
+  "/ingest/static/:path*", // PostHog ingest static
 ];
 
 // Auth routes that should redirect authenticated users to dashboard

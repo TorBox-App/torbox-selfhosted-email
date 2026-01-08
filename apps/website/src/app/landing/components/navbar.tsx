@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
@@ -30,13 +30,13 @@ const navigationItems = [
   { name: "Home", href: "/" },
   {
     name: "Products",
-    href: "#features",
+    href: "/#features",
     hasSubmenu: true,
     submenuType: "features",
   },
   { name: "Docs", href: "/docs", hasSubmenu: true, submenuType: "docs" },
   { name: "Blog", href: "/blog" },
-  { name: "Pricing", href: "#pricing" },
+  { name: "Pricing", href: "/#pricing" },
   { name: "SMS", href: "/sms", badge: "Soon" },
 ];
 
@@ -80,24 +80,46 @@ const docsItems = [
   },
 ];
 
-// Smooth scroll function
+// Smooth scroll function - only works when element exists on page
 const smoothScrollTo = (targetId: string) => {
-  if (targetId.startsWith("#")) {
-    const element = document.querySelector(targetId);
+  const hash = targetId.startsWith("/#") ? targetId.slice(1) : targetId;
+  if (hash.startsWith("#")) {
+    const element = document.querySelector(hash);
     if (element) {
       element.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
+      return true;
     }
   }
+  return false;
 };
+
+// Check if href is a hash link (starts with # or /#)
+const isHashLink = (href: string) =>
+  href.startsWith("#") || href.startsWith("/#");
 
 export function LandingNavbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const { setTheme, theme } = useTheme();
+
+  // Handle hash scrolling on page load (for navigation from other pages)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      // Small delay to ensure the page has rendered
+      const timeoutId = setTimeout(() => {
+        const element = document.querySelector(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/60">
@@ -185,12 +207,14 @@ export function LandingNavbar() {
                 ) : (
                   <NavigationMenuLink
                     className="group inline-flex h-10 w-max cursor-pointer items-center justify-center px-4 py-2 font-medium text-sm transition-colors hover:text-primary focus:text-primary focus:outline-none"
+                    href={item.href}
                     onClick={(e) => {
-                      e.preventDefault();
-                      if (item.href.startsWith("#")) {
-                        smoothScrollTo(item.href);
-                      } else {
-                        window.location.href = item.href;
+                      if (isHashLink(item.href)) {
+                        // Try smooth scroll first (works if element exists on page)
+                        if (smoothScrollTo(item.href)) {
+                          e.preventDefault();
+                        }
+                        // Otherwise let browser navigate to /#hash
                       }
                     }}
                   >
@@ -387,9 +411,18 @@ export function LandingNavbar() {
                           href={item.href}
                           onClick={(e) => {
                             setIsOpen(false);
-                            if (item.href.startsWith("#")) {
-                              e.preventDefault();
-                              setTimeout(() => smoothScrollTo(item.href), 100);
+                            if (isHashLink(item.href)) {
+                              // Check if element exists on current page
+                              const hash = item.href.startsWith("/#")
+                                ? item.href.slice(1)
+                                : item.href;
+                              const element = document.querySelector(hash);
+                              if (element) {
+                                // Element exists, smooth scroll after menu closes
+                                e.preventDefault();
+                                setTimeout(() => smoothScrollTo(item.href), 100);
+                              }
+                              // Otherwise let browser navigate to /#hash
                             }
                           }}
                         >

@@ -10,7 +10,7 @@ const footerLinks = {
   product: [
     { name: "CLI & SDK", href: "/cli" },
     { name: "Platform", href: "/platform" },
-    { name: "Pricing", href: "#pricing" },
+    { name: "Pricing", href: "/#pricing" },
   ],
   developers: [
     { name: "Documentation", href: "/docs" },
