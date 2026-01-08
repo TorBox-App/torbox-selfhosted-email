@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
       <article className="prose prose-gray dark:prose-invert max-w-none">
         <h1>Privacy Policy</h1>
         <p className="text-muted-foreground">
-          <strong>Last Updated:</strong> December 22, 2025
+          <strong>Last Updated:</strong> January 8, 2026
         </p>
 
         <p className="lead">
@@ -72,15 +72,48 @@ export default function PrivacyPolicy() {
           <li>Any personally identifiable information (PII)</li>
         </ul>
 
-        <h3>1.2 Dashboard Usage Data</h3>
-        <p>When you use the Wraps Platform (if applicable), we may collect:</p>
+        <h3>1.2 Dashboard & Website Analytics</h3>
+        <p>
+          When you use the Wraps Dashboard or visit our website, we use{" "}
+          <strong>PostHog</strong> to collect analytics data. This helps us
+          understand how our product is used and improve your experience.
+        </p>
+
+        <p>
+          <strong>We collect:</strong>
+        </p>
         <ul>
-          <li>Email address (for authentication)</li>
+          <li>Email address (for authentication and user identification)</li>
           <li>Organization name</li>
           <li>AWS account connections (account IDs are hashed)</li>
-          <li>Usage metrics and analytics</li>
-          <li>Browser type and version</li>
-          <li>Pages visited and features used</li>
+          <li>Pages visited and navigation patterns</li>
+          <li>Feature usage and interactions</li>
+          <li>Browser type, version, and screen size</li>
+          <li>Referral source (how you found us)</li>
+          <li>Country/region (derived from IP, IP is not stored)</li>
+        </ul>
+
+        <p>
+          <strong>Events we track include:</strong>
+        </p>
+        <ul>
+          <li>Sign-in and sign-up events (authentication method used)</li>
+          <li>Organization creation and team invitations</li>
+          <li>Email template creation and broadcast scheduling</li>
+          <li>Subscription upgrades and plan changes</li>
+          <li>AWS account connections</li>
+          <li>Feature adoption and usage patterns</li>
+        </ul>
+
+        <p>
+          <strong>We DO NOT collect:</strong>
+        </p>
+        <ul>
+          <li>Email content or template body text</li>
+          <li>Recipient email addresses</li>
+          <li>AWS credentials or secret keys</li>
+          <li>Session recordings or screen captures</li>
+          <li>Keystrokes or form field contents (except authentication)</li>
         </ul>
 
         <h3>1.3 Infrastructure Metadata</h3>
@@ -129,17 +162,57 @@ export default function PrivacyPolicy() {
 
         <ul>
           <li>
-            <strong>PostHog</strong> - Anonymous analytics and telemetry
-            processing
+            <strong>PostHog</strong> (
+            <a
+              className="text-primary"
+              href="https://posthog.com/privacy"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Privacy Policy
+            </a>
+            ) - Product analytics across CLI, web dashboard, and marketing
+            website. PostHog is an open-source analytics platform. We use
+            PostHog Cloud hosted in the US. Data collected includes usage
+            patterns, feature interactions, and anonymous telemetry. PostHog
+            processes this data on our behalf and does not use it for their own
+            purposes.
           </li>
           <li>
-            <strong>Vercel</strong> - Website and API hosting
+            <strong>Vercel</strong> (
+            <a
+              className="text-primary"
+              href="https://vercel.com/legal/privacy-policy"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Privacy Policy
+            </a>
+            ) - Website and API hosting
           </li>
           <li>
-            <strong>AWS</strong> - Infrastructure deployment (in your account)
+            <strong>AWS</strong> (
+            <a
+              className="text-primary"
+              href="https://aws.amazon.com/privacy/"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Privacy Policy
+            </a>
+            ) - Infrastructure deployment (in your account)
           </li>
           <li>
-            <strong>Stripe</strong> - Payment processing (if applicable)
+            <strong>Stripe</strong> (
+            <a
+              className="text-primary"
+              href="https://stripe.com/privacy"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Privacy Policy
+            </a>
+            ) - Payment processing
           </li>
         </ul>
 
@@ -201,7 +274,39 @@ export DO_NOT_TRACK=1`}
           for more details.
         </p>
 
-        <h3>5.2 Access Your Data</h3>
+        <h3>5.2 Opt-Out of Web Analytics</h3>
+        <p>
+          For the web dashboard and website, you can opt out of PostHog
+          analytics:
+        </p>
+        <ul>
+          <li>
+            <strong>Browser setting:</strong> Enable "Do Not Track" in your
+            browser settings
+          </li>
+          <li>
+            <strong>Ad blockers:</strong> Most ad blockers will block PostHog
+            tracking
+          </li>
+          <li>
+            <strong>PostHog opt-out:</strong> Visit{" "}
+            <a
+              className="text-primary"
+              href="https://posthog.com/privacy"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              PostHog's privacy page
+            </a>{" "}
+            to opt out globally
+          </li>
+        </ul>
+        <p>
+          Note: Opting out of analytics does not affect your ability to use
+          Wraps. Core functionality works without analytics enabled.
+        </p>
+
+        <h3>5.3 Access Your Data</h3>
         <p>
           You have the right to request a copy of your personal data. Contact us
           at{" "}
@@ -211,7 +316,7 @@ export DO_NOT_TRACK=1`}
           .
         </p>
 
-        <h3>5.3 Delete Your Data</h3>
+        <h3>5.4 Delete Your Data</h3>
         <p>
           You can request deletion of your data at any time by contacting{" "}
           <a className="text-primary" href="mailto:privacy@wraps.dev">
