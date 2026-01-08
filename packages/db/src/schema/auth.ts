@@ -147,7 +147,9 @@ export const statement = pgTable("statement", {
 export const subscription = pgTable("subscription", {
   id: text("id").primaryKey(),
   plan: text("plan").notNull(),
-  referenceId: text("reference_id").notNull(), // Organization ID or User ID
+  referenceId: text("reference_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   status: text("status").notNull(), // 'active' | 'trialing' | 'canceled' | 'past_due' etc.
@@ -237,6 +239,11 @@ export const statementRelations = relations(statement, ({ one }) => ({
 }));
 
 export const subscriptionRelations = relations(subscription, ({ one }) => ({
-  // Note: referenceId can point to either user or organization
-  // The application logic determines which one based on context
+  // referenceId points to organization ID for org subscriptions
+  organization: one(organization, {
+    fields: [subscription.referenceId],
+    references: [organization.id],
+  }),
 }));
+
+// Note: organizationRelations is defined in app.ts with all relations (extension, awsAccounts, etc.)

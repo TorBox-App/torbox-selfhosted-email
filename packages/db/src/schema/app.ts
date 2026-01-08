@@ -8,7 +8,14 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { member, organization, user } from "./auth";
+import {
+  invitation,
+  member,
+  organization,
+  statement,
+  subscription,
+  user,
+} from "./auth";
 import { contact, topic } from "./contacts";
 
 // Organization extension for usage tracking and onboarding
@@ -222,8 +229,13 @@ export const organizationExtensionRelations = relations(
 export const organizationRelations = relations(
   organization,
   ({ one, many }) => ({
-    extension: one(organizationExtension),
+    // From auth.ts - base relations
     members: many(member),
+    invitations: many(invitation),
+    statements: many(statement),
+    subscriptions: many(subscription),
+    // App-specific relations
+    extension: one(organizationExtension),
     awsAccounts: many(awsAccount),
     emailTemplates: many(emailTemplate),
     apiKeys: many(apiKey),
