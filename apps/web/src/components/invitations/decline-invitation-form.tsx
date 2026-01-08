@@ -2,6 +2,7 @@
 
 import { AlertCircle, Building2, Mail, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { InvitationDetails } from "@/actions/invitations";
@@ -33,6 +34,12 @@ export function DeclineInvitationForm({
     const result = await declineInvitation(invitationId);
 
     if (result.success) {
+      // Capture invitation declined event in PostHog
+      posthog.capture("invitation_declined", {
+        organization_name: invitation.organization.name,
+        inviter_email: invitation.inviter.email,
+      });
+
       toast.success(result.message);
       // Redirect to a confirmation page after a short delay
       setTimeout(() => {

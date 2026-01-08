@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
 import { inviteMember } from "@/actions/members";
@@ -51,6 +52,13 @@ export function InviteMemberDialog({
     const result = await inviteMember(email, role, organizationId);
 
     if (result.success) {
+      // Capture invitation sent event in PostHog
+      posthog.capture("invitation_sent", {
+        invited_email: email,
+        role: role,
+        organization_id: organizationId,
+      });
+
       toast.success(`Invitation sent to ${email}`);
       setEmail("");
       setRole("member");

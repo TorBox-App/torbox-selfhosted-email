@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles, Zap } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
@@ -78,6 +79,16 @@ export default function UpgradePage() {
     }
 
     setIsLoading(true);
+
+    // Capture subscription checkout started event in PostHog
+    posthog.capture("subscription_checkout_started", {
+      plan_id: selectedPlan,
+      plan_name: PLANS[selectedPlan].name,
+      plan_price: getDisplayPrice(PLANS[selectedPlan]),
+      organization_id: organization.id,
+      organization_slug: orgSlug,
+      has_early_adopter_pricing: hasEarlyAdopterPricing(PLANS[selectedPlan]),
+    });
 
     try {
       const result = await authClient.subscription.upgrade({

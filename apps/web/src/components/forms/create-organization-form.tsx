@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { createOrganizationAction } from "@/actions/organizations";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,12 @@ export function CreateOrganizationForm({
       });
 
       if (result.success) {
+        // Capture organization created event in PostHog
+        posthog.capture("organization_created", {
+          organization_name: name,
+          organization_slug: result.organization.slug,
+        });
+
         // Success! Redirect to the new organization's onboarding
         if (onSuccess) {
           onSuccess(result.organization.slug);

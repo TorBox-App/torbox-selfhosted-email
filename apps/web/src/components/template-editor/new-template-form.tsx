@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,14 @@ export function NewTemplateForm({ orgSlug }: NewTemplateFormProps) {
     const template = await createTemplate.mutateAsync({
       name: values.name,
       description: values.description,
+    });
+
+    // Capture template created event in PostHog
+    posthog.capture("template_created", {
+      template_id: template.id,
+      template_name: values.name,
+      has_description: !!values.description,
+      organization_slug: orgSlug,
     });
 
     router.push(`/${orgSlug}/emails/templates/${template.id}`);

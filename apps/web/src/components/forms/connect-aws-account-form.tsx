@@ -4,6 +4,7 @@ import { mergeForm, useForm } from "@tanstack/react-form";
 import { initialFormState, useTransform } from "@tanstack/react-form-nextjs";
 import { useStore } from "@tanstack/react-store";
 import { AlertCircle, CheckCircle, Copy, ExternalLink } from "lucide-react";
+import posthog from "posthog-js";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { connectAWSAccountAction } from "@/actions/aws-accounts";
@@ -123,6 +124,12 @@ export function ConnectAWSAccountForm({
 
   // Handle success callback
   if (isSuccess) {
+    // Capture AWS account connected event in PostHog
+    posthog.capture("aws_account_connected", {
+      organization_id: organizationId,
+      region: form.getFieldValue("region") || "us-east-1",
+    });
+
     // Clear the saved External ID from localStorage on success
     const storageKey = `wraps-external-id-${organizationId}`;
     if (typeof window !== "undefined") {

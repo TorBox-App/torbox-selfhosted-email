@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import z from "zod";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,16 @@ export default function SignInForm({
               toast.info("Please enter your 2FA code");
               return;
             }
+
+            // Identify user and capture sign-in event in PostHog
+            posthog.identify(value.email, {
+              email: value.email,
+            });
+            posthog.capture("user_signed_in", {
+              email: value.email,
+              method: "email",
+            });
+
             router.push(redirectTo);
             toast.success("Sign in successful");
           },
@@ -92,6 +103,11 @@ export default function SignInForm({
         toast.error(result.error.message || "Invalid 2FA code");
         return;
       }
+
+      // Capture 2FA verification event in PostHog
+      posthog.capture("two_factor_verified", {
+        method: "totp",
+      });
 
       router.push(redirectTo);
       toast.success("Sign in successful");
@@ -290,6 +306,11 @@ export default function SignInForm({
                       );
                       return;
                     }
+
+                    // Capture passkey sign-in event in PostHog
+                    posthog.capture("passkey_sign_in", {
+                      method: "passkey",
+                    });
 
                     router.push(redirectTo);
                     toast.success("Signed in with passkey");

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -413,6 +414,19 @@ export function BatchForm({
 
         if (result.success) {
           const isScheduled = result.batch.status === "scheduled";
+
+          // Capture broadcast sent event in PostHog
+          posthog.capture("broadcast_sent", {
+            broadcast_id: result.batch.id,
+            broadcast_name: campaignData.name || null,
+            recipient_count: result.batch.totalRecipients,
+            content_type: campaignData.contentType,
+            audience_type: campaignData.audienceType,
+            is_scheduled: isScheduled,
+            organization_id: organizationId,
+            organization_slug: orgSlug,
+          });
+
           toast.success(
             isScheduled ? "Broadcast scheduled" : "Broadcast created",
             {

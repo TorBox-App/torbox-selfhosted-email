@@ -2,6 +2,7 @@
 
 import { Building2, CheckCircle2, Mail, Shield, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { InvitationDetails } from "@/actions/invitations";
@@ -43,6 +44,14 @@ export function AcceptInvitationForm({
     const result = await acceptInvitation(invitationId);
 
     if (result.success) {
+      // Capture invitation accepted event in PostHog
+      posthog.capture("invitation_accepted", {
+        organization_name: invitation.organization.name,
+        organization_slug: result.organizationSlug,
+        role: invitation.role || "member",
+        inviter_email: invitation.inviter.email,
+      });
+
       toast.success(result.message);
       router.push(`/${result.organizationSlug}`);
     } else {

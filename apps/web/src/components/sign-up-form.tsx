@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import z from "zod";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
@@ -65,7 +66,18 @@ export default function SignUpForm({
         return;
       }
 
-      // Step 3: Redirect to onboarding to create organization
+      // Step 3: Identify user and capture signup event in PostHog
+      posthog.identify(value.email, {
+        email: value.email,
+        name: value.name,
+      });
+      posthog.capture("user_signed_up", {
+        email: value.email,
+        name: value.name,
+        selected_plan: plan || null,
+      });
+
+      // Step 4: Redirect to onboarding to create organization
       toast.success("Account created successfully!");
       const onboardingUrl = plan ? `/onboarding?plan=${plan}` : "/onboarding";
       router.push(onboardingUrl);

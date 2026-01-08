@@ -82,8 +82,8 @@ function generateMetaHtml(
   <meta property="og:url" content="${fullUrl}">
   <meta property="og:image" content="${meta.image}">
   <meta property="og:image:alt" content="${meta.title}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  <meta property="og:image:width" content="800">
+  <meta property="og:image:height" content="421">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
