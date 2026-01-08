@@ -2,9 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowUpIcon,
   CheckCircle2Icon,
   CreditCardIcon,
+  ExternalLinkIcon,
   ZapIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -46,7 +46,6 @@ export function OrganizationSettingsBilling({
   const queryClient = useQueryClient();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  // Only owners and admins can manage billing
   const canManageBilling = userRole === "owner" || userRole === "admin";
 
   // Get subscriptions for this organization
@@ -57,15 +56,54 @@ export function OrganizationSettingsBilling({
         return [];
       }
       return authClient.subscription.list({
-        query: {
-          referenceId: organization.id,
-        },
+        query: { referenceId: organization.id },
       });
     },
     enabled: !!organization.id,
   });
 
-  // Cancel subscription mutation
+  // Find active subscription
+  const activeSubscription = (subscriptions as any)?.data?.find(
+    (sub: { status: string }) =>
+      sub.status === "active" || sub.status === "trialing"
+  );
+
+  const currentPlan = (activeSubscription?.plan || "starter") as PlanId;
+  const planConfig = PLANS[currentPlan] || PLANS.starter;
+  const isTrialing = activeSubscription?.status === "trialing";
+  const isCancelled = activeSubscription?.cancelAtPeriodEnd === true;
+
+  // Mutations
+  const billingPortalMutation = useMutation({
+    mutationFn: async () =>
+      authClient.subscription.billingPortal({
+        referenceId: organization.id,
+        returnUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
+      }),
+    onSuccess: (result) => {
+      if (result.data?.url) {
+        window.location.href = result.data.url;
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to open billing portal");
+    },
+  });
+
+  const upgradeMutation = useMutation({
+    mutationFn: async (plan: string) => {
+      return authClient.subscription.upgrade({
+        plan,
+        referenceId: organization.id,
+        successUrl: `${window.location.origin}/${organization.slug}/settings/billing?subscribed=true`,
+        cancelUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to upgrade subscription");
+    },
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async (subscriptionId: string) =>
       authClient.subscription.cancel({
@@ -85,7 +123,6 @@ export function OrganizationSettingsBilling({
     },
   });
 
-  // Restore subscription mutation
   const restoreMutation = useMutation({
     mutationFn: async (subscriptionId: string) =>
       authClient.subscription.restore({
@@ -103,278 +140,185 @@ export function OrganizationSettingsBilling({
     },
   });
 
-  // Upgrade subscription mutation
-  const upgradeMutation = useMutation({
-    mutationFn: async (plan: string) => {
-      // Don't pass subscriptionId - let the plugin find the subscription by referenceId
-      return authClient.subscription.upgrade({
-        plan,
-        referenceId: organization.id,
-        successUrl: `${window.location.origin}/${organization.slug}/settings/billing?subscribed=true`,
-        cancelUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
-      });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to upgrade subscription");
-    },
-  });
-
   if (loadingSubscriptions) {
     return <Loader />;
   }
 
-  const activeSubscription = (subscriptions as any)?.data?.[0];
-  const currentPlan = (activeSubscription?.plan || "starter") as PlanId;
-  const planConfig = PLANS[currentPlan] || PLANS.starter;
-  const isTrialing = activeSubscription?.status === "trialing";
-  const isCancelled = activeSubscription?.cancelAtPeriodEnd === true;
   const trialEndsAt = activeSubscription?.trialEnd
     ? new Date(activeSubscription.trialEnd)
     : null;
 
-  const handleCancelClick = () => {
-    if (!canManageBilling) {
-      toast.error("Only organization owners and admins can manage billing");
-      return;
-    }
-
-    if (!activeSubscription?.id) {
-      toast.error("No active subscription to cancel");
-      return;
-    }
-
-    setShowCancelDialog(true);
-  };
-
-  const handleConfirmCancel = () => {
-    if (activeSubscription?.id) {
-      cancelMutation.mutate(activeSubscription.id);
-    }
-  };
-
-  const handleBillingPortal = async () => {
-    if (!canManageBilling) {
-      toast.error("Only organization owners and admins can manage billing");
-      return;
-    }
-
-    try {
-      const { data, error } = await authClient.subscription.billingPortal({
-        referenceId: organization.id,
-        returnUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
-      });
-
-      if (error) {
-        toast.error(error.message || "Failed to open billing portal");
-        return;
-      }
-
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to open billing portal"
-      );
-    }
-  };
-
-  const handleRestore = () => {
-    if (!canManageBilling) {
-      toast.error("Only organization owners and admins can manage billing");
-      return;
-    }
-
-    if (!activeSubscription?.id) {
-      toast.error("No subscription to restore");
-      return;
-    }
-
-    restoreMutation.mutate(activeSubscription.id);
-  };
-
-  const handleUpgrade = (plan: string) => {
-    if (!canManageBilling) {
-      toast.error("Only organization owners and admins can manage billing");
-      return;
-    }
-
-    upgradeMutation.mutate(plan);
-  };
+  const periodEndsAt = activeSubscription?.periodEnd
+    ? new Date(activeSubscription.periodEnd)
+    : null;
 
   return (
     <div className="space-y-6">
-      {/* Current Plan */}
+      {/* Current Plan Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Current Plan</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Current Plan
+                {isTrialing && <Badge variant="secondary">Free Trial</Badge>}
+                {isCancelled && <Badge variant="destructive">Cancelling</Badge>}
+              </CardTitle>
               <CardDescription>
-                Manage your organization's subscription
+                {isTrialing && trialEndsAt
+                  ? `Your trial ends on ${trialEndsAt.toLocaleDateString()}`
+                  : isCancelled && periodEndsAt
+                    ? `Access ends on ${periodEndsAt.toLocaleDateString()}`
+                    : "You're currently on this plan"}
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge
-                className="capitalize"
-                variant={currentPlan === "starter" ? "default" : "secondary"}
-              >
-                {planConfig.name}
-              </Badge>
-              {isTrialing && <Badge variant="secondary">Trial</Badge>}
-              {isCancelled && <Badge variant="destructive">Cancelling</Badge>}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isTrialing && trialEndsAt && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
-              <p className="text-blue-900 text-sm dark:text-blue-100">
-                <strong>Trial Period:</strong> Your trial ends on{" "}
-                {trialEndsAt.toLocaleDateString()}. You won't be charged until
-                then.
-              </p>
-            </div>
-          )}
-
-          <div className="flex items-baseline gap-2">
-            <span className="font-bold text-3xl">${planConfig.price}</span>
-            <span className="text-muted-foreground">{planConfig.period}</span>
-          </div>
-
-          <div>
-            <h3 className="mb-3 font-semibold">Plan Benefits</h3>
-            <ul className="space-y-2">
-              {planConfig.featureList.map((feature) => (
-                <li className="flex items-start gap-2 text-sm" key={feature}>
-                  <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-primary" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {activeSubscription && (
-            <div className="space-y-2 border-t pt-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
-                <span className="font-medium capitalize">
-                  {activeSubscription.status}
-                </span>
-              </div>
-              {activeSubscription.currentPeriodEnd && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {isCancelled
-                      ? "Access ends on"
-                      : isTrialing
-                        ? "Trial ends"
-                        : "Renews on"}
-                  </span>
-                  <span className="font-medium">
-                    {new Date(
-                      activeSubscription.currentPeriodEnd
-                    ).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Billing Portal Button */}
-          {activeSubscription && (
-            <div className="border-t pt-4">
+            {activeSubscription && canManageBilling && (
               <Button
-                className="w-full"
-                disabled={!canManageBilling}
-                onClick={handleBillingPortal}
+                onClick={() => billingPortalMutation.mutate()}
+                loading={billingPortalMutation.isPending}
                 variant="outline"
               >
                 <CreditCardIcon className="mr-2 size-4" />
-                Manage Billing & Payments
+                Manage Billing
+                <ExternalLinkIcon className="ml-2 size-4" />
               </Button>
-              {!canManageBilling && (
-                <p className="mt-2 text-center text-muted-foreground text-xs">
-                  Only organization owners and admins can manage billing
-                </p>
-              )}
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-baseline gap-2">
+            <span className="font-bold text-4xl">{planConfig.name}</span>
+            {planConfig.price !== null && planConfig.price > 0 && (
+              <span className="text-muted-foreground">
+                ${planConfig.price}
+                {planConfig.period}
+              </span>
+            )}
+          </div>
+
+          <ul className="space-y-2">
+            {planConfig.featureList.map((feature) => (
+              <li className="flex items-start gap-2 text-sm" key={feature}>
+                <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+
+          {isCancelled && periodEndsAt && (
+            <div className="flex items-center justify-between rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                Your subscription will end on {periodEndsAt.toLocaleDateString()}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => restoreMutation.mutate(activeSubscription.id)}
+                loading={restoreMutation.isPending}
+                disabled={!canManageBilling}
+              >
+                Restore
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Restore Subscription Card */}
-      {isCancelled && (
-        <Card className="border-primary">
+      {/* Upgrade Options */}
+      {!isCancelled && currentPlan !== "growth" && (
+        <Card>
           <CardHeader>
-            <CardTitle>Restore Your Subscription</CardTitle>
+            <CardTitle>Upgrade Your Plan</CardTitle>
             <CardDescription>
-              Changed your mind? You can reactivate your subscription before it
-              ends.
+              Unlock more features and increase your limits
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm">
-              Your subscription is set to cancel on{" "}
-              {activeSubscription?.currentPeriodEnd &&
-                new Date(
-                  activeSubscription.currentPeriodEnd
-                ).toLocaleDateString()}
-              . Click below to restore access and continue your plan.
-            </p>
-            <Button
-              className="w-full"
-              disabled={!canManageBilling || restoreMutation.isPending}
-              onClick={handleRestore}
-            >
-              {restoreMutation.isPending
-                ? "Restoring..."
-                : "Restore Subscription"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Pro Plan */}
+              {currentPlan === "starter" && (
+                <div className="space-y-4 rounded-lg border p-6">
+                  <div>
+                    <h3 className="font-semibold text-lg">{PLANS.pro.name}</h3>
+                    <div className="mt-2 flex items-baseline gap-1">
+                      <span className="font-bold text-3xl">
+                        ${PLANS.pro.price}
+                      </span>
+                      <span className="text-muted-foreground text-sm">
+                        {PLANS.pro.period}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground text-sm">
+                      {PLANS.pro.description}
+                    </p>
+                  </div>
 
-      {/* Upgrade Option - Starter to Pro */}
-      {currentPlan === "starter" && !isCancelled && (
-        <Card className="border-primary">
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <ArrowUpIcon className="size-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <CardTitle>Upgrade to Pro</CardTitle>
-                <CardDescription>{PLANS.pro.description}</CardDescription>
+                  <ul className="space-y-2">
+                    {PLANS.pro.featureList.slice(0, 4).map((feature) => (
+                      <li
+                        className="flex items-start gap-2 text-sm"
+                        key={feature}
+                      >
+                        <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    className="w-full"
+                    onClick={() => upgradeMutation.mutate("pro")}
+                    loading={upgradeMutation.isPending}
+                    disabled={!canManageBilling}
+                  >
+                    Upgrade to Pro
+                  </Button>
+                </div>
+              )}
+
+              {/* Growth Plan */}
+              <div className="space-y-4 rounded-lg border p-6">
+                <div>
+                  <h3 className="font-semibold text-lg">{PLANS.growth.name}</h3>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="font-bold text-3xl">
+                      ${PLANS.growth.price}
+                    </span>
+                    <span className="text-muted-foreground text-sm">
+                      {PLANS.growth.period}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-muted-foreground text-sm">
+                    {PLANS.growth.description}
+                  </p>
+                </div>
+
+                <ul className="space-y-2">
+                  {PLANS.growth.featureList.slice(0, 4).map((feature) => (
+                    <li
+                      className="flex items-start gap-2 text-sm"
+                      key={feature}
+                    >
+                      <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className="w-full"
+                  variant={currentPlan === "starter" ? "outline" : "default"}
+                  onClick={() => upgradeMutation.mutate("growth")}
+                  loading={upgradeMutation.isPending}
+                  disabled={!canManageBilling}
+                >
+                  Upgrade to Growth
+                </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline gap-1">
-              <span className="font-bold text-3xl">${PLANS.pro.price}</span>
-              <span className="text-muted-foreground">{PLANS.pro.period}</span>
-            </div>
-
-            <ul className="space-y-2">
-              {PLANS.pro.featureList.map((feature) => (
-                <li className="flex items-start gap-2 text-sm" key={feature}>
-                  <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-primary" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Button
-              className="w-full"
-              disabled={!canManageBilling || upgradeMutation.isPending}
-              onClick={() => handleUpgrade("pro")}
-              size="lg"
-            >
-              {upgradeMutation.isPending ? "Upgrading..." : "Upgrade to Pro"}
-            </Button>
 
             {!canManageBilling && (
-              <p className="text-center text-muted-foreground text-xs">
+              <p className="mt-4 text-center text-muted-foreground text-xs">
                 Only organization owners and admins can manage billing
               </p>
             )}
@@ -382,196 +326,81 @@ export function OrganizationSettingsBilling({
         </Card>
       )}
 
-      {/* Upgrade Option - Pro to Growth */}
-      {currentPlan === "pro" && !isCancelled && (
-        <Card className="border-primary">
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <ArrowUpIcon className="size-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <CardTitle>Upgrade to Growth</CardTitle>
-                <CardDescription>{PLANS.growth.description}</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline gap-1">
-              <span className="font-bold text-3xl">${PLANS.growth.price}</span>
-              <span className="text-muted-foreground">
-                {PLANS.growth.period}
-              </span>
-            </div>
+      {/* AWS Infrastructure Costs */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ZapIcon className="size-5 text-primary" />
+            <CardTitle>AWS Infrastructure Costs</CardTitle>
+          </div>
+          <CardDescription>Separate from your Wraps subscription</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-muted-foreground text-sm">
+          <p>
+            <strong className="text-foreground">Email Sending:</strong> $0.10
+            per 1,000 emails (paid directly to AWS)
+          </p>
+          <p>
+            <strong className="text-foreground">Infrastructure:</strong>{" "}
+            ~$2-5/month for DynamoDB, Lambda, EventBridge
+          </p>
+          <p className="text-xs">
+            Free tier: First 3,000 emails/month are free for new AWS accounts
+          </p>
+        </CardContent>
+      </Card>
 
-            <ul className="space-y-2">
-              {PLANS.growth.featureList.slice(0, 6).map((feature) => (
-                <li className="flex items-start gap-2 text-sm" key={feature}>
-                  <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-primary" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Button
-              className="w-full"
-              disabled={!canManageBilling || upgradeMutation.isPending}
-              onClick={() => handleUpgrade("growth")}
-              size="lg"
-            >
-              {upgradeMutation.isPending ? "Upgrading..." : "Upgrade to Growth"}
-            </Button>
-
-            {!canManageBilling && (
-              <p className="text-center text-muted-foreground text-xs">
-                Only organization owners and admins can manage billing
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Growth Option for Starter users */}
-      {currentPlan === "starter" && !isCancelled && (
-        <Card className="border-muted">
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                <ArrowUpIcon className="size-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <CardTitle>{PLANS.growth.name}</CardTitle>
-                <CardDescription>{PLANS.growth.description}</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-baseline gap-1">
-              <span className="font-bold text-3xl">${PLANS.growth.price}</span>
-              <span className="text-muted-foreground">
-                {PLANS.growth.period}
-              </span>
-            </div>
-
-            <ul className="space-y-2">
-              {PLANS.growth.featureList.slice(0, 4).map((feature) => (
-                <li className="flex items-start gap-2 text-sm" key={feature}>
-                  <CheckCircle2Icon className="mt-0.5 size-4 flex-shrink-0 text-muted-foreground" />
-                  <span className="text-muted-foreground">{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Button
-              className="w-full"
-              disabled={!canManageBilling || upgradeMutation.isPending}
-              onClick={() => handleUpgrade("growth")}
-              size="lg"
-              variant="outline"
-            >
-              {upgradeMutation.isPending ? "Upgrading..." : "Upgrade to Growth"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Cancel Subscription Option */}
+      {/* Cancel Subscription */}
       {activeSubscription && !isCancelled && (
-        <Card className="border-muted">
-          <CardHeader>
-            <CardTitle className="text-muted-foreground">
-              Cancel Subscription
-            </CardTitle>
-            <CardDescription>
-              Cancel your subscription and lose dashboard access
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              Cancelling will remove access to the dashboard at the end of your
-              current billing period. You'll still have access until{" "}
-              {activeSubscription?.currentPeriodEnd &&
-                new Date(
-                  activeSubscription.currentPeriodEnd
-                ).toLocaleDateString()}
-              .
-            </p>
-
-            <Button
-              disabled={!canManageBilling}
-              onClick={handleCancelClick}
-              variant="outline"
-            >
-              Cancel Subscription
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="border-t pt-6">
+          <Button
+            variant="ghost"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() => setShowCancelDialog(true)}
+            disabled={!canManageBilling}
+          >
+            Cancel Subscription
+          </Button>
+        </div>
       )}
 
       {/* Cancel Confirmation Dialog */}
       <Dialog
+        open={showCancelDialog}
         onOpenChange={(open) => {
           if (!cancelMutation.isPending) {
             setShowCancelDialog(open);
           }
         }}
-        open={showCancelDialog}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancel Subscription?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel your subscription? You'll lose
-              access to the dashboard at the end of your current billing period
-              {activeSubscription?.currentPeriodEnd && (
-                <>
-                  {" "}
-                  on{" "}
-                  {new Date(
-                    activeSubscription.currentPeriodEnd
-                  ).toLocaleDateString()}
-                </>
-              )}
-              . You can still use the CLI and SDK for free.
+              Are you sure you want to cancel? You'll lose access to the
+              dashboard at the end of your billing period
+              {periodEndsAt && ` on ${periodEndsAt.toLocaleDateString()}`}. You
+              can still use the CLI and SDK for free.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
-              disabled={cancelMutation.isPending}
-              onClick={() => setShowCancelDialog(false)}
-              type="button"
               variant="outline"
+              onClick={() => setShowCancelDialog(false)}
+              disabled={cancelMutation.isPending}
             >
               Keep Subscription
             </Button>
             <Button
-              disabled={cancelMutation.isPending}
-              onClick={handleConfirmCancel}
-              type="button"
               variant="destructive"
+              onClick={() => cancelMutation.mutate(activeSubscription?.id)}
+              loading={cancelMutation.isPending}
             >
-              {cancelMutation.isPending
-                ? "Cancelling..."
-                : "Yes, Cancel Subscription"}
+              Yes, Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* AWS Costs Note */}
-      <Card className="border-muted bg-muted/30">
-        <CardContent className="flex items-start gap-3 pt-6">
-          <ZapIcon className="mt-0.5 size-5 flex-shrink-0 text-primary" />
-          <div className="space-y-1">
-            <h3 className="font-semibold text-sm">Note on AWS Costs</h3>
-            <p className="text-muted-foreground text-sm">
-              Your plan covers the Wraps dashboard and advanced features. You'll
-              still pay AWS directly for email sending ($0.10 per 1,000 emails)
-              and infrastructure (~$2-5/mo for most apps).
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
