@@ -184,10 +184,24 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
     },
     {
       params: t.Object({
-        token: t.String(),
+        token: t.String({ description: "Unsubscribe token", maxLength: 500 }),
       }),
       // Accept any body type for flexibility (RFC 8058 sends form-urlencoded)
       body: t.Optional(t.Unknown()),
+      response: {
+        200: t.Object({
+          success: t.Boolean(),
+          message: t.Optional(t.String()),
+          contactId: t.Optional(t.String()),
+          topicId: t.Optional(t.String()),
+        }),
+        400: t.Object({
+          error: t.String(),
+        }),
+        404: t.Object({
+          error: t.String(),
+        }),
+      },
       detail: {
         tags: ["unsubscribe"],
         summary: "One-click unsubscribe (RFC 8058)",
@@ -346,8 +360,13 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
     },
     {
       params: t.Object({
-        token: t.String(),
+        token: t.String({ description: "Unsubscribe token", maxLength: 500 }),
       }),
+      response: {
+        200: t.String({ description: "HTML confirmation page" }),
+        400: t.String({ description: "HTML error page" }),
+        404: t.String({ description: "HTML not found page" }),
+      },
       detail: {
         tags: ["unsubscribe"],
         summary: "Unsubscribe confirmation page",

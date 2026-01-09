@@ -18,6 +18,16 @@ import {
   enqueueWorkflowStep,
 } from "../services/workflow-queue";
 
+// Common response schemas
+const errorResponse = t.Object({
+  error: t.String({ description: "Error message" }),
+});
+
+// OpenAPI 3.0 compatible arbitrary properties object
+const propertiesSchema = t.Optional(
+  t.Object({}, { additionalProperties: true, description: "Event properties" })
+);
+
 export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
 
   /**
@@ -144,15 +154,25 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       body: t.Object({
         name: t.String({
           description: "Event name (e.g., 'purchase.completed')",
+          maxLength: 255,
         }),
-        contactId: t.Optional(t.String({ description: "Contact ID" })),
+        contactId: t.Optional(t.String({ description: "Contact ID", maxLength: 36 })),
         contactEmail: t.Optional(
-          t.String({ description: "Contact email (alternative to contactId)" })
+          t.String({ description: "Contact email (alternative to contactId)", maxLength: 255 })
         ),
-        properties: t.Optional(
-          t.Record(t.String(), t.Unknown(), { description: "Event properties" })
-        ),
+        properties: propertiesSchema,
       }),
+      response: {
+        200: t.Object({
+          success: t.Boolean(),
+          workflowsTriggered: t.Number({ description: "Number of workflows triggered" }),
+          executionsResumed: t.Number({ description: "Number of executions resumed" }),
+        }),
+        400: t.Object({
+          success: t.Literal(false),
+          error: t.String(),
+        }),
+      },
       detail: {
         summary: "Ingest event",
         description:
@@ -284,13 +304,23 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       body: t.Object({
         events: t.Array(
           t.Object({
-            name: t.String(),
-            contactId: t.Optional(t.String()),
-            contactEmail: t.Optional(t.String()),
-            properties: t.Optional(t.Record(t.String(), t.Unknown())),
-          })
+            name: t.String({ maxLength: 255 }),
+            contactId: t.Optional(t.String({ maxLength: 36 })),
+            contactEmail: t.Optional(t.String({ maxLength: 255 })),
+            properties: t.Optional(t.Object({}, { additionalProperties: true })),
+          }),
+          { description: "List of events to process" }
         ),
       }),
+      response: {
+        200: t.Object({
+          success: t.Boolean(),
+          processed: t.Number({ description: "Number of events processed" }),
+          workflowsTriggered: t.Number({ description: "Total workflows triggered" }),
+          executionsResumed: t.Number({ description: "Total executions resumed" }),
+          errors: t.Array(t.String(), { description: "Error messages if any" }),
+        }),
+      },
       detail: {
         summary: "Batch ingest events",
         description: "Process multiple events in a single request",

@@ -190,8 +190,26 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
   },
   {
     params: t.Object({
-      awsAccountNumber: t.String(),
+      awsAccountNumber: t.String({ description: "12-digit AWS account ID", maxLength: 12 }),
     }),
+    response: {
+      200: t.Object({
+        status: t.String({ description: "Processing status" }),
+        eventType: t.Optional(t.String()),
+        messageId: t.Optional(t.String()),
+        reason: t.Optional(t.String()),
+      }),
+      401: t.Object({
+        error: t.String(),
+      }),
+      404: t.Object({
+        error: t.String(),
+      }),
+      500: t.Object({
+        error: t.String(),
+        details: t.Optional(t.String()),
+      }),
+    },
     detail: {
       tags: ["webhooks"],
       summary: "Receive SES events",

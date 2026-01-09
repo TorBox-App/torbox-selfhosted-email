@@ -23,40 +23,40 @@ import {
 
 // Batch send request schema
 const createBatchSchema = t.Object({
-  channel: t.Optional(t.Union([t.Literal("email"), t.Literal("sms")])),
-  name: t.Optional(t.String()),
+  channel: t.Optional(t.Union([t.Literal("email"), t.Literal("sms")], { description: "Channel to send through" })),
+  name: t.Optional(t.String({ description: "Name for the batch send", maxLength: 255 })),
   // Recipient targeting
   audienceType: t.Optional(
-    t.Union([t.Literal("all"), t.Literal("topic"), t.Literal("segment")])
+    t.Union([t.Literal("all"), t.Literal("topic"), t.Literal("segment")], { description: "Audience targeting type" })
   ),
-  topicId: t.Optional(t.String()),
-  segmentId: t.Optional(t.String()),
+  topicId: t.Optional(t.String({ description: "Topic ID to target", maxLength: 36 })),
+  segmentId: t.Optional(t.String({ description: "Segment ID to target", maxLength: 36 })),
   // Email-specific fields
-  subject: t.Optional(t.String()),
-  previewText: t.Optional(t.String()),
-  from: t.Optional(t.String()),
-  fromName: t.Optional(t.String()),
-  replyTo: t.Optional(t.String()),
-  templateId: t.Optional(t.String()),
-  htmlContent: t.Optional(t.String()),
+  subject: t.Optional(t.String({ description: "Email subject line", maxLength: 998 })),
+  previewText: t.Optional(t.String({ description: "Email preview text", maxLength: 500 })),
+  from: t.Optional(t.String({ description: "From email address", maxLength: 255 })),
+  fromName: t.Optional(t.String({ description: "From display name", maxLength: 100 })),
+  replyTo: t.Optional(t.String({ description: "Reply-to email address", maxLength: 255 })),
+  templateId: t.Optional(t.String({ description: "Email template ID", maxLength: 36 })),
+  htmlContent: t.Optional(t.String({ description: "Raw HTML content (if not using template)" })),
   // SMS-specific fields (Phase 3)
-  body: t.Optional(t.String()),
-  senderId: t.Optional(t.String()),
+  body: t.Optional(t.String({ description: "SMS body text", maxLength: 1600 })),
+  senderId: t.Optional(t.String({ description: "SMS sender ID", maxLength: 20 })),
   // Scheduling
-  scheduledFor: t.Optional(t.String()),
+  scheduledFor: t.Optional(t.String({ description: "ISO 8601 datetime for scheduled send", format: "date-time" })),
   // AWS account to use
-  awsAccountId: t.String(),
+  awsAccountId: t.String({ description: "AWS account ID to use for sending", maxLength: 36 }),
   // Pre-counted recipients (from web action validation)
-  totalRecipients: t.Optional(t.Number()),
+  totalRecipients: t.Optional(t.Number({ description: "Pre-counted recipient count" })),
 });
 
 // Batch send response schema
 const batchResponseSchema = t.Object({
-  id: t.String(),
-  status: t.String(),
-  channel: t.String(),
-  totalRecipients: t.Number(),
-  createdAt: t.String(),
+  id: t.String({ description: "Batch ID" }),
+  status: t.String({ description: "Batch status (queued, scheduled, processing, completed, failed, cancelled)" }),
+  channel: t.String({ description: "Channel (email or sms)" }),
+  totalRecipients: t.Number({ description: "Total number of recipients" }),
+  createdAt: t.String({ description: "Creation timestamp", format: "date-time" }),
 });
 
 export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
@@ -185,15 +185,30 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
         processedRecipients: batch.processedRecipients,
         sent: batch.sent,
         failed: batch.failed,
-        startedAt: batch.startedAt?.toISOString(),
-        completedAt: batch.completedAt?.toISOString(),
+        startedAt: batch.startedAt?.toISOString() ?? null,
+        completedAt: batch.completedAt?.toISOString() ?? null,
         createdAt: batch.createdAt.toISOString(),
       };
     },
     {
       params: t.Object({
-        id: t.String(),
+        id: t.String({ description: "Batch ID", maxLength: 36 }),
       }),
+      response: {
+        200: t.Object({
+          id: t.String(),
+          status: t.String(),
+          channel: t.String(),
+          name: t.Union([t.String(), t.Null()]),
+          totalRecipients: t.Number(),
+          processedRecipients: t.Number(),
+          sent: t.Number(),
+          failed: t.Number(),
+          startedAt: t.Union([t.String(), t.Null()]),
+          completedAt: t.Union([t.String(), t.Null()]),
+          createdAt: t.String(),
+        }),
+      },
       detail: {
         tags: ["batch"],
         summary: "Get batch status",
@@ -251,13 +266,15 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
     },
     {
       params: t.Object({
-        id: t.String(),
+        id: t.String({ description: "Batch ID to cancel", maxLength: 36 }),
       }),
-      response: t.Object({
-        success: t.Boolean(),
-        id: t.String(),
-        status: t.String(),
-      }),
+      response: {
+        200: t.Object({
+          success: t.Boolean(),
+          id: t.String(),
+          status: t.String(),
+        }),
+      },
       detail: {
         tags: ["batch"],
         summary: "Cancel batch send",

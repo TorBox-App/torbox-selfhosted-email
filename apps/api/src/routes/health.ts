@@ -2,7 +2,7 @@
  * Health Check Routes
  */
 
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 
 export const healthRoutes = new Elysia({ prefix: "" })
   .get(
@@ -13,6 +13,14 @@ export const healthRoutes = new Elysia({ prefix: "" })
       version: "1.0.0",
     }),
     {
+      response: t.Object({
+        status: t.String({ description: "Health status", examples: ["ok"] }),
+        timestamp: t.String({
+          description: "ISO 8601 timestamp",
+          format: "date-time",
+        }),
+        version: t.String({ description: "API version", examples: ["1.0.0"] }),
+      }),
       detail: {
         tags: ["health"],
         summary: "Health check",
@@ -28,6 +36,11 @@ export const healthRoutes = new Elysia({ prefix: "" })
       docs: "/swagger",
     }),
     {
+      response: t.Object({
+        name: t.String({ description: "API name" }),
+        version: t.String({ description: "API version" }),
+        docs: t.String({ description: "Documentation URL" }),
+      }),
       detail: {
         tags: ["health"],
         summary: "API info",

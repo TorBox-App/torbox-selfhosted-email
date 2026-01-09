@@ -6,7 +6,6 @@
  */
 
 import { cors } from "@elysiajs/cors";
-import openapi from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { batchRoutes } from "./routes/batch";
@@ -18,6 +17,79 @@ import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
 import { workflowsRoutes } from "./routes/workflows";
 
+/**
+ * OpenAPI documentation configuration
+ * Shared between swagger UI and OpenAPI spec generation
+ */
+const openApiDocumentation = {
+  openapi: "3.0.3" as const,
+  info: {
+    title: "Wraps Platform API",
+    version: "1.0.0",
+    description:
+      "REST API for the Wraps email marketing platform. Send emails, manage contacts, trigger workflows, and process events.",
+    contact: {
+      name: "Wraps Support",
+      url: "https://wraps.dev",
+      email: "support@wraps.dev",
+    },
+    license: {
+      name: "Proprietary",
+      url: "https://wraps.dev/terms",
+    },
+    termsOfService: "https://wraps.dev/terms",
+  },
+  servers: [
+    {
+      url: "https://api.wraps.dev",
+      description: "Production API",
+    },
+  ],
+  tags: [
+    { name: "health", description: "Health check and API info endpoints" },
+    {
+      name: "contacts",
+      description:
+        "Contact management - create, update, delete, and list contacts",
+    },
+    {
+      name: "batch",
+      description: "Batch email sending operations for broadcasts",
+    },
+    {
+      name: "events",
+      description: "Custom event ingestion for triggering workflows",
+    },
+    {
+      name: "workflows",
+      description: "API-triggered workflow execution endpoints",
+    },
+    {
+      name: "webhooks",
+      description: "Webhook endpoints for receiving SES events",
+    },
+    {
+      name: "unsubscribe",
+      description: "RFC 8058 compliant email unsubscribe endpoints",
+    },
+    {
+      name: "tools",
+      description: "Free email deliverability tools (no auth required)",
+    },
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http" as const,
+        scheme: "bearer",
+        description:
+          "API key (wraps_*) or session token. Use format: Bearer wraps_your_api_key",
+      },
+    },
+  },
+  security: [{ bearerAuth: [] }],
+};
+
 export const app = new Elysia()
   .onError(({ error }) => {
     // Return error message in response body
@@ -28,61 +100,15 @@ export const app = new Elysia()
     cors({
       origin: true, // Allow any origin for public API
       credentials: true,
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Organization-Id"],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     })
   )
   .use(
-    openapi({
-      documentation: {
-        info: {
-          title: "Wraps Platform API",
-          version: "1.0.0",
-          description: "API for batch sending and platform features",
-        },
-        servers: [
-          {
-            url: "https://api.wraps.dev",
-            description: "Wraps Platform API",
-          },
-        ],
-      },
-      specPath: "openapi.json",
-    })
-  )
-  .use(
     swagger({
-      documentation: {
-        info: {
-          title: "Wraps Platform API",
-          version: "1.0.0",
-          description: "API for batch sending and platform features",
-        },
-        servers: [
-          {
-            url: "https://api.wraps.dev",
-            description: "Wraps Platform API",
-          },
-        ],
-        tags: [
-          { name: "health", description: "Health check endpoints" },
-          { name: "contacts", description: "Contact management" },
-          { name: "batch", description: "Batch sending operations" },
-          {
-            name: "events",
-            description: "Event ingestion for workflow triggers",
-          },
-          { name: "workflows", description: "Workflow trigger endpoints" },
-          {
-            name: "webhooks",
-            description: "Webhook endpoints for event processing",
-          },
-          {
-            name: "unsubscribe",
-            description: "Email unsubscribe endpoints (RFC 8058 compliant)",
-          },
-        ],
-      },
+      path: "/swagger",
+      documentation: openApiDocumentation,
+      exclude: ["/swagger", "/swagger/json"],
     })
   )
   .use(healthRoutes)
