@@ -184,3 +184,16 @@ html {
 .animate-logo-scroll:hover {
   animation-play-state: paused;
 }
+
+/* Shimmer animation for tab indicators */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

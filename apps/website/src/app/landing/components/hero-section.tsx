@@ -29,12 +29,14 @@ export function HeroSection() {
           {/* Main Headline */}
           <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-6xl lg:text-7xl">
             <span className="flex flex-col items-center justify-center sm:flex-row sm:gap-3">
-              <span>AWS</span>
-              <WordRotate
-                className="text-orange-500"
-                duration={3000}
-                words={["Email", "SMS", "CDN"]}
-              />
+              <span className="flex flex-row items-center justify-center gap-2">
+                <span>AWS</span>
+                <WordRotate
+                  className="text-orange-500"
+                  duration={3000}
+                  words={["Email", "SMS", "CDN"]}
+                />
+              </span>
               <span>simplified.</span>
             </span>
           </h1>

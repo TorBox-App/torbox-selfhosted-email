@@ -2,20 +2,20 @@
 
 import {
   ArrowRight,
+  BarChart3,
   Check,
-  Cloud,
   Code2,
-  Gauge,
-  Lock,
-  Mail,
+  Globe,
+  History,
+  LayoutDashboard,
   Send,
   Shield,
   Terminal,
-  Workflow,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
-import { Image3D } from "@/components/image-3d";
 import { Button } from "@/components/ui/button";
+import { assetUrl, cn } from "@/lib/utils";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -37,7 +37,30 @@ import {
 import { InteractiveArchitectureDiagram } from "./architecture-section";
 import { IconBox, SectionWrapper } from "./section-card";
 
-type TabKey = "deploy" | "send" | "features";
+type TabKey = "console" | "deploy" | "send";
+
+const consoleFeatures = [
+  {
+    icon: BarChart3,
+    title: "Real-time Analytics",
+    description: "Track sends, deliveries, opens, clicks, bounces in real-time",
+  },
+  {
+    icon: History,
+    title: "Message History",
+    description: "Search and filter through your email history with timelines",
+  },
+  {
+    icon: Globe,
+    title: "Domain Management",
+    description: "View verification status, DKIM records, and DNS config",
+  },
+  {
+    icon: Shield,
+    title: "Reputation Metrics",
+    description: "Monitor sender reputation, bounce rates, complaint ratios",
+  },
+];
 
 const installCommands = {
   npm: "npm install @wraps.dev/email",
@@ -64,51 +87,6 @@ const result = await wraps.emails.send({
   html: '<h1>Welcome!</h1>',
 });`;
 
-const mainFeatures = [
-  {
-    icon: Terminal,
-    title: "One-Command Deploy",
-    description: "Production-ready email infrastructure in under 2 minutes.",
-  },
-  {
-    icon: Mail,
-    title: "TypeScript-First SDK",
-    description: "Clean API with full type safety. Just wraps.emails.send().",
-  },
-  {
-    icon: Gauge,
-    title: "Event Tracking",
-    description: "Delivery, open, and click tracking stored in DynamoDB.",
-  },
-  {
-    icon: Lock,
-    title: "Zero Stored Credentials",
-    description: "OIDC and IAM roles - we never see your AWS keys.",
-  },
-];
-
-const secondaryFeatures = [
-  {
-    icon: Cloud,
-    title: "AWS Pricing, No Markup",
-    description: "Pay AWS directly at $0.10 per 1,000 emails.",
-  },
-  {
-    icon: Shield,
-    title: "Production-Ready Configs",
-    description: "Pre-configured presets for different needs.",
-  },
-  {
-    icon: Terminal,
-    title: "Local-First Dashboard",
-    description: "Run the console locally with zero setup.",
-  },
-  {
-    icon: Workflow,
-    title: "Future-Proof Roadmap",
-    description: "Email today, SMS and workflows coming soon.",
-  },
-];
 
 function DeployContent() {
   return (
@@ -294,90 +272,167 @@ function SendContent() {
   );
 }
 
-function FeaturesContent() {
+function ConsoleContent() {
   return (
-    <div className="space-y-12">
-      {/* First row - Image left, features right */}
-      <div className="grid items-center gap-8 lg:grid-cols-2">
-        <Image3D
-          alt="Analytics dashboard"
-          darkSrc="feature-1-dark.webp"
-          direction="left"
-          lightSrc="feature-1-light.webp"
-        />
-        <div className="space-y-4">
-          <h3 className="font-semibold text-xl">Everything You Need</h3>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {mainFeatures.map((feature) => (
-              <li className="flex items-start gap-3" key={feature.title}>
-                <IconBox highlighted icon={feature.icon} size="sm" />
-                <div>
-                  <h4 className="font-medium text-sm">{feature.title}</h4>
-                  <p className="text-muted-foreground text-xs">
-                    {feature.description}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+    <div className="space-y-8">
+      {/* Large browser window mockup */}
+      <div className="group relative mx-auto max-w-4xl">
+        {/* Glow effect */}
+        <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-orange-500/20 via-orange-500/10 to-orange-500/20 opacity-50 blur-3xl transition-opacity duration-700 group-hover:opacity-70" />
+
+        {/* Browser window */}
+        <div className="relative overflow-hidden rounded-2xl border-2 border-orange-500/20 bg-background shadow-2xl dark:border-orange-500/30">
+          {/* Browser chrome */}
+          <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                <div className="size-3 rounded-full bg-red-500" />
+                <div className="size-3 rounded-full bg-yellow-500" />
+                <div className="size-3 rounded-full bg-green-500" />
+              </div>
+              <div className="hidden items-center gap-2 rounded-md bg-background/80 px-3 py-1 sm:flex">
+                <div className="size-3 rounded-full bg-green-500/50" />
+                <span className="font-mono text-muted-foreground text-xs">
+                  localhost:5555
+                </span>
+              </div>
+            </div>
+            <span className="hidden rounded bg-orange-500/10 px-2 py-0.5 font-medium text-orange-600 text-xs sm:inline dark:text-orange-400">
+              Local Mode
+            </span>
+          </div>
+
+          {/* Screenshot */}
+          <div className="relative aspect-[16/10] overflow-hidden bg-muted/20">
+            <img
+              alt="Wraps Console - Light Mode"
+              className="block size-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.02] dark:hidden"
+              decoding="async"
+              loading="lazy"
+              src={assetUrl("wraps-console-light.avif")}
+            />
+            <img
+              alt="Wraps Console - Dark Mode"
+              className="hidden size-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.02] dark:block"
+              decoding="async"
+              loading="lazy"
+              src={assetUrl("wraps-console-dark.avif")}
+            />
+
+            {/* Fade overlay at bottom */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/60 to-transparent" />
+          </div>
         </div>
       </div>
 
-      {/* Second row - Features left, image right */}
-      <div className="grid items-center gap-8 lg:grid-cols-2">
-        <div className="order-2 space-y-4 lg:order-1">
-          <h3 className="font-semibold text-xl">Send, Track, Iterate</h3>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {secondaryFeatures.map((feature) => (
-              <li className="flex items-start gap-3" key={feature.title}>
-                <IconBox highlighted icon={feature.icon} size="sm" />
-                <div>
-                  <h4 className="font-medium text-sm">{feature.title}</h4>
-                  <p className="text-muted-foreground text-xs">
-                    {feature.description}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <Image3D
-          alt="Performance dashboard"
-          className="order-1 lg:order-2"
-          darkSrc="feature-2-dark.webp"
-          direction="right"
-          lightSrc="feature-2-light.webp"
-        />
+      {/* Feature pills */}
+      <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {consoleFeatures.map((feature) => {
+          const Icon = feature.icon;
+          return (
+            <div
+              className="flex flex-col items-center rounded-xl border bg-muted/30 p-4 text-center transition-colors hover:border-orange-500/50"
+              key={feature.title}
+            >
+              <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-orange-500/10">
+                <Icon className="size-5 text-orange-500" />
+              </div>
+              <h4 className="mb-1 font-semibold text-sm">{feature.title}</h4>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {feature.description}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
+      {/* CTA */}
       <div className="flex justify-center gap-4">
         <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
-          <a href="/docs">
-            Read the Docs
+          <a href="/docs/quickstart">
+            Get Started
             <ArrowRight className="ml-2 size-4" />
           </a>
         </Button>
         <Button asChild size="lg" variant="outline">
-          <a
-            href="https://github.com/wraps-team/wraps"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            View on GitHub
-          </a>
+          <a href="/cli">Learn About CLI</a>
         </Button>
       </div>
     </div>
   );
 }
 
-export function CliTabbedSection() {
-  const [activeTab, setActiveTab] = useState<TabKey>("deploy");
+interface GlowingTabProps {
+  tabs: { key: TabKey; label: string; icon: LucideIcon }[];
+  activeTab: TabKey;
+  onTabChange: (key: TabKey) => void;
+}
 
-  const tabs = [
-    { key: "deploy" as const, label: "Deploy", icon: Terminal },
-    { key: "send" as const, label: "Send", icon: Send },
-    { key: "features" as const, label: "Features", icon: Gauge },
+function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
+  return (
+    <div className="mb-8 flex justify-center">
+      {/* Outer glow container */}
+      <div className="relative">
+        {/* Background glow effect */}
+        <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-xl dark:bg-orange-500/10" />
+
+        {/* Tab container with glass effect */}
+        <div className="relative inline-flex gap-1 rounded-full border border-orange-500/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:border-orange-500/30 dark:bg-background/50">
+          {tabs.map((tab, index) => {
+            const isActive = activeTab === tab.key;
+            const Icon = tab.icon;
+
+            return (
+              <button
+                className={cn(
+                  "group relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 font-medium text-sm transition-all duration-300",
+                  isActive
+                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                    : "text-muted-foreground hover:bg-orange-500/10 hover:text-foreground dark:hover:bg-orange-500/20"
+                )}
+                key={tab.key}
+                onClick={() => onTabChange(tab.key)}
+                type="button"
+              >
+                {/* Active tab glow */}
+                {isActive && (
+                  <div className="absolute inset-0 rounded-full bg-orange-500 blur-md opacity-50" />
+                )}
+
+                <Icon
+                  className={cn(
+                    "relative size-4 transition-transform duration-300",
+                    isActive
+                      ? "scale-110"
+                      : "group-hover:scale-110 group-hover:text-orange-500"
+                  )}
+                />
+
+                <span className="relative hidden sm:inline">{tab.label}</span>
+
+                {/* Shimmer effect for inactive tabs - staggered for ripple effect */}
+                {!isActive && (
+                  <div
+                    className="absolute inset-0 -translate-x-full animate-[shimmer_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-orange-500/10 to-transparent"
+                    style={{ animationDelay: `${index * 0.3}s` }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CliTabbedSection() {
+  const [activeTab, setActiveTab] = useState<TabKey>("console");
+
+  const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
+    { key: "console", label: "Console", icon: LayoutDashboard },
+    { key: "deploy", label: "Deploy", icon: Terminal },
+    { key: "send", label: "Send", icon: Send },
   ];
 
   return (
@@ -387,32 +442,17 @@ export function CliTabbedSection() {
       id="cli"
       title="Built for Developers"
     >
-      {/* Main tab bar */}
-      <div className="mb-8 flex justify-center">
-        <div className="inline-flex rounded-full border bg-background p-1">
-          {tabs.map((tab) => (
-            <button
-              className={`flex items-center gap-2 rounded-full px-5 py-2.5 font-medium text-sm transition-all ${
-                activeTab === tab.key
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              type="button"
-            >
-              <tab.icon className="size-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <GlowingTabBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={tabs}
+      />
 
       {/* Tab content */}
       <div className="min-h-[500px]">
+        {activeTab === "console" && <ConsoleContent />}
         {activeTab === "deploy" && <DeployContent />}
         {activeTab === "send" && <SendContent />}
-        {activeTab === "features" && <FeaturesContent />}
       </div>
     </SectionWrapper>
   );

@@ -20,9 +20,11 @@ import {
   Workflow,
   Zap,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { assetUrl } from "@/lib/utils";
 import { SectionWrapper } from "./section-card";
 
@@ -215,13 +217,77 @@ function AutomationsContent() {
   );
 }
 
+interface GlowingTabProps {
+  tabs: { key: TabKey; label: string; icon: LucideIcon }[];
+  activeTab: TabKey;
+  onTabChange: (key: TabKey) => void;
+}
+
+function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
+  return (
+    <div className="mb-8 flex justify-center">
+      {/* Outer glow container */}
+      <div className="relative">
+        {/* Background glow effect */}
+        <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-xl dark:bg-orange-500/10" />
+
+        {/* Tab container with glass effect */}
+        <div className="relative inline-flex gap-1 rounded-full border border-orange-500/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:border-orange-500/30 dark:bg-background/50">
+          {tabs.map((tab, index) => {
+            const isActive = activeTab === tab.key;
+            const Icon = tab.icon;
+
+            return (
+              <button
+                className={cn(
+                  "group relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 font-medium text-sm transition-all duration-300",
+                  isActive
+                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                    : "text-muted-foreground hover:bg-orange-500/10 hover:text-foreground dark:hover:bg-orange-500/20"
+                )}
+                key={tab.key}
+                onClick={() => onTabChange(tab.key)}
+                type="button"
+              >
+                {/* Active tab glow */}
+                {isActive && (
+                  <div className="absolute inset-0 rounded-full bg-orange-500 blur-md opacity-50" />
+                )}
+
+                <Icon
+                  className={cn(
+                    "relative size-4 transition-transform duration-300",
+                    isActive
+                      ? "scale-110"
+                      : "group-hover:scale-110 group-hover:text-orange-500"
+                  )}
+                />
+
+                <span className="relative hidden sm:inline">{tab.label}</span>
+
+                {/* Shimmer effect for inactive tabs - staggered for ripple effect */}
+                {!isActive && (
+                  <div
+                    className="absolute inset-0 -translate-x-full animate-[shimmer_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-orange-500/10 to-transparent"
+                    style={{ animationDelay: `${index * 0.3}s` }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProductTabbedSection() {
   const [activeTab, setActiveTab] = useState<TabKey>("templates");
 
-  const tabs = [
-    { key: "templates" as const, label: "Templates", icon: LayoutGrid },
-    { key: "broadcasts" as const, label: "Broadcasts", icon: Send },
-    { key: "automations" as const, label: "Automations", icon: Workflow },
+  const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
+    { key: "templates", label: "Templates", icon: LayoutGrid },
+    { key: "broadcasts", label: "Broadcasts", icon: Send },
+    { key: "automations", label: "Automations", icon: Workflow },
   ];
 
   return (
@@ -232,26 +298,11 @@ export function ProductTabbedSection() {
       premium
       title="The Complete Email Platform"
     >
-      {/* Main tab bar */}
-      <div className="mb-8 flex justify-center">
-        <div className="inline-flex rounded-full border bg-background p-1">
-          {tabs.map((tab) => (
-            <button
-              className={`flex items-center gap-2 rounded-full px-5 py-2.5 font-medium text-sm transition-all ${
-                activeTab === tab.key
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              type="button"
-            >
-              <tab.icon className="size-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <GlowingTabBar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={tabs}
+      />
 
       {/* Tab content */}
       <div className="min-h-[450px]">
