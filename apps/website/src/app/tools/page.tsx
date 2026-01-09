@@ -14,7 +14,6 @@ import {
   Server,
   Settings2,
   Shield,
-  ShieldAlert,
   ShieldCheck,
   Sparkles,
   X,
@@ -275,7 +274,7 @@ export default function ToolsPage() {
         },
         body: JSON.stringify({
           domain: domain.trim(),
-          quick: false,
+          quick: true,
           ...(dkimSelector.trim() && {
             dkimSelectors: dkimSelector
               .split(",")
@@ -449,7 +448,7 @@ export default function ToolsPage() {
             <Card className="mb-8 border-red-500/20 bg-red-500/5">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <ShieldAlert className="h-5 w-5 text-red-500" />
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
                   <p className="text-red-600 dark:text-red-400">{error}</p>
                 </div>
               </CardContent>
@@ -580,11 +579,6 @@ export default function ToolsPage() {
                           key: "mx",
                           label: "MX",
                           data: result.score.breakdown.mx,
-                        },
-                        {
-                          key: "blacklist",
-                          label: "Blacklist",
-                          data: result.score.breakdown.blacklist,
                         },
                       ].map(({ key, label, data }) => (
                         <div className="space-y-1" key={key}>
@@ -989,54 +983,6 @@ export default function ToolsPage() {
                         </div>
                       )}
 
-                      {/* Blacklist Status */}
-                      {result.blacklist && (
-                        <div className="space-y-3 md:col-span-2">
-                          <div className="flex items-center gap-2 font-medium">
-                            <ShieldAlert className="h-4 w-4" />
-                            Blacklist Status
-                          </div>
-                          {result.blacklist.checked ? (
-                            result.blacklist.overallClean ? (
-                              <div className="flex items-center gap-2 text-green-600 text-sm">
-                                <Check className="h-4 w-4" />
-                                Not listed on any monitored blacklists
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {[
-                                  ...(result.blacklist.domainListings || []),
-                                  ...(result.blacklist.ipListings || []),
-                                ].map((listing, i) => (
-                                  <div
-                                    className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/5 p-2 text-sm"
-                                    key={`bl-${i}`}
-                                  >
-                                    <span className="text-red-600">
-                                      Listed on {listing.blacklist}
-                                    </span>
-                                    {listing.delistUrl && (
-                                      <a
-                                        className="text-blue-500 hover:underline"
-                                        href={listing.delistUrl}
-                                        rel="noopener noreferrer"
-                                        target="_blank"
-                                      >
-                                        Request removal
-                                      </a>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )
-                          ) : (
-                            <p className="text-muted-foreground text-sm">
-                              Skipped in quick mode. Run a full scan to check
-                              blacklists.
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1090,7 +1036,7 @@ export default function ToolsPage() {
                           fetch(`${API_URL}/tools/email-check`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ domain: d, quick: false }),
+                            body: JSON.stringify({ domain: d, quick: true }),
                           })
                             .then((r) => r.json())
                             .then((data) => {
