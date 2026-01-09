@@ -300,6 +300,9 @@ export async function fetchEmailById(
       availableKeys: Object.keys(sendEvent),
     });
 
+    // Find subject from any event that has it (send event may not have it)
+    const subjectFromEvents = events.find((e) => e.subject)?.subject;
+
     // Try to extract email content from eventData
     let htmlBody: string | undefined;
     let textBody: string | undefined;
@@ -429,7 +432,7 @@ export async function fetchEmailById(
       from: sendEvent.from || "unknown",
       to: toAddresses,
       replyTo: sendEvent.replyTo,
-      subject: sendEvent.subject || "(no subject)",
+      subject: sendEvent.subject || subjectFromEvents || "(no subject)",
       htmlBody: htmlBody || sendEvent.htmlBody,
       textBody: textBody || sendEvent.textBody,
       status,

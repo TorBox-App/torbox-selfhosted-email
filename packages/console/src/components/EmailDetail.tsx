@@ -1,6 +1,7 @@
 import { ArrowLeft, Check, Clock, Mail, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { CopyButton } from "@/components/cdn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group";
 import { EmailArchiveViewer } from "./EmailArchiveViewer";
 
 type EmailEvent = {
@@ -233,64 +240,99 @@ export function EmailDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
         <Button onClick={() => navigate("/email")} size="sm" variant="ghost">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to emails
+          Back
         </Button>
-        <Badge variant={STATUS_VARIANTS[email.status]}>
-          {email.status.charAt(0).toUpperCase() + email.status.slice(1)}
-        </Badge>
       </div>
 
       {/* Email Metadata */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="space-y-1.5">
-              <CardTitle className="text-2xl">{email.subject}</CardTitle>
-              <CardDescription className="font-mono text-xs">
-                {email.messageId}
-              </CardDescription>
-            </div>
+        <CardHeader className="space-y-1.5">
+          {/* Row 1: Subject */}
+          <CardTitle className="flex flex-row items-center gap-2 text-xl">
+            <span className="text-xl">{email.subject || "(no subject)"}</span>
+            <Badge className="shrink-0" variant={STATUS_VARIANTS[email.status]}>
+              {email.status.charAt(0).toUpperCase() + email.status.slice(1)}
+            </Badge>
+          </CardTitle>
+          {/* Row 2: ID */}
+          <div className="flex min-w-0 items-center gap-2">
+            <code className="min-w-0 truncate rounded bg-muted px-2 py-0.5 font-mono text-muted-foreground text-xs">
+              {email.messageId}
+            </code>
+            <CopyButton
+              className="h-6 w-6 shrink-0"
+              size="sm"
+              value={email.messageId}
+              variant="ghost"
+            />
+          </div>
+          {/* Row 3: From → To */}
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap">
+            <InputGroup className="w-full cursor-text! sm:w-auto sm:min-w-[518px]">
+              <InputGroupAddon align="inline-start">
+                <InputGroupText>From</InputGroupText>
+              </InputGroupAddon>
+              <InputGroupInput
+                className="min-w-0 cursor-text! truncate font-mono text-sm *:select-all"
+                disabled
+                readOnly
+                value={email.from}
+              />
+              <InputGroupAddon align="inline-end">
+                <CopyButton
+                  className="h-6 w-6"
+                  size="sm"
+                  value={email.from}
+                  variant="ghost"
+                />
+              </InputGroupAddon>
+            </InputGroup>
+            <InputGroup className="w-full cursor-text! sm:w-auto sm:min-w-[518px]">
+              <InputGroupAddon align="inline-start">
+                <InputGroupText>To</InputGroupText>
+              </InputGroupAddon>
+              <InputGroupInput
+                className="min-w-0 cursor-text! truncate font-mono text-sm *:select-all"
+                disabled
+                readOnly
+                value={
+                  email.to.length > 0 ? email.to.join(", ") : "(no recipients)"
+                }
+              />
+              <InputGroupAddon align="inline-end">
+                <CopyButton
+                  className="h-6 w-6"
+                  size="sm"
+                  value={email.to.join(", ")}
+                  variant="ghost"
+                />
+              </InputGroupAddon>
+            </InputGroup>
+            {email.replyTo && (
+              <InputGroup className="w-full sm:w-auto sm:max-w-md">
+                <InputGroupAddon align="inline-start">
+                  <InputGroupText>Reply-To</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput
+                  className="min-w-0 truncate font-mono text-sm"
+                  readOnly
+                  value={email.replyTo}
+                />
+                <InputGroupAddon align="inline-end">
+                  <CopyButton
+                    className="h-6 w-6"
+                    size="sm"
+                    value={email.replyTo}
+                    variant="ghost"
+                  />
+                </InputGroupAddon>
+              </InputGroup>
+            )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1">
-              <div className="text-muted-foreground text-sm">FROM</div>
-              <div className="font-mono text-sm">{email.from}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground text-sm">TO</div>
-              <div className="font-mono text-sm">
-                {email.to.length > 0 ? email.to.join(", ") : "(no recipients)"}
-              </div>
-            </div>
-            {email.replyTo && (
-              <div className="space-y-1">
-                <div className="text-muted-foreground text-sm">REPLY-TO</div>
-                <div className="font-mono text-sm">{email.replyTo}</div>
-              </div>
-            )}
-            <div className="space-y-1">
-              <div className="text-muted-foreground text-sm">ID</div>
-              <div className="flex items-center gap-2">
-                <code className="rounded bg-muted px-2 py-1 font-mono text-xs">
-                  {email.id}
-                </code>
-                <Button
-                  className="h-6 w-6"
-                  onClick={() => navigator.clipboard.writeText(email.id)}
-                  size="icon"
-                  variant="ghost"
-                >
-                  <span className="sr-only">Copy ID</span>📋
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
       </Card>
 
       {/* Email Archive Viewer - only show if archiving is enabled */}
