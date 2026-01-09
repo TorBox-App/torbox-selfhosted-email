@@ -63,6 +63,9 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Remove system Pulumi (SST compatibility fix)
+        run: sudo rm -f /usr/local/bin/pulumi-language-nodejs
+
       - name: Deploy SST
         run: npx sst deploy --stage ${{ github.event.inputs.stage || 'production' }}
         env:
