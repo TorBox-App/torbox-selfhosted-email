@@ -6,9 +6,9 @@
  */
 
 import { cors } from "@elysiajs/cors";
+import openapi from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
-
 import { batchRoutes } from "./routes/batch";
 import { contactsRoutes } from "./routes/contacts";
 import { eventsRoutes } from "./routes/events";
@@ -28,8 +28,20 @@ export const app = new Elysia()
     cors({
       origin: true, // Allow any origin for public API
       credentials: true,
-      allowedHeaders: ["Content-Type", "Authorization", "X-Organization-Id"],
+      allowedHeaders: ["Content-Type", "Authorization"],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    })
+  )
+  .use(
+    openapi({
+      documentation: {
+        info: {
+          title: "Wraps Platform API",
+          version: "1.0.0",
+          description: "API for batch sending and platform features",
+        },
+      },
+      specPath: "openapi.json",
     })
   )
   .use(
