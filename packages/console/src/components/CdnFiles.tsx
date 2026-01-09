@@ -646,36 +646,7 @@ export function CdnFiles() {
     [uploads.length, uploadFile]
   );
 
-  // Selection handlers
-  const handleSelectFile = React.useCallback((key: string) => {
-    setSelectedFiles((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  }, []);
-
-  const handleSelectAll = React.useCallback(() => {
-    if (!info?.files) {
-      return;
-    }
-    const filteredKeys = filteredFiles.map((f) => f.key);
-    if (selectedFiles.length === filteredKeys.length) {
-      setSelectedFiles([]);
-    } else {
-      setSelectedFiles(filteredKeys);
-    }
-  }, [info?.files, selectedFiles.length, filteredFiles.map]);
-
-  // Bulk actions
-  const handleBulkStar = React.useCallback(async () => {
-    await Promise.all(selectedFiles.map((key) => handleToggleStar(key, true)));
-    setSelectedFiles([]);
-  }, [selectedFiles, handleToggleStar]);
-
-  const handleBulkDelete = React.useCallback(() => {
-    setDeleteConfirm({ keys: selectedFiles, isOpen: true });
-  }, [selectedFiles]);
-
-  // Computed values
+  // Computed values (must be before handlers that use them)
   const filteredFiles = React.useMemo(() => {
     if (!info?.files) {
       return [];
@@ -706,6 +677,35 @@ export function CdnFiles() {
       return true;
     });
   }, [info?.files, searchQuery, filters]);
+
+  // Selection handlers
+  const handleSelectFile = React.useCallback((key: string) => {
+    setSelectedFiles((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }, []);
+
+  const handleSelectAll = React.useCallback(() => {
+    if (!info?.files) {
+      return;
+    }
+    const filteredKeys = filteredFiles.map((f) => f.key);
+    if (selectedFiles.length === filteredKeys.length) {
+      setSelectedFiles([]);
+    } else {
+      setSelectedFiles(filteredKeys);
+    }
+  }, [info?.files, selectedFiles.length, filteredFiles]);
+
+  // Bulk actions
+  const handleBulkStar = React.useCallback(async () => {
+    await Promise.all(selectedFiles.map((key) => handleToggleStar(key, true)));
+    setSelectedFiles([]);
+  }, [selectedFiles, handleToggleStar]);
+
+  const handleBulkDelete = React.useCallback(() => {
+    setDeleteConfirm({ keys: selectedFiles, isOpen: true });
+  }, [selectedFiles]);
 
   const availableFormats = React.useMemo(() => {
     if (!info?.files) {
