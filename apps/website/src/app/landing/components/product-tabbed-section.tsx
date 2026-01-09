@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
   Calendar,
@@ -20,12 +21,10 @@ import {
   Workflow,
   Zap,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { assetUrl } from "@/lib/utils";
+import { assetUrl, cn } from "@/lib/utils";
 import { SectionWrapper } from "./section-card";
 
 type TabKey = "templates" | "broadcasts" | "automations";
@@ -217,11 +216,11 @@ function AutomationsContent() {
   );
 }
 
-interface GlowingTabProps {
+type GlowingTabProps = {
   tabs: { key: TabKey; label: string; icon: LucideIcon }[];
   activeTab: TabKey;
   onTabChange: (key: TabKey) => void;
-}
+};
 
 function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
   return (

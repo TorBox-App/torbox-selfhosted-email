@@ -2,6 +2,7 @@
 
 import { ActiveSessions } from "./components/active-sessions";
 import { ChangePassword } from "./components/change-password";
+import { LoginAlerts } from "./components/login-alerts";
 import { PasskeyManagement } from "./components/passkey-management";
 import { TwoFactorAuth } from "./components/two-factor-auth";
 
@@ -24,6 +25,9 @@ export default function SecuritySettings() {
 
       {/* Two-Factor Authentication */}
       <TwoFactorAuth />
+
+      {/* Login Alerts */}
+      <LoginAlerts />
 
       {/* Active Sessions */}
       <ActiveSessions />

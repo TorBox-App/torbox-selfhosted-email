@@ -13,6 +13,9 @@ import {
   type ChangePasswordInput,
   changePasswordFormOpts,
   changePasswordSchema,
+  type SecuritySettingsInput,
+  securitySettingsFormOpts,
+  securitySettingsSchema,
   type UpdateAccountInput,
   updateAccountFormOpts,
   updateAccountSchema,
@@ -130,6 +133,123 @@ export type ChangePasswordResult =
       success: false;
       error: string;
     };
+
+// Server validator for security settings
+const serverValidateSecuritySettings = createServerValidate({
+  ...securitySettingsFormOpts,
+  onServerValidate: ({ value }) => {
+    const result = securitySettingsSchema.safeParse(value);
+    if (!result.success) {
+      return result.error.issues[0]?.message || "Validation failed";
+    }
+  },
+});
+
+export type SecuritySettingsResult =
+  | {
+      success: true;
+      message: string;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+/**
+ * Get current security settings for the logged-in user
+ */
+export async function getSecuritySettingsAction(): Promise<{
+  phoneNumber: string;
+  loginAlertsEnabled: boolean;
+} | null> {
+  try {
+    const session = await auth.api.getSession({
+      headers: await import("next/headers").then((mod) => mod.headers()),
+    });
+
+    if (!session?.user) {
+      return null;
+    }
+
+    const userData = await db.query.user.findFirst({
+      where: (users, { eq: eqOp }) => eqOp(users.id, session.user.id),
+      columns: {
+        phoneNumber: true,
+        loginAlertsEnabled: true,
+      },
+    });
+
+    return {
+      phoneNumber: userData?.phoneNumber || "",
+      loginAlertsEnabled: userData?.loginAlertsEnabled ?? false,
+    };
+  } catch (error) {
+    console.error("Failed to get security settings:", error);
+    return null;
+  }
+}
+
+/**
+ * Update security settings (phone number and login alerts)
+ */
+export async function updateSecuritySettingsAction(
+  _prev: unknown,
+  formData: FormData
+): Promise<
+  SecuritySettingsResult | ServerValidateError<SecuritySettingsInput, undefined>
+> {
+  try {
+    // Validate form data
+    const validatedData = await serverValidateSecuritySettings(formData);
+
+    // Get current user session
+    const session = await auth.api.getSession({
+      headers: await import("next/headers").then((mod) => mod.headers()),
+    });
+
+    if (!session?.user) {
+      return {
+        success: false,
+        error: "You must be logged in to update security settings",
+      };
+    }
+
+    // Update user in database
+    await db
+      .update(user)
+      .set({
+        phoneNumber: validatedData.phoneNumber || null,
+        loginAlertsEnabled: validatedData.loginAlertsEnabled,
+      })
+      .where(eq(user.id, session.user.id));
+
+    // Revalidate paths
+    revalidatePath("/settings/account");
+
+    return {
+      success: true,
+      message: validatedData.loginAlertsEnabled
+        ? "Security settings updated. You'll receive SMS alerts for new logins."
+        : "Security settings updated.",
+    };
+  } catch (error) {
+    // If it's a ServerValidateError, re-throw it
+    if (error && typeof error === "object" && "formState" in error) {
+      throw error;
+    }
+
+    const log = createActionLogger("updateSecuritySettingsAction", {});
+    log.error(
+      { err: serializeError(error) },
+      "Failed to update security settings"
+    );
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "An unexpected error occurred",
+    };
+  }
+}
 
 export async function changePasswordAction(
   _prev: unknown,

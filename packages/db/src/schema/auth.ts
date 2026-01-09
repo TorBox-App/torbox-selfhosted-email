@@ -19,6 +19,10 @@ export const user = pgTable("user", {
   lastLoginMethod: text("last_login_method"),
   // Stripe plugin field
   stripeCustomerId: text("stripe_customer_id"),
+  // Phone number for SMS notifications (E.164 format, e.g., +14155551234)
+  phoneNumber: text("phone_number"),
+  // Whether to send SMS alerts on new device/IP login
+  loginAlertsEnabled: boolean("login_alerts_enabled").default(false),
 });
 
 export const session = pgTable("session", {

@@ -26,10 +26,12 @@
     "@better-auth/stripe": "1.4.10",
     "@wraps.dev/client": "0.4.0",
     "@wraps.dev/email": "^0.4.0",
+    "@wraps.dev/sms": "^0.1.1",
     "@wraps/db": "workspace:*",
     "@wraps/email": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
+    "drizzle-orm": "^0.44.2",
     "stripe": "catalog:",
     "zod": "catalog:"
   }

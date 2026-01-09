@@ -41,3 +41,28 @@ export const changePasswordFormOpts = formOptions({
     confirmPassword: "",
   } satisfies ChangePasswordInput,
 });
+
+// Schema for security settings (phone number and login alerts)
+export const securitySettingsSchema = z.object({
+  phoneNumber: z
+    .string()
+    .transform((val) => val.trim())
+    .refine((val) => val === "" || z.e164().safeParse(val).success, {
+      message: "Phone number must be in E.164 format (e.g., +14155551234)",
+    }),
+  // FormData sends booleans as strings, so we need to preprocess
+  loginAlertsEnabled: z.preprocess(
+    (val) => val === true || val === "true",
+    z.boolean()
+  ),
+});
+
+export type SecuritySettingsInput = z.infer<typeof securitySettingsSchema>;
+
+// Form options for security settings
+export const securitySettingsFormOpts = formOptions({
+  defaultValues: {
+    phoneNumber: "",
+    loginAlertsEnabled: false as boolean,
+  } satisfies SecuritySettingsInput,
+});

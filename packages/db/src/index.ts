@@ -12,6 +12,6 @@ const sql = neon(process.env.DATABASE_URL || "");
 export const db = drizzle(sql, { schema });
 
 // Re-export commonly used drizzle-orm operators
-export { and, eq, or, sql as sqlExpr } from "drizzle-orm";
+export { and, desc, eq, or, sql as sqlExpr } from "drizzle-orm";
 // Re-export all schemas for use elsewhere
 export * from "./schema";

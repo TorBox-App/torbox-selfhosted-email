@@ -820,6 +820,9 @@ importers:
       '@wraps.dev/email':
         specifier: ^0.4.0
         version: 0.4.0(@react-email/components@1.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+      '@wraps.dev/sms':
+        specifier: ^0.1.1
+        version: 0.1.1
       '@wraps/db':
         specifier: workspace:*
         version: link:../db
@@ -832,6 +835,9 @@ importers:
       dotenv:
         specifier: 'catalog:'
         version: 17.2.3
+      drizzle-orm:
+        specifier: ^0.44.2
+        version: 0.44.7(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.9)(pg@8.16.3)
       stripe:
         specifier: 'catalog:'
         version: 19.3.1(@types/node@24.10.0)
@@ -6164,6 +6170,10 @@ packages:
         optional: true
       react:
         optional: true
+
+  '@wraps.dev/sms@0.1.1':
+    resolution: {integrity: sha512-X12uCSgi2n/MKdFMC6E/oE1XHrDpwL/7aT0WYf3ucSeb32DsrU8BDs7RAxKD8YNupx6GxNABS/YnE/LA9diSRw==}
+    engines: {node: '>=20.0.0'}
 
   '@xyflow/react@12.10.0':
     resolution: {integrity: sha512-eOtz3whDMWrB4KWVatIBrKuxECHqip6PfA8fTpaS2RUGVpiEAe+nqDKsLqkViVWxDGreq0lWX71Xth/SPAzXiw==}
@@ -18665,6 +18675,14 @@ snapshots:
     optionalDependencies:
       '@react-email/components': 1.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react: 19.2.3
+    transitivePeerDependencies:
+      - aws-crt
+
+  '@wraps.dev/sms@0.1.1':
+    dependencies:
+      '@aws-sdk/client-pinpoint-sms-voice-v2': 3.955.0
+      '@aws-sdk/credential-providers': 3.962.0
+      zod: 4.1.12
     transitivePeerDependencies:
       - aws-crt
 

@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
   BarChart3,
@@ -12,10 +13,8 @@ import {
   Shield,
   Terminal,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { assetUrl, cn } from "@/lib/utils";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -34,6 +33,7 @@ import {
   SnippetTabsList,
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
+import { assetUrl, cn } from "@/lib/utils";
 import { InteractiveArchitectureDiagram } from "./architecture-section";
 import { IconBox, SectionWrapper } from "./section-card";
 
@@ -86,7 +86,6 @@ const result = await wraps.emails.send({
   subject: 'Welcome to our app!',
   html: '<h1>Welcome!</h1>',
 });`;
-
 
 function DeployContent() {
   return (
@@ -362,11 +361,11 @@ function ConsoleContent() {
   );
 }
 
-interface GlowingTabProps {
+type GlowingTabProps = {
   tabs: { key: TabKey; label: string; icon: LucideIcon }[];
   activeTab: TabKey;
   onTabChange: (key: TabKey) => void;
-}
+};
 
 function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
   return (

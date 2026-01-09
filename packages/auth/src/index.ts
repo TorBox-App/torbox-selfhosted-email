@@ -4,6 +4,7 @@ import { db, eq } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import { getWrapsClient } from "@wraps/email";
 import { createPlatformClient } from "@wraps.dev/client";
+import { WrapsSMS } from "@wraps.dev/sms";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
@@ -14,6 +15,7 @@ import {
   organization,
   twoFactor,
 } from "better-auth/plugins";
+import { desc } from "drizzle-orm";
 import Stripe from "stripe";
 
 /**
@@ -68,6 +70,93 @@ async function trackUserSignup(user: { email: string; name: string | null }) {
     }
   } catch (err) {
     console.error("Error tracking user.signup event:", err);
+  }
+}
+
+/**
+ * Send login alert SMS when a new device or IP is detected.
+ * Non-blocking - failures are logged but don't affect auth flow.
+ */
+async function sendLoginAlertSms(
+  phoneNumber: string,
+  details: { ipAddress?: string; userAgent?: string }
+) {
+  try {
+    // Parse user agent for a friendly device description
+    const deviceInfo = parseUserAgent(details.userAgent);
+
+    const message = `[Wraps.dev] New login detected from ${deviceInfo}${details.ipAddress ? ` (IP: ${details.ipAddress})` : ""}. If this wasn't you, secure your account immediately.`;
+
+    const sms = new WrapsSMS();
+    await sms.send({
+      to: phoneNumber,
+      message,
+      messageType: "TRANSACTIONAL",
+    });
+
+    console.log(`Login alert SMS sent to ${phoneNumber.slice(0, 6)}***`);
+  } catch (error) {
+    console.error("Failed to send login alert SMS:", error);
+  }
+}
+
+/**
+ * Parse user agent string into a friendly device description.
+ */
+function parseUserAgent(userAgent?: string): string {
+  if (!userAgent) return "unknown device";
+
+  // Simple parsing - could use a library like ua-parser-js for more detail
+  if (userAgent.includes("iPhone")) return "iPhone";
+  if (userAgent.includes("iPad")) return "iPad";
+  if (userAgent.includes("Android")) return "Android device";
+  if (userAgent.includes("Mac")) return "Mac";
+  if (userAgent.includes("Windows")) return "Windows PC";
+  if (userAgent.includes("Linux")) return "Linux";
+  if (userAgent.includes("Chrome")) return "Chrome browser";
+  if (userAgent.includes("Firefox")) return "Firefox browser";
+  if (userAgent.includes("Safari")) return "Safari browser";
+
+  return "new device";
+}
+
+/**
+ * Check if this is a new device/IP for the user.
+ * Returns true if either IP or user agent is different from all previous sessions.
+ */
+async function isNewDeviceOrIp(
+  userId: string,
+  currentIp?: string,
+  currentUserAgent?: string
+): Promise<boolean> {
+  try {
+    // Get user's previous sessions (excluding the current one being created)
+    const previousSessions = await db.query.session.findMany({
+      where: eq(schema.session.userId, userId),
+      orderBy: [desc(schema.session.createdAt)],
+      limit: 10, // Check last 10 sessions
+    });
+
+    if (previousSessions.length === 0) {
+      // First session ever - don't alert (this is likely initial signup)
+      return false;
+    }
+
+    // Check if current IP or user agent is new
+    const knownIps = new Set(
+      previousSessions.map((s) => s.ipAddress).filter(Boolean)
+    );
+    const knownAgents = new Set(
+      previousSessions.map((s) => s.userAgent).filter(Boolean)
+    );
+
+    const isNewIp = currentIp && !knownIps.has(currentIp);
+    const isNewAgent = currentUserAgent && !knownAgents.has(currentUserAgent);
+
+    return isNewIp || isNewAgent;
+  } catch (error) {
+    console.error("Error checking for new device/IP:", error);
+    return false;
   }
 }
 
@@ -378,6 +467,33 @@ export const auth = betterAuth<BetterAuthOptions>({
           }
 
           return { data: session };
+        },
+        after: async (session) => {
+          // Send login alert SMS if new device/IP detected
+          try {
+            const user = await db.query.user.findFirst({
+              where: eq(schema.user.id, session.userId),
+            });
+
+            // Only send if user has phone number and login alerts enabled
+            if (user?.phoneNumber && user?.loginAlertsEnabled) {
+              const isNew = await isNewDeviceOrIp(
+                session.userId,
+                session.ipAddress ?? undefined,
+                session.userAgent ?? undefined
+              );
+
+              if (isNew) {
+                // Fire and forget - don't block auth flow
+                sendLoginAlertSms(user.phoneNumber, {
+                  ipAddress: session.ipAddress ?? undefined,
+                  userAgent: session.userAgent ?? undefined,
+                });
+              }
+            }
+          } catch (error) {
+            console.error("Error in login alert hook:", error);
+          }
         },
       },
     },

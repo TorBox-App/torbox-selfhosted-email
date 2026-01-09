@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BellDot,
   CircleUser,
   EllipsisVertical,
   LogOut,
@@ -116,7 +115,7 @@ export function NavUser() {
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            {/* <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link href="/settings/notifications">
@@ -124,7 +123,7 @@ export function NavUser() {
                   Notifications
                 </Link>
               </DropdownMenuItem>
-            </DropdownMenuGroup>
+            </DropdownMenuGroup> */}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer"
