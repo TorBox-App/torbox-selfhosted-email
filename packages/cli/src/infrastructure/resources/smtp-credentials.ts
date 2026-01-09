@@ -1,6 +1,6 @@
-import * as aws from "@pulumi/aws";
-import * as pulumi from "@pulumi/pulumi";
 import { createHmac } from "node:crypto";
+import * as aws from "@pulumi/aws";
+import type * as pulumi from "@pulumi/pulumi";
 
 /**
  * SMTP credentials configuration
@@ -50,7 +50,10 @@ export function convertToSMTPPassword(
   const kMessage = createHmac("sha256", kTerminal).update(MESSAGE).digest();
 
   // Step 2: Prepend version byte and base64 encode
-  const signatureWithVersion = Buffer.concat([Buffer.from([VERSION]), kMessage]);
+  const signatureWithVersion = Buffer.concat([
+    Buffer.from([VERSION]),
+    kMessage,
+  ]);
   return signatureWithVersion.toString("base64");
 }
 
@@ -60,7 +63,9 @@ export function convertToSMTPPassword(
 async function userExists(userName: string): Promise<boolean> {
   try {
     const { IAMClient, GetUserCommand } = await import("@aws-sdk/client-iam");
-    const iam = new IAMClient({ region: process.env.AWS_REGION || "us-east-1" });
+    const iam = new IAMClient({
+      region: process.env.AWS_REGION || "us-east-1",
+    });
     await iam.send(new GetUserCommand({ UserName: userName }));
     return true;
   } catch (error: any) {

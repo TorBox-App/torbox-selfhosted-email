@@ -363,19 +363,19 @@ describe("Workflow Processor - Complete Trigger Logic", () => {
    * Integration tests for the complete trigger validation logic.
    */
 
-  interface WorkflowConfig {
+  type WorkflowConfig = {
     allowReentry: boolean;
     reentryDelaySeconds: number | null;
     contactCooldownSeconds: number | null;
     maxConcurrentExecutions: number | null;
-  }
+  };
 
-  interface ExecutionState {
+  type ExecutionState = {
     hasActiveExecution: boolean;
     lastCompletedAt: Date | null;
     lastAnyExecutionAt: Date | null;
     currentConcurrentCount: number;
-  }
+  };
 
   function shouldTriggerWorkflow(
     config: WorkflowConfig,

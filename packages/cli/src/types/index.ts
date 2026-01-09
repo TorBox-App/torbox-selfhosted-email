@@ -3,6 +3,24 @@
  * This file maintains backwards compatibility while supporting multi-service architecture
  */
 
+// Re-export CDN types
+export type {
+  CdnConfigPreset,
+  CdnDestroyOptions,
+  CdnFeatureCostBreakdown,
+  CdnInitOptions,
+  CdnRetention,
+  CdnStackConfig,
+  CdnStackOutputs,
+  CdnStatusOptions,
+  CdnUpgradeOptions,
+  CdnVerifyOptions,
+  CloudFrontPriceClass,
+  GeoRestriction,
+  WrapsCdnConfig,
+  WrapsCdnFeature,
+  WrapsCdnFeatureMetadata,
+} from "./cdn.js";
 // Re-export email types
 export type {
   EmailConfigOptions,
@@ -34,7 +52,6 @@ export type {
   StatusOptions,
   UpdateRoleOptions,
 } from "./shared.js";
-
 // Re-export SMS types
 export type {
   PhoneNumberType,
@@ -56,25 +73,6 @@ export type {
   WrapsSMSFeature,
   WrapsSMSFeatureMetadata,
 } from "./sms.js";
-
-// Re-export CDN types
-export type {
-  CdnConfigPreset,
-  CdnDestroyOptions,
-  CdnFeatureCostBreakdown,
-  CdnInitOptions,
-  CdnRetention,
-  CdnStackConfig,
-  CdnStackOutputs,
-  CdnStatusOptions,
-  CdnUpgradeOptions,
-  CdnVerifyOptions,
-  CloudFrontPriceClass,
-  GeoRestriction,
-  WrapsCdnConfig,
-  WrapsCdnFeature,
-  WrapsCdnFeatureMetadata,
-} from "./cdn.js";
 
 // Backwards compatibility aliases (deprecated, use specific types instead)
 // Import specific types for legacy aliases

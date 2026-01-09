@@ -22,7 +22,7 @@ type PendingRequest = {
  */
 export class ImageOptimizer {
   private worker: Worker | null = null;
-  private pending = new Map<string, PendingRequest>();
+  private readonly pending = new Map<string, PendingRequest>();
 
   /**
    * Get or create the Web Worker
@@ -48,7 +48,9 @@ export class ImageOptimizer {
     const { id, result, error, progress } = e.data;
     const pending = this.pending.get(id);
 
-    if (!pending) return;
+    if (!pending) {
+      return;
+    }
 
     // Progress update
     if (progress !== undefined && progress < 100 && pending.onProgress) {

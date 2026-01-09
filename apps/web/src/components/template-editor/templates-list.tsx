@@ -170,7 +170,9 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
 
   // Filter and sort templates
   const filteredTemplates = useMemo(() => {
-    if (!templates) return [];
+    if (!templates) {
+      return [];
+    }
 
     const templatesWithUsage = templates as TemplateWithUsage[];
 
@@ -183,18 +185,23 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
         const matchesDescription = template.description
           ?.toLowerCase()
           .includes(query);
-        if (!(matchesName || matchesDescription)) return false;
+        if (!(matchesName || matchesDescription)) {
+          return false;
+        }
       }
 
       // Type filter
       if (filters.types.size > 0) {
         const emailType = template.emailType || "marketing";
-        if (!filters.types.has(emailType)) return false;
+        if (!filters.types.has(emailType)) {
+          return false;
+        }
       }
 
       // Status filter
-      if (filters.statuses.size > 0 && !filters.statuses.has(template.status))
+      if (filters.statuses.size > 0 && !filters.statuses.has(template.status)) {
         return false;
+      }
 
       // Usage filter
       if (filters.usage.size > 0) {
@@ -208,8 +215,9 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
           filters.usage.has("automations") && inAutomations;
         const matchesUnused = filters.usage.has("unused") && isUnused;
 
-        if (!(matchesBroadcasts || matchesAutomations || matchesUnused))
+        if (!(matchesBroadcasts || matchesAutomations || matchesUnused)) {
           return false;
+        }
       }
 
       return true;
@@ -328,7 +336,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
           <div className="flex flex-1 items-center gap-2">
             {/* Search */}
             <div className="relative max-w-sm flex-1">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
               <Input
                 className="pl-9"
                 onChange={(e) => setSearchQuery(e.target.value)}

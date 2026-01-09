@@ -18,14 +18,17 @@ import { rateLimitMiddleware } from "../middleware/rate-limit";
 import { enqueueWorkflowStep } from "../services/workflow-queue";
 
 // Common response schemas
-const errorResponse = t.Object({
+const _errorResponse = t.Object({
   success: t.Literal(false),
   error: t.String({ description: "Error message" }),
 });
 
 // OpenAPI 3.0 compatible arbitrary properties object
 const dataSchema = t.Optional(
-  t.Object({}, { additionalProperties: true, description: "Data to pass to the workflow" })
+  t.Object(
+    {},
+    { additionalProperties: true, description: "Data to pass to the workflow" }
+  )
 );
 
 export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
@@ -141,12 +144,20 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
     },
     {
       params: t.Object({
-        workflowId: t.String({ description: "Workflow ID to trigger", maxLength: 36 }),
+        workflowId: t.String({
+          description: "Workflow ID to trigger",
+          maxLength: 36,
+        }),
       }),
       body: t.Object({
-        contactId: t.Optional(t.String({ description: "Contact ID", maxLength: 36 })),
+        contactId: t.Optional(
+          t.String({ description: "Contact ID", maxLength: 36 })
+        ),
         contactEmail: t.Optional(
-          t.String({ description: "Contact email (alternative to contactId)", maxLength: 255 })
+          t.String({
+            description: "Contact email (alternative to contactId)",
+            maxLength: 255,
+          })
         ),
         data: dataSchema,
       }),
@@ -310,7 +321,10 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
     },
     {
       params: t.Object({
-        workflowId: t.String({ description: "Workflow ID to trigger", maxLength: 36 }),
+        workflowId: t.String({
+          description: "Workflow ID to trigger",
+          maxLength: 36,
+        }),
       }),
       body: t.Object({
         contacts: t.Array(
@@ -322,7 +336,13 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
           { description: "List of contacts to trigger the workflow for" }
         ),
         data: t.Optional(
-          t.Object({}, { additionalProperties: true, description: "Common data to pass to all workflow triggers" })
+          t.Object(
+            {},
+            {
+              additionalProperties: true,
+              description: "Common data to pass to all workflow triggers",
+            }
+          )
         ),
       }),
       response: {
@@ -330,8 +350,12 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
           success: t.Boolean(),
           workflowId: t.Optional(t.String()),
           workflowName: t.Optional(t.String()),
-          triggered: t.Optional(t.Number({ description: "Number of contacts triggered" })),
-          errors: t.Optional(t.Array(t.String(), { description: "Error messages if any" })),
+          triggered: t.Optional(
+            t.Number({ description: "Number of contacts triggered" })
+          ),
+          errors: t.Optional(
+            t.Array(t.String(), { description: "Error messages if any" })
+          ),
           error: t.Optional(t.String()),
         }),
       },

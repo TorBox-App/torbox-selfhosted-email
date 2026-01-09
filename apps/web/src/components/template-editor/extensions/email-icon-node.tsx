@@ -160,7 +160,7 @@ const EmailIconNodeView = ({
         </div>
 
         {/* Drag handle and edit button */}
-        <div className="absolute -top-1 -right-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="-top-1 -right-1 absolute flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <DragHandle />
           <Popover onOpenChange={setIsEditing} open={isEditing}>
             <PopoverTrigger asChild>

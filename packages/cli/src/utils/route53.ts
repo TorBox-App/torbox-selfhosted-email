@@ -213,7 +213,6 @@ export async function previewDNSChanges(
     : "v=spf1 include:amazonses.com ~all";
 
   let spfStatus: ProposedDNSRecord["status"] = "new";
-  let spfConflictReason: string | undefined;
 
   if (existingTXT.spfValue) {
     if (existingTXT.spfValue === proposedSPF) {
@@ -233,7 +232,7 @@ export async function previewDNSChanges(
     existingValue: existingTXT.spfValue ? `"${existingTXT.spfValue}"` : null,
     status: spfStatus,
     category: "spf",
-    conflictReason: spfConflictReason,
+    conflictReason: undefined,
   });
 
   // DMARC record - check for existing DMARC

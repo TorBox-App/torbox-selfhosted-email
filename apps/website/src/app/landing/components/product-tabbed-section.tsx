@@ -57,7 +57,7 @@ function TemplatesContent() {
     <div className="space-y-8">
       {/* Screenshot */}
       <div className="group relative">
-        <div className="absolute top-2 left-1/2 mx-auto h-16 w-[70%] -translate-x-1/2 transform rounded-full bg-orange-500/10 blur-2xl lg:-top-4 lg:h-32" />
+        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
           <img
             alt="Template Editor - Light Mode"
@@ -110,7 +110,7 @@ function BroadcastsContent() {
     <div className="space-y-8">
       {/* Screenshot */}
       <div className="group relative">
-        <div className="absolute top-2 left-1/2 mx-auto h-16 w-[70%] -translate-x-1/2 transform rounded-full bg-orange-500/10 blur-2xl lg:-top-4 lg:h-32" />
+        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
           <img
             alt="Broadcasts Dashboard - Light Mode"
@@ -175,7 +175,7 @@ function AutomationsContent() {
 
       {/* Screenshot */}
       <div className="group relative">
-        <div className="absolute top-2 left-1/2 mx-auto h-16 w-[70%] -translate-x-1/2 transform rounded-full bg-orange-500/10 blur-2xl lg:-top-4 lg:h-32" />
+        <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
           <img
             alt="Workflow Builder - Light Mode"

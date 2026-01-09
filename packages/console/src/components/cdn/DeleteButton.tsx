@@ -3,13 +3,13 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface DeleteButtonProps {
+type DeleteButtonProps = {
   onDelete: () => void | Promise<void>;
   className?: string;
   variant?: "default" | "outline" | "ghost" | "destructive";
   size?: "default" | "sm" | "icon";
   label?: string;
-}
+};
 
 export function DeleteButton({
   onDelete,
@@ -38,16 +38,18 @@ export function DeleteButton({
   return (
     <Button
       className={cn(
-        "text-destructive hover:text-destructive transition-all",
+        "text-destructive transition-all hover:text-destructive",
         className
       )}
+      disabled={isDeleting}
       onClick={handleDelete}
       size={size}
       variant={variant}
-      disabled={isDeleting}
     >
       {isDeleting ? (
-        <Loader2 className={cn("animate-spin", label ? "mr-1.5 h-4 w-4" : "h-4 w-4")} />
+        <Loader2
+          className={cn("animate-spin", label ? "mr-1.5 h-4 w-4" : "h-4 w-4")}
+        />
       ) : (
         <Trash2 className={cn(label ? "mr-1.5 h-4 w-4" : "h-4 w-4")} />
       )}

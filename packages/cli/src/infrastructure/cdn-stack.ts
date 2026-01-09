@@ -1,9 +1,9 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import type {
-  Provider,
   CdnStackConfig,
   CdnStackOutputs,
+  Provider,
 } from "../types/index.js";
 import {
   createCdnACMCertificate,
@@ -52,9 +52,7 @@ async function roleExists(roleName: string): Promise<boolean> {
 /**
  * Create IAM role for storage infrastructure
  */
-async function createCdnIAMRole(
-  config: CdnIAMConfig
-): Promise<aws.iam.Role> {
+async function createCdnIAMRole(config: CdnIAMConfig): Promise<aws.iam.Role> {
   // Build assume role policy based on provider
   let assumeRolePolicy: pulumi.Output<string>;
 

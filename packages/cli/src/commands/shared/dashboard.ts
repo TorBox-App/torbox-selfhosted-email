@@ -109,8 +109,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
   // Extract storage outputs
   const cdnBucketName = storageStackOutputs.bucketName?.value;
   const cdnDistributionId = storageStackOutputs.distributionId?.value;
-  const cdnDistributionDomain =
-    storageStackOutputs.distributionDomain?.value;
+  const cdnDistributionDomain = storageStackOutputs.distributionDomain?.value;
   const cdnCertificateArn = storageStackOutputs.acmCertificateArn?.value;
 
   // Load SMS and storage config from metadata

@@ -186,7 +186,7 @@ function NavItemComponent({
 
       {/* Children */}
       {hasChildren && isExpanded && (
-        <div className="ml-4 mt-1 space-y-0.5 border-l border-border pl-3">
+        <div className="mt-1 ml-4 space-y-0.5 border-border border-l pl-3">
           {item.children?.map((child) => {
             const childIsActive = pathname === child.href;
             return (

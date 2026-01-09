@@ -666,7 +666,12 @@ async function handleSendEmail(
   // Auto-publish if not published to SES (requires compiledHtml)
   if (!sesTemplateName && tmpl.compiledHtml) {
     sesTemplateName = await autoPublishTemplate(
-      tmpl as { id: string; name: string; subject: string | null; compiledHtml: string },
+      tmpl as {
+        id: string;
+        name: string;
+        subject: string | null;
+        compiledHtml: string;
+      },
       credentials,
       account.region
     );
@@ -696,9 +701,7 @@ async function handleSendEmail(
         ConfigurationSetName: "wraps-email-tracking",
         EmailTags: emailTags,
         ListManagementOptions:
-          isMarketing && headers.length > 0
-            ? undefined
-            : undefined,
+          isMarketing && headers.length > 0 ? undefined : undefined,
       })
     );
 
@@ -740,9 +743,7 @@ async function handleSendEmail(
       })
     );
 
-    console.log(
-      `[workflow] Sent email via raw HTML to ${contactRecord.email}`
-    );
+    console.log(`[workflow] Sent email via raw HTML to ${contactRecord.email}`);
   }
 
   const messageId = result.MessageId ?? "";
@@ -809,7 +810,10 @@ export function substituteVariables(
     return template(data);
   } catch (error) {
     // If Handlebars fails, fall back to simple regex replacement
-    console.warn("[workflow] Handlebars compilation failed, using fallback:", error);
+    console.warn(
+      "[workflow] Handlebars compilation failed, using fallback:",
+      error
+    );
     return text.replace(
       /\{\{\s*(?:contact\.)?([a-zA-Z0-9_]+)\s*\}\}/g,
       (_match, key) => {
@@ -848,8 +852,17 @@ function htmlToPlainText(html: string): string {
  * Returns the SES template name if successful, or null if publishing fails.
  */
 async function autoPublishTemplate(
-  tmpl: { id: string; name: string; subject: string | null; compiledHtml: string },
-  credentials: { accessKeyId: string; secretAccessKey: string; sessionToken?: string },
+  tmpl: {
+    id: string;
+    name: string;
+    subject: string | null;
+    compiledHtml: string;
+  },
+  credentials: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  },
   region: string
 ): Promise<string | null> {
   try {

@@ -1,4 +1,4 @@
-import posthog from 'posthog-js';
+import posthog from "posthog-js";
 
 /**
  * Analytics utility for Google Tag Manager integration
@@ -104,7 +104,7 @@ export const trackPageView = (path: string, title?: string): void => {
 
   // Send pageview to PostHog
   try {
-    posthog.capture('$pageview', {
+    posthog.capture("$pageview", {
       page_path: path,
       page_title: pageTitle,
     });

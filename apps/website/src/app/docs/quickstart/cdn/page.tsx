@@ -87,13 +87,15 @@ export default function CdnQuickstartPage() {
           Get Started with CDN
         </h1>
         <p className="text-lg text-muted-foreground">
-          Deploy S3 + CloudFront CDN infrastructure to your AWS account in under 2 minutes.
-          Get global CDN delivery with browser-based image optimization.
+          Deploy S3 + CloudFront CDN infrastructure to your AWS account in under
+          2 minutes. Get global CDN delivery with browser-based image
+          optimization.
         </p>
         <div className="mt-4 rounded-lg border bg-muted/50 p-4">
           <p className="text-muted-foreground text-sm">
-            <strong>Pricing:</strong> Free to use. You pay AWS directly for storage (~$0.023/GB/month) and bandwidth (~$0.085/GB).
-            A typical setup costs ~$5-7/month for 10GB storage + 50GB bandwidth.
+            <strong>Pricing:</strong> Free to use. You pay AWS directly for
+            storage (~$0.023/GB/month) and bandwidth (~$0.085/GB). A typical
+            setup costs ~$5-7/month for 10GB storage + 50GB bandwidth.
           </p>
         </div>
       </div>
@@ -191,8 +193,8 @@ export default function CdnQuickstartPage() {
           Add Custom Domain (Optional)
         </h2>
         <p className="mb-4 text-muted-foreground">
-          If you specified a custom domain during init, add the DNS records shown by the CLI.
-          Then verify and upgrade:
+          If you specified a custom domain during init, add the DNS records
+          shown by the CLI. Then verify and upgrade:
         </p>
         <CodeBlock
           className="mb-4 h-auto"
@@ -234,7 +236,11 @@ npx @wraps.dev/cli cdn upgrade`,
           </CodeBlockBody>
         </CodeBlock>
         <p className="text-muted-foreground text-sm">
-          Without a custom domain, you can still use the CloudFront URL (e.g., <code className="rounded bg-muted px-1.5 py-0.5">d1234abcd.cloudfront.net</code>).
+          Without a custom domain, you can still use the CloudFront URL (e.g.,{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            d1234abcd.cloudfront.net
+          </code>
+          ).
         </p>
       </section>
 
@@ -276,7 +282,8 @@ npx @wraps.dev/cli cdn upgrade`,
           Upload Files
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Upload files to your S3 bucket. They'll be automatically served through CloudFront CDN:
+          Upload files to your S3 bucket. They'll be automatically served
+          through CloudFront CDN:
         </p>
         <CodeBlock
           className="mb-4 h-auto"
@@ -316,8 +323,11 @@ npx @wraps.dev/cli cdn upgrade`,
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">Tip: Get your bucket name</p>
           <p className="mt-2 text-muted-foreground text-sm">
-            Run <code className="rounded bg-muted px-1.5 py-0.5">npx @wraps.dev/cli cdn status</code> to see your
-            S3 bucket name, CDN domain, and usage statistics.
+            Run{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              npx @wraps.dev/cli cdn status
+            </code>{" "}
+            to see your S3 bucket name, CDN domain, and usage statistics.
           </p>
         </div>
       </section>
@@ -331,7 +341,8 @@ npx @wraps.dev/cli cdn upgrade`,
           Use Image Optimization (Optional)
         </h2>
         <p className="mb-4 text-muted-foreground">
-          CloudFront includes browser-based image optimization. Just add query parameters to your CDN URLs:
+          CloudFront includes browser-based image optimization. Just add query
+          parameters to your CDN URLs:
         </p>
         <CodeBlock
           className="mb-4 h-auto"
@@ -369,7 +380,8 @@ npx @wraps.dev/cli cdn upgrade`,
           </CodeBlockBody>
         </CodeBlock>
         <p className="text-muted-foreground text-sm">
-          Supported parameters: <code className="rounded bg-muted px-1.5 py-0.5">width</code>,{" "}
+          Supported parameters:{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">width</code>,{" "}
           <code className="rounded bg-muted px-1.5 py-0.5">height</code>,{" "}
           <code className="rounded bg-muted px-1.5 py-0.5">quality</code>,{" "}
           <code className="rounded bg-muted px-1.5 py-0.5">format</code>,{" "}
@@ -387,7 +399,8 @@ npx @wraps.dev/cli cdn upgrade`,
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground text-sm">
-                Learn about all CDN commands: init, status, verify, upgrade, sync, and destroy.
+                Learn about all CDN commands: init, status, verify, upgrade,
+                sync, and destroy.
               </p>
               <Button asChild variant="outline">
                 <a href="/docs/cli-reference/cdn">

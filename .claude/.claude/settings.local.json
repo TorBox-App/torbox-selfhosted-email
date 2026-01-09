@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm fix:*)",
+      "Bash(npx biome:*)",
+      "Bash(pnpm check:errors:*)",
+      "Bash(pnpm test:*)"
+    ]
+  }
+}

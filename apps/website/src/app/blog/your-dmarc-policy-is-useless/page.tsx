@@ -103,7 +103,7 @@ const EmailHeaderScroller = () => {
       setOffset((prev) => (prev + 1) % (headers.length * 60));
     }, 50);
     return () => clearInterval(interval);
-  }, [headers.length]);
+  }, []);
 
   return (
     <div className="pointer-events-none absolute inset-0 mx-auto w-2xl opacity-[0.60] dark:opacity-[0.55]">
@@ -111,7 +111,7 @@ const EmailHeaderScroller = () => {
         className="whitespace-nowrap text-left font-mono text-foreground text-xs"
         style={{ transform: `translateY(-${offset}px)` }}
       >
-        {[...Array(30)].map((_, i) => (
+        {[...new Array(30)].map((_, i) => (
           <div className="py-1" key={i}>
             {headers.map((h, j) => (
               <div className="py-0.5" key={`${i}-${j}`}>
@@ -197,9 +197,13 @@ const DMARCSimulator = () => {
 
       if (email.passes) {
         outcome = "delivered";
-      } else if (policy === "none") outcome = "delivered";
-      else if (policy === "quarantine") outcome = "quarantined";
-      else outcome = "rejected";
+      } else if (policy === "none") {
+        outcome = "delivered";
+      } else if (policy === "quarantine") {
+        outcome = "quarantined";
+      } else {
+        outcome = "rejected";
+      }
 
       const newEmail = {
         ...email,
@@ -699,7 +703,9 @@ const DomainChecker = () => {
   const [error, setError] = useState<string | null>(null);
 
   const checkDomain = async () => {
-    if (!domain.trim()) return;
+    if (!domain.trim()) {
+      return;
+    }
     setChecking(true);
     setError(null);
     setResult(null);
@@ -732,26 +738,48 @@ const DomainChecker = () => {
   };
 
   const getSpfStatus = (): "pass" | "warn" | "fail" => {
-    if (!result?.spf.exists) return "fail";
-    if (!result.spf.valid) return "fail";
-    if (result.spf.allMechanism === "+all") return "fail";
-    if (result.spf.allMechanism === "~all") return "warn";
+    if (!result?.spf.exists) {
+      return "fail";
+    }
+    if (!result.spf.valid) {
+      return "fail";
+    }
+    if (result.spf.allMechanism === "+all") {
+      return "fail";
+    }
+    if (result.spf.allMechanism === "~all") {
+      return "warn";
+    }
     return "pass";
   };
 
   const getDkimStatus = (): "pass" | "warn" | "fail" => {
-    if (!result?.dkim?.found) return "fail";
+    if (!result?.dkim?.found) {
+      return "fail";
+    }
     // Check for weak keys
-    const hasWeakKey = result.dkim?.selectorsFound?.some((s) => s.keyBits < 2048);
-    if (hasWeakKey) return "warn";
+    const hasWeakKey = result.dkim?.selectorsFound?.some(
+      (s) => s.keyBits < 2048
+    );
+    if (hasWeakKey) {
+      return "warn";
+    }
     return "pass";
   };
 
   const getDmarcStatus = (): "pass" | "warn" | "fail" => {
-    if (!result?.dmarc.exists) return "fail";
-    if (!result.dmarc.valid) return "fail";
-    if (result.dmarc.policy === "none") return "warn";
-    if (result.dmarc.policy === "quarantine") return "warn";
+    if (!result?.dmarc.exists) {
+      return "fail";
+    }
+    if (!result.dmarc.valid) {
+      return "fail";
+    }
+    if (result.dmarc.policy === "none") {
+      return "warn";
+    }
+    if (result.dmarc.policy === "quarantine") {
+      return "warn";
+    }
     return "pass";
   };
 
@@ -770,15 +798,19 @@ const DomainChecker = () => {
   };
 
   const getStatusIcon = (status: "pass" | "warn" | "fail") => {
-    if (status === "pass")
+    if (status === "pass") {
       return <CheckCircle className="h-5 w-5 text-green-500" />;
-    if (status === "warn")
+    }
+    if (status === "warn") {
       return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+    }
     return <XCircle className="h-5 w-5 text-red-500" />;
   };
 
   const getMessage = () => {
-    if (!result) return "";
+    if (!result) {
+      return "";
+    }
     const dmarcPolicy = result.dmarc.policy;
     if (!result.dmarc.exists) {
       return "CRITICAL: No DMARC record found. Your domain is vulnerable to spoofing.";
@@ -796,7 +828,9 @@ const DomainChecker = () => {
   };
 
   const getMessageStyle = () => {
-    if (!result) return "";
+    if (!result) {
+      return "";
+    }
     const policy = result.dmarc.policy;
     if (!result.dmarc.exists || policy === "none") {
       return "border border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400";

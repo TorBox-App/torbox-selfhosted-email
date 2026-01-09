@@ -123,7 +123,7 @@ export function PricingPlans({
           key={tier.id}
         >
           {tier.popular && (
-            <div className="absolute start-0 -top-3 w-full">
+            <div className="-top-3 absolute start-0 w-full">
               <Badge className="mx-auto flex w-fit gap-1.5 rounded-full font-medium">
                 <Sparkles className="!size-4" />
                 {mode === "pricing" && <span>Most Popular</span>}

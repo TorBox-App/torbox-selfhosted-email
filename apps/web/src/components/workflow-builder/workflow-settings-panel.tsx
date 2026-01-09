@@ -98,7 +98,7 @@ export function WorkflowSettingsPanel({
       workflow.defaultFrom ||
       orgDefaults?.defaultFrom ||
       "";
-    if (defaultFrom && defaultFrom.includes("@")) {
+    if (defaultFrom?.includes("@")) {
       const [prefix, domain] = defaultFrom.split("@");
       setFromPrefix(prefix || "");
       setFromDomain(domain || "");

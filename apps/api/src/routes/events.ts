@@ -19,7 +19,7 @@ import {
 } from "../services/workflow-queue";
 
 // Common response schemas
-const errorResponse = t.Object({
+const _errorResponse = t.Object({
   error: t.String({ description: "Error message" }),
 });
 
@@ -156,17 +156,26 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
           description: "Event name (e.g., 'purchase.completed')",
           maxLength: 255,
         }),
-        contactId: t.Optional(t.String({ description: "Contact ID", maxLength: 36 })),
+        contactId: t.Optional(
+          t.String({ description: "Contact ID", maxLength: 36 })
+        ),
         contactEmail: t.Optional(
-          t.String({ description: "Contact email (alternative to contactId)", maxLength: 255 })
+          t.String({
+            description: "Contact email (alternative to contactId)",
+            maxLength: 255,
+          })
         ),
         properties: propertiesSchema,
       }),
       response: {
         200: t.Object({
           success: t.Boolean(),
-          workflowsTriggered: t.Number({ description: "Number of workflows triggered" }),
-          executionsResumed: t.Number({ description: "Number of executions resumed" }),
+          workflowsTriggered: t.Number({
+            description: "Number of workflows triggered",
+          }),
+          executionsResumed: t.Number({
+            description: "Number of executions resumed",
+          }),
         }),
         400: t.Object({
           success: t.Literal(false),
@@ -307,7 +316,9 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
             name: t.String({ maxLength: 255 }),
             contactId: t.Optional(t.String({ maxLength: 36 })),
             contactEmail: t.Optional(t.String({ maxLength: 255 })),
-            properties: t.Optional(t.Object({}, { additionalProperties: true })),
+            properties: t.Optional(
+              t.Object({}, { additionalProperties: true })
+            ),
           }),
           { description: "List of events to process" }
         ),
@@ -316,8 +327,12 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         200: t.Object({
           success: t.Boolean(),
           processed: t.Number({ description: "Number of events processed" }),
-          workflowsTriggered: t.Number({ description: "Total workflows triggered" }),
-          executionsResumed: t.Number({ description: "Total executions resumed" }),
+          workflowsTriggered: t.Number({
+            description: "Total workflows triggered",
+          }),
+          executionsResumed: t.Number({
+            description: "Total executions resumed",
+          }),
           errors: t.Array(t.String(), { description: "Error messages if any" }),
         }),
       },

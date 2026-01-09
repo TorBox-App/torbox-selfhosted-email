@@ -262,7 +262,12 @@ function renderDescription(
   // Split by template variable pattern {{variable_name}}
   const parts = template.split(/(\{\{[^}]+\}\})/g);
 
-  return parts.map((part, index) => {
+  // Create unique keys based on cumulative string position
+  let position = 0;
+  return parts.map((part) => {
+    const currentPosition = position;
+    position += part.length;
+
     const match = part.match(/^\{\{(\w+)\}\}$/);
     if (match) {
       const varName = match[1];
@@ -273,13 +278,13 @@ function renderDescription(
           return (
             <span
               className="font-medium text-gray-700 dark:text-gray-300"
-              key={index}
+              key={`${varName}-${currentPosition}`}
             >
               {value}
             </span>
           );
         }
-        return <span key={index}>{value}</span>;
+        return <span key={`${varName}-${currentPosition}`}>{value}</span>;
       }
       // Return the original if variable not found
       return part;

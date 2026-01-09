@@ -39,7 +39,8 @@
       "nursery": {
         "noShadow": "warn",
         "noIncrementDecrement": "warn",
-        "useMaxParams": "warn"
+        "useMaxParams": "warn",
+        "useSortedClasses": "off"
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": "warn",

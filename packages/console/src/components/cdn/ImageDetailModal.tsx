@@ -15,17 +15,23 @@ import { DeleteButton } from "./DeleteButton";
 import { StarButton } from "./StarButton";
 import type { CdnFile } from "./types";
 
-interface ImageDetailModalProps {
+type ImageDetailModalProps = {
   file: CdnFile;
   onClose: () => void;
   onToggleStar: (key: string, starred: boolean) => void;
   onDelete: (key: string) => void;
-}
+};
 
 function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  if (bytes === 0) {
+    return "0 B";
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(2)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
@@ -34,7 +40,9 @@ function getFileExtension(filename: string): string {
 }
 
 function isImageFile(contentType?: string, filename?: string): boolean {
-  if (contentType?.startsWith("image/")) return true;
+  if (contentType?.startsWith("image/")) {
+    return true;
+  }
   const ext = filename ? getFileExtension(filename) : "";
   return [
     "jpg",
@@ -81,13 +89,11 @@ export function ImageDetailModal({
             </div>
             <div className="flex items-center gap-2">
               <StarButton
-                starred={file.starred}
                 onToggle={() => onToggleStar(file.key, !file.starred)}
+                starred={file.starred}
                 variant="outline"
               />
-              <DeleteButton
-                onDelete={() => onDelete(file.key)}
-              />
+              <DeleteButton onDelete={() => onDelete(file.key)} />
               <Button onClick={onClose} size="icon" variant="outline">
                 <X className="h-4 w-4" />
               </Button>

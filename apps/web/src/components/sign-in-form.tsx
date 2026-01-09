@@ -3,9 +3,9 @@
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
-import posthog from "posthog-js";
 import z from "zod";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
@@ -270,7 +270,7 @@ export default function SignInForm({
                       Login
                       {lastMethod === "email" && (
                         <Badge
-                          className="absolute top-1/2 right-2 ml-auto -translate-y-1/2"
+                          className="-translate-y-1/2 absolute top-1/2 right-2 ml-auto"
                           variant="secondary"
                         >
                           Last used
@@ -342,7 +342,7 @@ export default function SignInForm({
                 Sign in with Passkey
                 {lastMethod === "passkey" && !isPasskeyLoading && (
                   <Badge
-                    className="absolute top-1/2 right-2 ml-auto -translate-y-1/2"
+                    className="-translate-y-1/2 absolute top-1/2 right-2 ml-auto"
                     variant="secondary"
                   >
                     Last used

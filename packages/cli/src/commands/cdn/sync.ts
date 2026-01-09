@@ -4,10 +4,7 @@ import pc from "picocolors";
 import { deployCdnStack } from "../../infrastructure/cdn-stack.js";
 import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
-import type {
-  CdnStackConfig,
-  WrapsCdnConfig,
-} from "../../types/index.js";
+import type { CdnStackConfig, WrapsCdnConfig } from "../../types/index.js";
 import {
   getAWSRegion,
   validateAWSCredentials,

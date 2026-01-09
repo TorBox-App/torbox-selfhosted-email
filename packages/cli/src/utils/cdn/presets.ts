@@ -1,7 +1,4 @@
-import type {
-  CdnConfigPreset,
-  WrapsCdnConfig,
-} from "../../types/index.js";
+import type { CdnConfigPreset, WrapsCdnConfig } from "../../types/index.js";
 import { calculateCosts, formatCost } from "./costs.js";
 
 /**
@@ -44,9 +41,7 @@ export const PRODUCTION_PRESET: WrapsCdnConfig = {
 /**
  * Get preset configuration by name
  */
-export function getPreset(
-  preset: CdnConfigPreset
-): WrapsCdnConfig | null {
+export function getPreset(preset: CdnConfigPreset): WrapsCdnConfig | null {
   switch (preset) {
     case "starter":
       return { ...STARTER_PRESET };

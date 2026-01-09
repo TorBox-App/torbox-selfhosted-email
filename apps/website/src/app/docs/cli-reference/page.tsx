@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowRight, HardDrive, Mail, MessageSquare, Terminal } from "lucide-react";
+import {
+  ArrowRight,
+  HardDrive,
+  Mail,
+  MessageSquare,
+  Terminal,
+} from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,9 +105,10 @@ export default function CLIReferencePage() {
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground text-sm">
-                Deploy and manage AWS SES email infrastructure with event tracking, analytics, and domain management.
+                Deploy and manage AWS SES email infrastructure with event
+                tracking, analytics, and domain management.
               </p>
-              <Button asChild variant="outline" className="w-full">
+              <Button asChild className="w-full" variant="outline">
                 <a href="/docs/cli-reference/email">
                   View Email Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -119,9 +126,10 @@ export default function CLIReferencePage() {
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground text-sm">
-                Deploy S3 + CloudFront CDN infrastructure with browser-based image optimization.
+                Deploy S3 + CloudFront CDN infrastructure with browser-based
+                image optimization.
               </p>
-              <Button asChild variant="outline" className="w-full">
+              <Button asChild className="w-full" variant="outline">
                 <a href="/docs/cli-reference/storage">
                   View Storage Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -130,19 +138,22 @@ export default function CLIReferencePage() {
             </CardContent>
           </Card>
 
-          <Card className="transition-colors hover:border-primary/50 opacity-60">
+          <Card className="opacity-60 transition-colors hover:border-primary/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <MessageSquare className="h-5 w-5 text-muted-foreground" />
                 SMS Commands
-                <Badge variant="secondary" className="ml-auto text-xs">Soon</Badge>
+                <Badge className="ml-auto text-xs" variant="secondary">
+                  Soon
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground text-sm">
-                Deploy AWS End User Messaging (Pinpoint) for SMS and MMS. Coming soon.
+                Deploy AWS End User Messaging (Pinpoint) for SMS and MMS. Coming
+                soon.
               </p>
-              <Button variant="outline" className="w-full" disabled>
+              <Button className="w-full" disabled variant="outline">
                 Coming Soon
               </Button>
             </CardContent>
@@ -343,11 +354,22 @@ export default function CLIReferencePage() {
           <CardContent>
             <div className="space-y-2 text-muted-foreground text-sm">
               <p>
-                Use service-specific destroy commands to remove individual services:
+                Use service-specific destroy commands to remove individual
+                services:
               </p>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li><code className="rounded bg-muted px-1.5 py-0.5">wraps email destroy</code> - Remove email infrastructure only</li>
-                <li><code className="rounded bg-muted px-1.5 py-0.5">wraps storage destroy</code> - Remove storage infrastructure only</li>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    wraps email destroy
+                  </code>{" "}
+                  - Remove email infrastructure only
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    wraps storage destroy
+                  </code>{" "}
+                  - Remove storage infrastructure only
+                </li>
               </ul>
             </div>
           </CardContent>

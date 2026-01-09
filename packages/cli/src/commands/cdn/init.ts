@@ -8,12 +8,18 @@ import {
   trackServiceInit,
 } from "../../telemetry/events.js";
 import type {
-  CloudFrontPriceClass,
-  GeoRestriction,
   CdnConfigPreset,
   CdnStackConfig,
+  CloudFrontPriceClass,
+  GeoRestriction,
   WrapsCdnConfig,
 } from "../../types/index.js";
+import { getCostSummary } from "../../utils/cdn/costs.js";
+import {
+  getPreset,
+  getPresetInfo,
+  validateConfig,
+} from "../../utils/cdn/presets.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -43,12 +49,6 @@ import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
 } from "../../utils/shared/pulumi.js";
-import { getCostSummary } from "../../utils/cdn/costs.js";
-import {
-  getPreset,
-  getPresetInfo,
-  validateConfig,
-} from "../../utils/cdn/presets.js";
 
 /**
  * Storage init command options
@@ -403,12 +403,8 @@ export async function init(options: CdnInitOptions): Promise<void> {
     clack.log.warn(
       `CDN service already exists for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
     );
-    clack.log.info(
-      `Created: ${existingConnection.services.cdn?.deployedAt}`
-    );
-    clack.log.info(
-      `Use ${pc.cyan("wraps cdn status")} to view current setup`
-    );
+    clack.log.info(`Created: ${existingConnection.services.cdn?.deployedAt}`);
+    clack.log.info(`Use ${pc.cyan("wraps cdn status")} to view current setup`);
     process.exit(0);
   }
 
@@ -789,11 +785,15 @@ export async function init(options: CdnInitOptions): Promise<void> {
           ).length;
 
           const summaryParts: string[] = [];
-          if (newCount > 0) summaryParts.push(pc.green(`${newCount} new`));
-          if (conflictCount > 0)
+          if (newCount > 0) {
+            summaryParts.push(pc.green(`${newCount} new`));
+          }
+          if (conflictCount > 0) {
             summaryParts.push(pc.red(`${conflictCount} conflicts`));
-          if (noChangeCount > 0)
+          }
+          if (noChangeCount > 0) {
             summaryParts.push(pc.dim(`${noChangeCount} unchanged`));
+          }
           console.log(`  ${summaryParts.join(" | ")}\n`);
 
           for (const record of dnsRecords) {
@@ -1009,9 +1009,7 @@ function displayCdnSuccess(options: {
 
   // Next steps
   clack.log.info(`\n${pc.bold("Next Steps:")}`);
-  clack.log.info(
-    `  1. ${pc.cyan("wraps cdn status")} - View your CDN setup`
-  );
+  clack.log.info(`  1. ${pc.cyan("wraps cdn status")} - View your CDN setup`);
 
   if (options.customDomainPending) {
     clack.log.info("  2. Add DNS records above and validate SSL certificate");
@@ -1041,9 +1039,7 @@ function displayCdnSuccess(options: {
 
   if (options.customDomainPending) {
     clack.outro(
-      pc.yellow(
-        "CDN deployed! Custom domain pending certificate validation."
-      )
+      pc.yellow("CDN deployed! Custom domain pending certificate validation.")
     );
   } else {
     clack.outro(pc.green("CDN is ready!"));

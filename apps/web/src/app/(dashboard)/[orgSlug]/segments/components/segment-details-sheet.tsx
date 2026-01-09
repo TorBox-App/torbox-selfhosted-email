@@ -76,7 +76,7 @@ export function SegmentDetailsSheet({
         }
       });
     }
-  }, [open, segmentId, organizationId, segment]);
+  }, [open, organizationId, segment]);
 
   if (!segment) {
     return null;
@@ -228,7 +228,9 @@ function ConditionSummary({
     fieldId: string,
     value: string | string[] | number | boolean | null | undefined | {}
   ) => {
-    if (value === undefined || value === null || value === "") return "";
+    if (value === undefined || value === null || value === "") {
+      return "";
+    }
 
     // Handle topic values
     if (fieldId === "topics" && typeof value === "string") {
@@ -242,7 +244,7 @@ function ConditionSummary({
 
     // Handle dates for "within" operator
     if (typeof value === "string" && value.endsWith("d")) {
-      const days = Number.parseInt(value);
+      const days = Number.parseInt(value, 10);
       return `${days} day${days !== 1 ? "s" : ""}`;
     }
 

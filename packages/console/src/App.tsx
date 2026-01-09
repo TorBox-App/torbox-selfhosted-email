@@ -7,6 +7,9 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AppSidebar } from "@/components/app-sidebar";
+import { CdnFiles } from "@/components/CdnFiles";
+import { CdnMetrics } from "@/components/CdnMetrics";
+import { CdnSettings } from "@/components/CdnSettings";
 import { EmailDetail } from "@/components/EmailDetail";
 import { EmailLogs } from "@/components/EmailLogs";
 import { EmailMetrics } from "@/components/EmailMetrics";
@@ -15,9 +18,6 @@ import { SMSDetail } from "@/components/SMSDetail";
 import { SMSLogs } from "@/components/SMSLogs";
 import { SMSMetrics } from "@/components/SMSMetrics";
 import { SMSSettings } from "@/components/SMSSettings";
-import { CdnFiles } from "@/components/CdnFiles";
-import { CdnMetrics } from "@/components/CdnMetrics";
-import { CdnSettings } from "@/components/CdnSettings";
 import { ThemeProvider } from "@/components/theme-provider";
 import {
   Breadcrumb,

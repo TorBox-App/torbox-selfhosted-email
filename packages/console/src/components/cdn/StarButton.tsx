@@ -3,14 +3,14 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface StarButtonProps {
+type StarButtonProps = {
   starred?: boolean;
   onToggle: () => void | Promise<void>;
   className?: string;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "icon";
   label?: string;
-}
+};
 
 export function StarButton({
   starred,
@@ -40,19 +40,23 @@ export function StarButton({
   return (
     <Button
       className={cn("transition-all", className)}
+      disabled={isToggling}
       onClick={handleToggle}
       size={size}
       variant={variant}
-      disabled={isToggling}
     >
       {isToggling ? (
-        <Loader2 className={cn("animate-spin", label ? "mr-1.5 h-4 w-4" : "h-4 w-4")} />
+        <Loader2
+          className={cn("animate-spin", label ? "mr-1.5 h-4 w-4" : "h-4 w-4")}
+        />
       ) : (
         <Star
           className={cn(
             "transition-colors",
             label ? "mr-1.5 h-4 w-4" : "h-4 w-4",
-            starred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"
+            starred
+              ? "fill-yellow-500 text-yellow-500"
+              : "text-muted-foreground"
           )}
         />
       )}

@@ -19,103 +19,137 @@ const emailCheckResponseSchema = t.Object({
   domain: t.Optional(t.String()),
   checkedAt: t.Optional(t.String()),
   duration: t.Optional(t.Number()),
-  score: t.Optional(t.Object({
-    grade: t.String(),
-    score: t.Number(),
-    maxScore: t.Number(),
-    breakdown: t.Object({}, { additionalProperties: true }),
-  })),
-  spf: t.Optional(t.Object({
-    exists: t.Boolean(),
-    valid: t.Boolean(),
-    record: t.Union([t.String(), t.Null()]),
-    lookupCount: t.Number(),
-    lookupLimit: t.Number(),
-    allMechanism: t.Union([t.String(), t.Null()]),
-    includes: t.Array(t.String()),
-    hasPtr: t.Boolean(),
-    warnings: t.Array(t.String()),
-  })),
-  dkim: t.Optional(t.Object({
-    found: t.Boolean(),
-    selectorsFound: t.Array(t.Object({
-      selector: t.String(),
-      keyType: t.Union([t.String(), t.Null()]),
-      keyBits: t.Union([t.Number(), t.Null()]),
-      testMode: t.Boolean(),
-    })),
-    selectorsChecked: t.Number(),
-    warnings: t.Array(t.String()),
-  })),
-  dmarc: t.Optional(t.Object({
-    exists: t.Boolean(),
-    valid: t.Boolean(),
-    record: t.Union([t.String(), t.Null()]),
-    policy: t.Union([t.String(), t.Null()]),
-    subdomainPolicy: t.Union([t.String(), t.Null()]),
-    reportingEnabled: t.Boolean(),
-    pct: t.Union([t.Number(), t.Null()]),
-    alignmentSpf: t.Union([t.String(), t.Null()]),
-    alignmentDkim: t.Union([t.String(), t.Null()]),
-    ruaAddresses: t.Array(t.String()),
-    warnings: t.Array(t.String()),
-  })),
-  mx: t.Optional(t.Object({
-    exists: t.Boolean(),
-    hasRedundancy: t.Boolean(),
-    records: t.Array(t.Object({
-      exchange: t.String(),
-      priority: t.Number(),
-      resolves: t.Boolean(),
-      ipv4Count: t.Number(),
-      ipv6Count: t.Number(),
-    })),
-  })),
-  domainAge: t.Optional(t.Object({
-    ageInDays: t.Union([t.Number(), t.Null()]),
-    createdAt: t.Union([t.String(), t.Null()]),
-    expiresAt: t.Union([t.String(), t.Null()]),
-    daysUntilExpiry: t.Union([t.Number(), t.Null()]),
-    registrar: t.Union([t.String(), t.Null()]),
-    source: t.Union([t.String(), t.Null()]),
-    privacyEnabled: t.Boolean(),
-  })),
-  ipv6: t.Optional(t.Object({
-    mxHasIpv6: t.Boolean(),
-    spfIncludesIpv6: t.Boolean(),
-    mxIpv6Count: t.Number(),
-  })),
-  reverseDns: t.Optional(t.Object({
-    allHavePtr: t.Boolean(),
-    allConfirm: t.Boolean(),
-    count: t.Number(),
-  })),
-  blacklist: t.Optional(t.Object({
-    checked: t.Boolean(),
-    overallClean: t.Boolean(),
-    domainListings: t.Array(t.Object({
-      blacklist: t.String(),
-      priority: t.String(),
-      delistUrl: t.Union([t.String(), t.Null()]),
-    })),
-    ipListings: t.Array(t.Object({
-      blacklist: t.String(),
-      priority: t.String(),
-      target: t.String(),
-      delistUrl: t.Union([t.String(), t.Null()]),
-    })),
-  })),
-  issues: t.Optional(t.Array(t.Object({
-    check: t.String(),
-    reason: t.String(),
-    points: t.Number(),
-    severity: t.String(),
-  }))),
-  bonuses: t.Optional(t.Array(t.Object({
-    check: t.String(),
-    reason: t.String(),
-    points: t.Number(),
-  }))),
+  score: t.Optional(
+    t.Object({
+      grade: t.String(),
+      score: t.Number(),
+      maxScore: t.Number(),
+      breakdown: t.Object({}, { additionalProperties: true }),
+    })
+  ),
+  spf: t.Optional(
+    t.Object({
+      exists: t.Boolean(),
+      valid: t.Boolean(),
+      record: t.Union([t.String(), t.Null()]),
+      lookupCount: t.Number(),
+      lookupLimit: t.Number(),
+      allMechanism: t.Union([t.String(), t.Null()]),
+      includes: t.Array(t.String()),
+      hasPtr: t.Boolean(),
+      warnings: t.Array(t.String()),
+    })
+  ),
+  dkim: t.Optional(
+    t.Object({
+      found: t.Boolean(),
+      selectorsFound: t.Array(
+        t.Object({
+          selector: t.String(),
+          keyType: t.Union([t.String(), t.Null()]),
+          keyBits: t.Union([t.Number(), t.Null()]),
+          testMode: t.Boolean(),
+        })
+      ),
+      selectorsChecked: t.Number(),
+      warnings: t.Array(t.String()),
+    })
+  ),
+  dmarc: t.Optional(
+    t.Object({
+      exists: t.Boolean(),
+      valid: t.Boolean(),
+      record: t.Union([t.String(), t.Null()]),
+      policy: t.Union([t.String(), t.Null()]),
+      subdomainPolicy: t.Union([t.String(), t.Null()]),
+      reportingEnabled: t.Boolean(),
+      pct: t.Union([t.Number(), t.Null()]),
+      alignmentSpf: t.Union([t.String(), t.Null()]),
+      alignmentDkim: t.Union([t.String(), t.Null()]),
+      ruaAddresses: t.Array(t.String()),
+      warnings: t.Array(t.String()),
+    })
+  ),
+  mx: t.Optional(
+    t.Object({
+      exists: t.Boolean(),
+      hasRedundancy: t.Boolean(),
+      records: t.Array(
+        t.Object({
+          exchange: t.String(),
+          priority: t.Number(),
+          resolves: t.Boolean(),
+          ipv4Count: t.Number(),
+          ipv6Count: t.Number(),
+        })
+      ),
+    })
+  ),
+  domainAge: t.Optional(
+    t.Object({
+      ageInDays: t.Union([t.Number(), t.Null()]),
+      createdAt: t.Union([t.String(), t.Null()]),
+      expiresAt: t.Union([t.String(), t.Null()]),
+      daysUntilExpiry: t.Union([t.Number(), t.Null()]),
+      registrar: t.Union([t.String(), t.Null()]),
+      source: t.Union([t.String(), t.Null()]),
+      privacyEnabled: t.Boolean(),
+    })
+  ),
+  ipv6: t.Optional(
+    t.Object({
+      mxHasIpv6: t.Boolean(),
+      spfIncludesIpv6: t.Boolean(),
+      mxIpv6Count: t.Number(),
+    })
+  ),
+  reverseDns: t.Optional(
+    t.Object({
+      allHavePtr: t.Boolean(),
+      allConfirm: t.Boolean(),
+      count: t.Number(),
+    })
+  ),
+  blacklist: t.Optional(
+    t.Object({
+      checked: t.Boolean(),
+      overallClean: t.Boolean(),
+      domainListings: t.Array(
+        t.Object({
+          blacklist: t.String(),
+          priority: t.String(),
+          delistUrl: t.Union([t.String(), t.Null()]),
+        })
+      ),
+      ipListings: t.Array(
+        t.Object({
+          blacklist: t.String(),
+          priority: t.String(),
+          target: t.String(),
+          delistUrl: t.Union([t.String(), t.Null()]),
+        })
+      ),
+    })
+  ),
+  issues: t.Optional(
+    t.Array(
+      t.Object({
+        check: t.String(),
+        reason: t.String(),
+        points: t.Number(),
+        severity: t.String(),
+      })
+    )
+  ),
+  bonuses: t.Optional(
+    t.Array(
+      t.Object({
+        check: t.String(),
+        reason: t.String(),
+        points: t.Number(),
+      })
+    )
+  ),
   error: t.Optional(t.String()),
 });
 
@@ -294,10 +328,25 @@ export const toolsRoutes = new Elysia({ prefix: "/tools" })
     },
     {
       body: t.Object({
-        domain: t.String({ minLength: 3, maxLength: 255, description: "Domain to check" }),
-        quick: t.Optional(t.Boolean({ description: "Quick mode (skip blacklist checks)" })),
-        dkimSelector: t.Optional(t.String({ maxLength: 100, description: "Single DKIM selector to check" })),
-        dkimSelectors: t.Optional(t.Array(t.String({ maxLength: 100 }), { description: "Multiple DKIM selectors to check" })),
+        domain: t.String({
+          minLength: 3,
+          maxLength: 255,
+          description: "Domain to check",
+        }),
+        quick: t.Optional(
+          t.Boolean({ description: "Quick mode (skip blacklist checks)" })
+        ),
+        dkimSelector: t.Optional(
+          t.String({
+            maxLength: 100,
+            description: "Single DKIM selector to check",
+          })
+        ),
+        dkimSelectors: t.Optional(
+          t.Array(t.String({ maxLength: 100 }), {
+            description: "Multiple DKIM selectors to check",
+          })
+        ),
       }),
       response: {
         200: emailCheckResponseSchema,

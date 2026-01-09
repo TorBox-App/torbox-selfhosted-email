@@ -1,8 +1,4 @@
-import {
-  ExternalLink,
-  File as FileIcon,
-  FileImage,
-} from "lucide-react";
+import { ExternalLink, File as FileIcon, FileImage } from "lucide-react";
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,18 +14,24 @@ import { CopyButton } from "./CopyButton";
 import { StarButton } from "./StarButton";
 import type { CdnFile } from "./types";
 
-interface LibraryGridViewProps {
+type LibraryGridViewProps = {
   files: CdnFile[];
   selectedFiles: string[];
   onSelectFile: (key: string) => void;
   onToggleStar: (key: string, starred: boolean) => void;
   onFileClick: (file: CdnFile) => void;
-}
+};
 
 function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes === 0) {
+    return "0 B";
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(0)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
@@ -38,7 +40,9 @@ function getFileExtension(filename: string): string {
 }
 
 function isImageFile(contentType?: string, filename?: string): boolean {
-  if (contentType?.startsWith("image/")) return true;
+  if (contentType?.startsWith("image/")) {
+    return true;
+  }
   const ext = filename ? getFileExtension(filename) : "";
   return [
     "jpg",
@@ -100,9 +104,9 @@ export function LibraryGridView({
 
             {/* Star Button - Top Right */}
             <StarButton
-              starred={file.starred}
-              onToggle={() => onToggleStar(file.key, !file.starred)}
               className="absolute top-2 right-2 rounded-full bg-background/80 hover:bg-background/90"
+              onToggle={() => onToggleStar(file.key, !file.starred)}
+              starred={file.starred}
             />
 
             {/* Card Content Below Image */}
@@ -120,7 +124,7 @@ export function LibraryGridView({
                   </CardTitle>
                 </div>
                 <CardDescription className="flex items-center gap-2 pl-6">
-                  <Badge variant="outline" className="rounded-sm text-[10px]">
+                  <Badge className="rounded-sm text-[10px]" variant="outline">
                     {ext.toUpperCase()}
                   </Badge>
                   <span className="text-xs">{formatSize(file.size)}</span>
@@ -136,10 +140,10 @@ export function LibraryGridView({
                   variant="ghost"
                 />
                 <Button
-                  size="sm"
-                  variant="ghost"
                   className="h-7 px-2"
                   onClick={(e) => handleOpenExternal(e, file.url)}
+                  size="sm"
+                  variant="ghost"
                 >
                   <ExternalLink className="mr-1 h-3 w-3" />
                   Open

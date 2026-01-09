@@ -108,7 +108,9 @@ export function fileToDataUrl(file: File): Promise<string> {
  * Format bytes to human-readable string
  */
 export function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
+  if (bytes === 0) {
+    return "0 B";
+  }
 
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB"];
@@ -164,7 +166,9 @@ export function calculateSavings(
   originalSize: number,
   optimizedSize: number
 ): number {
-  if (originalSize === 0) return 0;
+  if (originalSize === 0) {
+    return 0;
+  }
   return Math.round((1 - optimizedSize / originalSize) * 100);
 }
 

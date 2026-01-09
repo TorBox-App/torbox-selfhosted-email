@@ -80,7 +80,7 @@ export function WaitForEventNode({
       </div>
 
       {/* Three outputs at bottom */}
-      <div className="absolute right-0 -bottom-5 left-0 flex justify-between px-3">
+      <div className="-bottom-5 absolute right-0 left-0 flex justify-between px-3">
         {/* Event received - left */}
         <div className="flex flex-col items-center">
           <span className="mb-0.5 font-medium text-[8px] text-green-600">
@@ -122,7 +122,7 @@ export function WaitForEventNode({
       </div>
 
       {errorMessage && (
-        <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap text-red-500 text-xs">
+        <div className="-bottom-12 -translate-x-1/2 absolute left-1/2 whitespace-nowrap text-red-500 text-xs">
           {errorMessage}
         </div>
       )}

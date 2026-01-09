@@ -1,12 +1,12 @@
 import { Star, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface LibraryBulkActionsProps {
+type LibraryBulkActionsProps = {
   selectedCount: number;
   onStar: () => void;
   onDelete: () => void;
   onClearSelection: () => void;
-}
+};
 
 export function LibraryBulkActions({
   selectedCount,

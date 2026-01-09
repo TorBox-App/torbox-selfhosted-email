@@ -28,8 +28,7 @@ export function createCdnRouter(config: ServerConfig): Router {
 
       // Get storage info from metadata
       const settings = {
-        bucketName:
-          config.cdnBucketName || `wraps-cdn-${config.accountId}`,
+        bucketName: config.cdnBucketName || `wraps-cdn-${config.accountId}`,
         bucketArn: `arn:aws:s3:::${config.cdnBucketName || `wraps-cdn-${config.accountId}`}`,
         region: config.region,
         roleArn: config.cdnRoleArn || config.roleArn,
@@ -273,7 +272,7 @@ export function createCdnRouter(config: ServerConfig): Router {
           })
         );
         numberOfObjects = objectsResponse.Datapoints?.[0]?.Average || 0;
-      } catch (err) {
+      } catch (_err) {
         console.log("[CDN] CloudWatch metrics not available yet");
       }
 

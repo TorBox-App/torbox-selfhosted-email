@@ -11,9 +11,7 @@ const QuickstartEmailDocs = lazy(
   () => import("@/app/docs/quickstart/email/page")
 );
 const QuickstartSmsDocs = lazy(() => import("@/app/docs/quickstart/sms/page"));
-const QuickstartCdnDocs = lazy(
-  () => import("@/app/docs/quickstart/cdn/page")
-);
+const QuickstartCdnDocs = lazy(() => import("@/app/docs/quickstart/cdn/page"));
 const QuickstartPlatformDocs = lazy(
   () => import("@/app/docs/quickstart/platform/page")
 );

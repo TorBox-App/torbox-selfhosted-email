@@ -5,7 +5,7 @@
 
 export type ImageFormat = "webp" | "avif" | "jpeg" | "png" | "original";
 
-export interface OptimizeOptions {
+export type OptimizeOptions = {
   /** Output format */
   format: ImageFormat;
   /** Quality 1-100 (higher = better quality, larger file) */
@@ -16,9 +16,9 @@ export interface OptimizeOptions {
   maxHeight?: number;
   /** Target file size in KB (will iteratively adjust quality to hit) */
   targetSize?: number;
-}
+};
 
-export interface OptimizedResult {
+export type OptimizedResult = {
   /** Optimized image blob */
   blob: Blob;
   /** Data URL for preview */
@@ -35,14 +35,14 @@ export interface OptimizedResult {
   savings: number;
   /** Output format used */
   format: ImageFormat;
-}
+};
 
 export interface PreviewResult extends OptimizedResult {
   /** Original image data URL for comparison */
   originalDataUrl: string;
 }
 
-export interface Preset {
+export type Preset = {
   /** Preset identifier */
   name: string;
   /** Display label */
@@ -51,20 +51,20 @@ export interface Preset {
   description: string;
   /** Preset options */
   options: Partial<OptimizeOptions>;
-}
+};
 
 export type SizeWarningLevel = "info" | "warning" | "error";
 
-export interface SizeWarning {
+export type SizeWarning = {
   /** Warning severity */
   level: SizeWarningLevel;
   /** Warning message */
   message: string;
   /** Suggested action */
   suggestion?: string;
-}
+};
 
-export interface BrowserSupport {
+export type BrowserSupport = {
   /** WebP encode/decode support */
   webp: boolean;
   /** AVIF encode/decode support */
@@ -75,11 +75,11 @@ export interface BrowserSupport {
   webWorker: boolean;
   /** WebAssembly support */
   wasm: boolean;
-}
+};
 
 export type WorkerMessageType = "optimize" | "preview" | "cancel";
 
-export interface WorkerMessage {
+export type WorkerMessage = {
   /** Unique message ID */
   id: string;
   /** Message type */
@@ -88,9 +88,9 @@ export interface WorkerMessage {
   file?: File;
   /** Optimization options */
   options: OptimizeOptions;
-}
+};
 
-export interface WorkerResponse {
+export type WorkerResponse = {
   /** Message ID this response is for */
   id: string;
   /** Progress percentage (0-100) */
@@ -99,13 +99,13 @@ export interface WorkerResponse {
   result?: OptimizedResult;
   /** Error message if failed */
   error?: string;
-}
+};
 
-export interface GifInfo {
+export type GifInfo = {
   /** Whether the GIF is animated */
   isAnimated: boolean;
   /** Frame count (1 for static) */
   frameCount: number;
   /** File size in bytes */
   size: number;
-}
+};

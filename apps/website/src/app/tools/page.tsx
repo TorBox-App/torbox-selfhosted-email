@@ -260,7 +260,9 @@ export default function ToolsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const checkDomain = async () => {
-    if (!domain.trim()) return;
+    if (!domain.trim()) {
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -305,16 +307,28 @@ export default function ToolsPage() {
   };
 
   const getSpfStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.spf.exists) return "none";
-    if (!result.spf.valid) return "fail";
-    if (result.spf.allMechanism === "+all") return "fail";
-    if (result.spf.allMechanism === "~all") return "warn";
+    if (!result?.spf.exists) {
+      return "none";
+    }
+    if (!result.spf.valid) {
+      return "fail";
+    }
+    if (result.spf.allMechanism === "+all") {
+      return "fail";
+    }
+    if (result.spf.allMechanism === "~all") {
+      return "warn";
+    }
     return "pass";
   };
 
   const getDkimStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.dkim?.found) return "none";
-    if ((result.dkim?.warnings?.length ?? 0) > 0) return "warn";
+    if (!result?.dkim?.found) {
+      return "none";
+    }
+    if ((result.dkim?.warnings?.length ?? 0) > 0) {
+      return "warn";
+    }
     return "pass";
   };
 
@@ -325,15 +339,25 @@ export default function ToolsPage() {
     result.dkim?.warnings?.some((w) => w.toLowerCase().includes("aws ses"));
 
   const getDmarcStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.dmarc.exists) return "none";
-    if (!result.dmarc.valid) return "fail";
-    if (result.dmarc.policy === "none") return "warn";
+    if (!result?.dmarc.exists) {
+      return "none";
+    }
+    if (!result.dmarc.valid) {
+      return "fail";
+    }
+    if (result.dmarc.policy === "none") {
+      return "warn";
+    }
     return "pass";
   };
 
   const getMxStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.mx.exists) return "none";
-    if (result.mx.records.some((r) => !r.resolves)) return "warn";
+    if (!result?.mx.exists) {
+      return "none";
+    }
+    if (result.mx.records.some((r) => !r.resolves)) {
+      return "warn";
+    }
     return "pass";
   };
 
@@ -374,7 +398,7 @@ export default function ToolsPage() {
             <CardContent className="pt-6">
               <div className="flex gap-3">
                 <div className="relative flex-1">
-                  <Mail className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
                   <Input
                     className="h-12 pl-10 text-lg"
                     disabled={isLoading}
@@ -456,7 +480,7 @@ export default function ToolsPage() {
           )}
 
           {/* Results */}
-          {result && result.success && (
+          {result?.success && (
             <div className="space-y-6">
               {/* Score Card */}
               <Card>
@@ -738,7 +762,8 @@ export default function ToolsPage() {
                       <div className="flex items-center justify-between p-4">
                         <StatusBadge label="DKIM" status={getDkimStatus()} />
                         <span className="text-muted-foreground text-sm">
-                          {result.dkim?.selectorsFound?.length ?? 0} selector(s) found
+                          {result.dkim?.selectorsFound?.length ?? 0} selector(s)
+                          found
                         </span>
                       </div>
                       <div className="border-t bg-muted/30 p-4">
@@ -982,7 +1007,6 @@ export default function ToolsPage() {
                           </div>
                         </div>
                       )}
-
                     </div>
                   </CardContent>
                 </Card>

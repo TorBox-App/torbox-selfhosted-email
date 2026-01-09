@@ -2,10 +2,10 @@ import { LayoutGrid, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ViewMode } from "./types";
 
-interface LibraryViewToggleProps {
+type LibraryViewToggleProps = {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-}
+};
 
 export function LibraryViewToggle({
   viewMode,

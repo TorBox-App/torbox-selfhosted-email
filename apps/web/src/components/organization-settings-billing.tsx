@@ -91,14 +91,13 @@ export function OrganizationSettingsBilling({
   });
 
   const upgradeMutation = useMutation({
-    mutationFn: async (plan: string) => {
-      return authClient.subscription.upgrade({
+    mutationFn: async (plan: string) =>
+      authClient.subscription.upgrade({
         plan,
         referenceId: organization.id,
         successUrl: `${window.location.origin}/${organization.slug}/settings/billing?subscribed=true`,
         cancelUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
-      });
-    },
+      }),
     onError: (error: Error) => {
       toast.error(error.message || "Failed to upgrade subscription");
     },
@@ -174,8 +173,8 @@ export function OrganizationSettingsBilling({
             </div>
             {activeSubscription && canManageBilling && (
               <Button
-                onClick={() => billingPortalMutation.mutate()}
                 loading={billingPortalMutation.isPending}
+                onClick={() => billingPortalMutation.mutate()}
                 variant="outline"
               >
                 <CreditCardIcon className="mr-2 size-4" />
@@ -208,14 +207,15 @@ export function OrganizationSettingsBilling({
           {isCancelled && periodEndsAt && (
             <div className="flex items-center justify-between rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
               <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                Your subscription will end on {periodEndsAt.toLocaleDateString()}
+                Your subscription will end on{" "}
+                {periodEndsAt.toLocaleDateString()}
               </p>
               <Button
+                disabled={!canManageBilling}
+                loading={restoreMutation.isPending}
+                onClick={() => restoreMutation.mutate(activeSubscription.id)}
                 size="sm"
                 variant="outline"
-                onClick={() => restoreMutation.mutate(activeSubscription.id)}
-                loading={restoreMutation.isPending}
-                disabled={!canManageBilling}
               >
                 Restore
               </Button>
@@ -267,9 +267,9 @@ export function OrganizationSettingsBilling({
 
                   <Button
                     className="w-full"
-                    onClick={() => upgradeMutation.mutate("pro")}
-                    loading={upgradeMutation.isPending}
                     disabled={!canManageBilling}
+                    loading={upgradeMutation.isPending}
+                    onClick={() => upgradeMutation.mutate("pro")}
                   >
                     Upgrade to Pro
                   </Button>
@@ -307,10 +307,10 @@ export function OrganizationSettingsBilling({
 
                 <Button
                   className="w-full"
-                  variant={currentPlan === "starter" ? "outline" : "default"}
-                  onClick={() => upgradeMutation.mutate("growth")}
-                  loading={upgradeMutation.isPending}
                   disabled={!canManageBilling}
+                  loading={upgradeMutation.isPending}
+                  onClick={() => upgradeMutation.mutate("growth")}
+                  variant={currentPlan === "starter" ? "outline" : "default"}
                 >
                   Upgrade to Growth
                 </Button>
@@ -333,7 +333,9 @@ export function OrganizationSettingsBilling({
             <ZapIcon className="size-5 text-primary" />
             <CardTitle>AWS Infrastructure Costs</CardTitle>
           </div>
-          <CardDescription>Separate from your Wraps subscription</CardDescription>
+          <CardDescription>
+            Separate from your Wraps subscription
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-muted-foreground text-sm">
           <p>
@@ -354,10 +356,10 @@ export function OrganizationSettingsBilling({
       {activeSubscription && !isCancelled && (
         <div className="border-t pt-6">
           <Button
-            variant="ghost"
             className="text-muted-foreground hover:text-destructive"
-            onClick={() => setShowCancelDialog(true)}
             disabled={!canManageBilling}
+            onClick={() => setShowCancelDialog(true)}
+            variant="ghost"
           >
             Cancel Subscription
           </Button>
@@ -366,12 +368,12 @@ export function OrganizationSettingsBilling({
 
       {/* Cancel Confirmation Dialog */}
       <Dialog
-        open={showCancelDialog}
         onOpenChange={(open) => {
           if (!cancelMutation.isPending) {
             setShowCancelDialog(open);
           }
         }}
+        open={showCancelDialog}
       >
         <DialogContent>
           <DialogHeader>
@@ -385,16 +387,16 @@ export function OrganizationSettingsBilling({
           </DialogHeader>
           <DialogFooter>
             <Button
-              variant="outline"
-              onClick={() => setShowCancelDialog(false)}
               disabled={cancelMutation.isPending}
+              onClick={() => setShowCancelDialog(false)}
+              variant="outline"
             >
               Keep Subscription
             </Button>
             <Button
-              variant="destructive"
-              onClick={() => cancelMutation.mutate(activeSubscription?.id)}
               loading={cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate(activeSubscription?.id)}
+              variant="destructive"
             >
               Yes, Cancel
             </Button>

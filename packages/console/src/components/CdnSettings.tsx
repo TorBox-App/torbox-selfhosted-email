@@ -276,25 +276,23 @@ function CDNSection({ settings }: { settings: CdnSettings }) {
             </>
           )}
           {settings.cdn.customDomain && (
-            <>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-sm">
-                  Custom Domain
-                </span>
-                <div className="flex items-center gap-2">
-                  <a
-                    className="text-blue-600 text-sm hover:underline dark:text-blue-400"
-                    href={`https://${settings.cdn.customDomain}`}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    {settings.cdn.customDomain}
-                    <ExternalLink className="ml-1 inline h-3 w-3" />
-                  </a>
-                  <CopyButton text={`https://${settings.cdn.customDomain}`} />
-                </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-sm">
+                Custom Domain
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  className="text-blue-600 text-sm hover:underline dark:text-blue-400"
+                  href={`https://${settings.cdn.customDomain}`}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {settings.cdn.customDomain}
+                  <ExternalLink className="ml-1 inline h-3 w-3" />
+                </a>
+                <CopyButton text={`https://${settings.cdn.customDomain}`} />
               </div>
-            </>
+            </div>
           )}
         </div>
 

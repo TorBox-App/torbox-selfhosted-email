@@ -45,13 +45,13 @@ import type { WorkflowJob } from "../services/workflow-queue";
 // SST Output Loading
 // -----------------------------------------------------------------------------
 
-interface SstOutputs {
+type SstOutputs = {
   workflowQueueUrl: string;
   workflowDlqUrl: string;
   apiUrl: string;
   schedulerGroupName: string;
   schedulerRoleArn: string;
-}
+};
 
 function loadSstOutputs(): SstOutputs {
   const outputsPath = resolve(process.cwd(), "../../.sst/outputs.json");
@@ -963,7 +963,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           expect(execution).not.toBeNull();
 
           const finalExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             ["completed", "failed"],
             15_000
           );
@@ -1014,14 +1014,14 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           expect(execution).not.toBeNull();
 
           const finalExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "completed",
             15_000
           );
           expect(finalExecution?.status).toBe("completed");
 
           // Check step executions to verify YES branch was taken
-          const stepExecs = await getStepExecutions(execution!.id);
+          const stepExecs = await getStepExecutions(execution?.id);
           const conditionStep = stepExecs.find(
             (s) => s.stepType === "condition"
           );
@@ -1060,14 +1060,14 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           expect(execution).not.toBeNull();
 
           const finalExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "completed",
             15_000
           );
           expect(finalExecution?.status).toBe("completed");
 
           // Check step executions to verify NO branch was taken
-          const stepExecs = await getStepExecutions(execution!.id);
+          const stepExecs = await getStepExecutions(execution?.id);
           const conditionStep = stepExecs.find(
             (s) => s.stepType === "condition"
           );
@@ -1102,7 +1102,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
         const execution = await waitForExecutionCreated(wf.id, testContact.id);
         expect(execution).not.toBeNull();
 
-        await waitForExecutionStatus(execution!.id, "completed", 15_000);
+        await waitForExecutionStatus(execution?.id, "completed", 15_000);
 
         // Verify contact was updated
         const [updatedContact] = await db
@@ -1149,14 +1149,14 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           expect(execution).not.toBeNull();
 
           const finalExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "completed",
             20_000
           );
           expect(finalExecution?.status).toBe("completed");
 
           // Verify all steps were executed
-          const stepExecs = await getStepExecutions(execution!.id);
+          const stepExecs = await getStepExecutions(execution?.id);
           const stepTypes = stepExecs.map((s) => s.stepType);
 
           // Should have: update_contact, condition, update_contact, exit
@@ -1205,7 +1205,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
 
           // First, it should enter "paused" state while waiting for delay
           const pausedExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "paused",
             15_000
           );
@@ -1214,7 +1214,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
 
           // Wait for delay to complete (5s delay + buffer)
           const completedExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "completed",
             20_000 // 20s timeout for delay + processing
           );
@@ -1412,7 +1412,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
 
           // Wait for execution to enter waiting state
           const waitingExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "waiting",
             15_000
           );
@@ -1447,19 +1447,19 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           );
           expect(execution).not.toBeNull();
 
-          await waitForExecutionStatus(execution!.id, "waiting", 15_000);
+          await waitForExecutionStatus(execution?.id, "waiting", 15_000);
 
           // Send resume event (simulating event received)
           await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
             type: "resume",
-            executionId: execution!.id,
+            executionId: execution?.id,
             branch: "yes",
             organizationId: testOrg.id,
           });
 
           // Wait for execution to complete
           const completedExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "completed",
             15_000
           );
@@ -1497,7 +1497,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           expect(execution).not.toBeNull();
 
           const waitingExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "waiting",
             15_000
           );
@@ -1534,19 +1534,19 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           );
           expect(execution).not.toBeNull();
 
-          await waitForExecutionStatus(execution!.id, "waiting", 15_000);
+          await waitForExecutionStatus(execution?.id, "waiting", 15_000);
 
           // Send resume with "opened" branch
           await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
             type: "resume",
-            executionId: execution!.id,
+            executionId: execution?.id,
             branch: "opened",
             organizationId: testOrg.id,
           });
 
           // Should complete
           const completedExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "completed",
             15_000
           );
@@ -1587,7 +1587,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
         const execution = await waitForExecutionCreated(wf.id, testContact.id);
         expect(execution).not.toBeNull();
 
-        await waitForExecutionStatus(execution!.id, "completed", 15_000);
+        await waitForExecutionStatus(execution?.id, "completed", 15_000);
 
         // Verify subscription was created
         const [subscription] = await db
@@ -1633,7 +1633,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
             wf.id,
             testContact.id
           );
-          await waitForExecutionStatus(execution!.id, "completed", 15_000);
+          await waitForExecutionStatus(execution?.id, "completed", 15_000);
 
           // Verify subscription was updated
           const [subscription] = await db
@@ -1685,7 +1685,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           );
           expect(execution).not.toBeNull();
 
-          await waitForExecutionStatus(execution!.id, "completed", 15_000);
+          await waitForExecutionStatus(execution?.id, "completed", 15_000);
 
           // Verify subscription was updated to unsubscribed
           const [subscription] = await db
@@ -1728,7 +1728,7 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
 
           // Should complete (unsubscribe with no existing record is a no-op)
           const completedExecution = await waitForExecutionStatus(
-            execution!.id,
+            execution?.id,
             "completed",
             15_000
           );

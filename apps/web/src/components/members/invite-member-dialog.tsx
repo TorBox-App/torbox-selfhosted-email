@@ -55,7 +55,7 @@ export function InviteMemberDialog({
       // Capture invitation sent event in PostHog
       posthog.capture("invitation_sent", {
         invited_email: email,
-        role: role,
+        role,
         organization_id: organizationId,
       });
 

@@ -14,7 +14,7 @@ import { batchQueue, workflowQueue } from "./queues";
 import { schedulerGroup, schedulerRole } from "./scheduler-resources";
 
 // Re-export for backwards compatibility
-export { schedulerGroup, schedulerRole };
+export { schedulerGroup, schedulerRole } from "./scheduler-resources";
 
 // Policy to allow Scheduler to send messages to queues (batch + workflow)
 new aws.iam.RolePolicy("SchedulerSqsPolicy", {

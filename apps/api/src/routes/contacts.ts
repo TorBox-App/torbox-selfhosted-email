@@ -71,72 +71,139 @@ const contactResponseSchema = t.Object({
   emailsClicked: t.Number({ description: "Number of emails clicked" }),
   smsSent: t.Number({ description: "Number of SMS sent" }),
   smsClicked: t.Number({ description: "Number of SMS clicked" }),
-  createdAt: t.String({ description: "Creation timestamp", format: "date-time" }),
-  updatedAt: t.String({ description: "Last update timestamp", format: "date-time" }),
+  createdAt: t.String({
+    description: "Creation timestamp",
+    format: "date-time",
+  }),
+  updatedAt: t.String({
+    description: "Last update timestamp",
+    format: "date-time",
+  }),
 });
 
 const createContactSchema = t.Object({
   email: t.Optional(t.String({ description: "Email address", maxLength: 255 })),
   phone: t.Optional(t.String({ description: "Phone number", maxLength: 50 })),
-  firstName: t.Optional(t.String({ description: "First name", maxLength: 100 })),
+  firstName: t.Optional(
+    t.String({ description: "First name", maxLength: 100 })
+  ),
   lastName: t.Optional(t.String({ description: "Last name", maxLength: 100 })),
-  company: t.Optional(t.String({ description: "Company name", maxLength: 200 })),
+  company: t.Optional(
+    t.String({ description: "Company name", maxLength: 200 })
+  ),
   jobTitle: t.Optional(t.String({ description: "Job title", maxLength: 200 })),
   emailStatus: t.Optional(
-    t.Union([
-      t.Literal("active"),
-      t.Literal("unsubscribed"),
-      t.Literal("bounced"),
-      t.Literal("complained"),
-    ], { description: "Email subscription status" })
+    t.Union(
+      [
+        t.Literal("active"),
+        t.Literal("unsubscribed"),
+        t.Literal("bounced"),
+        t.Literal("complained"),
+      ],
+      { description: "Email subscription status" }
+    )
   ),
   smsStatus: t.Optional(
-    t.Union([
-      t.Literal("pending_consent"),
-      t.Literal("opted_in"),
-      t.Literal("opted_out"),
-      t.Literal("invalid"),
-    ], { description: "SMS consent status" })
+    t.Union(
+      [
+        t.Literal("pending_consent"),
+        t.Literal("opted_in"),
+        t.Literal("opted_out"),
+        t.Literal("invalid"),
+      ],
+      { description: "SMS consent status" }
+    )
   ),
   properties: propertiesSchema,
-  topicIds: t.Optional(t.Array(t.String({ maxLength: 36 }), { description: "Topic IDs to subscribe" })),
-  topicSlugs: t.Optional(t.Array(t.String({ maxLength: 100 }), { description: "Topic slugs to subscribe" })),
+  topicIds: t.Optional(
+    t.Array(t.String({ maxLength: 36 }), {
+      description: "Topic IDs to subscribe",
+    })
+  ),
+  topicSlugs: t.Optional(
+    t.Array(t.String({ maxLength: 100 }), {
+      description: "Topic slugs to subscribe",
+    })
+  ),
 });
 
 const updateContactSchema = t.Object({
   email: t.Optional(t.String({ description: "Email address", maxLength: 255 })),
   phone: t.Optional(t.String({ description: "Phone number", maxLength: 50 })),
-  firstName: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()], { description: "First name" })),
-  lastName: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()], { description: "Last name" })),
-  company: t.Optional(t.Union([t.String({ maxLength: 200 }), t.Null()], { description: "Company name" })),
-  jobTitle: t.Optional(t.Union([t.String({ maxLength: 200 }), t.Null()], { description: "Job title" })),
+  firstName: t.Optional(
+    t.Union([t.String({ maxLength: 100 }), t.Null()], {
+      description: "First name",
+    })
+  ),
+  lastName: t.Optional(
+    t.Union([t.String({ maxLength: 100 }), t.Null()], {
+      description: "Last name",
+    })
+  ),
+  company: t.Optional(
+    t.Union([t.String({ maxLength: 200 }), t.Null()], {
+      description: "Company name",
+    })
+  ),
+  jobTitle: t.Optional(
+    t.Union([t.String({ maxLength: 200 }), t.Null()], {
+      description: "Job title",
+    })
+  ),
   emailStatus: t.Optional(
-    t.Union([
-      t.Literal("active"),
-      t.Literal("unsubscribed"),
-      t.Literal("bounced"),
-      t.Literal("complained"),
-    ], { description: "Email subscription status" })
+    t.Union(
+      [
+        t.Literal("active"),
+        t.Literal("unsubscribed"),
+        t.Literal("bounced"),
+        t.Literal("complained"),
+      ],
+      { description: "Email subscription status" }
+    )
   ),
   smsStatus: t.Optional(
-    t.Union([
-      t.Literal("pending_consent"),
-      t.Literal("opted_in"),
-      t.Literal("opted_out"),
-      t.Literal("invalid"),
-    ], { description: "SMS consent status" })
+    t.Union(
+      [
+        t.Literal("pending_consent"),
+        t.Literal("opted_in"),
+        t.Literal("opted_out"),
+        t.Literal("invalid"),
+      ],
+      { description: "SMS consent status" }
+    )
   ),
   properties: propertiesSchema,
-  topicIds: t.Optional(t.Array(t.String({ maxLength: 36 }), { description: "Topic IDs to subscribe" })),
-  topicSlugs: t.Optional(t.Array(t.String({ maxLength: 100 }), { description: "Topic slugs to subscribe" })),
+  topicIds: t.Optional(
+    t.Array(t.String({ maxLength: 36 }), {
+      description: "Topic IDs to subscribe",
+    })
+  ),
+  topicSlugs: t.Optional(
+    t.Array(t.String({ maxLength: 100 }), {
+      description: "Topic slugs to subscribe",
+    })
+  ),
 });
 
 const listContactsQuerySchema = t.Object({
-  page: t.Optional(t.String({ description: "Page number (1-indexed)", maxLength: 10 })),
-  pageSize: t.Optional(t.String({ description: "Number of items per page (max 100)", maxLength: 10 })),
-  emailStatus: t.Optional(t.String({ description: "Filter by email status", maxLength: 20 })),
-  smsStatus: t.Optional(t.String({ description: "Filter by SMS status", maxLength: 20 })),
-  search: t.Optional(t.String({ description: "Search by email or phone", maxLength: 255 })),
+  page: t.Optional(
+    t.String({ description: "Page number (1-indexed)", maxLength: 10 })
+  ),
+  pageSize: t.Optional(
+    t.String({
+      description: "Number of items per page (max 100)",
+      maxLength: 10,
+    })
+  ),
+  emailStatus: t.Optional(
+    t.String({ description: "Filter by email status", maxLength: 20 })
+  ),
+  smsStatus: t.Optional(
+    t.String({ description: "Filter by SMS status", maxLength: 20 })
+  ),
+  search: t.Optional(
+    t.String({ description: "Search by email or phone", maxLength: 255 })
+  ),
 });
 
 // Helpers
@@ -255,7 +322,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       response: {
         200: t.Object({
           contacts: t.Array(contactResponseSchema),
-          total: t.Number({ description: "Total number of contacts matching filter" }),
+          total: t.Number({
+            description: "Total number of contacts matching filter",
+          }),
           page: t.Number({ description: "Current page number" }),
           pageSize: t.Number({ description: "Number of items per page" }),
           totalPages: t.Number({ description: "Total number of pages" }),
@@ -334,12 +403,14 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       response: {
         200: t.Object({
           ...contactResponseSchema.properties,
-          topics: t.Array(t.Object({
-            topicId: t.String(),
-            topicName: t.String(),
-            status: t.String(),
-            subscribedAt: t.Union([t.String(), t.Null()]),
-          })),
+          topics: t.Array(
+            t.Object({
+              topicId: t.String(),
+              topicName: t.String(),
+              status: t.String(),
+              subscribedAt: t.Union([t.String(), t.Null()]),
+            })
+          ),
         }),
         404: errorResponse,
       },
@@ -584,7 +655,11 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       response: {
         201: t.Object({
           ...contactResponseSchema.properties,
-          pendingTopics: t.Optional(t.Array(t.String(), { description: "Topic IDs pending confirmation" })),
+          pendingTopics: t.Optional(
+            t.Array(t.String(), {
+              description: "Topic IDs pending confirmation",
+            })
+          ),
         }),
         400: errorResponse,
         409: errorResponse,
@@ -1003,7 +1078,11 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       response: {
         200: t.Object({
           ...contactResponseSchema.properties,
-          pendingTopics: t.Optional(t.Array(t.String(), { description: "Topic IDs pending confirmation" })),
+          pendingTopics: t.Optional(
+            t.Array(t.String(), {
+              description: "Topic IDs pending confirmation",
+            })
+          ),
         }),
         404: errorResponse,
       },
@@ -1248,17 +1327,27 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         id: t.String({ description: "Contact ID", maxLength: 36 }),
       }),
       body: t.Object({
-        topicIds: t.Optional(t.Array(t.String({ maxLength: 36 }), { description: "Topic IDs to subscribe" })),
-        topicSlugs: t.Optional(t.Array(t.String({ maxLength: 100 }), { description: "Topic slugs to subscribe" })),
+        topicIds: t.Optional(
+          t.Array(t.String({ maxLength: 36 }), {
+            description: "Topic IDs to subscribe",
+          })
+        ),
+        topicSlugs: t.Optional(
+          t.Array(t.String({ maxLength: 100 }), {
+            description: "Topic slugs to subscribe",
+          })
+        ),
       }),
       response: {
         200: t.Object({
-          topics: t.Array(t.Object({
-            topicId: t.String(),
-            topicName: t.String(),
-            status: t.String(),
-            subscribedAt: t.Union([t.String(), t.Null()]),
-          })),
+          topics: t.Array(
+            t.Object({
+              topicId: t.String(),
+              topicName: t.String(),
+              status: t.String(),
+              subscribedAt: t.Union([t.String(), t.Null()]),
+            })
+          ),
           pendingTopics: t.Optional(t.Array(t.String())),
         }),
         404: errorResponse,
@@ -1347,7 +1436,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
     },
     {
       body: t.Object({
-        ids: t.Array(t.String({ maxLength: 36 }), { description: "Contact IDs to delete (max 100)" }),
+        ids: t.Array(t.String({ maxLength: 36 }), {
+          description: "Contact IDs to delete (max 100)",
+        }),
       }),
       response: {
         200: t.Object({

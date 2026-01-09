@@ -110,14 +110,15 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
   // 6. Preview or Destroy Pulumi stack
   if (options.preview) {
     // PREVIEW MODE - show what would be destroyed without actually destroying
-    if (metadata.services.email?.pulumiStackName) {
+    const pulumiStackName = metadata.services.email?.pulumiStackName;
+    if (pulumiStackName) {
       try {
         const previewResult = await progress.execute(
           "Generating removal preview",
           async () => {
             const stack = await pulumi.automation.LocalWorkspace.selectStack(
               {
-                stackName: metadata.services.email?.pulumiStackName!,
+                stackName: pulumiStackName,
                 projectName: "wraps-email",
                 program: async () => {}, // Empty program for destroy
               },

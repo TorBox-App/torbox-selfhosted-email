@@ -25,7 +25,10 @@ export type SESTemplateParams = {
 /**
  * Creates an SES client using provided credentials
  */
-function createSESClient(credentials: SESCredentials, region: string): SESClient {
+function createSESClient(
+  credentials: SESCredentials,
+  region: string
+): SESClient {
   return new SESClient({
     region,
     credentials: {

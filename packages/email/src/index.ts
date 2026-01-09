@@ -9,7 +9,20 @@ export {
   generateConfirmationUrl,
   verifyConfirmationToken,
 } from "./lib/confirmation-token";
-
+// SES templates
+export type { SESCredentials, SESTemplateParams } from "./lib/ses-templates";
+export {
+  deleteSESTemplate,
+  generateSESTemplateName,
+  templateExists,
+  upsertSESTemplate,
+} from "./lib/ses-templates";
+// SES variable transformation
+export {
+  flattenVariablesForSes,
+  toSesVariableName,
+  transformVariablesForSes,
+} from "./lib/ses-variables";
 // Subscription service
 export type {
   CreateSubscriptionParams,
@@ -19,19 +32,3 @@ export {
   determineSubscriptionStatus,
   sendTopicConfirmationEmail,
 } from "./lib/subscription-service";
-
-// SES templates
-export type { SESCredentials, SESTemplateParams } from "./lib/ses-templates";
-export {
-  generateSESTemplateName,
-  upsertSESTemplate,
-  deleteSESTemplate,
-  templateExists,
-} from "./lib/ses-templates";
-
-// SES variable transformation
-export {
-  toSesVariableName,
-  transformVariablesForSes,
-  flattenVariablesForSes,
-} from "./lib/ses-variables";

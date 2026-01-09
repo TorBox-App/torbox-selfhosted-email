@@ -56,7 +56,7 @@ const EmailRowNodeView = ({
       </div>
 
       {/* Drag handle and settings button */}
-      <div className="absolute -top-2 right-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="-top-2 absolute right-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <DragHandle />
         <Popover onOpenChange={setIsEditing} open={isEditing}>
           <PopoverTrigger asChild>
@@ -102,7 +102,7 @@ const EmailRowNodeView = ({
       </div>
 
       {/* Visual indicator for row */}
-      <div className="absolute top-0 bottom-0 -left-4 flex items-center">
+      <div className="-left-4 absolute top-0 bottom-0 flex items-center">
         <div className="flex items-center gap-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
           <Columns className="h-3 w-3" />
         </div>

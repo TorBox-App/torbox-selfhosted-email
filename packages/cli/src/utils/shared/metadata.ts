@@ -3,14 +3,14 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
+  CdnConfigPreset,
   EmailConfigPreset,
   Provider,
   ServiceType,
   SMSConfigPreset,
-  CdnConfigPreset,
+  WrapsCdnConfig,
   WrapsEmailConfig,
   WrapsSMSConfig,
-  WrapsCdnConfig,
 } from "../../types/index.js";
 import { ensureWrapsDir, getWrapsDir } from "./fs.js";
 

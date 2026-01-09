@@ -24,7 +24,7 @@ export function Image3D({
     <div className={cn("group relative aspect-[4/3] w-full", className)}>
       <div className="perspective-distant transform-3d">
         {/* Animated background glow */}
-        <div className="absolute rounded-3xl bg-gradient-to-r from-primary/10 via-blue-500/10 to-purple-500/10 opacity-0 blur-2xl transition-all duration-1000 group-hover:opacity-100 sm:-inset-8" />
+        <div className="sm:-inset-8 absolute rounded-3xl bg-gradient-to-r from-primary/10 via-blue-500/10 to-purple-500/10 opacity-0 blur-2xl transition-all duration-1000 group-hover:opacity-100" />
 
         {/* Main 3D container */}
         <div className="transform-3d group-hover:translate-z-16 relative size-full transition-all duration-700 ease-out group-hover:rotate-x-8 group-hover:rotate-y-12">
@@ -38,9 +38,9 @@ export function Image3D({
             {/* Shimmer effect */}
             <div
               className={cn(
-                "pointer-events-none absolute inset-0 z-20 -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-out",
+                "-skew-x-12 pointer-events-none absolute inset-0 z-20 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-out",
                 isRight
-                  ? "translate-x-full group-hover:-translate-x-full"
+                  ? "group-hover:-translate-x-full translate-x-full"
                   : "-translate-x-full group-hover:translate-x-full"
               )}
             />

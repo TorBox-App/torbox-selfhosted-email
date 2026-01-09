@@ -3,8 +3,8 @@
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import posthog from "posthog-js";
+import { toast } from "sonner";
 import z from "zod";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";

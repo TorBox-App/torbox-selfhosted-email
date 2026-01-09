@@ -333,13 +333,14 @@ function upgradeToTls(
             resolve({ success: false, error: err.message });
           }
         });
-      } else if (buffer.includes("454") || buffer.includes("501")) {
+      } else if (
+        (buffer.includes("454") || buffer.includes("501")) &&
+        !resolved
+      ) {
         // TLS not available
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timer);
-          resolve({ success: false, error: "Server rejected STARTTLS" });
-        }
+        resolved = true;
+        clearTimeout(timer);
+        resolve({ success: false, error: "Server rejected STARTTLS" });
       }
     };
 

@@ -143,7 +143,9 @@ export function ContactDetailsSheet({
   }, [open, contact, form]);
 
   const handleSave = useCallback(() => {
-    if (!contact) return;
+    if (!contact) {
+      return;
+    }
 
     const values = form.state.values;
     const propertiesObj = properties.reduce(
@@ -204,7 +206,9 @@ export function ContactDetailsSheet({
   }, [contact, form.state.values, properties, selectedTopicIds, onSave]);
 
   const handleCancel = useCallback(() => {
-    if (!contact) return;
+    if (!contact) {
+      return;
+    }
 
     // Reset form to original values
     form.setFieldValue("email", contact.email || "");

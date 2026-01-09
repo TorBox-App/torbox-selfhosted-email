@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { FilterOptions } from "./types";
 
-interface LibraryFiltersProps {
+type LibraryFiltersProps = {
   filters: FilterOptions;
   onFiltersChange: (filters: FilterOptions) => void;
   availableFormats: string[];
-}
+};
 
 export function LibraryFilters({
   filters,

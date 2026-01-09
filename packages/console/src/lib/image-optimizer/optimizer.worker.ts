@@ -135,16 +135,24 @@ async function encode(
 
   switch (format) {
     case "webp":
-      if (!webpEncode) throw new Error("WebP encoder not loaded");
+      if (!webpEncode) {
+        throw new Error("WebP encoder not loaded");
+      }
       return webpEncode(imageData, { quality });
     case "avif":
-      if (!avifEncode) throw new Error("AVIF encoder not loaded");
+      if (!avifEncode) {
+        throw new Error("AVIF encoder not loaded");
+      }
       return avifEncode(imageData, { quality });
     case "jpeg":
-      if (!jpegEncode) throw new Error("JPEG encoder not loaded");
+      if (!jpegEncode) {
+        throw new Error("JPEG encoder not loaded");
+      }
       return jpegEncode(imageData, { quality });
     case "png":
-      if (!pngEncode) throw new Error("PNG encoder not loaded");
+      if (!pngEncode) {
+        throw new Error("PNG encoder not loaded");
+      }
       return pngEncode(imageData);
     default:
       throw new Error(`Unsupported format: ${format}`);
@@ -176,7 +184,9 @@ async function processImage(
   sendProgress(30);
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Failed to get canvas context");
+  if (!ctx) {
+    throw new Error("Failed to get canvas context");
+  }
 
   ctx.drawImage(bitmap, 0, 0);
   bitmap.close(); // Free memory

@@ -175,7 +175,7 @@ export function BatchForm({
     // Parse org default from email into prefix and domain
     let defaultFromPrefix = "";
     let defaultFromDomain = "";
-    if (orgDefaults?.defaultFrom && orgDefaults.defaultFrom.includes("@")) {
+    if (orgDefaults?.defaultFrom?.includes("@")) {
       const [prefix, domain] = orgDefaults.defaultFrom.split("@");
       defaultFromPrefix = prefix || "";
       defaultFromDomain = domain || "";

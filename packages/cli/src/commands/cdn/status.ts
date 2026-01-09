@@ -24,9 +24,7 @@ export type CdnStatusOptions = {
 /**
  * Storage Status command - Show current CDN infrastructure setup
  */
-export async function cdnStatus(
-  options: CdnStatusOptions
-): Promise<void> {
+export async function cdnStatus(options: CdnStatusOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

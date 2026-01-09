@@ -27,18 +27,12 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
 /**
  * Storage Upgrade command - Add custom domain to CloudFront after certificate validation
  */
-export async function cdnUpgrade(
-  options: CdnUpgradeOptions
-): Promise<void> {
+export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
   clack.intro(
-    pc.bold(
-      options.preview
-        ? "Wraps CDN Upgrade Preview"
-        : "Wraps CDN Upgrade"
-    )
+    pc.bold(options.preview ? "Wraps CDN Upgrade Preview" : "Wraps CDN Upgrade")
   );
 
   // 1. Validate AWS credentials
@@ -133,9 +127,7 @@ export async function cdnUpgrade(
       );
       const aliases =
         cfResponse.Distribution?.DistributionConfig?.Aliases?.Items || [];
-      cloudFrontHasCustomDomain = aliases.includes(
-        cdnConfig.cdn.customDomain
-      );
+      cloudFrontHasCustomDomain = aliases.includes(cdnConfig.cdn.customDomain);
     } catch {
       // Ignore errors checking CloudFront
     }

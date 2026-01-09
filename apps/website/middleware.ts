@@ -46,7 +46,9 @@ const CRAWLER_PATTERNS = [
  * Check if the user agent is a known crawler
  */
 function isCrawler(userAgent: string | null): boolean {
-  if (!userAgent) return false;
+  if (!userAgent) {
+    return false;
+  }
   const ua = userAgent.toLowerCase();
   return CRAWLER_PATTERNS.some((pattern) => ua.includes(pattern.toLowerCase()));
 }

@@ -1,9 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import type {
-  CdnRetention,
-  WrapsCdnConfig,
-} from "../../types/index.js";
+import type { CdnRetention, WrapsCdnConfig } from "../../types/index.js";
 
 /**
  * S3 storage bucket configuration
@@ -74,19 +71,16 @@ export async function createCdnBucket(
   }
 
   // Enable AES-256 encryption (always on)
-  new aws.s3.BucketServerSideEncryptionConfigurationV2(
-    "wraps-cdn-encryption",
-    {
-      bucket: bucket.id,
-      rules: [
-        {
-          applyServerSideEncryptionByDefault: {
-            sseAlgorithm: "AES256",
-          },
+  new aws.s3.BucketServerSideEncryptionConfigurationV2("wraps-cdn-encryption", {
+    bucket: bucket.id,
+    rules: [
+      {
+        applyServerSideEncryptionByDefault: {
+          sseAlgorithm: "AES256",
         },
-      ],
-    }
-  );
+      },
+    ],
+  });
 
   // Configure CORS for browser uploads
   // Include common dev ports: Vite (5173), Next.js (3000/3001), Wraps Console (5556)

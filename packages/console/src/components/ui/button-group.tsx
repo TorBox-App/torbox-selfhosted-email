@@ -7,7 +7,7 @@ const ButtonGroup = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     className={cn(
-      "inline-flex -space-x-px rounded-md shadow-xs rtl:space-x-reverse",
+      "-space-x-px inline-flex rounded-md shadow-xs rtl:space-x-reverse",
       "[&>*:first-child]:rounded-s-md [&>*:first-child]:rounded-e-none",
       "[&>*:last-child]:rounded-s-none [&>*:last-child]:rounded-e-md",
       "[&>*:not(:first-child):not(:last-child)]:rounded-none",

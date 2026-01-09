@@ -1,9 +1,5 @@
 import { formatDistanceToNow } from "date-fns";
-import {
-  ExternalLink,
-  File as FileIcon,
-  FileImage,
-} from "lucide-react";
+import { ExternalLink, File as FileIcon, FileImage } from "lucide-react";
 import type React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,19 +21,25 @@ import { CopyButton } from "./CopyButton";
 import { StarButton } from "./StarButton";
 import type { CdnFile } from "./types";
 
-interface LibraryTableViewProps {
+type LibraryTableViewProps = {
   files: CdnFile[];
   selectedFiles: string[];
   onSelectFile: (key: string) => void;
   onSelectAll: () => void;
   onToggleStar: (key: string, starred: boolean) => void;
   onFileClick: (file: CdnFile) => void;
-}
+};
 
 function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes === 0) {
+    return "0 B";
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(0)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
@@ -46,7 +48,9 @@ function getFileExtension(filename: string): string {
 }
 
 function isImageFile(contentType?: string, filename?: string): boolean {
-  if (contentType?.startsWith("image/")) return true;
+  if (contentType?.startsWith("image/")) {
+    return true;
+  }
   const ext = filename ? getFileExtension(filename) : "";
   return [
     "jpg",
@@ -116,8 +120,8 @@ export function LibraryTableView({
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <StarButton
                     className="h-8 w-8"
-                    starred={file.starred}
                     onToggle={() => onToggleStar(file.key, !file.starred)}
+                    starred={file.starred}
                   />
                 </TableCell>
                 <TableCell>

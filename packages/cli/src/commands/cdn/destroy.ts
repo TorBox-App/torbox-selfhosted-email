@@ -36,9 +36,7 @@ export type CdnDestroyOptions = {
 /**
  * Storage Destroy command - Remove CDN infrastructure
  */
-export async function cdnDestroy(
-  options: CdnDestroyOptions
-): Promise<void> {
+export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
   const startTime = Date.now();
 
   clack.intro(
@@ -225,7 +223,7 @@ export async function cdnDestroy(
       await progress.execute(
         `Deleting DNS records for ${customDomain}`,
         async () => {
-          await deleteCdnDNSRecords(hostedZone!.id, customDomain);
+          await deleteCdnDNSRecords(hostedZone?.id, customDomain);
         }
       );
     } catch (error: any) {

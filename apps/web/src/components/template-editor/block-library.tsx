@@ -125,7 +125,7 @@ export function BlockLibrary({ editor, orgSlug }: BlockLibraryProps) {
       {/* Search and Filter */}
       <div className="space-y-2 border-b p-3">
         <div className="relative">
-          <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="-translate-y-1/2 absolute top-1/2 left-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-8"
             onChange={(e) => setSearch(e.target.value)}

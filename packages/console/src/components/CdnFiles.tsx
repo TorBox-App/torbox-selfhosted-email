@@ -16,18 +16,18 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { ImageOptimizeDialog } from "@/components/image-optimizer";
 import {
+  type CdnFile,
+  type CdnInfo,
   DeleteButton,
   type FilterOptions,
   ImageDetailModal,
   LibraryGridView,
   LibraryTableView,
   StarButton,
-  type CdnFile,
-  type CdnInfo,
   type ViewMode,
 } from "@/components/cdn";
+import { ImageOptimizeDialog } from "@/components/image-optimizer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -62,11 +62,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
+  if (bytes === 0) {
+    return "0 B";
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
@@ -374,9 +381,7 @@ export function CdnFiles() {
 
   // Selection state
   const [selectedFiles, setSelectedFiles] = React.useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = React.useState<CdnFile | null>(
-    null
-  );
+  const [selectedFile, setSelectedFile] = React.useState<CdnFile | null>(null);
 
   // Upload state
   const [showUpload, setShowUpload] = React.useState(false);
@@ -445,7 +450,9 @@ export function CdnFiles() {
 
         // Update local state
         setInfo((prev) => {
-          if (!prev) return prev;
+          if (!prev) {
+            return prev;
+          }
           return {
             ...prev,
             files: prev.files.map((f) =>
@@ -460,7 +467,7 @@ export function CdnFiles() {
         }
 
         toast.success(starred ? "File starred" : "Star removed");
-      } catch (err) {
+      } catch (_err) {
         toast.error("Failed to update star status");
       }
     },
@@ -475,12 +482,9 @@ export function CdnFiles() {
       try {
         await Promise.all(
           keys.map((key) =>
-            fetch(
-              `/api/cdn/files/${encodeURIComponent(key)}?token=${token}`,
-              {
-                method: "DELETE",
-              }
-            )
+            fetch(`/api/cdn/files/${encodeURIComponent(key)}?token=${token}`, {
+              method: "DELETE",
+            })
           )
         );
 
@@ -515,14 +519,11 @@ export function CdnFiles() {
           )
         );
 
-        const urlResponse = await fetch(
-          `/api/cdn/upload-url?token=${token}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filename, contentType }),
-          }
-        );
+        const urlResponse = await fetch(`/api/cdn/upload-url?token=${token}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename, contentType }),
+        });
 
         if (!urlResponse.ok) {
           throw new Error("Failed to get upload URL");
@@ -622,7 +623,9 @@ export function CdnFiles() {
   // Handle optimized images
   const handleOptimizedImages = React.useCallback(
     (results: Array<{ file: File | Blob; cdnFilename: string }>) => {
-      if (!results || results.length === 0) return;
+      if (!results || results.length === 0) {
+        return;
+      }
 
       const startIndex = uploads.length;
 
@@ -651,14 +654,16 @@ export function CdnFiles() {
   }, []);
 
   const handleSelectAll = React.useCallback(() => {
-    if (!info?.files) return;
+    if (!info?.files) {
+      return;
+    }
     const filteredKeys = filteredFiles.map((f) => f.key);
     if (selectedFiles.length === filteredKeys.length) {
       setSelectedFiles([]);
     } else {
       setSelectedFiles(filteredKeys);
     }
-  }, [info?.files, selectedFiles.length]);
+  }, [info?.files, selectedFiles.length, filteredFiles.map]);
 
   // Bulk actions
   const handleBulkStar = React.useCallback(async () => {
@@ -672,7 +677,9 @@ export function CdnFiles() {
 
   // Computed values
   const filteredFiles = React.useMemo(() => {
-    if (!info?.files) return [];
+    if (!info?.files) {
+      return [];
+    }
 
     return info.files.filter((file) => {
       // Search filter
@@ -701,11 +708,15 @@ export function CdnFiles() {
   }, [info?.files, searchQuery, filters]);
 
   const availableFormats = React.useMemo(() => {
-    if (!info?.files) return [];
+    if (!info?.files) {
+      return [];
+    }
     const formats = new Set<string>();
     info.files.forEach((file) => {
       const ext = file.key.split(".").pop()?.toLowerCase();
-      if (ext) formats.add(ext);
+      if (ext) {
+        formats.add(ext);
+      }
     });
     return Array.from(formats).sort();
   }, [info?.files]);
@@ -777,21 +788,21 @@ export function CdnFiles() {
           {/* Selection Actions (left side when active) */}
           {selectedFiles.length > 0 && (
             <div className="flex items-center rounded-lg border">
-              <div className="flex items-center gap-1.5 border-r px-2.5 py-1.5 text-sm font-medium">
+              <div className="flex items-center gap-1.5 border-r px-2.5 py-1.5 font-medium text-sm">
                 {selectedFiles.length} selected
               </div>
               <StarButton
                 className="rounded-none border-0"
+                label="Star"
                 onToggle={handleBulkStar}
                 size="sm"
-                label="Star"
               />
               <DeleteButton
                 className="rounded-none border-0 border-l"
+                label="Delete"
                 onDelete={handleBulkDelete}
                 size="sm"
                 variant="ghost"
-                label="Delete"
               />
               <Button
                 className="rounded-l-none border-0 border-l"
@@ -806,7 +817,7 @@ export function CdnFiles() {
 
           {/* Search */}
           <div className="relative min-w-[200px] flex-1">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -826,7 +837,9 @@ export function CdnFiles() {
               size="sm"
               variant={filters.starred ? "secondary" : "ghost"}
             >
-              <Star className={`mr-1.5 h-4 w-4 ${filters.starred ? "fill-current" : ""}`} />
+              <Star
+                className={`mr-1.5 h-4 w-4 ${filters.starred ? "fill-current" : ""}`}
+              />
               Starred
             </Button>
             {availableFormats.length > 0 && (
@@ -840,7 +853,10 @@ export function CdnFiles() {
                     <Filter className="mr-1.5 h-4 w-4" />
                     Formats
                     {filters.formats.length > 0 && (
-                      <Badge className="ml-1.5 px-1.5 py-0 text-xs" variant="secondary">
+                      <Badge
+                        className="ml-1.5 px-1.5 py-0 text-xs"
+                        variant="secondary"
+                      >
                         {filters.formats.length}
                       </Badge>
                     )}
@@ -873,21 +889,23 @@ export function CdnFiles() {
           {/* View Toggle */}
           <ToggleGroup
             className="rounded-lg border"
-            onValueChange={(value) => value && handleViewModeChange(value as ViewMode)}
+            onValueChange={(value) =>
+              value && handleViewModeChange(value as ViewMode)
+            }
             type="single"
             value={viewMode}
           >
             <ToggleGroupItem
+              aria-label="Grid view"
               className="rounded-r-none border-0"
               value="grid"
-              aria-label="Grid view"
             >
               <Grid3X3 className="h-4 w-4" />
             </ToggleGroupItem>
             <ToggleGroupItem
+              aria-label="Table view"
               className="rounded-l-none border-0 border-l"
               value="table"
-              aria-label="Table view"
             >
               <List className="h-4 w-4" />
             </ToggleGroupItem>

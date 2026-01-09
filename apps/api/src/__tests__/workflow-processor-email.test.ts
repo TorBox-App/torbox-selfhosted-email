@@ -599,7 +599,7 @@ describe("Subject Line Sanitization", () => {
 
     it("should truncate after sanitization", () => {
       // Create a subject that exceeds 998 chars after newline replacement
-      const subject = "Hello\n" + "C".repeat(1000);
+      const subject = `Hello\n${"C".repeat(1000)}`;
       const sanitized = sanitizeEmailSubject(subject);
       expect(sanitized.length).toBe(998);
     });
@@ -687,7 +687,8 @@ describe("Workflow Processor Email - Integration Scenarios", () => {
 
       const templateHtml =
         "<p>It's been {{trigger.lastActivityDays}} days since we saw you.</p>" +
-        "<p>Your last purchase: ${{trigger.lastPurchaseAmount}} for {{trigger.productName}}</p>";
+        "<p>Your last purchase: $" +
+        "{{trigger.lastPurchaseAmount}} for {{trigger.productName}}</p>";
 
       // Variable substitution
       const htmlBody = templateHtml

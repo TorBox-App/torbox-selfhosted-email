@@ -250,7 +250,9 @@ export class TelemetryClient {
    * Returns true if footer was shown, false if already shown this session.
    */
   showFooterOnce(): boolean {
-    if (this.hasShownFooter) return false;
+    if (this.hasShownFooter) {
+      return false;
+    }
     this.hasShownFooter = true;
 
     console.log();

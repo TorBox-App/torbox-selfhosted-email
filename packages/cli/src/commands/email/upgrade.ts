@@ -1003,7 +1003,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         clack.log.info(
           "\nRotating credentials will invalidate your current SMTP password."
         );
-        clack.log.warn("You will need to update all systems using the old credentials.");
+        clack.log.warn(
+          "You will need to update all systems using the old credentials."
+        );
 
         const confirmRotate = await clack.confirm({
           message: "Generate new SMTP credentials?",
@@ -1020,7 +1022,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
       // Show info about SMTP
       clack.log.info(`\n${pc.bold("SMTP Credentials for Legacy Systems")}\n`);
-      clack.log.info(pc.dim("Generate SMTP username/password that works with:"));
+      clack.log.info(
+        pc.dim("Generate SMTP username/password that works with:")
+      );
       clack.log.info(pc.dim("  - PHP mail() and PHPMailer"));
       clack.log.info(pc.dim("  - WordPress (WP Mail SMTP plugin)"));
       clack.log.info(pc.dim("  - Nodemailer and other SMTP libraries"));
@@ -1519,7 +1523,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     // Show as copiable env vars
     console.log(pc.bold("  Environment Variables:\n"));
     console.log(pc.dim(`  SMTP_HOST=${outputs.smtpEndpoint}`));
-    console.log(pc.dim(`  SMTP_PORT=587`));
+    console.log(pc.dim("  SMTP_PORT=587"));
     console.log(pc.dim(`  SMTP_USER=${outputs.smtpUsername}`));
     console.log(pc.dim(`  SMTP_PASS=${outputs.smtpPassword}\n`));
 

@@ -61,7 +61,7 @@ export function SenderDefaultsForm({
 
   // Parse initial from email into prefix and domain
   const parseFromEmail = (email: string | null) => {
-    if (email && email.includes("@")) {
+    if (email?.includes("@")) {
       const [prefix, domain] = email.split("@");
       return { prefix: prefix || "", domain: domain || "" };
     }

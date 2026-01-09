@@ -51,7 +51,7 @@ export function CliConsoleSection() {
       <div className="mb-16">
         <div className="group relative mx-auto max-w-5xl">
           {/* Glow effect */}
-          <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-green-500/20 via-green-500/10 to-green-500/20 opacity-0 blur-3xl transition-opacity duration-700 group-hover:opacity-100" />
+          <div className="-inset-4 absolute rounded-3xl bg-gradient-to-r from-green-500/20 via-green-500/10 to-green-500/20 opacity-0 blur-3xl transition-opacity duration-700 group-hover:opacity-100" />
 
           {/* Browser window */}
           <div className="relative overflow-hidden rounded-2xl border-2 border-green-500/30 bg-background shadow-2xl">
@@ -102,7 +102,7 @@ export function CliConsoleSection() {
           </div>
 
           {/* Floating sidebar menu card */}
-          <div className="absolute top-12 -left-16 hidden rounded-xl border bg-background p-3 shadow-xl sm:block lg:-left-20">
+          <div className="-left-16 lg:-left-20 absolute top-12 hidden rounded-xl border bg-background p-3 shadow-xl sm:block">
             {/* Logo */}
             <div className="mb-3 flex justify-center border-b pb-3">
               <Logo size={28} />
@@ -127,7 +127,7 @@ export function CliConsoleSection() {
           </div>
 
           {/* Floating terminal card */}
-          <div className="absolute -bottom-6 -left-4 hidden rounded-xl border-2 border-green-500/30 bg-[#121314] p-4 shadow-2xl sm:block lg:-left-8">
+          <div className="-bottom-6 -left-4 lg:-left-8 absolute hidden rounded-xl border-2 border-green-500/30 bg-[#121314] p-4 shadow-2xl sm:block">
             <div className="font-mono text-sm">
               <div className="mb-2 text-muted-foreground">
                 <span className="text-green-400">$</span> wraps console
@@ -140,7 +140,7 @@ export function CliConsoleSection() {
           </div>
 
           {/* Floating stats card */}
-          <div className="absolute -top-4 -right-4 hidden rounded-xl border bg-background p-4 shadow-xl sm:block lg:-right-8">
+          <div className="-top-4 -right-4 lg:-right-8 absolute hidden rounded-xl border bg-background p-4 shadow-xl sm:block">
             <div className="mb-2 font-medium text-muted-foreground text-xs">
               Today's Stats
             </div>

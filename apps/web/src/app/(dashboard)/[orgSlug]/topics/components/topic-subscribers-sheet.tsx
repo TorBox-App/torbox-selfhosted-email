@@ -83,7 +83,7 @@ export function TopicSubscribersSheet({
         }
       });
     }
-  }, [open, topicId, organizationId, page, topic]);
+  }, [open, organizationId, page, topic]);
 
   if (!topic) {
     return null;

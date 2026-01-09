@@ -446,7 +446,7 @@ export function OrganizationSettingsApiKeys({
                     value={newSecretKey}
                   />
                   <Button
-                    className="absolute top-1/2 right-2 h-6 w-6 -translate-y-1/2"
+                    className="-translate-y-1/2 absolute top-1/2 right-2 h-6 w-6"
                     onClick={() => setShowSecretKey(!showSecretKey)}
                     size="icon"
                     variant="ghost"

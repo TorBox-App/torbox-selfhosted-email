@@ -190,7 +190,10 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
   },
   {
     params: t.Object({
-      awsAccountNumber: t.String({ description: "12-digit AWS account ID", maxLength: 12 }),
+      awsAccountNumber: t.String({
+        description: "12-digit AWS account ID",
+        maxLength: 12,
+      }),
     }),
     response: {
       200: t.Object({

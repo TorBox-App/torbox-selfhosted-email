@@ -99,7 +99,7 @@ const EmailButtonNodeView = ({
 
         {/* Drag handle and edit button - in separate contentEditable=false container */}
         <div
-          className="absolute -top-2 -right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+          className="-top-2 -right-2 absolute flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
           contentEditable={false}
         >
           <DragHandle />

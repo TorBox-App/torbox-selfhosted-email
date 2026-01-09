@@ -482,7 +482,9 @@ export default function CostCalculatorPage() {
                       id="https-tracking"
                       onCheckedChange={(checked) => {
                         setHttpsTracking(checked);
-                        if (!checked) setWafEnabled(false);
+                        if (!checked) {
+                          setWafEnabled(false);
+                        }
                       }}
                     />
                   </div>

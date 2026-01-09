@@ -23,40 +23,84 @@ import {
 
 // Batch send request schema
 const createBatchSchema = t.Object({
-  channel: t.Optional(t.Union([t.Literal("email"), t.Literal("sms")], { description: "Channel to send through" })),
-  name: t.Optional(t.String({ description: "Name for the batch send", maxLength: 255 })),
+  channel: t.Optional(
+    t.Union([t.Literal("email"), t.Literal("sms")], {
+      description: "Channel to send through",
+    })
+  ),
+  name: t.Optional(
+    t.String({ description: "Name for the batch send", maxLength: 255 })
+  ),
   // Recipient targeting
   audienceType: t.Optional(
-    t.Union([t.Literal("all"), t.Literal("topic"), t.Literal("segment")], { description: "Audience targeting type" })
+    t.Union([t.Literal("all"), t.Literal("topic"), t.Literal("segment")], {
+      description: "Audience targeting type",
+    })
   ),
-  topicId: t.Optional(t.String({ description: "Topic ID to target", maxLength: 36 })),
-  segmentId: t.Optional(t.String({ description: "Segment ID to target", maxLength: 36 })),
+  topicId: t.Optional(
+    t.String({ description: "Topic ID to target", maxLength: 36 })
+  ),
+  segmentId: t.Optional(
+    t.String({ description: "Segment ID to target", maxLength: 36 })
+  ),
   // Email-specific fields
-  subject: t.Optional(t.String({ description: "Email subject line", maxLength: 998 })),
-  previewText: t.Optional(t.String({ description: "Email preview text", maxLength: 500 })),
-  from: t.Optional(t.String({ description: "From email address", maxLength: 255 })),
-  fromName: t.Optional(t.String({ description: "From display name", maxLength: 100 })),
-  replyTo: t.Optional(t.String({ description: "Reply-to email address", maxLength: 255 })),
-  templateId: t.Optional(t.String({ description: "Email template ID", maxLength: 36 })),
-  htmlContent: t.Optional(t.String({ description: "Raw HTML content (if not using template)" })),
+  subject: t.Optional(
+    t.String({ description: "Email subject line", maxLength: 998 })
+  ),
+  previewText: t.Optional(
+    t.String({ description: "Email preview text", maxLength: 500 })
+  ),
+  from: t.Optional(
+    t.String({ description: "From email address", maxLength: 255 })
+  ),
+  fromName: t.Optional(
+    t.String({ description: "From display name", maxLength: 100 })
+  ),
+  replyTo: t.Optional(
+    t.String({ description: "Reply-to email address", maxLength: 255 })
+  ),
+  templateId: t.Optional(
+    t.String({ description: "Email template ID", maxLength: 36 })
+  ),
+  htmlContent: t.Optional(
+    t.String({ description: "Raw HTML content (if not using template)" })
+  ),
   // SMS-specific fields (Phase 3)
   body: t.Optional(t.String({ description: "SMS body text", maxLength: 1600 })),
-  senderId: t.Optional(t.String({ description: "SMS sender ID", maxLength: 20 })),
+  senderId: t.Optional(
+    t.String({ description: "SMS sender ID", maxLength: 20 })
+  ),
   // Scheduling
-  scheduledFor: t.Optional(t.String({ description: "ISO 8601 datetime for scheduled send", format: "date-time" })),
+  scheduledFor: t.Optional(
+    t.String({
+      description: "ISO 8601 datetime for scheduled send",
+      format: "date-time",
+    })
+  ),
   // AWS account to use
-  awsAccountId: t.String({ description: "AWS account ID to use for sending", maxLength: 36 }),
+  awsAccountId: t.String({
+    description: "AWS account ID to use for sending",
+    maxLength: 36,
+  }),
   // Pre-counted recipients (from web action validation)
-  totalRecipients: t.Optional(t.Number({ description: "Pre-counted recipient count" })),
+  totalRecipients: t.Optional(
+    t.Number({ description: "Pre-counted recipient count" })
+  ),
 });
 
 // Batch send response schema
 const batchResponseSchema = t.Object({
   id: t.String({ description: "Batch ID" }),
-  status: t.String({ description: "Batch status (queued, scheduled, processing, completed, failed, cancelled)" }),
+  status: t.String({
+    description:
+      "Batch status (queued, scheduled, processing, completed, failed, cancelled)",
+  }),
   channel: t.String({ description: "Channel (email or sms)" }),
   totalRecipients: t.Number({ description: "Total number of recipients" }),
-  createdAt: t.String({ description: "Creation timestamp", format: "date-time" }),
+  createdAt: t.String({
+    description: "Creation timestamp",
+    format: "date-time",
+  }),
 });
 
 export const batchRoutes = createAuthenticatedRoutes("/v1/batch")

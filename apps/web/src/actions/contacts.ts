@@ -90,7 +90,7 @@ async function verifyOrgAccess(
     },
   });
 
-  if (!(membership && membership.organization.slug)) {
+  if (!membership?.organization.slug) {
     return null;
   }
 

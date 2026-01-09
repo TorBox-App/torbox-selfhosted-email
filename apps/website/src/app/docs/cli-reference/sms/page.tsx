@@ -55,7 +55,7 @@ export default function CLIReferenceSMSPage() {
     <DocsLayout>
       {/* Breadcrumb */}
       <div className="mb-6">
-        <Button asChild variant="ghost" size="sm" className="gap-2">
+        <Button asChild className="gap-2" size="sm" variant="ghost">
           <a href="/docs/cli-reference">
             <ArrowLeft className="h-4 w-4" />
             CLI Reference
@@ -68,15 +68,15 @@ export default function CLIReferenceSMSPage() {
         <Badge className="mb-4" variant="outline">
           CLI Reference / SMS
         </Badge>
-        <h1 className="mb-4 font-bold text-4xl tracking-tight">
-          SMS Commands
-        </h1>
+        <h1 className="mb-4 font-bold text-4xl tracking-tight">SMS Commands</h1>
         <p className="text-lg text-muted-foreground">
-          Deploy AWS End User Messaging SMS infrastructure for transactional and marketing messages.
+          Deploy AWS End User Messaging SMS infrastructure for transactional and
+          marketing messages.
         </p>
         <div className="mt-4 rounded-lg border bg-muted/50 p-4">
           <p className="text-muted-foreground text-sm">
-            <strong>Pricing:</strong> Free to use. You pay AWS directly for phone numbers ($1-2/mo) and per-message costs (~$0.0075/segment US).
+            <strong>Pricing:</strong> Free to use. You pay AWS directly for
+            phone numbers ($1-2/mo) and per-message costs (~$0.0075/segment US).
             Registration fees apply for toll-free and 10DLC numbers.
           </p>
         </div>
@@ -89,7 +89,8 @@ export default function CLIReferenceSMSPage() {
           wraps sms init
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Deploy SMS infrastructure to your AWS account. Sets up phone numbers, configuration sets, event tracking, and IAM roles.
+          Deploy SMS infrastructure to your AWS account. Sets up phone numbers,
+          configuration sets, event tracking, and IAM roles.
         </p>
 
         <Card className="mb-4">
@@ -147,9 +148,18 @@ export default function CLIReferenceSMSPage() {
           </CardHeader>
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
-              <li><strong>Simulator</strong> ($1/mo) - Testing only, 100 msg/day, no registration required</li>
-              <li><strong>Toll-free</strong> ($2/mo) - Production ready, 3 MPS, requires registration (~15 days)</li>
-              <li><strong>10DLC</strong> ($2/mo + fees) - High volume, up to 75 MPS, requires brand + campaign registration</li>
+              <li>
+                <strong>Simulator</strong> ($1/mo) - Testing only, 100 msg/day,
+                no registration required
+              </li>
+              <li>
+                <strong>Toll-free</strong> ($2/mo) - Production ready, 3 MPS,
+                requires registration (~15 days)
+              </li>
+              <li>
+                <strong>10DLC</strong> ($2/mo + fees) - High volume, up to 75
+                MPS, requires brand + campaign registration
+              </li>
             </ul>
           </CardContent>
         </Card>
@@ -160,11 +170,15 @@ export default function CLIReferenceSMSPage() {
           </CardHeader>
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
-              <li>Phone number (simulator, toll-free, or 10DLC based on selection)</li>
+              <li>
+                Phone number (simulator, toll-free, or 10DLC based on selection)
+              </li>
               <li>Configuration set with event tracking</li>
               <li>Opt-out list for compliance</li>
               <li>SNS topic + SQS queue for event processing</li>
-              <li>Lambda function for event processing (if event tracking enabled)</li>
+              <li>
+                Lambda function for event processing (if event tracking enabled)
+              </li>
               <li>DynamoDB table for message history (if enabled)</li>
               <li>IAM role for your application</li>
               <li>Protect configuration for fraud protection</li>
@@ -180,7 +194,8 @@ export default function CLIReferenceSMSPage() {
           wraps sms status
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Display the current status of your SMS infrastructure, including phone number, configuration, and enabled features.
+          Display the current status of your SMS infrastructure, including phone
+          number, configuration, and enabled features.
         </p>
 
         <Card className="mb-4">
@@ -215,7 +230,8 @@ export default function CLIReferenceSMSPage() {
           wraps sms test
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Send a test SMS message to verify your setup is working. Supports AWS simulator numbers for sandbox testing.
+          Send a test SMS message to verify your setup is working. Supports AWS
+          simulator numbers for sandbox testing.
         </p>
 
         <Card className="mb-4">
@@ -281,7 +297,8 @@ export default function CLIReferenceSMSPage() {
           wraps sms verify-number
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Verify a destination phone number for sandbox testing. Required before you can send to real numbers in sandbox mode.
+          Verify a destination phone number for sandbox testing. Required before
+          you can send to real numbers in sandbox mode.
         </p>
 
         <Card className="mb-4">
@@ -371,7 +388,8 @@ export default function CLIReferenceSMSPage() {
           wraps sms register
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Start the toll-free registration process. Required before toll-free numbers can send messages at scale.
+          Start the toll-free registration process. Required before toll-free
+          numbers can send messages at scale.
         </p>
 
         <Card className="mb-4">
@@ -414,7 +432,8 @@ export default function CLIReferenceSMSPage() {
               <li>Expected monthly message volume</li>
             </ul>
             <p className="mt-4 text-muted-foreground text-sm">
-              <strong>Timeline:</strong> Registration typically takes 1-15 business days.
+              <strong>Timeline:</strong> Registration typically takes 1-15
+              business days.
             </p>
           </CardContent>
         </Card>
@@ -427,7 +446,8 @@ export default function CLIReferenceSMSPage() {
           wraps sms upgrade
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Enhance your SMS infrastructure with additional features or upgrade to a higher-tier phone number.
+          Enhance your SMS infrastructure with additional features or upgrade to
+          a higher-tier phone number.
         </p>
 
         <Card className="mb-4">
@@ -470,12 +490,16 @@ export default function CLIReferenceSMSPage() {
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
               <li>Upgrade phone number type (simulator → toll-free → 10DLC)</li>
-              <li>Change configuration preset (starter → production → enterprise)</li>
+              <li>
+                Change configuration preset (starter → production → enterprise)
+              </li>
               <li>Enable/disable event tracking</li>
               <li>Change message history retention period</li>
               <li>Enable/disable link click tracking</li>
               <li>Enable/disable message archiving</li>
-              <li>Configure fraud protection (country allowlist, AIT filtering)</li>
+              <li>
+                Configure fraud protection (country allowlist, AIT filtering)
+              </li>
             </ul>
           </CardContent>
         </Card>
@@ -532,7 +556,10 @@ export default function CLIReferenceSMSPage() {
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
               <li>Updates Lambda function code with latest CLI version</li>
-              <li>Recreates any missing SDK-managed resources (phone pool, event destination)</li>
+              <li>
+                Recreates any missing SDK-managed resources (phone pool, event
+                destination)
+              </li>
               <li>Ensures fraud protection is configured</li>
               <li>Refreshes infrastructure state</li>
             </ul>
@@ -547,7 +574,8 @@ export default function CLIReferenceSMSPage() {
           wraps sms destroy
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Remove all SMS infrastructure from your AWS account. This is a destructive operation.
+          Remove all SMS infrastructure from your AWS account. This is a
+          destructive operation.
         </p>
 
         <Card className="mb-4">
@@ -604,20 +632,24 @@ export default function CLIReferenceSMSPage() {
       <section className="mb-12">
         <h2 className="mb-6 font-bold text-2xl">Programmatic Usage</h2>
         <p className="mb-4 text-muted-foreground">
-          After deploying infrastructure with the CLI, use the SDK to send SMS messages from your application.
+          After deploying infrastructure with the CLI, use the SDK to send SMS
+          messages from your application.
         </p>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Example: Send SMS from Node.js</CardTitle>
+            <CardTitle className="text-lg">
+              Example: Send SMS from Node.js
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <CodeBlock
               className="h-auto"
-              data={[{
-                language: "typescript",
-                filename: "send-sms.ts",
-                code: `import { Wraps } from '@wraps.dev/sms';
+              data={[
+                {
+                  language: "typescript",
+                  filename: "send-sms.ts",
+                  code: `import { Wraps } from '@wraps.dev/sms';
 
 const wraps = new Wraps();
 
@@ -629,14 +661,18 @@ const result = await wraps.sms.send({
 
 if (result.success) {
   console.log('SMS sent:', result.data.messageId);
-}`
-              }]}
+}`,
+                },
+              ]}
               defaultValue="typescript"
             >
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}

@@ -61,7 +61,7 @@ export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
         )}
       >
         {/* Content rotated back */}
-        <div className="flex -rotate-45 flex-col items-center px-1 text-center">
+        <div className="-rotate-45 flex flex-col items-center px-1 text-center">
           <div className="mb-0.5 flex h-6 w-6 items-center justify-center rounded bg-orange-500 text-white">
             <GitBranch className="h-3 w-3" />
           </div>
@@ -75,7 +75,7 @@ export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
       </div>
 
       {/* Yes output - bottom left */}
-      <div className="absolute -bottom-5 left-2 flex flex-col items-center">
+      <div className="-bottom-5 absolute left-2 flex flex-col items-center">
         <span className="mb-0.5 font-medium text-[8px] text-green-600">
           Yes
         </span>
@@ -88,7 +88,7 @@ export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
       </div>
 
       {/* No output - bottom right */}
-      <div className="absolute right-2 -bottom-5 flex flex-col items-center">
+      <div className="-bottom-5 absolute right-2 flex flex-col items-center">
         <span className="mb-0.5 font-medium text-[8px] text-red-600">No</span>
         <Handle
           className="!relative !transform-none !bg-red-500 !w-2.5 !h-2.5 !border-2 !border-white"
@@ -99,7 +99,7 @@ export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
       </div>
 
       {errorMessage && (
-        <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap text-red-500 text-xs">
+        <div className="-bottom-12 -translate-x-1/2 absolute left-1/2 whitespace-nowrap text-red-500 text-xs">
           {errorMessage}
         </div>
       )}

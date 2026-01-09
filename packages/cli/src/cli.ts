@@ -8,6 +8,13 @@ import pc from "picocolors";
 // AWS commands
 import { doctor as awsDoctor } from "./commands/aws/doctor.js";
 import { setup as awsSetup } from "./commands/aws/setup.js";
+// CDN commands
+import { cdnDestroy } from "./commands/cdn/destroy.js";
+import { init as cdnInit } from "./commands/cdn/init.js";
+import { cdnStatus } from "./commands/cdn/status.js";
+import { cdnSync } from "./commands/cdn/sync.js";
+import { cdnUpgrade } from "./commands/cdn/upgrade.js";
+import { cdnVerify } from "./commands/cdn/verify.js";
 // Email commands
 import { check } from "./commands/email/check.js";
 import { config } from "./commands/email/config.js";
@@ -42,13 +49,6 @@ import { smsSync } from "./commands/sms/sync.js";
 import { smsTest } from "./commands/sms/test.js";
 import { smsUpgrade } from "./commands/sms/upgrade.js";
 import { smsVerifyNumber } from "./commands/sms/verify-number.js";
-// CDN commands
-import { cdnDestroy } from "./commands/cdn/destroy.js";
-import { init as cdnInit } from "./commands/cdn/init.js";
-import { cdnStatus } from "./commands/cdn/status.js";
-import { cdnSync } from "./commands/cdn/sync.js";
-import { cdnUpgrade } from "./commands/cdn/upgrade.js";
-import { cdnVerify } from "./commands/cdn/verify.js";
 import { support } from "./commands/support.js";
 // Telemetry commands
 import {

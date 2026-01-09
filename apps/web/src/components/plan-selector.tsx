@@ -53,7 +53,7 @@ export function PlanSelector({
           >
             {/* Early adopter badge */}
             {isEarlyAdopter && !isPopular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <div className="-top-3 -translate-x-1/2 absolute left-1/2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 font-medium text-white text-xs">
                   Early Adopter
                 </span>
@@ -62,7 +62,7 @@ export function PlanSelector({
 
             {/* Popular badge (with early adopter note) */}
             {isPopular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <div className="-top-3 -translate-x-1/2 absolute left-1/2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground text-xs">
                   <Sparkles className="h-3 w-3" />
                   {isEarlyAdopter ? "Popular - Early Adopter" : "Popular"}
@@ -72,7 +72,7 @@ export function PlanSelector({
 
             {/* Current plan badge */}
             {isCurrent && showCurrentBadge && (
-              <div className="absolute -top-3 right-4">
+              <div className="-top-3 absolute right-4">
                 <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground text-xs">
                   Current
                 </span>

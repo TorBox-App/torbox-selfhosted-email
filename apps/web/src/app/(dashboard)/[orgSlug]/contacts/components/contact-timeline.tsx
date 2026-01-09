@@ -177,7 +177,9 @@ function StatusDots({
   const statuses = channel === "email" ? emailStatuses : smsStatuses;
   const activeStatuses = statuses.filter((s) => s.timestamp);
 
-  if (activeStatuses.length === 0) return null;
+  if (activeStatuses.length === 0) {
+    return null;
+  }
 
   return (
     <div className="flex items-center gap-1">
@@ -307,7 +309,9 @@ function TimelineEventRow({
   // Handle workflow and contact_created events
   const config =
     EVENT_CONFIG[event.type as Exclude<TimelineEventType, "message">];
-  if (!config) return null;
+  if (!config) {
+    return null;
+  }
 
   const Icon = config.icon;
 

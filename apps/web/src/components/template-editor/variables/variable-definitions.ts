@@ -251,4 +251,3 @@ export function toSuggestionFormat(variables: VariableDefinition[]): Array<{
     description: v.description,
   }));
 }
-

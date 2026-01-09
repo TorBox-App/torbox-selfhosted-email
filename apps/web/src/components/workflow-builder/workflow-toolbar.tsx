@@ -82,7 +82,7 @@ export function WorkflowToolbar({
     if (_nodes.length > 0) {
       runValidation();
     }
-  }, [runValidation, _nodes, _edges]);
+  }, [runValidation, _nodes]);
 
   // Focus input when editing starts
   useEffect(() => {

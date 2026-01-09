@@ -209,12 +209,10 @@ export function LandingNavbar() {
                     className="group inline-flex h-10 w-max cursor-pointer items-center justify-center px-4 py-2 font-medium text-sm transition-colors hover:text-primary focus:text-primary focus:outline-none"
                     href={item.href}
                     onClick={(e) => {
-                      if (isHashLink(item.href)) {
-                        // Try smooth scroll first (works if element exists on page)
-                        if (smoothScrollTo(item.href)) {
-                          e.preventDefault();
-                        }
-                        // Otherwise let browser navigate to /#hash
+                      // Try smooth scroll for hash links (works if element exists on page)
+                      // Otherwise let browser navigate to /#hash
+                      if (isHashLink(item.href) && smoothScrollTo(item.href)) {
+                        e.preventDefault();
                       }
                     }}
                   >
@@ -294,7 +292,7 @@ export function LandingNavbar() {
                       size="icon"
                       variant="ghost"
                     >
-                      <Moon className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                      <Moon className="dark:-rotate-90 h-4 w-4 rotate-0 scale-100 transition-all dark:scale-0" />
                       <Sun className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                     </Button>
                     <Button
@@ -420,7 +418,10 @@ export function LandingNavbar() {
                               if (element) {
                                 // Element exists, smooth scroll after menu closes
                                 e.preventDefault();
-                                setTimeout(() => smoothScrollTo(item.href), 100);
+                                setTimeout(
+                                  () => smoothScrollTo(item.href),
+                                  100
+                                );
                               }
                               // Otherwise let browser navigate to /#hash
                             }

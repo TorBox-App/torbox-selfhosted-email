@@ -105,9 +105,7 @@ async function checkDistributionStatus(
 /**
  * Storage Verify command - Check DNS and certificate status
  */
-export async function cdnVerify(
-  options: CdnVerifyOptions
-): Promise<void> {
+export async function cdnVerify(options: CdnVerifyOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

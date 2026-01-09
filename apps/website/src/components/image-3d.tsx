@@ -23,7 +23,7 @@ export function Image3D({
     <div className={cn("group relative aspect-4/3 w-full", className)}>
       <div className="perspective-distant transform-3d size-full">
         {/* Animated background glow */}
-        <div className="absolute rounded-3xl bg-linear-to-r from-orange-500/10 via-orange-500/5 to-orange-500/10 opacity-0 blur-2xl transition-all duration-1000 group-hover:opacity-100 sm:-inset-8" />
+        <div className="sm:-inset-8 absolute rounded-3xl bg-linear-to-r from-orange-500/10 via-orange-500/5 to-orange-500/10 opacity-0 blur-2xl transition-all duration-1000 group-hover:opacity-100" />
 
         {/* Main 3D container */}
         <div
@@ -33,7 +33,7 @@ export function Image3D({
           )}
         >
           {/* Depth layers for 3D effect */}
-          <div className="-translate-z-8 absolute -top-5 -right-4 -bottom-5 -left-7 translate-x-2 translate-y-0 rounded-3xl">
+          <div className="-translate-z-8 -top-5 -right-4 -bottom-5 -left-7 absolute translate-x-2 translate-y-0 rounded-3xl">
             <div className="size-full rounded-3xl border border-orange-500/20 bg-linear-to-br from-orange-500/5 via-background/40 to-orange-500/5 shadow-xl" />
           </div>
 
@@ -42,9 +42,9 @@ export function Image3D({
             {/* Shimmer effect */}
             <div
               className={cn(
-                "pointer-events-none absolute inset-0 z-20 -skew-x-12 bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-out",
+                "-skew-x-12 pointer-events-none absolute inset-0 z-20 bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-out",
                 isRight
-                  ? "translate-x-full group-hover:-translate-x-full"
+                  ? "group-hover:-translate-x-full translate-x-full"
                   : "-translate-x-full group-hover:translate-x-full"
               )}
             />

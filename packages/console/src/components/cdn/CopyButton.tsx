@@ -4,13 +4,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface CopyButtonProps {
+type CopyButtonProps = {
   value: string;
   className?: string;
   variant?: "default" | "outline" | "ghost" | "secondary";
   size?: "default" | "sm" | "icon";
   label?: string;
-}
+};
 
 export function CopyButton({
   value,
@@ -19,7 +19,9 @@ export function CopyButton({
   size = "icon",
   label,
 }: CopyButtonProps) {
-  const [state, setState] = React.useState<"idle" | "copying" | "copied">("idle");
+  const [state, setState] = React.useState<"idle" | "copying" | "copied">(
+    "idle"
+  );
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -49,13 +51,15 @@ export function CopyButton({
         state === "copied" && "text-green-500",
         className
       )}
+      disabled={state === "copying"}
       onClick={handleCopy}
       size={size}
       variant={variant}
-      disabled={state === "copying"}
     >
       {state === "copying" ? (
-        <Loader2 className={cn("animate-spin", label ? "mr-2 h-4 w-4" : "h-4 w-4")} />
+        <Loader2
+          className={cn("animate-spin", label ? "mr-2 h-4 w-4" : "h-4 w-4")}
+        />
       ) : state === "copied" ? (
         <Check className={cn(label ? "mr-2 h-4 w-4" : "h-4 w-4")} />
       ) : (

@@ -78,14 +78,14 @@ const WIDTH_PRESETS = [
   { value: "1920", label: "Full HD (1920px)", description: "Desktop screens" },
 ] as const;
 
-interface ImageOptimizeDialogProps {
+type ImageOptimizeDialogProps = {
   files: File[];
   onComplete: (
     results: Array<{ file: File | Blob; cdnFilename: string }>
   ) => void;
   onClose: () => void;
   open: boolean;
-}
+};
 
 type FileStatus = "pending" | "processing" | "ready" | "done" | "skipped";
 
@@ -160,7 +160,9 @@ export function ImageOptimizeDialog({
 
   // === Initialize entries when dialog opens ===
   React.useEffect(() => {
-    if (!open || files.length === 0) return;
+    if (!open || files.length === 0) {
+      return;
+    }
 
     const newEntries: FileEntry[] = files.map((file, index) => ({
       id: `${file.name}-${index}-${Date.now()}`,
@@ -262,7 +264,9 @@ export function ImageOptimizeDialog({
   const prevOptionsKey = React.useRef(optionsKey);
 
   React.useEffect(() => {
-    if (prevOptionsKey.current === optionsKey) return;
+    if (prevOptionsKey.current === optionsKey) {
+      return;
+    }
     prevOptionsKey.current = optionsKey;
 
     // Reset non-animated entries to pending (user must click Optimize again)
@@ -314,7 +318,9 @@ export function ImageOptimizeDialog({
   };
 
   // === Render ===
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   const isSingleFile = entries.length === 1;
   const singleEntry = isSingleFile ? entries[0] : null;

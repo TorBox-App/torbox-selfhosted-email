@@ -199,7 +199,9 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
 
   // Handle applying the pending workflow
   const handleApplyWorkflow = useCallback(() => {
-    if (!pendingWorkflow) return;
+    if (!pendingWorkflow) {
+      return;
+    }
 
     applyAIFlow(pendingWorkflow.steps, pendingWorkflow.transitions);
     toast.success("Workflow applied to canvas", {
