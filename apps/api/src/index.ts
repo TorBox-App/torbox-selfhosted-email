@@ -40,6 +40,12 @@ export const app = new Elysia()
           version: "1.0.0",
           description: "API for batch sending and platform features",
         },
+        servers: [
+          {
+            url: "https://api.wraps.dev",
+            description: "Wraps Platform API",
+          },
+        ],
       },
       specPath: "openapi.json",
     })
@@ -52,6 +58,12 @@ export const app = new Elysia()
           version: "1.0.0",
           description: "API for batch sending and platform features",
         },
+        servers: [
+          {
+            url: "https://api.wraps.dev",
+            description: "Wraps Platform API",
+          },
+        ],
         tags: [
           { name: "health", description: "Health check endpoints" },
           { name: "contacts", description: "Contact management" },
