@@ -81,7 +81,7 @@ export default function CLIReferencePage() {
             </code>
             ,{" "}
             <code className="rounded bg-background px-1.5 py-0.5">
-              wraps storage init
+              wraps cdn init
             </code>
             ,{" "}
             <code className="rounded bg-background px-1.5 py-0.5">
@@ -121,7 +121,7 @@ export default function CLIReferencePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <HardDrive className="h-5 w-5 text-primary" />
-                Storage Commands
+                CDN Commands
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -130,8 +130,8 @@ export default function CLIReferencePage() {
                 image optimization.
               </p>
               <Button asChild className="w-full" variant="outline">
-                <a href="/docs/cli-reference/storage">
-                  View Storage Commands
+                <a href="/docs/cli-reference/cdn">
+                  View CDN Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>
@@ -235,7 +235,7 @@ export default function CLIReferencePage() {
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
               <li>AWS account and region</li>
-              <li>All deployed services (email, storage, sms)</li>
+              <li>All deployed services (email, cdn, sms)</li>
               <li>Active configuration preset and features per service</li>
               <li>Deployed AWS resources</li>
               <li>Links to console and documentation</li>
@@ -366,9 +366,9 @@ export default function CLIReferencePage() {
                 </li>
                 <li>
                   <code className="rounded bg-muted px-1.5 py-0.5">
-                    wraps storage destroy
+                    wraps cdn destroy
                   </code>{" "}
-                  - Remove storage infrastructure only
+                  - Remove CDN infrastructure only
                 </li>
               </ul>
             </div>

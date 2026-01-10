@@ -28,10 +28,10 @@ const cliGuides = [
     ],
   },
   {
-    title: "Storage",
+    title: "CDN",
     description:
       "Deploy S3 + CloudFront CDN for global file delivery with browser-based image optimization.",
-    href: "/docs/quickstart/storage",
+    href: "/docs/quickstart/cdn",
     icon: HardDrive,
     features: [
       "S3 bucket + CDN",

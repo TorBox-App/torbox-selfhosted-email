@@ -675,8 +675,8 @@ export default function CLIReferenceEmailPage() {
           </a>
         </Button>
         <Button asChild variant="outline">
-          <a href="/docs/cli-reference/storage">
-            Storage Commands
+          <a href="/docs/cli-reference/cdn">
+            CDN Commands
             <ArrowRight className="ml-2 h-4 w-4" />
           </a>
         </Button>

@@ -262,7 +262,7 @@ export default function CLIReferenceCdnPage() {
                   -r, --region &lt;region&gt;
                 </code>
                 <p className="mt-2 text-muted-foreground text-sm">
-                  AWS region where storage is deployed
+                  AWS region where CDN is deployed
                 </p>
               </div>
             </div>

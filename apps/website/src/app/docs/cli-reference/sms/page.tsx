@@ -696,9 +696,9 @@ if (result.success) {
       {/* Navigation */}
       <div className="flex justify-between">
         <Button asChild variant="outline">
-          <a href="/docs/cli-reference/storage">
+          <a href="/docs/cli-reference/cdn">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Storage Commands
+            CDN Commands
           </a>
         </Button>
         <Button asChild variant="outline">
