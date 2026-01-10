@@ -1,0 +1,438 @@
+import { db, eq } from "@wraps/db";
+import * as schema from "@wraps/db/schema/auth";
+import { getWrapsClient } from "@wraps/email";
+import { createPlatformClient } from "@wraps.dev/client";
+import type Stripe from "stripe";
+
+/**
+ * Emit a subscription lifecycle event to the Platform API.
+ * This allows workflows to be triggered for subscription changes.
+ */
+export async function emitSubscriptionEvent(
+  eventName: string,
+  adminEmail: string,
+  properties: Record<string, unknown>
+): Promise<boolean> {
+  try {
+    const apiKey = process.env.WRAPS_API_KEY;
+    if (!apiKey) {
+      console.warn("WRAPS_API_KEY not configured, skipping subscription event");
+      return false;
+    }
+
+    const client = createPlatformClient({ apiKey });
+    const normalizedEmail = adminEmail.toLowerCase().trim();
+
+    // Emit the subscription event
+    const { error } = await client.POST("/v1/events/", {
+      body: {
+        name: eventName,
+        contactEmail: normalizedEmail,
+        properties,
+      },
+    });
+
+    if (error) {
+      console.error(`Failed to emit ${eventName} event:`, error);
+      return false;
+    }
+
+    console.log(`Emitted ${eventName} event for ${normalizedEmail}`);
+    return true;
+  } catch (err) {
+    console.error(`Error emitting ${eventName} event:`, err);
+    return false;
+  }
+}
+
+/**
+ * Get organization admins for a subscription.
+ * Returns the organization and list of admin/owner members.
+ */
+export async function getSubscriptionOrgAdmins(subscriptionQuery: {
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+}): Promise<{
+  subscription: typeof schema.subscription.$inferSelect | null;
+  organization: typeof schema.organization.$inferSelect | null;
+  admins: Array<{
+    user: typeof schema.user.$inferSelect | null;
+    role: string;
+  }>;
+}> {
+  // Find subscription
+  let sub: typeof schema.subscription.$inferSelect | null = null;
+
+  if (subscriptionQuery.stripeCustomerId) {
+    sub = await db.query.subscription.findFirst({
+      where: eq(
+        schema.subscription.stripeCustomerId,
+        subscriptionQuery.stripeCustomerId
+      ),
+    });
+  } else if (subscriptionQuery.stripeSubscriptionId) {
+    sub = await db.query.subscription.findFirst({
+      where: eq(
+        schema.subscription.stripeSubscriptionId,
+        subscriptionQuery.stripeSubscriptionId
+      ),
+    });
+  }
+
+  if (!sub) {
+    return { subscription: null, organization: null, admins: [] };
+  }
+
+  // Get organization
+  const org = await db.query.organization.findFirst({
+    where: eq(schema.organization.id, sub.referenceId),
+  });
+
+  if (!org) {
+    return { subscription: sub, organization: null, admins: [] };
+  }
+
+  // Get admin members
+  const members = await db.query.member.findMany({
+    where: eq(schema.member.organizationId, org.id),
+    with: {
+      user: true,
+    },
+  });
+
+  const admins = members
+    .filter((m) => m.role === "owner" || m.role === "admin")
+    .map((m) => ({ user: m.user, role: m.role }));
+
+  return { subscription: sub, organization: org, admins };
+}
+
+/**
+ * Handle invoice.payment_failed webhook event.
+ * Sends payment failure emails to organization admins.
+ */
+export async function handlePaymentFailed(
+  invoice: Stripe.Invoice
+): Promise<{ success: boolean; notifiedCount: number }> {
+  const customerId =
+    typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id;
+
+  if (!customerId) {
+    console.error("Payment failed webhook: No customer ID found");
+    return { success: false, notifiedCount: 0 };
+  }
+
+  const {
+    subscription: sub,
+    organization: org,
+    admins,
+  } = await getSubscriptionOrgAdmins({ stripeCustomerId: customerId });
+
+  if (!sub) {
+    console.error(
+      `Payment failed webhook: No subscription found for customer ${customerId}`
+    );
+    return { success: false, notifiedCount: 0 };
+  }
+
+  if (!org) {
+    console.error(
+      `Payment failed webhook: No organization found for ${sub.referenceId}`
+    );
+    return { success: false, notifiedCount: 0 };
+  }
+
+  if (admins.length === 0) {
+    console.error(`Payment failed webhook: No admins found for org ${org.id}`);
+    return { success: false, notifiedCount: 0 };
+  }
+
+  // Format amount
+  const amount = (invoice.amount_due / 100).toFixed(2);
+  const currency = invoice.currency.toUpperCase();
+
+  // Build billing URL
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev";
+  const billingUrl = `${appUrl}/${org.slug}/settings/billing`;
+
+  // Send payment failed email to all admins
+  const wraps = await getWrapsClient();
+  let notifiedCount = 0;
+
+  for (const admin of admins) {
+    if (!admin.user?.email) continue;
+
+    try {
+      await wraps.sendTemplate({
+        from: "Wraps <billing@wraps.dev>",
+        to: admin.user.email,
+        template: "Payment-Failure",
+        templateData: {
+          name: admin.user.name || "there",
+          amount: `${currency} ${amount}`,
+          organizationName: org.name,
+          billingUrl,
+          invoiceUrl: invoice.hosted_invoice_url || undefined,
+        },
+      });
+      notifiedCount++;
+    } catch (emailError) {
+      console.error(
+        `Failed to send payment failed email to ${admin.user.email}:`,
+        emailError
+      );
+    }
+  }
+
+  console.log(
+    `Payment failed notification sent for org ${org.id} (${org.name})`
+  );
+  return { success: true, notifiedCount };
+}
+
+/**
+ * Handle checkout.session.completed webhook event.
+ * Emits subscription.activated event for workflow triggers.
+ */
+export async function handleCheckoutCompleted(
+  session: Stripe.Checkout.Session
+): Promise<{ success: boolean; eventsEmitted: number }> {
+  // Only handle subscription checkouts
+  if (session.mode !== "subscription") {
+    return { success: true, eventsEmitted: 0 };
+  }
+
+  const customerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
+
+  if (!customerId) {
+    console.error("Checkout completed webhook: No customer ID found");
+    return { success: false, eventsEmitted: 0 };
+  }
+
+  const {
+    subscription: sub,
+    organization: org,
+    admins,
+  } = await getSubscriptionOrgAdmins({ stripeCustomerId: customerId });
+
+  if (!sub) {
+    console.error(
+      `Checkout completed webhook: No subscription found for customer ${customerId}`
+    );
+    return { success: false, eventsEmitted: 0 };
+  }
+
+  if (!org) {
+    console.error(
+      `Checkout completed webhook: No organization found for ${sub.referenceId}`
+    );
+    return { success: false, eventsEmitted: 0 };
+  }
+
+  // Format amount
+  const amount = session.amount_total
+    ? (session.amount_total / 100).toFixed(2)
+    : "0.00";
+  const currency = (session.currency || "usd").toUpperCase();
+
+  // Emit subscription.activated event for each admin
+  let eventsEmitted = 0;
+  for (const admin of admins) {
+    if (!admin.user?.email) continue;
+
+    const emitted = await emitSubscriptionEvent(
+      "subscription.activated",
+      admin.user.email,
+      {
+        organizationId: org.id,
+        organizationName: org.name,
+        plan: sub.plan,
+        amount: `${currency} ${amount}`,
+        activatedAt: new Date().toISOString(),
+      }
+    );
+    if (emitted) eventsEmitted++;
+  }
+
+  console.log(
+    `Subscription activated for org ${org.id} (${org.name}) - plan: ${sub.plan}`
+  );
+  return { success: true, eventsEmitted };
+}
+
+/**
+ * Handle customer.subscription.deleted webhook event.
+ * Emits subscription.canceled event for workflow triggers.
+ */
+export async function handleSubscriptionDeleted(
+  subscription: Stripe.Subscription
+): Promise<{ success: boolean; eventsEmitted: number }> {
+  const {
+    subscription: sub,
+    organization: org,
+    admins,
+  } = await getSubscriptionOrgAdmins({
+    stripeSubscriptionId: subscription.id,
+  });
+
+  if (!sub) {
+    console.error(
+      `Subscription deleted webhook: No subscription found for ${subscription.id}`
+    );
+    return { success: false, eventsEmitted: 0 };
+  }
+
+  if (!org) {
+    console.error(
+      `Subscription deleted webhook: No organization found for ${sub.referenceId}`
+    );
+    return { success: false, eventsEmitted: 0 };
+  }
+
+  // Determine cancellation reason
+  const cancelReason = subscription.cancellation_details?.reason || "unknown";
+
+  // Emit subscription.canceled event for each admin
+  let eventsEmitted = 0;
+  for (const admin of admins) {
+    if (!admin.user?.email) continue;
+
+    const emitted = await emitSubscriptionEvent(
+      "subscription.canceled",
+      admin.user.email,
+      {
+        organizationId: org.id,
+        organizationName: org.name,
+        plan: sub.plan,
+        cancelReason,
+        canceledAt: new Date().toISOString(),
+      }
+    );
+    if (emitted) eventsEmitted++;
+  }
+
+  console.log(
+    `Subscription canceled for org ${org.id} (${org.name}) - reason: ${cancelReason}`
+  );
+  return { success: true, eventsEmitted };
+}
+
+/**
+ * Handle customer.subscription.updated webhook event.
+ * Emits subscription.upgraded or subscription.downgraded events for plan changes.
+ */
+export async function handleSubscriptionUpdated(
+  subscription: Stripe.Subscription,
+  previousAttributes: Partial<Stripe.Subscription> | undefined
+): Promise<{
+  success: boolean;
+  eventsEmitted: number;
+  changeType: string | null;
+}> {
+  // Check if the plan changed
+  const currentPriceId = subscription.items.data[0]?.price.id;
+  const previousPriceId = (previousAttributes?.items?.data as any)?.[0]?.price
+    ?.id;
+
+  // If no price change, skip
+  if (!previousPriceId || currentPriceId === previousPriceId) {
+    return { success: true, eventsEmitted: 0, changeType: null };
+  }
+
+  const {
+    subscription: sub,
+    organization: org,
+    admins,
+  } = await getSubscriptionOrgAdmins({
+    stripeSubscriptionId: subscription.id,
+  });
+
+  if (!sub) {
+    console.error(
+      `Subscription updated webhook: No subscription found for ${subscription.id}`
+    );
+    return { success: false, eventsEmitted: 0, changeType: null };
+  }
+
+  if (!org) {
+    console.error(
+      `Subscription updated webhook: No organization found for ${sub.referenceId}`
+    );
+    return { success: false, eventsEmitted: 0, changeType: null };
+  }
+
+  // Determine if upgrade or downgrade based on price amount
+  const currentAmount = subscription.items.data[0]?.price.unit_amount || 0;
+  const previousItem = (previousAttributes?.items?.data as any)?.[0];
+  const previousAmount = previousItem?.price?.unit_amount || 0;
+
+  const isUpgrade = currentAmount > previousAmount;
+  const eventName = isUpgrade
+    ? "subscription.upgraded"
+    : "subscription.downgraded";
+  const changeType = isUpgrade ? "upgrade" : "downgrade";
+
+  // Get previous plan name if available
+  const previousPlan = sub.plan; // Current plan in DB might not be updated yet
+
+  // Emit event for each admin
+  let eventsEmitted = 0;
+  for (const admin of admins) {
+    if (!admin.user?.email) continue;
+
+    const emitted = await emitSubscriptionEvent(eventName, admin.user.email, {
+      organizationId: org.id,
+      organizationName: org.name,
+      previousPlan,
+      newPlan: sub.plan,
+      changeType,
+      changedAt: new Date().toISOString(),
+    });
+    if (emitted) eventsEmitted++;
+  }
+
+  console.log(
+    `Subscription ${changeType} for org ${org.id} (${org.name}) - from ${previousPlan} to ${sub.plan}`
+  );
+  return { success: true, eventsEmitted, changeType };
+}
+
+/**
+ * Main webhook event handler for Stripe events.
+ * Routes events to appropriate handlers.
+ */
+export async function handleStripeWebhook(event: Stripe.Event): Promise<void> {
+  switch (event.type) {
+    case "invoice.payment_failed":
+      await handlePaymentFailed(event.data.object as Stripe.Invoice);
+      break;
+
+    case "checkout.session.completed":
+      await handleCheckoutCompleted(
+        event.data.object as Stripe.Checkout.Session
+      );
+      break;
+
+    case "customer.subscription.deleted":
+      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+      break;
+
+    case "customer.subscription.updated":
+      await handleSubscriptionUpdated(
+        event.data.object as Stripe.Subscription,
+        event.data.previous_attributes as
+          | Partial<Stripe.Subscription>
+          | undefined
+      );
+      break;
+
+    default:
+      // Unhandled event type
+      break;
+  }
+}

@@ -13,10 +13,13 @@
   "type": "module",
   "scripts": {
     "build": "tsdown",
-    "dev": "stripe listen --forward-to localhost:3000/api/auth/stripe/webhook"
+    "dev": "stripe listen --forward-to localhost:3000/api/auth/stripe/webhook",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "vitest": "^4.0.7"
   },
   "peerDependencies": {
     "typescript": "catalog:"
