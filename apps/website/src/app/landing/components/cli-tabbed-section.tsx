@@ -308,14 +308,14 @@ function ConsoleContent() {
               className="block size-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.02] dark:hidden"
               decoding="async"
               loading="lazy"
-              src={assetUrl("wraps-console-light.avif")}
+              src={assetUrl("Wraps-Console.gif")}
             />
             <img
               alt="Wraps Console - Dark Mode"
               className="hidden size-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.02] dark:block"
               decoding="async"
               loading="lazy"
-              src={assetUrl("wraps-console-dark.avif")}
+              src={assetUrl("Wraps-Console.gif")}
             />
 
             {/* Fade overlay at bottom */}
