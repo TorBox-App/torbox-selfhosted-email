@@ -66,6 +66,16 @@ type ComplaintDataPoint = {
   complaintRate: number;
 };
 
+type SuppressionDataPoint = {
+  date: string;
+  timestamp: number;
+  accountLevel: number;
+  globalLevel: number;
+  total: number;
+  sent: number;
+  suppressionRate: number;
+};
+
 export function useAnalyticsOverview(orgSlug: string, days = 30) {
   return useQuery<AnalyticsOverview>({
     queryKey: ["analytics", "overview", orgSlug, days],
@@ -171,6 +181,22 @@ export function useComplaintData(orgSlug: string, days = 30) {
       );
       if (!response.ok) {
         throw new Error("Failed to fetch complaint data");
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useSuppressionData(orgSlug: string, days = 30) {
+  return useQuery<SuppressionDataPoint[]>({
+    queryKey: ["analytics", "suppression", orgSlug, days],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/${orgSlug}/analytics/suppression?days=${days}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch suppression data");
       }
       return response.json();
     },

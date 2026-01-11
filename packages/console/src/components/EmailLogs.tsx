@@ -45,7 +45,8 @@ type EmailLog = {
     | "sent"
     | "failed"
     | "opened"
-    | "clicked";
+    | "clicked"
+    | "suppressed";
   timestamp: number;
   messageId: string;
 };
@@ -86,6 +87,12 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
     description: "Email bounced - recipient's mailbox may not exist or be full",
     className:
       "bg-orange-500/10 text-orange-700 dark:text-orange-400 hover:bg-orange-500/20 border-orange-500/20",
+  },
+  suppressed: {
+    variant: "default",
+    description: "Email blocked - recipient is on the suppression list",
+    className:
+      "bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border-amber-500/20",
   },
   complained: {
     variant: "default",
@@ -284,6 +291,7 @@ export function EmailLogs() {
                   <SelectItem value="delivered">Delivered</SelectItem>
                   <SelectItem value="sent">Sent</SelectItem>
                   <SelectItem value="bounced">Bounced</SelectItem>
+                  <SelectItem value="suppressed">Suppressed</SelectItem>
                   <SelectItem value="complained">Complained</SelectItem>
                   <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>

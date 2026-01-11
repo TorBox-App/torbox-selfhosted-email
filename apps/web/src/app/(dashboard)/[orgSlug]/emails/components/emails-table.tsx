@@ -159,6 +159,7 @@ export function EmailsTable({ data, orgSlug, days }: EmailsTableProps) {
                 <SelectItem value="opened">Opened</SelectItem>
                 <SelectItem value="clicked">Clicked</SelectItem>
                 <SelectItem value="bounced">Bounced</SelectItem>
+                <SelectItem value="suppressed">Suppressed</SelectItem>
                 <SelectItem value="complained">Complained</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>

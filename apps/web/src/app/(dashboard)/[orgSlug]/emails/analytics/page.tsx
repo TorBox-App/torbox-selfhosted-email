@@ -9,6 +9,7 @@ import { EmailVolumeChart } from "./components/email-volume-chart";
 import { EngagementChart } from "./components/engagement-chart";
 import { PerformanceMetrics } from "./components/performance-metrics";
 import { RecentActivity } from "./components/recent-activity";
+import { SuppressionChart } from "./components/suppression-chart";
 
 type AnalyticsPageProps = {
   params: Promise<{
@@ -62,8 +63,9 @@ export default async function AnalyticsPage({ params }: AnalyticsPageProps) {
         <EngagementChart orgSlug={orgSlug} />
 
         {/* Reputation Monitoring */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-3">
           <BounceTypeChart orgSlug={orgSlug} />
+          <SuppressionChart orgSlug={orgSlug} />
           <ComplaintChart orgSlug={orgSlug} />
         </div>
 

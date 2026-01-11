@@ -12,6 +12,7 @@ const dynamodb = new DynamoDBClient({});
  * - Open: Email opened by recipient
  * - Click: Link clicked in email
  * - Bounce: Email bounced (permanent or transient)
+ * - Suppressed: Email blocked due to recipient on suppression list
  * - Complaint: Recipient marked email as spam
  * - Reject: Email rejected before sending
  * - Rendering Failure: Template rendering failed
@@ -49,7 +50,7 @@ export async function handler(event: SQSEvent, context: Context) {
 
       // The actual SES event is in the 'detail' field of the EventBridge event
       const message = eventBridgeEvent.detail;
-      const eventType = message.eventType || message.notificationType;
+      let eventType = message.eventType || message.notificationType;
 
       // Extract email details
       const mail = message.mail;
@@ -100,14 +101,33 @@ export async function handler(event: SQSEvent, context: Context) {
           ipAddress: message.click.ipAddress,
         };
       } else if (eventType === "Bounce" && message.bounce) {
-        eventTimestamp = new Date(message.bounce.timestamp).getTime();
-        additionalData = {
-          bounceType: message.bounce.bounceType,
-          bounceSubType: message.bounce.bounceSubType,
-          bouncedRecipients: message.bounce.bouncedRecipients,
-          timestamp: message.bounce.timestamp,
-          feedbackId: message.bounce.feedbackId,
-        };
+        const bounceSubType = message.bounce.bounceSubType;
+
+        // Treat suppression as a distinct event type, not a bounce
+        // SES sends suppressions as bounces with bounceSubType of "Suppressed" or "OnAccountSuppressionList"
+        if (
+          bounceSubType === "Suppressed" ||
+          bounceSubType === "OnAccountSuppressionList"
+        ) {
+          eventType = "Suppressed";
+          eventTimestamp = new Date(message.bounce.timestamp).getTime();
+          additionalData = {
+            reason: bounceSubType,
+            suppressedRecipients: message.bounce.bouncedRecipients,
+            timestamp: message.bounce.timestamp,
+            feedbackId: message.bounce.feedbackId,
+          };
+        } else {
+          // Regular bounce handling
+          eventTimestamp = new Date(message.bounce.timestamp).getTime();
+          additionalData = {
+            bounceType: message.bounce.bounceType,
+            bounceSubType: message.bounce.bounceSubType,
+            bouncedRecipients: message.bounce.bouncedRecipients,
+            timestamp: message.bounce.timestamp,
+            feedbackId: message.bounce.feedbackId,
+          };
+        }
       } else if (eventType === "Complaint" && message.complaint) {
         eventTimestamp = new Date(message.complaint.timestamp).getTime();
         additionalData = {

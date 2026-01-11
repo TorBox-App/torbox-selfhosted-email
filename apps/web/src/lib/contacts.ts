@@ -9,6 +9,7 @@ export const EMAIL_STATUSES = [
   "unsubscribed",
   "bounced",
   "complained",
+  "suppressed",
 ] as const;
 
 export type EmailStatus = (typeof EMAIL_STATUSES)[number];
@@ -18,6 +19,7 @@ export const EMAIL_STATUS_LABELS: Record<EmailStatus, string> = {
   unsubscribed: "Unsubscribed",
   bounced: "Bounced",
   complained: "Complained",
+  suppressed: "Suppressed",
 };
 
 export const EMAIL_STATUS_COLORS: Record<EmailStatus, string> = {
@@ -25,6 +27,7 @@ export const EMAIL_STATUS_COLORS: Record<EmailStatus, string> = {
   unsubscribed: "bg-gray-100 text-gray-800",
   bounced: "bg-red-100 text-red-800",
   complained: "bg-red-100 text-red-800",
+  suppressed: "bg-amber-100 text-amber-800",
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -65,6 +68,7 @@ export const CONTACT_STATUSES = [
   "unsubscribed",
   "bounced",
   "complained",
+  "suppressed",
 ] as const;
 
 /** @deprecated Use EmailStatus instead */
@@ -77,6 +81,7 @@ export const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
   unsubscribed: "Unsubscribed",
   bounced: "Bounced",
   complained: "Complained",
+  suppressed: "Suppressed",
 };
 
 /** @deprecated Use EMAIL_STATUS_COLORS instead */
@@ -86,6 +91,7 @@ export const CONTACT_STATUS_COLORS: Record<ContactStatus, string> = {
   unsubscribed: "bg-gray-100 text-gray-800",
   bounced: "bg-red-100 text-red-800",
   complained: "bg-red-100 text-red-800",
+  suppressed: "bg-amber-100 text-amber-800",
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -103,6 +109,7 @@ export type ContactWithMeta = {
   emailUnsubscribedAt: Date | null;
   emailBouncedAt: Date | null;
   emailComplainedAt: Date | null;
+  emailSuppressedAt: Date | null;
   lastEmailSentAt: Date | null;
   lastEmailOpenedAt: Date | null;
   lastEmailClickedAt: Date | null;

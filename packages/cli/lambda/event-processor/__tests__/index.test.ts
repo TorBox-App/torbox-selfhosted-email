@@ -288,7 +288,7 @@ describe("Lambda Event Processor", () => {
   });
 
   describe("Suppression List Event - AWS Simulator", () => {
-    it("should process suppression list bounce event", async () => {
+    it("should transform global suppression bounce to Suppressed event type", async () => {
       dynamoMock.on(PutItemCommand).resolves({});
 
       const event: SQSEvent = {
@@ -324,11 +324,113 @@ describe("Lambda Event Processor", () => {
       expect(result.statusCode).toBe(200);
 
       const putItemCall = dynamoMock.call(0).args[0].input;
+      // Event type should be transformed from "Bounce" to "Suppressed"
+      expect(putItemCall.Item?.eventType.S).toBe("Suppressed");
+
       const additionalData = JSON.parse(
         putItemCall.Item?.additionalData.S || "{}"
       );
+      // Suppressed events have different additionalData structure
+      expect(additionalData.reason).toBe("Suppressed");
+      expect(additionalData.suppressedRecipients).toHaveLength(1);
+      expect(additionalData.suppressedRecipients[0].emailAddress).toBe(
+        SES_SIMULATOR_ADDRESSES.SUPPRESSION_LIST
+      );
+      // Should NOT have bounceType/bounceSubType (those are for regular bounces)
+      expect(additionalData.bounceType).toBeUndefined();
+      expect(additionalData.bounceSubType).toBeUndefined();
+    });
+
+    it("should transform account-level suppression bounce to Suppressed event type", async () => {
+      dynamoMock.on(PutItemCommand).resolves({});
+
+      const event: SQSEvent = {
+        Records: [
+          createSQSRecord({
+            eventType: "Bounce",
+            messageId: "account-suppression-test-123",
+            timestamp: "2024-01-15T10:30:00.000Z",
+            source: "sender@example.com",
+            destination: ["suppressed@example.com"],
+            subject: "Account Suppression Test",
+            bounce: {
+              bounceType: "Permanent",
+              bounceSubType: "OnAccountSuppressionList",
+              bouncedRecipients: [
+                {
+                  emailAddress: "suppressed@example.com",
+                  action: "failed",
+                  status: "5.1.1",
+                  diagnosticCode:
+                    "Address is on account-level suppression list",
+                },
+              ],
+              timestamp: "2024-01-15T10:30:01.000Z",
+              feedbackId: "account-suppression-feedback-123",
+            },
+          }),
+        ],
+      };
+
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(200);
+
+      const putItemCall = dynamoMock.call(0).args[0].input;
+      // Event type should be transformed to "Suppressed"
+      expect(putItemCall.Item?.eventType.S).toBe("Suppressed");
+
+      const additionalData = JSON.parse(
+        putItemCall.Item?.additionalData.S || "{}"
+      );
+      expect(additionalData.reason).toBe("OnAccountSuppressionList");
+      expect(additionalData.suppressedRecipients).toHaveLength(1);
+    });
+
+    it("should NOT transform regular bounces to Suppressed", async () => {
+      dynamoMock.on(PutItemCommand).resolves({});
+
+      const event: SQSEvent = {
+        Records: [
+          createSQSRecord({
+            eventType: "Bounce",
+            messageId: "regular-bounce-123",
+            timestamp: "2024-01-15T10:30:00.000Z",
+            source: "sender@example.com",
+            destination: [SES_SIMULATOR_ADDRESSES.BOUNCE],
+            subject: "Regular Bounce Test",
+            bounce: {
+              bounceType: "Permanent",
+              bounceSubType: "General",
+              bouncedRecipients: [
+                {
+                  emailAddress: SES_SIMULATOR_ADDRESSES.BOUNCE,
+                  action: "failed",
+                  status: "5.1.1",
+                  diagnosticCode: "smtp; 550 5.1.1 user unknown",
+                },
+              ],
+              timestamp: "2024-01-15T10:30:01.000Z",
+              feedbackId: "bounce-feedback-123",
+            },
+          }),
+        ],
+      };
+
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(200);
+
+      const putItemCall = dynamoMock.call(0).args[0].input;
+      // Regular bounces should remain as "Bounce"
+      expect(putItemCall.Item?.eventType.S).toBe("Bounce");
+
+      const additionalData = JSON.parse(
+        putItemCall.Item?.additionalData.S || "{}"
+      );
+      // Regular bounces have bounceType and bounceSubType
       expect(additionalData.bounceType).toBe("Permanent");
-      expect(additionalData.bounceSubType).toBe("Suppressed");
+      expect(additionalData.bounceSubType).toBe("General");
     });
   });
 

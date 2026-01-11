@@ -14,7 +14,7 @@ type ContactsPageProps = {
     page?: string;
     pageSize?: string;
     search?: string;
-    status?: string;
+    emailStatus?: string;
     topicId?: string;
   }>;
 };
@@ -28,7 +28,7 @@ export default async function ContactsPage({
     page = "1",
     pageSize = "50",
     search,
-    status,
+    emailStatus,
     topicId,
   } = await searchParams;
 
@@ -55,12 +55,12 @@ export default async function ContactsPage({
       page: Number.parseInt(page, 10),
       pageSize: Number.parseInt(pageSize, 10),
       search,
-      status: status as
-        | "pending_confirmation"
+      emailStatus: emailStatus as
         | "active"
         | "unsubscribed"
         | "bounced"
         | "complained"
+        | "suppressed"
         | undefined,
       topicId,
     }),

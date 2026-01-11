@@ -24,7 +24,7 @@ type EmailDetailPageProps = {
   }>;
 };
 
-const EVENT_COLORS = {
+const EVENT_COLORS: Record<EmailStatus, string> = {
   sent: "text-blue-500",
   delivered: "text-green-500",
   bounced: "text-red-500",
@@ -35,7 +35,8 @@ const EVENT_COLORS = {
   rejected: "text-red-500",
   rendering_failure: "text-red-500",
   delivery_delay: "text-yellow-500",
-} as const;
+  suppressed: "text-amber-500",
+};
 
 const STATUS_VARIANTS: Record<
   EmailStatus,
@@ -51,6 +52,7 @@ const STATUS_VARIANTS: Record<
   rejected: "destructive",
   rendering_failure: "destructive",
   delivery_delay: "secondary",
+  suppressed: "destructive",
 };
 
 // Map SES event types to our EmailStatus
@@ -66,6 +68,7 @@ function mapEventTypeToStatus(eventType: string): EmailStatus {
     "Rendering Failure": "rendering_failure",
     RenderingFailure: "rendering_failure",
     DeliveryDelay: "delivery_delay",
+    Suppressed: "suppressed",
   };
   return (mapping[eventType] as EmailStatus) || "sent";
 }
@@ -143,6 +146,7 @@ async function fetchEmail(
       "clicked",
       "complained",
       "bounced",
+      "suppressed",
       "opened",
       "delivered",
       "sent",

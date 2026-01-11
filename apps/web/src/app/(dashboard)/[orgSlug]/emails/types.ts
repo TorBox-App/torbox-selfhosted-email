@@ -8,7 +8,8 @@ export type EmailStatus =
   | "failed"
   | "rejected"
   | "rendering_failure"
-  | "delivery_delay";
+  | "delivery_delay"
+  | "suppressed";
 
 export type EmailEvent = {
   type: EmailStatus;

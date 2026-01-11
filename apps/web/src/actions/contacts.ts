@@ -110,6 +110,8 @@ export async function listContacts(
     page?: number;
     pageSize?: number;
     search?: string;
+    emailStatus?: EmailStatus;
+    /** @deprecated Use emailStatus instead */
     status?: ContactStatus;
     topicId?: string;
   } = {}
@@ -123,7 +125,14 @@ export async function listContacts(
       };
     }
 
-    const { page = 1, pageSize = 50, search, status, topicId } = options;
+    const {
+      page = 1,
+      pageSize = 50,
+      search,
+      emailStatus,
+      status,
+      topicId,
+    } = options;
     const offset = (page - 1) * pageSize;
 
     // Build where conditions
@@ -133,7 +142,11 @@ export async function listContacts(
       conditions.push(ilike(contact.email, `%${search}%`));
     }
 
-    if (status) {
+    // Prefer emailStatus over legacy status
+    if (emailStatus) {
+      conditions.push(eq(contact.emailStatus, emailStatus));
+    } else if (status) {
+      // Legacy fallback
       conditions.push(eq(contact.status, status));
     }
 
@@ -200,6 +213,7 @@ export async function listContacts(
         emailUnsubscribedAt: c.emailUnsubscribedAt,
         emailBouncedAt: c.emailBouncedAt,
         emailComplainedAt: c.emailComplainedAt,
+        emailSuppressedAt: c.emailSuppressedAt,
         lastEmailSentAt: c.lastEmailSentAt,
         lastEmailOpenedAt: c.lastEmailOpenedAt,
         lastEmailClickedAt: c.lastEmailClickedAt,
@@ -309,6 +323,7 @@ export async function getContact(
         emailUnsubscribedAt: c.emailUnsubscribedAt,
         emailBouncedAt: c.emailBouncedAt,
         emailComplainedAt: c.emailComplainedAt,
+        emailSuppressedAt: c.emailSuppressedAt,
         lastEmailSentAt: c.lastEmailSentAt,
         lastEmailOpenedAt: c.lastEmailOpenedAt,
         lastEmailClickedAt: c.lastEmailClickedAt,
@@ -669,6 +684,8 @@ export async function updateContact(
         updateData.emailBouncedAt = new Date();
       } else if (data.emailStatus === "complained") {
         updateData.emailComplainedAt = new Date();
+      } else if (data.emailStatus === "suppressed") {
+        updateData.emailSuppressedAt = new Date();
       }
     }
 

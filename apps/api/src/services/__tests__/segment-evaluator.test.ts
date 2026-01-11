@@ -1087,6 +1087,169 @@ describe("Segment Evaluator", () => {
     });
   });
 
+  describe("Email Status Filtering", () => {
+    describe("suppressed status", () => {
+      it("should match contacts with suppressed emailStatus", () => {
+        const suppressedContact = {
+          ...baseContact,
+          emailStatus: "suppressed",
+        };
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "equals",
+          value: "suppressed",
+        };
+        expect(evaluateFilter(filter, suppressedContact)).toBe(true);
+      });
+
+      it("should exclude suppressed contacts from active filter", () => {
+        const suppressedContact = {
+          ...baseContact,
+          emailStatus: "suppressed",
+        };
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "equals",
+          value: "active",
+        };
+        expect(evaluateFilter(filter, suppressedContact)).toBe(false);
+      });
+
+      it("should match suppressed in notEquals active filter", () => {
+        const suppressedContact = {
+          ...baseContact,
+          emailStatus: "suppressed",
+        };
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "notEquals",
+          value: "active",
+        };
+        expect(evaluateFilter(filter, suppressedContact)).toBe(true);
+      });
+
+      it("should match suppressed in inList filter", () => {
+        const suppressedContact = {
+          ...baseContact,
+          emailStatus: "suppressed",
+        };
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "inList",
+          value: ["bounced", "complained", "suppressed"],
+        };
+        expect(evaluateFilter(filter, suppressedContact)).toBe(true);
+      });
+
+      it("should exclude suppressed from deliverable contacts list", () => {
+        const suppressedContact = {
+          ...baseContact,
+          emailStatus: "suppressed",
+        };
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "notInList",
+          value: ["bounced", "complained", "suppressed", "unsubscribed"],
+        };
+        expect(evaluateFilter(filter, suppressedContact)).toBe(false);
+      });
+    });
+
+    describe("all email statuses", () => {
+      const emailStatuses = [
+        "active",
+        "unsubscribed",
+        "bounced",
+        "complained",
+        "suppressed",
+      ];
+
+      it.each(
+        emailStatuses
+      )("should correctly filter by emailStatus: %s", (status) => {
+        const contactWithStatus = {
+          ...baseContact,
+          emailStatus: status,
+        };
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "equals",
+          value: status,
+        };
+        expect(evaluateFilter(filter, contactWithStatus)).toBe(true);
+      });
+
+      it("should identify deliverable contacts (active only)", () => {
+        const condition: FilterCondition = {
+          logic: "AND",
+          groups: [
+            {
+              filters: [
+                { field: "emailStatus", operator: "equals", value: "active" },
+              ],
+            },
+          ],
+        };
+
+        // Active contacts should match
+        expect(evaluateCondition(condition, baseContact)).toBe(true);
+
+        // Non-active contacts should not match
+        const bouncedContact = { ...baseContact, emailStatus: "bounced" };
+        expect(evaluateCondition(condition, bouncedContact)).toBe(false);
+
+        const suppressedContact = { ...baseContact, emailStatus: "suppressed" };
+        expect(evaluateCondition(condition, suppressedContact)).toBe(false);
+
+        const complainedContact = { ...baseContact, emailStatus: "complained" };
+        expect(evaluateCondition(condition, complainedContact)).toBe(false);
+      });
+
+      it("should identify undeliverable contacts for re-engagement exclusion", () => {
+        // Contacts with delivery issues should be excluded from broadcasts
+        const condition: FilterCondition = {
+          logic: "OR",
+          groups: [
+            {
+              filters: [
+                { field: "emailStatus", operator: "equals", value: "bounced" },
+              ],
+            },
+            {
+              filters: [
+                {
+                  field: "emailStatus",
+                  operator: "equals",
+                  value: "complained",
+                },
+              ],
+            },
+            {
+              filters: [
+                {
+                  field: "emailStatus",
+                  operator: "equals",
+                  value: "suppressed",
+                },
+              ],
+            },
+          ],
+        };
+
+        // Active contacts should not match undeliverable segment
+        expect(evaluateCondition(condition, baseContact)).toBe(false);
+
+        // Bounced should match
+        const bouncedContact = { ...baseContact, emailStatus: "bounced" };
+        expect(evaluateCondition(condition, bouncedContact)).toBe(true);
+
+        // Suppressed should match
+        const suppressedContact = { ...baseContact, emailStatus: "suppressed" };
+        expect(evaluateCondition(condition, suppressedContact)).toBe(true);
+      });
+    });
+  });
+
   describe("Complex Real-world Scenarios", () => {
     it("should match: active US pro users who subscribed to newsletter", () => {
       const condition: FilterCondition = {

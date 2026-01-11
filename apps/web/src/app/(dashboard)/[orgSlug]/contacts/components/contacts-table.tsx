@@ -61,10 +61,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  CONTACT_STATUS_LABELS,
-  CONTACT_STATUSES,
   type ContactStatus,
   type ContactWithMeta,
+  EMAIL_STATUS_LABELS,
+  EMAIL_STATUSES,
   type EmailStatus,
   type SmsStatus,
 } from "@/lib/contacts";
@@ -476,7 +476,7 @@ export function ContactsTable({
   };
 
   const canEdit = userRole === "owner" || userRole === "admin";
-  const statusFilter = searchParams.get("status");
+  const statusFilter = searchParams.get("emailStatus");
   const topicFilter = searchParams.get("topicId");
 
   return (
@@ -495,11 +495,11 @@ export function ContactsTable({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {/* Status Filter */}
+          {/* Email Status Filter */}
           <Select
             onValueChange={(value) => {
               updateSearchParams({
-                status: value === "all" ? undefined : value,
+                emailStatus: value === "all" ? undefined : value,
                 page: "1",
               });
             }}
@@ -510,9 +510,9 @@ export function ContactsTable({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              {CONTACT_STATUSES.map((status) => (
+              {EMAIL_STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {CONTACT_STATUS_LABELS[status]}
+                  {EMAIL_STATUS_LABELS[status]}
                 </SelectItem>
               ))}
             </SelectContent>

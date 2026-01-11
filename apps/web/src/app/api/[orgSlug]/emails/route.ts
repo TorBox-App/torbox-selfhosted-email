@@ -22,6 +22,7 @@ function mapEventTypeToStatus(eventType: string): EmailStatus {
     Open: "opened",
     Click: "clicked",
     Bounce: "bounced",
+    Suppressed: "suppressed",
     Complaint: "complained",
     Reject: "rejected",
     "Rendering Failure": "rendering_failure",
@@ -132,6 +133,7 @@ export async function GET(request: Request, context: RouteContext) {
           const statusPriority: EmailStatus[] = [
             "clicked",
             "complained",
+            "suppressed",
             "bounced",
             "opened",
             "delivered",

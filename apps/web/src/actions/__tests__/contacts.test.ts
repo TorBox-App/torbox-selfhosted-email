@@ -358,6 +358,96 @@ describe("Contacts Server Actions", () => {
         expect(result.contacts[0].email).toBe("alice@example.com");
       }
     });
+
+    it("should filter by emailStatus", async () => {
+      // Create contacts with different email statuses
+      await db
+        .update(contact)
+        .set({ emailStatus: "bounced" })
+        .where(eq(contact.email, "alice@example.com"));
+
+      const result = await listContacts(testOrganization.id, {
+        emailStatus: "bounced",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.contacts).toHaveLength(1);
+        expect(result.contacts[0].email).toBe("alice@example.com");
+        expect(result.contacts[0].emailStatus).toBe("bounced");
+      }
+    });
+
+    it("should filter by emailStatus suppressed", async () => {
+      // Create a suppressed contact
+      await db
+        .update(contact)
+        .set({
+          emailStatus: "suppressed",
+          emailSuppressedAt: new Date(),
+        })
+        .where(eq(contact.email, "bob@example.com"));
+
+      const result = await listContacts(testOrganization.id, {
+        emailStatus: "suppressed",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.contacts).toHaveLength(1);
+        expect(result.contacts[0].email).toBe("bob@example.com");
+        expect(result.contacts[0].emailStatus).toBe("suppressed");
+        expect(result.contacts[0].emailSuppressedAt).not.toBeNull();
+      }
+    });
+
+    it("should prefer emailStatus over legacy status filter", async () => {
+      // When both emailStatus and status are provided, emailStatus should take precedence
+      await db
+        .update(contact)
+        .set({ emailStatus: "complained" })
+        .where(eq(contact.email, "charlie@example.com"));
+
+      const result = await listContacts(testOrganization.id, {
+        emailStatus: "complained",
+        status: "active", // This should be ignored
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.contacts).toHaveLength(1);
+        expect(result.contacts[0].email).toBe("charlie@example.com");
+        expect(result.contacts[0].emailStatus).toBe("complained");
+      }
+    });
+
+    it("should return all email statuses when no filter applied", async () => {
+      // Set different statuses for each contact
+      await db
+        .update(contact)
+        .set({ emailStatus: "bounced" })
+        .where(eq(contact.email, "alice@example.com"));
+      await db
+        .update(contact)
+        .set({ emailStatus: "suppressed" })
+        .where(eq(contact.email, "bob@example.com"));
+      await db
+        .update(contact)
+        .set({ emailStatus: "complained" })
+        .where(eq(contact.email, "charlie@example.com"));
+
+      const result = await listContacts(testOrganization.id);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.contacts).toHaveLength(3);
+        // Should include all statuses
+        const statuses = result.contacts.map((c) => c.emailStatus);
+        expect(statuses).toContain("bounced");
+        expect(statuses).toContain("suppressed");
+        expect(statuses).toContain("complained");
+      }
+    });
   });
 
   describe("getContact", () => {

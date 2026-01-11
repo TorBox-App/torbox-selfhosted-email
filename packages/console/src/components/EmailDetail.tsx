@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Clock, Mail, X } from "lucide-react";
+import { ArrowLeft, Ban, Check, Clock, Mail, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CopyButton } from "@/components/cdn";
@@ -27,7 +27,8 @@ type EmailEvent = {
     | "complained"
     | "opened"
     | "clicked"
-    | "failed";
+    | "failed"
+    | "suppressed";
   timestamp: number;
   metadata?: Record<string, any>;
 };
@@ -48,7 +49,8 @@ type EmailDetails = {
     | "sent"
     | "failed"
     | "opened"
-    | "clicked";
+    | "clicked"
+    | "suppressed";
   sentAt: number;
   events: EmailEvent[];
 };
@@ -57,6 +59,7 @@ const EVENT_ICONS = {
   sent: Mail,
   delivered: Check,
   bounced: X,
+  suppressed: Ban,
   complained: X,
   opened: Mail,
   clicked: Mail,
@@ -67,6 +70,7 @@ const EVENT_COLORS = {
   sent: "text-blue-500",
   delivered: "text-green-500",
   bounced: "text-red-500",
+  suppressed: "text-amber-500",
   complained: "text-red-500",
   opened: "text-purple-500",
   clicked: "text-indigo-500",
@@ -80,6 +84,7 @@ const STATUS_VARIANTS: Record<
   delivered: "default",
   sent: "secondary",
   bounced: "destructive",
+  suppressed: "destructive",
   complained: "destructive",
   failed: "destructive",
   opened: "default",

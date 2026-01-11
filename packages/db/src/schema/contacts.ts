@@ -17,7 +17,12 @@ import { template } from "./templates";
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type EmailStatus = "active" | "unsubscribed" | "bounced" | "complained";
+export type EmailStatus =
+  | "active"
+  | "unsubscribed"
+  | "bounced"
+  | "complained"
+  | "suppressed";
 export type SmsStatus =
   | "pending_consent"
   | "opted_in"
@@ -32,7 +37,8 @@ export type ContactStatus =
   | "active"
   | "unsubscribed"
   | "bounced"
-  | "complained";
+  | "complained"
+  | "suppressed";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CONTACTS TABLE
@@ -60,6 +66,7 @@ export const contact = pgTable(
     emailUnsubscribedAt: timestamp("email_unsubscribed_at"),
     emailBouncedAt: timestamp("email_bounced_at"),
     emailComplainedAt: timestamp("email_complained_at"),
+    emailSuppressedAt: timestamp("email_suppressed_at"),
 
     // Email engagement
     lastEmailSentAt: timestamp("last_email_sent_at"),

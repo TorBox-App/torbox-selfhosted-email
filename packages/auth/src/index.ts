@@ -170,6 +170,49 @@ const stripeClient = process.env.STRIPE_SECRET_KEY
     })
   : null;
 
+/**
+ * Subscription plan configuration for Stripe billing.
+ * Exported for testing and reference.
+ */
+export const subscriptionPlans = [
+  {
+    name: "starter",
+    priceId: process.env.STRIPE_STARTER_PRICE_ID,
+    annualDiscountPriceId: process.env.STRIPE_STARTER_ANNUAL_PRICE_ID,
+    limits: {
+      emails: -1, // Unlimited (they pay AWS)
+      awsAccounts: 1,
+      aiMessages: 50,
+      bulkBatchSize: 100,
+      members: -1, // Unlimited (we don't gate on team size)
+    },
+  },
+  {
+    name: "pro",
+    priceId: process.env.STRIPE_PRO_PRICE_ID,
+    annualDiscountPriceId: process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
+    limits: {
+      emails: -1, // Unlimited (they pay AWS)
+      awsAccounts: 3,
+      aiMessages: 250,
+      bulkBatchSize: 1000,
+      members: -1, // Unlimited (we don't gate on team size)
+    },
+  },
+  {
+    name: "growth",
+    priceId: process.env.STRIPE_GROWTH_PRICE_ID,
+    annualDiscountPriceId: process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID,
+    limits: {
+      emails: -1, // Unlimited
+      awsAccounts: -1, // Unlimited
+      aiMessages: 1000,
+      bulkBatchSize: 10_000,
+      members: -1, // Unlimited
+    },
+  },
+] as const;
+
 export const auth = betterAuth<BetterAuthOptions>({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -287,46 +330,7 @@ export const auth = betterAuth<BetterAuthOptions>({
 
                 return true;
               },
-              plans: [
-                {
-                  name: "starter",
-                  priceId: process.env.STRIPE_STARTER_PRICE_ID,
-                  annualDiscountPriceId:
-                    process.env.STRIPE_STARTER_ANNUAL_PRICE_ID,
-                  limits: {
-                    emails: -1, // Unlimited (they pay AWS)
-                    awsAccounts: 1,
-                    aiMessages: 50,
-                    bulkBatchSize: 100,
-                    members: -1, // Unlimited (we don't gate on team size)
-                  },
-                },
-                {
-                  name: "pro",
-                  priceId: process.env.STRIPE_PRO_PRICE_ID,
-                  annualDiscountPriceId: process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
-                  limits: {
-                    emails: -1, // Unlimited (they pay AWS)
-                    awsAccounts: 3,
-                    aiMessages: 250,
-                    bulkBatchSize: 1000,
-                    members: -1, // Unlimited (we don't gate on team size)
-                  },
-                },
-                {
-                  name: "growth",
-                  priceId: process.env.STRIPE_GROWTH_PRICE_ID,
-                  annualDiscountPriceId:
-                    process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID,
-                  limits: {
-                    emails: -1, // Unlimited
-                    awsAccounts: -1, // Unlimited
-                    aiMessages: 1000,
-                    bulkBatchSize: 10_000,
-                    members: -1, // Unlimited
-                  },
-                },
-              ],
+              plans: subscriptionPlans,
             },
           }),
         ]

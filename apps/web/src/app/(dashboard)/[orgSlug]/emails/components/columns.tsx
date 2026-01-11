@@ -2,6 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  Ban,
   CheckCircle2,
   type Circle,
   Clock,
@@ -56,6 +57,13 @@ const STATUS_CONFIG: Record<
     className:
       "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
     icon: XCircle,
+  },
+  suppressed: {
+    label: "Suppressed",
+    variant: "default",
+    className:
+      "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+    icon: Ban,
   },
   complained: {
     label: "Complained",

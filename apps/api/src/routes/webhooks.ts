@@ -30,7 +30,8 @@ type SesEventType =
   | "Complaint"
   | "Reject"
   | "Rendering Failure"
-  | "DeliveryDelay";
+  | "DeliveryDelay"
+  | "Suppressed";
 
 // EventBridge envelope structure for SES events
 type EventBridgeEvent = {
@@ -78,6 +79,12 @@ type EventBridgeEvent = {
       timestamp: string;
       complainedRecipients: Array<{ emailAddress: string }>;
       complaintFeedbackType?: string;
+    };
+    // Suppression event data (from transformed Lambda events)
+    suppression?: {
+      reason: string; // "Suppressed" or "OnAccountSuppressionList"
+      timestamp: string;
+      suppressedRecipients: Array<{ emailAddress: string }>;
     };
   };
 };
@@ -168,6 +175,14 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
 
         case "Complaint":
           await processComplaint(message, event.detail.complaint?.timestamp);
+          break;
+
+        case "Suppressed":
+          await processSuppression(
+            message,
+            event.detail.suppression?.reason,
+            event.detail.suppression?.timestamp
+          );
           break;
 
         default:
@@ -446,6 +461,48 @@ async function processComplaint(
   }
 
   console.log(`[WEBHOOK] Marked message ${message.id} as complained`);
+}
+
+async function processSuppression(
+  message: MessageRecord,
+  suppressionReason?: string,
+  timestamp?: string
+): Promise<void> {
+  const suppressedAt = timestamp ? new Date(timestamp) : new Date();
+
+  // Update messageSend status
+  await db
+    .update(messageSend)
+    .set({
+      status: "suppressed",
+      suppressedAt,
+    })
+    .where(eq(messageSend.id, message.id));
+
+  // Increment batchSend counter if applicable
+  if (message.batchSendId) {
+    await db
+      .update(batchSend)
+      .set({
+        suppressed: sql`${batchSend.suppressed} + 1`,
+      })
+      .where(eq(batchSend.id, message.batchSendId));
+  }
+
+  // Update contact status - all suppressions mark contact as suppressed
+  if (message.contactId) {
+    await db
+      .update(contact)
+      .set({
+        emailStatus: "suppressed",
+        emailSuppressedAt: suppressedAt,
+      })
+      .where(eq(contact.id, message.contactId));
+  }
+
+  console.log(
+    `[WEBHOOK] Marked message ${message.id} as suppressed (reason: ${suppressionReason ?? "unknown"})`
+  );
 }
 
 /**

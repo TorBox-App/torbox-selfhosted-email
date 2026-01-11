@@ -48,6 +48,7 @@ export const messageSendStatusEnum = pgEnum("message_send_status", [
   "clicked",
   "bounced",
   "complained",
+  "suppressed", // SES suppression list
   "failed",
   "opted_out", // SMS specific
 ]);
@@ -140,6 +141,7 @@ export const batchSend = pgTable(
     clicked: integer("clicked").default(0).notNull(),
     bounced: integer("bounced").default(0).notNull(),
     complained: integer("complained").default(0).notNull(),
+    suppressed: integer("suppressed").default(0).notNull(),
 
     // SMS-specific stats (Phase 3)
     smsSegments: integer("sms_segments").default(0).notNull(), // Total SMS segments
@@ -270,6 +272,7 @@ export const messageSend = pgTable(
     clickedAt: timestamp("clicked_at"),
     bouncedAt: timestamp("bounced_at"),
     complainedAt: timestamp("complained_at"),
+    suppressedAt: timestamp("suppressed_at"),
     // SMS-specific
     optedOutAt: timestamp("opted_out_at"),
 

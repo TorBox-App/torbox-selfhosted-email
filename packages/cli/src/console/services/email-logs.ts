@@ -17,7 +17,8 @@ export type EmailLog = {
     | "sent"
     | "failed"
     | "opened"
-    | "clicked";
+    | "clicked"
+    | "suppressed";
   sentAt: number;
   accountId?: string;
   errorMessage?: string;
@@ -31,7 +32,8 @@ export type EmailEvent = {
     | "complained"
     | "opened"
     | "clicked"
-    | "failed";
+    | "failed"
+    | "suppressed";
   timestamp: number;
   metadata?: Record<string, any>;
 };
@@ -52,7 +54,8 @@ export type EmailDetails = {
     | "sent"
     | "failed"
     | "opened"
-    | "clicked";
+    | "clicked"
+    | "suppressed";
   sentAt: number;
   events: EmailEvent[];
 };
@@ -163,7 +166,7 @@ export async function fetchEmailLogs(
 
 /**
  * Get priority for event type (higher = more important to display)
- * Priority: Complaint > Permanent Bounce > Click > Open > Delivery > Transient Bounce > Send
+ * Priority: Complaint > Suppressed/Permanent Bounce > Click > Open > Delivery > Transient Bounce > Send
  */
 function getEventPriority(item: any): number {
   const type = item.eventType?.toLowerCase();
@@ -171,6 +174,8 @@ function getEventPriority(item: any): number {
   switch (type) {
     case "complaint":
       return 7;
+    case "suppressed":
+      return 6; // Same priority as permanent bounce
     case "bounce": {
       // Permanent bounces (hard bounces) are more important than delivery
       // Transient bounces (OOTO, mailbox full) are less important than delivery
@@ -200,6 +205,8 @@ function normalizeEmailLog(data: any): EmailLog {
 
   if (eventType === "complaint") {
     status = "complained";
+  } else if (eventType === "suppressed") {
+    status = "suppressed";
   } else if (eventType === "bounce") {
     status = "bounced";
   } else if (eventType === "click") {
@@ -343,13 +350,16 @@ export async function fetchEmailById(
       }
     }
 
-    // Determine final status (priority order: complaint > bounce > click > open > delivery > sent)
+    // Determine final status (priority order: complaint > suppressed/bounce > click > open > delivery > sent)
     let status: EmailDetails["status"] = "sent";
     const hasDelivery = events.some(
       (e) => e.eventType?.toLowerCase() === "delivery"
     );
     const hasBounce = events.some(
       (e) => e.eventType?.toLowerCase() === "bounce"
+    );
+    const hasSuppressed = events.some(
+      (e) => e.eventType?.toLowerCase() === "suppressed"
     );
     const hasComplaint = events.some(
       (e) => e.eventType?.toLowerCase() === "complaint"
@@ -359,6 +369,8 @@ export async function fetchEmailById(
 
     if (hasComplaint) {
       status = "complained";
+    } else if (hasSuppressed) {
+      status = "suppressed";
     } else if (hasBounce) {
       status = "bounced";
     } else if (hasClick) {
@@ -385,6 +397,9 @@ export async function fetchEmailById(
           case "bounce":
             type = "bounced";
             break;
+          case "suppressed":
+            type = "suppressed";
+            break;
           case "complaint":
             type = "complained";
             break;
@@ -404,6 +419,19 @@ export async function fetchEmailById(
         if (eventType === "bounce" && event.bounceType) {
           metadata.bounceType = event.bounceType;
           metadata.bounceSubType = event.bounceSubType;
+        }
+
+        if (eventType === "suppressed") {
+          // Parse additionalData for suppression details
+          try {
+            const additionalData = event.additionalData
+              ? JSON.parse(event.additionalData)
+              : {};
+            metadata.reason = additionalData.reason;
+            metadata.suppressedRecipients = additionalData.suppressedRecipients;
+          } catch {
+            // Ignore parse errors
+          }
         }
 
         if (eventType === "complaint" && event.complaintFeedbackType) {
