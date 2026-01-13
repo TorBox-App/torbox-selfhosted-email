@@ -18,7 +18,7 @@ const scheduler = new SchedulerClient({});
  * Format a date for EventBridge Scheduler at() expression.
  * Must be in format: at(yyyy-MM-ddTHH:mm:ss) without milliseconds or timezone.
  */
-function formatScheduleExpression(date: Date): string {
+export function formatScheduleExpression(date: Date): string {
   const iso = date.toISOString(); // 2026-01-08T04:37:29.148Z
   const withoutMs = iso.split(".")[0]; // 2026-01-08T04:37:29
   return `at(${withoutMs})`;
@@ -28,7 +28,7 @@ function formatScheduleExpression(date: Date): string {
  * Generate a short schedule name that fits within the 64-char limit.
  * Uses first 8 chars of each UUID to create unique but short names.
  */
-function generateScheduleName(
+export function generateScheduleName(
   prefix: string,
   executionId: string,
   stepId: string

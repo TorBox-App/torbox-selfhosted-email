@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => {
     test: {
       globals: true,
       environment: "node",
+      // Use jsdom for component tests
+      environmentMatchGlobs: [["src/components/**/*.test.{ts,tsx}", "jsdom"]],
       setupFiles: ["./src/lib/permissions/__tests__/setup.ts"],
       // Sequential execution required when using shared database with afterEach cleanup
       fileParallelism: false,

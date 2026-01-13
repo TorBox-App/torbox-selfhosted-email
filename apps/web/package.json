@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:ee": "vitest run --testNamePattern='.*' src/components/\\(ee\\) src/app/\\(dashboard\\)/\\[orgSlug\\]/\\(ee\\)",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
@@ -140,6 +141,10 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.1",
+    "@testing-library/user-event": "14.6.1",
     "@types/babel__traverse": "7.28.0",
     "@types/he": "1.2.3",
     "@types/mailparser": "3.4.6",
@@ -151,6 +156,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.0",
     "handlebars": "4.7.8",
+    "jsdom": "27.4.0",
     "tailwindcss": "^4.1.11",
     "tw-animate-css": "^1.3.6",
     "typescript": "catalog:",

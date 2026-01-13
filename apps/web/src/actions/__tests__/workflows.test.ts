@@ -138,6 +138,11 @@ vi.mock("@wraps/auth", () => ({
   },
 }));
 
+// Mock plan-limits to allow workflows feature
+vi.mock("@/lib/plan-limits", () => ({
+  checkFeatureAccess: vi.fn(async () => ({ allowed: true })),
+}));
+
 // Set up test database
 beforeAll(async () => {
   // Insert test users
