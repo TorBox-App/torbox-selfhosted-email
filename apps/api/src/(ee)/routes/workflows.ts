@@ -13,9 +13,9 @@ import { t } from "elysia";
 import {
   type AuthContext,
   createAuthenticatedRoutes,
-} from "../middleware/auth";
-import { rateLimitMiddleware } from "../middleware/rate-limit";
-import { enqueueWorkflowStep } from "../services/workflow-queue";
+} from "../../middleware/auth";
+import { rateLimitMiddleware } from "../../middleware/rate-limit";
+import { enqueueWorkflowStep } from "../../services/workflow-queue";
 
 // Common response schemas
 const _errorResponse = t.Object({

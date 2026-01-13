@@ -28,7 +28,7 @@ import {
 } from "vitest";
 
 // Mock the workflow-queue module to avoid actual AWS calls
-vi.mock("../services/workflow-queue", () => ({
+vi.mock("../../services/workflow-queue", () => ({
   enqueueWorkflowStep: vi.fn().mockResolvedValue(undefined),
   deleteScheduledStep: vi.fn().mockResolvedValue(undefined),
 }));
@@ -36,8 +36,8 @@ vi.mock("../services/workflow-queue", () => ({
 import {
   cancelExecutionsForTopicUnsubscribe,
   emitTopicUnsubscribed,
-} from "../services/workflow-events";
-import { deleteScheduledStep } from "../services/workflow-queue";
+} from "../../services/workflow-events";
+import { deleteScheduledStep } from "../../services/workflow-queue";
 
 // Test data IDs (unique to avoid conflicts with other tests)
 const TEST_PREFIX = "api-wf-cancel-test";

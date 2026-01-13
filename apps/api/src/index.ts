@@ -8,6 +8,7 @@
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
+import { workflowsRoutes } from "./(ee)/routes/workflows";
 import { batchRoutes } from "./routes/batch";
 import { contactsRoutes } from "./routes/contacts";
 import { eventsRoutes } from "./routes/events";
@@ -15,7 +16,6 @@ import { healthRoutes } from "./routes/health";
 import { toolsRoutes } from "./routes/tools";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
-import { workflowsRoutes } from "./routes/workflows";
 
 /**
  * OpenAPI documentation configuration

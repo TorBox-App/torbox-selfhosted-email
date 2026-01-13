@@ -16,6 +16,7 @@ import { and, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { checkFeatureAccess } from "@/lib/plan-limits";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -282,6 +283,17 @@ export async function createWorkflow(
       };
     }
 
+    // Check if workflows feature is available for this plan
+    const featureCheck = await checkFeatureAccess(organizationId, "workflows");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error:
+          featureCheck.message ??
+          "Automations require a Growth plan or higher.",
+      };
+    }
+
     if (!data.name?.trim()) {
       return { success: false, error: "Workflow name is required" };
     }
@@ -368,6 +380,17 @@ export async function updateWorkflow(
       return {
         success: false,
         error: "You don't have access to this organization",
+      };
+    }
+
+    // Check if workflows feature is available for this plan
+    const featureCheck = await checkFeatureAccess(organizationId, "workflows");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error:
+          featureCheck.message ??
+          "Automations require a Growth plan or higher.",
       };
     }
 
@@ -519,6 +542,17 @@ export async function deleteWorkflow(
       };
     }
 
+    // Check if workflows feature is available for this plan
+    const featureCheck = await checkFeatureAccess(organizationId, "workflows");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error:
+          featureCheck.message ??
+          "Automations require a Growth plan or higher.",
+      };
+    }
+
     // Verify workflow exists
     const existing = await db.query.workflow.findFirst({
       where: and(
@@ -588,6 +622,17 @@ export async function enableWorkflow(
       return {
         success: false,
         error: "You don't have access to this organization",
+      };
+    }
+
+    // Check if workflows feature is available for this plan
+    const featureCheck = await checkFeatureAccess(organizationId, "workflows");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error:
+          featureCheck.message ??
+          "Automations require a Growth plan or higher.",
       };
     }
 
@@ -744,6 +789,17 @@ export async function disableWorkflow(
       };
     }
 
+    // Check if workflows feature is available for this plan
+    const featureCheck = await checkFeatureAccess(organizationId, "workflows");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error:
+          featureCheck.message ??
+          "Automations require a Growth plan or higher.",
+      };
+    }
+
     // Verify workflow exists
     const existing = await db.query.workflow.findFirst({
       where: and(
@@ -800,6 +856,17 @@ export async function duplicateWorkflow(
       return {
         success: false,
         error: "You don't have access to this organization",
+      };
+    }
+
+    // Check if workflows feature is available for this plan
+    const featureCheck = await checkFeatureAccess(organizationId, "workflows");
+    if (!featureCheck.allowed) {
+      return {
+        success: false,
+        error:
+          featureCheck.message ??
+          "Automations require a Growth plan or higher.",
       };
     }
 

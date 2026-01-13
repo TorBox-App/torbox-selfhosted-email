@@ -46,6 +46,9 @@
     "test": {
       "cache": false
     },
+    "test:ee": {
+      "cache": false
+    },
     "test:coverage": {
       "cache": false,
       "outputs": ["coverage/**"]

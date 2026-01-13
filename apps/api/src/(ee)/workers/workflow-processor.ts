@@ -36,16 +36,16 @@ import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, sql } from "drizzle-orm";
 import Handlebars from "handlebars";
 
-import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
+import { generateUnsubscribeToken } from "../../lib/unsubscribe-token";
 
-import { getCredentials } from "../services/credentials";
+import { getCredentials } from "../../services/credentials";
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
   scheduleWaitTimeout,
   scheduleWorkflowStep,
   type WorkflowJob,
-} from "../services/workflow-queue";
+} from "../../services/workflow-queue";
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
   for (const record of event.Records) {
@@ -830,7 +830,7 @@ export function substituteVariables(
  * - Collapses whitespace
  * - Truncates to reasonable length (998 chars per RFC 2822)
  */
-function sanitizeEmailSubject(subject: string): string {
+export function sanitizeEmailSubject(subject: string): string {
   return subject
     .replace(/[\r\n]+/g, " ") // Remove newlines (header injection prevention)
     .replace(/\s+/g, " ") // Collapse whitespace
@@ -906,7 +906,7 @@ async function autoPublishTemplate(
  * Validate phone number is in E.164 format
  * E.164: +[country code][subscriber number] (e.g., +15551234567)
  */
-function isValidE164Phone(phone: string): boolean {
+export function isValidE164Phone(phone: string): boolean {
   // E.164 format: + followed by 10-15 digits
   const e164Regex = /^\+[1-9]\d{9,14}$/;
   return e164Regex.test(phone);
@@ -1142,7 +1142,7 @@ function handleCondition(
   };
 }
 
-function evaluateCondition(
+export function evaluateCondition(
   fieldValue: unknown,
   operator: string,
   compareValue: unknown

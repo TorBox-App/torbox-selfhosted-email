@@ -11,11 +11,16 @@ export default defineConfig({
     environment: "node",
     // Sequential execution required when using shared database
     fileParallelism: false,
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/\\(ee\\)/**/*.test.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      include: ["src/routes/**/*.ts", "src/middleware/**/*.ts"],
+      include: [
+        "src/routes/**/*.ts",
+        "src/middleware/**/*.ts",
+        "src/\\(ee\\)/routes/**/*.ts",
+        "src/\\(ee\\)/workers/**/*.ts",
+      ],
       exclude: ["**/__tests__/**", "**/*.test.ts"],
     },
   },
