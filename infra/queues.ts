@@ -121,10 +121,10 @@ export const workflowQueue = new sst.aws.Queue("WorkflowQueue", {
 });
 
 // Subscribe workflow processor to the queue
-// The worker is defined in apps/api/src/workers/workflow-processor.ts
+// The worker is defined in apps/api/src/(ee)/workers/workflow-processor.ts
 workflowQueue.subscribe(
   {
-    handler: "apps/api/src/workers/workflow-processor.handler",
+    handler: "apps/api/src/(ee)/workers/workflow-processor.handler",
     runtime: "nodejs22.x",
     timeout: "5 minutes",
     memory: "512 MB",
