@@ -63,7 +63,6 @@ export function SmsTeaserSection() {
           {services.map((service) => {
             const Icon = service.icon;
             const isAvailable = service.status === "available";
-            const isComing = service.status === "coming";
 
             return (
               <div

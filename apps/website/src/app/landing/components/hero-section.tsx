@@ -1,14 +1,83 @@
 "use client";
 
-import { ArrowRight, Star } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { ArrowRight, Check, Copy } from "lucide-react";
 import { AsciinemaPlayer } from "@/components/asciinema-player";
 import { DotPattern } from "@/components/dot-pattern";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { WordRotate } from "@/components/ui/word-rotate";
 import { assetUrl } from "@/lib/utils";
 
+const services = [
+  { name: "Email", price: "$0.10/1k" },
+  { name: "CDN", price: "$0.085/GB" },
+  { name: "SMS", price: "~$0.01/msg" },
+];
+
+function SyncedRotate() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % services.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const current = services[index];
+
+  return (
+    <span className="flex flex-col items-center gap-1 sm:flex-row sm:gap-3">
+      <span className="flex items-center gap-2 sm:gap-3">
+        <span>Own your</span>
+        <span className="relative inline-block min-w-[100px] sm:min-w-[120px]">
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={current.name}
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="inline-block text-orange-500"
+            >
+              {current.name}
+            </motion.span>
+          </AnimatePresence>
+        </span>
+      </span>
+      <span className="flex items-center gap-2 sm:gap-3">
+        <span className="text-muted-foreground">for</span>
+        <span className="relative inline-block min-w-[120px] sm:min-w-[140px]">
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={current.price}
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="inline-block text-orange-500"
+            >
+              {current.price}
+            </motion.span>
+          </AnimatePresence>
+        </span>
+      </span>
+    </span>
+  );
+}
+
+const command = "npx @wraps.dev/cli email init";
+
 export function HeroSection() {
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(command);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <section className="relative overflow-hidden bg-linear-to-b from-background to-background/80 pt-20 pb-16 sm:pt-32">
       {/* Background Pattern */}
@@ -40,58 +109,41 @@ export function HeroSection() {
           </div>
 
           {/* Main Headline */}
-          <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-6xl lg:text-7xl">
-            <span className="flex flex-col items-center justify-center sm:flex-row sm:gap-3">
-              <span className="flex flex-row items-center justify-center gap-2">
-                <span>AWS</span>
-                <WordRotate
-                  className="text-orange-500"
-                  duration={3000}
-                  words={["Email", "CDN", "SMS"]}
-                />
-              </span>
-              <span>simplified.</span>
-            </span>
+          <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-5xl lg:text-6xl">
+            <SyncedRotate />
           </h1>
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            One command deploys production-ready infrastructure to your AWS
-            account. Use Wraps' TypeScript SDK or AWS's. You own everything.
+            One command deploys to your AWS account. No vendor markup.
+            No lock-in. Just AWS pricing.
           </p>
 
           {/* CTA */}
           <div className="flex flex-col items-center gap-4">
-            <code className="rounded-lg border bg-muted/50 px-6 py-3 font-mono text-base sm:text-lg">
-              npx @wraps.dev/cli email init
-            </code>
-            <div className="flex gap-4">
-              <Button
-                asChild
-                className="cursor-pointer bg-orange-500 text-base hover:bg-orange-600"
-                size="lg"
-              >
-                <a href="/docs/quickstart">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-              <Button
-                asChild
-                className="cursor-pointer text-base"
-                size="lg"
-                variant="outline"
-              >
-                <a
-                  href="https://github.com/wraps-team/wraps"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <Star className="mr-2 h-4 w-4" />
-                  Star on GitHub
-                </a>
-              </Button>
-            </div>
+            <button
+              className="flex items-center gap-2 rounded-lg border-2 border-orange-500/30 bg-background px-5 py-3 font-mono text-sm transition-colors hover:border-orange-500 hover:bg-orange-500/5 sm:text-base"
+              onClick={copyToClipboard}
+              type="button"
+            >
+              <span className="text-muted-foreground">$</span>
+              <span>{command}</span>
+              {copied ? (
+                <Check className="size-4 text-green-500" />
+              ) : (
+                <Copy className="size-4 text-muted-foreground" />
+              )}
+            </button>
+            <Button
+              asChild
+              className="cursor-pointer bg-orange-500 text-base hover:bg-orange-600"
+              size="lg"
+            >
+              <a href="/docs/quickstart">
+                Get Started Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
           </div>
         </div>
 

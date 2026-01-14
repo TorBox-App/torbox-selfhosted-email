@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowRight, CreditCard, Key, Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CreditCard, Key, Shield } from "lucide-react";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -125,25 +124,6 @@ export function PrinciplesSection() {
               </div>
             );
           })}
-        </div>
-
-        {/* CTA */}
-        <div className="mt-10 flex justify-center">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="border-zinc-300 bg-transparent hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-500 dark:border-zinc-700"
-          >
-            <a
-              href="https://github.com/wraps-team/wraps"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              View on GitHub
-              <ArrowRight className="ml-2 size-3" />
-            </a>
-          </Button>
         </div>
       </div>
     </section>

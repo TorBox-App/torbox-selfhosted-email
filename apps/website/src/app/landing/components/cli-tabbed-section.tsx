@@ -2,7 +2,6 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
-  ArrowRight,
   BarChart3,
   Check,
   Code2,
@@ -16,7 +15,6 @@ import {
   Terminal,
 } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -169,18 +167,6 @@ function DeployContent() {
           showTabBar={false}
         />
       </div>
-
-      <div className="flex justify-center gap-4">
-        <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
-          <a href="/docs/quickstart">
-            View Quickstart
-            <ArrowRight className="ml-2 size-4" />
-          </a>
-        </Button>
-        <Button asChild size="lg" variant="outline">
-          <a href="/cli">Learn About CLI</a>
-        </Button>
-      </div>
     </div>
   );
 }
@@ -267,18 +253,6 @@ function SendContent() {
           showTabBar={false}
         />
       </div>
-
-      <div className="flex justify-center gap-4">
-        <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
-          <a href="/docs/sdk-reference">
-            SDK Reference
-            <ArrowRight className="ml-2 size-4" />
-          </a>
-        </Button>
-        <Button asChild size="lg" variant="outline">
-          <a href="/docs/quickstart">View Quickstart</a>
-        </Button>
-      </div>
     </div>
   );
 }
@@ -356,19 +330,6 @@ function ConsoleContent() {
           );
         })}
       </div>
-
-      {/* CTA */}
-      <div className="flex justify-center gap-4">
-        <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
-          <a href="/docs/quickstart">
-            Get Started
-            <ArrowRight className="ml-2 size-4" />
-          </a>
-        </Button>
-        <Button asChild size="lg" variant="outline">
-          <a href="/cli">Learn About CLI</a>
-        </Button>
-      </div>
     </div>
   );
 }
@@ -438,12 +399,12 @@ function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
 }
 
 export function CliTabbedSection() {
-  const [activeTab, setActiveTab] = useState<TabKey>("deploy");
+  const [activeTab, setActiveTab] = useState<TabKey>("console");
 
   const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
+    { key: "console", label: "Console", icon: LayoutDashboard },
     { key: "deploy", label: "Deploy", icon: Terminal },
     { key: "send", label: "Send", icon: Send },
-    { key: "console", label: "Console", icon: LayoutDashboard },
   ];
 
   return (
