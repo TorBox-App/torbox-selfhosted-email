@@ -27,8 +27,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BillingToggle } from "@/components/billing-toggle";
 import { authClient } from "@/lib/auth-client";
-import { PLANS, type PlanId } from "@/lib/plans";
+import {
+  getAnnualTotal,
+  getDisplayPrice,
+  getPriceByInterval,
+  hasEarlyAdopterPricing,
+  PLANS,
+  type BillingInterval,
+  type PlanId,
+} from "@/lib/plans";
+import {
+  getOrganizationSubscription,
+  type SubscriptionData,
+} from "@/actions/subscriptions";
 
 type OrganizationSettingsBillingProps = {
   organization: {
@@ -45,33 +58,43 @@ export function OrganizationSettingsBilling({
 }: OrganizationSettingsBillingProps) {
   const queryClient = useQueryClient();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [upgradeBillingInterval, setUpgradeBillingInterval] =
+    useState<BillingInterval>("monthly");
 
   const canManageBilling = userRole === "owner" || userRole === "admin";
 
-  // Get subscriptions for this organization
-  const { data: subscriptions, isLoading: loadingSubscriptions } = useQuery({
-    queryKey: ["subscriptions", organization.id],
-    queryFn: async () => {
-      if (!organization.id) {
-        return [];
-      }
-      return authClient.subscription.list({
-        query: { referenceId: organization.id },
-      });
-    },
-    enabled: !!organization.id,
-  });
+  // Get subscription for this organization using our server action
+  // This fetches directly from DB to include custom fields like `annual`
+  const { data: subscriptionResult, isLoading: loadingSubscriptions } =
+    useQuery({
+      queryKey: ["subscription", organization.id],
+      queryFn: async () => {
+        if (!organization.id) {
+          return { success: true, subscription: null } as const;
+        }
+        return getOrganizationSubscription(organization.id);
+      },
+      enabled: !!organization.id,
+    });
 
-  // Find active subscription
-  const activeSubscription = (subscriptions as any)?.data?.find(
-    (sub: { status: string }) =>
-      sub.status === "active" || sub.status === "trialing"
-  );
+  // Get active subscription from result - only consider active/trialing as active
+  const subscription = subscriptionResult?.success
+    ? subscriptionResult.subscription
+    : undefined;
+  const activeSubscription: SubscriptionData | null | undefined =
+    subscription?.status === "active" || subscription?.status === "trialing"
+      ? subscription
+      : null;
 
   const currentPlan = (activeSubscription?.plan || "starter") as PlanId;
   const planConfig = PLANS[currentPlan] || PLANS.starter;
   const isTrialing = activeSubscription?.status === "trialing";
   const isCancelled = activeSubscription?.cancelAtPeriodEnd === true;
+  // Detect annual billing - check if billing period is yearly
+  const isAnnual = activeSubscription?.annual === true;
+  const currentBillingInterval: BillingInterval = isAnnual
+    ? "annual"
+    : "monthly";
 
   // Mutations
   const billingPortalMutation = useMutation({
@@ -91,9 +114,16 @@ export function OrganizationSettingsBilling({
   });
 
   const upgradeMutation = useMutation({
-    mutationFn: async (plan: string) =>
+    mutationFn: async ({
+      plan,
+      annual,
+    }: {
+      plan: string;
+      annual: boolean;
+    }) =>
       authClient.subscription.upgrade({
         plan,
+        annual,
         referenceId: organization.id,
         successUrl: `${window.location.origin}/${organization.slug}/settings/billing?subscribed=true`,
         cancelUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
@@ -112,7 +142,7 @@ export function OrganizationSettingsBilling({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["subscriptions", organization.id],
+        queryKey: ["subscription", organization.id],
       });
       setShowCancelDialog(false);
       toast.success("Subscription cancelled successfully");
@@ -130,7 +160,7 @@ export function OrganizationSettingsBilling({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["subscriptions", organization.id],
+        queryKey: ["subscription", organization.id],
       });
       toast.success("Subscription restored successfully");
     },
@@ -160,7 +190,10 @@ export function OrganizationSettingsBilling({
             <div>
               <CardTitle className="flex items-center gap-2">
                 Current Plan
-                {isTrialing && <Badge variant="secondary">Free Trial</Badge>}
+                {isAnnual && (
+                  <Badge className="bg-green-600 text-white">Annual</Badge>
+                )}
+                {isTrialing && <Badge variant="secondary">Trial</Badge>}
                 {isCancelled && <Badge variant="destructive">Cancelling</Badge>}
               </CardTitle>
               <CardDescription>
@@ -189,8 +222,12 @@ export function OrganizationSettingsBilling({
             <span className="font-bold text-4xl">{planConfig.name}</span>
             {planConfig.price !== null && planConfig.price > 0 && (
               <span className="text-muted-foreground">
-                ${planConfig.price}
-                {planConfig.period}
+                ${getPriceByInterval(planConfig, currentBillingInterval)}/mo
+                {isAnnual && getAnnualTotal(planConfig) && (
+                  <span className="ml-2 text-green-600">
+                    (${getAnnualTotal(planConfig)}/yr)
+                  </span>
+                )}
               </span>
             )}
           </div>
@@ -233,7 +270,13 @@ export function OrganizationSettingsBilling({
               Unlock more features and increase your limits
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
+            {/* Billing Interval Toggle */}
+            <BillingToggle
+              onChange={setUpgradeBillingInterval}
+              value={upgradeBillingInterval}
+            />
+
             <div className="grid gap-4 md:grid-cols-2">
               {/* Pro Plan */}
               {currentPlan === "starter" && (
@@ -242,12 +285,24 @@ export function OrganizationSettingsBilling({
                     <h3 className="font-semibold text-lg">{PLANS.pro.name}</h3>
                     <div className="mt-2 flex items-baseline gap-1">
                       <span className="font-bold text-3xl">
-                        ${PLANS.pro.price}
+                        ${getPriceByInterval(PLANS.pro, upgradeBillingInterval)}
                       </span>
-                      <span className="text-muted-foreground text-sm">
-                        {PLANS.pro.period}
-                      </span>
+                      {hasEarlyAdopterPricing(PLANS.pro) && (
+                        <span className="text-muted-foreground text-sm line-through">
+                          $
+                          {upgradeBillingInterval === "annual"
+                            ? PLANS.pro.annualPrice
+                            : PLANS.pro.price}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-sm">/mo</span>
                     </div>
+                    {upgradeBillingInterval === "annual" &&
+                      getAnnualTotal(PLANS.pro) && (
+                        <p className="mt-1 text-green-600 text-sm">
+                          ${getAnnualTotal(PLANS.pro)} billed annually
+                        </p>
+                      )}
                     <p className="mt-1 text-muted-foreground text-sm">
                       {PLANS.pro.description}
                     </p>
@@ -269,7 +324,12 @@ export function OrganizationSettingsBilling({
                     className="w-full"
                     disabled={!canManageBilling}
                     loading={upgradeMutation.isPending}
-                    onClick={() => upgradeMutation.mutate("pro")}
+                    onClick={() =>
+                      upgradeMutation.mutate({
+                        plan: "pro",
+                        annual: upgradeBillingInterval === "annual",
+                      })
+                    }
                   >
                     Upgrade to Pro
                   </Button>
@@ -282,12 +342,25 @@ export function OrganizationSettingsBilling({
                   <h3 className="font-semibold text-lg">{PLANS.growth.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="font-bold text-3xl">
-                      ${PLANS.growth.price}
+                      $
+                      {getPriceByInterval(PLANS.growth, upgradeBillingInterval)}
                     </span>
-                    <span className="text-muted-foreground text-sm">
-                      {PLANS.growth.period}
-                    </span>
+                    {hasEarlyAdopterPricing(PLANS.growth) && (
+                      <span className="text-muted-foreground text-sm line-through">
+                        $
+                        {upgradeBillingInterval === "annual"
+                          ? PLANS.growth.annualPrice
+                          : PLANS.growth.price}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground text-sm">/mo</span>
                   </div>
+                  {upgradeBillingInterval === "annual" &&
+                    getAnnualTotal(PLANS.growth) && (
+                      <p className="mt-1 text-green-600 text-sm">
+                        ${getAnnualTotal(PLANS.growth)} billed annually
+                      </p>
+                    )}
                   <p className="mt-1 text-muted-foreground text-sm">
                     {PLANS.growth.description}
                   </p>
@@ -309,7 +382,12 @@ export function OrganizationSettingsBilling({
                   className="w-full"
                   disabled={!canManageBilling}
                   loading={upgradeMutation.isPending}
-                  onClick={() => upgradeMutation.mutate("growth")}
+                  onClick={() =>
+                    upgradeMutation.mutate({
+                      plan: "growth",
+                      annual: upgradeBillingInterval === "annual",
+                    })
+                  }
                   variant={currentPlan === "starter" ? "outline" : "default"}
                 >
                   Upgrade to Growth
@@ -395,7 +473,7 @@ export function OrganizationSettingsBilling({
             </Button>
             <Button
               loading={cancelMutation.isPending}
-              onClick={() => cancelMutation.mutate(activeSubscription?.id)}
+              onClick={() => activeSubscription?.id && cancelMutation.mutate(activeSubscription.id)}
               variant="destructive"
             >
               Yes, Cancel

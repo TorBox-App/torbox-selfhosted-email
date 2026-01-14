@@ -163,6 +163,7 @@ export const subscription = pgTable("subscription", {
   seats: integer("seats"),
   trialStart: timestamp("trial_start"),
   trialEnd: timestamp("trial_end"),
+  annual: boolean("annual").default(false), // true for annual billing, false for monthly
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

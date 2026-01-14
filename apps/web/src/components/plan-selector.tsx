@@ -2,9 +2,11 @@
 
 import { Check, Sparkles } from "lucide-react";
 import {
+  getAnnualTotal,
   getDisplayPlans,
-  getDisplayPrice,
+  getPriceByInterval,
   hasEarlyAdopterPricing,
+  type BillingInterval,
   type PlanId,
 } from "@/lib/plans";
 import { cn } from "@/lib/utils";
@@ -14,6 +16,7 @@ type PlanSelectorProps = {
   onSelectPlan: (plan: PlanId) => void;
   currentPlan?: PlanId | null;
   showCurrentBadge?: boolean;
+  billingInterval?: BillingInterval;
 };
 
 export function PlanSelector({
@@ -21,6 +24,7 @@ export function PlanSelector({
   onSelectPlan,
   currentPlan,
   showCurrentBadge = false,
+  billingInterval = "monthly",
 }: PlanSelectorProps) {
   const displayPlans = getDisplayPlans();
 
@@ -36,7 +40,10 @@ export function PlanSelector({
         const isCurrent = currentPlan === id;
         const isPopular = id === "pro";
         const isEarlyAdopter = hasEarlyAdopterPricing(plan);
-        const displayPrice = getDisplayPrice(plan);
+        const displayPrice = getPriceByInterval(plan, billingInterval);
+        const regularPrice =
+          billingInterval === "annual" ? plan.annualPrice : plan.price;
+        const annualTotal = getAnnualTotal(plan);
 
         return (
           <button
@@ -102,12 +109,17 @@ export function PlanSelector({
             {/* Price */}
             <div className="mb-4">
               <span className="font-bold text-3xl">${displayPrice}</span>
-              {isEarlyAdopter && (
+              {isEarlyAdopter && regularPrice && (
                 <span className="ml-2 text-lg text-muted-foreground line-through">
-                  ${plan.price}
+                  ${regularPrice}
                 </span>
               )}
-              <span className="text-muted-foreground">{plan.period}</span>
+              <span className="text-muted-foreground">/mo</span>
+              {billingInterval === "annual" && annualTotal && (
+                <p className="mt-1 text-green-600 text-sm">
+                  ${annualTotal}/yr
+                </p>
+              )}
             </div>
 
             {/* Key features */}

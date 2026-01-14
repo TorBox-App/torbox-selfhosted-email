@@ -16,6 +16,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan");
+  const interval = searchParams.get("interval");
   const { data: session, isPending } = authClient.useSession();
 
   // Redirect to auth if not logged in
@@ -28,11 +29,15 @@ export default function OnboardingPage() {
     return <Loader fullScreen />;
   }
 
-  // Handle successful org creation - pass plan param to org onboarding
+  // Handle successful org creation - pass plan and interval params to org onboarding
   const handleSuccess = (orgSlug: string) => {
-    const url = plan
-      ? `/${orgSlug}/onboarding?plan=${plan}`
-      : `/${orgSlug}/onboarding`;
+    const params = new URLSearchParams();
+    if (plan) params.set("plan", plan);
+    if (interval) params.set("interval", interval);
+    const url =
+      params.toString() !== ""
+        ? `/${orgSlug}/onboarding?${params.toString()}`
+        : `/${orgSlug}/onboarding`;
     router.push(url);
     router.refresh();
   };

@@ -3,6 +3,7 @@ import * as schema from "@wraps/db/schema/auth";
 import { getWrapsClient } from "@wraps/email";
 import { createPlatformClient } from "@wraps.dev/client";
 import type Stripe from "stripe";
+import { stripeClient } from "./index";
 
 /**
  * Emit a subscription lifecycle event to the Platform API.
@@ -195,6 +196,7 @@ export async function handlePaymentFailed(
 /**
  * Handle checkout.session.completed webhook event.
  * Emits subscription.activated event for workflow triggers.
+ * Also sets the annual billing flag if not already set.
  */
 export async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session
@@ -234,6 +236,44 @@ export async function handleCheckoutCompleted(
     return { success: false, eventsEmitted: 0 };
   }
 
+  // Determine annual billing from the Stripe subscription interval
+  // This is more reliable than metadata since better-auth doesn't set metadata
+  let isAnnual = false;
+
+  const stripeSubscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+
+  if (stripeSubscriptionId && stripeClient) {
+    try {
+      const stripeSubscription =
+        await stripeClient.subscriptions.retrieve(stripeSubscriptionId);
+      const interval =
+        stripeSubscription.items.data[0]?.price.recurring?.interval;
+      isAnnual = interval === "year";
+      console.log(
+        `Fetched subscription ${stripeSubscriptionId} from Stripe - interval: ${interval}, isAnnual: ${isAnnual}`
+      );
+    } catch (err) {
+      console.error(`Failed to fetch subscription from Stripe:`, err);
+      // Fallback to metadata if available
+      isAnnual =
+        session.metadata?.annual === "true" ||
+        session.metadata?.billing_interval === "annual";
+    }
+  }
+
+  // Always update the annual flag on checkout completion
+  // This handles both new subscriptions and cases where subscription.created fired before DB record existed
+  await db
+    .update(schema.subscription)
+    .set({ annual: isAnnual, updatedAt: new Date() })
+    .where(eq(schema.subscription.id, sub.id));
+  console.log(
+    `Set subscription ${sub.id} annual flag to ${isAnnual} from checkout`
+  );
+
   // Format amount
   const amount = session.amount_total
     ? (session.amount_total / 100).toFixed(2)
@@ -253,6 +293,7 @@ export async function handleCheckoutCompleted(
         organizationName: org.name,
         plan: sub.plan,
         amount: `${currency} ${amount}`,
+        annual: isAnnual,
         activatedAt: new Date().toISOString(),
       }
     );
@@ -260,7 +301,7 @@ export async function handleCheckoutCompleted(
   }
 
   console.log(
-    `Subscription activated for org ${org.id} (${org.name}) - plan: ${sub.plan}`
+    `Subscription activated for org ${org.id} (${org.name}) - plan: ${sub.plan}, annual: ${isAnnual}`
   );
   return { success: true, eventsEmitted };
 }
@@ -403,6 +444,43 @@ export async function handleSubscriptionUpdated(
 }
 
 /**
+ * Handle customer.subscription.created webhook event.
+ * Sets the annual billing flag based on Stripe subscription interval.
+ */
+export async function handleSubscriptionCreated(
+  subscription: Stripe.Subscription
+): Promise<{ success: boolean }> {
+  // Get the billing interval from the price
+  const interval = subscription.items.data[0]?.price.recurring?.interval;
+  const isAnnual = interval === "year";
+
+  // Find and update the subscription record
+  const sub = await db.query.subscription.findFirst({
+    where: eq(schema.subscription.stripeSubscriptionId, subscription.id),
+  });
+
+  if (!sub) {
+    // Subscription might not be in our DB yet - better-auth creates it async
+    // We'll also check in handleCheckoutCompleted as a fallback
+    console.log(
+      `Subscription created webhook: Subscription ${subscription.id} not yet in DB`
+    );
+    return { success: false };
+  }
+
+  // Update the annual field
+  await db
+    .update(schema.subscription)
+    .set({ annual: isAnnual, updatedAt: new Date() })
+    .where(eq(schema.subscription.id, sub.id));
+
+  console.log(
+    `Subscription ${subscription.id} marked as ${isAnnual ? "annual" : "monthly"}`
+  );
+  return { success: true };
+}
+
+/**
  * Main webhook event handler for Stripe events.
  * Routes events to appropriate handlers.
  */
@@ -416,6 +494,10 @@ export async function handleStripeWebhook(event: Stripe.Event): Promise<void> {
       await handleCheckoutCompleted(
         event.data.object as Stripe.Checkout.Session
       );
+      break;
+
+    case "customer.subscription.created":
+      await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
       break;
 
     case "customer.subscription.deleted":

@@ -71,6 +71,24 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     setIsInitialized(true);
   }, [orgSlug, searchParams]);
 
+  // Store plan and billing interval preferences in localStorage
+  useEffect(() => {
+    if (!orgSlug) {
+      return;
+    }
+
+    const planParam = searchParams.get("plan");
+    const intervalParam = searchParams.get("interval");
+
+    // Only store if params exist in URL (coming from signup)
+    if (planParam) {
+      localStorage.setItem(`onboarding_plan_${orgSlug}`, planParam);
+    }
+    if (intervalParam) {
+      localStorage.setItem(`onboarding_interval_${orgSlug}`, intervalParam);
+    }
+  }, [orgSlug, searchParams]);
+
   // Save step to localStorage
   useEffect(() => {
     if (orgSlug && isInitialized) {
@@ -166,6 +184,8 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
 
     // Clear localStorage
     localStorage.removeItem(`onboarding_step_${orgSlug}`);
+    localStorage.removeItem(`onboarding_plan_${orgSlug}`);
+    localStorage.removeItem(`onboarding_interval_${orgSlug}`);
 
     router.push(`/${orgSlug}/emails`);
   };

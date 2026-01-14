@@ -31,6 +31,7 @@ export default function SignUpForm({
   const searchParams = useSearchParams();
   const _redirectTo = searchParams.get("redirect") || "/dashboard";
   const plan = searchParams.get("plan");
+  const interval = searchParams.get("interval") || "monthly";
   const { isPending } = authClient.useSession();
 
   const form = useForm({
@@ -75,11 +76,18 @@ export default function SignUpForm({
         email: value.email,
         name: value.name,
         selected_plan: plan || null,
+        billing_interval: interval,
       });
 
       // Step 4: Redirect to onboarding to create organization
       toast.success("Account created successfully!");
-      const onboardingUrl = plan ? `/onboarding?plan=${plan}` : "/onboarding";
+      const onboardingParams = new URLSearchParams();
+      if (plan) onboardingParams.set("plan", plan);
+      if (interval) onboardingParams.set("interval", interval);
+      const onboardingUrl =
+        onboardingParams.toString() !== ""
+          ? `/onboarding?${onboardingParams.toString()}`
+          : "/onboarding";
       router.push(onboardingUrl);
     },
     validators: {

@@ -4,6 +4,7 @@ import { CreditCardIcon, ZapIcon } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { BillingToggle } from "@/components/billing-toggle";
 import { PlanSelector } from "@/components/plan-selector";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +17,11 @@ import {
 } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
 import {
-  getDisplayPrice,
+  getAnnualTotal,
+  getPriceByInterval,
   hasEarlyAdopterPricing,
   PLANS,
+  type BillingInterval,
   type PlanId,
 } from "@/lib/plans";
 
@@ -37,14 +40,38 @@ export function BillingStep({
   const searchParams = useSearchParams();
   const orgSlug = params.orgSlug as string;
 
-  // Get plan from URL param, default to starter
+  // Get plan from URL param or localStorage, default to starter
   const planParam = searchParams.get("plan") as PlanId | null;
+  const storedPlan =
+    typeof window !== "undefined"
+      ? (localStorage.getItem(`onboarding_plan_${orgSlug}`) as PlanId | null)
+      : null;
   const initialPlan: PlanId =
-    planParam && ["starter", "pro", "growth", "scale"].includes(planParam)
+    (planParam && ["starter", "pro", "growth", "scale"].includes(planParam)
       ? planParam
-      : "starter";
+      : storedPlan &&
+          ["starter", "pro", "growth", "scale"].includes(storedPlan)
+        ? storedPlan
+        : null) ?? "starter";
+
+  // Get billing interval from URL param or localStorage, default to monthly
+  const intervalParam = searchParams.get("interval") as BillingInterval | null;
+  const storedInterval =
+    typeof window !== "undefined"
+      ? (localStorage.getItem(
+          `onboarding_interval_${orgSlug}`
+        ) as BillingInterval | null)
+      : null;
+  const initialInterval: BillingInterval =
+    (intervalParam && ["monthly", "annual"].includes(intervalParam)
+      ? intervalParam
+      : storedInterval && ["monthly", "annual"].includes(storedInterval)
+        ? storedInterval
+        : null) ?? "monthly";
 
   const [selectedPlan, setSelectedPlan] = useState<PlanId>(initialPlan);
+  const [billingInterval, setBillingInterval] =
+    useState<BillingInterval>(initialInterval);
   const [isLoading, setIsLoading] = useState(false);
 
   const plan = PLANS[selectedPlan];
@@ -61,9 +88,10 @@ export function BillingStep({
       // Start Stripe checkout for selected plan
       const result = await authClient.subscription.upgrade({
         plan: selectedPlan,
+        annual: billingInterval === "annual",
         referenceId: organizationId,
         successUrl: `${window.location.origin}/${orgSlug}/emails?subscribed=true`,
-        cancelUrl: `${window.location.origin}/${orgSlug}/onboarding?step=5&plan=${selectedPlan}`,
+        cancelUrl: `${window.location.origin}/${orgSlug}/onboarding?step=5&plan=${selectedPlan}&interval=${billingInterval}`,
       });
 
       if (result.error) {
@@ -92,8 +120,12 @@ export function BillingStep({
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Billing Interval Toggle */}
+        <BillingToggle onChange={setBillingInterval} value={billingInterval} />
+
         {/* Plan Selector */}
         <PlanSelector
+          billingInterval={billingInterval}
           onSelectPlan={setSelectedPlan}
           selectedPlan={selectedPlan}
         />
@@ -109,16 +141,21 @@ export function BillingStep({
             </div>
             <div className="text-right">
               <span className="font-bold text-2xl">
-                ${getDisplayPrice(plan)}
+                ${getPriceByInterval(plan, billingInterval)}
               </span>
               {hasEarlyAdopterPricing(plan) && (
                 <span className="ml-1 text-muted-foreground line-through">
-                  ${plan.price}
+                  ${billingInterval === "annual" ? plan.annualPrice : plan.price}
                 </span>
               )}
-              <span className="text-muted-foreground">{plan.period}</span>
+              <span className="text-muted-foreground">/mo</span>
             </div>
           </div>
+          {billingInterval === "annual" && getAnnualTotal(plan) && (
+            <p className="mt-1 text-green-600 text-sm">
+              ${getAnnualTotal(plan)} billed annually
+            </p>
+          )}
           {hasEarlyAdopterPricing(plan) && (
             <p className="mt-2 text-green-600 text-xs">
               Early adopter pricing - your rate stays locked forever

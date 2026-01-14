@@ -403,3 +403,6 @@ export const auth = betterAuth<BetterAuthOptions>({
     },
   },
 });
+
+// Export the Stripe client for use in webhook handlers
+export { stripeClient };

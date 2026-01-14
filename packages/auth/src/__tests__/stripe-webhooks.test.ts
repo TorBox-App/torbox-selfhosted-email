@@ -2,22 +2,32 @@ import type Stripe from "stripe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the database module
-vi.mock("@wraps/db", () => ({
-  db: {
-    query: {
-      subscription: {
-        findFirst: vi.fn(),
+vi.mock("@wraps/db", () => {
+  const mockSetFn = vi.fn(() => ({
+    where: vi.fn(() => Promise.resolve()),
+  }));
+  const mockUpdateFn = vi.fn(() => ({
+    set: mockSetFn,
+  }));
+
+  return {
+    db: {
+      query: {
+        subscription: {
+          findFirst: vi.fn(),
+        },
+        organization: {
+          findFirst: vi.fn(),
+        },
+        member: {
+          findMany: vi.fn(),
+        },
       },
-      organization: {
-        findFirst: vi.fn(),
-      },
-      member: {
-        findMany: vi.fn(),
-      },
+      update: mockUpdateFn,
     },
-  },
-  eq: vi.fn((a, b) => ({ field: a, value: b })),
-}));
+    eq: vi.fn((a, b) => ({ field: a, value: b })),
+  };
+});
 
 // Mock the email module
 vi.mock("@wraps/email", () => ({
@@ -35,16 +45,29 @@ vi.mock("@wraps.dev/client", () => ({
   })),
 }));
 
+// Mock the stripeClient from index - define inside factory to avoid hoisting issues
+vi.mock("../index", () => {
+  return {
+    stripeClient: {
+      subscriptions: {
+        retrieve: vi.fn(),
+      },
+    },
+  };
+});
+
 // Import after mocks are set up
 import { db } from "@wraps/db";
 import { getWrapsClient } from "@wraps/email";
 import { createPlatformClient } from "@wraps.dev/client";
+import { stripeClient } from "../index";
 import {
   emitSubscriptionEvent,
   getSubscriptionOrgAdmins,
   handleCheckoutCompleted,
   handlePaymentFailed,
   handleStripeWebhook,
+  handleSubscriptionCreated,
   handleSubscriptionDeleted,
   handleSubscriptionUpdated,
 } from "../stripe-webhooks";
@@ -314,11 +337,19 @@ describe("handleCheckoutCompleted", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.WRAPS_API_KEY = "test-api-key";
+    // Default mock for Stripe subscription - monthly
+    vi.mocked(stripeClient!.subscriptions.retrieve).mockResolvedValue({
+      id: "sub_stripe_123",
+      items: {
+        data: [{ price: { recurring: { interval: "month" } } }],
+      },
+    });
   });
 
   const mockSession: Partial<Stripe.Checkout.Session> = {
     mode: "subscription",
     customer: "cus_123",
+    subscription: "sub_stripe_123",
     amount_total: 2900,
     currency: "usd",
   };
@@ -370,6 +401,211 @@ describe("handleCheckoutCompleted", () => {
 
     expect(result.success).toBe(true);
     expect(result.eventsEmitted).toBe(0);
+  });
+
+  it("should set annual=true when Stripe subscription has yearly interval", async () => {
+    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
+
+    // Mock Stripe subscription with yearly interval
+    vi.mocked(stripeClient!.subscriptions.retrieve).mockResolvedValue({
+      id: "sub_stripe_123",
+      items: {
+        data: [{ price: { recurring: { interval: "year" } } }],
+      },
+    });
+
+    vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
+      id: "sub_123",
+      referenceId: "org_123",
+      plan: "pro",
+      stripeCustomerId: "cus_123",
+      annual: null, // Not yet set
+    } as any);
+
+    vi.mocked(db.query.organization.findFirst).mockResolvedValue({
+      id: "org_123",
+      name: "Test Org",
+      slug: "test-org",
+    } as any);
+
+    vi.mocked(db.query.member.findMany).mockResolvedValue([
+      { user: { email: "owner@example.com", name: "Owner" }, role: "owner" },
+    ] as any);
+
+    const sessionWithAnnual: Partial<Stripe.Checkout.Session> = {
+      mode: "subscription",
+      customer: "cus_123",
+      subscription: "sub_stripe_123",
+      amount_total: 10000,
+      currency: "usd",
+    };
+
+    const result = await handleCheckoutCompleted(
+      sessionWithAnnual as Stripe.Checkout.Session
+    );
+
+    expect(result.success).toBe(true);
+    expect(vi.mocked(stripeClient!.subscriptions.retrieve)).toHaveBeenCalledWith(
+      "sub_stripe_123"
+    );
+    expect(db.update).toHaveBeenCalled();
+  });
+
+  it("should set annual=false when Stripe subscription has monthly interval", async () => {
+    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
+
+    // Mock Stripe subscription with monthly interval (already default in beforeEach)
+    vi.mocked(stripeClient!.subscriptions.retrieve).mockResolvedValue({
+      id: "sub_stripe_123",
+      items: {
+        data: [{ price: { recurring: { interval: "month" } } }],
+      },
+    });
+
+    vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
+      id: "sub_123",
+      referenceId: "org_123",
+      plan: "pro",
+      stripeCustomerId: "cus_123",
+      annual: null, // Not yet set
+    } as any);
+
+    vi.mocked(db.query.organization.findFirst).mockResolvedValue({
+      id: "org_123",
+      name: "Test Org",
+      slug: "test-org",
+    } as any);
+
+    vi.mocked(db.query.member.findMany).mockResolvedValue([
+      { user: { email: "owner@example.com", name: "Owner" }, role: "owner" },
+    ] as any);
+
+    const sessionMonthly: Partial<Stripe.Checkout.Session> = {
+      mode: "subscription",
+      customer: "cus_123",
+      subscription: "sub_stripe_123",
+      amount_total: 1000,
+      currency: "usd",
+    };
+
+    const result = await handleCheckoutCompleted(
+      sessionMonthly as Stripe.Checkout.Session
+    );
+
+    expect(result.success).toBe(true);
+    expect(db.update).toHaveBeenCalled();
+  });
+
+  it("should always update annual flag from Stripe subscription (handles timing issues)", async () => {
+    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
+
+    // Mock Stripe subscription with yearly interval
+    vi.mocked(stripeClient!.subscriptions.retrieve).mockResolvedValue({
+      id: "sub_stripe_123",
+      items: {
+        data: [{ price: { recurring: { interval: "year" } } }],
+      },
+    });
+
+    vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
+      id: "sub_123",
+      referenceId: "org_123",
+      plan: "pro",
+      stripeCustomerId: "cus_123",
+      annual: false, // Could have been set wrong by timing issue
+    } as any);
+
+    vi.mocked(db.query.organization.findFirst).mockResolvedValue({
+      id: "org_123",
+      name: "Test Org",
+      slug: "test-org",
+    } as any);
+
+    vi.mocked(db.query.member.findMany).mockResolvedValue([
+      { user: { email: "owner@example.com", name: "Owner" }, role: "owner" },
+    ] as any);
+
+    const session: Partial<Stripe.Checkout.Session> = {
+      mode: "subscription",
+      customer: "cus_123",
+      subscription: "sub_stripe_123",
+      amount_total: 10000,
+      currency: "usd",
+    };
+
+    await handleCheckoutCompleted(session as Stripe.Checkout.Session);
+
+    // Should always update to ensure correct value from Stripe
+    expect(db.update).toHaveBeenCalled();
+  });
+});
+
+describe("handleSubscriptionCreated", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const createMockStripeSubscription = (interval: "month" | "year") =>
+    ({
+      id: "sub_stripe_123",
+      customer: "cus_123",
+      items: {
+        data: [
+          {
+            price: {
+              id: "price_123",
+              recurring: {
+                interval,
+              },
+            },
+          },
+        ],
+      },
+    }) as unknown as Stripe.Subscription;
+
+  it("should set annual=true for yearly subscriptions", async () => {
+    vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
+      id: "sub_123",
+      referenceId: "org_123",
+      plan: "pro",
+      stripeSubscriptionId: "sub_stripe_123",
+      annual: null,
+    } as any);
+
+    const mockSubscription = createMockStripeSubscription("year");
+    const result = await handleSubscriptionCreated(mockSubscription);
+
+    expect(result.success).toBe(true);
+    expect(db.update).toHaveBeenCalled();
+  });
+
+  it("should set annual=false for monthly subscriptions", async () => {
+    vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
+      id: "sub_123",
+      referenceId: "org_123",
+      plan: "pro",
+      stripeSubscriptionId: "sub_stripe_123",
+      annual: null,
+    } as any);
+
+    const mockSubscription = createMockStripeSubscription("month");
+    const result = await handleSubscriptionCreated(mockSubscription);
+
+    expect(result.success).toBe(true);
+    expect(db.update).toHaveBeenCalled();
+  });
+
+  it("should return success=false when subscription not found in DB", async () => {
+    vi.mocked(db.query.subscription.findFirst).mockResolvedValue(null);
+
+    const mockSubscription = createMockStripeSubscription("year");
+    const result = await handleSubscriptionCreated(mockSubscription);
+
+    expect(result.success).toBe(false);
+    expect(db.update).not.toHaveBeenCalled();
   });
 });
 
@@ -661,6 +897,38 @@ describe("handleStripeWebhook", () => {
     await handleStripeWebhook(event as Stripe.Event);
 
     expect(db.query.subscription.findFirst).toHaveBeenCalled();
+  });
+
+  it("should route customer.subscription.created to handleSubscriptionCreated", async () => {
+    vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
+      id: "sub_123",
+      stripeSubscriptionId: "sub_stripe_123",
+    } as any);
+
+    const event: Partial<Stripe.Event> = {
+      type: "customer.subscription.created",
+      data: {
+        object: {
+          id: "sub_stripe_123",
+          customer: "cus_123",
+          items: {
+            data: [
+              {
+                price: {
+                  id: "price_123",
+                  recurring: { interval: "year" },
+                },
+              },
+            ],
+          },
+        } as unknown as Stripe.Subscription,
+      } as any,
+    };
+
+    await handleStripeWebhook(event as Stripe.Event);
+
+    expect(db.query.subscription.findFirst).toHaveBeenCalled();
+    expect(db.update).toHaveBeenCalled();
   });
 
   it("should route customer.subscription.deleted to handleSubscriptionDeleted", async () => {

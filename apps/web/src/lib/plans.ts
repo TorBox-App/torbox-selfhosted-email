@@ -37,10 +37,15 @@ export type RateLimits = {
   minuteRequests: number;
 };
 
+export type BillingInterval = "monthly" | "annual";
+
 export type PlanConfig = {
   name: string;
   price: number;
   earlyAdopterPrice?: number; // Discounted price for first 50 customers
+  annualPrice?: number; // Regular annual price (per month equivalent)
+  annualEarlyAdopterPrice?: number; // Early adopter annual price (per month equivalent)
+  annualTotal?: number; // Total billed annually (early adopter)
   period: string;
   description: string;
   dashboardAccess: boolean;
@@ -76,6 +81,9 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     name: "Starter",
     price: 19,
     earlyAdopterPrice: 10,
+    annualPrice: 16, // ~20% savings vs monthly ($192/yr)
+    annualEarlyAdopterPrice: 8, // Early adopter annual ($100/yr)
+    annualTotal: 100, // Total billed annually (early adopter)
     period: "/month",
     description: "Transactional email + simple broadcasts",
     dashboardAccess: true,
@@ -122,6 +130,9 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     name: "Pro",
     price: 49,
     earlyAdopterPrice: 30,
+    annualPrice: 41, // ~20% savings vs monthly ($492/yr)
+    annualEarlyAdopterPrice: 25, // Early adopter annual ($300/yr)
+    annualTotal: 300, // Total billed annually (early adopter)
     period: "/month",
     description: "Add audience management",
     dashboardAccess: true,
@@ -170,6 +181,10 @@ export const PLANS: Record<PlanId, PlanConfig> = {
   growth: {
     name: "Growth",
     price: 149,
+    earlyAdopterPrice: 99, // Early adopter monthly
+    annualPrice: 125, // ~20% savings vs monthly ($1,500/yr)
+    annualEarlyAdopterPrice: 83, // Early adopter annual ($990/yr)
+    annualTotal: 990, // Total billed annually (early adopter)
     period: "/month",
     description: "Add automation & behavioral targeting",
     dashboardAccess: true,
@@ -220,6 +235,8 @@ export const PLANS: Record<PlanId, PlanConfig> = {
   scale: {
     name: "Scale",
     price: 299,
+    annualPrice: 250, // ~20% savings vs monthly ($3,000/yr)
+    annualTotal: 2990, // Total billed annually
     period: "/month",
     description: "High volume with custom retention",
     dashboardAccess: true,
@@ -318,6 +335,37 @@ export function getDisplayPrice(plan: PlanConfig): number {
  */
 export function hasEarlyAdopterPricing(plan: PlanConfig): boolean {
   return EARLY_ADOPTER_ACTIVE && plan.earlyAdopterPrice !== undefined;
+}
+
+/**
+ * Get the annual price for display (early adopter or regular)
+ */
+export function getAnnualDisplayPrice(plan: PlanConfig): number | null {
+  if (EARLY_ADOPTER_ACTIVE && plan.annualEarlyAdopterPrice) {
+    return plan.annualEarlyAdopterPrice;
+  }
+  return plan.annualPrice ?? null;
+}
+
+/**
+ * Get the annual total (amount billed annually)
+ */
+export function getAnnualTotal(plan: PlanConfig): number | null {
+  return plan.annualTotal ?? null;
+}
+
+/**
+ * Get the price based on billing interval
+ */
+export function getPriceByInterval(
+  plan: PlanConfig,
+  interval: BillingInterval
+): number {
+  if (interval === "annual") {
+    const annualPrice = getAnnualDisplayPrice(plan);
+    if (annualPrice) return annualPrice;
+  }
+  return getDisplayPrice(plan);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

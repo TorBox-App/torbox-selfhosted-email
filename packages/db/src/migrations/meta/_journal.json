@@ -197,6 +197,13 @@
       "when": 1768163694143,
       "tag": "0027_workable_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1768418657920,
+      "tag": "0028_familiar_prodigy",
+      "breakpoints": true
     }
   ]
 }
