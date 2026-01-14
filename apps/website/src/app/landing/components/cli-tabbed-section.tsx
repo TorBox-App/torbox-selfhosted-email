@@ -399,12 +399,12 @@ function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
 }
 
 export function CliTabbedSection() {
-  const [activeTab, setActiveTab] = useState<TabKey>("console");
+  const [activeTab, setActiveTab] = useState<TabKey>("deploy");
 
   const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
-    { key: "console", label: "Console", icon: LayoutDashboard },
     { key: "deploy", label: "Deploy", icon: Terminal },
     { key: "send", label: "Send", icon: Send },
+    { key: "console", label: "Console", icon: LayoutDashboard },
   ];
 
   return (
