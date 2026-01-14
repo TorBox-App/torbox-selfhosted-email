@@ -14,6 +14,12 @@ const BLOG_META: Record<
       "82% of domains have no DMARC. Of those that do, most set p=none—which tells receivers not to enforce. An interactive deep-dive into email authentication.",
     image: "https://wraps.dev/blog/dmarc-policy-is-useless.png",
   },
+  "/blog/ses-sandbox-guide": {
+    title: "How to Get Out of AWS SES Sandbox",
+    description:
+      "The complete guide to SES production access approval. Interactive checklists, request templates, and everything you need to escape the sandbox on your first try.",
+    image: "https://wraps.dev/blog/get-out-of-sandbox.png",
+  },
 };
 
 /**

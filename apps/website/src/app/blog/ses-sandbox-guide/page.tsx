@@ -1,0 +1,1295 @@
+"use client";
+
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowRight,
+  Check,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Circle,
+  Clock,
+  Copy,
+  ExternalLink,
+  FileText,
+  HelpCircle,
+  RefreshCw,
+  Server,
+  Shield,
+  Zap,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { LandingFooter } from "@/app/landing/components/footer";
+import { LandingNavbar } from "@/app/landing/components/navbar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+// ============================================================================
+// DATA - Checklist items
+// ============================================================================
+const checklistData = [
+  {
+    id: "technical-setup",
+    title: "Technical Setup",
+    items: [
+      {
+        id: "domain-verified",
+        title: "Verify your domain in SES",
+        description:
+          "Domain-level verification (not just email address) is required to send",
+        required: true,
+      },
+      {
+        id: "dkim-enabled",
+        title: "Enable Easy DKIM",
+        description:
+          'Add all 3 CNAME records and wait for "Verified" status',
+        required: true,
+      },
+      {
+        id: "spf-record",
+        title: "Publish SPF record",
+        description: "v=spf1 include:amazonses.com ~all on your MAIL FROM subdomain",
+        required: true,
+      },
+      {
+        id: "dmarc-record",
+        title: "Publish DMARC policy",
+        description: "Start with p=none for monitoring, can strengthen later",
+        recommended: true,
+      },
+      {
+        id: "sns-bounces",
+        title: "Configure SNS for bounces",
+        description: "Create SNS topic and subscribe your endpoint",
+        recommended: true,
+      },
+      {
+        id: "sns-complaints",
+        title: "Configure SNS for complaints",
+        description: "Create separate SNS topic for complaint notifications",
+        recommended: true,
+      },
+    ],
+  },
+  {
+    id: "account-profile",
+    title: "Account & Profile",
+    items: [
+      {
+        id: "business-email",
+        title: "Use business email on AWS account",
+        description: "Avoid Gmail, Hotmail, etc. Use your domain email",
+      },
+      {
+        id: "website-live",
+        title: "Live website on your domain",
+        description:
+          'Not a parked page or "coming soon" — real content showing your business',
+        recommended: true,
+      },
+      {
+        id: "privacy-policy",
+        title: "Privacy policy published",
+        description: "Accessible privacy policy on your website",
+      },
+      {
+        id: "contact-info",
+        title: "Contact information visible",
+        description: "Email or contact form on your website",
+      },
+    ],
+  },
+  {
+    id: "request-preparation",
+    title: "Request Preparation",
+    items: [
+      {
+        id: "use-case-detailed",
+        title: "Write detailed use case",
+        description: "Explain exactly what emails you send and why (~500+ words)",
+        required: true,
+      },
+      {
+        id: "consent-explained",
+        title: "Explain consent/opt-in mechanism",
+        description: "How do recipients sign up? Where do they consent?",
+        recommended: true,
+      },
+      {
+        id: "bounce-handling-documented",
+        title: "Document bounce handling process",
+        description: "What happens when an email bounces? Auto-suppression?",
+        recommended: true,
+      },
+      {
+        id: "complaint-handling-documented",
+        title: "Document complaint handling process",
+        description:
+          "How do you handle spam complaints? Immediate removal?",
+        recommended: true,
+      },
+      {
+        id: "volume-realistic",
+        title: "Provide realistic volume estimates",
+        description:
+          "Current volume and 6-month projection with justification",
+      },
+      {
+        id: "unsubscribe-explained",
+        title: "Explain unsubscribe mechanism",
+        description:
+          "One-click unsubscribe for marketing, suppression list for all",
+      },
+    ],
+  },
+];
+
+const templateDefaults = {
+  companyName: "",
+  websiteUrl: "",
+  useCase: "transactional",
+  emailTypes: "",
+  currentVolume: "",
+  projectedVolume: "",
+  consentMechanism: "",
+};
+
+// ============================================================================
+// COMPONENTS
+// ============================================================================
+
+const InfoCard = ({
+  type = "tip",
+  icon: Icon,
+  title,
+  children,
+}: {
+  type?: "tip" | "warning" | "danger";
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) => {
+  const styles = {
+    tip: "border-green-500/50 bg-green-500/10",
+    warning: "border-yellow-500/50 bg-yellow-500/10",
+    danger: "border-red-500/50 bg-red-500/10",
+  };
+  const iconStyles = {
+    tip: "text-green-600 dark:text-green-400",
+    warning: "text-yellow-600 dark:text-yellow-400",
+    danger: "text-red-600 dark:text-red-400",
+  };
+
+  return (
+    <div className={`my-6 rounded-xl border p-4 ${styles[type]}`}>
+      <div
+        className={`mb-2 flex items-center gap-2 font-semibold ${iconStyles[type]}`}
+      >
+        <Icon className="h-4 w-4" />
+        {title}
+      </div>
+      <p className="text-foreground/80 text-sm">{children}</p>
+    </div>
+  );
+};
+
+const CodeBlock = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: string;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(children);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="my-4 overflow-hidden rounded-lg border bg-muted/30">
+      <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
+        <span className="font-mono text-muted-foreground text-xs">{label}</span>
+        <button
+          className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors ${
+            copied
+              ? "bg-green-500/20 text-green-600 dark:text-green-400"
+              : "bg-muted text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={handleCopy}
+        >
+          {copied ? (
+            <>
+              <Check className="h-3 w-3" /> Copied
+            </>
+          ) : (
+            <>
+              <Copy className="h-3 w-3" /> Copy
+            </>
+          )}
+        </button>
+      </div>
+      <pre className="overflow-x-auto p-4 font-mono text-foreground text-sm">
+        {children}
+      </pre>
+    </div>
+  );
+};
+
+const Collapsible = ({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border bg-muted/30">
+      <button
+        className="flex w-full items-center gap-3 px-4 py-3 text-left font-medium transition-colors hover:bg-muted/50"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <ChevronRight
+          className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`}
+        />
+        {title}
+      </button>
+      {isOpen && <div className="border-t px-4 py-3">{children}</div>}
+    </div>
+  );
+};
+
+// Checklist Components
+const ChecklistGroup = ({
+  group,
+  checkedItems,
+  onToggle,
+}: {
+  group: (typeof checklistData)[0];
+  checkedItems: string[];
+  onToggle: (id: string) => void;
+}) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const completedCount = group.items.filter((item) =>
+    checkedItems.includes(item.id)
+  ).length;
+  const isComplete = completedCount === group.items.length;
+
+  return (
+    <div className="border-b border-border last:border-b-0">
+      <button
+        className="flex w-full items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        {isExpanded ? (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        )}
+        <span className="flex-1 text-left font-medium">{group.title}</span>
+        <span
+          className={`rounded px-2 py-0.5 font-mono text-xs ${
+            isComplete
+              ? "bg-green-500/20 text-green-600 dark:text-green-400"
+              : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {completedCount}/{group.items.length}
+        </span>
+      </button>
+      {isExpanded && (
+        <div className="space-y-1 px-4 pb-3">
+          {group.items.map((item) => (
+            <button
+              key={item.id}
+              className={`flex w-full items-start gap-3 rounded-lg p-3 text-left transition-all ${
+                checkedItems.includes(item.id)
+                  ? "bg-muted/30 opacity-60"
+                  : "hover:bg-muted/50"
+              }`}
+              onClick={() => onToggle(item.id)}
+            >
+              <div
+                className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition-colors ${
+                  checkedItems.includes(item.id)
+                    ? "border-green-500 bg-green-500 text-white"
+                    : "border-muted-foreground"
+                }`}
+              >
+                {checkedItems.includes(item.id) && (
+                  <Check className="h-3 w-3" />
+                )}
+              </div>
+              <div className="flex-1">
+                <div
+                  className={`font-medium ${checkedItems.includes(item.id) ? "line-through" : ""}`}
+                >
+                  {item.title}
+                </div>
+                <div className="text-muted-foreground text-sm">
+                  {item.description}
+                </div>
+                {item.required && (
+                  <span className="mt-1 inline-block rounded bg-red-500/20 px-2 py-0.5 font-mono text-red-600 text-xs dark:text-red-400">
+                    Required
+                  </span>
+                )}
+                {item.recommended && (
+                  <span className="mt-1 inline-block rounded bg-blue-500/20 px-2 py-0.5 font-mono text-blue-600 text-xs dark:text-blue-400">
+                    Recommended
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ReadinessChecklist = ({
+  checkedItems,
+  setCheckedItems,
+}: {
+  checkedItems: string[];
+  setCheckedItems: React.Dispatch<React.SetStateAction<string[]>>;
+}) => {
+  const totalItems = checklistData.reduce(
+    (acc, group) => acc + group.items.length,
+    0
+  );
+  const checkedCount = checkedItems.length;
+
+  const handleToggle = (itemId: string) => {
+    setCheckedItems((prev) =>
+      prev.includes(itemId)
+        ? prev.filter((id) => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-3">
+        <div className="flex items-center gap-2 font-semibold">
+          <Shield className="h-4 w-4 text-primary" />
+          Pre-Request Checklist
+        </div>
+        <div className="font-mono text-muted-foreground text-sm">
+          {checkedCount} of {totalItems} complete
+        </div>
+      </div>
+      {checklistData.map((group) => (
+        <ChecklistGroup
+          key={group.id}
+          group={group}
+          checkedItems={checkedItems}
+          onToggle={handleToggle}
+        />
+      ))}
+    </Card>
+  );
+};
+
+// Decision Flow Diagram
+const DecisionFlowDiagram = () => (
+  <div className="my-8 space-y-4">
+    <div className="rounded-xl border border-primary/50 bg-primary/5 p-4">
+      <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+        Decision
+      </div>
+      <div className="font-semibold">
+        Is your domain verified with Easy DKIM enabled?
+      </div>
+    </div>
+
+    <div className="grid gap-4 md:grid-cols-2">
+      <div>
+        <div className="mb-2 text-center font-mono text-green-600 text-sm dark:text-green-400">
+          YES
+        </div>
+        <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+          <div className="font-semibold">Check custom MAIL FROM</div>
+          <div className="text-muted-foreground text-sm">
+            Verify SPF record is published
+          </div>
+        </div>
+      </div>
+      <div>
+        <div className="mb-2 text-center font-mono text-red-600 text-sm dark:text-red-400">
+          NO
+        </div>
+        <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/5 p-4">
+          <div className="font-semibold">Stop — Complete DNS setup first</div>
+          <div className="text-muted-foreground text-sm">
+            Requests without DKIM are almost always denied
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="flex justify-center py-2">
+      <ArrowDown className="h-5 w-5 text-muted-foreground" />
+    </div>
+
+    <div className="rounded-xl border border-primary/50 bg-primary/5 p-4">
+      <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+        Decision
+      </div>
+      <div className="font-semibold">
+        Is SNS configured for bounces AND complaints?
+      </div>
+    </div>
+
+    <div className="grid gap-4 md:grid-cols-2">
+      <div>
+        <div className="mb-2 text-center font-mono text-green-600 text-sm dark:text-green-400">
+          YES
+        </div>
+        <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+          <div className="font-semibold">Write detailed request</div>
+          <div className="text-muted-foreground text-sm">
+            Target ~1000 words with specific details
+          </div>
+        </div>
+      </div>
+      <div>
+        <div className="mb-2 text-center font-mono text-red-600 text-sm dark:text-red-400">
+          NO
+        </div>
+        <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/5 p-4">
+          <div className="font-semibold">Configure SNS topics</div>
+          <div className="text-muted-foreground text-sm">
+            Required for bounce/complaint handling proof
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="flex justify-center py-2">
+      <ArrowDown className="h-5 w-5 text-muted-foreground" />
+    </div>
+
+    <div className="rounded-xl border border-green-500/50 bg-green-500/5 p-4">
+      <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+        Ready
+      </div>
+      <div className="font-semibold">Submit production access request</div>
+      <div className="text-muted-foreground text-sm">
+        Expect initial response within 24 hours
+      </div>
+    </div>
+  </div>
+);
+
+// Template Builder
+const TemplateBuilder = ({
+  formData,
+  setFormData,
+}: {
+  formData: typeof templateDefaults;
+  setFormData: React.Dispatch<React.SetStateAction<typeof templateDefaults>>;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const generateTemplate = () => {
+    const {
+      companyName,
+      websiteUrl,
+      useCase,
+      emailTypes,
+      currentVolume,
+      projectedVolume,
+      consentMechanism,
+    } = formData;
+
+    return `We operate ${companyName || "[Company Name]"} at ${websiteUrl || "[website URL]"}, a ${useCase === "transactional" ? "software platform" : "business"} requiring Amazon SES for ${useCase} email communications.
+
+EMAIL USE CASE AND TYPES
+${
+  emailTypes ||
+  `[Describe the specific types of emails you send, e.g.:
+- Account verification emails when users sign up
+- Password reset emails triggered by user requests
+- Order confirmations after purchases
+- Shipping notifications when orders are dispatched]`
+}
+
+These emails are ${useCase === "transactional" ? "not marketing communications—they are triggered by specific user actions and are essential to our service operation" : "sent only to subscribers who have explicitly opted in to receive our communications"}.
+
+TECHNICAL IMPLEMENTATION
+Our domain is fully verified with Easy DKIM enabled (all 3 CNAME records verified). We have configured a custom MAIL FROM domain with proper SPF alignment. Our DMARC policy is published and actively monitored.
+
+We have configured Amazon SNS topics for both bounce and complaint notifications:
+- Bounce notifications trigger automatic removal of the failed address from our active sending list
+- Complaint notifications result in immediate suppression of the complainant's address
+
+CONSENT AND OPT-IN MECHANISM
+${
+  consentMechanism ||
+  `[Explain how users consent to receive emails:
+- Users provide their email during account registration
+- Checkbox confirming acceptance of Terms of Service and Privacy Policy
+- Double opt-in confirmation for marketing communications]`
+}
+
+VOLUME ESTIMATES
+Current sending volume: ${currentVolume || "[X]"} emails per day
+Projected volume (6 months): ${projectedVolume || "[Y]"} emails per day
+
+Our sending pattern is gradual and event-driven, not bulk blasts. Volume increases correlate with organic user growth.
+
+BOUNCE AND COMPLAINT HANDLING
+Bounce handling: Our system receives SNS notifications for bounced emails. Hard bounces are immediately and permanently suppressed—these addresses are never retried. Soft bounces are retried up to 3 times with exponential backoff before being suppressed.
+
+Complaint handling: Any complaint results in immediate removal from all future communications. We manually review each complaint to identify potential issues with our email content or targeting.
+
+UNSUBSCRIBE PROCESS
+${useCase === "transactional" ? "As these are transactional emails essential to service operation, users manage their notification preferences through their account settings. Users can disable non-essential notifications while still receiving critical account and security emails." : "All marketing emails include a one-click unsubscribe link in the footer. Unsubscribe requests are processed immediately and the email address is added to our suppression list."}
+
+We are committed to maintaining excellent deliverability and sender reputation. We understand that our use of SES reflects on all SES customers, and we take this responsibility seriously.`;
+  };
+
+  const template = generateTemplate();
+  const wordCount = template.split(/\s+/).filter(Boolean).length;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(template);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="border-b bg-muted/50 px-4 py-3">
+        <div className="font-semibold">Request Template Builder</div>
+        <div className="text-muted-foreground text-sm">
+          Fill in your details to generate a production-ready request
+        </div>
+      </div>
+
+      <div className="space-y-4 p-4">
+        <div>
+          <label className="mb-1.5 block font-medium text-sm">
+            Company / Product Name
+          </label>
+          <input
+            type="text"
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="Acme Corp"
+            value={formData.companyName}
+            onChange={(e) => handleChange("companyName", e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-medium text-sm">
+            Website URL
+          </label>
+          <input
+            type="text"
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="https://acme.com"
+            value={formData.websiteUrl}
+            onChange={(e) => handleChange("websiteUrl", e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-medium text-sm">
+            Primary Use Case
+          </label>
+          <select
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            value={formData.useCase}
+            onChange={(e) => handleChange("useCase", e.target.value)}
+          >
+            <option value="transactional">
+              Transactional (account alerts, receipts, etc.)
+            </option>
+            <option value="marketing">Marketing (newsletters, promotions)</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-medium text-sm">
+            Specific Email Types
+          </label>
+          <textarea
+            className="min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="- Account verification emails&#10;- Password reset requests&#10;- Order confirmations"
+            value={formData.emailTypes}
+            onChange={(e) => handleChange("emailTypes", e.target.value)}
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block font-medium text-sm">
+              Current Daily Volume
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="500"
+              value={formData.currentVolume}
+              onChange={(e) => handleChange("currentVolume", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block font-medium text-sm">
+              Projected Daily Volume (6 months)
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="2,000"
+              value={formData.projectedVolume}
+              onChange={(e) => handleChange("projectedVolume", e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block font-medium text-sm">
+            Consent / Opt-in Mechanism
+          </label>
+          <textarea
+            className="min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder="Describe how users sign up and consent to receive emails"
+            value={formData.consentMechanism}
+            onChange={(e) => handleChange("consentMechanism", e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="border-t bg-muted/30 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="font-medium text-muted-foreground text-sm">
+            Generated Request Text
+          </span>
+          <button
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+              copied
+                ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+            onClick={handleCopy}
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" /> Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" /> Copy to Clipboard
+              </>
+            )}
+          </button>
+        </div>
+        <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border bg-background p-4 font-mono text-foreground/80 text-sm leading-relaxed">
+          {template}
+        </pre>
+        <div
+          className={`mt-3 flex items-center gap-2 font-mono text-sm ${wordCount >= 400 ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}`}
+        >
+          <FileText className="h-4 w-4" />
+          {wordCount} words{" "}
+          {wordCount >= 400 ? "— Good length" : "— Try to reach ~400+ words"}
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// Denial Recovery Flow
+const DenialRecoveryFlow = () => (
+  <div className="my-8 space-y-4">
+    <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/5 p-4">
+      <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+        Status
+      </div>
+      <div className="font-semibold">Request Denied</div>
+      <div className="text-muted-foreground text-sm">
+        Don't panic — first-time denial is extremely common
+      </div>
+    </div>
+
+    <div className="flex justify-center py-2">
+      <ArrowDown className="h-5 w-5 text-muted-foreground" />
+    </div>
+
+    <div className="rounded-xl border border-primary/50 bg-primary/5 p-4">
+      <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+        Decision
+      </div>
+      <div className="font-semibold">Is this your first denial?</div>
+    </div>
+
+    <div className="grid gap-4 md:grid-cols-2">
+      <div>
+        <div className="mb-2 text-center font-mono text-green-600 text-sm dark:text-green-400">
+          YES — First denial
+        </div>
+        <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+          <div className="font-semibold">Resubmit with more detail</div>
+          <div className="text-muted-foreground text-sm">
+            Expand your request to ~1000 words. Add specifics about your tech
+            setup, consent flow, and handling processes.
+          </div>
+        </div>
+      </div>
+      <div>
+        <div className="mb-2 text-center font-mono text-red-600 text-sm dark:text-red-400">
+          Multiple denials
+        </div>
+        <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+          <div className="font-semibold">Request escalation</div>
+          <div className="text-muted-foreground text-sm">
+            Ask for "secondary review" or "escalation to senior reviewer" in
+            your next submission.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="flex justify-center py-2">
+      <ArrowDown className="h-5 w-5 text-muted-foreground" />
+    </div>
+
+    <div className="rounded-xl border border-blue-500/50 bg-blue-500/5 p-4">
+      <div className="mb-1 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+        Action
+      </div>
+      <div className="mb-2 font-semibold">Attach supporting evidence</div>
+      <ul className="space-y-1 text-muted-foreground text-sm">
+        <li>• Previous ESP invoices (SendGrid, Mailgun, etc.)</li>
+        <li>• Social media presence with engaged following</li>
+        <li>• Press coverage or customer testimonials</li>
+        <li>• Screenshots of your email setup</li>
+      </ul>
+    </div>
+  </div>
+);
+
+// Progress Header
+const ProgressHeader = ({
+  progress,
+  approval,
+}: {
+  progress: number;
+  approval: { level: string; text: string };
+}) => (
+  <div className="sticky top-16 z-40 border-b bg-background/95 py-3 backdrop-blur-sm">
+    <div className="container mx-auto flex items-center gap-4 px-4">
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-primary/80 via-primary to-primary/80 transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <div className="font-mono text-primary text-sm">{progress}%</div>
+      <div
+        className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-sm ${
+          approval.level === "high"
+            ? "bg-green-500/20 text-green-600 dark:text-green-400"
+            : approval.level === "medium"
+              ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+              : "bg-red-500/20 text-red-600 dark:text-red-400"
+        }`}
+      >
+        {approval.level === "high" && <CheckCircle className="h-4 w-4" />}
+        {approval.level === "medium" && <Clock className="h-4 w-4" />}
+        {approval.level === "low" && <AlertTriangle className="h-4 w-4" />}
+        {approval.text}
+      </div>
+    </div>
+  </div>
+);
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+export default function SESSandboxGuide() {
+  const [checkedItems, setCheckedItems] = useState<string[]>([]);
+  const [formData, setFormData] = useState(templateDefaults);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load saved state from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("ses-guide-checklist");
+    if (saved) {
+      try {
+        setCheckedItems(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse saved checklist");
+      }
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save checklist state (only after initial load)
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem("ses-guide-checklist", JSON.stringify(checkedItems));
+    }
+  }, [checkedItems, isLoaded]);
+
+  // Calculate progress
+  const totalItems = checklistData.reduce(
+    (acc, group) => acc + group.items.length,
+    0
+  );
+  const progress = Math.round((checkedItems.length / totalItems) * 100);
+
+  const getApprovalLikelihood = () => {
+    if (progress >= 80) return { level: "high", text: "High likelihood" };
+    if (progress >= 50) return { level: "medium", text: "Medium likelihood" };
+    return { level: "low", text: "Low likelihood" };
+  };
+
+  const approval = getApprovalLikelihood();
+
+  return (
+    <div className="min-h-screen bg-background">
+      <LandingNavbar />
+
+      {/* Hero Section */}
+      <header className="relative overflow-hidden border-b pb-16 pt-24">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
+        <div className="container relative mx-auto px-4">
+          <Badge className="mb-4" variant="outline">
+            <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
+            Updated January 2026
+          </Badge>
+          <h1 className="mb-4 max-w-3xl font-bold text-4xl tracking-tight md:text-5xl">
+            How to Get Out of{" "}
+            <span className="text-primary">AWS SES Sandbox</span>
+          </h1>
+          <p className="max-w-2xl text-lg text-muted-foreground">
+            The complete guide to production access approval. Interactive
+            checklists, request templates, and everything you need to escape the
+            sandbox on your first try.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-8">
+            <div>
+              <div className="font-mono text-2xl text-primary">Common</div>
+              <div className="text-muted-foreground text-sm">
+                First-time denials
+              </div>
+            </div>
+            <div>
+              <div className="font-mono text-2xl text-primary">24h</div>
+              <div className="text-muted-foreground text-sm">
+                Typical response time
+              </div>
+            </div>
+            <div>
+              <div className="font-mono text-2xl text-primary">~1000</div>
+              <div className="text-muted-foreground text-sm">
+                Words recommended
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Bar */}
+      <ProgressHeader progress={progress} approval={approval} />
+
+      {/* Main Content */}
+      <main className="container mx-auto max-w-4xl space-y-16 px-4 py-16">
+        {/* Why Requests Get Denied */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">Why Most Requests Get Denied</h2>
+          </div>
+          <p className="mb-6 text-lg text-muted-foreground">
+            AWS SES sandbox restrictions exist to protect their email
+            infrastructure's reputation. Getting out requires proving you
+            understand email deliverability — not just that you have a
+            legitimate business.
+          </p>
+
+          <InfoCard type="warning" icon={AlertTriangle} title="2024 Change">
+            While AWS documentation calls email authentication "strongly
+            recommended," community reports indicate that requests without
+            SPF, DKIM, and DMARC configured are frequently denied. Set up your
+            DNS records before submitting.
+          </InfoCard>
+        </section>
+
+        {/* Checklist */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <CheckCircle className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">Pre-Request Readiness Checklist</h2>
+          </div>
+          <p className="mb-6 text-lg text-muted-foreground">
+            Complete every required item before submitting. Your progress is
+            saved automatically. Each checkbox you complete increases your
+            approval likelihood.
+          </p>
+
+          <ReadinessChecklist
+            checkedItems={checkedItems}
+            setCheckedItems={setCheckedItems}
+          />
+        </section>
+
+        {/* Decision Flow */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <ArrowRight className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">Are You Ready to Submit?</h2>
+          </div>
+          <p className="mb-6 text-lg text-muted-foreground">
+            Walk through this decision tree to confirm you've completed the
+            critical steps. If you hit a "Stop" node, complete that step first.
+          </p>
+
+          <DecisionFlowDiagram />
+        </section>
+
+        {/* DNS Configuration */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <Server className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">DNS Configuration</h2>
+          </div>
+          <p className="mb-6 text-lg text-muted-foreground">
+            Your DNS records are the foundation of email authentication. Here's
+            exactly what you need.
+          </p>
+
+          <Collapsible title="SPF Record for Custom MAIL FROM" defaultOpen>
+            <p className="mb-3 text-muted-foreground text-sm">
+              Add this TXT record to your MAIL FROM subdomain (e.g.,
+              mail.yourdomain.com):
+            </p>
+            <CodeBlock label="TXT Record">
+              v=spf1 include:amazonses.com ~all
+            </CodeBlock>
+          </Collapsible>
+
+          <Collapsible title="DMARC Policy Record">
+            <p className="mb-3 text-muted-foreground text-sm">
+              Add this TXT record to _dmarc.yourdomain.com. Start with p=none
+              for monitoring:
+            </p>
+            <CodeBlock label="TXT Record">
+              v=DMARC1; p=none; rua=mailto:dmarc@yourdomain.com
+            </CodeBlock>
+            <InfoCard type="tip" icon={CheckCircle} title="DMARC Progression">
+              After monitoring for a few weeks with no issues, strengthen to
+              p=quarantine, then p=reject.
+            </InfoCard>
+          </Collapsible>
+
+          <Collapsible title="DKIM CNAME Records">
+            <p className="text-muted-foreground text-sm">
+              AWS provides 3 CNAME records when you enable Easy DKIM. Add all
+              three — your domain won't show "Verified" until all records
+              propagate.
+            </p>
+          </Collapsible>
+        </section>
+
+        {/* Template Builder */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">Request Template Builder</h2>
+          </div>
+          <p className="mb-6 text-lg text-muted-foreground">
+            Fill in your details to generate a comprehensive production access
+            request. The template includes all the sections AWS reviewers look
+            for.
+          </p>
+
+          <TemplateBuilder formData={formData} setFormData={setFormData} />
+
+          <InfoCard type="tip" icon={CheckCircle} title="Pro Tip">
+            Copy the generated text and paste it into the "Use case description"
+            field in the SES console. Don't be afraid to make it longer —
+            detailed requests dramatically outperform brief ones.
+          </InfoCard>
+        </section>
+
+        {/* After Submission */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <Clock className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">After You Submit</h2>
+          </div>
+          <p className="mb-6 text-lg text-muted-foreground">
+            Here's what to expect once you hit submit.
+          </p>
+
+          <div className="relative space-y-6 border-l-2 border-muted pl-8">
+            <div className="relative">
+              <div className="absolute -left-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary bg-primary text-white">
+                <Clock className="h-3 w-3" />
+              </div>
+              <h4 className="font-semibold">0-24 Hours: Initial Review</h4>
+              <p className="text-muted-foreground text-sm">
+                AWS Trust & Safety reviews your request. Most responses come
+                within 24 hours during business days.
+              </p>
+            </div>
+            <div className="relative">
+              <div className="absolute -left-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-muted bg-background">
+                <Circle className="h-2 w-2 fill-muted-foreground" />
+              </div>
+              <h4 className="font-semibold">Response: Approved or Follow-up</h4>
+              <p className="text-muted-foreground text-sm">
+                You'll either get production access or receive questions/denial.
+                Follow-up questions are actually a good sign — they're engaging
+                with your request.
+              </p>
+            </div>
+            <div className="relative">
+              <div className="absolute -left-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-muted bg-background">
+                <Circle className="h-2 w-2 fill-muted-foreground" />
+              </div>
+              <h4 className="font-semibold">If Approved: Gradual Increase</h4>
+              <p className="text-muted-foreground text-sm">
+                Start with your approved quota. AWS automatically increases
+                limits as you demonstrate good sending practices.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Denial Recovery */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <RefreshCw className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">Denied? Here's What to Do</h2>
+          </div>
+          <p className="mb-6 text-lg text-muted-foreground">
+            First-time denial is so common it's almost expected. Here's how to
+            recover.
+          </p>
+
+          <InfoCard type="danger" icon={AlertTriangle} title="The Standard Denial">
+            AWS sends a vague response: "We reviewed your request and determined
+            that your use of Amazon SES could have a negative impact on our
+            service." This tells you nothing — don't take it personally.
+          </InfoCard>
+
+          <DenialRecoveryFlow />
+        </section>
+
+        {/* Common Mistakes */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">
+              Common Mistakes That Trigger Denial
+            </h2>
+          </div>
+
+          <div className="space-y-2">
+            <Collapsible
+              title="Vague or brief use case description"
+              defaultOpen
+            >
+              <p className="text-muted-foreground text-sm">
+                "I want to send transactional emails to my users" is not enough.
+                Explain exactly what triggers each email, how users opt in, and
+                what content they contain.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="Missing DNS authentication">
+              <p className="text-muted-foreground text-sm">
+                If DKIM shows "Pending" or you haven't configured SPF/DMARC,
+                your request will likely be denied. Complete all DNS setup
+                before submitting.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="No bounce/complaint handling explanation">
+              <p className="text-muted-foreground text-sm">
+                AWS needs to know you won't damage their reputation. Explicitly
+                describe your SNS configuration and what happens when you
+                receive bounce/complaint notifications.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="Website doesn't match the request">
+              <p className="text-muted-foreground text-sm">
+                Reviewers visit your URL. If it's a parked domain, "coming soon"
+                page, or doesn't match your described use case, that's a red
+                flag.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="Using a free email address">
+              <p className="text-muted-foreground text-sm">
+                Gmail, Hotmail, or Yahoo addresses on your AWS account signal
+                non-business use. Use an email address on the domain you're
+                requesting production access for.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="Requesting marketing access as a new user">
+              <p className="text-muted-foreground text-sm">
+                Marketing emails face much higher scrutiny. If you're new to
+                SES, request transactional access first, build reputation, then
+                expand to marketing.
+              </p>
+            </Collapsible>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <HelpCircle className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">Frequently Asked Questions</h2>
+          </div>
+
+          <div className="space-y-2">
+            <Collapsible title="Do I need a live app before requesting production access?">
+              <p className="text-muted-foreground text-sm">
+                Not necessarily, but your website needs to clearly show what
+                your business does. A landing page with your value proposition,
+                contact info, and privacy policy is sufficient. What matters is
+                that reviewers can verify you're a real business.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="My domain is brand new. Will that cause denial?">
+              <p className="text-muted-foreground text-sm">
+                New domains face more scrutiny but aren't automatically denied.
+                Make your request extra detailed, ensure all DNS records are
+                properly configured, and consider waiting a few weeks for the
+                domain to age before requesting.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="Can I request access for multiple AWS accounts?">
+              <p className="text-muted-foreground text-sm">
+                Yes, but each account needs its own request. If you're using AWS
+                Organizations, submit from the account that will actually send
+                emails. Requests from accounts with no other AWS usage face more
+                scrutiny.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="How long until my limits automatically increase?">
+              <p className="text-muted-foreground text-sm">
+                AWS monitors your sending reputation and automatically increases
+                quotas over time. This typically happens within a few weeks of
+                consistent, high-quality sending. Maintain bounce rates below 2%
+                and complaint rates below 0.1%.
+              </p>
+            </Collapsible>
+
+            <Collapsible title="Should I use SES or a third-party provider?">
+              <p className="text-muted-foreground text-sm">
+                SES is significantly cheaper at scale ($0.10/1000 emails) but
+                requires more setup and management. If you want hands-off
+                deliverability with dedicated IPs and better support, consider
+                SendGrid, Postmark, or Mailgun. If you're comfortable with AWS
+                and want to minimize costs, SES is excellent.
+              </p>
+            </Collapsible>
+          </div>
+        </section>
+
+        {/* Resources */}
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
+              <ExternalLink className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="font-bold text-2xl">Additional Resources</h2>
+          </div>
+
+          <div className="space-y-3">
+            <a
+              href="https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+            >
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              <span>AWS Official Documentation: Request Production Access</span>
+            </a>
+
+            <a
+              href="https://docs.aws.amazon.com/ses/latest/dg/send-email-authentication.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+            >
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              <span>AWS Email Authentication Guide (SPF, DKIM, DMARC)</span>
+            </a>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-primary/5 p-8 text-center">
+          <h3 className="mb-3 font-bold text-2xl">
+            Skip the sandbox nightmare entirely
+          </h3>
+          <p className="mx-auto mb-6 max-w-lg text-muted-foreground">
+            Wraps CLI deploys production-ready email infrastructure to your AWS
+            account in one command. DNS records, bounce handling, reputation
+            monitoring — all handled.
+          </p>
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button asChild size="lg">
+              <a href="/docs/quickstart/email">
+                Get Started Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <a href="/cli">Learn About Wraps CLI</a>
+            </Button>
+          </div>
+        </section>
+      </main>
+
+      <LandingFooter />
+    </div>
+  );
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Calendar, Clock, Shield } from "lucide-react";
+import { ArrowRight, Calendar, Clock, FileCheck, Shield } from "lucide-react";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,17 @@ const posts: BlogPost[] = [
     featured: true,
     icon: <Shield className="h-6 w-6" />,
     image: "/blog/DMARC_EXPLOITED.png",
+  },
+  {
+    slug: "ses-sandbox-guide",
+    title: "How to Get Out of AWS SES Sandbox",
+    description:
+      "The complete guide to SES production access approval. Interactive checklists, request templates, and everything you need to escape the sandbox on your first try.",
+    category: "Guide",
+    date: "January 2026",
+    readTime: "15 min read",
+    icon: <FileCheck className="h-6 w-6" />,
+    image: "/blog/get-out-of-sandbox.png",
   },
 ];
 

@@ -64,6 +64,9 @@ const Blog = lazy(() => import("@/app/blog/page"));
 const BlogDmarcSucks = lazy(
   () => import("@/app/blog/your-dmarc-policy-is-useless/page")
 );
+const BlogSESSandboxGuide = lazy(
+  () => import("@/app/blog/ses-sandbox-guide/page")
+);
 
 // Tools
 const Tools = lazy(() => import("@/app/tools/page"));
@@ -213,6 +216,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/blog/your-dmarc-policy-is-useless",
     element: <BlogDmarcSucks />,
+  },
+  {
+    path: "/blog/ses-sandbox-guide",
+    element: <BlogSESSandboxGuide />,
   },
 
   // Legal pages
