@@ -34,8 +34,9 @@ import {
   SnippetTabsTrigger,
 } from "@/components/ui/shadcn-io/snippet";
 import { assetUrl, cn } from "@/lib/utils";
+import { FadeIn, ScaleIn } from "./animations";
 import { InteractiveArchitectureDiagram } from "./architecture-section";
-import { IconBox, SectionWrapper } from "./section-card";
+import { IconBox } from "./section-card";
 
 type TabKey = "console" | "deploy" | "send";
 
@@ -408,26 +409,40 @@ export function CliTabbedSection() {
   ];
 
   return (
-    <SectionWrapper
-      badge="Free Forever"
-      badgeColor="green"
-      badgeLink="/cli"
-      description="Deploy production-ready infrastructure to your AWS account. CLI, TypeScript SDK, and local console included."
-      id="cli"
-      title="CLI + SDK + Local Console"
-    >
-      <GlowingTabBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        tabs={tabs}
-      />
+    <section className="py-24" id="cli">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {/* Simple header */}
+        <FadeIn className="mb-12 text-center">
+          <a
+            className="mb-4 inline-block rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 font-medium text-green-600 text-xs transition-colors hover:bg-green-500/20 dark:text-green-400"
+            href="/cli"
+          >
+            Free Forever
+          </a>
+          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+            CLI + SDK + Local Console
+          </h2>
+          <p className="mx-auto max-w-2xl text-muted-foreground">
+            Deploy production-ready infrastructure to your AWS account. CLI,
+            TypeScript SDK, and local console included.
+          </p>
+        </FadeIn>
 
-      {/* Tab content */}
-      <div className="min-h-[500px]">
-        {activeTab === "console" && <ConsoleContent />}
-        {activeTab === "deploy" && <DeployContent />}
-        {activeTab === "send" && <SendContent />}
+        <ScaleIn delay={0.2}>
+          <GlowingTabBar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            tabs={tabs}
+          />
+        </ScaleIn>
+
+        {/* Tab content */}
+        <div className="min-h-[500px]">
+          {activeTab === "console" && <ConsoleContent />}
+          {activeTab === "deploy" && <DeployContent />}
+          {activeTab === "send" && <SendContent />}
+        </div>
       </div>
-    </SectionWrapper>
+    </section>
   );
 }

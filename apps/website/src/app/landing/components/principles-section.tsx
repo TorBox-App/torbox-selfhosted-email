@@ -1,6 +1,7 @@
 "use client";
 
 import { CreditCard, Key, Shield } from "lucide-react";
+import { StaggerContainer, StaggerItem } from "./animations";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -97,34 +98,36 @@ export function PrinciplesSection() {
 
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Principles Grid */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StaggerContainer
+          className="grid gap-4 grid-cols-2 lg:grid-cols-4"
+          staggerDelay={0.1}
+        >
           {principles.map((principle) => {
             const Icon = principle.icon;
             return (
-              <div
-                className="group relative overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 pt-12 transition-all hover:border-orange-500/50 dark:border-zinc-800 dark:bg-zinc-900"
-                key={principle.title}
-              >
-                {/* Large background icon */}
-                <div className="absolute -right-3 -top-3 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
-                  <Icon className="size-24 text-orange-500" />
-                </div>
+              <StaggerItem key={principle.title}>
+                <div className="group relative h-full overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 pt-12 transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+                  {/* Large background icon */}
+                  <div className="absolute -right-3 -top-3 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
+                    <Icon className="size-24 text-orange-500" />
+                  </div>
 
-                {/* Small accent icon */}
-                <div className="absolute left-4 top-4">
-                  <Icon className="size-5 text-orange-500" />
-                </div>
+                  {/* Small accent icon */}
+                  <div className="absolute left-4 top-4">
+                    <Icon className="size-5 text-orange-500" />
+                  </div>
 
-                <h3 className="relative mb-1 font-semibold text-sm text-foreground">
-                  {principle.title}
-                </h3>
-                <p className="relative text-muted-foreground text-xs leading-relaxed">
-                  {principle.description}
-                </p>
-              </div>
+                  <h3 className="relative mb-1 font-semibold text-sm text-foreground">
+                    {principle.title}
+                  </h3>
+                  <p className="relative text-muted-foreground text-xs leading-relaxed">
+                    {principle.description}
+                  </p>
+                </div>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       </div>
     </section>
   );

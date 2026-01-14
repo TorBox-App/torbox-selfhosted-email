@@ -1,13 +1,12 @@
 "use client";
 
-import { CircleHelp } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { SectionCard, SectionWrapper } from "./section-card";
+import { FadeIn, ScaleIn } from "./animations";
 
 type FaqItem = {
   value: string;
@@ -67,44 +66,50 @@ const faqItems: FaqItem[] = [
 ];
 
 const FaqSection = () => (
-  <SectionWrapper
-    badge="FAQ"
-    description="Everything you need to know about Wraps, pricing, security, and deployment."
-    id="faq"
-    title="Frequently Asked Questions"
-  >
-    <SectionCard
-      footer={{
-        title: "Still have questions?",
-        description:
-          "We're here to help. Reach out and we'll get back to you as soon as possible.",
-        ctaText: "Contact Support",
-        ctaLink: "mailto:support@wraps.dev",
-      }}
-    >
-      <Accordion className="space-y-3" collapsible type="single">
-        {faqItems.map((item) => (
-          <AccordionItem
-            className="rounded-lg border bg-background px-4"
-            key={item.value}
-            value={item.value}
-          >
-            <AccordionTrigger className="cursor-pointer gap-4 py-4 hover:no-underline">
-              <div className="flex items-center gap-3 text-left">
-                <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5 text-orange-500">
-                  <CircleHelp className="size-4" />
-                </div>
+  <section className="py-20" id="faq">
+    <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+      {/* Simple heading */}
+      <FadeIn className="mb-8 text-center">
+        <p className="text-lg text-muted-foreground">
+          Questions?{" "}
+          <span className="text-foreground">We've got answers.</span>
+        </p>
+      </FadeIn>
+
+      {/* Clean accordion */}
+      <ScaleIn delay={0.1}>
+        <Accordion className="space-y-2" collapsible type="single">
+          {faqItems.map((item) => (
+            <AccordionItem
+              className="rounded-lg border px-4 transition-colors data-[state=open]:border-orange-500/30 data-[state=open]:bg-orange-500/5"
+              key={item.value}
+              value={item.value}
+            >
+              <AccordionTrigger className="cursor-pointer py-4 text-left hover:no-underline">
                 <span className="font-medium">{item.question}</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-4 pl-11 text-muted-foreground">
-              {item.answer}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-    </SectionCard>
-  </SectionWrapper>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 text-muted-foreground">
+                {item.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </ScaleIn>
+
+      {/* Simple contact line */}
+      <FadeIn delay={0.2} className="mt-8 text-center">
+        <p className="text-muted-foreground text-sm">
+          Still have questions?{" "}
+          <a
+            className="text-orange-500 underline-offset-4 hover:underline"
+            href="mailto:support@wraps.dev"
+          >
+            Contact support
+          </a>
+        </p>
+      </FadeIn>
+    </div>
+  </section>
 );
 
 export { FaqSection };

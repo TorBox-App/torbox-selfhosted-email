@@ -1,5 +1,7 @@
 "use client";
 
+import { FadeIn, StaggerContainer, StaggerItem } from "./animations";
+
 // AWS Logo
 function AWSLogo({ className }: { className?: string }) {
   return (
@@ -137,36 +139,38 @@ export function TrustedBySection() {
 
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="mb-8 text-center sm:mb-10">
-          <p className="mb-2 font-medium text-orange-500 text-sm">
-            Built On
-          </p>
+        <FadeIn className="mb-8 text-center sm:mb-10">
+          <p className="mb-2 font-medium text-orange-500 text-sm">Built On</p>
           <h2 className="font-bold text-xl text-foreground sm:text-2xl">
             Battle-tested infrastructure
           </h2>
-        </div>
+        </FadeIn>
 
         {/* Tech Stack Grid */}
-        <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 lg:gap-16">
+        <StaggerContainer
+          className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 lg:gap-16"
+          staggerDelay={0.15}
+        >
           {techStack.map((tech) => {
             const Logo = tech.logo;
             return (
-              <a
-                aria-label={`Learn more about ${tech.name}`}
-                className="group flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
-                href={tech.href}
-                key={tech.name}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <Logo className="h-10 w-auto text-muted-foreground transition-colors group-hover:text-foreground sm:h-12" />
-                <span className="text-muted-foreground text-xs font-medium">
-                  {tech.name}
-                </span>
-              </a>
+              <StaggerItem key={tech.name}>
+                <a
+                  aria-label={`Learn more about ${tech.name}`}
+                  className="group flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
+                  href={tech.href}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <Logo className="h-10 w-auto text-muted-foreground transition-colors group-hover:text-foreground sm:h-12" />
+                  <span className="font-medium text-muted-foreground text-xs">
+                    {tech.name}
+                  </span>
+                </a>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       </div>
     </section>
   );

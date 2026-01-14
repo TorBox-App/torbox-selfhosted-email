@@ -10,7 +10,6 @@ import {
   Filter,
   GitBranch,
   LayoutGrid,
-  Mail,
   MousePointerClick,
   Palette,
   Play,
@@ -25,7 +24,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { assetUrl, cn } from "@/lib/utils";
-import { SectionWrapper } from "./section-card";
+import { FadeIn, ScaleIn } from "./animations";
 
 type TabKey = "templates" | "broadcasts" | "automations";
 
@@ -46,10 +45,10 @@ const broadcastFeatures = [
 ];
 
 const automationFeatures = [
+  { icon: Sparkles, title: "AI-Powered", badge: "AI" },
   { icon: Zap, title: "Event Triggers" },
   { icon: Clock, title: "Wait Steps" },
   { icon: GitBranch, title: "Conditions" },
-  { icon: Mail, title: "Send Email" },
   { icon: MousePointerClick, title: "Actions" },
 ];
 
@@ -205,6 +204,14 @@ function AutomationsContent() {
           >
             <feature.icon className="size-4 text-orange-500" />
             <span className="font-medium text-sm">{feature.title}</span>
+            {feature.badge && (
+              <Badge
+                className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                variant="secondary"
+              >
+                {feature.badge}
+              </Badge>
+            )}
           </div>
         ))}
       </div>
@@ -290,39 +297,63 @@ export function ProductTabbedSection() {
   ];
 
   return (
-    <SectionWrapper
-      badge="From $10/mo"
-      badgeColor="orange"
-      badgeLink="/platform"
-      description="Build emails, send campaigns, and automate workflows - all from your browser."
-      id="platform"
-      title="Wraps Platform"
-    >
-      <GlowingTabBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        tabs={tabs}
-      />
+    <section className="py-24" id="platform">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <FadeIn className="mb-12 text-center">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2">
+            <Sparkles className="size-4 text-orange-500" />
+            <span className="font-semibold text-orange-600 text-sm dark:text-orange-400">
+              Wraps Platform
+            </span>
+            <span className="text-muted-foreground text-sm">from $10/mo</span>
+          </div>
+          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+            Build. Send.{" "}
+            <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
+              Automate.
+            </span>
+          </h2>
+          <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+            Design emails with AI assistance, send targeted campaigns, and build
+            automated workflows — all from your browser.
+          </p>
+        </FadeIn>
 
-      {/* Tab content */}
-      <div className="min-h-[450px]">
-        {activeTab === "templates" && <TemplatesContent />}
-        {activeTab === "broadcasts" && <BroadcastsContent />}
-        {activeTab === "automations" && <AutomationsContent />}
-      </div>
+        <ScaleIn delay={0.2}>
+          <GlowingTabBar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            tabs={tabs}
+          />
+        </ScaleIn>
 
-      {/* CTA */}
-      <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
-          <a href="https://app.wraps.dev/auth?mode=signup">
-            Start Free Trial
-            <ArrowRight className="ml-2 size-4" />
-          </a>
-        </Button>
-        <Button asChild size="lg" variant="outline">
-          <a href="/platform">Learn More</a>
-        </Button>
+        {/* Tab content */}
+        <div className="min-h-[450px]">
+          {activeTab === "templates" && <TemplatesContent />}
+          {activeTab === "broadcasts" && <BroadcastsContent />}
+          {activeTab === "automations" && <AutomationsContent />}
+        </div>
+
+        {/* CTA */}
+        <FadeIn delay={0.3}>
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button
+              asChild
+              className="bg-orange-500 hover:bg-orange-600"
+              size="lg"
+            >
+              <a href="https://app.wraps.dev/auth?mode=signup">
+                Start Free Trial
+                <ArrowRight className="ml-2 size-4" />
+              </a>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <a href="/platform">Learn More</a>
+            </Button>
+          </div>
+        </FadeIn>
       </div>
-    </SectionWrapper>
+    </section>
   );
 }
