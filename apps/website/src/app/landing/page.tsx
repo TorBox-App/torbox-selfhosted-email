@@ -5,9 +5,9 @@ import { FaqSection } from "./components/faq-section";
 import { LandingFooter } from "./components/footer";
 import { HeroSection } from "./components/hero-section";
 import { LandingNavbar } from "./components/navbar";
+import { PrinciplesSection } from "./components/principles-section";
 import { ProductTabbedSection } from "./components/product-tabbed-section";
 import { SmsTeaserSection } from "./components/sms-teaser-section";
-import { StatsSection } from "./components/stats-section";
 import { TrustedBySection } from "./components/trusted-by-section";
 import { premiumBgClass, UpgradeSection } from "./components/upgrade-section";
 
@@ -22,9 +22,11 @@ export default function LandingPage() {
         {/* Hero & Social Proof */}
         <HeroSection />
         <TrustedBySection />
-        <StatsSection />
 
-        {/* SMS Coming Soon Teaser */}
+        {/* Core Principles */}
+        <PrinciplesSection />
+
+        {/* Platform Vision */}
         <SmsTeaserSection />
 
         {/* Free Tier - CLI + SDK + Local Console (Tabbed) */}

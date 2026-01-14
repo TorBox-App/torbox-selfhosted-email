@@ -7,23 +7,35 @@ const services = [
   {
     icon: Mail,
     name: "Email",
-    description: "AWS SES",
+    tagline: "Transactional & Marketing",
+    aws: "AWS SES",
+    price: "$0.10 / 1k emails",
+    features: ["Open & click tracking", "Bounce handling", "DKIM signing"],
     status: "available",
     href: "/docs/quickstart/email",
+    cta: "Get Started",
   },
   {
     icon: Globe,
     name: "CDN",
-    description: "AWS CloudFront",
+    tagline: "Global Asset Delivery",
+    aws: "AWS CloudFront",
+    price: "$0.085 / GB",
+    features: ["Edge caching", "Custom domains", "SSL certificates"],
     status: "available",
     href: "/docs/quickstart/cdn",
+    cta: "Get Started",
   },
   {
     icon: MessageSquare,
     name: "SMS",
-    description: "AWS End User Messaging",
+    tagline: "Text Notifications",
+    aws: "AWS End User Messaging",
+    price: "Pay per message",
+    features: ["Two-way messaging", "Delivery receipts", "Number management"],
     status: "coming",
     href: "/sms",
+    cta: "Join Waitlist",
   },
 ];
 
@@ -46,88 +58,134 @@ export function SmsTeaserSection() {
           </p>
         </div>
 
-        {/* Services Timeline */}
-        <div className="mb-10 grid gap-4 sm:grid-cols-3">
+        {/* Products Grid */}
+        <div className="grid gap-6 sm:grid-cols-3">
           {services.map((service) => {
             const Icon = service.icon;
             const isAvailable = service.status === "available";
             const isComing = service.status === "coming";
 
-            const cardContent = (
-              <>
-                {/* Status Badge */}
-                <div className="absolute right-4 top-4">
+            return (
+              <div
+                className={`group relative flex flex-col overflow-hidden rounded-2xl border transition-all ${
+                  isAvailable
+                    ? "border-zinc-200 bg-white hover:border-orange-500/50 hover:shadow-xl hover:shadow-orange-500/5 dark:border-zinc-800 dark:bg-zinc-900"
+                    : "border-zinc-200 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/30"
+                }`}
+                key={service.name}
+              >
+                {/* Large background icon */}
+                <div
+                  className={`pointer-events-none absolute -right-8 -top-8 transition-opacity ${
+                    isAvailable
+                      ? "opacity-[0.06] group-hover:opacity-[0.1]"
+                      : "opacity-[0.03]"
+                  }`}
+                >
+                  <Icon
+                    className={`size-40 ${
+                      isAvailable ? "text-orange-500" : "text-foreground"
+                    }`}
+                  />
+                </div>
+
+                {/* Header */}
+                <div className="relative border-b border-zinc-100 p-5 pb-4 dark:border-zinc-800">
+                  <div className="mb-3 flex items-start justify-between">
+                    <div
+                      className={`flex size-11 items-center justify-center rounded-xl ${
+                        isAvailable
+                          ? "bg-orange-500 text-white"
+                          : "bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400"
+                      }`}
+                    >
+                      <Icon className="size-5" />
+                    </div>
+                    {isAvailable ? (
+                      <span className="flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-1 text-[10px] font-medium text-green-700 dark:text-green-400">
+                        <Check className="size-2.5" />
+                        Available
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-orange-500/10 px-2 py-1 text-[10px] font-medium text-orange-600 dark:text-orange-400">
+                        Coming Soon
+                      </span>
+                    )}
+                  </div>
+                  <h3
+                    className={`font-bold text-2xl ${
+                      isAvailable ? "text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {service.name}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    {service.tagline}
+                  </p>
+                </div>
+
+                {/* Body */}
+                <div className="relative flex flex-1 flex-col p-5">
+                  {/* AWS Badge */}
+                  <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-1 dark:bg-zinc-800">
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      {service.aws}
+                    </span>
+                  </div>
+
+                  {/* Price */}
+                  <div className="mb-4">
+                    <span
+                      className={`font-semibold text-lg ${
+                        isAvailable ? "text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      {service.price}
+                    </span>
+                  </div>
+
+                  {/* Features */}
+                  <ul className="mb-6 flex-1 space-y-2">
+                    {service.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-center gap-2 text-sm text-muted-foreground"
+                      >
+                        <Check
+                          className={`size-3.5 ${
+                            isAvailable ? "text-orange-500" : "text-zinc-400"
+                          }`}
+                        />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* CTA */}
                   {isAvailable ? (
-                    <span className="flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">
-                      <Check className="size-3" />
-                      Available
-                    </span>
-                  ) : isComing ? (
-                    <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-                      Coming Soon
-                    </span>
+                    <Button
+                      asChild
+                      className="w-full bg-orange-500 hover:bg-orange-600"
+                    >
+                      <a href={service.href}>
+                        {service.cta}
+                        <ArrowRight className="ml-1.5 size-4" />
+                      </a>
+                    </Button>
                   ) : (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">
-                      Planned
-                    </span>
+                    <Button asChild variant="outline" className="w-full">
+                      <a href={service.href}>
+                        {service.cta}
+                        <ArrowRight className="ml-1.5 size-4" />
+                      </a>
+                    </Button>
                   )}
                 </div>
-
-                <div
-                  className={`mb-3 flex size-12 items-center justify-center rounded-lg ${
-                    isAvailable
-                      ? "bg-orange-500/10 text-orange-500"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  <Icon className="size-6" />
-                </div>
-                <h3
-                  className={`mb-1 font-semibold text-lg ${
-                    isAvailable ? "text-orange-500" : ""
-                  }`}
-                >
-                  {service.name}
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  {service.description}
-                </p>
-              </>
-            );
-
-            const cardClasses = `relative rounded-xl border p-5 transition-colors ${
-              isAvailable
-                ? "border-orange-500 bg-orange-500/5 hover:bg-orange-500/10"
-                : "border-border bg-background hover:border-orange-500/50"
-            }`;
-
-            return isAvailable ? (
-              <a className={cardClasses} href={service.href} key={service.name}>
-                {cardContent}
-              </a>
-            ) : (
-              <div className={cardClasses} key={service.name}>
-                {cardContent}
               </div>
             );
           })}
         </div>
 
-        {/* CTA */}
-        <div className="flex flex-col items-center gap-3">
-          <Button
-            asChild
-            className="cursor-pointer bg-orange-500 hover:bg-orange-600"
-          >
-            <a href="/sms">
-              Join SMS Waitlist
-              <ArrowRight className="ml-1 size-4" />
-            </a>
-          </Button>
-          <p className="text-muted-foreground text-xs">
-            Be the first to know when SMS launches
-          </p>
-        </div>
       </div>
     </section>
   );

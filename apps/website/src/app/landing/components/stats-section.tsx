@@ -11,9 +11,9 @@ const stats = [
   },
   {
     icon: Zap,
-    value: "$0.10",
-    label: "Per 1K Emails",
-    description: "AWS SES pricing, billed to you",
+    value: "AWS",
+    label: "Direct Pricing",
+    description: "Pay AWS directly, no markup",
   },
   {
     icon: ShieldCheck,

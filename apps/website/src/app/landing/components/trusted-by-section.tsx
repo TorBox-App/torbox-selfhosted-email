@@ -1,7 +1,5 @@
 "use client";
 
-import { DotPattern } from "@/components/dot-pattern";
-
 const projects = [
   {
     name: "Lilikoi",
@@ -17,12 +15,73 @@ const projects = [
   },
 ];
 
+function GridPattern() {
+  return (
+    <svg
+      className="absolute inset-0 size-full opacity-[0.04] dark:opacity-[0.03]"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <pattern
+          id="trusted-by-grid"
+          width="32"
+          height="32"
+          patternUnits="userSpaceOnUse"
+        >
+          <path
+            d="M0 32V0h32"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+          />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#trusted-by-grid)" />
+    </svg>
+  );
+}
+
+function DotGrid() {
+  const rows = 8;
+  const cols = 12;
+
+  return (
+    <div className="absolute -right-4 -top-4">
+      <div
+        className="grid gap-3"
+        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+      >
+        {Array.from({ length: rows * cols }).map((_, i) => {
+          const row = Math.floor(i / cols);
+          const col = i % cols;
+
+          // Top-right corner: fade as we go down-left
+          const distance = (row + (cols - 1 - col)) / (rows + cols - 2);
+          const opacity = Math.max(0, 1 - distance * 1.2);
+
+          if (opacity <= 0.05) return <div key={i} className="size-1" />;
+
+          return (
+            <div
+              key={i}
+              className="size-1 rounded-full bg-orange-500 dark:bg-orange-400"
+              style={{ opacity: opacity * 0.5 }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function TrustedBySection() {
   return (
-    <section className="relative py-12 sm:py-16">
-      {/* Background with transparency */}
-      <div className="absolute inset-0 bg-linear-to-r from-orange-500/5 via-transparent to-orange-500/5" />
-      <DotPattern className="opacity-60" fadeStyle="circle" size="sm" />
+    <section className="relative overflow-hidden pt-12 pb-6 sm:pt-16 sm:pb-8">
+      {/* Background Grid */}
+      <GridPattern />
+
+      {/* Top-left Dot Grid */}
+      <DotGrid />
 
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
