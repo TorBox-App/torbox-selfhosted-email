@@ -9,18 +9,21 @@ const services = [
     name: "Email",
     description: "AWS SES",
     status: "available",
+    href: "/docs/quickstart/email",
   },
   {
     icon: Globe,
     name: "CDN",
     description: "AWS CloudFront",
     status: "available",
+    href: "/docs/quickstart/cdn",
   },
   {
     icon: MessageSquare,
     name: "SMS",
     description: "AWS End User Messaging",
     status: "coming",
+    href: "/sms",
   },
 ];
 
@@ -50,15 +53,8 @@ export function SmsTeaserSection() {
             const isAvailable = service.status === "available";
             const isComing = service.status === "coming";
 
-            return (
-              <div
-                className={`relative rounded-xl border p-5 transition-colors ${
-                  isAvailable
-                    ? "border-orange-500 bg-orange-500/5"
-                    : "border-border bg-background hover:border-orange-500/50"
-                }`}
-                key={service.name}
-              >
+            const cardContent = (
+              <>
                 {/* Status Badge */}
                 <div className="absolute right-4 top-4">
                   {isAvailable ? (
@@ -96,6 +92,22 @@ export function SmsTeaserSection() {
                 <p className="text-muted-foreground text-sm">
                   {service.description}
                 </p>
+              </>
+            );
+
+            const cardClasses = `relative rounded-xl border p-5 transition-colors ${
+              isAvailable
+                ? "border-orange-500 bg-orange-500/5 hover:bg-orange-500/10"
+                : "border-border bg-background hover:border-orange-500/50"
+            }`;
+
+            return isAvailable ? (
+              <a className={cardClasses} href={service.href} key={service.name}>
+                {cardContent}
+              </a>
+            ) : (
+              <div className={cardClasses} key={service.name}>
+                {cardContent}
               </div>
             );
           })}
