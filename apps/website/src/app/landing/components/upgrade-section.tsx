@@ -72,26 +72,14 @@ export function UpgradeSection() {
                 <div className="font-medium text-muted-foreground text-sm">
                   Feature
                 </div>
-                <div className="text-center font-medium text-sm">
-                  <span className="hidden sm:inline">Free</span>
-                  <span className="sm:hidden">$0</span>
-                  <span className="ml-1 hidden text-muted-foreground sm:inline">
-                    ($0)
-                  </span>
+                <div className="text-center font-medium text-green-600 text-sm dark:text-green-400">
+                  Free
                 </div>
                 <div className="text-center font-medium text-sm">
-                  <span className="hidden sm:inline">Starter</span>
-                  <span className="sm:hidden">$10</span>
-                  <span className="ml-1 hidden text-muted-foreground sm:inline">
-                    ($10)
-                  </span>
+                  Starter
                 </div>
                 <div className="text-center font-medium text-orange-500 text-sm">
-                  <span className="hidden sm:inline">Pro</span>
-                  <span className="sm:hidden">$30</span>
-                  <span className="ml-1 hidden text-muted-foreground sm:inline">
-                    ($30)
-                  </span>
+                  Pro
                 </div>
               </div>
 
@@ -150,29 +138,19 @@ export function UpgradeSection() {
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button
               asChild
-              className="cursor-pointer"
+              className="cursor-pointer border-green-500/50 text-green-700 hover:bg-green-500/10 dark:text-green-400"
               size="lg"
               variant="outline"
             >
-              <a href="/docs/quickstart">Continue with Free</a>
-            </Button>
-            <Button
-              asChild
-              className="cursor-pointer"
-              size="lg"
-              variant="outline"
-            >
-              <a href="https://app.wraps.dev/auth?mode=signup&plan=starter">
-                Start with Starter
-              </a>
+              <a href="/cli">Learn About Free Tier</a>
             </Button>
             <Button
               asChild
               className="cursor-pointer bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
-              <a href="https://app.wraps.dev/auth?mode=signup&plan=pro">
-                Start with Pro
+              <a href="/platform">
+                See Platform Pricing
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>

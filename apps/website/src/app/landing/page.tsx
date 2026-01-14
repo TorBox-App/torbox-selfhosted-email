@@ -5,7 +5,6 @@ import { FaqSection } from "./components/faq-section";
 import { LandingFooter } from "./components/footer";
 import { HeroSection } from "./components/hero-section";
 import { LandingNavbar } from "./components/navbar";
-import { PricingSection } from "./components/pricing-section";
 import { ProductTabbedSection } from "./components/product-tabbed-section";
 import { SmsTeaserSection } from "./components/sms-teaser-section";
 import { StatsSection } from "./components/stats-section";
@@ -38,7 +37,6 @@ export default function LandingPage() {
         {/* Premium Tier - Wraps Platform (Tabbed) */}
         <div className={premiumBgClass}>
           <ProductTabbedSection />
-          <PricingSection />
           <FaqSection />
           <CTASection />
         </div>

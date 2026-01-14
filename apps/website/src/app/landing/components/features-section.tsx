@@ -3,10 +3,11 @@
 import {
   ArrowRight,
   Cloud,
-  Gauge,
+  GitFork,
   Lock,
   Mail,
   Shield,
+  ShieldAlert,
   Terminal,
   Workflow,
 } from "lucide-react";
@@ -30,10 +31,10 @@ const mainFeatures = [
     status: "Available",
   },
   {
-    icon: Gauge,
-    title: "Event Tracking & Analytics",
+    icon: ShieldAlert,
+    title: "Reputation Protection",
     description:
-      "Delivery, open, and click tracking stored in DynamoDB. View metrics in the dashboard or query directly.",
+      "Bounces and complaints tracked automatically. Suppression lists prevent re-sending to bad addresses, protecting your sender reputation.",
     status: "Available",
   },
   {
@@ -54,15 +55,15 @@ const secondaryFeatures = [
   },
   {
     icon: Shield,
-    title: "Production-Ready Configs",
+    title: "Infrastructure Presets",
     description:
-      "Pre-configured infrastructure presets for different needs: minimal tracking, full analytics, or high-volume sending.",
+      "Starter (~$0.05/mo) for MVPs, Production (~$2-5/mo) for apps, Enterprise (~$50-100/mo) for high-volume. Choose what you need.",
   },
   {
-    icon: Terminal,
-    title: "Local-First Dashboard",
+    icon: GitFork,
+    title: "Open Source & Auditable",
     description:
-      "Run the console locally with zero setup. Upgrade to the Platform when you're ready.",
+      "CLI and SDK are open source (AGPLv3). Audit the code, fork it, customize the Pulumi infrastructure.",
   },
   {
     icon: Workflow,

@@ -291,11 +291,12 @@ export function ProductTabbedSection() {
 
   return (
     <SectionWrapper
-      badge="Wraps Platform"
+      badge="From $10/mo"
+      badgeColor="orange"
+      badgeLink="/platform"
       description="Build emails, send campaigns, and automate workflows - all from your browser."
       id="platform"
-      premium
-      title="The Complete Email Platform"
+      title="Wraps Platform"
     >
       <GlowingTabBar
         activeTab={activeTab}

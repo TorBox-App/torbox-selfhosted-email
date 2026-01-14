@@ -8,7 +8,9 @@ import {
   Code2,
   Globe,
   History,
+  Key,
   LayoutDashboard,
+  ListFilter,
   Send,
   Shield,
   Terminal,
@@ -51,6 +53,11 @@ const consoleFeatures = [
     description: "Search and filter through your email history with timelines",
   },
   {
+    icon: ListFilter,
+    title: "Suppression Lists",
+    description: "View and manage bounce/complaint suppression automatically",
+  },
+  {
     icon: Globe,
     title: "Domain Management",
     description: "View verification status, DKIM records, and DNS config",
@@ -59,6 +66,11 @@ const consoleFeatures = [
     icon: Shield,
     title: "Reputation Metrics",
     description: "Monitor sender reputation, bounce rates, complaint ratios",
+  },
+  {
+    icon: Key,
+    title: "SMTP Credentials",
+    description: "Generate SMTP credentials for legacy integrations",
   },
 ];
 
@@ -325,7 +337,7 @@ function ConsoleContent() {
       </div>
 
       {/* Feature pills */}
-      <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {consoleFeatures.map((feature) => {
           const Icon = feature.icon;
           return (
@@ -436,10 +448,12 @@ export function CliTabbedSection() {
 
   return (
     <SectionWrapper
-      badge="Free · CLI + SDK"
-      description="Skip the AWS Console. Deploy production-ready email infrastructure in under 2 minutes."
+      badge="Free Forever"
+      badgeColor="green"
+      badgeLink="/cli"
+      description="Deploy production-ready infrastructure to your AWS account. CLI, TypeScript SDK, and local console included."
       id="cli"
-      title="Built for Developers"
+      title="CLI + SDK + Local Console"
     >
       <GlowingTabBar
         activeTab={activeTab}

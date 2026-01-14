@@ -20,10 +20,23 @@ export function HeroSection() {
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
           {/* Announcement Badge */}
-          <div className="mb-8 flex justify-center">
-            <Badge className="border-foreground px-4 py-2" variant="outline">
-              Free CLI + SDK · Platform $10/mo
-            </Badge>
+          <div className="mb-8 flex justify-center gap-2">
+            <a href="/cli">
+              <Badge
+                className="border-green-500/50 bg-green-500/10 px-3 py-1.5 text-green-700 transition-colors hover:bg-green-500/20 dark:text-green-400"
+                variant="outline"
+              >
+                Free CLI + SDK
+              </Badge>
+            </a>
+            <a href="/platform">
+              <Badge
+                className="border-orange-500/50 bg-orange-500/10 px-3 py-1.5 text-orange-700 transition-colors hover:bg-orange-500/20 dark:text-orange-400"
+                variant="outline"
+              >
+                Platform from $10/mo
+              </Badge>
+            </a>
           </div>
 
           {/* Main Headline */}
@@ -34,7 +47,7 @@ export function HeroSection() {
                 <WordRotate
                   className="text-orange-500"
                   duration={3000}
-                  words={["Email", "SMS", "CDN"]}
+                  words={["Email", "CDN", "SMS"]}
                 />
               </span>
               <span>simplified.</span>
@@ -43,8 +56,8 @@ export function HeroSection() {
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            Start free with our CLI and SDK. Upgrade to the Wraps Platform when
-            you're ready.
+            One command deploys production-ready infrastructure to your AWS
+            account. Use Wraps' TypeScript SDK or AWS's. You own everything.
           </p>
 
           {/* CTA */}

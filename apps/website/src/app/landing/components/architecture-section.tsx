@@ -36,9 +36,9 @@ const tabContent: Record<ArchitectureTabKey, TabContent> = {
   track: {
     title: "Track Events",
     description:
-      "When recipients open, click, or bounce emails, SES captures these events. Wraps infrastructure routes them through EventBridge and SQS to Lambda, storing everything in DynamoDB.",
-    ctaText: "Learn More",
-    ctaLink: "/docs/quickstart",
+      "SES captures opens, clicks, bounces, and complaints. Wraps routes these through EventBridge, SQS (with DLQ for reliability), and Lambda into DynamoDB. Query directly or view in the dashboard.",
+    ctaText: "See Event Types",
+    ctaLink: "/docs/cli-reference/email#event-tracking",
   },
   deploy: {
     title: "Deploy Infrastructure",

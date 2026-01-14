@@ -63,6 +63,8 @@ type SectionWrapperProps = {
   title: string;
   description?: string;
   badge?: string;
+  badgeColor?: "default" | "green" | "orange";
+  badgeLink?: string;
   premium?: boolean;
   id?: string;
   className?: string;
@@ -73,26 +75,39 @@ export function SectionWrapper({
   title,
   description,
   badge,
+  badgeColor = "default",
+  badgeLink,
   premium = false,
   id,
   className = "",
 }: SectionWrapperProps) {
+  const badgeColorClasses = {
+    default: "bg-background text-muted-foreground border-border",
+    green:
+      "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400",
+    orange:
+      "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+  };
+
+  const badgeClass = `mb-4 inline-block rounded-full border px-3 py-1 font-medium text-xs transition-colors ${
+    premium ? badgeColorClasses.orange : badgeColorClasses[badgeColor]
+  } ${badgeLink ? "hover:opacity-80" : ""}`;
+
+  const BadgeContent = badge ? (
+    <span className={badgeClass}>{badge}</span>
+  ) : null;
+
   return (
     <section className={`py-24 ${className}`} id={id}>
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="mb-12 text-center">
-          {badge && (
-            <span
-              className={`mb-4 inline-block rounded-full border px-3 py-1 font-medium text-xs ${
-                premium
-                  ? "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                  : "bg-background text-muted-foreground"
-              }`}
-            >
-              {badge}
-            </span>
-          )}
+          {badge &&
+            (badgeLink ? (
+              <a href={badgeLink}>{BadgeContent}</a>
+            ) : (
+              BadgeContent
+            ))}
           <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
             {title}
           </h2>

@@ -58,9 +58,9 @@ export function CliHeroSection() {
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl">
-            The Wraps CLI deploys production-ready email infrastructure to your
-            AWS account. Domain verification, event tracking, local console —
-            all included.
+            Deploy production-ready infrastructure to your AWS account. Domain
+            verification, event tracking, local console — all included, all
+            free.
           </p>
 
           {/* Install command */}
