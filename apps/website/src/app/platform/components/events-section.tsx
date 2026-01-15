@@ -5,7 +5,7 @@ import {
   CircleDollarSign,
   Clock,
   Code2,
-  Infinity,
+  Infinity as InfinityIcon,
   Zap,
 } from "lucide-react";
 import { motion, useInView } from "motion/react";
@@ -15,7 +15,8 @@ const eventTypes = [
   {
     icon: Zap,
     title: "Custom Events",
-    description: "Track any action: signups, purchases, page views, button clicks",
+    description:
+      "Track any action: signups, purchases, page views, button clicks",
     counted: true,
   },
   {
@@ -37,19 +38,22 @@ const customEventCode = `await client.POST('/v1/events/', {
 
 const benefits = [
   {
-    icon: Infinity,
+    icon: InfinityIcon,
     title: "Unlimited Contacts",
-    description: "Store as many contacts as you need. We don't charge for database rows.",
+    description:
+      "Store as many contacts as you need. We don't charge for database rows.",
   },
   {
     icon: CircleDollarSign,
     title: "Pay for Actions",
-    description: "Only custom events count. Email engagement tracking is always free.",
+    description:
+      "Only custom events count. Email engagement tracking is always free.",
   },
   {
     icon: Clock,
     title: "Flexible Retention",
-    description: "30 days to 1 year history. Events power segments and automations.",
+    description:
+      "30 days to 1 year history. Events power segments and automations.",
   },
 ];
 
@@ -74,8 +78,8 @@ export function DashboardEventsSection() {
             What counts as an event?
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">
-            We only charge for custom events you explicitly track. Email opens, clicks,
-            and delivery events are always free.
+            We only charge for custom events you explicitly track. Email opens,
+            clicks, and delivery events are always free.
           </p>
         </motion.div>
 
@@ -85,7 +89,9 @@ export function DashboardEventsSection() {
             const Icon = type.icon;
             return (
               <motion.div
-                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                animate={
+                  isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
+                }
                 className={`relative overflow-hidden rounded-2xl border-2 p-6 ${
                   type.counted
                     ? "border-orange-500 bg-orange-500/5"
@@ -129,7 +135,9 @@ export function DashboardEventsSection() {
                 <div className="rounded-lg bg-zinc-900 p-3">
                   <div className="flex items-center gap-2 text-zinc-500 text-xs mb-2">
                     <Code2 className="size-3" />
-                    <span>{type.counted ? "Platform SDK" : "How it works"}</span>
+                    <span>
+                      {type.counted ? "Platform SDK" : "How it works"}
+                    </span>
                   </div>
                   {type.counted ? (
                     <pre className="font-mono text-green-400 text-xs leading-relaxed overflow-x-auto">
@@ -161,7 +169,9 @@ export function DashboardEventsSection() {
               const Icon = benefit.icon;
               return (
                 <motion.div
-                  animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+                  animate={
+                    isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
+                  }
                   className="text-center"
                   initial={{ opacity: 0, y: 10 }}
                   key={benefit.title}
@@ -187,8 +197,8 @@ export function DashboardEventsSection() {
           initial={{ opacity: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
         >
-          Compare: Customer.io charges $150+/mo for 12K contacts.
-          With Wraps, unlimited contacts start at $10/mo.
+          Compare: Customer.io charges $150+/mo for 12K contacts. With Wraps,
+          unlimited contacts start at $10/mo.
         </motion.p>
       </div>
     </section>

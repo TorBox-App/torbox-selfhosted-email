@@ -10,7 +10,7 @@ import {
   Eye,
   Filter,
   GitBranch,
-  Infinity,
+  Infinity as InfinityIcon,
   LayoutGrid,
   MousePointerClick,
   Palette,
@@ -55,7 +55,7 @@ const automationFeatures = [
 ];
 
 const eventFeatures = [
-  { icon: Infinity, title: "Unlimited Contacts" },
+  { icon: InfinityIcon, title: "Unlimited Contacts" },
   { icon: Zap, title: "Custom Events" },
   { icon: Activity, title: "Email Tracking", badge: "Free" },
   { icon: Clock, title: "30d–1yr Retention" },
@@ -237,21 +237,43 @@ const eventWorkflowExamples = [
   {
     event: "user.signed_up",
     workflow: "Welcome Series",
-    steps: ["Welcome email", "Wait 1 day", "Getting started tips", "Wait 3 days", "Feature highlight"],
+    steps: [
+      "Welcome email",
+      "Wait 1 day",
+      "Getting started tips",
+      "Wait 3 days",
+      "Feature highlight",
+    ],
   },
   {
     event: "trial.started",
     workflow: "Trial Onboarding",
-    steps: ["Quick start guide", "Wait 2 days", "Check: activated?", "If no → help email", "Day 12 → upgrade CTA"],
+    steps: [
+      "Quick start guide",
+      "Wait 2 days",
+      "Check: activated?",
+      "If no → help email",
+      "Day 12 → upgrade CTA",
+    ],
   },
   {
     event: "order.completed",
     workflow: "Post-Purchase",
-    steps: ["Order confirmation", "Wait 7 days", "Review request", "Wait 30 days", "Reorder reminder"],
+    steps: [
+      "Order confirmation",
+      "Wait 7 days",
+      "Review request",
+      "Wait 30 days",
+      "Reorder reminder",
+    ],
   },
 ];
 
-function EventWorkflowCard({ example }: { example: typeof eventWorkflowExamples[0] }) {
+function EventWorkflowCard({
+  example,
+}: {
+  example: (typeof eventWorkflowExamples)[0];
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border bg-background">
       {/* Event trigger header */}
@@ -315,7 +337,9 @@ function EventCodeExample() {
       {/* Code content */}
       <div className="p-4">
         <pre className="font-mono text-sm leading-relaxed">
-          <span className="text-zinc-500">{"// Send an event when a user upgrades"}</span>
+          <span className="text-zinc-500">
+            {"// Send an event when a user upgrades"}
+          </span>
           {"\n"}
           <span className="text-purple-400">await</span>
           <span className="text-zinc-300"> client.</span>
@@ -324,7 +348,9 @@ function EventCodeExample() {
           <span className="text-green-400">'/v1/events/'</span>
           <span className="text-zinc-300">, {"{"}</span>
           {"\n"}
-          <span className="text-zinc-300">{"  "}body: {"{"}</span>
+          <span className="text-zinc-300">
+            {"  "}body: {"{"}
+          </span>
           {"\n"}
           <span className="text-zinc-300">{"    "}name: </span>
           <span className="text-green-400">'plan.upgraded'</span>
@@ -334,7 +360,9 @@ function EventCodeExample() {
           <span className="text-green-400">'jane@acme.co'</span>
           <span className="text-zinc-300">,</span>
           {"\n"}
-          <span className="text-zinc-300">{"    "}properties: {"{"} </span>
+          <span className="text-zinc-300">
+            {"    "}properties: {"{"}{" "}
+          </span>
           <span className="text-zinc-300">plan: </span>
           <span className="text-green-400">'pro'</span>
           <span className="text-zinc-300">{" }"}</span>
@@ -357,7 +385,9 @@ function EventsContent() {
       {/* Divider with text */}
       <div className="flex items-center gap-4">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-muted-foreground text-sm font-medium">triggers workflows like</span>
+        <span className="text-muted-foreground text-sm font-medium">
+          triggers workflows like
+        </span>
         <div className="h-px flex-1 bg-border" />
       </div>
 
