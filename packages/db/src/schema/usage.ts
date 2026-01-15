@@ -223,3 +223,63 @@ export const apiRateLimitWindowRelations = relations(
     }),
   })
 );
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVENT USAGE TRACKING (for event-based pricing limits)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Event Usage Monthly Summary
+ *
+ * One row per organization per month for fast event limit checks.
+ * Uses upsert pattern: increment count on each event ingestion.
+ *
+ * The periodKey is formatted as "YYYY-MM" (e.g., "2025-01")
+ * Combined with organizationId creates a unique constraint.
+ *
+ * Event limits per plan:
+ * - Starter: 50,000 events/month
+ * - Growth: 250,000 events/month
+ * - Scale: 1,000,000 events/month
+ */
+export const eventUsageMonthly = pgTable(
+  "event_usage_monthly",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+
+    organizationId: text("organization_id")
+      .references(() => organization.id, { onDelete: "cascade" })
+      .notNull(),
+
+    // Period key formatted as "YYYY-MM" for easy querying
+    periodKey: text("period_key").notNull(),
+
+    // Count of events stored this period
+    eventCount: integer("event_count").default(0).notNull(),
+
+    // Track when limits were last checked/updated
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // Fast lookup: org + period (most common query for limit checks)
+    uniqueIndex("event_usage_monthly_org_period_idx").on(
+      table.organizationId,
+      table.periodKey
+    ),
+    // For admin: find all orgs in a period
+    index("event_usage_monthly_period_idx").on(table.periodKey),
+  ]
+);
+
+// Relations for event usage
+export const eventUsageMonthlyRelations = relations(
+  eventUsageMonthly,
+  ({ one }) => ({
+    organization: one(organization, {
+      fields: [eventUsageMonthly.organizationId],
+      references: [organization.id],
+    }),
+  })
+);

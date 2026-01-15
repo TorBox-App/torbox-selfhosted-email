@@ -3,9 +3,24 @@
  *
  * Receives custom events from customer's API, triggers matching workflows,
  * and resumes waiting executions.
+ *
+ * Event limits (2026 pricing model):
+ * - Starter: 50,000 events/month
+ * - Growth: 250,000 events/month
+ * - Scale: 1,000,000 events/month
+ * - Enterprise: Unlimited
+ *
+ * Soft cap with 25% grace period (blocks at 125% of limit).
  */
 
-import { contact, db, eq, workflow, workflowExecution } from "@wraps/db";
+import {
+  contact,
+  contactEvent,
+  db,
+  eq,
+  workflow,
+  workflowExecution,
+} from "@wraps/db";
 import { and, sql } from "drizzle-orm";
 import { t } from "elysia";
 
@@ -13,6 +28,11 @@ import {
   type AuthContext,
   createAuthenticatedRoutes,
 } from "../middleware/auth";
+import {
+  eventLimitMiddleware,
+  getEventTTLExpiration,
+  incrementEventUsage,
+} from "../middleware/event-limit";
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
@@ -29,14 +49,16 @@ const propertiesSchema = t.Optional(
 );
 
 export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
+  // Apply event limit middleware (checks usage before allowing ingestion)
+  .use(eventLimitMiddleware)
 
   /**
    * Ingest a custom event
    *
    * POST /v1/events
    *
-   * Triggers any workflows listening for this event and resumes
-   * executions waiting for this event.
+   * Stores the event, triggers any workflows listening for this event,
+   * and resumes executions waiting for this event.
    */
   .post(
     "/",
@@ -86,7 +108,19 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         executionsResumed: 0,
       };
 
-      // 1. Find and trigger matching workflows
+      // 1. Store the event in contactEvent table with 2-year TTL
+      await db.insert(contactEvent).values({
+        contactId: contactRecord.id,
+        organizationId: auth.organizationId,
+        eventName: name,
+        eventData: properties || {},
+        expiresAt: getEventTTLExpiration(),
+      });
+
+      // 2. Increment event usage counter
+      await incrementEventUsage(auth.organizationId);
+
+      // 3. Find and trigger matching workflows
       const matchingWorkflows = await db
         .select()
         .from(workflow)
@@ -110,7 +144,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         results.workflowsTriggered++;
       }
 
-      // 2. Resume executions waiting for this event
+      // 4. Resume executions waiting for this event
       const waitingExecutions = await db
         .select()
         .from(workflowExecution)
@@ -246,6 +280,15 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
             continue;
           }
 
+          // Store the event in contactEvent table with 2-year TTL
+          await db.insert(contactEvent).values({
+            contactId: contactRecord.id,
+            organizationId: auth.organizationId,
+            eventName: event.name,
+            eventData: event.properties || {},
+            expiresAt: getEventTTLExpiration(),
+          });
+
           // Trigger matching workflows
           const matchingWorkflows = await db
             .select()
@@ -302,6 +345,11 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
             `Error processing event ${event.name}: ${error instanceof Error ? error.message : "Unknown error"}`
           );
         }
+      }
+
+      // Increment event usage counter with total processed count
+      if (results.processed > 0) {
+        await incrementEventUsage(auth.organizationId, results.processed);
       }
 
       return {

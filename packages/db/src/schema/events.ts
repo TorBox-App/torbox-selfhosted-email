@@ -40,6 +40,11 @@ export const contactEvent = pgTable(
 
     // Timestamp
     createdAt: timestamp("created_at").defaultNow().notNull(),
+
+    // TTL for 2-year backstop cleanup
+    // Events are soft-limited by plan retention (30/90/365 days) in queries,
+    // but hard-deleted after 2 years for all tiers
+    expiresAt: timestamp("expires_at"),
   },
   (table) => ({
     // Index for finding events by contact
@@ -56,6 +61,9 @@ export const contactEvent = pgTable(
       table.contactId,
       table.eventName
     ),
+
+    // Index for TTL cleanup job
+    expiresIdx: index("contact_event_expires_idx").on(table.expiresAt),
   })
 );
 

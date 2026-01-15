@@ -103,6 +103,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             title: "Contacts",
             url: `/${orgSlug}/contacts`,
           },
+          {
+            title: "Events",
+            url: `/${orgSlug}/events`,
+          },
           // Topics - requires Pro plan
           ...(planFeatures?.topics
             ? [

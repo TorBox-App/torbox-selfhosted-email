@@ -21,7 +21,8 @@
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "seed:demo": "tsx scripts/seed-demo-batches.ts"
+    "seed:demo": "tsx scripts/seed-demo-batches.ts",
+    "seed:events": "tsx scripts/seed-events.ts"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.2",

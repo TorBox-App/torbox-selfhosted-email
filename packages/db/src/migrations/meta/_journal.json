@@ -204,6 +204,13 @@
       "when": 1768418657920,
       "tag": "0028_familiar_prodigy",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1768505849809,
+      "tag": "0029_cute_maddog",
+      "breakpoints": true
     }
   ]
 }

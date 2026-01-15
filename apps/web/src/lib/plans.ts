@@ -57,6 +57,11 @@ export type PlanConfig = {
   aiMessages: number;
   bulkBatchSize: number;
 
+  // Event-Based Pricing Limits (2026 model)
+  maxEvents: number; // Monthly event limit (-1 = unlimited)
+  maxWorkflows: number; // Active workflow limit (-1 = unlimited)
+  eventRetentionDays: number; // UI/API filter window (30, 90, 365)
+
   // Feature Access
   features: Record<PlanFeature, boolean>;
 
@@ -88,12 +93,17 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     description: "Transactional email + simple broadcasts",
     dashboardAccess: true,
 
-    // Resource Limits
-    maxContacts: 5000,
+    // Resource Limits (2026 model: unlimited contacts)
+    maxContacts: -1, // Unlimited contacts
     maxMembers: -1, // Unlimited
     maxAwsAccounts: 1,
     aiMessages: 50,
     bulkBatchSize: 100,
+
+    // Event-Based Pricing Limits
+    maxEvents: 50_000, // 50K events/month
+    maxWorkflows: 5, // 5 workflows
+    eventRetentionDays: 30, // 30-day retention
 
     // Feature Access
     features: {
@@ -116,33 +126,40 @@ export const PLANS: Record<PlanId, PlanConfig> = {
 
     // Display
     featureList: [
-      "5,000 contacts",
+      "Unlimited contacts",
+      "50,000 events/month",
       "Transactional + batch sending",
+      "5 workflows",
       "50 AI messages per month",
       "1 AWS account",
-      "50K API requests/day",
+      "30-day event history",
       "Email support (48hr)",
     ],
     cta: "Subscribe",
   },
 
   pro: {
-    name: "Pro",
+    name: "Growth",
     price: 49,
-    earlyAdopterPrice: 30,
-    annualPrice: 41, // ~20% savings vs monthly ($492/yr)
-    annualEarlyAdopterPrice: 25, // Early adopter annual ($300/yr)
-    annualTotal: 300, // Total billed annually (early adopter)
+    earlyAdopterPrice: 49, // No early adopter discount for Growth
+    annualPrice: 41, // ~17% savings vs monthly ($490/yr)
+    annualEarlyAdopterPrice: 41, // Same as regular annual
+    annualTotal: 490, // Total billed annually
     period: "/month",
-    description: "Add audience management",
+    description: "Add marketing automation + topics",
     dashboardAccess: true,
 
-    // Resource Limits
-    maxContacts: 25_000,
+    // Resource Limits (2026 model: unlimited contacts)
+    maxContacts: -1, // Unlimited contacts
     maxMembers: -1, // Unlimited
     maxAwsAccounts: 3,
     aiMessages: 250,
     bulkBatchSize: 1000,
+
+    // Event-Based Pricing Limits
+    maxEvents: 250_000, // 250K events/month
+    maxWorkflows: 25, // 25 workflows
+    eventRetentionDays: 90, // 90-day retention
 
     // Feature Access
     features: {
@@ -165,36 +182,43 @@ export const PLANS: Record<PlanId, PlanConfig> = {
 
     // Display
     featureList: [
-      "25,000 contacts",
+      "Unlimited contacts",
+      "250,000 events/month",
       "Everything in Starter",
       "Topics (subscription management)",
       "Segments (property-based targeting)",
       "Campaigns (scheduled, targeted)",
+      "25 workflows",
       "250 AI messages per month",
       "3 AWS accounts",
-      "200K API requests/day",
+      "90-day event history",
       "Priority support (24hr)",
     ],
     cta: "Subscribe",
   },
 
   growth: {
-    name: "Growth",
+    name: "Scale",
     price: 149,
-    earlyAdopterPrice: 99, // Early adopter monthly
-    annualPrice: 125, // ~20% savings vs monthly ($1,500/yr)
-    annualEarlyAdopterPrice: 83, // Early adopter annual ($990/yr)
-    annualTotal: 990, // Total billed annually (early adopter)
+    earlyAdopterPrice: 149, // No early adopter discount for Scale
+    annualPrice: 124, // ~17% savings vs monthly ($1,490/yr)
+    annualEarlyAdopterPrice: 124, // Same as regular annual
+    annualTotal: 1490, // Total billed annually
     period: "/month",
-    description: "Add automation & behavioral targeting",
+    description: "Full automation + event tracking",
     dashboardAccess: true,
 
-    // Resource Limits
-    maxContacts: 100_000,
+    // Resource Limits (2026 model: unlimited contacts)
+    maxContacts: -1, // Unlimited contacts
     maxMembers: -1, // Unlimited
     maxAwsAccounts: -1, // Unlimited
     aiMessages: 1000,
     bulkBatchSize: 10_000,
+
+    // Event-Based Pricing Limits
+    maxEvents: 1_000_000, // 1M events/month
+    maxWorkflows: -1, // Unlimited workflows
+    eventRetentionDays: 365, // 1-year retention
 
     // Feature Access
     features: {
@@ -206,7 +230,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       events: true, // Behavioral tracking
       advancedSegments: true, // Event-based segments
       customRetention: false,
-      prioritySLA: false,
+      prioritySLA: true, // Priority support SLA
     },
 
     // Rate Limits
@@ -217,36 +241,41 @@ export const PLANS: Record<PlanId, PlanConfig> = {
 
     // Display
     featureList: [
-      "100,000 contacts",
-      "Everything in Pro",
-      "Workflows (visual automation)",
+      "Unlimited contacts",
+      "1,000,000 events/month",
+      "Everything in Growth",
+      "Unlimited workflows",
       "Event tracking (behavioral triggers)",
       "Advanced segments (event-based)",
       "Multi-tenant orchestration",
       "1,000 AI messages per month",
       "Unlimited AWS accounts",
-      "500K API requests/day",
-      "1 year event retention",
-      "Dedicated support",
+      "1-year event history",
+      "Priority support + SLA",
     ],
     cta: "Subscribe",
   },
 
   scale: {
-    name: "Scale",
+    name: "Enterprise",
     price: 299,
-    annualPrice: 250, // ~20% savings vs monthly ($3,000/yr)
+    annualPrice: 250, // ~17% savings vs monthly ($2,990/yr)
     annualTotal: 2990, // Total billed annually
     period: "/month",
-    description: "High volume with custom retention",
+    description: "Enterprise with custom limits",
     dashboardAccess: true,
 
-    // Resource Limits
-    maxContacts: 500_000,
+    // Resource Limits (2026 model: unlimited contacts)
+    maxContacts: -1, // Unlimited contacts
     maxMembers: -1, // Unlimited
     maxAwsAccounts: -1, // Unlimited
-    aiMessages: 1000,
+    aiMessages: 2000,
     bulkBatchSize: 50_000,
+
+    // Event-Based Pricing Limits
+    maxEvents: -1, // Unlimited events
+    maxWorkflows: -1, // Unlimited workflows
+    eventRetentionDays: 730, // 2-year retention
 
     // Feature Access
     features: {
@@ -269,14 +298,16 @@ export const PLANS: Record<PlanId, PlanConfig> = {
 
     // Display
     featureList: [
-      "500,000 contacts",
-      "Everything in Growth",
+      "Unlimited contacts",
+      "Unlimited events",
+      "Everything in Scale",
+      "Unlimited workflows",
       "Custom retention policies",
-      "2 year event retention",
+      "2-year event history",
       "1M API requests/day",
-      "Priority support + SLA",
+      "Dedicated support + SLA",
     ],
-    cta: "Subscribe",
+    cta: "Contact Sales",
   },
 } as const;
 
@@ -553,4 +584,143 @@ export function getBatchSizeLimit(planId: PlanId | string): number {
 export function getAiMessageLimit(planId: PlanId | string): number {
   const plan = PLANS[planId as PlanId];
   return plan?.aiMessages ?? 50;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVENT LIMITS (2026 Event-Based Pricing)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get the monthly event limit for a plan
+ * Returns -1 for unlimited
+ */
+export function getEventLimit(planId: PlanId | string): number {
+  const plan = PLANS[planId as PlanId];
+  return plan?.maxEvents ?? 50_000; // Default to Starter limit
+}
+
+/**
+ * Get the workflow limit for a plan
+ * Returns -1 for unlimited
+ */
+export function getWorkflowLimit(planId: PlanId | string): number {
+  const plan = PLANS[planId as PlanId];
+  return plan?.maxWorkflows ?? 5; // Default to Starter limit
+}
+
+/**
+ * Get the event retention period in days for a plan
+ */
+export function getEventRetentionDays(planId: PlanId | string): number {
+  const plan = PLANS[planId as PlanId];
+  return plan?.eventRetentionDays ?? 30; // Default to Starter retention
+}
+
+/**
+ * Check if an organization can ingest more events based on their plan
+ */
+export function canIngestEvent(
+  planId: PlanId | string,
+  currentCount: number
+): boolean {
+  const limit = getEventLimit(planId);
+  if (limit === -1) {
+    return true; // Unlimited
+  }
+  // Allow up to 125% of limit (25% grace period) before hard block
+  return currentCount < limit * 1.25;
+}
+
+/**
+ * Get event usage threshold status based on current usage
+ */
+export function getEventUsageThreshold(
+  planId: PlanId | string,
+  currentCount: number
+): "normal" | "warning" | "critical" | "exceeded" {
+  const limit = getEventLimit(planId);
+  if (limit === -1) {
+    return "normal"; // Unlimited
+  }
+
+  const percentUsed = (currentCount / limit) * 100;
+
+  if (percentUsed >= 125) {
+    return "exceeded"; // 125%+ - hard block
+  }
+  if (percentUsed >= 100) {
+    return "critical"; // 100-125% - banner + email
+  }
+  if (percentUsed >= 80) {
+    return "warning"; // 80-100% - dashboard warning
+  }
+  return "normal";
+}
+
+/**
+ * Get event limit message for display
+ */
+export function getEventLimitMessage(
+  planId: PlanId | string,
+  currentCount: number
+): string {
+  const plan = PLANS[planId as PlanId];
+  if (!plan) {
+    return "You've reached your event limit.";
+  }
+
+  const limit = plan.maxEvents;
+  if (limit === -1) {
+    return ""; // No limit message needed
+  }
+
+  const threshold = getEventUsageThreshold(planId, currentCount);
+  const remaining = Math.max(0, limit - currentCount);
+  const percentUsed = Math.round((currentCount / limit) * 100);
+
+  switch (threshold) {
+    case "exceeded":
+      return `Event limit exceeded (${percentUsed}% used). Upgrade to continue ingesting events.`;
+    case "critical":
+      return `You've reached your monthly event limit of ${limit.toLocaleString()}. Resets on the 1st.`;
+    case "warning":
+      return `${remaining.toLocaleString()} events remaining (${100 - percentUsed}% left). Resets on the 1st.`;
+    default:
+      return "";
+  }
+}
+
+/**
+ * Check if an organization can add more workflows based on their plan
+ */
+export function canAddWorkflow(
+  planId: PlanId | string,
+  currentCount: number
+): boolean {
+  const limit = getWorkflowLimit(planId);
+  if (limit === -1) {
+    return true; // Unlimited
+  }
+  return currentCount < limit;
+}
+
+/**
+ * Get workflow limit message for display
+ */
+export function getWorkflowLimitMessage(planId: PlanId | string): string {
+  const plan = PLANS[planId as PlanId];
+  if (!plan) {
+    return "You've reached your workflow limit.";
+  }
+
+  const limit = plan.maxWorkflows;
+  if (limit === -1) {
+    return ""; // No limit message needed
+  }
+
+  if (limit <= 5) {
+    return `Your ${plan.name} plan includes ${limit} workflows. Upgrade to Growth for 25 workflows.`;
+  }
+
+  return `Your ${plan.name} plan includes up to ${limit} workflows. Upgrade for unlimited.`;
 }

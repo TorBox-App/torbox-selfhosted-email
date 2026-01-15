@@ -511,3 +511,214 @@ describe("resendConfirmation", () => {
     expect(result.error).toContain("Topic not found");
   });
 });
+
+// Organization isolation test data
+const otherOrganization = {
+  id: "test-pref-org-other",
+  name: "Other Test Org",
+  slug: "other-pref-test-org",
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
+};
+
+const otherOrgTopic = {
+  id: "test-pref-topic-other-org",
+  organizationId: otherOrganization.id,
+  name: "Other Org Topic",
+  slug: "other-org-topic",
+  description: "Topic in a different organization",
+  public: true,
+  doubleOptIn: false,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: testUser.id,
+};
+
+const otherOrgContact = {
+  id: "test-pref-contact-other-org",
+  organizationId: otherOrganization.id,
+  email: "other-subscriber@example.com",
+  emailHash: "other-pref-contact-hash",
+  status: "active",
+  properties: {},
+  emailsSent: 0,
+  emailsOpened: 0,
+  emailsClicked: 0,
+  smsSent: 0,
+  smsClicked: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+describe("Organization isolation", () => {
+  beforeAll(async () => {
+    // Insert other organization
+    await db
+      .insert(organization)
+      .values(otherOrganization)
+      .onConflictDoUpdate({
+        target: organization.id,
+        set: { name: otherOrganization.name },
+      });
+
+    // Insert topic in other org
+    await db
+      .insert(topic)
+      .values(otherOrgTopic)
+      .onConflictDoUpdate({
+        target: topic.id,
+        set: { updatedAt: new Date() },
+      });
+
+    // Insert contact in other org
+    await db
+      .insert(contact)
+      .values(otherOrgContact)
+      .onConflictDoUpdate({
+        target: contact.id,
+        set: { updatedAt: new Date() },
+      });
+  });
+
+  afterAll(async () => {
+    await db
+      .delete(contactTopic)
+      .where(eq(contactTopic.contactId, otherOrgContact.id));
+    await db.delete(contact).where(eq(contact.id, otherOrgContact.id));
+    await db.delete(topic).where(eq(topic.id, otherOrgTopic.id));
+    await db
+      .delete(organization)
+      .where(eq(organization.id, otherOrganization.id));
+  });
+
+  it("should not allow subscribing to topics from another organization", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    // Try to subscribe to a topic from the other organization
+    const result = await updatePreferences(
+      token,
+      testContact.id,
+      testOrganization.id,
+      { [otherOrgTopic.id]: true }
+    );
+
+    // The action should succeed but should not create a subscription
+    // because the topic doesn't belong to the token's organization
+    expect(result.success).toBe(true);
+
+    // Verify no subscription was created to the other org's topic
+    const subscriptions = await db
+      .select()
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.contactId, testContact.id),
+          eq(contactTopic.topicId, otherOrgTopic.id)
+        )
+      );
+
+    expect(subscriptions).toHaveLength(0);
+  });
+
+  it("should not allow token from one org to modify contact in another org", async () => {
+    // Generate token for testContact in testOrganization
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    // Try to update preferences for a different organization
+    const result = await updatePreferences(
+      token,
+      testContact.id,
+      otherOrganization.id, // Different org!
+      { [otherOrgTopic.id]: true }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Invalid token");
+  });
+
+  it("should not allow contact from one org to use another org's token", async () => {
+    // Generate token for otherOrgContact in otherOrganization
+    const otherToken = await generateUnsubscribeToken(
+      otherOrgContact.id,
+      otherOrganization.id
+    );
+
+    // Try to use it with testOrganization
+    const result = await updatePreferences(
+      otherToken,
+      otherOrgContact.id,
+      testOrganization.id, // Wrong org for this token
+      { [testRegularTopic.id]: true }
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Invalid token");
+  });
+
+  it("should not allow resending confirmation for topic in another org", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    // Try to resend confirmation for a topic in another organization
+    const result = await resendConfirmation(
+      token,
+      testContact.id,
+      testOrganization.id,
+      otherOrgTopic.id // Topic from other org
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Topic not found");
+  });
+
+  it("should isolate subscriptions between organizations", async () => {
+    // Subscribe testContact to testRegularTopic
+    const token1 = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+    await updatePreferences(token1, testContact.id, testOrganization.id, {
+      [testRegularTopic.id]: true,
+    });
+
+    // Subscribe otherOrgContact to otherOrgTopic
+    const token2 = await generateUnsubscribeToken(
+      otherOrgContact.id,
+      otherOrganization.id
+    );
+    await updatePreferences(
+      token2,
+      otherOrgContact.id,
+      otherOrganization.id,
+      { [otherOrgTopic.id]: true }
+    );
+
+    // Verify testContact's subscriptions don't include other org's topics
+    const testContactSubs = await db
+      .select()
+      .from(contactTopic)
+      .where(eq(contactTopic.contactId, testContact.id));
+
+    const testContactTopicIds = testContactSubs.map((s) => s.topicId);
+    expect(testContactTopicIds).not.toContain(otherOrgTopic.id);
+
+    // Verify otherOrgContact's subscriptions don't include test org's topics
+    const otherContactSubs = await db
+      .select()
+      .from(contactTopic)
+      .where(eq(contactTopic.contactId, otherOrgContact.id));
+
+    const otherContactTopicIds = otherContactSubs.map((s) => s.topicId);
+    expect(otherContactTopicIds).not.toContain(testRegularTopic.id);
+    expect(otherContactTopicIds).not.toContain(testDoubleOptInTopic.id);
+  });
+});

@@ -71,6 +71,12 @@ const EVENT_CONFIG: Record<
     color: "text-slate-600",
     bgColor: "bg-slate-100",
   },
+  custom_event: {
+    icon: Zap,
+    label: "Event",
+    color: "text-purple-600",
+    bgColor: "bg-purple-100",
+  },
 };
 
 // Status dot configuration for message events
@@ -315,7 +321,7 @@ function TimelineEventRow({
 
   const Icon = config.icon;
 
-  // Build detail text and link for workflow events
+  // Build detail text and link for workflow events and custom events
   let detailText: string | null = null;
   let detailLink: string | null = null;
 
@@ -328,6 +334,12 @@ function TimelineEventRow({
     if (event.eventName && event.type === "workflow_started") {
       detailText = `${event.workflowName} (${event.eventName})`;
     }
+  }
+
+  // For custom events, show the event name as detail text and link to events page
+  if (event.type === "custom_event" && event.eventName) {
+    detailText = event.eventName;
+    detailLink = `/${orgSlug}/events?eventName=${encodeURIComponent(event.eventName)}`;
   }
 
   return (
@@ -369,12 +381,12 @@ function TimelineEventRow({
           </div>
         )}
 
-        {/* Show event data preview for workflow triggers */}
+        {/* Show event data preview for workflow triggers and custom events */}
         {event.eventData &&
           Object.keys(event.eventData).length > 0 &&
-          event.type === "workflow_started" && (
+          (event.type === "workflow_started" || event.type === "custom_event") && (
             <div className="mt-1 flex items-center gap-1">
-              <Zap className="h-3 w-3 text-amber-500" />
+              <Zap className={cn("h-3 w-3", event.type === "custom_event" ? "text-purple-500" : "text-amber-500")} />
               <span className="truncate text-muted-foreground text-xs">
                 {Object.entries(event.eventData)
                   .slice(0, 2)

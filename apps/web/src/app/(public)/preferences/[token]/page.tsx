@@ -36,7 +36,13 @@ export async function generateMetadata({
       description: topicSettings.preferenceCenterDescription,
     })
     .from(organization)
-    .leftJoin(topicSettings, eq(organization.id, topicSettings.organizationId))
+    .leftJoin(
+      topicSettings,
+      and(
+        eq(organization.id, topicSettings.organizationId),
+        eq(topicSettings.organizationId, payload.oid) // defense in depth
+      )
+    )
     .where(eq(organization.id, payload.oid))
     .limit(1);
 
@@ -110,6 +116,7 @@ export default async function PreferencesPage({
   }
 
   // Load organization with branding and topic settings (single query with left join)
+  // Join condition includes explicit org check for defense in depth
   const [orgWithSettings] = await db
     .select({
       name: organization.name,
@@ -119,7 +126,13 @@ export default async function PreferencesPage({
       preferenceCenterDescription: topicSettings.preferenceCenterDescription,
     })
     .from(organization)
-    .leftJoin(topicSettings, eq(organization.id, topicSettings.organizationId))
+    .leftJoin(
+      topicSettings,
+      and(
+        eq(organization.id, topicSettings.organizationId),
+        eq(topicSettings.organizationId, organizationId) // defense in depth
+      )
+    )
     .where(eq(organization.id, organizationId))
     .limit(1);
 

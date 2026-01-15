@@ -5,6 +5,7 @@ import { auth } from "@wraps/auth";
 import {
   batchSend,
   contact,
+  contactEvent,
   contactTopic,
   db,
   messageSend,
@@ -1172,7 +1173,8 @@ export type TimelineEventType =
   | "workflow_started"
   | "workflow_completed"
   | "workflow_failed"
-  | "contact_created";
+  | "contact_created"
+  | "custom_event"; // Custom events tracked from SDK
 
 export type MessageStatusTimestamps = {
   sentAt?: Date | null;
@@ -1370,6 +1372,35 @@ export async function getContactTimeline(
           ...baseEvent,
         });
       }
+    }
+
+    // Fetch custom events for this contact
+    const customEvents = await db
+      .select({
+        id: contactEvent.id,
+        eventName: contactEvent.eventName,
+        eventData: contactEvent.eventData,
+        createdAt: contactEvent.createdAt,
+      })
+      .from(contactEvent)
+      .where(
+        and(
+          eq(contactEvent.contactId, contactId),
+          eq(contactEvent.organizationId, organizationId)
+        )
+      )
+      .orderBy(desc(contactEvent.createdAt))
+      .limit(50);
+
+    // Convert custom events to timeline events
+    for (const customEvent of customEvents) {
+      events.push({
+        id: customEvent.id,
+        type: "custom_event",
+        timestamp: customEvent.createdAt,
+        eventName: customEvent.eventName,
+        eventData: customEvent.eventData as Record<string, unknown> | null,
+      });
     }
 
     // Sort all events by timestamp descending
