@@ -2,7 +2,8 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
 import { AwsConnectStep } from "./components/aws-connect-step";
@@ -15,10 +16,10 @@ import { WelcomeStep } from "./components/welcome-step";
 
 const STEPS = [
   { id: 1, title: "Welcome", component: WelcomeStep },
-  { id: 2, title: "Install CLI", component: CliInstallStep },
-  { id: 3, title: "Connect AWS", component: AwsConnectStep },
-  { id: 4, title: "First Deployment", component: DeployStep },
-  { id: 5, title: "Choose Plan", component: BillingStep },
+  { id: 2, title: "Choose Plan", component: BillingStep },
+  { id: 3, title: "Install CLI", component: CliInstallStep },
+  { id: 4, title: "Connect AWS", component: AwsConnectStep },
+  { id: 5, title: "First Deployment", component: DeployStep },
   { id: 6, title: "Success", component: SuccessStep },
 ];
 
@@ -88,6 +89,26 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       localStorage.setItem(`onboarding_interval_${orgSlug}`, intervalParam);
     }
   }, [orgSlug, searchParams]);
+
+  // Handle returning from Stripe checkout with subscribed=true
+  const hasShownSubscribedToast = useRef(false);
+  useEffect(() => {
+    if (!isInitialized || hasShownSubscribedToast.current) {
+      return;
+    }
+
+    const subscribed = searchParams.get("subscribed");
+    if (subscribed === "true") {
+      hasShownSubscribedToast.current = true;
+      toast.success(
+        "Payment successful! Let's set up your AWS infrastructure."
+      );
+      // Advance to CLI install step (step 3) if on billing step
+      if (currentStep === 2) {
+        setCurrentStep(3);
+      }
+    }
+  }, [searchParams, isInitialized, currentStep]);
 
   // Save step to localStorage
   useEffect(() => {

@@ -17,11 +17,11 @@ import {
 } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
 import {
+  type BillingInterval,
   getAnnualTotal,
   getPriceByInterval,
   hasEarlyAdopterPricing,
   PLANS,
-  type BillingInterval,
   type PlanId,
 } from "@/lib/plans";
 
@@ -49,8 +49,7 @@ export function BillingStep({
   const initialPlan: PlanId =
     (planParam && ["starter", "pro", "growth", "scale"].includes(planParam)
       ? planParam
-      : storedPlan &&
-          ["starter", "pro", "growth", "scale"].includes(storedPlan)
+      : storedPlan && ["starter", "pro", "growth", "scale"].includes(storedPlan)
         ? storedPlan
         : null) ?? "starter";
 
@@ -80,18 +79,14 @@ export function BillingStep({
     setIsLoading(true);
 
     try {
-      // Mark onboarding complete before redirecting to Stripe
-      await fetch(`/api/${orgSlug}/onboarding/complete`, {
-        method: "POST",
-      });
-
       // Start Stripe checkout for selected plan
+      // After successful payment, user will return to onboarding to complete AWS setup
       const result = await authClient.subscription.upgrade({
         plan: selectedPlan,
         annual: billingInterval === "annual",
         referenceId: organizationId,
-        successUrl: `${window.location.origin}/${orgSlug}/emails?subscribed=true`,
-        cancelUrl: `${window.location.origin}/${orgSlug}/onboarding?step=5&plan=${selectedPlan}&interval=${billingInterval}`,
+        successUrl: `${window.location.origin}/${orgSlug}/onboarding?step=3&subscribed=true`,
+        cancelUrl: `${window.location.origin}/${orgSlug}/onboarding?step=2&plan=${selectedPlan}&interval=${billingInterval}`,
       });
 
       if (result.error) {
@@ -145,7 +140,8 @@ export function BillingStep({
               </span>
               {hasEarlyAdopterPricing(plan) && (
                 <span className="ml-1 text-muted-foreground line-through">
-                  ${billingInterval === "annual" ? plan.annualPrice : plan.price}
+                  $
+                  {billingInterval === "annual" ? plan.annualPrice : plan.price}
                 </span>
               )}
               <span className="text-muted-foreground">/mo</span>
