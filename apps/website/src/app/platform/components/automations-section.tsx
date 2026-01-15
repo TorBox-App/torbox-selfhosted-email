@@ -4,7 +4,6 @@ import {
   Clock,
   GitBranch,
   MousePointerClick,
-  Play,
   Sparkles,
   Zap,
 } from "lucide-react";
@@ -69,13 +68,6 @@ export function DashboardAutomationsSection() {
               Automate Your Growth
             </h2>
           </div>
-          <Badge
-            className="ml-2 bg-blue-500/10 text-blue-600 dark:text-blue-400"
-            variant="secondary"
-          >
-            <Play className="mr-1 size-3" />
-            Coming Soon
-          </Badge>
         </motion.div>
 
         {/* Split layout: Content left, screenshot right (flipped from Ch. 2) */}
@@ -127,23 +119,20 @@ export function DashboardAutomationsSection() {
               ))}
             </div>
 
-            {/* Growth tier hint */}
+            {/* Scale tier hint */}
             <motion.div
               animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4"
+              className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4"
               initial={{ opacity: 0 }}
               transition={{ duration: 0.5, delay: 0.8 }}
             >
               <p className="text-sm">
-                <span className="font-medium text-blue-600 dark:text-blue-400">
-                  Growth ($149/mo):
+                <span className="font-medium text-orange-600 dark:text-orange-400">
+                  Scale ($149/mo):
                 </span>{" "}
                 <span className="text-muted-foreground">
-                  Workflows, event tracking, and advanced segments
+                  Unlimited workflows, event tracking, and advanced segments
                 </span>
-              </p>
-              <p className="mt-2 text-muted-foreground text-xs">
-                Currently in development. Join the waitlist to get early access.
               </p>
             </motion.div>
           </motion.div>
@@ -156,9 +145,9 @@ export function DashboardAutomationsSection() {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             {/* Background glow */}
-            <div className="absolute -inset-4 rounded-3xl bg-blue-500/10 blur-2xl opacity-50" />
+            <div className="absolute -inset-4 rounded-3xl bg-orange-500/10 blur-2xl opacity-50" />
 
-            <div className="relative overflow-hidden rounded-2xl border-2 border-blue-500/20 bg-card shadow-2xl">
+            <div className="relative overflow-hidden rounded-2xl border-2 border-orange-500/20 bg-card shadow-2xl">
               {/* Light mode image */}
               <img
                 alt="Workflow Builder - Light Mode"
@@ -175,16 +164,6 @@ export function DashboardAutomationsSection() {
                 loading="lazy"
                 src={assetUrl("automations-builder-dark.avif")}
               />
-
-              {/* Coming soon overlay */}
-              <div className="absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-[1px]">
-                <div className="rounded-full border border-blue-500/30 bg-background/90 px-4 py-2 shadow-lg">
-                  <span className="flex items-center gap-2 font-medium text-blue-600 text-sm dark:text-blue-400">
-                    <Play className="size-4" />
-                    Preview — Coming Soon
-                  </span>
-                </div>
-              </div>
             </div>
           </motion.div>
         </div>

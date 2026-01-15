@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   ArrowRight,
   Calendar,
   Clock,
@@ -9,6 +10,7 @@ import {
   Eye,
   Filter,
   GitBranch,
+  Infinity,
   LayoutGrid,
   MousePointerClick,
   Palette,
@@ -26,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { assetUrl, cn } from "@/lib/utils";
 import { FadeIn, ScaleIn } from "./animations";
 
-type TabKey = "templates" | "broadcasts" | "automations";
+type TabKey = "templates" | "broadcasts" | "automations" | "events";
 
 const templateFeatures = [
   { icon: Sparkles, title: "AI-Powered", badge: "AI" },
@@ -50,6 +52,14 @@ const automationFeatures = [
   { icon: Clock, title: "Wait Steps" },
   { icon: GitBranch, title: "Conditions" },
   { icon: MousePointerClick, title: "Actions" },
+];
+
+const eventFeatures = [
+  { icon: Infinity, title: "Unlimited Contacts" },
+  { icon: Zap, title: "Custom Events" },
+  { icon: Activity, title: "Email Tracking", badge: "Free" },
+  { icon: Clock, title: "30d–1yr Retention" },
+  // { icon: Filter, title: "Segment Triggers", badge: "Pro" },
 ];
 
 function TemplatesContent() {
@@ -223,6 +233,170 @@ function AutomationsContent() {
   );
 }
 
+const eventWorkflowExamples = [
+  {
+    event: "user.signed_up",
+    workflow: "Welcome Series",
+    steps: ["Welcome email", "Wait 1 day", "Getting started tips", "Wait 3 days", "Feature highlight"],
+  },
+  {
+    event: "trial.started",
+    workflow: "Trial Onboarding",
+    steps: ["Quick start guide", "Wait 2 days", "Check: activated?", "If no → help email", "Day 12 → upgrade CTA"],
+  },
+  {
+    event: "order.completed",
+    workflow: "Post-Purchase",
+    steps: ["Order confirmation", "Wait 7 days", "Review request", "Wait 30 days", "Reorder reminder"],
+  },
+];
+
+function EventWorkflowCard({ example }: { example: typeof eventWorkflowExamples[0] }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border bg-background">
+      {/* Event trigger header */}
+      <div className="flex items-center gap-3 border-b bg-orange-500/5 px-4 py-3">
+        <div className="flex size-8 items-center justify-center rounded-full bg-orange-500">
+          <Zap className="size-4 text-white" />
+        </div>
+        <div>
+          <code className="font-mono font-semibold text-orange-500 text-sm">
+            {example.event}
+          </code>
+          <p className="text-muted-foreground text-xs">triggers</p>
+        </div>
+      </div>
+
+      {/* Workflow visualization */}
+      <div className="p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Workflow className="size-4 text-muted-foreground" />
+          <span className="font-medium text-sm">{example.workflow}</span>
+        </div>
+        <div className="space-y-2">
+          {example.steps.map((step, index) => (
+            <div className="flex items-center gap-2" key={step}>
+              <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                {index + 1}
+              </div>
+              <span className="text-muted-foreground text-xs">{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EventWorkflowExamples() {
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {eventWorkflowExamples.map((example) => (
+        <EventWorkflowCard example={example} key={example.event} />
+      ))}
+    </div>
+  );
+}
+
+function EventCodeExample() {
+  return (
+    <div className="mx-auto max-w-2xl overflow-hidden rounded-2xl border bg-zinc-950">
+      {/* Terminal header */}
+      <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900/50 px-4 py-2">
+        <div className="flex gap-1.5">
+          <div className="size-3 rounded-full bg-red-500/80" />
+          <div className="size-3 rounded-full bg-yellow-500/80" />
+          <div className="size-3 rounded-full bg-green-500/80" />
+        </div>
+        <span className="ml-2 font-mono text-zinc-500 text-xs">
+          your-app.ts
+        </span>
+      </div>
+      {/* Code content */}
+      <div className="p-4">
+        <pre className="font-mono text-sm leading-relaxed">
+          <span className="text-zinc-500">{"// Send an event when a user upgrades"}</span>
+          {"\n"}
+          <span className="text-purple-400">await</span>
+          <span className="text-zinc-300"> client.</span>
+          <span className="text-yellow-400">POST</span>
+          <span className="text-zinc-300">(</span>
+          <span className="text-green-400">'/v1/events/'</span>
+          <span className="text-zinc-300">, {"{"}</span>
+          {"\n"}
+          <span className="text-zinc-300">{"  "}body: {"{"}</span>
+          {"\n"}
+          <span className="text-zinc-300">{"    "}name: </span>
+          <span className="text-green-400">'plan.upgraded'</span>
+          <span className="text-zinc-300">,</span>
+          {"\n"}
+          <span className="text-zinc-300">{"    "}contactEmail: </span>
+          <span className="text-green-400">'jane@acme.co'</span>
+          <span className="text-zinc-300">,</span>
+          {"\n"}
+          <span className="text-zinc-300">{"    "}properties: {"{"} </span>
+          <span className="text-zinc-300">plan: </span>
+          <span className="text-green-400">'pro'</span>
+          <span className="text-zinc-300">{" }"}</span>
+          {"\n"}
+          <span className="text-zinc-300">{"  }"}</span>
+          {"\n"}
+          <span className="text-zinc-300">{"})"}</span>
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+function EventsContent() {
+  return (
+    <div className="space-y-8">
+      {/* SDK Code Example */}
+      <EventCodeExample />
+
+      {/* Divider with text */}
+      <div className="flex items-center gap-4">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-muted-foreground text-sm font-medium">triggers workflows like</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      {/* Event → Workflow Examples */}
+      <EventWorkflowExamples />
+
+      {/* Feature Pills */}
+      <div className="flex flex-wrap justify-center gap-3">
+        {eventFeatures.map((feature) => (
+          <div
+            className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+            key={feature.title}
+          >
+            <feature.icon className="size-4 text-orange-500" />
+            <span className="font-medium text-sm">{feature.title}</span>
+            {feature.badge && (
+              <Badge
+                className={cn(
+                  "text-xs",
+                  feature.badge === "Free"
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                    : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                )}
+                variant="secondary"
+              >
+                {feature.badge}
+              </Badge>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <p className="text-center text-muted-foreground text-sm">
+        Unlimited contacts on all plans. Events start at 50K/mo ($10/mo).
+      </p>
+    </div>
+  );
+}
+
 type GlowingTabProps = {
   tabs: { key: TabKey; label: string; icon: LucideIcon }[];
   activeTab: TabKey;
@@ -294,6 +468,7 @@ export function ProductTabbedSection() {
     { key: "templates", label: "Templates", icon: LayoutGrid },
     { key: "broadcasts", label: "Broadcasts", icon: Send },
     { key: "automations", label: "Automations", icon: Workflow },
+    { key: "events", label: "Events", icon: Activity },
   ];
 
   return (
@@ -333,6 +508,7 @@ export function ProductTabbedSection() {
           {activeTab === "templates" && <TemplatesContent />}
           {activeTab === "broadcasts" && <BroadcastsContent />}
           {activeTab === "automations" && <AutomationsContent />}
+          {activeTab === "events" && <EventsContent />}
         </div>
 
         {/* CTA */}

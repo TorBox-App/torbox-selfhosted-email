@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, Mail, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,13 @@ const tiers = [
   {
     name: "Starter",
     price: 10,
-    regularPrice: 19,
-    annualPrice: 8,
-    annualRegularPrice: 16,
-    annualTotal: 100,
-    contacts: "5,000",
+    annualPrice: 100,
+    events: "50,000",
+    workflows: "5",
+    retention: "30 days",
     description: "Templates + transactional email",
     features: [
+      "Unlimited contacts",
       "Unlimited templates",
       "50 AI generations/mo",
       "Basic broadcasts",
@@ -26,55 +26,49 @@ const tiers = [
       "1 AWS account",
     ],
     highlighted: false,
-    earlyAdopter: true,
     planId: "starter",
     ctaText: "Get Started",
   },
   {
-    name: "Pro",
-    price: 30,
-    regularPrice: 49,
-    annualPrice: 25,
-    annualRegularPrice: 41,
-    annualTotal: 300,
-    contacts: "25,000",
-    description: "Add audience management",
+    name: "Growth",
+    price: 49,
+    annualPrice: 490,
+    events: "250,000",
+    workflows: "25",
+    retention: "90 days",
+    description: "Add audience management & automation",
     features: [
       "Everything in Starter",
       "Topics & preference center",
       "Segments & targeting",
       "Scheduled campaigns",
+      "Workflow automations",
       "250 AI generations/mo",
       "3 AWS accounts",
     ],
     highlighted: true,
     popular: true,
-    earlyAdopter: true,
-    planId: "pro",
+    planId: "growth",
     ctaText: "Get Started",
   },
   {
-    name: "Growth",
-    price: 99,
-    regularPrice: 149,
-    annualPrice: 83,
-    annualRegularPrice: 125,
-    annualTotal: 990,
-    contacts: "100,000",
-    description: "Add automation & events",
+    name: "Scale",
+    price: 149,
+    annualPrice: 1490,
+    events: "1,000,000",
+    workflows: "Unlimited",
+    retention: "1 year",
+    description: "High-volume + advanced automation",
     features: [
-      "Everything in Pro",
-      "Workflow automations",
-      "Event tracking",
-      "Advanced segments",
+      "Everything in Growth",
+      // "Advanced event segments",
       "1,000 AI generations/mo",
       "Unlimited AWS accounts",
+      "Dedicated support",
     ],
     highlighted: false,
-    earlyAdopter: true,
-    comingSoon: true,
-    planId: "growth",
-    ctaText: "Request Early Access",
+    planId: "scale",
+    ctaText: "Get Started",
   },
 ];
 
@@ -85,10 +79,16 @@ export function DashboardPricingSection() {
     useState<BillingInterval>("monthly");
 
   const getCtaLink = (tier: (typeof tiers)[0]) => {
-    if (tier.comingSoon) {
-      return "mailto:jarod@wraps.dev?subject=Growth%20Plan%20Early%20Access";
+    const annual = billingInterval === "annual" ? "&annual=true" : "";
+    return `https://app.wraps.dev/auth?mode=signup&plan=${tier.planId}${annual}`;
+  };
+
+  const getDisplayPrice = (tier: (typeof tiers)[0]) => {
+    if (billingInterval === "annual") {
+      // Annual price per month (17% off)
+      return Math.round(tier.annualPrice / 12);
     }
-    return `https://app.wraps.dev/auth?mode=signup&plan=${tier.planId}&interval=${billingInterval}`;
+    return tier.price;
   };
 
   return (
@@ -115,18 +115,9 @@ export function DashboardPricingSection() {
           <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
             Simple, predictable pricing
           </h2>
-          <p className="mx-auto max-w-2xl text-muted-foreground">
-            Features unlock as you grow. No per-seat fees. No hidden costs.
+          <p className="mx-auto max-w-2xl text-muted-foreground mb-6">
+            Unlimited contacts. Gate on events. No per-seat fees.
           </p>
-        </motion.div>
-
-        {/* Billing Toggle */}
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="mb-10"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
           <BillingToggle
             onChange={setBillingInterval}
             value={billingInterval}
@@ -136,13 +127,6 @@ export function DashboardPricingSection() {
         {/* Pricing cards */}
         <div className="grid gap-6 lg:grid-cols-3">
           {tiers.map((tier, index) => {
-            const displayPrice =
-              billingInterval === "annual" ? tier.annualPrice : tier.price;
-            const regularPrice =
-              billingInterval === "annual"
-                ? tier.annualRegularPrice
-                : tier.regularPrice;
-
             return (
               <motion.div
                 animate={
@@ -155,21 +139,6 @@ export function DashboardPricingSection() {
                 key={tier.name}
                 transition={{ duration: 0.5, delay: 0.1 + index * 0.1 }}
               >
-                {/* Badges - top left */}
-                <div className="absolute top-4 left-4 flex gap-2">
-                  {tier.earlyAdopter && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-2 py-1 font-medium text-white text-xs">
-                      Early Adopter
-                    </span>
-                  )}
-                  {tier.comingSoon && (
-                    <span className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-1 font-medium text-blue-600 text-xs dark:text-blue-400">
-                      <Sparkles className="size-3" />
-                      Coming Soon
-                    </span>
-                  )}
-                </div>
-
                 {/* Popular Badge */}
                 {tier.popular && (
                   <div className="absolute top-4 right-4">
@@ -182,7 +151,7 @@ export function DashboardPricingSection() {
 
                 {/* Header */}
                 <div
-                  className={`border-b px-6 py-6 pt-14 ${
+                  className={`border-b px-6 py-6 ${
                     tier.highlighted ? "bg-orange-500/5" : "bg-muted/30"
                   }`}
                 >
@@ -194,21 +163,39 @@ export function DashboardPricingSection() {
                     {tier.name}
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="font-bold text-4xl">${displayPrice}</span>
-                    {regularPrice && (
-                      <span className="text-lg text-muted-foreground line-through">
-                        ${regularPrice}
-                      </span>
-                    )}
+                    <span className="font-bold text-4xl">
+                      ${getDisplayPrice(tier)}
+                    </span>
                     <span className="text-muted-foreground">/mo</span>
                   </div>
-                  {billingInterval === "annual" && (
+                  {billingInterval === "annual" ? (
                     <div className="mt-1 text-green-600 text-sm dark:text-green-400">
-                      ${tier.annualTotal} billed annually
+                      ${tier.annualPrice} billed annually (save 17%)
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-muted-foreground text-sm">
+                      or ${tier.annualPrice}/yr (save 17%)
                     </div>
                   )}
-                  <div className="mt-1 text-muted-foreground text-sm">
-                    {tier.contacts} contacts
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <div>
+                      <span className="block font-medium text-foreground">
+                        {tier.events}
+                      </span>
+                      events/mo
+                    </div>
+                    <div>
+                      <span className="block font-medium text-foreground">
+                        {tier.workflows}
+                      </span>
+                      workflows
+                    </div>
+                    <div>
+                      <span className="block font-medium text-foreground">
+                        {tier.retention}
+                      </span>
+                      history
+                    </div>
                   </div>
                   <p className="mt-3 text-muted-foreground text-sm">
                     {tier.description}
@@ -243,11 +230,7 @@ export function DashboardPricingSection() {
                   >
                     <a href={getCtaLink(tier)}>
                       {tier.ctaText}
-                      {tier.comingSoon ? (
-                        <Mail className="ml-2 size-4" />
-                      ) : (
-                        <ArrowRight className="ml-2 size-4" />
-                      )}
+                      <ArrowRight className="ml-2 size-4" />
                     </a>
                   </Button>
                 </div>
@@ -256,20 +239,37 @@ export function DashboardPricingSection() {
           })}
         </div>
 
-        {/* Early Adopter note */}
+        {/* Founding Member Program */}
         <motion.div
           animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-          className="mt-10 rounded-xl border border-green-200 bg-green-50 p-4 text-center dark:border-green-900 dark:bg-green-950"
+          className="mt-10 rounded-xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-900 dark:bg-orange-950"
           initial={{ opacity: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
         >
-          <p className="font-medium text-green-800 text-sm dark:text-green-200">
-            🎉 Early Adopter Pricing — Grandfathered forever.
-          </p>
-          <p className="mt-1 text-green-700 text-xs dark:text-green-300">
-            Sign up now and keep these rates even after prices increase. Your
-            rate stays locked for as long as you're a customer.
-          </p>
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <span className="text-xl">🚀</span>
+            <p className="font-semibold text-orange-800 dark:text-orange-200">
+              Founding Member Program — First 100 Customers
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 text-orange-700 text-sm dark:text-orange-300 max-w-lg mx-auto">
+            <div className="flex items-center gap-2">
+              <Check className="size-4 shrink-0" strokeWidth={2.5} />
+              <span>Direct Slack access to the founder</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="size-4 shrink-0" strokeWidth={2.5} />
+              <span>Input on roadmap priorities</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="size-4 shrink-0" strokeWidth={2.5} />
+              <span>Your logo on our website</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="size-4 shrink-0" strokeWidth={2.5} />
+              <span>Locked-in pricing for life</span>
+            </div>
+          </div>
         </motion.div>
 
         {/* Footer note */}

@@ -7,32 +7,60 @@ import { Button } from "@/components/ui/button";
 import { FadeIn } from "./animations";
 
 const comparisonFeatures = [
-  { feature: "CLI deployment", free: true, starter: true, pro: true },
-  { feature: "TypeScript SDK", free: true, starter: true, pro: true },
-  { feature: "Event tracking", free: true, starter: true, pro: true },
-  { feature: "Local console", free: true, starter: true, pro: true },
+  { feature: "CLI deployment", free: true, starter: true, growth: true },
+  { feature: "TypeScript SDK", free: true, starter: true, growth: true },
+  { feature: "Event tracking", free: true, starter: true, growth: true },
+  { feature: "Local console", free: true, starter: true, growth: true },
   {
     feature: "Email analytics",
     free: "Local",
     starter: true,
-    pro: true,
+    growth: true,
   },
-  { feature: "Wraps Platform", free: false, starter: true, pro: true },
-  { feature: "Contacts", free: false, starter: "5,000", pro: "25,000" },
-  { feature: "Templates", free: false, starter: "Unlimited", pro: "Unlimited" },
-  { feature: "AI generations", free: false, starter: "50/mo", pro: "250/mo" },
-  { feature: "Broadcasts", free: false, starter: true, pro: true },
+  { feature: "Wraps Platform", free: false, starter: true, growth: true },
   {
-    feature: "Scheduled broadcasts",
+    feature: "Events/month",
     free: false,
-    starter: false,
-    pro: true,
+    starter: "50K",
+    growth: "250K",
+    link: "/platform#events",
   },
-  { feature: "Topics", free: false, starter: false, pro: true },
-  { feature: "Segments", free: false, starter: false, pro: true },
-  { feature: "Preference center", free: false, starter: false, pro: true },
-  { feature: "AWS accounts", free: false, starter: "1", pro: "3" },
-  { feature: "Support", free: "GitHub", starter: "48hr", pro: "24hr" },
+  {
+    feature: "Event history",
+    free: false,
+    starter: "30 days",
+    growth: "90 days",
+    link: "/platform#events",
+  },
+  { feature: "Workflows", free: false, starter: "5", growth: "25" },
+  {
+    feature: "AI generations",
+    free: false,
+    starter: "50/mo",
+    growth: "250/mo",
+  },
+  {
+    feature: "Contacts",
+    free: false,
+    starter: "Unlimited",
+    growth: "Unlimited",
+  },
+  {
+    feature: "Templates",
+    free: false,
+    starter: "Unlimited",
+    growth: "Unlimited",
+  },
+  {
+    feature: "Team members",
+    free: false,
+    starter: "Unlimited",
+    growth: "Unlimited",
+  },
+  { feature: "Topics & segments", free: false, starter: false, growth: true },
+  { feature: "Preference center", free: false, starter: false, growth: true },
+  { feature: "AWS accounts", free: false, starter: "1", growth: "3" },
+  { feature: "Support", free: "GitHub", starter: "48hr", growth: "24hr" },
 ];
 
 // Premium background class - use this on all premium sections
@@ -140,7 +168,18 @@ function TableRow({
       initial={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3, delay: index * 0.03 }}
     >
-      <div className="text-sm">{row.feature}</div>
+      <div className="text-sm">
+        {row.link ? (
+          <a
+            className="underline decoration-muted-foreground/50 underline-offset-2 hover:decoration-foreground"
+            href={row.link}
+          >
+            {row.feature}
+          </a>
+        ) : (
+          row.feature
+        )}
+      </div>
       <div className="flex justify-center">
         {typeof row.free === "string" ? (
           <span className="text-muted-foreground text-xs sm:text-sm">
@@ -164,11 +203,11 @@ function TableRow({
         )}
       </div>
       <div className="flex justify-center">
-        {typeof row.pro === "string" ? (
+        {typeof row.growth === "string" ? (
           <span className="font-medium text-orange-500 text-xs sm:text-sm">
-            {row.pro}
+            {row.growth}
           </span>
-        ) : row.pro ? (
+        ) : row.growth ? (
           <Check className="size-5 text-green-500" />
         ) : (
           <X className="size-5 text-muted-foreground/30" />
@@ -202,12 +241,12 @@ export function UpgradeSection() {
       <div className="relative">
         {/* Diagonal background transition */}
         <div
-          className="absolute inset-0 bg-stone-100/50 dark:bg-white/[0.06]"
+          className="pointer-events-none absolute inset-0 bg-stone-100/50 dark:bg-white/[0.06]"
           style={{
             clipPath: "polygon(0 31%, 100% 10%, 100% 100%, 0 100%)",
           }}
         />
-        <div className="relative pb-8">
+        <div className="relative pb-2">
           <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-2xl" ref={tableRef}>
               <motion.div
@@ -235,9 +274,9 @@ export function UpgradeSection() {
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-orange-500 text-sm">
-                      Pro
+                      Growth
                     </span>
-                    <p className="text-muted-foreground text-xs">$30/mo</p>
+                    <p className="text-muted-foreground text-xs">$49/mo</p>
                   </div>
                 </div>
 
@@ -257,11 +296,11 @@ export function UpgradeSection() {
         </div>
 
         {/* CTA */}
-        <FadeIn className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button
               asChild
-              className="cursor-pointer border-green-500/50 bg-background text-green-700 hover:bg-green-500/10 dark:text-green-400"
+              className="border-green-500/50 bg-background text-green-700 hover:bg-green-500/10 dark:text-green-400"
               size="lg"
               variant="outline"
             >
@@ -269,7 +308,7 @@ export function UpgradeSection() {
             </Button>
             <Button
               asChild
-              className="cursor-pointer bg-orange-500 hover:bg-orange-600"
+              className="bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
               <a href="/platform">
@@ -278,7 +317,7 @@ export function UpgradeSection() {
               </a>
             </Button>
           </div>
-        </FadeIn>
+        </div>
 
         {/* Terminal transition */}
         <TerminalTransition />

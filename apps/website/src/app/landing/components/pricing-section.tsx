@@ -1,16 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { Check, Sparkles, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionWrapper } from "./section-card";
+import { BillingToggle } from "./billing-toggle";
+
+type BillingInterval = "monthly" | "annual";
 
 const plans = [
   {
     id: "cli",
     name: "CLI & SDK",
-    price: "$0",
-    regularPrice: null,
+    price: 0,
     period: "forever",
+    annualPrice: null,
     description: "Deploy and send emails with the command line",
     highlight: false,
     earlyAdopter: false,
@@ -30,18 +34,19 @@ const plans = [
   {
     id: "starter",
     name: "Starter",
-    price: "$10",
-    regularPrice: "$19",
-    period: "/month",
-    description: "Transactional email + simple broadcasts",
+    price: 10,
+    period: "/mo",
+    annualPrice: 100,
+    description: "Templates + transactional email",
     highlight: false,
-    earlyAdopter: true,
+    earlyAdopter: false,
     cta: "Subscribe",
     ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=starter",
     features: [
-      "5,000 contacts",
-      "Transactional + batch sending",
-      "Wraps Platform at wraps.dev",
+      "Unlimited contacts",
+      "50,000 events/month",
+      "5 active workflows",
+      "30-day event history",
       "Unlimited templates",
       "50 AI generations/month",
       "1 AWS account",
@@ -49,48 +54,48 @@ const plans = [
     ],
   },
   {
-    id: "pro",
-    name: "Pro",
-    price: "$30",
-    regularPrice: "$49",
-    period: "/month",
-    description: "Add audience management",
+    id: "growth",
+    name: "Growth",
+    price: 49,
+    period: "/mo",
+    annualPrice: 490,
+    description: "Add audience management & automation",
     highlight: true,
     popular: true,
-    earlyAdopter: true,
+    earlyAdopter: false,
     cta: "Subscribe",
-    ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=pro",
+    ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=growth",
     features: [
-      "25,000 contacts",
+      "Unlimited contacts",
+      "250,000 events/month",
+      "25 active workflows",
+      "90-day event history",
       "Everything in Starter",
-      "Topics (subscription management)",
-      "Segments (property-based targeting)",
-      "Campaigns (scheduled, targeted)",
-      "Preference center",
+      "Topics & preference center",
+      "Segments & targeting",
       "250 AI generations/month",
       "3 AWS accounts",
       "Priority support (24hr)",
     ],
   },
   {
-    id: "growth",
-    name: "Growth",
-    price: "$149",
-    regularPrice: null,
-    period: "/month",
-    description: "Add automation & behavioral targeting",
+    id: "scale",
+    name: "Scale",
+    price: 149,
+    period: "/mo",
+    annualPrice: 1490,
+    description: "High-volume + advanced automation",
     highlight: false,
     earlyAdopter: false,
-    comingSoon: true,
-    cta: "Coming Soon",
-    ctaLink: null,
+    cta: "Subscribe",
+    ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=scale",
     features: [
-      "100,000 contacts",
-      "Everything in Pro",
-      "Workflows (visual automation)",
-      "Event tracking (behavioral triggers)",
-      "Advanced segments (event-based)",
-      "Multi-tenant orchestration",
+      "Unlimited contacts",
+      "1,000,000 events/month",
+      "Unlimited workflows",
+      "1-year event history",
+      "Everything in Growth",
+      "Advanced event segments",
       "1,000 AI generations/month",
       "Unlimited AWS accounts",
       "Dedicated support",
@@ -99,6 +104,23 @@ const plans = [
 ];
 
 export function PricingSection() {
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
+
+  const getDisplayPrice = (plan: (typeof plans)[0]) => {
+    if (plan.annualPrice && billingInterval === "annual") {
+      return Math.round(plan.annualPrice / 12);
+    }
+    return plan.price;
+  };
+
+  const getCtaLink = (plan: (typeof plans)[0]) => {
+    if (!plan.ctaLink.startsWith("https://app.wraps.dev")) {
+      return plan.ctaLink;
+    }
+    const annual = billingInterval === "annual" ? "&annual=true" : "";
+    return `${plan.ctaLink}${annual}`;
+  };
+
   return (
     <SectionWrapper
       badge="Pricing"
@@ -106,6 +128,14 @@ export function PricingSection() {
       id="pricing"
       title="Simple, Transparent Pricing"
     >
+      {/* Billing Toggle */}
+      <div className="mb-8 flex justify-center">
+        <BillingToggle
+          onChange={setBillingInterval}
+          value={billingInterval}
+        />
+      </div>
+
       {/* Pricing Cards */}
       <div className="mb-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan) => (
@@ -132,9 +162,7 @@ export function PricingSection() {
               </div>
             )}
 
-            <div
-              className={`p-6 ${plan.earlyAdopter || plan.popular ? "pt-12" : ""}`}
-            >
+            <div className="p-6">
               <div className="mb-4">
                 <div className="mb-2 flex items-center gap-2">
                   {plan.id === "cli" && (
@@ -148,13 +176,19 @@ export function PricingSection() {
               </div>
 
               <div className="mb-4">
-                <span className="font-bold text-3xl">{plan.price}</span>
-                {plan.regularPrice && (
-                  <span className="ml-2 text-lg text-muted-foreground line-through">
-                    {plan.regularPrice}
-                  </span>
-                )}
+                <span className="font-bold text-3xl">${getDisplayPrice(plan)}</span>
                 <span className="text-muted-foreground">{plan.period}</span>
+                {plan.annualPrice && (
+                  billingInterval === "annual" ? (
+                    <div className="mt-1 text-green-600 text-sm">
+                      ${plan.annualPrice} billed annually (save 17%)
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-muted-foreground text-sm">
+                      or ${plan.annualPrice}/yr (save 17%)
+                    </div>
+                  )
+                )}
               </div>
 
               {plan.ctaLink ? (
@@ -164,7 +198,7 @@ export function PricingSection() {
                   size="default"
                   variant={plan.highlight ? "default" : "outline"}
                 >
-                  <a href={plan.ctaLink}>{plan.cta}</a>
+                  <a href={getCtaLink(plan)}>{plan.cta}</a>
                 </Button>
               ) : (
                 <Button
@@ -193,26 +227,42 @@ export function PricingSection() {
         ))}
       </div>
 
-      {/* Early Adopter note */}
-      <div className="mb-8 rounded-xl border border-green-200 bg-green-50 p-4 text-center dark:border-green-900 dark:bg-green-950">
-        <p className="font-medium text-green-800 text-sm dark:text-green-200">
-          Early Adopter Pricing - Lock in these rates before they increase.
-        </p>
-        <p className="mt-1 text-green-700 text-xs dark:text-green-300">
-          Prices will rise to $19/mo and $49/mo when we add SMS features. Your
-          rate stays locked forever.
-        </p>
+      {/* Founding Member Program */}
+      <div className="mb-8 rounded-xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-900 dark:bg-orange-950">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <span className="text-xl">🚀</span>
+          <p className="font-semibold text-orange-800 dark:text-orange-200">
+            Founding Member Program — First 100 Customers
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 text-orange-700 text-sm dark:text-orange-300 max-w-lg mx-auto">
+          <div className="flex items-center gap-2">
+            <Check className="size-4 shrink-0" strokeWidth={2.5} />
+            <span>Direct Slack access to the founder</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="size-4 shrink-0" strokeWidth={2.5} />
+            <span>Input on roadmap priorities</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="size-4 shrink-0" strokeWidth={2.5} />
+            <span>Your logo on our website</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="size-4 shrink-0" strokeWidth={2.5} />
+            <span>Locked-in pricing for life</span>
+          </div>
+        </div>
       </div>
 
-      {/* Scale tier note */}
+      {/* Enterprise note */}
       <p className="mb-8 text-center text-muted-foreground text-sm">
-        Need more? <strong className="text-foreground">Scale ($299/mo)</strong>{" "}
-        for 500K contacts with custom retention and priority SLA.{" "}
+        Need custom limits or on-prem deployment?{" "}
         <a
           className="text-primary hover:underline"
           href="mailto:support@wraps.dev"
         >
-          Contact us
+          Contact us for Enterprise
         </a>
       </p>
 
