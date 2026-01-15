@@ -2,6 +2,10 @@
 
 import { Cloud } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AwsDynamodb } from "@/components/ui/svgs/awsDynamodb";
+import { AwsEventbridge } from "@/components/ui/svgs/awsEventbridge";
+import { AwsLambda } from "@/components/ui/svgs/awsLambda";
+import { AwsSes } from "@/components/ui/svgs/awsSes";
 import { Docker } from "@/components/ui/svgs/docker";
 import { Nodejs } from "@/components/ui/svgs/nodejs";
 import { Pnpm } from "@/components/ui/svgs/pnpm";
@@ -95,24 +99,24 @@ const techCategories: TechCategory[] = [
     description: "Production-grade AWS services deployed to your account",
     technologies: [
       {
-        name: "AWS SES",
-        Icon: Cloud,
-        color: "#FF9900",
-      },
-      {
-        name: "DynamoDB",
-        Icon: Cloud,
+        name: "SES",
+        Icon: AwsSes,
         color: "#FF9900",
       },
       {
         name: "Lambda",
-        Icon: Cloud,
+        Icon: AwsLambda,
         color: "#FF9900",
       },
       {
         name: "EventBridge",
-        Icon: Cloud,
-        color: "#FF9900",
+        Icon: AwsEventbridge,
+        color: "#FF4F8B",
+      },
+      {
+        name: "DynamoDB",
+        Icon: AwsDynamodb,
+        color: "#527FFF",
       },
     ],
   },
@@ -172,7 +176,7 @@ const supportedPlatforms: Platform[] = [
   },
   {
     name: "AWS Lambda",
-    Icon: Cloud,
+    Icon: AwsLambda,
     description: "Native IAM role support",
   },
   {

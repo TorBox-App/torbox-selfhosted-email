@@ -34,7 +34,7 @@ const principles = [
   {
     icon: Key,
     title: "You Own It",
-    description: "Deploys to your AWS account. No vendor lock-in.",
+    description: "Production-ready infrastructure in your AWS account.",
   },
   {
     icon: CreditCard,

@@ -4,17 +4,23 @@ import {
   AlertTriangle,
   ArrowRight,
   Code2,
-  Database,
   Eye,
-  Mail,
   MousePointerClick,
-  Radio,
   Terminal,
   Users,
-  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { AwsDynamodbIcon } from "@/components/ui/svgs/awsDynamodbIcon";
+import { AwsEventbridgeIcon } from "@/components/ui/svgs/awsEventbridgeIcon";
+import { AwsLambdaIcon } from "@/components/ui/svgs/awsLambdaIcon";
+import { AwsSesIcon } from "@/components/ui/svgs/awsSesIcon";
+import { AwsSqsIcon } from "@/components/ui/svgs/awsSqsIcon";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export type ArchitectureTabKey = "send" | "track" | "deploy";
 
@@ -61,28 +67,30 @@ function IconBox({
   label?: string;
   compact?: boolean;
 }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <div
-        className={`flex aspect-square items-center justify-center rounded-full border-2 bg-background transition-all ${
-          compact ? "size-7" : "size-10"
-        } ${
-          highlighted
-            ? "border-orange-500 bg-orange-500/5 text-orange-500"
-            : "border-border text-muted-foreground"
-        }`}
-      >
-        <Icon className={compact ? "size-3.5" : "size-4"} />
-      </div>
-      {label && (
-        <span
-          className={`${compact ? "text-[9px]" : "text-[10px]"} ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
-        >
-          {label}
-        </span>
-      )}
+  const iconElement = (
+    <div
+      className={`flex aspect-square items-center justify-center rounded-full border-2 bg-background transition-all ${
+        compact ? "size-10" : "size-14"
+      } ${
+        highlighted
+          ? "border-orange-500 bg-orange-500/5 text-orange-500"
+          : "border-border text-muted-foreground"
+      }`}
+    >
+      <Icon className={compact ? "size-8" : "size-11"} />
     </div>
   );
+
+  if (label) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{iconElement}</TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return iconElement;
 }
 
 // Simple node component for external entities (Your App, Recipients)
@@ -118,7 +126,7 @@ function SimpleNode({
         <Icon className={compact ? "size-5" : "size-6"} />
       </div>
       <span
-        className={`font-medium ${compact ? "text-xs" : "text-xs"} ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
+        className={`font-medium text-xs ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
       >
         {label}
       </span>
@@ -154,7 +162,7 @@ function AWSAccountBox({
         Your AWS Account
       </div>
       <div
-        className={`flex flex-col rounded-xl border-2 border-muted-foreground/30 border-dashed bg-muted/10 ${compact ? "gap-2 p-3" : "gap-4 p-4"}`}
+        className={`flex flex-col items-center rounded-xl border-2 border-muted-foreground/30 border-dashed bg-muted/10 ${compact ? "gap-2 p-3" : "gap-4 p-4"}`}
       >
         {/* SES Box - Top Row */}
         <div
@@ -163,17 +171,17 @@ function AWSAccountBox({
         >
           <div
             className={`flex items-center justify-center rounded-lg border-2 transition-all ${
-              compact ? "h-9 w-9" : "h-12 w-12"
+              compact ? "h-12 w-12" : "h-16 w-16"
             } ${
               sesHighlighted
                 ? "border-orange-500 bg-orange-500/5 text-orange-500"
                 : "border-border bg-background text-muted-foreground"
             }`}
           >
-            <Mail className={compact ? "h-4 w-4" : "h-6 w-6"} />
+            <AwsSesIcon className={compact ? "h-9 w-9" : "h-14 w-14"} />
           </div>
           <span
-            className={`font-medium ${compact ? "text-xs" : "text-xs"} ${
+            className={`font-medium text-xs ${
               sesHighlighted ? "text-orange-500" : "text-muted-foreground"
             }`}
           >
@@ -183,50 +191,39 @@ function AWSAccountBox({
 
         {/* Wraps Infrastructure Box - Bottom Row */}
         <div
-          className={`flex flex-col items-center ${compact ? "gap-1" : "gap-2"}`}
+          className={`flex items-center rounded-lg border-2 transition-all ${
+            compact ? "gap-1.5 px-2 py-1.5" : "gap-2 px-3 py-2"
+          } ${
+            wrapsHighlighted
+              ? "border-orange-500 bg-orange-500/5"
+              : "border-border bg-background"
+          }`}
           ref={wrapsRef}
         >
-          <div
-            className={`flex items-center rounded-lg border-2 transition-all ${
-              compact ? "gap-1.5 px-2 py-1.5" : "gap-2 px-3 py-2"
-            } ${
-              wrapsHighlighted
-                ? "border-orange-500 bg-orange-500/5"
-                : "border-border bg-background"
-            }`}
-          >
-            <IconBox
-              compact={compact}
-              highlighted={wrapsHighlighted}
-              icon={Zap}
-              label="EB"
-            />
-            <IconBox
-              compact={compact}
-              highlighted={wrapsHighlighted}
-              icon={Radio}
-              label="SQS"
-            />
-            <IconBox
-              compact={compact}
-              highlighted={wrapsHighlighted}
-              icon={Code2}
-              label="λ"
-            />
-            <IconBox
-              compact={compact}
-              highlighted={wrapsHighlighted}
-              icon={Database}
-              label="DB"
-            />
-          </div>
-          <span
-            className={`font-medium ${compact ? "text-xs" : "text-xs"} ${
-              wrapsHighlighted ? "text-orange-500" : "text-muted-foreground"
-            }`}
-          >
-            Wraps
-          </span>
+          <IconBox
+            compact={compact}
+            highlighted={wrapsHighlighted}
+            icon={AwsEventbridgeIcon}
+            label="EventBridge"
+          />
+          <IconBox
+            compact={compact}
+            highlighted={wrapsHighlighted}
+            icon={AwsSqsIcon}
+            label="SQS"
+          />
+          <IconBox
+            compact={compact}
+            highlighted={wrapsHighlighted}
+            icon={AwsLambdaIcon}
+            label="Lambda"
+          />
+          <IconBox
+            compact={compact}
+            highlighted={wrapsHighlighted}
+            icon={AwsDynamodbIcon}
+            label="DynamoDB"
+          />
         </div>
       </div>
     </div>
@@ -246,13 +243,13 @@ function MobileNode({
   return (
     <div className="flex flex-col items-center gap-1">
       <div
-        className={`flex aspect-square size-12 items-center justify-center rounded-full border-2 ${
+        className={`flex aspect-square size-14 items-center justify-center rounded-full border-2 ${
           highlighted
             ? "border-orange-500 bg-orange-500/5 text-orange-500"
             : "border-border bg-background text-muted-foreground"
         }`}
       >
-        <Icon className="h-5 w-5" />
+        <Icon className="h-11 w-11" />
       </div>
       <span
         className={`text-xs ${highlighted ? "text-orange-500" : "text-muted-foreground"}`}
@@ -282,12 +279,16 @@ function MobileAWSBox({
       </span>
       <div className="flex items-center gap-3 rounded-xl border-2 border-muted-foreground/30 border-dashed bg-muted/10 px-4 py-3">
         {showSES && (
-          <MobileNode highlighted={sesHighlighted} icon={Mail} label="SES" />
+          <MobileNode
+            highlighted={sesHighlighted}
+            icon={AwsSesIcon}
+            label="SES"
+          />
         )}
         {showWraps && (
           <MobileNode
             highlighted={wrapsHighlighted}
-            icon={Database}
+            icon={AwsDynamodbIcon}
             label="Wraps"
           />
         )}
@@ -473,7 +474,7 @@ function ConnectionLines({
           {/* SES to Wraps (event tracking) */}
           <path
             className="animate-dash"
-            d={`M ${ses.x - nodeOffset} ${ses.y + 12} C ${ses.x - nodeOffset - 30} ${ses.y + 12}, ${wraps.x - wrapsXOffset + 15} ${ses.y + 30}, ${wraps.x - wrapsXOffset + 15} ${wraps.y - (compact ? 40 : 58)}`}
+            d={`M ${ses.x - nodeOffset} ${ses.y + 12} C ${ses.x - nodeOffset - 30} ${ses.y + 12}, ${wraps.x - wrapsXOffset + 10} ${ses.y + 10}, ${wraps.x - wrapsXOffset + 10} ${wraps.y - (compact ? 30 : 58)}`}
             fill="none"
             markerEnd="url(#arrowhead-orange)"
             opacity={0.6}
@@ -536,7 +537,7 @@ function ConnectionLines({
             className="animate-dash"
             d={createCurvedPath(
               { x: cli.x + nodeOffset, y: cli.y + 12 },
-              { x: wraps.x - wrapsXOffset, y: wraps.y - 12 },
+              { x: wraps.x - wrapsXOffset - (compact ? 40 : 60), y: wraps.y },
               0.5
             )}
             fill="none"
