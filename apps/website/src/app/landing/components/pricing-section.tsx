@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Check, Sparkles, Terminal } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { SectionWrapper } from "./section-card";
 import { BillingToggle } from "./billing-toggle";
+import { SectionWrapper } from "./section-card";
 
 type BillingInterval = "monthly" | "annual";
 
@@ -104,7 +104,8 @@ const plans = [
 ];
 
 export function PricingSection() {
-  const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
+  const [billingInterval, setBillingInterval] =
+    useState<BillingInterval>("monthly");
 
   const getDisplayPrice = (plan: (typeof plans)[0]) => {
     if (plan.annualPrice && billingInterval === "annual") {
@@ -130,10 +131,7 @@ export function PricingSection() {
     >
       {/* Billing Toggle */}
       <div className="mb-8 flex justify-center">
-        <BillingToggle
-          onChange={setBillingInterval}
-          value={billingInterval}
-        />
+        <BillingToggle onChange={setBillingInterval} value={billingInterval} />
       </div>
 
       {/* Pricing Cards */}
@@ -176,10 +174,12 @@ export function PricingSection() {
               </div>
 
               <div className="mb-4">
-                <span className="font-bold text-3xl">${getDisplayPrice(plan)}</span>
+                <span className="font-bold text-3xl">
+                  ${getDisplayPrice(plan)}
+                </span>
                 <span className="text-muted-foreground">{plan.period}</span>
-                {plan.annualPrice && (
-                  billingInterval === "annual" ? (
+                {plan.annualPrice &&
+                  (billingInterval === "annual" ? (
                     <div className="mt-1 text-green-600 text-sm">
                       ${plan.annualPrice} billed annually (save 17%)
                     </div>
@@ -187,8 +187,7 @@ export function PricingSection() {
                     <div className="mt-1 text-muted-foreground text-sm">
                       or ${plan.annualPrice}/yr (save 17%)
                     </div>
-                  )
-                )}
+                  ))}
               </div>
 
               {plan.ctaLink ? (

@@ -256,9 +256,7 @@ export function OrganizationSettingsBilling({
       </Card>
 
       {/* Event Usage */}
-      {organization.slug && (
-        <EventUsageCard orgSlug={organization.slug} />
-      )}
+      {organization.slug && <EventUsageCard orgSlug={organization.slug} />}
 
       {/* Upgrade Options */}
       {!isCancelled && currentPlan !== "growth" && (

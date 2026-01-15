@@ -5,7 +5,6 @@ import {
   type ColumnFiltersState,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   type SortingState,
@@ -15,7 +14,9 @@ import {
 import { Search, Zap } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -32,10 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
-import type { EventWithContact } from "@/lib/events";
-import type { DateRangePreset } from "@/lib/events";
+import type { DateRangePreset, EventWithContact } from "@/lib/events";
 import { createColumns } from "./columns";
 import { DateRangePicker } from "./date-range-picker";
 import { EventDetailSheet } from "./event-detail-sheet";
@@ -156,10 +154,7 @@ export function EventsTable({
     [orgSlug]
   );
 
-  const columns = useMemo(
-    () => createColumns(columnActions),
-    [columnActions]
-  );
+  const columns = useMemo(() => createColumns(columnActions), [columnActions]);
 
   const table = useReactTable({
     data: events,
@@ -198,10 +193,10 @@ export function EventsTable({
           <div className="relative max-w-sm flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              ref={searchInputRef}
               className="pl-9 pr-16"
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search events..."
+              ref={searchInputRef}
               value={searchInput}
             />
             <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 hidden sm:flex">

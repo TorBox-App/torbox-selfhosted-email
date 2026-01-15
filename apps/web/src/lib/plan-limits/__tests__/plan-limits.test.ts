@@ -152,7 +152,8 @@ describe("Plan Limits", () => {
 
       expect(result.allowed).toBe(true);
       expect(result.current).toBe(0);
-      expect(result.limit).toBeGreaterThan(0);
+      // Starter plan has unlimited contacts (-1) in the 2026 pricing model
+      expect(result.limit).toBe(-1);
     });
   });
 

@@ -73,7 +73,9 @@ export default async function EventsPage({
 
   const events = eventsResult.success ? eventsResult.events : [];
   const total = eventsResult.success ? eventsResult.total : 0;
-  const eventNames = eventNamesResult.success ? eventNamesResult.eventNames : [];
+  const eventNames = eventNamesResult.success
+    ? eventNamesResult.eventNames
+    : [];
 
   return (
     <>

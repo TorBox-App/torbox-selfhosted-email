@@ -43,9 +43,9 @@ export function DateRangePicker({
   onDateRangeChange,
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<DateRangePreset | undefined>(
-    preset
-  );
+  const [selectedPreset, setSelectedPreset] = useState<
+    DateRangePreset | undefined
+  >(preset);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(
     dateFrom || dateTo ? { from: dateFrom, to: dateTo } : undefined
   );
@@ -83,7 +83,7 @@ export function DateRangePicker({
   };
 
   const getDisplayValue = () => {
-    if (!selectedPreset && !dateRange) {
+    if (!(selectedPreset || dateRange)) {
       return "All time";
     }
 

@@ -1164,21 +1164,20 @@ describe("Segment Evaluator", () => {
         "suppressed",
       ];
 
-      it.each(emailStatuses)(
-        "should correctly filter by emailStatus: %s",
-        (status) => {
-          const contactWithStatus = {
-            ...baseContact,
-            emailStatus: status,
-          };
-          const filter: SegmentFilter = {
-            field: "emailStatus",
-            operator: "equals",
-            value: status,
-          };
-          expect(evaluateFilter(filter, contactWithStatus)).toBe(true);
-        }
-      );
+      it.each(
+        emailStatuses
+      )("should correctly filter by emailStatus: %s", (status) => {
+        const contactWithStatus = {
+          ...baseContact,
+          emailStatus: status,
+        };
+        const filter: SegmentFilter = {
+          field: "emailStatus",
+          operator: "equals",
+          value: status,
+        };
+        expect(evaluateFilter(filter, contactWithStatus)).toBe(true);
+      });
 
       it("should identify deliverable contacts (active only)", () => {
         const condition: FilterCondition = {

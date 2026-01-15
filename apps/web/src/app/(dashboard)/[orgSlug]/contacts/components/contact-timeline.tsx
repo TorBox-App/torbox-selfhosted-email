@@ -384,9 +384,17 @@ function TimelineEventRow({
         {/* Show event data preview for workflow triggers and custom events */}
         {event.eventData &&
           Object.keys(event.eventData).length > 0 &&
-          (event.type === "workflow_started" || event.type === "custom_event") && (
+          (event.type === "workflow_started" ||
+            event.type === "custom_event") && (
             <div className="mt-1 flex items-center gap-1">
-              <Zap className={cn("h-3 w-3", event.type === "custom_event" ? "text-purple-500" : "text-amber-500")} />
+              <Zap
+                className={cn(
+                  "h-3 w-3",
+                  event.type === "custom_event"
+                    ? "text-purple-500"
+                    : "text-amber-500"
+                )}
+              />
               <span className="truncate text-muted-foreground text-xs">
                 {Object.entries(event.eventData)
                   .slice(0, 2)

@@ -2,7 +2,7 @@
 // This file imports @wraps/db and must only be used in server components/actions
 
 import { contact, contactEvent } from "@wraps/db";
-import { eq, gte, ilike, lte, sql, type SQL } from "drizzle-orm";
+import { eq, gte, ilike, lte, type SQL, sql } from "drizzle-orm";
 import type { ListEventsOptions } from "./events";
 
 /**

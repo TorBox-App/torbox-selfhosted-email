@@ -2,12 +2,7 @@ import { db } from "@wraps/db";
 import { eventUsageMonthly } from "@wraps/db/schema/usage";
 import { and, eq, sql } from "drizzle-orm";
 import { getOrganizationPlanId } from "@/lib/organization";
-import {
-  PLANS,
-  type PlanId,
-  getEventLimit,
-  getEventUsageThreshold,
-} from "@/lib/plans";
+import { getEventLimit, getEventUsageThreshold } from "@/lib/plans";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PERIOD KEY HELPERS
@@ -100,7 +95,7 @@ export async function checkEventUsageLimit(organizationId: string): Promise<{
  */
 export async function incrementEventUsage(
   organizationId: string,
-  count: number = 1
+  count = 1
 ): Promise<number> {
   const periodKey = getEventUsagePeriodKey();
 

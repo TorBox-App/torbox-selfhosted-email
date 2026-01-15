@@ -28,9 +28,7 @@ type ColumnActions = {
 /**
  * Truncate and format JSON data for preview
  */
-function formatEventDataPreview(
-  data: Record<string, unknown> | null
-): string {
+function formatEventDataPreview(data: Record<string, unknown> | null): string {
   if (!data) return "-";
 
   const entries = Object.entries(data);
@@ -83,9 +81,7 @@ export function createColumns(
                   {formatRelativeTime(date)}
                 </span>
               </TooltipTrigger>
-              <TooltipContent>
-                {date.toLocaleString()}
-              </TooltipContent>
+              <TooltipContent>{date.toLocaleString()}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         );
@@ -97,7 +93,7 @@ export function createColumns(
       cell: ({ row }) => {
         const eventName = row.getValue("eventName") as string;
         return (
-          <Badge variant="secondary" className="font-mono text-xs">
+          <Badge className="font-mono text-xs" variant="secondary">
             {eventName}
           </Badge>
         );
@@ -108,9 +104,10 @@ export function createColumns(
       header: "Contact",
       cell: ({ row }) => {
         const event = row.original;
-        const displayName = event.contactFirstName || event.contactLastName
-          ? `${event.contactFirstName || ""} ${event.contactLastName || ""}`.trim()
-          : event.contactEmail;
+        const displayName =
+          event.contactFirstName || event.contactLastName
+            ? `${event.contactFirstName || ""} ${event.contactLastName || ""}`.trim()
+            : event.contactEmail;
 
         return (
           <Link

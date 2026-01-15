@@ -64,7 +64,10 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({
       current: usage.current,
       limit: usage.limit,
-      remaining: Math.max(0, usage.limit === -1 ? -1 : usage.limit - usage.current),
+      remaining: Math.max(
+        0,
+        usage.limit === -1 ? -1 : usage.limit - usage.current
+      ),
       percentUsed: usage.percentUsed,
       planId: usage.planId,
       threshold: usage.threshold,

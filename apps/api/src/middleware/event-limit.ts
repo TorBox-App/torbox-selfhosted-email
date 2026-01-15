@@ -10,13 +10,7 @@
  * - 125%: Hard block with 429 response
  */
 
-import {
-  and,
-  db,
-  eq,
-  eventUsageMonthly,
-  sqlExpr as sql,
-} from "@wraps/db";
+import { and, db, eq, eventUsageMonthly, sqlExpr as sql } from "@wraps/db";
 import { Elysia } from "elysia";
 
 import type { AuthContext } from "./auth";
@@ -62,7 +56,7 @@ async function getEventUsageCount(organizationId: string): Promise<number> {
  */
 export async function incrementEventUsage(
   organizationId: string,
-  count: number = 1
+  count = 1
 ): Promise<number> {
   const periodKey = getPeriodKey();
 
@@ -163,7 +157,10 @@ export const eventLimitMiddleware = new Elysia({ name: "event-limit" }).derive(
       }
     } catch (error) {
       // Re-throw limit exceeded errors
-      if (error instanceof Error && error.message.includes("event_limit_exceeded")) {
+      if (
+        error instanceof Error &&
+        error.message.includes("event_limit_exceeded")
+      ) {
         throw error;
       }
 
@@ -191,5 +188,7 @@ function getSecondsUntilNextMonth(): number {
  */
 function getNextMonthResetDate(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0)
+  );
 }

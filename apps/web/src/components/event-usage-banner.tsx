@@ -36,10 +36,8 @@ export function EventUsageBanner({ orgSlug }: EventUsageBannerProps) {
   const bgColors = {
     warning:
       "bg-amber-50 border-amber-200 dark:bg-amber-950/50 dark:border-amber-800",
-    critical:
-      "bg-red-50 border-red-200 dark:bg-red-950/50 dark:border-red-800",
-    exceeded:
-      "bg-red-100 border-red-300 dark:bg-red-950 dark:border-red-700",
+    critical: "bg-red-50 border-red-200 dark:bg-red-950/50 dark:border-red-800",
+    exceeded: "bg-red-100 border-red-300 dark:bg-red-950 dark:border-red-700",
   };
 
   const textColors = {
@@ -84,11 +82,11 @@ export function EventUsageBanner({ orgSlug }: EventUsageBannerProps) {
         )}
         {usage.threshold === "warning" && (
           <Button
+            aria-label="Dismiss warning"
             className="h-8 w-8 p-0"
             onClick={() => setDismissed(true)}
             size="sm"
             variant="ghost"
-            aria-label="Dismiss warning"
           >
             <X className="h-4 w-4" />
           </Button>

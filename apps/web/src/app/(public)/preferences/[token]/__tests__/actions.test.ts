@@ -695,12 +695,9 @@ describe("Organization isolation", () => {
       otherOrgContact.id,
       otherOrganization.id
     );
-    await updatePreferences(
-      token2,
-      otherOrgContact.id,
-      otherOrganization.id,
-      { [otherOrgTopic.id]: true }
-    );
+    await updatePreferences(token2, otherOrgContact.id, otherOrganization.id, {
+      [otherOrgTopic.id]: true,
+    });
 
     // Verify testContact's subscriptions don't include other org's topics
     const testContactSubs = await db

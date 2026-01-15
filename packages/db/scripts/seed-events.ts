@@ -49,7 +49,7 @@ const eventTypes = [
   {
     name: "order.completed",
     getData: () => ({
-      orderId: `ORD-${randomInt(10000, 99999)}`,
+      orderId: `ORD-${randomInt(10_000, 99_999)}`,
       total: randomInt(10, 500),
       currency: "USD",
       items: randomInt(1, 5),
@@ -130,7 +130,7 @@ const eventTypes = [
   {
     name: "cart.abandoned",
     getData: () => ({
-      cartId: `CART-${randomInt(10000, 99999)}`,
+      cartId: `CART-${randomInt(10_000, 99_999)}`,
       value: randomInt(20, 300),
       itemCount: randomInt(1, 4),
     }),
@@ -139,7 +139,12 @@ const eventTypes = [
     name: "support.ticket_opened",
     getData: () => ({
       ticketId: `TKT-${randomInt(1000, 9999)}`,
-      category: randomChoice(["billing", "technical", "feature_request", "bug"]),
+      category: randomChoice([
+        "billing",
+        "technical",
+        "feature_request",
+        "bug",
+      ]),
       priority: randomChoice(["low", "medium", "high"]),
     }),
   },
@@ -185,7 +190,9 @@ async function main() {
   });
 
   if (contacts.length === 0) {
-    console.error("No contacts found for this organization. Create some first.");
+    console.error(
+      "No contacts found for this organization. Create some first."
+    );
     process.exit(1);
   }
 
