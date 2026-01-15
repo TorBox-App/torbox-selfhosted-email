@@ -16,7 +16,6 @@ const eventTypes = [
     icon: Zap,
     title: "Custom Events",
     description: "Track any action: signups, purchases, page views, button clicks",
-    example: 'wraps.track("order.completed", { orderId: "123" })',
     counted: true,
   },
   {
@@ -27,6 +26,14 @@ const eventTypes = [
     counted: false,
   },
 ];
+
+const customEventCode = `await client.POST('/v1/events/', {
+  body: {
+    name: 'order.completed',
+    contactEmail: 'jane@acme.co',
+    properties: { orderId: '123' }
+  }
+})`;
 
 const benefits = [
   {
@@ -122,11 +129,17 @@ export function DashboardEventsSection() {
                 <div className="rounded-lg bg-zinc-900 p-3">
                   <div className="flex items-center gap-2 text-zinc-500 text-xs mb-2">
                     <Code2 className="size-3" />
-                    <span>{type.counted ? "SDK Call" : "How it works"}</span>
+                    <span>{type.counted ? "Platform SDK" : "How it works"}</span>
                   </div>
-                  <code className="font-mono text-green-400 text-sm">
-                    {type.example}
-                  </code>
+                  {type.counted ? (
+                    <pre className="font-mono text-green-400 text-xs leading-relaxed overflow-x-auto">
+                      {customEventCode}
+                    </pre>
+                  ) : (
+                    <code className="font-mono text-green-400 text-sm">
+                      {type.example}
+                    </code>
+                  )}
                 </div>
               </motion.div>
             );
