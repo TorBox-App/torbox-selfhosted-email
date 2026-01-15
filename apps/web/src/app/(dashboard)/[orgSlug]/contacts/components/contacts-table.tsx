@@ -14,7 +14,14 @@ import {
 } from "@tanstack/react-table";
 import { Plus, Search, Tags, Trash2, Upload } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import {
   bulkDeleteContacts,
@@ -44,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -110,6 +118,21 @@ export function ContactsTable({
   const [globalFilter, setGlobalFilter] = useState(
     searchParams.get("search") || ""
   );
+
+  // Ref for search input to enable keyboard shortcut
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut: Cmd+F to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Dialog/sheet state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -487,11 +510,15 @@ export function ContactsTable({
           <div className="relative max-w-sm flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-9"
+              className="pl-9 pr-16"
               onChange={(event) => handleSearch(event.target.value)}
               placeholder="Search by email..."
+              ref={searchInputRef}
               value={globalFilter}
             />
+            <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 hidden sm:flex">
+              ⌘F
+            </Kbd>
           </div>
         </div>
         <div className="flex items-center space-x-2">

@@ -12,7 +12,7 @@ import {
 } from "@tanstack/react-table";
 import { Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   createSegment,
@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Table,
   TableBody,
@@ -70,6 +71,21 @@ export function SegmentsTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+
+  // Ref for search input to enable keyboard shortcut
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut: Cmd+F to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Dialog/sheet state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -200,11 +216,15 @@ export function SegmentsTable({
           <div className="relative max-w-sm flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-9"
+              className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(event.target.value)}
               placeholder="Search segments..."
+              ref={searchInputRef}
               value={globalFilter}
             />
+            <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 hidden sm:flex">
+              ⌘F
+            </Kbd>
           </div>
         </div>
         <div className="flex items-center space-x-2">

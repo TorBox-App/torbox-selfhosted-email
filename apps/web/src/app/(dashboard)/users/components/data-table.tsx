@@ -22,7 +22,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -95,6 +96,21 @@ export function DataTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
+
+  // Ref for search input to enable keyboard shortcut
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut: Cmd+F to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -320,11 +336,15 @@ export function DataTable({
           <div className="relative max-w-sm flex-1">
             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-9"
+              className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(String(event.target.value))}
               placeholder="Search users..."
+              ref={searchInputRef}
               value={globalFilter ?? ""}
             />
+            <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 hidden sm:flex">
+              ⌘F
+            </Kbd>
           </div>
         </div>
         <div className="flex items-center space-x-2">
