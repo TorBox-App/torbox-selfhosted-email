@@ -132,7 +132,7 @@ export function DashboardPricingSection() {
                 animate={
                   isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }
                 }
-                className={`relative overflow-hidden rounded-2xl border-2 bg-background ${
+                className={`relative flex flex-col overflow-hidden rounded-2xl border-2 bg-background ${
                   tier.highlighted ? "border-orange-500" : "border-border"
                 }`}
                 initial={{ opacity: 0, y: 30 }}
@@ -203,7 +203,7 @@ export function DashboardPricingSection() {
                 </div>
 
                 {/* Features */}
-                <div className="p-6">
+                <div className="flex flex-1 flex-col p-6">
                   <ul className="mb-6 space-y-2.5">
                     {tier.features.map((feature) => (
                       <li
@@ -224,7 +224,7 @@ export function DashboardPricingSection() {
 
                   <Button
                     asChild
-                    className={`w-full ${tier.highlighted ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                    className={`mt-auto w-full ${tier.highlighted ? "bg-orange-500 hover:bg-orange-600" : ""}`}
                     size="lg"
                     variant={tier.highlighted ? "default" : "outline"}
                   >
