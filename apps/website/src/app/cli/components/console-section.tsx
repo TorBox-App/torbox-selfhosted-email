@@ -6,8 +6,14 @@ export function CliConsoleSection() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Inline text - flows naturally */}
         <p className="mb-8 text-center text-lg text-muted-foreground">
-          Run <code className="rounded bg-muted px-2 py-1 font-mono text-green-500 text-sm">wraps console</code> for a local dashboard.{" "}
-          <span className="text-foreground">Your data never leaves your machine.</span>
+          Run{" "}
+          <code className="rounded bg-muted px-2 py-1 font-mono text-green-500 text-sm">
+            wraps console
+          </code>{" "}
+          for a local dashboard.{" "}
+          <span className="text-foreground">
+            Your data never leaves your machine.
+          </span>
         </p>
 
         {/* Console GIF */}

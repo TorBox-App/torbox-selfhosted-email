@@ -75,7 +75,7 @@ function TerminalTransition() {
               transition={{ duration: 0.3, delay: 0.3 }}
             >
               <span className="text-green-500">$</span>
-              <span className="text-zinc-300"> wraps upgrade</span>
+              <span className="text-zinc-300"> wraps platform</span>
             </motion.div>
 
             <motion.div

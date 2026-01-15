@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowRight, Check, Copy, Link2, RotateCcw, Shield } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  Link2,
+  RotateCcw,
+  Shield,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -49,8 +56,11 @@ export function ExistingSesSection() {
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">
             Wraps deploys alongside your existing setup. We create new resources
-            with the <code className="rounded bg-muted px-1.5 py-0.5 text-sm">wraps-email-</code> prefix—your
-            current infrastructure stays untouched.
+            with the{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-sm">
+              wraps-email-
+            </code>{" "}
+            prefix—your current infrastructure stays untouched.
           </p>
         </div>
 

@@ -19,15 +19,15 @@ export default function DashboardPage() {
       const timeoutId = setTimeout(() => {
         const element = document.querySelector(hash);
         if (element) {
-          const targetPosition = element.getBoundingClientRect().top + window.scrollY;
+          const targetPosition =
+            element.getBoundingClientRect().top + window.scrollY;
           const startPosition = window.scrollY;
           const distance = targetPosition - startPosition;
           const duration = 1200; // ms - slower scroll
           let startTime: number | null = null;
 
-          const easeInOutCubic = (t: number) => {
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-          };
+          const easeInOutCubic = (t: number) =>
+            t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
           const animateScroll = (currentTime: number) => {
             if (startTime === null) startTime = currentTime;

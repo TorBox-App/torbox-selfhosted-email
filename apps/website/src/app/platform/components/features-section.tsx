@@ -1,76 +1,94 @@
 "use client";
 
-import { BarChart3, Globe, History, Shield, Users, Zap } from "lucide-react";
-import {
-  FeatureItem,
-  SectionWrapper,
-} from "@/app/landing/components/section-card";
+import { BarChart3, Globe, History, Key, Shield, Users } from "lucide-react";
+import { motion, useInView } from "motion/react";
+import { useRef } from "react";
 
 const features = [
   {
     icon: BarChart3,
-    title: "Email Analytics",
-    description:
-      "Track sends, deliveries, opens, clicks, bounces, and complaints. Real-time visibility into your email performance.",
-    highlighted: true,
-  },
-  {
-    icon: Users,
-    title: "Contact Management",
-    description:
-      "Import contacts, create segments, and manage topics. Track subscriptions and preferences across your audience.",
-    highlighted: true,
-  },
-  {
-    icon: Zap,
-    title: "Real-time Events",
-    description:
-      "See email events as they happen. Webhooks for bounces, complaints, and delivery notifications.",
-    highlighted: true,
+    title: "Real-time Analytics",
+    description: "Track opens, clicks, bounces, and complaints as they happen",
   },
   {
     icon: History,
     title: "Message History",
-    description:
-      "Search and filter through your email history. View full event timelines for every message sent.",
-    highlighted: false,
+    description: "Search and filter through your email history with timelines",
+  },
+  {
+    icon: Users,
+    title: "Contact Management",
+    description: "Import contacts, track preferences, manage suppression lists",
   },
   {
     icon: Globe,
     title: "Domain Management",
-    description:
-      "Add and verify sending domains. Monitor DKIM, SPF, and DMARC status from one dashboard.",
-    highlighted: false,
+    description: "Add domains, monitor DKIM/SPF/DMARC from one dashboard",
   },
   {
     icon: Shield,
     title: "Reputation Monitoring",
-    description:
-      "Track your sender reputation, bounce rates, and complaint ratios to maintain deliverability.",
-    highlighted: false,
+    description: "Track sender reputation, bounce rates, complaint ratios",
+  },
+  {
+    icon: Key,
+    title: "SMTP Credentials",
+    description: "Generate credentials for legacy integrations",
   },
 ];
 
 export function DashboardFeaturesSection() {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+
   return (
-    <SectionWrapper
-      badge="Plus More"
-      description="Everything else you need to run professional email operations."
+    <section
+      className="relative bg-stone-100/50 py-16 dark:bg-white/[0.06]"
       id="features"
-      premium
-      title="Built for Growing Teams"
+      ref={ref}
     >
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {features.map((feature) => (
-          <FeatureItem
-            description={feature.description}
-            highlighted={feature.highlighted}
-            icon={feature.icon}
-            key={feature.title}
-            title={feature.title}
-          />
-        ))}
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {/* Compact header */}
+        <motion.div
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          className="mb-10 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h3 className="mb-2 font-semibold text-xl">
+            Plus everything else you need
+          </h3>
+          <p className="text-muted-foreground text-sm">Included in all plans</p>
+        </motion.div>
+
+        {/* Compact feature grid */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <motion.div
+                animate={
+                  isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
+                }
+                className="flex items-start gap-3 rounded-lg border bg-background/50 p-4"
+                initial={{ opacity: 0, y: 10 }}
+                key={feature.title}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+              >
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
+                  <Icon className="size-4 text-orange-500" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm">{feature.title}</h4>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
-    </SectionWrapper>
+    </section>
   );
 }

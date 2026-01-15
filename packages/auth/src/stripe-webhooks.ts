@@ -256,7 +256,7 @@ export async function handleCheckoutCompleted(
         `Fetched subscription ${stripeSubscriptionId} from Stripe - interval: ${interval}, isAnnual: ${isAnnual}`
       );
     } catch (err) {
-      console.error(`Failed to fetch subscription from Stripe:`, err);
+      console.error("Failed to fetch subscription from Stripe:", err);
       // Fallback to metadata if available
       isAnnual =
         session.metadata?.annual === "true" ||

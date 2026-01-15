@@ -71,8 +71,7 @@ const FaqSection = () => (
       {/* Simple heading */}
       <FadeIn className="mb-8 text-center">
         <p className="text-lg text-muted-foreground">
-          Questions?{" "}
-          <span className="text-foreground">We've got answers.</span>
+          Questions? <span className="text-foreground">We've got answers.</span>
         </p>
       </FadeIn>
 
@@ -97,7 +96,7 @@ const FaqSection = () => (
       </ScaleIn>
 
       {/* Simple contact line */}
-      <FadeIn delay={0.2} className="mt-8 text-center">
+      <FadeIn className="mt-8 text-center" delay={0.2}>
         <p className="text-muted-foreground text-sm">
           Still have questions?{" "}
           <a

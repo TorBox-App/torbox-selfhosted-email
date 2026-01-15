@@ -23,7 +23,9 @@ export function BillingToggle({
         <div
           className={cn(
             "absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-background shadow-sm transition-transform duration-200 ease-out",
-            value === "annual" ? "translate-x-[calc(100%+4px)]" : "translate-x-0"
+            value === "annual"
+              ? "translate-x-[calc(100%+4px)]"
+              : "translate-x-0"
           )}
         />
 

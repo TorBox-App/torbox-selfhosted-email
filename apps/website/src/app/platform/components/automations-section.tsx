@@ -3,17 +3,23 @@
 import {
   Clock,
   GitBranch,
-  Mail,
   MousePointerClick,
   Play,
-  Workflow,
+  Sparkles,
   Zap,
 } from "lucide-react";
-import { SectionWrapper } from "@/app/landing/components/section-card";
+import { motion, useInView } from "motion/react";
+import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/utils";
 
 const features = [
+  {
+    icon: Sparkles,
+    title: "AI-Powered",
+    description: "Generate workflows from natural language prompts",
+    badge: "AI",
+  },
   {
     icon: Zap,
     title: "Event Triggers",
@@ -22,120 +28,167 @@ const features = [
   {
     icon: Clock,
     title: "Wait Steps",
-    description: "Add delays between actions - hours, days, or weeks",
+    description: "Add delays between actions — hours, days, or weeks",
   },
   {
     icon: GitBranch,
     title: "Conditions",
-    description: "Branch workflows based on contact properties or behavior",
-  },
-  {
-    icon: Mail,
-    title: "Send Email",
-    description: "Send templated emails at the perfect moment",
+    description: "Branch based on contact properties or behavior",
   },
   {
     icon: MousePointerClick,
     title: "Actions",
-    description: "Update contacts, add tags, or trigger webhooks",
+    description: "Send emails, update contacts, trigger webhooks",
   },
 ];
 
-function PlaceholderImage() {
-  return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl border-2 border-muted-foreground/25 border-dashed bg-muted/50">
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <div className="flex aspect-square size-16 items-center justify-center rounded-full border-2 border-orange-500 bg-orange-500/5">
-          <Workflow className="size-8 text-orange-500" />
-        </div>
-        <div>
-          <p className="font-semibold text-foreground">Workflow Builder</p>
-          <p className="text-muted-foreground text-sm">
-            Screenshot coming soon
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function DashboardAutomationsSection() {
-  // Check if automation images exist - use placeholder if not
-  const hasImages = true;
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <SectionWrapper
-      badge="Automations"
-      description="Build automated email sequences triggered by events, time delays, or conditions. Visual workflow builder included."
+    <section
+      className="relative overflow-x-clip bg-stone-100/50 py-24 dark:bg-white/[0.06]"
       id="automations"
-      premium
-      title="Automate Your Email Flows"
+      ref={ref}
     >
-      {/* Coming Soon Badge */}
-      <div className="mb-8 flex justify-center">
-        <Badge
-          className="bg-blue-500/10 px-4 py-1 text-blue-600 dark:text-blue-400"
-          variant="secondary"
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Chapter indicator */}
+        <motion.div
+          animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
+          className="mb-16 flex items-center gap-4"
+          initial={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.5 }}
         >
-          <Play className="mr-2 size-3" />
-          Coming Soon in Growth
-        </Badge>
-      </div>
-
-      {/* Main Screenshot or Placeholder */}
-      <div className="mb-12">
-        <div className="group relative">
-          {/* Background glow */}
-          <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
-
-          <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
-            {hasImages ? (
-              <>
-                {/* Light mode image */}
-                <img
-                  alt="Workflow Builder - Light Mode"
-                  className="block w-full rounded-xl object-cover dark:hidden"
-                  decoding="async"
-                  loading="lazy"
-                  src={assetUrl("automations-builder-light.avif")}
-                />
-                {/* Dark mode image */}
-                <img
-                  alt="Workflow Builder - Dark Mode"
-                  className="hidden w-full rounded-xl object-cover dark:block"
-                  decoding="async"
-                  loading="lazy"
-                  src={assetUrl("automations-builder-dark.avif")}
-                />
-              </>
-            ) : (
-              <PlaceholderImage />
-            )}
-
-            {/* Bottom fade effect - only show if has images */}
-            {hasImages && (
-              <div className="absolute bottom-0 left-0 h-24 w-full rounded-b-xl bg-linear-to-b from-background/0 via-background/70 to-background md:h-32" />
-            )}
+          <div className="flex size-10 items-center justify-center rounded-full bg-orange-500 font-bold text-white">
+            3
           </div>
+          <div>
+            <p className="font-medium text-orange-500 text-sm">Chapter Three</p>
+            <h2 className="font-bold text-2xl tracking-tight sm:text-3xl">
+              Automate Your Growth
+            </h2>
+          </div>
+          <Badge
+            className="ml-2 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+            variant="secondary"
+          >
+            <Play className="mr-1 size-3" />
+            Coming Soon
+          </Badge>
+        </motion.div>
+
+        {/* Split layout: Content left, screenshot right (flipped from Ch. 2) */}
+        <div className="grid items-center gap-12 lg:grid-cols-2">
+          {/* Content */}
+          <motion.div
+            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -40 }}
+            className="order-2 space-y-8 lg:order-1"
+            initial={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <p className="text-lg text-muted-foreground">
+              Build automated email sequences triggered by events, time delays,
+              or conditions. Visual workflow builder with AI assistance.
+            </p>
+
+            {/* Features as list */}
+            <div className="space-y-4">
+              {features.map((feature, index) => (
+                <motion.div
+                  animate={
+                    isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
+                  }
+                  className="flex items-start gap-3"
+                  initial={{ opacity: 0, y: 10 }}
+                  key={feature.title}
+                  transition={{ duration: 0.3, delay: 0.3 + index * 0.1 }}
+                >
+                  <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
+                    <feature.icon className="size-4 text-orange-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{feature.title}</span>
+                      {feature.badge && (
+                        <Badge
+                          className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                          variant="secondary"
+                        >
+                          {feature.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-sm">
+                      {feature.description}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Growth tier hint */}
+            <motion.div
+              animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+              className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4"
+              initial={{ opacity: 0 }}
+              transition={{ duration: 0.5, delay: 0.8 }}
+            >
+              <p className="text-sm">
+                <span className="font-medium text-blue-600 dark:text-blue-400">
+                  Growth ($149/mo):
+                </span>{" "}
+                <span className="text-muted-foreground">
+                  Workflows, event tracking, and advanced segments
+                </span>
+              </p>
+              <p className="mt-2 text-muted-foreground text-xs">
+                Currently in development. Join the waitlist to get early access.
+              </p>
+            </motion.div>
+          </motion.div>
+
+          {/* Screenshot - overflows right */}
+          <motion.div
+            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 40 }}
+            className="group relative order-1 lg:order-2 lg:-mr-32 xl:-mr-48 2xl:-mr-64"
+            initial={{ opacity: 0, x: 40 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            {/* Background glow */}
+            <div className="absolute -inset-4 rounded-3xl bg-blue-500/10 blur-2xl opacity-50" />
+
+            <div className="relative overflow-hidden rounded-2xl border-2 border-blue-500/20 bg-card shadow-2xl">
+              {/* Light mode image */}
+              <img
+                alt="Workflow Builder - Light Mode"
+                className="block w-full object-cover dark:hidden"
+                decoding="async"
+                loading="lazy"
+                src={assetUrl("automations-builder-light.avif")}
+              />
+              {/* Dark mode image */}
+              <img
+                alt="Workflow Builder - Dark Mode"
+                className="hidden w-full object-cover dark:block"
+                decoding="async"
+                loading="lazy"
+                src={assetUrl("automations-builder-dark.avif")}
+              />
+
+              {/* Coming soon overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-background/30 backdrop-blur-[1px]">
+                <div className="rounded-full border border-blue-500/30 bg-background/90 px-4 py-2 shadow-lg">
+                  <span className="flex items-center gap-2 font-medium text-blue-600 text-sm dark:text-blue-400">
+                    <Play className="size-4" />
+                    Preview — Coming Soon
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
-
-      {/* Feature Pills */}
-      <div className="flex flex-wrap justify-center gap-3">
-        {features.map((feature) => (
-          <div
-            className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
-            key={feature.title}
-          >
-            <feature.icon className="size-4 text-orange-500" />
-            <span className="font-medium text-sm">{feature.title}</span>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-8 text-center text-muted-foreground text-sm">
-        Workflow automations will be available in Pro plan ($30/mo)
-      </p>
-    </SectionWrapper>
+    </section>
   );
 }

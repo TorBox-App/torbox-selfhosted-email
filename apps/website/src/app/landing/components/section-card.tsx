@@ -103,11 +103,7 @@ export function SectionWrapper({
         {/* Section header */}
         <div className="mb-12 text-center">
           {badge &&
-            (badgeLink ? (
-              <a href={badgeLink}>{BadgeContent}</a>
-            ) : (
-              BadgeContent
-            ))}
+            (badgeLink ? <a href={badgeLink}>{BadgeContent}</a> : BadgeContent)}
           <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
             {title}
           </h2>

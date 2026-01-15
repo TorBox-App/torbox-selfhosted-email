@@ -46,15 +46,13 @@ vi.mock("@wraps.dev/client", () => ({
 }));
 
 // Mock the stripeClient from index - define inside factory to avoid hoisting issues
-vi.mock("../index", () => {
-  return {
-    stripeClient: {
-      subscriptions: {
-        retrieve: vi.fn(),
-      },
+vi.mock("../index", () => ({
+  stripeClient: {
+    subscriptions: {
+      retrieve: vi.fn(),
     },
-  };
-});
+  },
+}));
 
 // Import after mocks are set up
 import { db } from "@wraps/db";
@@ -437,7 +435,7 @@ describe("handleCheckoutCompleted", () => {
       mode: "subscription",
       customer: "cus_123",
       subscription: "sub_stripe_123",
-      amount_total: 10000,
+      amount_total: 10_000,
       currency: "usd",
     };
 
@@ -446,9 +444,9 @@ describe("handleCheckoutCompleted", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(vi.mocked(stripeClient!.subscriptions.retrieve)).toHaveBeenCalledWith(
-      "sub_stripe_123"
-    );
+    expect(
+      vi.mocked(stripeClient!.subscriptions.retrieve)
+    ).toHaveBeenCalledWith("sub_stripe_123");
     expect(db.update).toHaveBeenCalled();
   });
 
@@ -532,7 +530,7 @@ describe("handleCheckoutCompleted", () => {
       mode: "subscription",
       customer: "cus_123",
       subscription: "sub_stripe_123",
-      amount_total: 10000,
+      amount_total: 10_000,
       currency: "usd",
     };
 

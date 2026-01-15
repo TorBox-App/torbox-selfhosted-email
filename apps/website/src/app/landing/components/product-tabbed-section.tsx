@@ -344,7 +344,7 @@ export function ProductTabbedSection() {
               size="lg"
             >
               <a href="https://app.wraps.dev/auth?mode=signup">
-                Start Free Trial
+                Get Started
                 <ArrowRight className="ml-2 size-4" />
               </a>
             </Button>

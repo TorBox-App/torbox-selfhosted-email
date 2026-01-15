@@ -44,14 +44,14 @@ const checklistData = [
       {
         id: "dkim-enabled",
         title: "Enable Easy DKIM",
-        description:
-          'Add all 3 CNAME records and wait for "Verified" status',
+        description: 'Add all 3 CNAME records and wait for "Verified" status',
         required: true,
       },
       {
         id: "spf-record",
         title: "Publish SPF record",
-        description: "v=spf1 include:amazonses.com ~all on your MAIL FROM subdomain",
+        description:
+          "v=spf1 include:amazonses.com ~all on your MAIL FROM subdomain",
         required: true,
       },
       {
@@ -109,7 +109,8 @@ const checklistData = [
       {
         id: "use-case-detailed",
         title: "Write detailed use case",
-        description: "Explain exactly what emails you send and why (~500+ words)",
+        description:
+          "Explain exactly what emails you send and why (~500+ words)",
         required: true,
       },
       {
@@ -127,15 +128,13 @@ const checklistData = [
       {
         id: "complaint-handling-documented",
         title: "Document complaint handling process",
-        description:
-          "How do you handle spam complaints? Immediate removal?",
+        description: "How do you handle spam complaints? Immediate removal?",
         recommended: true,
       },
       {
         id: "volume-realistic",
         title: "Provide realistic volume estimates",
-        description:
-          "Current volume and 6-month projection with justification",
+        description: "Current volume and 6-month projection with justification",
       },
       {
         id: "unsubscribe-explained",
@@ -310,12 +309,12 @@ const ChecklistGroup = ({
         <div className="space-y-1 px-4 pb-3">
           {group.items.map((item) => (
             <button
-              key={item.id}
               className={`flex w-full items-start gap-3 rounded-lg p-3 text-left transition-all ${
                 checkedItems.includes(item.id)
                   ? "bg-muted/30 opacity-60"
                   : "hover:bg-muted/50"
               }`}
+              key={item.id}
               onClick={() => onToggle(item.id)}
             >
               <div
@@ -391,9 +390,9 @@ const ReadinessChecklist = ({
       </div>
       {checklistData.map((group) => (
         <ChecklistGroup
-          key={group.id}
-          group={group}
           checkedItems={checkedItems}
+          group={group}
+          key={group.id}
           onToggle={handleToggle}
         />
       ))}
@@ -588,11 +587,11 @@ We are committed to maintaining excellent deliverability and sender reputation. 
             Company / Product Name
           </label>
           <input
-            type="text"
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="Acme Corp"
-            value={formData.companyName}
             onChange={(e) => handleChange("companyName", e.target.value)}
+            placeholder="Acme Corp"
+            type="text"
+            value={formData.companyName}
           />
         </div>
 
@@ -601,11 +600,11 @@ We are committed to maintaining excellent deliverability and sender reputation. 
             Website URL
           </label>
           <input
-            type="text"
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="https://acme.com"
-            value={formData.websiteUrl}
             onChange={(e) => handleChange("websiteUrl", e.target.value)}
+            placeholder="https://acme.com"
+            type="text"
+            value={formData.websiteUrl}
           />
         </div>
 
@@ -615,13 +614,15 @@ We are committed to maintaining excellent deliverability and sender reputation. 
           </label>
           <select
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            value={formData.useCase}
             onChange={(e) => handleChange("useCase", e.target.value)}
+            value={formData.useCase}
           >
             <option value="transactional">
               Transactional (account alerts, receipts, etc.)
             </option>
-            <option value="marketing">Marketing (newsletters, promotions)</option>
+            <option value="marketing">
+              Marketing (newsletters, promotions)
+            </option>
           </select>
         </div>
 
@@ -631,9 +632,9 @@ We are committed to maintaining excellent deliverability and sender reputation. 
           </label>
           <textarea
             className="min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            onChange={(e) => handleChange("emailTypes", e.target.value)}
             placeholder="- Account verification emails&#10;- Password reset requests&#10;- Order confirmations"
             value={formData.emailTypes}
-            onChange={(e) => handleChange("emailTypes", e.target.value)}
           />
         </div>
 
@@ -643,11 +644,11 @@ We are committed to maintaining excellent deliverability and sender reputation. 
               Current Daily Volume
             </label>
             <input
-              type="text"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="500"
-              value={formData.currentVolume}
               onChange={(e) => handleChange("currentVolume", e.target.value)}
+              placeholder="500"
+              type="text"
+              value={formData.currentVolume}
             />
           </div>
           <div>
@@ -655,11 +656,11 @@ We are committed to maintaining excellent deliverability and sender reputation. 
               Projected Daily Volume (6 months)
             </label>
             <input
-              type="text"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="2,000"
-              value={formData.projectedVolume}
               onChange={(e) => handleChange("projectedVolume", e.target.value)}
+              placeholder="2,000"
+              type="text"
+              value={formData.projectedVolume}
             />
           </div>
         </div>
@@ -670,9 +671,9 @@ We are committed to maintaining excellent deliverability and sender reputation. 
           </label>
           <textarea
             className="min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            onChange={(e) => handleChange("consentMechanism", e.target.value)}
             placeholder="Describe how users sign up and consent to receive emails"
             value={formData.consentMechanism}
-            onChange={(e) => handleChange("consentMechanism", e.target.value)}
           />
         </div>
       </div>
@@ -909,7 +910,7 @@ export default function SESSandboxGuide() {
       </header>
 
       {/* Progress Bar */}
-      <ProgressHeader progress={progress} approval={approval} />
+      <ProgressHeader approval={approval} progress={progress} />
 
       {/* Main Content */}
       <main className="container mx-auto max-w-4xl space-y-16 px-4 py-16">
@@ -928,11 +929,11 @@ export default function SESSandboxGuide() {
             legitimate business.
           </p>
 
-          <InfoCard type="warning" icon={AlertTriangle} title="2024 Change">
+          <InfoCard icon={AlertTriangle} title="2024 Change" type="warning">
             While AWS documentation calls email authentication "strongly
-            recommended," community reports indicate that requests without
-            SPF, DKIM, and DMARC configured are frequently denied. Set up your
-            DNS records before submitting.
+            recommended," community reports indicate that requests without SPF,
+            DKIM, and DMARC configured are frequently denied. Set up your DNS
+            records before submitting.
           </InfoCard>
         </section>
 
@@ -942,7 +943,9 @@ export default function SESSandboxGuide() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
               <CheckCircle className="h-5 w-5 text-primary" />
             </div>
-            <h2 className="font-bold text-2xl">Pre-Request Readiness Checklist</h2>
+            <h2 className="font-bold text-2xl">
+              Pre-Request Readiness Checklist
+            </h2>
           </div>
           <p className="mb-6 text-lg text-muted-foreground">
             Complete every required item before submitting. Your progress is
@@ -985,7 +988,7 @@ export default function SESSandboxGuide() {
             exactly what you need.
           </p>
 
-          <Collapsible title="SPF Record for Custom MAIL FROM" defaultOpen>
+          <Collapsible defaultOpen title="SPF Record for Custom MAIL FROM">
             <p className="mb-3 text-muted-foreground text-sm">
               Add this TXT record to your MAIL FROM subdomain (e.g.,
               mail.yourdomain.com):
@@ -1003,7 +1006,7 @@ export default function SESSandboxGuide() {
             <CodeBlock label="TXT Record">
               v=DMARC1; p=none; rua=mailto:dmarc@yourdomain.com
             </CodeBlock>
-            <InfoCard type="tip" icon={CheckCircle} title="DMARC Progression">
+            <InfoCard icon={CheckCircle} title="DMARC Progression" type="tip">
               After monitoring for a few weeks with no issues, strengthen to
               p=quarantine, then p=reject.
             </InfoCard>
@@ -1034,7 +1037,7 @@ export default function SESSandboxGuide() {
 
           <TemplateBuilder formData={formData} setFormData={setFormData} />
 
-          <InfoCard type="tip" icon={CheckCircle} title="Pro Tip">
+          <InfoCard icon={CheckCircle} title="Pro Tip" type="tip">
             Copy the generated text and paste it into the "Use case description"
             field in the SES console. Don't be afraid to make it longer —
             detailed requests dramatically outperform brief ones.
@@ -1101,7 +1104,11 @@ export default function SESSandboxGuide() {
             recover.
           </p>
 
-          <InfoCard type="danger" icon={AlertTriangle} title="The Standard Denial">
+          <InfoCard
+            icon={AlertTriangle}
+            title="The Standard Denial"
+            type="danger"
+          >
             AWS sends a vague response: "We reviewed your request and determined
             that your use of Amazon SES could have a negative impact on our
             service." This tells you nothing — don't take it personally.
@@ -1123,8 +1130,8 @@ export default function SESSandboxGuide() {
 
           <div className="space-y-2">
             <Collapsible
-              title="Vague or brief use case description"
               defaultOpen
+              title="Vague or brief use case description"
             >
               <p className="text-muted-foreground text-sm">
                 "I want to send transactional emails to my users" is not enough.
@@ -1244,20 +1251,20 @@ export default function SESSandboxGuide() {
 
           <div className="space-y-3">
             <a
-              href="https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html"
-              target="_blank"
-              rel="noopener noreferrer"
               className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+              href="https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html"
+              rel="noopener noreferrer"
+              target="_blank"
             >
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
               <span>AWS Official Documentation: Request Production Access</span>
             </a>
 
             <a
-              href="https://docs.aws.amazon.com/ses/latest/dg/send-email-authentication.html"
-              target="_blank"
-              rel="noopener noreferrer"
               className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+              href="https://docs.aws.amazon.com/ses/latest/dg/send-email-authentication.html"
+              rel="noopener noreferrer"
+              target="_blank"
             >
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
               <span>AWS Email Authentication Guide (SPF, DKIM, DMARC)</span>
@@ -1282,7 +1289,7 @@ export default function SESSandboxGuide() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
-            <Button asChild variant="outline" size="lg">
+            <Button asChild size="lg" variant="outline">
               <a href="/cli">Learn About Wraps CLI</a>
             </Button>
           </div>

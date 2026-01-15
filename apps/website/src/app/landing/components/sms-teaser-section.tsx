@@ -136,7 +136,9 @@ export function SmsTeaserSection() {
                   <div className="mb-4">
                     <span
                       className={`font-semibold text-lg ${
-                        isAvailable ? "text-foreground" : "text-muted-foreground"
+                        isAvailable
+                          ? "text-foreground"
+                          : "text-muted-foreground"
                       }`}
                     >
                       {service.price}
@@ -147,8 +149,8 @@ export function SmsTeaserSection() {
                   <ul className="mb-6 flex-1 space-y-2">
                     {service.features.map((feature) => (
                       <li
-                        key={feature}
                         className="flex items-center gap-2 text-sm text-muted-foreground"
+                        key={feature}
                       >
                         <Check
                           className={`size-3.5 ${
@@ -172,7 +174,7 @@ export function SmsTeaserSection() {
                       </a>
                     </Button>
                   ) : (
-                    <Button asChild variant="outline" className="w-full">
+                    <Button asChild className="w-full" variant="outline">
                       <a href={service.href}>
                         {service.cta}
                         <ArrowRight className="ml-1.5 size-4" />
@@ -184,7 +186,6 @@ export function SmsTeaserSection() {
             );
           })}
         </div>
-
       </div>
     </section>
   );

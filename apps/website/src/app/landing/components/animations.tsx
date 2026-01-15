@@ -35,19 +35,19 @@ export function FadeIn({
 
   return (
     <motion.div
-      ref={ref}
-      initial={{ opacity: 0, ...directionOffset[direction] }}
       animate={
         isInView
           ? { opacity: 1, x: 0, y: 0 }
           : { opacity: 0, ...directionOffset[direction] }
       }
+      className={className}
+      initial={{ opacity: 0, ...directionOffset[direction] }}
+      ref={ref}
       transition={{
         duration,
         delay,
         ease: [0.21, 0.47, 0.32, 0.98],
       }}
-      className={className}
     >
       {children}
     </motion.div>
@@ -72,9 +72,10 @@ export function StaggerContainer({
 
   return (
     <motion.div
-      ref={ref}
-      initial="hidden"
       animate={isInView ? "visible" : "hidden"}
+      className={className}
+      initial="hidden"
+      ref={ref}
       variants={{
         hidden: {},
         visible: {
@@ -83,7 +84,6 @@ export function StaggerContainer({
           },
         },
       }}
-      className={className}
     >
       {children}
     </motion.div>
@@ -113,6 +113,7 @@ export function StaggerItem({
 
   return (
     <motion.div
+      className={className}
       variants={{
         hidden: { opacity: 0, ...directionOffset[direction] },
         visible: {
@@ -125,7 +126,6 @@ export function StaggerItem({
           },
         },
       }}
-      className={className}
     >
       {children}
     </motion.div>
@@ -152,17 +152,17 @@ export function ScaleIn({
 
   return (
     <motion.div
-      ref={ref}
-      initial={{ opacity: 0, scale: 0.95 }}
       animate={
         isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }
       }
+      className={className}
+      initial={{ opacity: 0, scale: 0.95 }}
+      ref={ref}
       transition={{
         duration,
         delay,
         ease: [0.21, 0.47, 0.32, 0.98],
       }}
-      className={className}
     >
       {children}
     </motion.div>
@@ -190,21 +190,21 @@ export function Counter({
 
   return (
     <motion.span
-      ref={ref}
+      animate={isInView ? { opacity: 1 } : { opacity: 0 }}
       className={className}
       initial={{ opacity: 0 }}
-      animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+      ref={ref}
     >
       {prefix}
       <motion.span
-        initial={{ opacity: 0 }}
         animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+        initial={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
       >
         {isInView ? (
           <motion.span
-            initial={{ opacity: 1 }}
             animate={{ opacity: 1 }}
+            initial={{ opacity: 1 }}
             transition={{ duration }}
           >
             {value}
@@ -225,10 +225,10 @@ export function GradientDivider({ className }: { className?: string }) {
 
   return (
     <motion.div
-      ref={ref}
+      animate={isInView ? { scaleX: 1, opacity: 1 } : { scaleX: 0, opacity: 0 }}
       className={`h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent ${className}`}
       initial={{ scaleX: 0, opacity: 0 }}
-      animate={isInView ? { scaleX: 1, opacity: 1 } : { scaleX: 0, opacity: 0 }}
+      ref={ref}
       transition={{ duration: 1, ease: "easeOut" }}
     />
   );
@@ -244,13 +244,13 @@ export function Pulse({
 }) {
   return (
     <motion.div
-      className={className}
       animate={{
         scale: [1, 1.02, 1],
       }}
+      className={className}
       transition={{
         duration: 2,
-        repeat: Infinity,
+        repeat: Number.POSITIVE_INFINITY,
         ease: "easeInOut",
       }}
     >

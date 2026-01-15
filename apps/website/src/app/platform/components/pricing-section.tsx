@@ -3,7 +3,6 @@
 import { ArrowRight, Check, Mail, Sparkles } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BillingToggle } from "./billing-toggle";
 
@@ -146,7 +145,9 @@ export function DashboardPricingSection() {
 
             return (
               <motion.div
-                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+                animate={
+                  isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }
+                }
                 className={`relative overflow-hidden rounded-2xl border-2 bg-background ${
                   tier.highlighted ? "border-orange-500" : "border-border"
                 }`}

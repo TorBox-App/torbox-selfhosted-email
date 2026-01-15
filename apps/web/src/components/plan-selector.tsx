@@ -2,11 +2,11 @@
 
 import { Check, Sparkles } from "lucide-react";
 import {
+  type BillingInterval,
   getAnnualTotal,
   getDisplayPlans,
   getPriceByInterval,
   hasEarlyAdopterPricing,
-  type BillingInterval,
   type PlanId,
 } from "@/lib/plans";
 import { cn } from "@/lib/utils";
@@ -116,9 +116,7 @@ export function PlanSelector({
               )}
               <span className="text-muted-foreground">/mo</span>
               {billingInterval === "annual" && annualTotal && (
-                <p className="mt-1 text-green-600 text-sm">
-                  ${annualTotal}/yr
-                </p>
+                <p className="mt-1 text-green-600 text-sm">${annualTotal}/yr</p>
               )}
             </div>
 

@@ -27,7 +27,6 @@ import {
 import { useTheme } from "@/hooks/use-theme";
 
 const navigationItems = [
-  { name: "Home", href: "/" },
   {
     name: "Products",
     href: "/#features",

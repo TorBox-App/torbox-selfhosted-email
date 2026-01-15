@@ -125,7 +125,6 @@ export function CliHeroSection() {
                 ))}
               </Snippet>
             </div>
-
           </div>
 
           {/* Right column - Terminal Demo */}

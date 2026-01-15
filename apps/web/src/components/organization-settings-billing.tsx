@@ -9,6 +9,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  getOrganizationSubscription,
+  type SubscriptionData,
+} from "@/actions/subscriptions";
+import { BillingToggle } from "@/components/billing-toggle";
 import Loader from "@/components/loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,21 +32,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BillingToggle } from "@/components/billing-toggle";
 import { authClient } from "@/lib/auth-client";
 import {
+  type BillingInterval,
   getAnnualTotal,
-  getDisplayPrice,
   getPriceByInterval,
   hasEarlyAdopterPricing,
   PLANS,
-  type BillingInterval,
   type PlanId,
 } from "@/lib/plans";
-import {
-  getOrganizationSubscription,
-  type SubscriptionData,
-} from "@/actions/subscriptions";
 
 type OrganizationSettingsBillingProps = {
   organization: {
@@ -114,13 +113,7 @@ export function OrganizationSettingsBilling({
   });
 
   const upgradeMutation = useMutation({
-    mutationFn: async ({
-      plan,
-      annual,
-    }: {
-      plan: string;
-      annual: boolean;
-    }) =>
+    mutationFn: async ({ plan, annual }: { plan: string; annual: boolean }) =>
       authClient.subscription.upgrade({
         plan,
         annual,
@@ -473,7 +466,10 @@ export function OrganizationSettingsBilling({
             </Button>
             <Button
               loading={cancelMutation.isPending}
-              onClick={() => activeSubscription?.id && cancelMutation.mutate(activeSubscription.id)}
+              onClick={() =>
+                activeSubscription?.id &&
+                cancelMutation.mutate(activeSubscription.id)
+              }
               variant="destructive"
             >
               Yes, Cancel

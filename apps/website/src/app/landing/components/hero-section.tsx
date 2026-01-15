@@ -62,9 +62,9 @@ export function HeroSection() {
         <div className="mx-auto max-w-4xl text-center">
           {/* Announcement Badge */}
           <motion.div
+            animate={{ opacity: 1, y: 0 }}
             className="mb-8 flex justify-center gap-2"
             initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <a href="/cli">
@@ -87,9 +87,9 @@ export function HeroSection() {
 
           {/* Main Headline */}
           <motion.h1
+            animate={{ opacity: 1, y: 0 }}
             className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-5xl lg:text-6xl"
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             Own Your <RotatingService /> Infrastructure
@@ -97,9 +97,9 @@ export function HeroSection() {
 
           {/* Subheadline */}
           <motion.p
+            animate={{ opacity: 1, y: 0 }}
             className="mx-auto mb-3 text-balance text-lg sm:text-xl"
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             One command deploys serverless pay-as-you-go infrastructure to your
@@ -108,9 +108,9 @@ export function HeroSection() {
 
           {/* Platform pitch */}
           <motion.p
+            animate={{ opacity: 1, y: 0 }}
             className="mx-auto mb-10 text-balance text-muted-foreground"
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
             Build workflows, templates, and broadcasts with the Wraps Platform.
@@ -118,9 +118,9 @@ export function HeroSection() {
 
           {/* CTA */}
           <motion.div
+            animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center justify-center gap-3 sm:flex-row"
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
             <button
@@ -150,9 +150,9 @@ export function HeroSection() {
 
         {/* Terminal Demo */}
         <motion.div
+          animate={{ opacity: 1, y: 0 }}
           className="mx-auto mt-16 max-w-4xl"
           initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
           <div className="group relative">

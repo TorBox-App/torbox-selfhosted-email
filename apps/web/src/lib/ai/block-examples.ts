@@ -2852,7 +2852,7 @@ export const CTA_EXAMPLES: BlockExample[] = [
             borderRadius: "8px",
             align: "center",
           },
-          content: [{ type: "text", text: "Start Free Trial" }],
+          content: [{ type: "text", text: "Get Started" }],
         },
       ],
     },
