@@ -1,11 +1,12 @@
 import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
-import { brandKit, db, template } from "@wraps/db";
+import { awsAccount, brandKit, db, template } from "@wraps/db";
 import { WrapsEmail } from "@wraps.dev/email";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
@@ -153,14 +154,39 @@ export async function POST(request: Request, context: RouteContext) {
     // Generate plain text version using react-email's robust converter
     const text = toPlainText(html);
 
-    // Initialize Wraps SDK with proper configuration
-    const region = process.env.AWS_REGION || "us-east-1";
-    const wraps = new WrapsEmail({
-      region,
-      roleArn: process.env.WRAPS_EMAIL_ROLE_ARN,
+    // Get the organization's AWS account
+    const customerAwsAccount = await db.query.awsAccount.findFirst({
+      where: eq(awsAccount.organizationId, orgWithMembership.id),
     });
 
-    // Determine sender address from environment or default
+    if (!customerAwsAccount) {
+      return NextResponse.json(
+        {
+          error:
+            "No AWS account connected. Please connect an AWS account first.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Get credentials for the customer's AWS account
+    const credentials = await getOrAssumeRole({
+      roleArn: customerAwsAccount.roleArn,
+      externalId: customerAwsAccount.externalId,
+      region: customerAwsAccount.region,
+    });
+
+    // Initialize Wraps SDK with the org's credentials
+    const wraps = new WrapsEmail({
+      region: customerAwsAccount.region,
+      credentials: {
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
+        sessionToken: credentials.sessionToken,
+      },
+    });
+
+    // Determine sender address from request or org defaults
     const senderEmail = from || process.env.EMAIL_FROM || "noreply@wraps.dev";
 
     // Send to each recipient
