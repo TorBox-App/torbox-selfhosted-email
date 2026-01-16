@@ -36,8 +36,8 @@ export function DashboardCtaSection() {
               Build. Send. Automate.
             </h2>
             <p className="mx-auto mb-8 max-w-xl text-background/70">
-              Start with templates and transactional email at $10/mo. Unlock
-              audience features as you grow. No commitment, cancel anytime.
+              Your AWS handles sending. We handle the DX. Unlimited contacts,
+              infrastructure you own. Start free or $10/mo for the Wraps Platform.
             </p>
 
             <div className="flex flex-col justify-center gap-4 sm:flex-row">

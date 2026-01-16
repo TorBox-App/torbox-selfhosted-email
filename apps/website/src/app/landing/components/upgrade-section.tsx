@@ -7,22 +7,24 @@ import { Button } from "@/components/ui/button";
 import { FadeIn } from "./animations";
 
 const comparisonFeatures = [
-  { feature: "CLI deployment", free: true, starter: true, growth: true },
-  { feature: "TypeScript SDK", free: true, starter: true, growth: true },
-  { feature: "Event tracking", free: true, starter: true, growth: true },
-  { feature: "Local console", free: true, starter: true, growth: true },
+  { feature: "CLI deployment", free: true, starter: true, growth: true, scale: true },
+  { feature: "TypeScript SDK", free: true, starter: true, growth: true, scale: true },
+  { feature: "Event tracking", free: true, starter: true, growth: true, scale: true },
+  { feature: "Local console", free: true, starter: true, growth: true, scale: true },
   {
     feature: "Email analytics",
     free: "Local",
     starter: true,
     growth: true,
+    scale: true,
   },
-  { feature: "Wraps Platform", free: false, starter: true, growth: true },
+  { feature: "Wraps Platform", free: false, starter: true, growth: true, scale: true },
   {
     feature: "Events/month",
     free: false,
     starter: "50K",
     growth: "250K",
+    scale: "1M",
     link: "/platform#events",
   },
   {
@@ -30,37 +32,44 @@ const comparisonFeatures = [
     free: false,
     starter: "30 days",
     growth: "90 days",
+    scale: "1 year",
     link: "/platform#events",
   },
-  { feature: "Workflows", free: false, starter: "5", growth: "25" },
+  { feature: "Workflows", free: false, starter: "5", growth: "25", scale: "Unlimited" },
   {
     feature: "AI generations",
     free: false,
     starter: "50/mo",
     growth: "250/mo",
+    scale: "1,000/mo",
   },
   {
     feature: "Contacts",
-    free: false,
+    free: "Unlimited",
     starter: "Unlimited",
     growth: "Unlimited",
+    scale: "Unlimited",
   },
   {
     feature: "Templates",
     free: false,
     starter: "Unlimited",
     growth: "Unlimited",
+    scale: "Unlimited",
   },
   {
     feature: "Team members",
     free: false,
-    starter: "Unlimited",
+    starter: "3",
     growth: "Unlimited",
+    scale: "Unlimited",
   },
-  { feature: "Topics & segments", free: false, starter: false, growth: true },
-  { feature: "Preference center", free: false, starter: false, growth: true },
-  { feature: "AWS accounts", free: false, starter: "1", growth: "3" },
-  { feature: "Support", free: "GitHub", starter: "48hr", growth: "24hr" },
+  { feature: "Topics & segments", free: false, starter: false, growth: true, scale: true },
+  { feature: "Preference center", free: false, starter: false, growth: true, scale: true },
+  { feature: "Advanced segments", free: false, starter: false, growth: false, scale: true },
+  { feature: "Multi-tenant", free: false, starter: false, growth: false, scale: true },
+  { feature: "AWS accounts", free: false, starter: "1", growth: "3", scale: "Unlimited" },
+  { feature: "Support", free: "GitHub", starter: "48hr", growth: "24hr", scale: "Priority" },
 ];
 
 // Premium background class - use this on all premium sections
@@ -130,7 +139,7 @@ function TerminalTransition() {
               initial={{ opacity: 0 }}
               transition={{ duration: 0.3, delay: 1.0 }}
             >
-              → Unlock templates, broadcasts, and automations...
+              → Add templates, broadcasts, and automations...
             </motion.div>
 
             <motion.div
@@ -162,7 +171,7 @@ function TableRow({
   return (
     <motion.div
       animate={{ opacity: 1, x: 0 }}
-      className={`grid grid-cols-4 px-4 py-3 transition-colors hover:bg-muted/30 sm:px-6 ${
+      className={`grid grid-cols-5 px-4 py-3 transition-colors hover:bg-muted/30 sm:px-6 ${
         isLast ? "" : "border-b"
       }`}
       initial={{ opacity: 0, x: -20 }}
@@ -204,10 +213,21 @@ function TableRow({
       </div>
       <div className="flex justify-center">
         {typeof row.growth === "string" ? (
-          <span className="font-medium text-orange-500 text-xs sm:text-sm">
+          <span className="text-foreground text-xs sm:text-sm">
             {row.growth}
           </span>
         ) : row.growth ? (
+          <Check className="size-5 text-green-500" />
+        ) : (
+          <X className="size-5 text-muted-foreground/30" />
+        )}
+      </div>
+      <div className="flex justify-center">
+        {typeof row.scale === "string" ? (
+          <span className="font-medium text-orange-500 text-xs sm:text-sm">
+            {row.scale}
+          </span>
+        ) : row.scale ? (
           <Check className="size-5 text-green-500" />
         ) : (
           <X className="size-5 text-muted-foreground/30" />
@@ -248,7 +268,7 @@ export function UpgradeSection() {
         />
         <div className="relative pb-2">
           <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-2xl" ref={tableRef}>
+            <div className="mx-auto max-w-3xl" ref={tableRef}>
               <motion.div
                 animate={
                   isTableInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }
@@ -258,7 +278,7 @@ export function UpgradeSection() {
                 transition={{ duration: 0.6, ease: "easeOut" }}
               >
                 {/* Table Header */}
-                <div className="grid grid-cols-4 border-b bg-muted/50 px-4 py-4 sm:px-6">
+                <div className="grid grid-cols-5 border-b bg-muted/50 px-4 py-4 sm:px-6">
                   <div className="font-medium text-muted-foreground text-sm">
                     Feature
                   </div>
@@ -273,10 +293,14 @@ export function UpgradeSection() {
                     <p className="text-muted-foreground text-xs">$10/mo</p>
                   </div>
                   <div className="text-center">
-                    <span className="font-semibold text-orange-500 text-sm">
-                      Growth
-                    </span>
+                    <span className="font-semibold text-sm">Growth</span>
                     <p className="text-muted-foreground text-xs">$49/mo</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="font-semibold text-orange-500 text-sm">
+                      Scale
+                    </span>
+                    <p className="text-muted-foreground text-xs">$149/mo</p>
                   </div>
                 </div>
 

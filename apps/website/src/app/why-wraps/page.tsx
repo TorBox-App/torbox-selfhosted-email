@@ -20,11 +20,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const costComparison = [
-  { volume: "10K/mo", saas: "$40-80", wraps: "~$3" },
-  { volume: "50K/mo", saas: "$100-200", wraps: "~$8" },
-  { volume: "100K/mo", saas: "$200-400", wraps: "~$15" },
-  { volume: "500K/mo", saas: "$500-1,000", wraps: "~$55" },
-  { volume: "1M/mo", saas: "$1,000+", wraps: "~$105" },
+  { volume: "10K/mo", saas: "$40-80", aws: "~$3", total: "~$13" },
+  { volume: "50K/mo", saas: "$100-200", aws: "~$8", total: "~$18" },
+  { volume: "100K/mo", saas: "$200-400", aws: "~$15", total: "~$64" },
+  { volume: "500K/mo", saas: "$500-1,000", aws: "~$55", total: "~$104" },
+  { volume: "1M/mo", saas: "$1,000+", aws: "~$105", total: "~$254" },
 ];
 
 const securityPoints = [
@@ -48,7 +48,7 @@ const faqItems = [
     id: "cost",
     question: "What's the total cost of ownership?",
     answer:
-      "AWS costs: $0.10/1K emails + ~$2-5/mo infrastructure (DynamoDB, Lambda, etc.). The CLI and SDK are free forever. Optional hosted dashboard starts at $10/mo. No hidden fees, no per-seat pricing.",
+      "AWS costs: $0.10/1K emails + ~$2-5/mo infrastructure (DynamoDB, Lambda, etc.). The CLI and SDK are free forever. The Wraps Platform starts at $10/mo for the full dashboard experience. No hidden fees, no per-seat pricing.",
   },
   {
     id: "support",
@@ -139,8 +139,11 @@ export default function WhyWrapsPage() {
                         <th className="p-4 text-left font-medium">
                           Email SaaS
                         </th>
+                        <th className="p-4 text-left font-medium">
+                          AWS Only
+                        </th>
                         <th className="p-4 text-left font-medium text-primary">
-                          Wraps (AWS)
+                          Wraps Total
                         </th>
                       </tr>
                     </thead>
@@ -151,8 +154,11 @@ export default function WhyWrapsPage() {
                             {row.volume}
                           </td>
                           <td className="p-4">{row.saas}</td>
+                          <td className="p-4 text-muted-foreground">
+                            {row.aws}
+                          </td>
                           <td className="p-4 font-medium text-primary">
-                            {row.wraps}
+                            {row.total}
                           </td>
                         </tr>
                       ))}
@@ -162,10 +168,10 @@ export default function WhyWrapsPage() {
               </CardContent>
             </Card>
             <p className="mt-4 text-muted-foreground text-sm">
-              Wraps costs include AWS SES ($0.10/1K) + infrastructure (~$2-5/mo
-              for DynamoDB, Lambda, EventBridge).{" "}
-              <a className="text-primary underline" href="/calculator">
-                Calculate your exact costs
+              AWS costs include SES ($0.10/1K) + infrastructure (~$2-5/mo).
+              Wraps Total includes Wraps Platform ($10-149/mo depending on tier).{" "}
+              <a className="text-primary underline" href="/platform#pricing">
+                See pricing tiers
               </a>
             </p>
           </section>

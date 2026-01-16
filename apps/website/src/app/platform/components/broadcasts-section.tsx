@@ -116,7 +116,7 @@ export function DashboardBroadcastsSection() {
           >
             <p className="text-lg text-muted-foreground">
               Send newsletters, announcements, and marketing campaigns. Start
-              with simple broadcasts, then unlock targeting as you grow.
+              with simple broadcasts, then add targeting with Growth.
             </p>
 
             {/* Features as list */}

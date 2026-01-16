@@ -197,8 +197,8 @@ export function DashboardEventsSection() {
           initial={{ opacity: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
         >
-          Compare: Customer.io charges $150+/mo for 12K contacts. With Wraps,
-          unlimited contacts start at $10/mo.
+          Compare: Customer.io charges $150+/mo for 12K contacts. Wraps gives
+          you unlimited contacts on every plan—even the free tier.
         </motion.p>
       </div>
     </section>
