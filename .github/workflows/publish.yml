@@ -97,9 +97,9 @@ jobs:
 
       - name: Build dependencies
         run: |
-          # Build shared dependencies first
-          pnpm --filter @wraps/core build || true
-          pnpm --filter @wraps/email-check build || true
+          # Build shared dependencies first (required for type declarations)
+          pnpm --filter @wraps/core build
+          pnpm --filter @wraps/email-check build
 
       - name: Build package
         run: pnpm --filter ${{ steps.parse.outputs.filter }} build
