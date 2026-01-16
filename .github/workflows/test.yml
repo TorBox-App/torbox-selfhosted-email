@@ -35,7 +35,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build dependencies
-        run: pnpm --dir packages/email-check build
+        run: |
+          pnpm --dir packages/core build
+          pnpm --dir packages/email-check build
 
       - name: Run type checking
         run: pnpm --dir packages/cli typecheck
