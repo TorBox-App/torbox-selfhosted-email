@@ -1,0 +1,816 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Wraps Email Infrastructure - Fully configurable email infrastructure with event tracking, history storage, and advanced features"
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Vercel OIDC Configuration (Required)"
+        Parameters:
+          - VercelTeamSlug
+          - VercelProjectName
+      - Label:
+          default: "Domain Configuration (Optional)"
+        Parameters:
+          - Domain
+          - MailFromSubdomain
+      - Label:
+          default: "Event Tracking"
+        Parameters:
+          - EnableEventTracking
+          - EventTypes
+      - Label:
+          default: "History Storage"
+        Parameters:
+          - EnableHistoryStorage
+          - HistoryRetentionDays
+      - Label:
+          default: "Advanced Features"
+        Parameters:
+          - EnableSMTP
+          - TLSRequired
+          - ReputationMetrics
+      - Label:
+          default: "Wraps Platform Integration (Optional)"
+        Parameters:
+          - WrapsOrganizationId
+          - WrapsWebhookSecret
+
+Parameters:
+  # Required - Vercel OIDC
+  VercelTeamSlug:
+    Type: String
+    Description: "Your Vercel team slug (e.g., 'my-team')"
+    MinLength: 1
+
+  VercelProjectName:
+    Type: String
+    Description: "Your Vercel project name (e.g., 'my-app')"
+    MinLength: 1
+
+  # Optional - Domain
+  Domain:
+    Type: String
+    Description: "Primary sending domain (leave empty to skip domain setup)"
+    Default: ""
+
+  MailFromSubdomain:
+    Type: String
+    Description: "MAIL FROM subdomain for improved deliverability"
+    Default: "mail"
+
+  # Event Tracking
+  EnableEventTracking:
+    Type: String
+    Description: "Enable EventBridge event tracking for SES events"
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  EventTypes:
+    Type: CommaDelimitedList
+    Description: "SES event types to track (comma-separated)"
+    Default: "SEND,DELIVERY,BOUNCE,COMPLAINT,OPEN,CLICK"
+
+  # History Storage
+  EnableHistoryStorage:
+    Type: String
+    Description: "Store events in DynamoDB for history queries and analytics"
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  HistoryRetentionDays:
+    Type: Number
+    Description: "Days to retain event history in DynamoDB"
+    Default: 90
+    MinValue: 1
+    MaxValue: 3650
+
+  # Advanced Features
+  EnableSMTP:
+    Type: String
+    Description: "Create SMTP credentials for legacy systems"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  TLSRequired:
+    Type: String
+    Description: "Require TLS encryption for all outbound emails"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  ReputationMetrics:
+    Type: String
+    Description: "Enable SES reputation metrics dashboard"
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  # Wraps Platform Integration
+  WrapsOrganizationId:
+    Type: String
+    Description: "Your Wraps Organization ID (for dashboard integration)"
+    Default: ""
+
+  WrapsWebhookSecret:
+    Type: String
+    Description: "Webhook secret for Wraps platform integration"
+    Default: ""
+    NoEcho: true
+
+Conditions:
+  HasDomain: !Not [!Equals [!Ref Domain, ""]]
+  HasEventTracking: !Equals [!Ref EnableEventTracking, "true"]
+  HasHistoryStorage: !And
+    - !Equals [!Ref EnableHistoryStorage, "true"]
+    - !Condition HasEventTracking
+  HasSMTP: !Equals [!Ref EnableSMTP, "true"]
+  HasTLS: !Equals [!Ref TLSRequired, "true"]
+  HasReputationMetrics: !Equals [!Ref ReputationMetrics, "true"]
+  HasWebhook: !Not [!Equals [!Ref WrapsWebhookSecret, ""]]
+
+Resources:
+  # ===========================================
+  # OIDC Provider for Vercel
+  # ===========================================
+  VercelOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: "https://oidc.vercel.com"
+      ClientIdList:
+        - !Sub "https://vercel.com/${VercelTeamSlug}"
+      ThumbprintList:
+        - "a031c46782e6e6c662c2c87c76da9aa62ccabd8e"
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  # ===========================================
+  # IAM Role for SDK Authentication
+  # ===========================================
+  WrapsEmailRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "wraps-email-role"
+      Description: "IAM role for Wraps SDK to send emails via SES"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !GetAtt VercelOIDCProvider.Arn
+            Action: "sts:AssumeRoleWithWebIdentity"
+            Condition:
+              StringEquals:
+                "oidc.vercel.com:aud": !Sub "https://vercel.com/${VercelTeamSlug}"
+              StringLike:
+                "oidc.vercel.com:sub": !Sub "owner:${VercelTeamSlug}:project:${VercelProjectName}:environment:*"
+      Policies:
+        - PolicyName: "wraps-email-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # SES Sending Permissions
+              - Sid: "SESSending"
+                Effect: Allow
+                Action:
+                  - "ses:SendEmail"
+                  - "ses:SendRawEmail"
+                  - "ses:SendTemplatedEmail"
+                  - "ses:SendBulkTemplatedEmail"
+                  - "ses:SendBulkEmail"
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "ses:ConfigurationSetName": "wraps-email-tracking"
+
+              # SES Read Permissions
+              - Sid: "SESRead"
+                Effect: Allow
+                Action:
+                  - "ses:GetSendQuota"
+                  - "ses:GetSendStatistics"
+                  - "ses:GetAccount"
+                Resource: "*"
+
+              # CloudWatch Metrics
+              - Sid: "CloudWatchMetrics"
+                Effect: Allow
+                Action:
+                  - "cloudwatch:GetMetricData"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:ListMetrics"
+                Resource: "*"
+
+              # DynamoDB - History Table (conditional)
+              - !If
+                - HasHistoryStorage
+                - Sid: "DynamoDBAccess"
+                  Effect: Allow
+                  Action:
+                    - "dynamodb:Query"
+                    - "dynamodb:GetItem"
+                    - "dynamodb:BatchGetItem"
+                  Resource:
+                    - !GetAtt WrapsEmailHistoryTable.Arn
+                    - !Sub "${WrapsEmailHistoryTable.Arn}/index/*"
+                - !Ref AWS::NoValue
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  # ===========================================
+  # SES Configuration Set
+  # ===========================================
+  WrapsEmailConfigSet:
+    Type: AWS::SESv2::ConfigurationSet
+    Properties:
+      ConfigurationSetName: "wraps-email-tracking"
+      DeliveryOptions:
+        TlsPolicy: !If [HasTLS, "REQUIRE", "OPTIONAL"]
+      ReputationOptions:
+        ReputationMetricsEnabled: !If [HasReputationMetrics, true, false]
+      SendingOptions:
+        SendingEnabled: true
+      SuppressionOptions:
+        SuppressedReasons:
+          - BOUNCE
+          - COMPLAINT
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  # ===========================================
+  # SES Domain Identity (Conditional)
+  # ===========================================
+  WrapsEmailDomainIdentity:
+    Type: AWS::SES::EmailIdentity
+    Condition: HasDomain
+    Properties:
+      EmailIdentity: !Ref Domain
+      ConfigurationSetAttributes:
+        ConfigurationSetName: !Ref WrapsEmailConfigSet
+      DkimSigningAttributes:
+        NextSigningKeyLength: RSA_2048_BIT
+
+  WrapsEmailMailFromAttributes:
+    Type: AWS::SESv2::EmailIdentityMailFromAttributes
+    Condition: HasDomain
+    DependsOn: WrapsEmailDomainIdentity
+    Properties:
+      EmailIdentity: !Ref Domain
+      MailFromDomain: !Sub "${MailFromSubdomain}.${Domain}"
+      BehaviorOnMxFailure: USE_DEFAULT_VALUE
+
+  # ===========================================
+  # EventBridge Event Destination (Conditional)
+  # ===========================================
+  WrapsEmailEventDestination:
+    Type: AWS::SESv2::ConfigurationSetEventDestination
+    Condition: HasEventTracking
+    DependsOn: WrapsEmailConfigSet
+    Properties:
+      ConfigurationSetName: "wraps-email-tracking"
+      EventDestinationName: "wraps-email-eventbridge"
+      EventDestination:
+        Enabled: true
+        MatchingEventTypes: !Ref EventTypes
+        EventBridgeDestination:
+          EventBusArn: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default"
+
+  # ===========================================
+  # SQS Queues (Conditional - for history storage)
+  # ===========================================
+  WrapsEmailDLQ:
+    Type: AWS::SQS::Queue
+    Condition: HasHistoryStorage
+    Properties:
+      QueueName: "wraps-email-events-dlq"
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  WrapsEmailQueue:
+    Type: AWS::SQS::Queue
+    Condition: HasHistoryStorage
+    Properties:
+      QueueName: "wraps-email-events"
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 345600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt WrapsEmailDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  WrapsEmailQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Condition: HasHistoryStorage
+    Properties:
+      Queues:
+        - !Ref WrapsEmailQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowEventBridgeToSendMessage"
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: "sqs:SendMessage"
+            Resource: !GetAtt WrapsEmailQueue.Arn
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !GetAtt WrapsEmailEventRule.Arn
+
+  # ===========================================
+  # EventBridge Rule (Conditional - for history storage)
+  # ===========================================
+  WrapsEmailEventRule:
+    Type: AWS::Events::Rule
+    Condition: HasHistoryStorage
+    Properties:
+      Name: "wraps-email-events-to-sqs"
+      Description: "Route SES email events to SQS for processing"
+      EventPattern:
+        source:
+          - "aws.ses"
+        detail-type:
+          - "Email Sending Events"
+      State: ENABLED
+      Targets:
+        - Id: "SQSTarget"
+          Arn: !GetAtt WrapsEmailQueue.Arn
+
+  # ===========================================
+  # DynamoDB History Table (Conditional)
+  # ===========================================
+  WrapsEmailHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Condition: HasHistoryStorage
+    Properties:
+      TableName: "wraps-email-history"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: messageId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+        - AttributeName: recipient
+          AttributeType: S
+      KeySchema:
+        - AttributeName: messageId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: recipient-timestamp-index
+          KeySchema:
+            - AttributeName: recipient
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  # ===========================================
+  # Lambda Event Processor (Conditional)
+  # ===========================================
+  WrapsEmailProcessorRole:
+    Type: AWS::IAM::Role
+    Condition: HasHistoryStorage
+    Properties:
+      RoleName: "wraps-email-processor-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+        - PolicyName: "wraps-email-processor-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "SQSAccess"
+                Effect: Allow
+                Action:
+                  - "sqs:ReceiveMessage"
+                  - "sqs:DeleteMessage"
+                  - "sqs:GetQueueAttributes"
+                Resource: !GetAtt WrapsEmailQueue.Arn
+              - Sid: "DynamoDBAccess"
+                Effect: Allow
+                Action:
+                  - "dynamodb:PutItem"
+                  - "dynamodb:UpdateItem"
+                  - "dynamodb:BatchWriteItem"
+                Resource: !GetAtt WrapsEmailHistoryTable.Arn
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  WrapsEmailProcessor:
+    Type: AWS::Lambda::Function
+    Condition: HasHistoryStorage
+    Properties:
+      FunctionName: "wraps-email-event-processor"
+      Description: "Processes SES email events and stores them in DynamoDB"
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 256
+      Role: !GetAtt WrapsEmailProcessorRole.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref WrapsEmailHistoryTable
+          RETENTION_DAYS: !Ref HistoryRetentionDays
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, PutCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
+
+          const client = new DynamoDBClient({});
+          const docClient = DynamoDBDocumentClient.from(client);
+          const TABLE_NAME = process.env.TABLE_NAME;
+          const RETENTION_DAYS = parseInt(process.env.RETENTION_DAYS || '90', 10);
+
+          exports.handler = async (event) => {
+            const results = { processed: 0, errors: 0 };
+
+            for (const record of event.Records) {
+              try {
+                const body = JSON.parse(record.body);
+                const detail = body.detail || body;
+
+                const eventType = detail.eventType || 'UNKNOWN';
+                const mail = detail.mail || {};
+                const messageId = mail.messageId || record.messageId || `unknown-${Date.now()}`;
+                const timestamp = new Date().toISOString();
+
+                // Calculate TTL
+                const ttl = Math.floor(Date.now() / 1000) + (RETENTION_DAYS * 24 * 60 * 60);
+
+                // Get recipients
+                const recipients = mail.destination || [];
+                const recipient = recipients[0] || 'unknown';
+
+                const item = {
+                  messageId,
+                  timestamp,
+                  eventType,
+                  recipient,
+                  recipients,
+                  subject: mail.commonHeaders?.subject || '',
+                  from: mail.commonHeaders?.from?.[0] || mail.source || '',
+                  ttl,
+                  raw: JSON.stringify(detail),
+                };
+
+                await docClient.send(new PutCommand({
+                  TableName: TABLE_NAME,
+                  Item: item,
+                }));
+
+                results.processed++;
+              } catch (error) {
+                console.error('Error processing record:', error);
+                results.errors++;
+              }
+            }
+
+            console.log(`Processed ${results.processed} records, ${results.errors} errors`);
+            return results;
+          };
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  WrapsEmailProcessorEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: HasHistoryStorage
+    Properties:
+      EventSourceArn: !GetAtt WrapsEmailQueue.Arn
+      FunctionName: !Ref WrapsEmailProcessor
+      BatchSize: 10
+      Enabled: true
+
+  # ===========================================
+  # SMTP User (Conditional)
+  # ===========================================
+  WrapsEmailSMTPUser:
+    Type: AWS::IAM::User
+    Condition: HasSMTP
+    Properties:
+      UserName: "wraps-email-smtp-user"
+      Policies:
+        - PolicyName: "wraps-smtp-send-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "SESSMTPSending"
+                Effect: Allow
+                Action:
+                  - "ses:SendRawEmail"
+                Resource: "*"
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  WrapsEmailSMTPAccessKey:
+    Type: AWS::IAM::AccessKey
+    Condition: HasSMTP
+    Properties:
+      UserName: !Ref WrapsEmailSMTPUser
+      Status: Active
+
+  # ===========================================
+  # Wraps Platform Webhook Integration (Conditional)
+  # ===========================================
+  WrapsWebhookEventRule:
+    Type: AWS::Events::Rule
+    Condition: HasWebhook
+    Properties:
+      Name: "wraps-email-events-to-webhook"
+      Description: "Forward SES email events to Wraps platform for dashboard analytics"
+      EventPattern:
+        source:
+          - "aws.ses"
+        detail-type:
+          - "Email Sending Events"
+      State: ENABLED
+      Targets:
+        - Id: "WrapsWebhookTarget"
+          Arn: !Sub "arn:aws:events:us-east-1:654654531039:event-bus/wraps-customer-events"
+          RoleArn: !GetAtt WrapsWebhookRole.Arn
+          HttpParameters:
+            HeaderParameters:
+              X-Wraps-Organization-Id: !Ref WrapsOrganizationId
+              X-Wraps-Webhook-Secret: !Ref WrapsWebhookSecret
+
+  WrapsWebhookRole:
+    Type: AWS::IAM::Role
+    Condition: HasWebhook
+    Properties:
+      RoleName: "wraps-email-webhook-role"
+      Description: "Role for forwarding events to Wraps platform"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "wraps-webhook-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "PutEventsToWrapsBus"
+                Effect: Allow
+                Action:
+                  - "events:PutEvents"
+                Resource: "arn:aws:events:us-east-1:654654531039:event-bus/wraps-customer-events"
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  # ===========================================
+  # Console Access Role (for Wraps Dashboard)
+  # ===========================================
+  WrapsConsoleAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "wraps-console-access-role"
+      Description: "Allows Wraps dashboard to read CloudWatch metrics and email data"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - "arn:aws:iam::654654531039:root"
+            Action: "sts:AssumeRole"
+            Condition:
+              StringEquals:
+                "sts:ExternalId": !Sub "${AWS::StackId}"
+      Policies:
+        - PolicyName: "wraps-console-access-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # CloudWatch Metrics - Read Only
+              - Sid: "CloudWatchMetricsReadOnly"
+                Effect: Allow
+                Action:
+                  - "cloudwatch:GetMetricData"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:ListMetrics"
+                Resource: "*"
+
+              # SES - Read Access
+              - Sid: "SESReadAccess"
+                Effect: Allow
+                Action:
+                  - "ses:GetSendQuota"
+                  - "ses:GetSendStatistics"
+                  - "ses:GetAccount"
+                  - "ses:ListIdentities"
+                  - "ses:GetIdentityVerificationAttributes"
+                  - "ses:GetIdentityDkimAttributes"
+                  - "ses:GetConfigurationSet"
+                Resource: "*"
+
+              # SES - Template Management
+              - Sid: "SESTemplateManagement"
+                Effect: Allow
+                Action:
+                  - "ses:GetTemplate"
+                  - "ses:ListTemplates"
+                  - "ses:CreateTemplate"
+                  - "ses:UpdateTemplate"
+                  - "ses:DeleteTemplate"
+                  - "ses:TestRenderTemplate"
+                Resource: "*"
+
+              # DynamoDB - Read Email Events
+              - Sid: "DynamoDBReadEmailEvents"
+                Effect: Allow
+                Action:
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:Query"
+                  - "dynamodb:Scan"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:BatchGetItem"
+                Resource:
+                  - !Sub "arn:aws:dynamodb:*:${AWS::AccountId}:table/wraps-email-*"
+                  - !Sub "arn:aws:dynamodb:*:${AWS::AccountId}:table/wraps-email-*/index/*"
+
+              # CloudFormation - Read stack outputs (for feature detection)
+              - Sid: "CloudFormationReadOutputs"
+                Effect: Allow
+                Action:
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:ListStacks"
+                Resource: "*"
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+        - Key: Purpose
+          Value: "Console Access"
+
+Outputs:
+  # Core Outputs
+  RoleArn:
+    Description: "IAM role ARN for SDK authentication (set as WRAPS_AWS_ROLE_ARN)"
+    Value: !GetAtt WrapsEmailRole.Arn
+    Export:
+      Name: "WrapsEmailRoleArn"
+
+  # Console Access Outputs (for Wraps Dashboard)
+  ConsoleRoleArn:
+    Description: "IAM role ARN for Wraps dashboard access (copy this to Wraps)"
+    Value: !GetAtt WrapsConsoleAccessRole.Arn
+    Export:
+      Name: "WrapsConsoleAccessRoleArn"
+
+  ExternalId:
+    Description: "External ID for dashboard role (copy this to Wraps)"
+    Value: !Sub "${AWS::StackId}"
+
+  ConfigSetName:
+    Description: "SES configuration set name (set as WRAPS_CONFIG_SET)"
+    Value: !Ref WrapsEmailConfigSet
+    Export:
+      Name: "WrapsEmailConfigSetName"
+
+  Region:
+    Description: "AWS region (set as WRAPS_AWS_REGION)"
+    Value: !Ref AWS::Region
+    Export:
+      Name: "WrapsEmailRegion"
+
+  AccountId:
+    Description: "AWS Account ID"
+    Value: !Ref AWS::AccountId
+
+  # Domain Outputs (Conditional)
+  Domain:
+    Condition: HasDomain
+    Description: "Primary sending domain"
+    Value: !Ref Domain
+
+  MailFromDomain:
+    Condition: HasDomain
+    Description: "MAIL FROM domain for SPF alignment"
+    Value: !Sub "${MailFromSubdomain}.${Domain}"
+
+  # Event Tracking Outputs (Conditional)
+  TableName:
+    Condition: HasHistoryStorage
+    Description: "DynamoDB table name for email history"
+    Value: !Ref WrapsEmailHistoryTable
+    Export:
+      Name: "WrapsEmailHistoryTableName"
+
+  QueueUrl:
+    Condition: HasHistoryStorage
+    Description: "SQS queue URL for events"
+    Value: !Ref WrapsEmailQueue
+    Export:
+      Name: "WrapsEmailQueueUrl"
+
+  DLQUrl:
+    Condition: HasHistoryStorage
+    Description: "SQS dead letter queue URL"
+    Value: !Ref WrapsEmailDLQ
+    Export:
+      Name: "WrapsEmailDLQUrl"
+
+  LambdaArn:
+    Condition: HasHistoryStorage
+    Description: "Lambda function ARN for event processing"
+    Value: !GetAtt WrapsEmailProcessor.Arn
+    Export:
+      Name: "WrapsEmailProcessorArn"
+
+  # SMTP Outputs (Conditional)
+  SMTPEndpoint:
+    Condition: HasSMTP
+    Description: "SMTP endpoint for email sending"
+    Value: !Sub "email-smtp.${AWS::Region}.amazonaws.com"
+
+  SMTPUsername:
+    Condition: HasSMTP
+    Description: "SMTP username (IAM Access Key ID)"
+    Value: !Ref WrapsEmailSMTPAccessKey
+
+  SMTPPassword:
+    Condition: HasSMTP
+    Description: "SMTP password (derived from secret key - STORE SECURELY)"
+    Value: !GetAtt WrapsEmailSMTPAccessKey.SecretAccessKey
+
+  # Features JSON Output
+  Features:
+    Description: "JSON representation of enabled features"
+    Value: !Sub |
+      {
+        "domain": "${Domain}",
+        "eventTracking": ${EnableEventTracking},
+        "historyStorage": ${EnableHistoryStorage},
+        "smtp": ${EnableSMTP},
+        "tlsRequired": ${TLSRequired},
+        "reputationMetrics": ${ReputationMetrics}
+      }
+
+  # Environment Variables (convenience output)
+  EnvironmentVariables:
+    Description: "Environment variables to set in your application"
+    Value: !Sub |
+      WRAPS_AWS_ROLE_ARN=${WrapsEmailRole.Arn}
+      WRAPS_AWS_REGION=${AWS::Region}
+      WRAPS_CONFIG_SET=wraps-email-tracking
+
+  # DNS Records (Conditional - for domain setup)
+  DKIMInstructions:
+    Condition: HasDomain
+    Description: "DKIM DNS record instructions"
+    Value: !Sub "Add 3 CNAME records for DKIM: Check SES console for ${Domain} identity to get the exact record values"
+
+  SPFRecord:
+    Condition: HasDomain
+    Description: "SPF TXT record for MAIL FROM domain"
+    Value: !Sub "Add TXT record at ${MailFromSubdomain}.${Domain} with value: v=spf1 include:amazonses.com ~all"
+
+  MXRecord:
+    Condition: HasDomain
+    Description: "MX record for MAIL FROM domain"
+    Value: !Sub "Add MX record at ${MailFromSubdomain}.${Domain} with value: 10 feedback-smtp.${AWS::Region}.amazonses.com"
+
+  NextSteps:
+    Description: "Next steps after deployment"
+    Value: |
+      1. Copy the RoleArn output and set it as WRAPS_AWS_ROLE_ARN in your environment
+      2. Set WRAPS_AWS_REGION to the Region output value
+      3. Set WRAPS_CONFIG_SET to the ConfigSetName output value
+      4. If you added a domain, configure the DNS records as shown in the outputs
+      5. Install the SDK: npm install @wraps.dev/email
+      6. Start sending emails!

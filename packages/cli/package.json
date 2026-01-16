@@ -47,6 +47,7 @@
   "author": "Wraps",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
+    "@wraps.dev/core": "workspace:*",
     "@aws-sdk/client-acm": "3.933.0",
     "@aws-sdk/client-cloudformation": "^3.490.0",
     "@aws-sdk/client-cloudfront": "3.933.0",

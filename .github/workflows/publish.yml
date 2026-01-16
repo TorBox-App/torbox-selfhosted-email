@@ -1,4 +1,4 @@
-name: Publish CLI to npm
+name: Publish Package to npm
 
 on:
   release:
@@ -30,11 +30,102 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build email-check (CLI dependency)
-        run: pnpm --filter @wraps/email-check build
+      - name: Parse release tag
+        id: parse
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          echo "Full tag: $TAG"
 
-      - name: Build CLI
-        run: pnpm --filter @wraps.dev/cli build
+          # Expected formats:
+          # cli-v1.0.0, cli-v1.0.0-beta.1, cli-v1.0.0-alpha.1
+          # cdk-v1.0.0, cdk-v1.0.0-beta.1
+          # pulumi-v1.0.0, pulumi-v1.0.0-beta.1
+          # core-v1.0.0, core-v1.0.0-beta.1
 
-      - name: Publish to npm (with OIDC Trusted Publishing)
-        run: pnpm --filter @wraps.dev/cli publish --access public --no-git-checks
+          # Extract package name (everything before -v)
+          if [[ "$TAG" =~ ^([a-z]+)-v ]]; then
+            PACKAGE="${BASH_REMATCH[1]}"
+          else
+            echo "Error: Tag must be in format <package>-v<version> (e.g., cli-v1.0.0)"
+            exit 1
+          fi
+
+          # Map package name to npm package and filter
+          case "$PACKAGE" in
+            cli)
+              NPM_PACKAGE="@wraps.dev/cli"
+              FILTER="@wraps.dev/cli"
+              ;;
+            cdk)
+              NPM_PACKAGE="@wraps.dev/cdk"
+              FILTER="@wraps/cdk"
+              ;;
+            pulumi)
+              NPM_PACKAGE="@wraps.dev/pulumi"
+              FILTER="@wraps/pulumi"
+              ;;
+            core)
+              NPM_PACKAGE="@wraps.dev/core"
+              FILTER="@wraps/core"
+              ;;
+            *)
+              echo "Error: Unknown package '$PACKAGE'. Must be one of: cli, cdk, pulumi, core"
+              exit 1
+              ;;
+          esac
+
+          # Determine dist-tag based on version
+          if [[ "$TAG" =~ -beta\. ]]; then
+            DIST_TAG="beta"
+          elif [[ "$TAG" =~ -alpha\. ]]; then
+            DIST_TAG="alpha"
+          elif [[ "$TAG" =~ -rc\. ]]; then
+            DIST_TAG="rc"
+          else
+            DIST_TAG="latest"
+          fi
+
+          echo "package=$PACKAGE" >> $GITHUB_OUTPUT
+          echo "npm_package=$NPM_PACKAGE" >> $GITHUB_OUTPUT
+          echo "filter=$FILTER" >> $GITHUB_OUTPUT
+          echo "dist_tag=$DIST_TAG" >> $GITHUB_OUTPUT
+
+          echo "Package: $PACKAGE"
+          echo "NPM Package: $NPM_PACKAGE"
+          echo "Filter: $FILTER"
+          echo "Dist Tag: $DIST_TAG"
+
+      - name: Build dependencies
+        run: |
+          # Build shared dependencies first
+          pnpm --filter @wraps/core build || true
+          pnpm --filter @wraps/email-check build || true
+
+      - name: Build package
+        run: pnpm --filter ${{ steps.parse.outputs.filter }} build
+
+      - name: Publish to npm
+        run: |
+          pnpm --filter ${{ steps.parse.outputs.filter }} publish \
+            --access public \
+            --no-git-checks \
+            --tag ${{ steps.parse.outputs.dist_tag }}
+        env:
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Summary
+        run: |
+          echo "## Published Package" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package:** ${{ steps.parse.outputs.npm_package }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dist Tag:** ${{ steps.parse.outputs.dist_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Install with:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.parse.outputs.dist_tag }}" == "latest" ]]; then
+            echo "npm install ${{ steps.parse.outputs.npm_package }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "npm install ${{ steps.parse.outputs.npm_package }}@${{ steps.parse.outputs.dist_tag }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

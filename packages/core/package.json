@@ -1,0 +1,64 @@
+{
+  "name": "@wraps.dev/core",
+  "version": "0.1.0",
+  "description": "Shared types, utilities, and Lambda code for Wraps IaC packages",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./lambda": {
+      "import": "./dist/lambda/index.js",
+      "types": "./dist/lambda/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "lambda"
+  ],
+  "scripts": {
+    "build": "pnpm build:lambda && tsup",
+    "build:lambda": "tsx scripts/build-lambda.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist lambda/event-processor/index.mjs lambda/event-processor/.bundled lambda/sms-event-processor/index.mjs lambda/sms-event-processor/.bundled"
+  },
+  "keywords": [
+    "wraps",
+    "email",
+    "aws",
+    "ses",
+    "infrastructure",
+    "shared"
+  ],
+  "author": "Wraps <hello@wraps.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-dev/wraps.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://wraps.dev",
+  "bugs": {
+    "url": "https://github.com/wraps-dev/wraps/issues"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.810.0",
+    "@aws-sdk/lib-dynamodb": "^3.810.0",
+    "@vitest/coverage-v8": "^4.0.7",
+    "esbuild": "^0.24.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3",
+    "vitest": "^4.0.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

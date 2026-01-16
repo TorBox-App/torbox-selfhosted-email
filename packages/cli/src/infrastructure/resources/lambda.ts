@@ -5,6 +5,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import {
+  LAMBDA_EVENT_PROCESSOR_PATH,
+  LAMBDA_SMS_EVENT_PROCESSOR_PATH,
+} from "@wraps.dev/core";
 import { build } from "esbuild";
 
 /**
@@ -35,6 +39,7 @@ export type LambdaConfig = {
   queueArn: pulumi.Output<string>;
   accountId: string;
   region: string;
+  retentionDays: number;
 };
 
 /**
@@ -101,10 +106,29 @@ async function findEventSourceMapping(
 /**
  * Get the Lambda function code directory
  *
- * In production (published package), uses pre-bundled code from dist/lambda/
- * In development, bundles the TypeScript source on-the-fly
+ * Priority order:
+ * 1. @wraps.dev/core package (shared Lambda code) - for event-processor
+ * 2. Pre-bundled code from dist/lambda/ (production - published package)
+ * 3. Pre-bundled code from lambda/ (development build)
+ * 4. On-the-fly bundling from TypeScript source (development)
  */
 export async function getLambdaCode(functionName: string): Promise<string> {
+  // For event-processor, prefer the shared code from @wraps.dev/core
+  if (functionName === "event-processor") {
+    const coreBundleMarker = join(LAMBDA_EVENT_PROCESSOR_PATH, ".bundled");
+    if (existsSync(coreBundleMarker)) {
+      return LAMBDA_EVENT_PROCESSOR_PATH;
+    }
+  }
+
+  // For sms-event-processor, prefer the shared code from @wraps.dev/core
+  if (functionName === "sms-event-processor") {
+    const coreBundleMarker = join(LAMBDA_SMS_EVENT_PROCESSOR_PATH, ".bundled");
+    if (existsSync(coreBundleMarker)) {
+      return LAMBDA_SMS_EVENT_PROCESSOR_PATH;
+    }
+  }
+
   const packageRoot = getPackageRoot();
 
   // Check for pre-bundled Lambda code in dist/ (production - published package)
@@ -241,6 +265,15 @@ export async function deployLambdaFunctions(
   const functionName = "wraps-email-event-processor";
   const exists = await lambdaFunctionExists(functionName);
 
+  // Lambda environment variables
+  const lambdaEnvironment = {
+    variables: {
+      TABLE_NAME: config.tableName,
+      AWS_ACCOUNT_ID: config.accountId,
+      RETENTION_DAYS: config.retentionDays.toString(),
+    },
+  };
+
   // Create event-processor Lambda
   const eventProcessor = exists
     ? new aws.lambda.Function(
@@ -253,12 +286,7 @@ export async function deployLambdaFunctions(
           code: new pulumi.asset.FileArchive(eventProcessorCode),
           timeout: 300, // 5 minutes (matches SQS visibility timeout)
           memorySize: 512,
-          environment: {
-            variables: {
-              TABLE_NAME: config.tableName,
-              AWS_ACCOUNT_ID: config.accountId,
-            },
-          },
+          environment: lambdaEnvironment,
           tags: {
             ManagedBy: "wraps-cli",
             Description:
@@ -277,12 +305,7 @@ export async function deployLambdaFunctions(
         code: new pulumi.asset.FileArchive(eventProcessorCode),
         timeout: 300, // 5 minutes (matches SQS visibility timeout)
         memorySize: 512,
-        environment: {
-          variables: {
-            TABLE_NAME: config.tableName,
-            AWS_ACCOUNT_ID: config.accountId,
-          },
-        },
+        environment: lambdaEnvironment,
         tags: {
           ManagedBy: "wraps-cli",
           Description:

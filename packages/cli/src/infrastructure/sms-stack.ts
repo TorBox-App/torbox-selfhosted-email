@@ -660,6 +660,7 @@ async function deploySMSLambdaFunction(config: {
   queueArn: pulumi.Output<string>;
   accountId: string;
   region: string;
+  retentionDays: number;
 }): Promise<aws.lambda.Function> {
   // Bundle Lambda code
   const { getLambdaCode } = await import("./resources/lambda.js");
@@ -742,6 +743,7 @@ async function deploySMSLambdaFunction(config: {
         variables: {
           TABLE_NAME: config.tableName,
           AWS_ACCOUNT_ID: config.accountId,
+          RETENTION_DAYS: config.retentionDays.toString(),
         },
       },
       tags: {
@@ -845,11 +847,18 @@ export async function deploySMSStack(
   // 9. Deploy Lambda function (if event tracking + DynamoDB enabled)
   let lambdaFunction;
   if (smsConfig.eventTracking?.dynamoDBHistory && dynamoTable && sqsResources) {
+    // Import retentionToDays from core
+    const { retentionToDays } = await import("@wraps.dev/core");
+    const retentionDays = retentionToDays(
+      smsConfig.eventTracking.archiveRetention ?? "90days"
+    );
+
     lambdaFunction = await deploySMSLambdaFunction({
       tableName: dynamoTable.name,
       queueArn: sqsResources.queue.arn,
       accountId,
       region: config.region,
+      retentionDays,
     });
   }
 

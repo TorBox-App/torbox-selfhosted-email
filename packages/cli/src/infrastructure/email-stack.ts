@@ -1,5 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import { retentionToDays } from "@wraps.dev/core";
 import type { EmailStackConfig, StackOutputs } from "../types/index.js";
 import { createDynamoDBTables } from "./resources/dynamodb.js";
 import { createEventBridgeResources } from "./resources/eventbridge.js";
@@ -153,12 +154,16 @@ export async function deployEmailStack(
     dynamoTables &&
     sqsResources
   ) {
+    const retentionDays = retentionToDays(
+      emailConfig.eventTracking?.archiveRetention ?? "90days"
+    );
     lambdaFunctions = await deployLambdaFunctions({
       roleArn: role.arn,
       tableName: dynamoTables.emailHistory.name,
       queueArn: sqsResources.queue.arn,
       accountId,
       region: config.region,
+      retentionDays,
     });
   }
 

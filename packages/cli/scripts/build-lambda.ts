@@ -49,19 +49,13 @@ async function bundleLambda(name: string, entryPoint: string) {
 async function main() {
   console.log("Building Lambda functions...\n");
 
-  // Email event processor
-  await bundleLambda(
-    "event-processor",
-    join(packageRoot, "lambda", "event-processor", "index.ts")
-  );
+  // Note: Both event-processor and sms-event-processor now use @wraps.dev/core's pre-bundled Lambdas
+  // No Lambda bundling needed in CLI package
 
-  // SMS event processor
-  await bundleLambda(
-    "sms-event-processor",
-    join(packageRoot, "lambda", "sms-event-processor", "index.ts")
+  console.log(
+    "No Lambda functions to build - using pre-bundled code from @wraps.dev/core"
   );
-
-  console.log("\n✓ All Lambda functions bundled successfully");
+  console.log("\n✓ Lambda setup complete");
 }
 
 main().catch((error) => {

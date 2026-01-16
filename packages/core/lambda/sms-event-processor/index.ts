@@ -27,6 +27,9 @@ export async function handler(event: SQSEvent) {
     throw new Error("TABLE_NAME environment variable not set");
   }
 
+  // Get retention days from environment, default to 90
+  const retentionDays = Number.parseInt(process.env.RETENTION_DAYS || "90", 10);
+
   for (const record of event.Records) {
     try {
       // Parse the SQS message body
@@ -97,6 +100,12 @@ export async function handler(event: SQSEvent) {
       // Calculate message segments (SMS is 160 chars for GSM, 70 for Unicode)
       const segments = messageBody ? Math.ceil(messageBody.length / 160) : 1;
 
+      // Calculate TTL based on retention days (0 or negative means no TTL)
+      const expiresAt =
+        retentionDays > 0
+          ? Date.now() + retentionDays * 24 * 60 * 60 * 1000
+          : Date.now() + 365 * 24 * 60 * 60 * 1000; // Default 1 year if not specified
+
       // Store event in DynamoDB
       await dynamodb.send(
         new PutItemCommand({
@@ -113,9 +122,7 @@ export async function handler(event: SQSEvent) {
             eventData: { S: JSON.stringify(detail) },
             additionalData: { S: JSON.stringify(additionalData) },
             createdAt: { N: Date.now().toString() },
-            expiresAt: {
-              N: (Date.now() + 90 * 24 * 60 * 60 * 1000).toString(),
-            }, // 90 days TTL
+            expiresAt: { N: expiresAt.toString() },
           },
         })
       );
