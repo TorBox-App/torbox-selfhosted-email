@@ -49,11 +49,11 @@ async function bundleLambda(name: string, entryPoint: string) {
 async function main() {
   console.log("Building Lambda functions...\n");
 
-  // Note: Both event-processor and sms-event-processor now use @wraps.dev/core's pre-bundled Lambdas
+  // Note: Both event-processor and sms-event-processor now use @wraps/core's pre-bundled Lambdas
   // No Lambda bundling needed in CLI package
 
   console.log(
-    "No Lambda functions to build - using pre-bundled code from @wraps.dev/core"
+    "No Lambda functions to build - using pre-bundled code from @wraps/core"
   );
   console.log("\n✓ Lambda setup complete");
 }

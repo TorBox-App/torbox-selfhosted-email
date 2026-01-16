@@ -848,7 +848,7 @@ export async function deploySMSStack(
   let lambdaFunction;
   if (smsConfig.eventTracking?.dynamoDBHistory && dynamoTable && sqsResources) {
     // Import retentionToDays from core
-    const { retentionToDays } = await import("@wraps.dev/core");
+    const { retentionToDays } = await import("@wraps/core");
     const retentionDays = retentionToDays(
       smsConfig.eventTracking.archiveRetention ?? "90days"
     );

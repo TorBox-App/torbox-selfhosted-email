@@ -1,6 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { retentionToDays } from "@wraps.dev/core";
+import { retentionToDays } from "@wraps/core";
 import type { EmailStackConfig, StackOutputs } from "../types/index.js";
 import { createDynamoDBTables } from "./resources/dynamodb.js";
 import { createEventBridgeResources } from "./resources/eventbridge.js";

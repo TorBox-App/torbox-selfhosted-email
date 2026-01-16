@@ -1,5 +1,5 @@
 /**
- * @wraps.dev/core - Shared types, utilities, and Lambda code for Wraps IaC packages
+ * @wraps/core - Shared types, utilities, and Lambda code for Wraps IaC packages
  *
  * This package provides common functionality used by @wraps.dev/pulumi and @wraps.dev/cdk:
  * - Shared types (SESEventType, ArchiveRetention, config interfaces)
@@ -62,7 +62,7 @@ export type {
  *
  * @example
  * ```typescript
- * import { LAMBDA_EVENT_PROCESSOR_PATH } from "@wraps.dev/core";
+ * import { LAMBDA_EVENT_PROCESSOR_PATH } from "@wraps/core";
  * import * as lambda from "aws-cdk-lib/aws-lambda";
  *
  * new lambda.Function(this, "Processor", {
@@ -82,7 +82,7 @@ export const LAMBDA_EVENT_PROCESSOR_PATH = new URL(
  *
  * @example
  * ```typescript
- * import { LAMBDA_SMS_EVENT_PROCESSOR_PATH } from "@wraps.dev/core";
+ * import { LAMBDA_SMS_EVENT_PROCESSOR_PATH } from "@wraps/core";
  * import * as lambda from "aws-cdk-lib/aws-lambda";
  *
  * new lambda.Function(this, "SMSProcessor", {

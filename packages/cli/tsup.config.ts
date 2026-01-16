@@ -12,7 +12,7 @@ export default defineConfig({
   sourcemap: true,
   target: "node24",
   outDir: "dist",
-  noExternal: ["@wraps/email-check", "@wraps.dev/core"], // Bundle workspace packages into CLI
+  noExternal: ["@wraps/email-check", "@wraps/core"], // Bundle workspace packages into CLI
   onSuccess: async () => {
     // Make CLI executable
     await import("node:fs/promises").then((fs) =>

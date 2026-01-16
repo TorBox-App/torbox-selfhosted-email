@@ -65,7 +65,7 @@ jobs:
               FILTER="@wraps/pulumi"
               ;;
             core)
-              NPM_PACKAGE="@wraps.dev/core"
+              NPM_PACKAGE="@wraps/core"
               FILTER="@wraps/core"
               ;;
             *)

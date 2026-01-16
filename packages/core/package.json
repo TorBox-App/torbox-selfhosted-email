@@ -1,5 +1,5 @@
 {
-  "name": "@wraps.dev/core",
+  "name": "@wraps/core",
   "version": "0.1.0",
   "description": "Shared types, utilities, and Lambda code for Wraps IaC packages",
   "type": "module",
