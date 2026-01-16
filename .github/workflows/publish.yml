@@ -58,11 +58,11 @@ jobs:
               ;;
             cdk)
               NPM_PACKAGE="@wraps.dev/cdk"
-              FILTER="@wraps/cdk"
+              FILTER="@wraps.dev/cdk"
               ;;
             pulumi)
               NPM_PACKAGE="@wraps.dev/pulumi"
-              FILTER="@wraps/pulumi"
+              FILTER="@wraps.dev/pulumi"
               ;;
             core)
               NPM_PACKAGE="@wraps/core"
