@@ -76,7 +76,9 @@ export class VercelDNSClient implements DNSProviderClient {
   ): Promise<boolean> {
     // For Vercel, the name should be relative to the domain
     // e.g., for "token._domainkey.example.com", name should be "token._domainkey"
-    const relativeName = name.replace(`.${this.domain}`, "") || "@";
+    // Root domain should be "@"
+    const relativeName =
+      name === this.domain ? "@" : name.replace(`.${this.domain}`, "");
 
     const body: Record<string, unknown> = {
       name: relativeName,
@@ -111,7 +113,9 @@ export class VercelDNSClient implements DNSProviderClient {
     }
 
     // Vercel stores relative names, so we need to match accordingly
-    const relativeName = name.replace(`.${this.domain}`, "") || "@";
+    // Root domain should be "@"
+    const relativeName =
+      name === this.domain ? "@" : name.replace(`.${this.domain}`, "");
 
     return (
       result.records.find(
