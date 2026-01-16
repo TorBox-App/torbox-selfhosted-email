@@ -275,7 +275,7 @@ export function OrganizationSettingsBilling({
             />
 
             <div className="grid gap-4 md:grid-cols-2">
-              {/* Pro Plan */}
+              {/* Growth Plan */}
               {currentPlan === "starter" && (
                 <div className="space-y-4 rounded-lg border p-6">
                   <div>
@@ -328,12 +328,12 @@ export function OrganizationSettingsBilling({
                       })
                     }
                   >
-                    Upgrade to Pro
+                    Upgrade to Growth
                   </Button>
                 </div>
               )}
 
-              {/* Growth Plan */}
+              {/* Scale Plan */}
               <div className="space-y-4 rounded-lg border p-6">
                 <div>
                   <h3 className="font-semibold text-lg">{PLANS.growth.name}</h3>
@@ -387,7 +387,7 @@ export function OrganizationSettingsBilling({
                   }
                   variant={currentPlan === "starter" ? "outline" : "default"}
                 >
-                  Upgrade to Growth
+                  Upgrade to Scale
                 </Button>
               </div>
             </div>

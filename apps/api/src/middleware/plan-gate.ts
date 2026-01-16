@@ -8,16 +8,17 @@ import { Elysia } from "elysia";
 import type { AuthContext } from "./auth";
 
 // Feature to minimum plan mapping
+// Note: workflows are available from Starter with quantity limits (5 → 25 → unlimited)
 const FEATURE_PLANS = {
   batch: "starter", // Starter+
-  topics: "pro", // Pro+
-  segments: "pro", // Pro+
-  campaigns: "pro", // Pro+
-  workflows: "growth", // Growth+
-  events: "growth", // Growth+
-  advancedSegments: "growth", // Growth+
-  customRetention: "scale", // Scale+
-  prioritySLA: "scale", // Scale+
+  topics: "pro", // Growth+
+  segments: "pro", // Growth+
+  campaigns: "pro", // Growth+
+  workflows: "starter", // Starter+ (with limits: 5/25/unlimited)
+  events: "growth", // Scale+
+  advancedSegments: "growth", // Scale+
+  customRetention: "scale", // Enterprise+
+  prioritySLA: "scale", // Enterprise+
 } as const;
 
 type Feature = keyof typeof FEATURE_PLANS;

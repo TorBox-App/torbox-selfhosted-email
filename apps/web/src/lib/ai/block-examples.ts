@@ -1447,7 +1447,7 @@ export const PRICING_EXAMPLES: BlockExample[] = [
                           marks: [
                             { type: "textStyle", attrs: { color: "#ffffff" } },
                           ],
-                          text: "Pro",
+                          text: "Growth",
                         },
                       ],
                     },

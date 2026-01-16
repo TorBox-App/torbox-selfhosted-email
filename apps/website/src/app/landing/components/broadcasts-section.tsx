@@ -26,25 +26,25 @@ const features = [
     icon: Calendar,
     title: "Schedule for Later",
     description: "Pick a date and time - we'll send it automatically",
-    plan: "Pro",
+    plan: "Growth",
   },
   {
     icon: Filter,
     title: "Segment Targeting",
     description: "Target contacts by properties like plan, location, or tags",
-    plan: "Pro",
+    plan: "Growth",
   },
   {
     icon: Tag,
     title: "Topic Subscriptions",
     description: "Let contacts subscribe to topics they care about",
-    plan: "Pro",
+    plan: "Growth",
   },
   {
     icon: Users,
     title: "Preference Center",
     description: "Hosted page for contacts to manage their preferences",
-    plan: "Pro",
+    plan: "Growth",
   },
   {
     icon: Clock,
@@ -143,7 +143,7 @@ export function BroadcastsSection() {
                 <h3 className="font-semibold text-lg">{feature.title}</h3>
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs ${
-                    feature.plan === "Pro"
+                    feature.plan === "Growth"
                       ? "bg-orange-500/10 text-orange-600 dark:text-orange-400"
                       : "bg-muted text-muted-foreground"
                   }`}

@@ -16,7 +16,7 @@ import { and, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createActionLogger, serializeError } from "@/lib/logger";
-import { checkFeatureAccess } from "@/lib/plan-limits";
+import { checkFeatureAccess, checkWorkflowLimit } from "@/lib/plan-limits";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -289,8 +289,16 @@ export async function createWorkflow(
       return {
         success: false,
         error:
-          featureCheck.message ??
-          "Automations require a Growth plan or higher.",
+          featureCheck.message ?? "Automations require an active subscription.",
+      };
+    }
+
+    // Check if organization has reached their workflow limit
+    const limitCheck = await checkWorkflowLimit(organizationId);
+    if (!limitCheck.allowed) {
+      return {
+        success: false,
+        error: limitCheck.message ?? "You have reached your workflow limit.",
       };
     }
 
@@ -389,8 +397,7 @@ export async function updateWorkflow(
       return {
         success: false,
         error:
-          featureCheck.message ??
-          "Automations require a Growth plan or higher.",
+          featureCheck.message ?? "Automations require an active subscription.",
       };
     }
 
@@ -548,8 +555,7 @@ export async function deleteWorkflow(
       return {
         success: false,
         error:
-          featureCheck.message ??
-          "Automations require a Growth plan or higher.",
+          featureCheck.message ?? "Automations require an active subscription.",
       };
     }
 
@@ -631,8 +637,7 @@ export async function enableWorkflow(
       return {
         success: false,
         error:
-          featureCheck.message ??
-          "Automations require a Growth plan or higher.",
+          featureCheck.message ?? "Automations require an active subscription.",
       };
     }
 
@@ -795,8 +800,7 @@ export async function disableWorkflow(
       return {
         success: false,
         error:
-          featureCheck.message ??
-          "Automations require a Growth plan or higher.",
+          featureCheck.message ?? "Automations require an active subscription.",
       };
     }
 
@@ -865,8 +869,16 @@ export async function duplicateWorkflow(
       return {
         success: false,
         error:
-          featureCheck.message ??
-          "Automations require a Growth plan or higher.",
+          featureCheck.message ?? "Automations require an active subscription.",
+      };
+    }
+
+    // Check if organization has reached their workflow limit
+    const limitCheck = await checkWorkflowLimit(organizationId);
+    if (!limitCheck.allowed) {
+      return {
+        success: false,
+        error: limitCheck.message ?? "You have reached your workflow limit.",
       };
     }
 

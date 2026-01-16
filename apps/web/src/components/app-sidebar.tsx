@@ -107,7 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             title: "Events",
             url: `/${orgSlug}/events`,
           },
-          // Topics - requires Pro plan
+          // Topics - requires Growth plan
           ...(planFeatures?.topics
             ? [
                 {
@@ -116,7 +116,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 },
               ]
             : []),
-          // Segments - requires Pro plan
+          // Segments - requires Growth plan
           ...(planFeatures?.segments
             ? [
                 {
@@ -129,7 +129,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     : null;
 
-  // Automations navigation - requires Growth+ plan
+  // Automations navigation - requires Scale+ plan
   const automationsNavGroup =
     orgSlug && planFeatures?.workflows
       ? {

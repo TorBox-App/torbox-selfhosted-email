@@ -159,7 +159,7 @@ beforeAll(async () => {
       set: { updatedAt: new Date() },
     });
 
-  // Set up Pro plan subscription (required for topics feature)
+  // Set up Growth plan subscription (required for topics feature)
   await db
     .insert(subscription)
     .values({

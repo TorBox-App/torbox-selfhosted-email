@@ -369,7 +369,8 @@ export async function createSegment(
     if (!featureCheck.allowed) {
       return {
         success: false,
-        error: featureCheck.message ?? "Segments require a Pro plan or higher.",
+        error:
+          featureCheck.message ?? "Segments require a Growth plan or higher.",
       };
     }
 

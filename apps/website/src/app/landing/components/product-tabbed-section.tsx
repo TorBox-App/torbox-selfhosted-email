@@ -40,10 +40,10 @@ const templateFeatures = [
 
 const broadcastFeatures = [
   { icon: Send, title: "Send to All" },
-  { icon: Filter, title: "Segments", badge: "Pro" },
-  { icon: Calendar, title: "Schedule", badge: "Pro" },
-  { icon: Tag, title: "Topics", badge: "Pro" },
-  { icon: Users, title: "Preference Center", badge: "Pro" },
+  { icon: Filter, title: "Segments", badge: "Growth" },
+  { icon: Calendar, title: "Schedule", badge: "Growth" },
+  { icon: Tag, title: "Topics", badge: "Growth" },
+  { icon: Users, title: "Preference Center", badge: "Growth" },
 ];
 
 const automationFeatures = [
@@ -59,7 +59,7 @@ const eventFeatures = [
   { icon: Zap, title: "Custom Events" },
   { icon: Activity, title: "Email Tracking", badge: "Free" },
   { icon: Clock, title: "30d–1yr Retention" },
-  // { icon: Filter, title: "Segment Triggers", badge: "Pro" },
+  // { icon: Filter, title: "Segment Triggers", badge: "Growth" },
 ];
 
 function TemplatesContent() {
@@ -227,7 +227,7 @@ function AutomationsContent() {
       </div>
 
       <p className="text-center text-muted-foreground text-sm">
-        Workflow automations will be available in Growth plan
+        Workflow automations will be available in Scale plan
       </p>
     </div>
   );

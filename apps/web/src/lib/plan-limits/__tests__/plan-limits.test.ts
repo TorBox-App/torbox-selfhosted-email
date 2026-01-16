@@ -239,7 +239,8 @@ describe("Plan Limits", () => {
       expect(result.allowed).toBe(true);
     });
 
-    it("should return not allowed for starter plan accessing workflows", async () => {
+    it("should return allowed for starter plan accessing workflows", async () => {
+      // Workflows are available for all tiers (starter+) with different limits
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
         plan: "starter",
@@ -251,8 +252,8 @@ describe("Plan Limits", () => {
 
       const result = await checkFeatureAccess(testOrgId, "workflows");
 
-      expect(result.allowed).toBe(false);
-      expect(result.requiredPlan).toBe("growth");
+      expect(result.allowed).toBe(true);
+      expect(result.requiredPlan).toBe("starter");
     });
   });
 });

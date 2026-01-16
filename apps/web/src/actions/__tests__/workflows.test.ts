@@ -138,9 +138,14 @@ vi.mock("@wraps/auth", () => ({
   },
 }));
 
-// Mock plan-limits to allow workflows feature
+// Mock plan-limits to allow workflows feature and workflow creation
 vi.mock("@/lib/plan-limits", () => ({
   checkFeatureAccess: vi.fn(async () => ({ allowed: true })),
+  checkWorkflowLimit: vi.fn(async () => ({
+    allowed: true,
+    current: 0,
+    limit: 5,
+  })),
 }));
 
 // Set up test database
@@ -182,12 +187,12 @@ beforeAll(async () => {
       set: { updatedAt: new Date() },
     });
 
-  // Set up Pro plan subscription (required for automations)
+  // Set up Scale plan subscription (required for automations)
   await db
     .insert(subscription)
     .values({
       id: `sub_test_workflows_${testOrganization.id}`,
-      plan: "pro",
+      plan: "growth",
       referenceId: testOrganization.id,
       status: "active",
       createdAt: new Date(),

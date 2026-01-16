@@ -16,25 +16,25 @@ const features = [
     icon: Filter,
     title: "Segments",
     description: "Target by properties like plan or location",
-    badge: "Pro",
+    badge: "Growth",
   },
   {
     icon: Calendar,
     title: "Schedule",
     description: "Pick a date and time for automatic sending",
-    badge: "Pro",
+    badge: "Growth",
   },
   {
     icon: Tag,
     title: "Topics",
     description: "Let contacts subscribe to what they care about",
-    badge: "Pro",
+    badge: "Growth",
   },
   {
     icon: Users,
     title: "Preference Center",
     description: "Hosted page for managing subscriptions",
-    badge: "Pro",
+    badge: "Growth",
   },
 ];
 
@@ -171,7 +171,7 @@ export function DashboardBroadcastsSection() {
               </p>
               <p className="mt-1 text-sm">
                 <span className="font-medium text-orange-600 dark:text-orange-400">
-                  Pro ($30/mo):
+                  Growth ($49/mo):
                 </span>{" "}
                 <span className="text-muted-foreground">
                   Add segments, scheduling, and topics

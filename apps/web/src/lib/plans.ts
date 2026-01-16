@@ -23,14 +23,14 @@ export type PlanId = "starter" | "pro" | "growth" | "scale";
 
 export type PlanFeature =
   | "batch" // Starter+: Send to all contacts
-  | "topics" // Pro+: Subscription management
-  | "segments" // Pro+: Property-based targeting
-  | "campaigns" // Pro+: Scheduled, targeted sends
-  | "workflows" // Growth+: Visual automation builder
-  | "events" // Growth+: Behavioral tracking
-  | "advancedSegments" // Growth+: Event-based segments
-  | "customRetention" // Scale+: Custom data retention
-  | "prioritySLA"; // Scale+: Priority support SLA
+  | "topics" // Growth+: Subscription management
+  | "segments" // Growth+: Property-based targeting
+  | "campaigns" // Growth+: Scheduled, targeted sends
+  | "workflows" // Starter+: Visual automation builder (5/25/unlimited by tier)
+  | "events" // Scale+: Behavioral tracking
+  | "advancedSegments" // Scale+: Event-based segments
+  | "customRetention" // Enterprise+: Custom data retention
+  | "prioritySLA"; // Enterprise+: Priority support SLA
 
 export type RateLimits = {
   dailyRequests: number; // -1 = unlimited
@@ -111,7 +111,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       topics: false,
       segments: false,
       campaigns: false,
-      workflows: false,
+      workflows: true, // 5 workflows limit
       events: false,
       advancedSegments: false,
       customRetention: false,
@@ -167,7 +167,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
       topics: true, // Subscription management
       segments: true, // Property-based targeting
       campaigns: true, // Scheduled, targeted sends
-      workflows: false,
+      workflows: true, // 25 workflows limit
       events: false,
       advancedSegments: false,
       customRetention: false,
@@ -498,7 +498,7 @@ export function getAwsAccountLimitMessage(planId: PlanId | string): string {
   }
 
   if (limit === 1) {
-    return `Your ${plan.name} plan includes 1 AWS account. Upgrade to Pro for up to 3 accounts.`;
+    return `Your ${plan.name} plan includes 1 AWS account. Upgrade to Growth for up to 3 accounts.`;
   }
 
   return `Your ${plan.name} plan includes up to ${limit} AWS accounts. Upgrade for more.`;
@@ -719,7 +719,7 @@ export function getWorkflowLimitMessage(planId: PlanId | string): string {
   }
 
   if (limit <= 5) {
-    return `Your ${plan.name} plan includes ${limit} workflows. Upgrade to Growth for 25 workflows.`;
+    return `Your ${plan.name} plan includes ${limit} workflows. Upgrade to Scale for 25 workflows.`;
   }
 
   return `Your ${plan.name} plan includes up to ${limit} workflows. Upgrade for unlimited.`;

@@ -8,7 +8,7 @@
  * - AWS account limits
  */
 
-import { awsAccount, contact, db, eq, subscription } from "@wraps/db";
+import { awsAccount, contact, db, eq, subscription, workflow } from "@wraps/db";
 import {
   getRequiredPlan,
   hasFeature,
@@ -141,6 +141,47 @@ export async function checkAwsAccountLimit(
     message: allowed
       ? undefined
       : `Your ${plan.name} plan includes ${limit} AWS account${limit !== 1 ? "s" : ""}. Upgrade for more.`,
+    requiredPlan: allowed ? undefined : getNextPlan(planId),
+  };
+}
+
+/**
+ * Check if an organization can add more workflows based on their plan
+ */
+export async function checkWorkflowLimit(
+  organizationId: string
+): Promise<LimitCheckResult> {
+  const planId = await getOrganizationPlan(organizationId);
+
+  // No valid subscription - user must subscribe
+  if (!planId) {
+    return {
+      allowed: false,
+      current: 0,
+      limit: 0,
+      message: "No active subscription. Please subscribe to continue.",
+      requiredPlan: "starter",
+    };
+  }
+
+  const plan = PLANS[planId];
+
+  const workflows = await db
+    .select()
+    .from(workflow)
+    .where(eq(workflow.organizationId, organizationId));
+
+  const current = workflows.length;
+  const limit = plan.maxWorkflows;
+  const allowed = limit === -1 || current < limit;
+
+  return {
+    allowed,
+    current,
+    limit,
+    message: allowed
+      ? undefined
+      : `Your ${plan.name} plan includes ${limit} workflow${limit !== 1 ? "s" : ""}. Upgrade for more.`,
     requiredPlan: allowed ? undefined : getNextPlan(planId),
   };
 }

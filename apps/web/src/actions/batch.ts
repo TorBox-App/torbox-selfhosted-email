@@ -331,7 +331,7 @@ export async function createBatchSend(
       if (!schedulingCheck.allowed) {
         return {
           success: false,
-          error: "Scheduling broadcasts requires a Pro plan or higher.",
+          error: "Scheduling broadcasts requires a Growth plan or higher.",
         };
       }
     }

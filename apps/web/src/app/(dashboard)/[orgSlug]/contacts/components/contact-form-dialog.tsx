@@ -460,7 +460,7 @@ export function ContactFormDialog({
                     className="font-medium text-primary hover:underline"
                     href={`/${orgSlug}/settings/billing`}
                   >
-                    Pro plan
+                    Growth plan
                   </Link>
                 </div>
               </div>

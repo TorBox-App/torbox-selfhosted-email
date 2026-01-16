@@ -217,7 +217,8 @@ export async function createTopic(
     if (!featureCheck.allowed) {
       return {
         success: false,
-        error: featureCheck.message ?? "Topics require a Pro plan or higher.",
+        error:
+          featureCheck.message ?? "Topics require a Growth plan or higher.",
       };
     }
 

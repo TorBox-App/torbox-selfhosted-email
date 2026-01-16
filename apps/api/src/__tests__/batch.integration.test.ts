@@ -88,7 +88,7 @@ const mockAuth = {
   apiKeyId: `${TEST_PREFIX}-key-1`,
   organizationId: testOrg.id,
   userId: testUser.id,
-  planId: "pro", // Pro plan has batch access
+  planId: "pro", // Growth plan has batch access
 };
 
 // Create test app with mocked auth and plan gate (bypasses actual validation)

@@ -1206,7 +1206,7 @@ function AudienceStep({
                         className="text-primary hover:underline"
                         href={`/${orgSlug}/settings/billing`}
                       >
-                        Pro
+                        Growth
                       </Link>
                     </span>
                   )}
@@ -1258,7 +1258,7 @@ function AudienceStep({
                         className="text-primary hover:underline"
                         href={`/${orgSlug}/settings/billing`}
                       >
-                        Pro
+                        Growth
                       </Link>
                     </span>
                   )}
@@ -1572,14 +1572,14 @@ function ReviewStep({
                     Schedule for later
                     {!schedulingEnabled && (
                       <span className="ml-2 text-muted-foreground text-xs">
-                        (Pro plan)
+                        (Growth plan)
                       </span>
                     )}
                   </label>
                   <p className="mt-1 text-muted-foreground text-xs">
                     {schedulingEnabled
                       ? "Choose a specific date and time to send"
-                      : "Upgrade to Pro to schedule broadcasts for later"}
+                      : "Upgrade to Growth to schedule broadcasts for later"}
                   </p>
                 </div>
                 {data.scheduleType === "later" && (

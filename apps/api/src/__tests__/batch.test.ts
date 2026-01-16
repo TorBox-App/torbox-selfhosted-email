@@ -49,7 +49,7 @@ const mockAuthContext = {
   apiKeyId: "key-123",
   organizationId: "org-123",
   userId: "user-123",
-  planId: "pro", // Pro plan has batch access
+  planId: "pro", // Growth plan has batch access
 };
 
 // Mock batch data

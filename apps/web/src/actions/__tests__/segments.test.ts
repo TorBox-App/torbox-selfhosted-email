@@ -117,7 +117,7 @@ beforeAll(async () => {
       set: { updatedAt: new Date() },
     });
 
-  // Set up Pro plan subscription (required for segments feature)
+  // Set up Growth plan subscription (required for segments feature)
   await db
     .insert(subscription)
     .values({
