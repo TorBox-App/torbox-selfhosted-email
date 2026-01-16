@@ -1,0 +1,54 @@
+// OIDC providers
+
+// Re-export SMTP utilities from core
+export { convertToSMTPPassword, getSMTPEndpoint } from "@wraps/core";
+// ACM certificate resources
+export { type ACMResult, createACMCertificate } from "./acm.js";
+// CloudFront resources
+export {
+  type CloudFrontResult,
+  createCloudFrontTracking,
+  createHTTPSTracking,
+} from "./cloudfront.js";
+
+// Event tracking resources (DynamoDB, SQS, EventBridge)
+export {
+  createEventBridgeRule,
+  createEventQueues,
+  createEventTracking,
+  createHistoryTable,
+  type DynamoDBResult,
+  type EventBridgeResult,
+  type SQSResult,
+} from "./events.js";
+// IAM resources
+export {
+  createIAMRole,
+  type IAMRoleConfig,
+  type IAMRoleResult,
+} from "./iam.js";
+// Lambda resources
+export { createEventProcessor, type LambdaResult } from "./lambda.js";
+// Mail Manager archive resources
+export {
+  createMailManagerArchive,
+  type MailManagerResult,
+} from "./mail-manager.js";
+export {
+  createCustomOIDCProvider,
+  createVercelOIDCProvider,
+  type OIDCProviderResult,
+} from "./oidc.js";
+// SES resources
+export {
+  createConfigSet,
+  createConfigSetV2,
+  createDomainIdentity,
+  createDomainIdentityV2,
+  createEventDestination,
+  createMailFromAttributes,
+  createSESResources,
+  type SESResourcesResult,
+} from "./ses.js";
+// SMTP credentials resources
+export { createSMTPCredentials, type SMTPResult } from "./smtp.js";

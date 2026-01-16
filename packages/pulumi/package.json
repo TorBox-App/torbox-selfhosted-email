@@ -1,0 +1,70 @@
+{
+  "name": "@wraps.dev/pulumi",
+  "version": "0.1.0",
+  "description": "Pulumi component for deploying Wraps email infrastructure",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-team/wraps.git",
+    "directory": "packages/pulumi"
+  },
+  "homepage": "https://wraps.dev",
+  "bugs": {
+    "url": "https://github.com/wraps-team/wraps/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup && pnpm build:lambda",
+    "build:lambda": "tsx scripts/build-lambda.ts",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "aws",
+    "ses",
+    "email",
+    "infrastructure",
+    "pulumi",
+    "iac"
+  ],
+  "author": "Wraps",
+  "license": "AGPL-3.0-or-later",
+  "peerDependencies": {
+    "@pulumi/aws": "^6.0.0 || ^7.0.0",
+    "@pulumi/pulumi": "^3.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-mailmanager": "3.925.0"
+  },
+  "devDependencies": {
+    "@wraps/core": "workspace:*",
+    "@pulumi/aws": "^7.11.1",
+    "tsx": "^4.20.6",
+    "@pulumi/pulumi": "^3.207.0",
+    "@types/node": "^20.11.0",
+    "tsup": "^8.0.1",
+    "typescript": "catalog:",
+    "vitest": "^4.0.7"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "name": "@wraps.dev/cdk",
+  "version": "0.1.0",
+  "description": "AWS CDK construct for deploying Wraps email infrastructure",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup && pnpm build:lambda",
+    "build:lambda": "tsx scripts/build-lambda.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "wraps",
+    "email",
+    "aws",
+    "ses",
+    "cdk",
+    "infrastructure"
+  ],
+  "author": "Wraps <hello@wraps.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wraps-dev/wraps.git",
+    "directory": "packages/cdk"
+  },
+  "homepage": "https://wraps.dev",
+  "bugs": {
+    "url": "https://github.com/wraps-dev/wraps/issues"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.0.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@wraps/core": "workspace:*",
+    "tsx": "^4.20.6",
+    "aws-cdk-lib": "^2.177.0",
+    "constructs": "^10.4.2",
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.0.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
