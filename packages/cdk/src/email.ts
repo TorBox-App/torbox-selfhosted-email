@@ -209,8 +209,9 @@ export class WrapsEmail extends Construct {
       // Main event queue
       const queue = new sqs.Queue(this, "Queue", {
         queueName: "wraps-email-events",
-        visibilityTimeout: cdk.Duration.seconds(60),
+        visibilityTimeout: cdk.Duration.seconds(60), // Must be >= Lambda timeout
         retentionPeriod: cdk.Duration.days(4),
+        receiveMessageWaitTime: cdk.Duration.seconds(20), // Long polling
         deadLetterQueue: {
           queue: dlq,
           maxReceiveCount: 3,
@@ -224,11 +225,29 @@ export class WrapsEmail extends Construct {
         description: "Route SES email events to SQS for processing",
         eventPattern: {
           source: ["aws.ses"],
-          detailType: ["Email Sending Events"],
         },
       });
       eventRule.addTarget(new eventsTargets.SqsQueue(queue));
       resources.eventRule = eventRule;
+
+      // SES event destination to publish events to EventBridge
+      // Maps event types from config (e.g., "SEND") to SES format (e.g., "send")
+      const eventTypes = config.events.types ?? [];
+      const sesEventTypes = eventTypes.map((type) =>
+        type.toLowerCase().replace(/_/g, "-")
+      );
+
+      new ses.CfnConfigurationSetEventDestination(this, "EventDestination", {
+        configurationSetName: configSet.configurationSetName,
+        eventDestination: {
+          name: "EventBridgeDestination",
+          enabled: true,
+          matchingEventTypes: sesEventTypes,
+          eventBridgeDestination: {
+            eventBusArn: `arn:aws:events:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:event-bus/default`,
+          },
+        },
+      });
 
       this.queueUrl = queue.queueUrl;
       this.dlqUrl = dlq.queueUrl;
@@ -246,20 +265,20 @@ export class WrapsEmail extends Construct {
             name: "messageId",
             type: dynamodb.AttributeType.STRING,
           },
-          sortKey: { name: "timestamp", type: dynamodb.AttributeType.STRING },
+          sortKey: { name: "sentAt", type: dynamodb.AttributeType.NUMBER },
           billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
           removalPolicy: config.removalPolicy,
-          timeToLiveAttribute: retentionDays > 0 ? "ttl" : undefined,
+          timeToLiveAttribute: retentionDays > 0 ? "expiresAt" : undefined,
         });
 
-        // GSI for recipient lookups
+        // GSI for account lookups
         table.addGlobalSecondaryIndex({
-          indexName: "recipient-timestamp-index",
+          indexName: "accountId-sentAt-index",
           partitionKey: {
-            name: "recipient",
+            name: "accountId",
             type: dynamodb.AttributeType.STRING,
           },
-          sortKey: { name: "timestamp", type: dynamodb.AttributeType.STRING },
+          sortKey: { name: "sentAt", type: dynamodb.AttributeType.NUMBER },
         });
 
         resources.table = table;
@@ -273,9 +292,10 @@ export class WrapsEmail extends Construct {
           handler: "index.handler",
           code: lambda.Code.fromAsset(getLambdaPath()),
           timeout: cdk.Duration.seconds(30),
-          memorySize: 256,
+          memorySize: 512,
           environment: {
             TABLE_NAME: table.tableName,
+            AWS_ACCOUNT_ID: cdk.Stack.of(this).account,
             RETENTION_DAYS: String(retentionDays > 0 ? retentionDays : 0),
           },
         });
@@ -285,6 +305,8 @@ export class WrapsEmail extends Construct {
         eventProcessor.addEventSource(
           new lambdaEventSources.SqsEventSource(queue, {
             batchSize: 10,
+            maxBatchingWindow: cdk.Duration.seconds(5),
+            reportBatchItemFailures: true,
           })
         );
 

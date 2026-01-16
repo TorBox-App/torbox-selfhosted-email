@@ -263,7 +263,7 @@ export async function deployLambdaFunctions(
           handler: "index.handler",
           role: lambdaRole.arn,
           code: new pulumi.asset.FileArchive(eventProcessorCode),
-          timeout: 300, // 5 minutes (matches SQS visibility timeout)
+          timeout: 30, // Lambda just parses JSON and writes to DynamoDB
           memorySize: 512,
           environment: lambdaEnvironment,
           tags: {
@@ -282,7 +282,7 @@ export async function deployLambdaFunctions(
         handler: "index.handler",
         role: lambdaRole.arn,
         code: new pulumi.asset.FileArchive(eventProcessorCode),
-        timeout: 300, // 5 minutes (matches SQS visibility timeout)
+        timeout: 30, // Lambda just parses JSON and writes to DynamoDB
         memorySize: 512,
         environment: lambdaEnvironment,
         tags: {

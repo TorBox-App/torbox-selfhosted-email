@@ -137,7 +137,7 @@ export function createEventProcessor(
   // Create Lambda function using pre-bundled code from core package
   let lambdaArgs: aws.lambda.FunctionArgs = {
     name: "wraps-email-event-processor",
-    runtime: "nodejs20.x",
+    runtime: "nodejs24.x",
     handler: "index.handler",
     role: lambdaRole.arn,
     code: new pulumi.asset.FileArchive(getLambdaPath()),
