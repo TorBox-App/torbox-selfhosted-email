@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/cdk",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "AWS CDK construct for deploying Wraps email infrastructure",
   "type": "module",
   "main": "./dist/index.js",
@@ -35,12 +35,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wraps-dev/wraps.git",
+    "url": "https://github.com/wraps-team/wraps.git",
     "directory": "packages/cdk"
   },
   "homepage": "https://wraps.dev",
   "bugs": {
-    "url": "https://github.com/wraps-dev/wraps/issues"
+    "url": "https://github.com/wraps-team/wraps/issues"
   },
   "peerDependencies": {
     "aws-cdk-lib": "^2.0.0",
