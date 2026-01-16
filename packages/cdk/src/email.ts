@@ -107,6 +107,9 @@ export class WrapsEmail extends Construct {
   /** MAIL FROM domain (if configured) */
   public readonly mailFromDomain?: string;
 
+  /** DKIM CNAME records to add to DNS (if domain is configured) */
+  public readonly dkimRecords?: { name: string; value: string }[];
+
   // ============================================
   // EVENT TRACKING OUTPUTS
   // ============================================
@@ -193,6 +196,23 @@ export class WrapsEmail extends Construct {
       this.mailFromDomain = config.mailFromSubdomain
         ? `${config.mailFromSubdomain}.${config.domain}`
         : undefined;
+
+      // Extract DKIM records for DNS configuration
+      // SES generates 3 DKIM CNAME records that need to be added to DNS
+      this.dkimRecords = [
+        {
+          name: emailIdentity.dkimDnsTokenName1,
+          value: emailIdentity.dkimDnsTokenValue1,
+        },
+        {
+          name: emailIdentity.dkimDnsTokenName2,
+          value: emailIdentity.dkimDnsTokenValue2,
+        },
+        {
+          name: emailIdentity.dkimDnsTokenName3,
+          value: emailIdentity.dkimDnsTokenValue3,
+        },
+      ];
     }
 
     // ============================================
@@ -371,6 +391,38 @@ export class WrapsEmail extends Construct {
         value: this.queueUrl,
         description: "SQS queue URL for events",
         exportName: "WrapsEmailQueueUrl",
+      });
+    }
+
+    // DKIM DNS records output
+    if (this.dkimRecords && this.domain) {
+      new cdk.CfnOutput(this, "DkimRecord1Output", {
+        value: `${this.dkimRecords[0].name} CNAME ${this.dkimRecords[0].value}`,
+        description: "DKIM CNAME record 1 - add to DNS",
+      });
+      new cdk.CfnOutput(this, "DkimRecord2Output", {
+        value: `${this.dkimRecords[1].name} CNAME ${this.dkimRecords[1].value}`,
+        description: "DKIM CNAME record 2 - add to DNS",
+      });
+      new cdk.CfnOutput(this, "DkimRecord3Output", {
+        value: `${this.dkimRecords[2].name} CNAME ${this.dkimRecords[2].value}`,
+        description: "DKIM CNAME record 3 - add to DNS",
+      });
+
+      // Also output SPF and DMARC guidance
+      if (this.mailFromDomain) {
+        new cdk.CfnOutput(this, "SpfRecordOutput", {
+          value: `${this.mailFromDomain} TXT "v=spf1 include:amazonses.com ~all"`,
+          description: "SPF TXT record for MAIL FROM domain - add to DNS",
+        });
+        new cdk.CfnOutput(this, "MailFromMxOutput", {
+          value: `${this.mailFromDomain} MX 10 feedback-smtp.${cdk.Stack.of(this).region}.amazonses.com`,
+          description: "MX record for MAIL FROM domain - add to DNS",
+        });
+      }
+      new cdk.CfnOutput(this, "DmarcRecordOutput", {
+        value: `_dmarc.${this.domain} TXT "v=DMARC1; p=none; rua=mailto:dmarc@${this.domain}"`,
+        description: "DMARC TXT record (recommended) - add to DNS",
       });
     }
   }
