@@ -1,60 +1,60 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
 
 /**
- * Pre-bundle Lambda functions for production use
+ * Copy Lambda functions from @wraps/core for production use
  *
- * This script bundles Lambda functions during the build process so they're
- * ready to deploy without requiring TypeScript sources in the published package.
+ * This script copies pre-bundled Lambda functions from @wraps/core into the CLI's
+ * dist/lambda directory so they're available when the CLI is published.
+ *
+ * The @wraps/core package is bundled into the CLI (noExternal), but import.meta.url
+ * paths don't work correctly when bundled. So we copy the Lambda files directly.
  */
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageRoot = join(__dirname, "..");
+const corePackageRoot = join(packageRoot, "..", "core");
 
-async function bundleLambda(name: string, entryPoint: string) {
-  const outdir = join(packageRoot, "dist", "lambda", name);
+function copyLambda(name: string) {
+  const sourcePath = join(corePackageRoot, "lambda", name);
+  const destPath = join(packageRoot, "dist", "lambda", name);
 
-  if (!existsSync(outdir)) {
-    mkdirSync(outdir, { recursive: true });
+  if (!existsSync(sourcePath)) {
+    throw new Error(
+      `Lambda source not found: ${sourcePath}\n` +
+        "Make sure @wraps/core is built first: pnpm --filter @wraps/core build"
+    );
   }
 
-  console.log(`Building Lambda: ${name}...`);
+  // Check that source has been bundled
+  const bundleMarker = join(sourcePath, ".bundled");
+  if (!existsSync(bundleMarker)) {
+    throw new Error(
+      `Lambda not bundled: ${sourcePath}\n` +
+        "Make sure @wraps/core is built first: pnpm --filter @wraps/core build"
+    );
+  }
 
-  await build({
-    entryPoints: [entryPoint],
-    bundle: true,
-    platform: "node",
-    target: "node24",
-    format: "esm",
-    outfile: join(outdir, "index.mjs"),
-    external: ["@aws-sdk/*"], // AWS SDK v3 is included in Lambda runtime
-    minify: true,
-    sourcemap: false,
-  });
+  // Create destination directory
+  if (!existsSync(dirname(destPath))) {
+    mkdirSync(dirname(destPath), { recursive: true });
+  }
 
-  // Create a marker file so we know this is a pre-bundled Lambda
-  writeFileSync(
-    join(outdir, ".bundled"),
-    `Bundled at: ${new Date().toISOString()}\n`
-  );
+  // Copy the entire Lambda directory
+  cpSync(sourcePath, destPath, { recursive: true });
 
-  console.log(`✓ Built ${name} -> dist/lambda/${name}/index.mjs`);
-  return outdir;
+  console.log(`✓ Copied ${name} -> dist/lambda/${name}/`);
 }
 
 async function main() {
-  console.log("Building Lambda functions...\n");
+  console.log("Copying Lambda functions from @wraps/core...\n");
 
-  // Note: Both event-processor and sms-event-processor now use @wraps/core's pre-bundled Lambdas
-  // No Lambda bundling needed in CLI package
+  copyLambda("event-processor");
+  copyLambda("sms-event-processor");
 
-  console.log(
-    "No Lambda functions to build - using pre-bundled code from @wraps/core"
-  );
   console.log("\n✓ Lambda setup complete");
 }
 

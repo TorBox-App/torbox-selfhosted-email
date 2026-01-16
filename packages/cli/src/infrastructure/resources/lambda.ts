@@ -5,10 +5,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import {
-  LAMBDA_EVENT_PROCESSOR_PATH,
-  LAMBDA_SMS_EVENT_PROCESSOR_PATH,
-} from "@wraps/core";
 import { build } from "esbuild";
 
 /**
@@ -107,28 +103,11 @@ async function findEventSourceMapping(
  * Get the Lambda function code directory
  *
  * Priority order:
- * 1. @wraps/core package (shared Lambda code) - for event-processor
- * 2. Pre-bundled code from dist/lambda/ (production - published package)
- * 3. Pre-bundled code from lambda/ (development build)
- * 4. On-the-fly bundling from TypeScript source (development)
+ * 1. Pre-bundled code from dist/lambda/ (production - copied from @wraps/core during build)
+ * 2. Pre-bundled code from lambda/ (development build)
+ * 3. On-the-fly bundling from TypeScript source (development)
  */
 export async function getLambdaCode(functionName: string): Promise<string> {
-  // For event-processor, prefer the shared code from @wraps/core
-  if (functionName === "event-processor") {
-    const coreBundleMarker = join(LAMBDA_EVENT_PROCESSOR_PATH, ".bundled");
-    if (existsSync(coreBundleMarker)) {
-      return LAMBDA_EVENT_PROCESSOR_PATH;
-    }
-  }
-
-  // For sms-event-processor, prefer the shared code from @wraps/core
-  if (functionName === "sms-event-processor") {
-    const coreBundleMarker = join(LAMBDA_SMS_EVENT_PROCESSOR_PATH, ".bundled");
-    if (existsSync(coreBundleMarker)) {
-      return LAMBDA_SMS_EVENT_PROCESSOR_PATH;
-    }
-  }
-
   const packageRoot = getPackageRoot();
 
   // Check for pre-bundled Lambda code in dist/ (production - published package)
