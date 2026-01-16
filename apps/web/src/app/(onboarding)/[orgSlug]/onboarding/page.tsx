@@ -2,14 +2,14 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
 import { AwsConnectStep } from "./components/aws-connect-step";
 import { BillingStep } from "./components/billing-step";
-import { CliInstallStep } from "./components/cli-install-step";
-import { DeployStep } from "./components/deploy-step";
+import { DeployInfrastructureStep } from "./components/deploy-infrastructure-step";
 import { StepProgress } from "./components/step-progress";
 import { SuccessStep } from "./components/success-step";
 import { WelcomeStep } from "./components/welcome-step";
@@ -17,10 +17,9 @@ import { WelcomeStep } from "./components/welcome-step";
 const STEPS = [
   { id: 1, title: "Welcome", component: WelcomeStep },
   { id: 2, title: "Choose Plan", component: BillingStep },
-  { id: 3, title: "Install CLI", component: CliInstallStep },
+  { id: 3, title: "Deploy", component: DeployInfrastructureStep },
   { id: 4, title: "Connect AWS", component: AwsConnectStep },
-  { id: 5, title: "First Deployment", component: DeployStep },
-  { id: 6, title: "Success", component: SuccessStep },
+  { id: 5, title: "Success", component: SuccessStep },
 ];
 
 type OnboardingPageProps = {
@@ -103,7 +102,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       toast.success(
         "Payment successful! Let's set up your AWS infrastructure."
       );
-      // Advance to CLI install step (step 3) if on billing step
+      // Advance to Deploy Infrastructure step (step 3) if on billing step
       if (currentStep === 2) {
         setCurrentStep(3);
       }
@@ -136,35 +135,77 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     enabled: !!orgSlug,
   });
 
+  // Find the organization that matches the orgSlug
+  const currentOrg = organizations?.find(
+    (org) => org.slug === orgSlug || org.id === orgSlug
+  );
+
+  // Track onboarding started (only once per session)
+  const hasTrackedStart = useRef(false);
   useEffect(() => {
-    if (onboardingStatus?.completed) {
-      // If completed, redirect to emails
+    if (isInitialized && currentOrg && !hasTrackedStart.current) {
+      hasTrackedStart.current = true;
+      posthog.capture("onboarding_started", {
+        organization_id: currentOrg.id,
+        initial_step: currentStep,
+      });
+    }
+  }, [isInitialized, currentOrg, currentStep]);
+
+  // Track step views
+  const previousStep = useRef<number | null>(null);
+  useEffect(() => {
+    if (isInitialized && currentOrg && previousStep.current !== currentStep) {
+      previousStep.current = currentStep;
+      posthog.capture("onboarding_step_viewed", {
+        step: currentStep,
+        step_name: STEPS[currentStep - 1]?.title,
+        organization_id: currentOrg.id,
+      });
+    }
+  }, [isInitialized, currentOrg, currentStep]);
+
+  // Handle redirects in useEffect to avoid setState during render
+  // Use refs to prevent multiple redirects
+  const hasRedirected = useRef(false);
+
+  useEffect(() => {
+    if (hasRedirected.current) return;
+    if (onboardingStatus?.completed && orgSlug) {
+      hasRedirected.current = true;
       router.push(`/${orgSlug}/emails`);
     }
   }, [onboardingStatus, router, orgSlug]);
+
+  useEffect(() => {
+    if (hasRedirected.current) return;
+    // Only redirect if auth check is complete and there's no session
+    if (!isPending && session === null) {
+      hasRedirected.current = true;
+      router.push("/auth");
+    }
+  }, [isPending, session, router]);
+
+  useEffect(() => {
+    if (hasRedirected.current) return;
+    // Only redirect if organizations have loaded AND org is not found
+    // organizations will be an array (possibly empty) when loaded, undefined when loading
+    if (organizations !== undefined && orgSlug && !currentOrg) {
+      hasRedirected.current = true;
+      router.push("/");
+    }
+  }, [currentOrg, organizations, orgSlug, router]);
 
   if (isPending || !isInitialized || !orgSlug) {
     return <Loader fullScreen />;
   }
 
   if (!session) {
-    router.push("/auth");
-    return null;
-  }
-
-  // Find the organization that matches the orgSlug
-  const currentOrg = organizations?.find(
-    (org) => org.slug === orgSlug || org.id === orgSlug
-  );
-
-  if (!currentOrg && organizations !== undefined) {
-    // Organization not found or user doesn't have access
-    router.push("/");
-    return null;
+    return <Loader fullScreen />;
   }
 
   if (!currentOrg) {
-    // Still loading organizations
+    // Still loading organizations or redirecting
     return <Loader fullScreen />;
   }
 
@@ -192,6 +233,13 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     }
   };
 
+  // Called when AWS account is already connected (CloudFormation deployment)
+  // This skips the AwsConnectStep and goes directly to Success
+  const handleConnected = () => {
+    // Skip to Success step (step 5)
+    setCurrentStep(5);
+  };
+
   const handleComplete = async () => {
     // Mark onboarding complete and redirect to emails
     await fetch(`/api/${orgSlug}/onboarding/complete`, {
@@ -208,6 +256,14 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     localStorage.removeItem(`onboarding_plan_${orgSlug}`);
     localStorage.removeItem(`onboarding_interval_${orgSlug}`);
 
+    // Track final completion in the main page as well for redundancy
+    if (currentOrg) {
+      posthog.capture("onboarding_flow_completed", {
+        organization_id: currentOrg.id,
+        final_step: currentStep,
+      });
+    }
+
     router.push(`/${orgSlug}/emails`);
   };
 
@@ -223,6 +279,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       <CurrentStepComponent
         onBack={handleBack}
         onComplete={handleComplete}
+        onConnected={handleConnected}
         onNext={handleNext}
         onSkip={handleSkip}
         organizationId={currentOrg.id}

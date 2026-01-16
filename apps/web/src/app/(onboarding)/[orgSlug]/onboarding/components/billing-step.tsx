@@ -2,6 +2,7 @@
 
 import { CreditCardIcon, ZapIcon } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BillingToggle } from "@/components/billing-toggle";
@@ -75,8 +76,52 @@ export function BillingStep({
 
   const plan = PLANS[selectedPlan];
 
+  // Track plan selection changes
+  const handlePlanChange = (newPlan: PlanId) => {
+    setSelectedPlan(newPlan);
+    posthog.capture("onboarding_plan_selected", {
+      step: 2,
+      step_name: "Billing",
+      organization_id: organizationId,
+      plan: newPlan,
+      billing_interval: billingInterval,
+      monthly_price: getPriceByInterval(PLANS[newPlan], billingInterval),
+    });
+  };
+
+  // Track billing interval changes
+  const handleIntervalChange = (newInterval: BillingInterval) => {
+    setBillingInterval(newInterval);
+    posthog.capture("onboarding_billing_interval_changed", {
+      step: 2,
+      step_name: "Billing",
+      organization_id: organizationId,
+      billing_interval: newInterval,
+      plan: selectedPlan,
+    });
+  };
+
+  const handleBack = () => {
+    posthog.capture("onboarding_step_back", {
+      step: 2,
+      step_name: "Billing",
+      organization_id: organizationId,
+    });
+    onBack();
+  };
+
   const handleSubscribe = async () => {
     setIsLoading(true);
+
+    // Track subscription checkout started
+    posthog.capture("onboarding_subscription_started", {
+      step: 2,
+      step_name: "Billing",
+      organization_id: organizationId,
+      plan: selectedPlan,
+      billing_interval: billingInterval,
+      monthly_price: getPriceByInterval(plan, billingInterval),
+    });
 
     try {
       // Start Stripe checkout for selected plan
@@ -116,12 +161,15 @@ export function BillingStep({
 
       <CardContent className="space-y-6">
         {/* Billing Interval Toggle */}
-        <BillingToggle onChange={setBillingInterval} value={billingInterval} />
+        <BillingToggle
+          onChange={handleIntervalChange}
+          value={billingInterval}
+        />
 
         {/* Plan Selector */}
         <PlanSelector
           billingInterval={billingInterval}
-          onSelectPlan={setSelectedPlan}
+          onSelectPlan={handlePlanChange}
           selectedPlan={selectedPlan}
         />
 
@@ -190,7 +238,7 @@ export function BillingStep({
       </CardContent>
 
       <CardFooter className="flex items-center justify-between">
-        <Button disabled={isLoading} onClick={onBack} variant="outline">
+        <Button disabled={isLoading} onClick={handleBack} variant="outline">
           Back
         </Button>
         <Button loading={isLoading} onClick={handleSubscribe} size="lg">

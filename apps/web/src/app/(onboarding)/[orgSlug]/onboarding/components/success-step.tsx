@@ -6,6 +6,7 @@ import {
   CodeIcon,
   LayoutDashboardIcon,
 } from "lucide-react";
+import posthog from "posthog-js";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,9 +19,27 @@ import {
 
 type SuccessStepProps = {
   onComplete: () => void;
+  organizationId: string;
 };
 
-export function SuccessStep({ onComplete }: SuccessStepProps) {
+export function SuccessStep({ onComplete, organizationId }: SuccessStepProps) {
+  const handleComplete = () => {
+    posthog.capture("onboarding_completed", {
+      step: 5,
+      step_name: "Success",
+      organization_id: organizationId,
+    });
+    onComplete();
+  };
+
+  const handleNextStepClick = (action: string) => {
+    posthog.capture("onboarding_next_step_clicked", {
+      step: 5,
+      step_name: "Success",
+      organization_id: organizationId,
+      action,
+    });
+  };
   return (
     <Card>
       <CardHeader className="text-center">
@@ -42,6 +61,7 @@ export function SuccessStep({ onComplete }: SuccessStepProps) {
             <a
               className="flex items-start gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
               href="/docs/quickstart"
+              onClick={() => handleNextStepClick("install_sdk")}
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -65,6 +85,7 @@ export function SuccessStep({ onComplete }: SuccessStepProps) {
             <a
               className="flex items-start gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
               href="/docs/domains"
+              onClick={() => handleNextStepClick("verify_domain")}
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -82,7 +103,10 @@ export function SuccessStep({ onComplete }: SuccessStepProps) {
 
             <button
               className="flex w-full items-start gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent"
-              onClick={onComplete}
+              onClick={() => {
+                handleNextStepClick("explore_dashboard");
+                handleComplete();
+              }}
               type="button"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -155,7 +179,7 @@ await wraps.emails.send({
       </CardContent>
 
       <CardFooter className="flex justify-center">
-        <Button className="w-full sm:w-auto" onClick={onComplete} size="lg">
+        <Button className="w-full sm:w-auto" onClick={handleComplete} size="lg">
           Continue to Dashboard
         </Button>
       </CardFooter>

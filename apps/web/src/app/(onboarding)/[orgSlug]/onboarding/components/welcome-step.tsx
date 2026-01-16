@@ -1,4 +1,5 @@
 import { DollarSignIcon, RocketIcon, ShieldCheckIcon } from "lucide-react";
+import posthog from "posthog-js";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,9 +12,31 @@ import {
 type WelcomeStepProps = {
   onNext: () => void;
   onSkip: () => void;
+  organizationId: string;
 };
 
-export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
+export function WelcomeStep({
+  onNext,
+  onSkip,
+  organizationId,
+}: WelcomeStepProps) {
+  const handleGetStarted = () => {
+    posthog.capture("onboarding_step_completed", {
+      step: 1,
+      step_name: "Welcome",
+      organization_id: organizationId,
+    });
+    onNext();
+  };
+
+  const handleSkip = () => {
+    posthog.capture("onboarding_skipped", {
+      step: 1,
+      step_name: "Welcome",
+      organization_id: organizationId,
+    });
+    onSkip();
+  };
   return (
     <Card>
       <CardHeader className="space-y-2 text-center">
@@ -69,10 +92,10 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
 
         {/* Actions */}
         <div className="flex items-center justify-between pt-4">
-          <Button onClick={onSkip} variant="ghost">
+          <Button onClick={handleSkip} variant="ghost">
             Skip setup for now
           </Button>
-          <Button onClick={onNext} size="lg">
+          <Button onClick={handleGetStarted} size="lg">
             Get Started
           </Button>
         </div>

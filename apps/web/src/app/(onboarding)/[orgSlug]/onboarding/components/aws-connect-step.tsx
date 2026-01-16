@@ -3,6 +3,7 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CloudIcon, ExternalLinkIcon } from "lucide-react";
+import posthog from "posthog-js";
 import { toast } from "sonner";
 import z from "zod";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,26 @@ export function AwsConnectStep({
   const cfTemplateUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cloudformation/wraps-console-access-role`;
   const awsConsoleUrl = `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=${encodeURIComponent(cfTemplateUrl)}&stackName=wraps-console-access`;
 
+  // Track back button
+  const handleBack = () => {
+    posthog.capture("onboarding_step_back", {
+      step: 4,
+      step_name: "AWS Connect",
+      organization_id: organizationId,
+    });
+    onBack();
+  };
+
+  // Track skip button
+  const handleSkip = () => {
+    posthog.capture("onboarding_skipped", {
+      step: 4,
+      step_name: "AWS Connect",
+      organization_id: organizationId,
+    });
+    onSkip();
+  };
+
   // TanStack Query mutation for AWS validation
   const validateAwsMutation = useMutation({
     mutationFn: async (data: { roleArn: string; externalId: string }) => {
@@ -56,10 +77,26 @@ export function AwsConnectStep({
       queryClient.invalidateQueries({
         queryKey: ["onboarding", organizationId],
       });
+      posthog.capture("onboarding_aws_connected", {
+        step: 4,
+        step_name: "AWS Connect",
+        organization_id: organizationId,
+      });
+      posthog.capture("onboarding_step_completed", {
+        step: 4,
+        step_name: "AWS Connect",
+        organization_id: organizationId,
+      });
       onNext();
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to validate AWS connection");
+      posthog.capture("onboarding_aws_connection_failed", {
+        step: 4,
+        step_name: "AWS Connect",
+        organization_id: organizationId,
+        error: error.message,
+      });
     },
   });
 
@@ -196,10 +233,10 @@ export function AwsConnectStep({
 
       <CardFooter className="flex items-center justify-between">
         <div className="flex gap-2">
-          <Button onClick={onBack} variant="outline">
+          <Button onClick={handleBack} variant="outline">
             Back
           </Button>
-          <Button onClick={onSkip} variant="ghost">
+          <Button onClick={handleSkip} variant="ghost">
             Skip
           </Button>
         </div>
