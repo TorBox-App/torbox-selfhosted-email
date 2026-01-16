@@ -146,3 +146,67 @@ export type ResolvedTrackingConfig = {
   httpsEnabled: boolean;
   wafEnabled: boolean;
 };
+
+// ============================================
+// DNS PROVIDER TYPES
+// ============================================
+
+/**
+ * Supported DNS providers
+ */
+export type DNSProvider = "route53" | "cloudflare" | "vercel";
+
+/**
+ * AWS Route53 DNS configuration
+ */
+export type Route53DNSConfig = {
+  provider: "route53";
+  /** Route53 hosted zone ID */
+  hostedZoneId: string;
+};
+
+/**
+ * Cloudflare DNS configuration
+ */
+export type CloudflareDNSConfig = {
+  provider: "cloudflare";
+  /** Cloudflare zone ID */
+  zoneId: string;
+  /** Cloudflare API token with DNS edit permissions */
+  apiToken: string;
+};
+
+/**
+ * Vercel DNS configuration
+ */
+export type VercelDNSConfig = {
+  provider: "vercel";
+  /** Vercel team ID (optional, uses personal account if not provided) */
+  teamId?: string;
+  /** Vercel API token */
+  apiToken: string;
+};
+
+/**
+ * DNS configuration - union of all provider configs
+ */
+export type DNSConfig =
+  | Route53DNSConfig
+  | CloudflareDNSConfig
+  | VercelDNSConfig;
+
+/**
+ * DNS record to be created
+ */
+export type DNSRecord = {
+  /** Record name (e.g., "_domainkey.example.com") */
+  name: string;
+  /** Record type */
+  type: "CNAME" | "TXT" | "MX";
+  /** Record value */
+  value: string;
+  /** TTL in seconds @default 1800 */
+  ttl?: number;
+  /** Priority (for MX records) */
+  priority?: number;
+};

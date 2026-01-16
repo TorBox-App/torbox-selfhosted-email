@@ -10,6 +10,8 @@ export {
   createCloudFrontTracking,
   createHTTPSTracking,
 } from "./cloudfront.js";
+// DNS provider resources
+export { createDNSRecords, type EmailDNSRecords } from "./dns.js";
 
 // Event tracking resources (DynamoDB, SQS, EventBridge)
 export {

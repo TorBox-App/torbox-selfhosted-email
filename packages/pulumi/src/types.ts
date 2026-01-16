@@ -5,14 +5,20 @@ import type * as pulumi from "@pulumi/pulumi";
 export type {
   ArchiveRetention,
   ArchivingConfig,
+  CloudflareDNSConfig,
+  DNSConfig,
+  DNSProvider,
+  DNSRecord,
   EventsConfig,
   OIDCConfig,
   ResolvedTrackingConfig,
+  Route53DNSConfig,
   SESEventType,
   SMTPConfig,
   SuppressionListConfig,
   SuppressionReason,
   TrackingConfig,
+  VercelDNSConfig,
   VercelOIDCConfig,
   WebhookConfig,
 } from "@wraps/core";
@@ -20,6 +26,7 @@ export type {
 // Import for local use
 import type {
   ArchivingConfig,
+  DNSConfig,
   EventsConfig,
   OIDCConfig,
   ResolvedTrackingConfig,
@@ -98,6 +105,28 @@ export type WrapsEmailArgs = {
    * DKIM tokens will be output for DNS configuration.
    */
   domain?: pulumi.Input<string>;
+
+  /**
+   * DNS provider configuration for automatic DNS record creation.
+   * Supports Route53, Cloudflare, and Vercel.
+   * If not provided, DNS records are output for manual creation.
+   *
+   * @example Route53
+   * ```typescript
+   * dns: { provider: "route53", hostedZoneId: "Z1234567890" }
+   * ```
+   *
+   * @example Cloudflare
+   * ```typescript
+   * dns: { provider: "cloudflare", zoneId: "abc123", apiToken: pulumi.secret("token") }
+   * ```
+   *
+   * @example Vercel
+   * ```typescript
+   * dns: { provider: "vercel", apiToken: pulumi.secret("token"), teamId: "team_xxx" }
+   * ```
+   */
+  dns?: pulumi.Input<DNSConfig>;
 
   /**
    * MAIL FROM subdomain for improved deliverability.
@@ -189,6 +218,7 @@ export type ResolvedConfig = {
   vercel?: VercelOIDCConfig;
   oidc?: OIDCConfig;
   domain?: string;
+  dns?: DNSConfig;
   mailFromSubdomain: string;
   tracking: ResolvedTrackingConfig;
   events?: EventsConfig;

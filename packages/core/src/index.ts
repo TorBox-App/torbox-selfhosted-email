@@ -40,10 +40,16 @@ export {
 export type {
   ArchiveRetention,
   ArchivingConfig,
+  // DNS provider types
+  CloudflareDNSConfig,
+  DNSConfig,
+  DNSProvider,
+  DNSRecord,
   EventsConfig,
   OIDCConfig,
   // Resolved config types
   ResolvedTrackingConfig,
+  Route53DNSConfig,
   // Event types
   SESEventType,
   SMTPConfig,
@@ -51,6 +57,7 @@ export type {
   SuppressionReason,
   // Feature config types
   TrackingConfig,
+  VercelDNSConfig,
   // OIDC config types
   VercelOIDCConfig,
   WebhookConfig,

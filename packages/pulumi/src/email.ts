@@ -4,6 +4,7 @@ import { retentionToDays } from "@wraps/core";
 import { applyDefaults } from "./defaults.js";
 import {
   createCustomOIDCProvider,
+  createDNSRecords,
   createEventProcessor,
   createEventTracking,
   createHTTPSTracking,
@@ -220,6 +221,29 @@ export class WrapsEmail extends pulumi.ComponentResource {
     nodes.configSet = sesResult.configSet;
     nodes.domainIdentity = sesResult.domainIdentity;
     nodes.domainDkim = sesResult.domainDkim;
+
+    // ============================================
+    // 3.5. CREATE DNS RECORDS (if DNS provider configured)
+    // ============================================
+    if (config.dns && config.domain) {
+      const mailFromDomain =
+        config.domain && config.mailFromSubdomain
+          ? `${config.mailFromSubdomain}.${config.domain}`
+          : undefined;
+
+      createDNSRecords(
+        name,
+        config.dns,
+        {
+          domain: config.domain,
+          dkimTokens: sesResult.dkimTokens,
+          mailFromDomain,
+          region: region.name,
+        },
+        tags,
+        { parent: this }
+      );
+    }
 
     // ============================================
     // 4. CREATE EVENT TRACKING (if configured)

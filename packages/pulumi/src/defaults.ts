@@ -3,6 +3,7 @@ import {
   DEFAULT_EVENT_TYPES,
   DEFAULT_SUPPRESSION_REASONS,
   DEFAULT_TAGS,
+  type DNSConfig,
   type SESEventType,
   type SuppressionReason,
 } from "@wraps/core";
@@ -43,10 +44,13 @@ export function applyDefaults(args: WrapsEmailArgs): ResolvedConfig {
     | undefined;
   const tags = args.tags as Record<string, string> | undefined;
 
+  const dns = args.dns as DNSConfig | undefined;
+
   return {
     vercel,
     oidc,
     domain,
+    dns,
     mailFromSubdomain: (args.mailFromSubdomain as string) ?? "mail",
     tracking: {
       enabled: tracking?.enabled ?? true,
