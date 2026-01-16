@@ -963,9 +963,6 @@ importers:
       '@pulumi/pulumi':
         specifier: ^3.207.0
         version: 3.214.0(ts-node@10.9.1(@types/node@20.19.27)(typescript@5.9.3))(typescript@5.9.3)
-      '@wraps/core':
-        specifier: workspace:*
-        version: link:../core
       args:
         specifier: ^5.0.3
         version: 5.0.3
@@ -1024,6 +1021,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 4.0.7
         version: 4.0.7(vitest@4.0.8(@edge-runtime/vm@3.2.0)(@types/node@20.19.27)(@vitest/ui@4.0.8)(jiti@2.6.1)(jsdom@27.4.0)(lightningcss@1.30.2)(tsx@4.20.6))
+      '@wraps/core':
+        specifier: workspace:*
+        version: link:../core
       '@wraps/email-check':
         specifier: workspace:*
         version: link:../email-check

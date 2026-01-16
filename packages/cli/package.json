@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/cli",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "CLI for deploying Wraps email infrastructure to your AWS account",
   "type": "module",
   "main": "./dist/cli.js",
@@ -47,7 +47,6 @@
   "author": "Wraps",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "@wraps/core": "workspace:*",
     "@aws-sdk/client-acm": "3.933.0",
     "@aws-sdk/client-cloudformation": "^3.490.0",
     "@aws-sdk/client-cloudfront": "3.933.0",
@@ -84,6 +83,7 @@
     "uuid": "^11.0.3"
   },
   "devDependencies": {
+    "@wraps/core": "workspace:*",
     "@types/args": "5.0.4",
     "@types/express": "^5.0.0",
     "@types/mailparser": "3.4.6",
