@@ -8,6 +8,7 @@ import * as eventsTargets from "aws-cdk-lib/aws-events-targets";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
+import * as route53 from "aws-cdk-lib/aws-route53";
 import * as ses from "aws-cdk-lib/aws-ses";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { Construct } from "constructs";
@@ -213,6 +214,76 @@ export class WrapsEmail extends Construct {
           value: emailIdentity.dkimDnsTokenValue3,
         },
       ];
+
+      // Create Route53 DNS records if hosted zone is provided
+      if (config.hostedZoneId) {
+        const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+          this,
+          "HostedZone",
+          {
+            hostedZoneId: config.hostedZoneId,
+            zoneName: config.domain,
+          }
+        );
+
+        // DKIM CNAME records (3 records)
+        for (let i = 0; i < 3; i++) {
+          const dkimRecord = this.dkimRecords[i];
+          new route53.CnameRecord(this, `DkimRecord${i + 1}`, {
+            zone: hostedZone,
+            recordName: dkimRecord.name,
+            domainName: dkimRecord.value,
+            ttl: cdk.Duration.minutes(30),
+            comment: `DKIM record ${i + 1} for SES email authentication`,
+          });
+        }
+
+        // SPF TXT record for the domain
+        new route53.TxtRecord(this, "SpfRecord", {
+          zone: hostedZone,
+          recordName: config.domain,
+          values: ["v=spf1 include:amazonses.com ~all"],
+          ttl: cdk.Duration.minutes(30),
+          comment: "SPF record for SES email sending",
+        });
+
+        // DMARC TXT record
+        new route53.TxtRecord(this, "DmarcRecord", {
+          zone: hostedZone,
+          recordName: `_dmarc.${config.domain}`,
+          values: [
+            `v=DMARC1; p=quarantine; rua=mailto:postmaster@${this.mailFromDomain || config.domain}`,
+          ],
+          ttl: cdk.Duration.minutes(30),
+          comment: "DMARC policy for email authentication",
+        });
+
+        // MAIL FROM domain records (if configured)
+        if (this.mailFromDomain) {
+          // MX record for bounce handling
+          new route53.MxRecord(this, "MailFromMxRecord", {
+            zone: hostedZone,
+            recordName: this.mailFromDomain,
+            values: [
+              {
+                priority: 10,
+                hostName: `feedback-smtp.${cdk.Stack.of(this).region}.amazonses.com`,
+              },
+            ],
+            ttl: cdk.Duration.minutes(30),
+            comment: "MX record for SES MAIL FROM domain",
+          });
+
+          // SPF TXT record for MAIL FROM subdomain
+          new route53.TxtRecord(this, "MailFromSpfRecord", {
+            zone: hostedZone,
+            recordName: this.mailFromDomain,
+            values: ["v=spf1 include:amazonses.com ~all"],
+            ttl: cdk.Duration.minutes(30),
+            comment: "SPF record for SES MAIL FROM domain",
+          });
+        }
+      }
     }
 
     // ============================================

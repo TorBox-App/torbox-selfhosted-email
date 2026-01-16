@@ -17,6 +17,7 @@ export function applyDefaults(props: WrapsEmailProps): ResolvedConfig {
     vercel: props.vercel,
     oidc: props.oidc,
     domain: props.domain,
+    hostedZoneId: props.hostedZoneId,
     mailFromSubdomain: props.mailFromSubdomain ?? "mail",
     tracking: {
       enabled: props.tracking?.enabled ?? true,

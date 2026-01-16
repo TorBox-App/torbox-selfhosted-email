@@ -68,6 +68,13 @@ export type WrapsEmailProps = {
   domain?: string;
 
   /**
+   * Route53 hosted zone ID for automatic DNS record creation.
+   * If provided, automatically creates DKIM, SPF, DMARC, and MAIL FROM records.
+   * If not provided, DNS records are output for manual creation.
+   */
+  hostedZoneId?: string;
+
+  /**
    * MAIL FROM subdomain for improved deliverability.
    * Combined with domain: "mail" + "example.com" = "mail.example.com"
    * @default "mail" (if domain is provided)
@@ -152,6 +159,7 @@ export type ResolvedConfig = {
   vercel?: VercelOIDCConfig;
   oidc?: OIDCConfig;
   domain?: string;
+  hostedZoneId?: string;
   mailFromSubdomain: string;
   tracking: ResolvedTrackingConfig;
   events?: EventsConfig;
