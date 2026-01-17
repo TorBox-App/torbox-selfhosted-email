@@ -313,7 +313,11 @@ export default function SPFBuilderPage() {
     setNewIncludeLoading(true);
 
     // Add with loading state
-    const newInc: CustomInclude = { domain: trimmed, lookups: null, loading: true };
+    const newInc: CustomInclude = {
+      domain: trimmed,
+      lookups: null,
+      loading: true,
+    };
     setCustomIncludes((prev) => [...prev, newInc]);
 
     // Resolve the actual lookup count
@@ -505,7 +509,8 @@ export default function SPFBuilderPage() {
                     </Button>
                   </div>
                   <p className="mt-1.5 text-muted-foreground text-xs">
-                    Add any SPF include mechanism. We'll resolve the actual lookup count.
+                    Add any SPF include mechanism. We'll resolve the actual
+                    lookup count.
                   </p>
                   {customIncludes.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -514,7 +519,9 @@ export default function SPFBuilderPage() {
                           className="inline-flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm"
                           key={inc.domain}
                         >
-                          <span className="font-mono">include:{inc.domain}</span>
+                          <span className="font-mono">
+                            include:{inc.domain}
+                          </span>
                           <span className="text-muted-foreground">
                             {inc.loading ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -646,10 +653,7 @@ export default function SPFBuilderPage() {
                     v=spf1
                   </span>
                   {customIPs.map((ip) => (
-                    <span
-                      className="text-cyan-600 dark:text-cyan-400"
-                      key={ip}
-                    >
+                    <span className="text-cyan-600 dark:text-cyan-400" key={ip}>
                       {" "}
                       {ip.includes(":") ? "ip6:" : "ip4:"}
                       {ip}
@@ -667,10 +671,10 @@ export default function SPFBuilderPage() {
                   {customIncludes.map((inc) => (
                     <span
                       className="text-blue-600 dark:text-blue-400"
-                      key={inc}
+                      key={inc.domain}
                     >
                       {" "}
-                      include:{inc}
+                      include:{inc.domain}
                     </span>
                   ))}
                   <span
@@ -708,8 +712,9 @@ export default function SPFBuilderPage() {
                   <code className="text-foreground">mx</code>,{" "}
                   <code className="text-foreground">ptr</code>, and{" "}
                   <code className="text-foreground">exists</code> mechanisms all
-                  require DNS lookups. <code className="text-foreground">ip4:</code>{" "}
-                  and <code className="text-foreground">ip6:</code> do not.
+                  require DNS lookups.{" "}
+                  <code className="text-foreground">ip4:</code> and{" "}
+                  <code className="text-foreground">ip6:</code> do not.
                 </CardContent>
               </Card>
               <Card>
@@ -726,7 +731,9 @@ export default function SPFBuilderPage() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">What is SPF flattening?</CardTitle>
+                  <CardTitle className="text-base">
+                    What is SPF flattening?
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground text-sm">
                   SPF flattening resolves includes to their IP addresses,
