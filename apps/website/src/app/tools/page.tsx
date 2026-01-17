@@ -672,11 +672,13 @@ export default function ToolsPage() {
                   <CardContent>
                     <div className="space-y-3">
                       {result.issues.map((issue, i) => {
-                        const isSpfIssue = issue.check.toLowerCase().includes("spf");
-                        const showSpfBuilderLink = isSpfIssue && (
-                          !result.spf.exists ||
-                          result.spf.lookupCount > result.spf.lookupLimit
-                        );
+                        const isSpfIssue = issue.check
+                          .toLowerCase()
+                          .includes("spf");
+                        const showSpfBuilderLink =
+                          isSpfIssue &&
+                          (!result.spf.exists ||
+                            result.spf.lookupCount > result.spf.lookupLimit);
 
                         return (
                           <div
@@ -700,11 +702,13 @@ export default function ToolsPage() {
                                     <>
                                       {" "}
                                       <a
-                                        href="/tools/spf-builder"
                                         className="inline-flex items-center gap-1 text-primary hover:underline"
+                                        href="/tools/spf-builder"
                                       >
                                         <ArrowRight className="h-3 w-3" />
-                                        {result.spf.exists ? "Fix with SPF Builder" : "Create with SPF Builder"}
+                                        {result.spf.exists
+                                          ? "Fix with SPF Builder"
+                                          : "Create with SPF Builder"}
                                       </a>
                                     </>
                                   )}

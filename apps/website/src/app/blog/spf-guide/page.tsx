@@ -138,9 +138,21 @@ const Collapsible = ({
 const PROVIDER_LOOKUPS = [
   { name: "ActiveCampaign", mechanism: "include:emsd1.com", lookups: 1 },
   { name: "AWS SES", mechanism: "include:amazonses.com", lookups: 1 },
-  { name: "Constant Contact", mechanism: "include:spf.constantcontact.com", lookups: 1 },
-  { name: "Google Workspace", mechanism: "include:_spf.google.com", lookups: 1 },
-  { name: "Microsoft 365", mechanism: "include:spf.protection.outlook.com", lookups: 1 },
+  {
+    name: "Constant Contact",
+    mechanism: "include:spf.constantcontact.com",
+    lookups: 1,
+  },
+  {
+    name: "Google Workspace",
+    mechanism: "include:_spf.google.com",
+    lookups: 1,
+  },
+  {
+    name: "Microsoft 365",
+    mechanism: "include:spf.protection.outlook.com",
+    lookups: 1,
+  },
   { name: "Postmark", mechanism: "include:spf.mtasv.net", lookups: 1 },
   { name: "Zendesk", mechanism: "include:mail.zendesk.com", lookups: 1 },
   { name: "Salesforce", mechanism: "include:_spf.salesforce.com", lookups: 2 },
@@ -172,7 +184,9 @@ export default function SPFGuidePage() {
           </Badge>
           <h1 className="mb-4 max-w-3xl font-bold text-4xl tracking-tight md:text-5xl">
             The SPF 10-Lookup Limit:{" "}
-            <span className="text-primary">Why Your Email Might Be Failing</span>
+            <span className="text-primary">
+              Why Your Email Might Be Failing
+            </span>
           </h1>
           <p className="max-w-2xl text-lg text-muted-foreground">
             SPF looks simple until you hit the 10-lookup limit. Suddenly your
@@ -221,17 +235,17 @@ export default function SPFGuidePage() {
           <div className="rounded-xl border bg-muted/30 p-6">
             <p className="mb-4 text-sm">
               When a receiving server gets an email from{" "}
-              <code className="rounded bg-muted px-1">hello@yourcompany.com</code>,
-              it checks the DNS for{" "}
-              <code className="rounded bg-muted px-1">yourcompany.com</code>'s SPF
-              record to see if the sending server is authorized.
+              <code className="rounded bg-muted px-1">
+                hello@yourcompany.com
+              </code>
+              , it checks the DNS for{" "}
+              <code className="rounded bg-muted px-1">yourcompany.com</code>'s
+              SPF record to see if the sending server is authorized.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 text-center">
               <div className="rounded-lg border bg-background p-3">
                 <div className="font-mono text-sm">Sending Server</div>
-                <div className="text-muted-foreground text-xs">
-                  192.0.2.100
-                </div>
+                <div className="text-muted-foreground text-xs">192.0.2.100</div>
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
               <div className="rounded-lg border bg-background p-3">
@@ -269,7 +283,11 @@ export default function SPFGuidePage() {
             evaluation returns PermError.
           </p>
 
-          <InfoCard icon={AlertTriangle} title="What Happens at 11 Lookups" type="danger">
+          <InfoCard
+            icon={AlertTriangle}
+            title="What Happens at 11 Lookups"
+            type="danger"
+          >
             When your SPF record exceeds 10 lookups, receiving servers return a
             PermError. This is treated as an SPF failure, which causes DMARC to
             fail if you're using DMARC (and you should be). Your emails may be
@@ -375,11 +393,7 @@ export default function SPFGuidePage() {
                     </span>
                   </li>
                 </ul>
-                <InfoCard
-                  icon={CheckCircle}
-                  title="Pro Tip"
-                  type="tip"
-                >
+                <InfoCard icon={CheckCircle} title="Pro Tip" type="tip">
                   If you have dedicated sending IPs, use ip4: or ip6: mechanisms
                   instead of includes to save lookups.
                 </InfoCard>
@@ -398,11 +412,14 @@ export default function SPFGuidePage() {
             record too.
           </p>
           <CodeBlock label="Google's SPF Record (Simplified)">
-{`v=spf1 include:_netblocks.google.com include:_netblocks2.google.com
+            {`v=spf1 include:_netblocks.google.com include:_netblocks2.google.com
        include:_netblocks3.google.com ~all`}
           </CodeBlock>
           <p className="text-muted-foreground text-sm">
-            That's why <code className="rounded bg-muted px-1">include:_spf.google.com</code>{" "}
+            That's why{" "}
+            <code className="rounded bg-muted px-1">
+              include:_spf.google.com
+            </code>{" "}
             costs 4 lookups, not 1.
           </p>
         </section>
@@ -473,9 +490,9 @@ export default function SPFGuidePage() {
             <h2 className="font-bold text-2xl">SPF Flattening</h2>
           </div>
           <p className="mb-6 text-lg text-muted-foreground">
-            SPF flattening resolves <code className="rounded bg-muted px-1">include:</code>{" "}
-            mechanisms to their actual IP addresses, eliminating the DNS lookups
-            entirely.
+            SPF flattening resolves{" "}
+            <code className="rounded bg-muted px-1">include:</code> mechanisms
+            to their actual IP addresses, eliminating the DNS lookups entirely.
           </p>
 
           <div className="mb-6 grid gap-4 md:grid-cols-2">
@@ -548,7 +565,9 @@ export default function SPFGuidePage() {
             <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
               <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
               <div>
-                <h4 className="font-medium">Use -all (hard fail) in production</h4>
+                <h4 className="font-medium">
+                  Use -all (hard fail) in production
+                </h4>
                 <p className="text-muted-foreground text-sm">
                   Start with ~all during testing, but switch to -all once
                   verified. Soft fail still allows spoofed email through.
@@ -559,7 +578,9 @@ export default function SPFGuidePage() {
             <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
               <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
               <div>
-                <h4 className="font-medium">Only authorize what you actually use</h4>
+                <h4 className="font-medium">
+                  Only authorize what you actually use
+                </h4>
                 <p className="text-muted-foreground text-sm">
                   Don't add providers "just in case." Every include is a
                   potential lookup and a potential attack vector.
@@ -570,7 +591,9 @@ export default function SPFGuidePage() {
             <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4">
               <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
               <div>
-                <h4 className="font-medium">Prefer IP mechanisms for dedicated IPs</h4>
+                <h4 className="font-medium">
+                  Prefer IP mechanisms for dedicated IPs
+                </h4>
                 <p className="text-muted-foreground text-sm">
                   If you have static sending IPs, use ip4: or ip6: instead of
                   includes to save lookups.

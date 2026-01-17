@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowRight, Calendar, Clock, FileCheck, Shield, Server } from "lucide-react";
+import {
+  ArrowRight,
+  Calendar,
+  Clock,
+  FileCheck,
+  Server,
+  Shield,
+} from "lucide-react";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { Badge } from "@/components/ui/badge";
