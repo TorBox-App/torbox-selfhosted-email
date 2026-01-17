@@ -6,144 +6,202 @@ import {
   Check,
   Copy,
   Info,
+  Loader2,
   Plus,
   Shield,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-// Provider data with their SPF mechanisms and lookup costs
+// Custom include with resolved lookup count
+type CustomInclude = {
+  domain: string;
+  lookups: number | null; // null = loading/unknown
+  loading?: boolean;
+  error?: string;
+};
+
+// Fetch SPF record via Cloudflare DNS-over-HTTPS
+async function fetchSpfRecord(domain: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=TXT`,
+      { headers: { Accept: "application/dns-json" } }
+    );
+    const data = await res.json();
+    if (!data.Answer) return null;
+
+    // Find the SPF record among TXT records
+    for (const answer of data.Answer) {
+      const txt = answer.data?.replace(/"/g, "") || "";
+      if (txt.startsWith("v=spf1")) {
+        return txt;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Count DNS lookups in an SPF record (recursive)
+async function countSpfLookups(
+  domain: string,
+  visited: Set<string> = new Set()
+): Promise<number> {
+  // Prevent infinite loops
+  if (visited.has(domain)) return 0;
+  visited.add(domain);
+
+  const record = await fetchSpfRecord(domain);
+  if (!record) return 1; // Count the failed lookup attempt
+
+  let count = 0;
+  const parts = record.split(/\s+/);
+
+  for (const part of parts) {
+    const mechanism = part.replace(/^[+\-~?]/, ""); // Remove qualifier
+
+    if (mechanism.startsWith("include:")) {
+      const includeDomain = mechanism.replace("include:", "");
+      count += 1; // The include itself is 1 lookup
+      count += await countSpfLookups(includeDomain, visited); // Plus nested lookups
+    } else if (mechanism.startsWith("redirect=")) {
+      const redirectDomain = mechanism.replace("redirect=", "");
+      count += 1;
+      count += await countSpfLookups(redirectDomain, visited);
+    } else if (
+      mechanism.startsWith("a:") ||
+      mechanism.startsWith("a/") ||
+      mechanism === "a"
+    ) {
+      count += 1;
+    } else if (
+      mechanism.startsWith("mx:") ||
+      mechanism.startsWith("mx/") ||
+      mechanism === "mx"
+    ) {
+      count += 1;
+    } else if (mechanism.startsWith("ptr") || mechanism === "ptr") {
+      count += 1;
+    } else if (mechanism.startsWith("exists:")) {
+      count += 1;
+    }
+    // ip4:, ip6:, all don't count as lookups
+  }
+
+  return count;
+}
+
+// Provider data with verified SPF mechanisms and lookup counts
+// All mechanisms verified via DNS lookup on 2026-01-16
 const PROVIDERS: Record<
   string,
   { name: string; mechanism: string; lookups: number; logo: string }
 > = {
-  // Email providers
+  // Email providers - verified
   google: {
     name: "Google Workspace",
     mechanism: "include:_spf.google.com",
-    lookups: 4,
-    logo: "google.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "google.png",
   },
   microsoft: {
     name: "Microsoft 365",
     mechanism: "include:spf.protection.outlook.com",
-    lookups: 2,
-    logo: "microsoft.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "microsoft.png",
   },
-  // Transactional
+  // Transactional - verified
   ses: {
     name: "AWS SES",
     mechanism: "include:amazonses.com",
-    lookups: 1,
-    logo: "aws.amazon.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "aws.png",
   },
   sendgrid: {
     name: "SendGrid",
     mechanism: "include:sendgrid.net",
-    lookups: 3,
-    logo: "sendgrid.com",
+    lookups: 2, // Includes ab.sendgrid.net
+    logo: "sendgrid.png",
   },
   postmark: {
     name: "Postmark",
     mechanism: "include:spf.mtasv.net",
-    lookups: 1,
-    logo: "postmarkapp.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "postmark.png",
   },
   mailgun: {
     name: "Mailgun",
     mechanism: "include:mailgun.org",
-    lookups: 2,
-    logo: "mailgun.com",
+    lookups: 5, // Complex: includes _spf.mailgun.org, _spf.eu.mailgun.org, then _spf1/_spf2
+    logo: "mailgun.png",
   },
-  resend: {
-    name: "Resend",
-    mechanism: "include:_spf.resend.com",
-    lookups: 1,
-    logo: "resend.com",
-  },
-  customerio: {
-    name: "Customer.io",
-    mechanism: "include:_spf.customer.io",
-    lookups: 2,
-    logo: "customer.io",
-  },
-  // Marketing/CRM
-  hubspot: {
-    name: "HubSpot",
-    mechanism: "include:spf.hubspot.com",
-    lookups: 2,
-    logo: "hubspot.com",
-  },
-  klaviyo: {
-    name: "Klaviyo",
-    mechanism: "include:_spf.klaviyo.com",
-    lookups: 2,
-    logo: "klaviyo.com",
-  },
+  // Marketing/CRM - verified
   activecampaign: {
     name: "ActiveCampaign",
     mechanism: "include:emsd1.com",
-    lookups: 2,
-    logo: "activecampaign.com",
-  },
-  intercom: {
-    name: "Intercom",
-    mechanism: "include:_spf.intercom.io",
-    lookups: 2,
-    logo: "intercom.com",
-  },
-  drip: {
-    name: "Drip",
-    mechanism: "include:_spf.getdrip.com",
-    lookups: 1,
-    logo: "drip.com",
-  },
-  convertkit: {
-    name: "ConvertKit",
-    mechanism: "include:_spf.convertkit.com",
-    lookups: 2,
-    logo: "convertkit.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "activecampaign.png",
   },
   constantcontact: {
     name: "Constant Contact",
     mechanism: "include:spf.constantcontact.com",
-    lookups: 2,
-    logo: "constantcontact.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "constantcontact.png",
   },
-  // Business tools
+  convertkit: {
+    name: "ConvertKit",
+    mechanism: "include:convertkit.com",
+    lookups: 3, // Includes _spf.google.com + hubspotemail.net
+    logo: "convertkit.png",
+  },
+  customerio: {
+    name: "Customer.io",
+    mechanism: "include:customeriomail.com",
+    lookups: 3, // Includes sendgrid.net
+    logo: "customerio.png",
+  },
+  klaviyo: {
+    name: "Klaviyo",
+    mechanism: "include:send.klaviyo.com",
+    lookups: 3, // CNAMEs to sendgrid.net
+    logo: "klaviyo.png",
+  },
+  // Business tools - verified
   salesforce: {
     name: "Salesforce",
     mechanism: "include:_spf.salesforce.com",
-    lookups: 3,
-    logo: "salesforce.com",
+    lookups: 2, // Uses exists: mechanism
+    logo: "salesforce.png",
   },
   zendesk: {
     name: "Zendesk",
     mechanism: "include:mail.zendesk.com",
-    lookups: 2,
-    logo: "zendesk.com",
+    lookups: 1, // Only contains IP ranges
+    logo: "zendesk.png",
   },
   freshdesk: {
     name: "Freshdesk",
     mechanism: "include:email.freshdesk.com",
-    lookups: 2,
-    logo: "freshworks.com",
+    lookups: 7, // Includes sendgrid.net (2) + 4 freshemail.io subdomains
+    logo: "freshdesk.png",
   },
-  shopify: {
-    name: "Shopify",
-    mechanism: "include:shops.shopify.com",
-    lookups: 1,
-    logo: "shopify.com",
+  zoho: {
+    name: "Zoho",
+    mechanism: "include:zoho.com",
+    lookups: 4, // Includes spf.zoho.com + zcsend.net + spf.zohomail.com (all IPs)
+    logo: "zoho.png",
   },
   stripe: {
     name: "Stripe",
-    mechanism: "include:_spf.stripe.com",
-    lookups: 1,
-    logo: "stripe.com",
+    mechanism: "include:spf1.stripe.com",
+    lookups: 4, // Includes _spf.google.com, amazonses.com, mail.zendesk.com
+    logo: "stripe.png",
   },
 };
 
@@ -170,17 +228,26 @@ const QUALIFIERS: Record<
 export default function SPFBuilderPage() {
   const [selectedProviders, setSelectedProviders] = useState<string[]>(["ses"]);
   const [customIPs, setCustomIPs] = useState<string[]>([]);
+  const [customIncludes, setCustomIncludes] = useState<CustomInclude[]>([]);
   const [newIP, setNewIP] = useState("");
+  const [newInclude, setNewInclude] = useState("");
+  const [newIncludeLoading, setNewIncludeLoading] = useState(false);
   const [qualifier, setQualifier] = useState("-all");
   const [copied, setCopied] = useState(false);
 
-  // Calculate total lookups
+  // Calculate total lookups using real counts from custom includes
   const lookupCount = useMemo(() => {
-    return selectedProviders.reduce(
+    const providerLookups = selectedProviders.reduce(
       (sum, p) => sum + (PROVIDERS[p]?.lookups || 0),
       0
     );
-  }, [selectedProviders]);
+    // Use real lookup counts, default to 2 if still loading
+    const customLookups = customIncludes.reduce(
+      (sum, inc) => sum + (inc.lookups ?? 2),
+      0
+    );
+    return providerLookups + customLookups;
+  }, [selectedProviders, customIncludes]);
 
   // Generate the SPF record
   const spfRecord = useMemo(() => {
@@ -198,11 +265,16 @@ export default function SPFBuilderPage() {
       }
     }
 
+    // Add custom includes
+    for (const inc of customIncludes) {
+      parts.push(`include:${inc.domain}`);
+    }
+
     // Add qualifier
     parts.push(qualifier);
 
     return parts.join(" ");
-  }, [selectedProviders, customIPs, qualifier]);
+  }, [selectedProviders, customIPs, customIncludes, qualifier]);
 
   const toggleProvider = (key: string) => {
     setSelectedProviders((prev) =>
@@ -225,6 +297,48 @@ export default function SPFBuilderPage() {
 
   const removeIP = (ip: string) => {
     setCustomIPs((prev) => prev.filter((i) => i !== ip));
+  };
+
+  const addInclude = useCallback(async () => {
+    let trimmed = newInclude.trim();
+    // Remove include: prefix if user added it
+    if (trimmed.startsWith("include:")) {
+      trimmed = trimmed.replace("include:", "");
+    }
+    if (!trimmed || customIncludes.some((inc) => inc.domain === trimmed)) {
+      return;
+    }
+
+    setNewInclude("");
+    setNewIncludeLoading(true);
+
+    // Add with loading state
+    const newInc: CustomInclude = { domain: trimmed, lookups: null, loading: true };
+    setCustomIncludes((prev) => [...prev, newInc]);
+
+    // Resolve the actual lookup count
+    try {
+      const lookups = await countSpfLookups(trimmed);
+      setCustomIncludes((prev) =>
+        prev.map((inc) =>
+          inc.domain === trimmed ? { ...inc, lookups, loading: false } : inc
+        )
+      );
+    } catch {
+      setCustomIncludes((prev) =>
+        prev.map((inc) =>
+          inc.domain === trimmed
+            ? { ...inc, lookups: 2, loading: false, error: "Failed to resolve" }
+            : inc
+        )
+      );
+    }
+
+    setNewIncludeLoading(false);
+  }, [newInclude, customIncludes]);
+
+  const removeInclude = (domain: string) => {
+    setCustomIncludes((prev) => prev.filter((i) => i.domain !== domain));
   };
 
   const copyToClipboard = () => {
@@ -337,7 +451,7 @@ export default function SPFBuilderPage() {
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                   {Object.entries(PROVIDERS).map(([key, provider]) => (
                     <button
-                      className={`rounded-lg border p-3 text-left transition-all ${
+                      className={`flex items-stretch gap-3 rounded-lg border text-left transition-all ${
                         selectedProviders.includes(key)
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border bg-muted/30 hover:border-muted-foreground/50"
@@ -346,22 +460,79 @@ export default function SPFBuilderPage() {
                       onClick={() => toggleProvider(key)}
                       type="button"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex w-12 shrink-0 items-center justify-center rounded-l-lg bg-muted/50 p-2">
                         <img
                           alt={provider.name}
-                          className="h-5 w-5 rounded"
-                          src={`https://logo.clearbit.com/${provider.logo}`}
+                          className="h-8 w-8 object-contain grayscale"
+                          src={`/logos/${provider.logo}`}
                         />
-                        <span className="font-medium text-sm">
+                      </div>
+                      <div className="flex flex-col justify-center py-2 pr-3">
+                        <span className="font-medium text-sm leading-tight">
                           {provider.name}
                         </span>
-                      </div>
-                      <div className="mt-1 pl-7 text-muted-foreground text-xs">
-                        +{provider.lookups} lookup
-                        {provider.lookups > 1 ? "s" : ""}
+                        <span className="text-muted-foreground text-xs">
+                          +{provider.lookups} lookup
+                          {provider.lookups > 1 ? "s" : ""}
+                        </span>
                       </div>
                     </button>
                   ))}
+                </div>
+
+                {/* Custom include input */}
+                <div className="mt-4 border-t pt-4">
+                  <p className="mb-2 font-medium text-sm">Other Provider</p>
+                  <div className="flex gap-2">
+                    <Input
+                      className="flex-1 font-mono text-sm"
+                      disabled={newIncludeLoading}
+                      onChange={(e) => setNewInclude(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addInclude()}
+                      placeholder="_spf.example.com"
+                      value={newInclude}
+                    />
+                    <Button
+                      disabled={newIncludeLoading || !newInclude.trim()}
+                      onClick={addInclude}
+                      variant="secondary"
+                    >
+                      {newIncludeLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="mt-1.5 text-muted-foreground text-xs">
+                    Add any SPF include mechanism. We'll resolve the actual lookup count.
+                  </p>
+                  {customIncludes.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {customIncludes.map((inc) => (
+                        <span
+                          className="inline-flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm"
+                          key={inc.domain}
+                        >
+                          <span className="font-mono">include:{inc.domain}</span>
+                          <span className="text-muted-foreground">
+                            {inc.loading ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              `+${inc.lookups}`
+                            )}
+                          </span>
+                          <button
+                            className="text-muted-foreground hover:text-red-500"
+                            onClick={() => removeInclude(inc.domain)}
+                            type="button"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -491,6 +662,15 @@ export default function SPFBuilderPage() {
                     >
                       {" "}
                       {PROVIDERS[p]?.mechanism}
+                    </span>
+                  ))}
+                  {customIncludes.map((inc) => (
+                    <span
+                      className="text-blue-600 dark:text-blue-400"
+                      key={inc}
+                    >
+                      {" "}
+                      include:{inc}
                     </span>
                   ))}
                   <span

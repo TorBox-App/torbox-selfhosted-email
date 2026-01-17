@@ -132,28 +132,26 @@ const Collapsible = ({
   );
 };
 
-// Provider lookup costs table (sorted by lookups, then alphabetically)
+// Provider lookup costs table - verified via DNS lookup 2026-01-16
+// Sorted by lookups, then alphabetically
+// Note: HubSpot requires a custom ID (e.g., include:[ID].spf03.hubspotemail.net)
 const PROVIDER_LOOKUPS = [
+  { name: "ActiveCampaign", mechanism: "include:emsd1.com", lookups: 1 },
   { name: "AWS SES", mechanism: "include:amazonses.com", lookups: 1 },
-  { name: "Drip", mechanism: "include:_spf.getdrip.com", lookups: 1 },
+  { name: "Constant Contact", mechanism: "include:spf.constantcontact.com", lookups: 1 },
+  { name: "Google Workspace", mechanism: "include:_spf.google.com", lookups: 1 },
+  { name: "Microsoft 365", mechanism: "include:spf.protection.outlook.com", lookups: 1 },
   { name: "Postmark", mechanism: "include:spf.mtasv.net", lookups: 1 },
-  { name: "Resend", mechanism: "include:_spf.resend.com", lookups: 1 },
-  { name: "Shopify", mechanism: "include:shops.shopify.com", lookups: 1 },
-  { name: "Stripe", mechanism: "include:_spf.stripe.com", lookups: 1 },
-  { name: "ActiveCampaign", mechanism: "include:emsd1.com", lookups: 2 },
-  { name: "Constant Contact", mechanism: "include:spf.constantcontact.com", lookups: 2 },
-  { name: "ConvertKit", mechanism: "include:_spf.convertkit.com", lookups: 2 },
-  { name: "Customer.io", mechanism: "include:_spf.customer.io", lookups: 2 },
-  { name: "Freshdesk", mechanism: "include:email.freshdesk.com", lookups: 2 },
-  { name: "HubSpot", mechanism: "include:spf.hubspot.com", lookups: 2 },
-  { name: "Intercom", mechanism: "include:_spf.intercom.io", lookups: 2 },
-  { name: "Klaviyo", mechanism: "include:_spf.klaviyo.com", lookups: 2 },
-  { name: "Mailgun", mechanism: "include:mailgun.org", lookups: 2 },
-  { name: "Microsoft 365", mechanism: "include:spf.protection.outlook.com", lookups: 2 },
-  { name: "Zendesk", mechanism: "include:mail.zendesk.com", lookups: 2 },
-  { name: "Salesforce", mechanism: "include:_spf.salesforce.com", lookups: 3 },
-  { name: "SendGrid", mechanism: "include:sendgrid.net", lookups: 3 },
-  { name: "Google Workspace", mechanism: "include:_spf.google.com", lookups: 4 },
+  { name: "Zendesk", mechanism: "include:mail.zendesk.com", lookups: 1 },
+  { name: "Salesforce", mechanism: "include:_spf.salesforce.com", lookups: 2 },
+  { name: "SendGrid", mechanism: "include:sendgrid.net", lookups: 2 },
+  { name: "ConvertKit", mechanism: "include:convertkit.com", lookups: 3 },
+  { name: "Customer.io", mechanism: "include:customeriomail.com", lookups: 3 },
+  { name: "Klaviyo", mechanism: "include:send.klaviyo.com", lookups: 3 },
+  { name: "Stripe", mechanism: "include:spf1.stripe.com", lookups: 4 },
+  { name: "Zoho", mechanism: "include:zoho.com", lookups: 4 },
+  { name: "Mailgun", mechanism: "include:mailgun.org", lookups: 5 },
+  { name: "Freshdesk", mechanism: "include:email.freshdesk.com", lookups: 7 },
 ];
 
 // ============================================================================
