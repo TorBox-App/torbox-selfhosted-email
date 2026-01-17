@@ -308,8 +308,15 @@ export default function SignInForm({
                       return;
                     }
 
-                    // Capture passkey sign-in event in PostHog
-                    posthog.capture("passkey_sign_in", {
+                    // Identify user and capture passkey sign-in event in PostHog
+                    if (result.data?.user) {
+                      posthog.identify(result.data.user.email, {
+                        email: result.data.user.email,
+                        name: result.data.user.name,
+                      });
+                    }
+                    posthog.capture("user_signed_in", {
+                      email: result.data?.user?.email,
                       method: "passkey",
                     });
 
