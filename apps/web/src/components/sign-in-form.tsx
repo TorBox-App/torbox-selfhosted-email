@@ -34,6 +34,7 @@ export default function SignInForm({
   const redirectTo = searchParams.get("redirect") || "/";
   const { isPending } = authClient.useSession();
   const [show2FA, setShow2FA] = useState(false);
+  const [twoFactorEmail, setTwoFactorEmail] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [is2FALoading, setIs2FALoading] = useState(false);
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
@@ -56,6 +57,7 @@ export default function SignInForm({
           onSuccess: (ctx) => {
             // Check if 2FA is required
             if (ctx.data.twoFactorRedirect) {
+              setTwoFactorEmail(value.email);
               setShow2FA(true);
               toast.info("Please enter your 2FA code");
               return;
@@ -104,9 +106,13 @@ export default function SignInForm({
         return;
       }
 
-      // Capture 2FA verification event in PostHog
-      posthog.capture("two_factor_verified", {
-        method: "totp",
+      // Identify user and capture sign-in event in PostHog
+      posthog.identify(twoFactorEmail, {
+        email: twoFactorEmail,
+      });
+      posthog.capture("user_signed_in", {
+        email: twoFactorEmail,
+        method: "email_2fa",
       });
 
       router.push(redirectTo);
@@ -170,6 +176,7 @@ export default function SignInForm({
                 className="w-full cursor-pointer"
                 onClick={() => {
                   setShow2FA(false);
+                  setTwoFactorEmail("");
                   setTwoFactorCode("");
                 }}
                 type="button"
