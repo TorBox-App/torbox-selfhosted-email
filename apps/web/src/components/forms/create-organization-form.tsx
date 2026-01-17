@@ -62,7 +62,6 @@ export function CreateOrganizationForm({
           onSuccess(result.organization.slug);
         } else {
           router.push(`/${result.organization.slug}/onboarding`);
-          router.refresh();
         }
       } else {
         // Handle error

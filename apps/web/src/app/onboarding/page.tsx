@@ -39,7 +39,6 @@ export default function OnboardingPage() {
         ? `/${orgSlug}/onboarding?${params.toString()}`
         : `/${orgSlug}/onboarding`;
     router.push(url);
-    router.refresh();
   };
 
   return (

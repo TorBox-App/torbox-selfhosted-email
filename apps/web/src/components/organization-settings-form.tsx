@@ -71,7 +71,6 @@ export function OrganizationSettingsForm({
           if (value.slug && value.slug !== organization.slug) {
             setTimeout(() => {
               router.push(`/${result.organization.slug}/settings`);
-              router.refresh();
             }, 1500);
           }
         } else {

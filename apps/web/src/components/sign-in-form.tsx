@@ -118,7 +118,8 @@ export default function SignInForm({
     }
   };
 
-  if (isPending) {
+  // Only show loader on initial page load, not during/after form submission
+  if (isPending && !form.state.isSubmitting && !form.state.isSubmitted) {
     return <Loader />;
   }
 

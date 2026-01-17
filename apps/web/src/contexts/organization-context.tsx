@@ -59,7 +59,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
     if (!error && data) {
       router.push(`/${orgSlug}/emails`);
-      router.refresh();
     }
   };
 
