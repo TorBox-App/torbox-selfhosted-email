@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Calendar, Clock, FileCheck, Shield } from "lucide-react";
+import { ArrowRight, Calendar, Clock, FileCheck, Shield, Server } from "lucide-react";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,16 @@ const posts: BlogPost[] = [
     featured: true,
     icon: <Shield className="h-6 w-6" />,
     image: "/blog/DMARC_EXPLOITED.png",
+  },
+  {
+    slug: "spf-guide",
+    title: "The SPF 10-Lookup Limit: Why Your Email Might Be Failing",
+    description:
+      "SPF looks simple until you hit the 10-lookup limit. Learn how lookups are counted, which providers cost the most, and how to stay under the limit.",
+    category: "Guide",
+    date: "January 2026",
+    readTime: "10 min read",
+    icon: <Server className="h-6 w-6" />,
   },
   {
     slug: "ses-sandbox-guide",

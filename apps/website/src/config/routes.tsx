@@ -67,9 +67,11 @@ const BlogDmarcSucks = lazy(
 const BlogSESSandboxGuide = lazy(
   () => import("@/app/blog/ses-sandbox-guide/page")
 );
+const BlogSPFGuide = lazy(() => import("@/app/blog/spf-guide/page"));
 
 // Tools
 const Tools = lazy(() => import("@/app/tools/page"));
+const SPFBuilder = lazy(() => import("@/app/tools/spf-builder/page"));
 
 export type RouteConfig = {
   path: string;
@@ -94,6 +96,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/tools",
     element: <Tools />,
+  },
+  {
+    path: "/tools/spf-builder",
+    element: <SPFBuilder />,
   },
 
   // Why Wraps (for internal champions)
@@ -220,6 +226,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/blog/ses-sandbox-guide",
     element: <BlogSESSandboxGuide />,
+  },
+  {
+    path: "/blog/spf-guide",
+    element: <BlogSPFGuide />,
   },
 
   // Legal pages

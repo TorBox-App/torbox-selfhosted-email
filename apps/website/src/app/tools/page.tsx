@@ -370,9 +370,14 @@ export default function ToolsPage() {
             <Shield className="size-6" />
             Wraps Email Tools
           </a>
-          <Button asChild variant="outline">
-            <a href="/">Back to Home</a>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button asChild size="sm" variant="ghost">
+              <a href="/tools/spf-builder">SPF Builder</a>
+            </Button>
+            <Button asChild variant="outline">
+              <a href="/">Back to Home</a>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -666,40 +671,60 @@ export default function ToolsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {result.issues.map((issue, i) => (
-                        <div
-                          className={`rounded-lg border p-4 ${
-                            issue.severity === "critical"
-                              ? "border-red-500/20 bg-red-500/5"
-                              : issue.severity === "warning"
-                                ? "border-yellow-500/20 bg-yellow-500/5"
-                                : "border-blue-500/20 bg-blue-500/5"
-                          }`}
-                          key={`issue-${i}`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <div className="mb-1 font-medium">
-                                {issue.check}
+                      {result.issues.map((issue, i) => {
+                        const isSpfIssue = issue.check.toLowerCase().includes("spf");
+                        const showSpfBuilderLink = isSpfIssue && (
+                          !result.spf.exists ||
+                          result.spf.lookupCount > result.spf.lookupLimit
+                        );
+
+                        return (
+                          <div
+                            className={`rounded-lg border p-4 ${
+                              issue.severity === "critical"
+                                ? "border-red-500/20 bg-red-500/5"
+                                : issue.severity === "warning"
+                                  ? "border-yellow-500/20 bg-yellow-500/5"
+                                  : "border-blue-500/20 bg-blue-500/5"
+                            }`}
+                            key={`issue-${i}`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="mb-1 font-medium">
+                                  {issue.check}
+                                </div>
+                                <p className="text-muted-foreground text-sm">
+                                  {issue.reason}
+                                  {showSpfBuilderLink && (
+                                    <>
+                                      {" "}
+                                      <a
+                                        href="/tools/spf-builder"
+                                        className="inline-flex items-center gap-1 text-primary hover:underline"
+                                      >
+                                        <ArrowRight className="h-3 w-3" />
+                                        {result.spf.exists ? "Fix with SPF Builder" : "Create with SPF Builder"}
+                                      </a>
+                                    </>
+                                  )}
+                                </p>
                               </div>
-                              <p className="text-muted-foreground text-sm">
-                                {issue.reason}
-                              </p>
+                              <Badge
+                                variant={
+                                  issue.severity === "critical"
+                                    ? "destructive"
+                                    : issue.severity === "warning"
+                                      ? "secondary"
+                                      : "outline"
+                                }
+                              >
+                                -{issue.points} pts
+                              </Badge>
                             </div>
-                            <Badge
-                              variant={
-                                issue.severity === "critical"
-                                  ? "destructive"
-                                  : issue.severity === "warning"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                            >
-                              -{issue.points} pts
-                            </Badge>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -1099,7 +1124,13 @@ export default function ToolsPage() {
               </CardHeader>
               <CardContent className="text-muted-foreground text-sm">
                 Sender Policy Framework (SPF) specifies which mail servers are
-                authorized to send email on behalf of your domain.
+                authorized to send email on behalf of your domain.{" "}
+                <a
+                  className="text-primary underline underline-offset-2 hover:text-primary/80"
+                  href="/tools/spf-builder"
+                >
+                  Build your SPF record →
+                </a>
               </CardContent>
             </Card>
             <Card>
