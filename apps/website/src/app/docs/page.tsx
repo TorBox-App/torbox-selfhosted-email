@@ -4,6 +4,8 @@ import {
   ArrowRight,
   Blocks,
   Book,
+  Box,
+  Layers,
   Mail,
   MessageSquare,
   Rocket,
@@ -68,6 +70,20 @@ const quickLinks = [
     title: "SMS SDK",
     description: "Send SMS with @wraps.dev/sms through AWS",
     href: "/docs/sms-sdk-reference",
+    disabled: false,
+  },
+  {
+    icon: Layers,
+    title: "CDK Construct",
+    description: "Deploy with AWS CDK infrastructure as code",
+    href: "/docs/cdk-reference",
+    disabled: false,
+  },
+  {
+    icon: Box,
+    title: "Pulumi Component",
+    description: "Deploy with Pulumi infrastructure as code",
+    href: "/docs/pulumi-reference",
     disabled: false,
   },
   {
@@ -312,6 +328,48 @@ export default function DocsPage() {
                   <Button asChild variant="outline">
                     <a
                       href="https://www.npmjs.com/package/@wraps.dev/sms"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      View on npm
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>CDK Construct</CardTitle>
+                  <CardDescription>
+                    View @wraps.dev/cdk package on npm
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild variant="outline">
+                    <a
+                      href="https://www.npmjs.com/package/@wraps.dev/cdk"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      View on npm
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pulumi Component</CardTitle>
+                  <CardDescription>
+                    View @wraps.dev/pulumi package on npm
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild variant="outline">
+                    <a
+                      href="https://www.npmjs.com/package/@wraps.dev/pulumi"
                       rel="noopener noreferrer"
                       target="_blank"
                     >

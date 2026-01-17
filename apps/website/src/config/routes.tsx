@@ -22,6 +22,10 @@ const ClientSDKReferenceDocs = lazy(
 const SMSSDKReferenceDocs = lazy(
   () => import("@/app/docs/sms-sdk-reference/page")
 );
+const CDKReferenceDocs = lazy(() => import("@/app/docs/cdk-reference/page"));
+const PulumiReferenceDocs = lazy(
+  () => import("@/app/docs/pulumi-reference/page")
+);
 const CLIReferenceDocs = lazy(() => import("@/app/docs/cli-reference/page"));
 const CLIReferenceEmailDocs = lazy(
   () => import("@/app/docs/cli-reference/email/page")
@@ -150,6 +154,14 @@ export const routes: RouteConfig[] = [
   {
     path: "/docs/sms-sdk-reference",
     element: <SMSSDKReferenceDocs />,
+  },
+  {
+    path: "/docs/cdk-reference",
+    element: <CDKReferenceDocs />,
+  },
+  {
+    path: "/docs/pulumi-reference",
+    element: <PulumiReferenceDocs />,
   },
   {
     path: "/docs/cli-reference",
