@@ -7,10 +7,34 @@ import { Button } from "@/components/ui/button";
 import { FadeIn } from "./animations";
 
 const comparisonFeatures = [
-  { feature: "CLI deployment", free: true, starter: true, growth: true, scale: true },
-  { feature: "TypeScript SDK", free: true, starter: true, growth: true, scale: true },
-  { feature: "Event tracking", free: true, starter: true, growth: true, scale: true },
-  { feature: "Local console", free: true, starter: true, growth: true, scale: true },
+  {
+    feature: "CLI deployment",
+    free: true,
+    starter: true,
+    growth: true,
+    scale: true,
+  },
+  {
+    feature: "TypeScript SDK",
+    free: true,
+    starter: true,
+    growth: true,
+    scale: true,
+  },
+  {
+    feature: "Event tracking",
+    free: true,
+    starter: true,
+    growth: true,
+    scale: true,
+  },
+  {
+    feature: "Local console",
+    free: true,
+    starter: true,
+    growth: true,
+    scale: true,
+  },
   {
     feature: "Email analytics",
     free: "Local",
@@ -18,7 +42,13 @@ const comparisonFeatures = [
     growth: true,
     scale: true,
   },
-  { feature: "Wraps Platform", free: false, starter: true, growth: true, scale: true },
+  {
+    feature: "Wraps Platform",
+    free: false,
+    starter: true,
+    growth: true,
+    scale: true,
+  },
   {
     feature: "Events/month",
     free: false,
@@ -35,7 +65,13 @@ const comparisonFeatures = [
     scale: "1 year",
     link: "/platform#events",
   },
-  { feature: "Workflows", free: false, starter: "5", growth: "25", scale: "Unlimited" },
+  {
+    feature: "Workflows",
+    free: false,
+    starter: "5",
+    growth: "25",
+    scale: "Unlimited",
+  },
   {
     feature: "AI generations",
     free: false,
@@ -64,12 +100,48 @@ const comparisonFeatures = [
     growth: "Unlimited",
     scale: "Unlimited",
   },
-  { feature: "Topics & segments", free: false, starter: false, growth: true, scale: true },
-  { feature: "Preference center", free: false, starter: false, growth: true, scale: true },
-  { feature: "Advanced segments", free: false, starter: false, growth: false, scale: true },
-  { feature: "Multi-tenant", free: false, starter: false, growth: false, scale: true },
-  { feature: "AWS accounts", free: false, starter: "1", growth: "3", scale: "Unlimited" },
-  { feature: "Support", free: "GitHub", starter: "48hr", growth: "24hr", scale: "Priority" },
+  {
+    feature: "Topics & segments",
+    free: false,
+    starter: false,
+    growth: true,
+    scale: true,
+  },
+  {
+    feature: "Preference center",
+    free: false,
+    starter: false,
+    growth: true,
+    scale: true,
+  },
+  {
+    feature: "Advanced segments",
+    free: false,
+    starter: false,
+    growth: false,
+    scale: true,
+  },
+  {
+    feature: "Multi-tenant",
+    free: false,
+    starter: false,
+    growth: false,
+    scale: true,
+  },
+  {
+    feature: "AWS accounts",
+    free: false,
+    starter: "1",
+    growth: "3",
+    scale: "Unlimited",
+  },
+  {
+    feature: "Support",
+    free: "GitHub",
+    starter: "48hr",
+    growth: "24hr",
+    scale: "Priority",
+  },
 ];
 
 // Premium background class - use this on all premium sections

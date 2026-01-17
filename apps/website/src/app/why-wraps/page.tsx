@@ -139,9 +139,7 @@ export default function WhyWrapsPage() {
                         <th className="p-4 text-left font-medium">
                           Email SaaS
                         </th>
-                        <th className="p-4 text-left font-medium">
-                          AWS Only
-                        </th>
+                        <th className="p-4 text-left font-medium">AWS Only</th>
                         <th className="p-4 text-left font-medium text-primary">
                           Wraps Total
                         </th>
@@ -169,7 +167,8 @@ export default function WhyWrapsPage() {
             </Card>
             <p className="mt-4 text-muted-foreground text-sm">
               AWS costs include SES ($0.10/1K) + infrastructure (~$2-5/mo).
-              Wraps Total includes Wraps Platform ($10-149/mo depending on tier).{" "}
+              Wraps Total includes Wraps Platform ($10-149/mo depending on
+              tier).{" "}
               <a className="text-primary underline" href="/platform#pricing">
                 See pricing tiers
               </a>

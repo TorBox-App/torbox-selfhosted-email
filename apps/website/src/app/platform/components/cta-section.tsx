@@ -37,7 +37,8 @@ export function DashboardCtaSection() {
             </h2>
             <p className="mx-auto mb-8 max-w-xl text-background/70">
               Your AWS handles sending. We handle the DX. Unlimited contacts,
-              infrastructure you own. Start free or $10/mo for the Wraps Platform.
+              infrastructure you own. Start free or $10/mo for the Wraps
+              Platform.
             </p>
 
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
