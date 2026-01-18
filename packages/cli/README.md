@@ -1,17 +1,26 @@
 # Wraps CLI
 
-> Deploy production-ready email infrastructure to your AWS account in 30 seconds.
+> Deploy email infrastructure (SES, DynamoDB, Lambda, EventBridge) to your AWS account.
+
+## What It Creates
+
+Running `wraps email init` deploys these AWS resources to your account:
+
+- **IAM Role** with OIDC trust policy (for Vercel) or instance profile (for AWS-native)
+- **SES Configuration Set** with event tracking rules
+- **EventBridge Rule** to capture SES events
+- **SQS Queue + Dead Letter Queue** for event buffering
+- **Lambda Function** to process events and write to DynamoDB
+- **DynamoDB Table** for email history storage
+
+All resources are tagged with `ManagedBy: wraps-cli` and prefixed with `wraps-email-`.
 
 ## Features
 
-- **Zero Configuration**: One command deploys everything you need
-- **Preview Mode**: See what changes would be made before deploying with `--preview`
-- **OIDC Support**: Vercel integration with no AWS credentials needed
-- **Non-Destructive**: Never modifies existing resources
-- **Beautiful UX**: Built with Bomb.sh stack (@clack/prompts) - beautiful interactive prompts and spinners
-- **Lightweight**: Uses args (<1kB) for blazing-fast CLI parsing
-- **Type-Safe**: Built with strict TypeScript
-- **Tab Completion**: Shell completion support (coming soon)
+- `--preview` flag shows what would be created without deploying
+- OIDC federation for Vercel (no AWS credentials in your app)
+- Never modifies existing AWS resources
+- Stores deployment metadata locally in `~/.wraps/`
 
 ## Prerequisites
 
@@ -443,36 +452,33 @@ wraps upgrade   # → Use 'wraps email upgrade'
 
 ## Configuration Presets
 
-Wraps offers feature-based configuration presets with transparent cost estimates:
+The CLI offers four presets that control which AWS resources are created:
 
 ### Starter (~$0.05/mo)
-Perfect for MVPs and side projects:
-- Open & click tracking
-- Bounce/complaint suppression
-- Minimal infrastructure
+- SES configuration set with open/click tracking
+- Suppression list for bounces/complaints
+- No event storage (events are tracked but not persisted)
 
-### Production (~$2-5/mo) - Recommended
-For most applications:
+### Production (~$2-5/mo)
 - Everything in Starter
-- Real-time event tracking (EventBridge)
-- 90-day email history storage
-- Reputation metrics dashboard
+- EventBridge → SQS → Lambda pipeline
+- DynamoDB table with 90-day TTL
+- Tracks: SEND, DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT
 
 ### Enterprise (~$50-100/mo)
-For high-volume senders:
 - Everything in Production
-- Dedicated IP address
-- 1-year email history retention
-- All 10 SES event types tracked
+- Dedicated IP address ($24.95/mo from AWS)
+- 1-year DynamoDB TTL
+- All 10 SES event types (adds REJECT, RENDERING_FAILURE, DELIVERY_DELAY, SUBSCRIPTION)
 
 ### Custom
-Configure each feature individually with granular control.
+Select individual features. Useful if you want event storage without a dedicated IP, or specific event types only.
 
 ## Hosting Provider Integration
 
-### Vercel (Recommended)
+### Vercel
 
-Wraps uses OIDC federation so you never need to store AWS credentials:
+Uses OIDC federation - your Vercel deployment assumes an IAM role directly, no AWS credentials stored:
 
 ```bash
 wraps init --provider vercel
@@ -660,22 +666,20 @@ wraps init
 
 ### Features ✅
 - [x] Preview mode (`--preview`) for all deployment commands
-- [x] Feature-based configuration presets (Starter, Production, Enterprise, Custom)
-- [x] Transparent cost estimation with monthly projections
+- [x] Configuration presets (Starter, Production, Enterprise, Custom)
+- [x] Cost estimation based on AWS pricing
 - [x] MAIL FROM domain configuration for DMARC alignment
-- [x] Custom tracking domain for branded email links
-- [x] Customizable event type tracking (10 SES event types)
-- [x] Flexible email history retention (7 days to 1 year)
-- [x] Dedicated IP address support for high-volume senders
-- [x] Lambda function bundling with esbuild
-- [x] Vercel OIDC integration (no AWS credentials needed)
-- [x] Real-time event tracking (EventBridge → SQS → Lambda → DynamoDB)
-- [x] Comprehensive domain management (add, list, verify, remove)
-- [x] Bounce/complaint handling with suppression lists
-- [x] Non-destructive deployments (never modifies existing resources)
-- [x] Beautiful interactive prompts (@clack/prompts)
-- [x] Comprehensive error handling with helpful suggestions
-- [x] Multi-service architecture ready (email, SMS coming soon)
+- [x] Custom tracking domain (HTTP, HTTPS coming in v1.1.0)
+- [x] Configurable event types (10 SES event types available)
+- [x] Configurable email history retention (7 days to 1 year TTL)
+- [x] Dedicated IP address provisioning
+- [x] Lambda bundling with esbuild
+- [x] Vercel OIDC integration
+- [x] Event pipeline: EventBridge → SQS → Lambda → DynamoDB
+- [x] Domain management (add, list, verify, remove)
+- [x] Suppression list for bounces/complaints
+- [x] Non-destructive (never modifies existing resources)
+- [x] Built with @clack/prompts
 
 ### Coming Soon
 
