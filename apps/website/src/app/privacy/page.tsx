@@ -1,4 +1,22 @@
-import { Link } from "react-router-dom";
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "Learn how Wraps collects, uses, and protects your data. Our privacy policy covers CLI telemetry, website analytics, and data handling.",
+  openGraph: {
+    title: "Privacy Policy | Wraps",
+    description:
+      "Learn how Wraps collects, uses, and protects your data. Our privacy policy covers CLI telemetry, website analytics, and data handling.",
+    type: "website",
+    url: "https://wraps.dev/privacy",
+  },
+  twitter: {
+    title: "Privacy Policy | Wraps",
+    description: "Learn how Wraps collects, uses, and protects your data.",
+  },
+};
 
 export default function PrivacyPolicy() {
   return (
@@ -6,7 +24,7 @@ export default function PrivacyPolicy() {
       <div className="mb-8">
         <Link
           className="text-muted-foreground text-sm transition-colors hover:text-foreground"
-          to="/"
+          href="/"
         >
           ← Back to Home
         </Link>
@@ -268,7 +286,7 @@ export DO_NOT_TRACK=1`}
         <p>
           Telemetry is also automatically disabled in CI/CD environments. See
           our{" "}
-          <Link className="text-primary hover:underline" to="/docs/telemetry">
+          <Link className="text-primary hover:underline" href="/docs/telemetry">
             telemetry documentation
           </Link>{" "}
           for more details.
@@ -466,7 +484,7 @@ export DO_NOT_TRACK=1`}
           This Privacy Policy is part of our commitment to transparency and user
           privacy. For more information about our telemetry implementation, see
           our{" "}
-          <Link className="text-primary hover:underline" to="/docs/telemetry">
+          <Link className="text-primary hover:underline" href="/docs/telemetry">
             telemetry documentation
           </Link>
           .

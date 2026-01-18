@@ -78,7 +78,8 @@ export function AboutSection() {
         <div className="mt-16 text-center">
           <div className="mb-6 flex items-center justify-center gap-2">
             <span className="text-muted-foreground">
-              Open source. Forever free local console. Deploy in 30 seconds.
+              Open source. Forever free local console. Deploy in under 2
+              minutes.
             </span>
           </div>
           <div className="flex flex-col justify-center gap-4 sm:flex-row">

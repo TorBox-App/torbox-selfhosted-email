@@ -124,7 +124,9 @@ export function HeroSection() {
             transition={{ duration: 0.6, delay: 0.5 }}
           >
             <button
-              aria-label={copied ? "Copied to clipboard" : "Copy command to clipboard"}
+              aria-label={
+                copied ? "Copied to clipboard" : "Copy command to clipboard"
+              }
               className="flex h-12 items-center gap-2 rounded-lg border-2 border-orange-500/30 bg-background px-5 font-mono text-sm transition-colors hover:border-orange-500 hover:bg-orange-500/5"
               onClick={copyToClipboard}
               type="button"
@@ -134,7 +136,10 @@ export function HeroSection() {
               {copied ? (
                 <Check aria-hidden="true" className="size-4 text-green-500" />
               ) : (
-                <Copy aria-hidden="true" className="size-4 text-muted-foreground" />
+                <Copy
+                  aria-hidden="true"
+                  className="size-4 text-muted-foreground"
+                />
               )}
             </button>
             <Button

@@ -11,6 +11,7 @@ import {
   Terminal,
   Workflow,
 } from "lucide-react";
+import { memo } from "react";
 import { Image3D } from "@/components/image-3d";
 import { Button } from "@/components/ui/button";
 import { IconBox, SectionWrapper } from "./section-card";
@@ -73,7 +74,7 @@ const secondaryFeatures = [
   },
 ];
 
-export function FeaturesSection() {
+export const FeaturesSection = memo(function FeaturesSection() {
   return (
     <SectionWrapper
       badge="Free · Open Source"
@@ -221,4 +222,4 @@ export function FeaturesSection() {
       </div>
     </SectionWrapper>
   );
-}
+});

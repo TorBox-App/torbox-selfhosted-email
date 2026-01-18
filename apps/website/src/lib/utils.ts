@@ -7,21 +7,19 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Get the correct URL for public assets
- * Handles both development and production asset paths
+ * In Next.js, public assets are served from the root
  */
 export function assetUrl(path: string): string {
-  const baseUrl = import.meta.env.BASE_URL || "/";
-  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
-  return baseUrl + cleanPath;
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return cleanPath;
 }
 
 /**
- * Get the correct URL path with basename prefix for internal navigation
+ * Get the correct URL path for internal navigation
  * @param path - The internal path (e.g., "/", "/auth")
- * @returns The full path with basename prefix
+ * @returns The full path
  */
 export function getAppUrl(path: string): string {
-  const basename = import.meta.env.VITE_BASENAME || "";
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return basename + cleanPath;
+  return cleanPath;
 }

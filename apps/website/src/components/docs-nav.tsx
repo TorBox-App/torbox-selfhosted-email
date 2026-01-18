@@ -17,8 +17,8 @@ import {
   ShieldCheck,
   Terminal,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -228,8 +228,7 @@ function NavItemComponent({
 }
 
 export function DocsNav() {
-  const location = useLocation();
-  const pathname = location.pathname;
+  const pathname = usePathname();
 
   return (
     <nav className="w-full space-y-6">

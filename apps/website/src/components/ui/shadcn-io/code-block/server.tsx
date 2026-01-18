@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   transformerNotationDiff,
   transformerNotationErrorLevel,
@@ -10,8 +9,38 @@ import type { HTMLAttributes } from "react";
 import {
   type BundledLanguage,
   type CodeOptionsMultipleThemes,
-  codeToHtml,
+  createHighlighter,
+  type Highlighter,
 } from "shiki";
+
+// Only load the languages and themes actually used in the codebase
+// This significantly reduces bundle size compared to loading all languages
+const SUPPORTED_LANGUAGES = [
+  "typescript",
+  "javascript",
+  "tsx",
+  "jsx",
+  "bash",
+  "shell",
+  "json",
+  "text",
+] as const;
+const SUPPORTED_THEMES = ["vitesse-light", "vitesse-dark"] as const;
+
+type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+
+// Singleton highlighter instance - created once and reused
+let highlighterPromise: Promise<Highlighter> | null = null;
+
+async function getHighlighter(): Promise<Highlighter> {
+  if (!highlighterPromise) {
+    highlighterPromise = createHighlighter({
+      themes: [...SUPPORTED_THEMES],
+      langs: [...SUPPORTED_LANGUAGES],
+    });
+  }
+  return highlighterPromise;
+}
 
 export type CodeBlockContentProps = HTMLAttributes<HTMLDivElement> & {
   themes?: CodeOptionsMultipleThemes["themes"];
@@ -27,32 +56,53 @@ export const CodeBlockContent = async ({
   syntaxHighlighting = true,
   ...props
 }: CodeBlockContentProps) => {
-  const html = syntaxHighlighting
-    ? await codeToHtml(children as string, {
-        lang: language ?? "typescript",
-        themes: themes ?? {
-          light: "vitesse-light",
-          dark: "vitesse-dark",
-        },
-        transformers: [
-          transformerNotationDiff({
-            matchAlgorithm: "v3",
-          }),
-          transformerNotationHighlight({
-            matchAlgorithm: "v3",
-          }),
-          transformerNotationWordHighlight({
-            matchAlgorithm: "v3",
-          }),
-          transformerNotationFocus({
-            matchAlgorithm: "v3",
-          }),
-          transformerNotationErrorLevel({
-            matchAlgorithm: "v3",
-          }),
-        ],
-      })
-    : children;
+  let html: string;
+
+  if (syntaxHighlighting) {
+    const highlighter = await getHighlighter();
+
+    // Normalize language to supported one, fallback to text
+    let lang: SupportedLanguage = "text";
+    if (language) {
+      const normalizedLang = language.toLowerCase();
+      if (SUPPORTED_LANGUAGES.includes(normalizedLang as SupportedLanguage)) {
+        lang = normalizedLang as SupportedLanguage;
+      } else if (normalizedLang === "ts") {
+        lang = "typescript";
+      } else if (normalizedLang === "js") {
+        lang = "javascript";
+      } else if (normalizedLang === "sh" || normalizedLang === "zsh") {
+        lang = "bash";
+      }
+    }
+
+    html = highlighter.codeToHtml(children as string, {
+      lang,
+      themes: themes ?? {
+        light: "vitesse-light",
+        dark: "vitesse-dark",
+      },
+      transformers: [
+        transformerNotationDiff({
+          matchAlgorithm: "v3",
+        }),
+        transformerNotationHighlight({
+          matchAlgorithm: "v3",
+        }),
+        transformerNotationWordHighlight({
+          matchAlgorithm: "v3",
+        }),
+        transformerNotationFocus({
+          matchAlgorithm: "v3",
+        }),
+        transformerNotationErrorLevel({
+          matchAlgorithm: "v3",
+        }),
+      ],
+    });
+  } else {
+    html = children;
+  }
 
   return (
     <div

@@ -227,8 +227,8 @@ export function MembersTable({
       )}
 
       <AlertDialog
-        open={!!memberToRemove}
         onOpenChange={(open) => !open && setMemberToRemove(null)}
+        open={!!memberToRemove}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -241,8 +241,8 @@ export function MembersTable({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive"
               onClick={handleRemoveMember}
+              variant="destructive"
             >
               Remove Member
             </AlertDialogAction>

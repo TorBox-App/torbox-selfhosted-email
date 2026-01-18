@@ -1,0 +1,90 @@
+import { Analytics } from "@vercel/analytics/next";
+import type { Metadata } from "next";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SidebarConfigProvider } from "@/contexts/sidebar-context";
+import { InViewProvider } from "@/hooks/use-shared-in-view";
+import { inter } from "@/lib/fonts";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://wraps.dev"),
+  title: {
+    default: "Wraps - AWS Email Pricing with Modern Developer Experience",
+    template: "%s | Wraps",
+  },
+  description:
+    "Email shouldn't cost $4/1K. SES shouldn't take hours to configure. Wraps gives you AWS pricing ($0.10/1K emails) with the SDK and dashboard you actually want. One command deploys everything.",
+  openGraph: {
+    type: "website",
+    siteName: "Wraps",
+    title: "Wraps - AWS Email Pricing with Modern Developer Experience",
+    description:
+      "Email shouldn't cost $4/1K. SES shouldn't take hours to configure. Wraps gives you AWS pricing ($0.10/1K emails) with the SDK and dashboard you actually want. One command deploys everything.",
+    url: "https://wraps.dev/",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Wraps - AWS Infrastructure Wrappers Platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Wraps - AWS Email Pricing with Modern Developer Experience",
+    description:
+      "Email shouldn't cost $4/1K. SES shouldn't take hours to configure. Wraps gives you AWS pricing ($0.10/1K emails) with the SDK and dashboard you actually want. One command deploys everything.",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/favicon-light.png", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon-dark.png", media: "(prefers-color-scheme: dark)" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
+};
+
+// Inline script to prevent flash of unstyled content (FOUC) for dark mode
+// This runs synchronously before React hydration to set the correct theme class
+const themeScript = `
+(function() {
+  const storageKey = 'wraps-ui-theme';
+  const theme = localStorage.getItem(storageKey);
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const resolvedTheme = theme === 'dark' || (theme === 'system' && systemDark) || (!theme && systemDark) ? 'dark' : 'light';
+  document.documentElement.classList.add(resolvedTheme);
+  document.documentElement.style.colorScheme = resolvedTheme;
+})();
+`;
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html
+      className={`${inter.variable} antialiased`}
+      lang="en"
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+          suppressHydrationWarning
+        />
+      </head>
+      <body className={inter.className}>
+        <ThemeProvider defaultTheme="system" storageKey="wraps-ui-theme">
+          <InViewProvider>
+            <SidebarConfigProvider>{children}</SidebarConfigProvider>
+          </InViewProvider>
+        </ThemeProvider>
+        <Analytics />
+      </body>
+    </html>
+  );
+}

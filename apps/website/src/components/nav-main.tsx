@@ -1,7 +1,8 @@
 "use client";
 
 import { ChevronRight, type LucideIcon } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import {
   Collapsible,
@@ -36,14 +37,14 @@ export function NavMain({
     }[];
   }[];
 }) {
-  const location = useLocation();
+  const pathname = usePathname();
 
   // Check if any subitem is active to determine if parent should be open
   const shouldBeOpen = (item: (typeof items)[0]) => {
     if (item.isActive) {
       return true;
     }
-    return item.items?.some((subItem) => location.pathname === subItem.url);
+    return item.items?.some((subItem) => pathname === subItem.url);
   };
 
   return (
@@ -77,9 +78,10 @@ export function NavMain({
                           <SidebarMenuSubButton
                             asChild
                             className="cursor-pointer"
-                            isActive={location.pathname === subItem.url}
+                            isActive={pathname === subItem.url}
                           >
                             <Link
+                              href={subItem.url}
                               rel={
                                 item.title === "Auth Pages" ||
                                 item.title === "Errors"
@@ -92,7 +94,6 @@ export function NavMain({
                                   ? "_blank"
                                   : undefined
                               }
-                              to={subItem.url}
                             >
                               <span>{subItem.title}</span>
                             </Link>
@@ -106,10 +107,10 @@ export function NavMain({
                 <SidebarMenuButton
                   asChild
                   className="cursor-pointer"
-                  isActive={location.pathname === item.url}
+                  isActive={pathname === item.url}
                   tooltip={item.title}
                 >
-                  <Link to={item.url}>
+                  <Link href={item.url}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
                   </Link>

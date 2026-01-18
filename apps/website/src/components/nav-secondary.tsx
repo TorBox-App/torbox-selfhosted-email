@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import type * as React from "react";
-import { Link } from "react-router-dom";
 
 import {
   SidebarGroup,
@@ -27,7 +27,7 @@ export function NavSecondary({
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild className="cursor-pointer" size="sm">
-                <Link to={item.url}>
+                <Link href={item.url}>
                   <item.icon />
                   <span>{item.title}</span>
                 </Link>

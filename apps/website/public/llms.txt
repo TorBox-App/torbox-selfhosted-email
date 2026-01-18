@@ -1,32 +1,32 @@
 # Wraps
 
-> Deploy production-ready email infrastructure to your AWS account in 30 seconds.
+> Email infrastructure you own.
 
-Wraps is a developer tool that deploys email sending infrastructure (AWS SES) directly to users' AWS accounts. No credentials stored, transparent AWS pricing ($0.10 per 1,000 emails), full data ownership.
+Wraps deploys production-ready email infrastructure to your AWS account. Modern DX. AWS economics. Your infrastructure.
 
 ## What Wraps Does
 
-Wraps provides two products:
+### CLI (`@wraps.dev/cli`)
+One command deploys complete email infrastructure to your AWS account:
 
-1. **CLI (`@wraps.dev/cli`)** - One command deploys complete email infrastructure:
-   - AWS SES configuration with DKIM signing
-   - Event tracking (opens, clicks, bounces, complaints)
-   - Email history storage in DynamoDB
-   - OIDC integration for Vercel (zero stored credentials)
-   - IAM roles with least-privilege permissions
+```bash
+npx @wraps.dev/cli email init
+```
 
-2. **Platform (app.wraps.dev)** - Visual dashboard for email operations:
-   - Template editor with drag-and-drop blocks
-   - Broadcast campaigns with segmentation
-   - Workflow automation builder
-   - Contact management with topics/preferences
-   - Real-time analytics and deliverability metrics
+Deploys: AWS SES with DKIM, Lambda event processing, DynamoDB history, EventBridge + SQS event capture, IAM roles with OIDC (Vercel, AWS native).
 
-## TypeScript SDK
+### Platform (app.wraps.dev)
+Visual dashboard with progressive feature unlocks:
+
+**Starter ($10/mo):** Templates with AI generation, batch sending, analytics, 30-day history, 5 workflows
+**Growth ($49/mo):** Topics (subscription management), Segments, Campaigns, 25 workflows
+**Scale ($149/mo):** Unlimited workflows, event tracking, advanced segments, multi-tenant orchestration
+
+### TypeScript SDKs
 
 ```typescript
+// Email SDK (@wraps.dev/email)
 import { Wraps } from '@wraps.dev/email';
-
 const wraps = new Wraps();
 
 await wraps.emails.send({
@@ -35,15 +35,46 @@ await wraps.emails.send({
   subject: 'Welcome!',
   html: '<h1>Hello from Wraps!</h1>',
 });
+
+// Batch send to all contacts
+await wraps.batch.send({
+  subject: 'Product Update',
+  templateId: 'tmpl_xxx',
+  from: 'updates@company.com',
+});
 ```
+
+**Available packages:**
+- `@wraps.dev/email` - Email sending via AWS SES
+- `@wraps.dev/sms` - SMS via AWS End User Messaging
+- `@wraps.dev/cdn` - Asset delivery via AWS CloudFront
+- `@wraps.dev/cli` - Infrastructure deployment CLI
+- `@wraps.dev/cdk` - AWS CDK constructs for email infrastructure
+- `@wraps.dev/pulumi` - Pulumi components for email infrastructure
 
 ## Key Differentiators
 
 - **Your AWS Account**: Infrastructure deploys to your account, not ours
-- **No Vendor Lock-in**: You own everything, data stays if you leave
-- **Transparent Pricing**: Pay AWS directly, no markup
-- **30-Second Setup**: `npx @wraps.dev/cli email init` and done
-- **Type-Safe**: Full TypeScript support with inference
+- **No Vendor Lock-in**: Your infrastructure keeps working if you stop paying us
+- **AWS Prices**: Pay AWS directly ($0.10/1K emails), no markup
+- **Under 2 Minutes**: `npx @wraps.dev/cli email init` and done
+- **Unlimited Contacts**: Gate on events (what costs money), not vanity metrics
+- **Zero Credentials Stored**: OIDC authentication, no AWS secrets
+
+## Pricing
+
+| | Free | Starter | Growth | Scale |
+|--|------|---------|--------|-------|
+| **Price** | $0 | $10/mo | $49/mo | $149/mo |
+| **Dashboard** | Self-host | Hosted | Hosted | Hosted |
+| **Contacts** | Unlimited | Unlimited | Unlimited | Unlimited |
+| **Workflows** | — | 5 | 25 | Unlimited |
+| **Features** | CLI/SDK | + Templates, Analytics | + Topics, Segments, Campaigns | + Events, Advanced Segments |
+
+You pay Wraps for tooling. You pay AWS for infrastructure. No surprises.
+
+**Example**: 100K emails/month = $10-49 (Wraps) + ~$10 (AWS) = $20-59 total
+Managed services charge $80-150+ for the same volume.
 
 ## Installation
 
@@ -76,10 +107,11 @@ npm install @wraps.dev/email
 
 - Infrastructure: Pulumi deploying to AWS (SES, DynamoDB, Lambda, EventBridge, SQS)
 - SDK: TypeScript, works with any Node.js framework
-- Platform: React 19, TailwindCSS, shadcn/ui
-- Auth: OIDC (Vercel), IAM roles (AWS native)
+- Platform: Next.js 15, React 19, shadcn/ui, Elysia API
+- Database: PostgreSQL (Neon) + Drizzle ORM
+- Auth: Better Auth with OIDC (Vercel, AWS native)
 
 ## Contact
 
 - Support: support@wraps.dev
-- Twitter: @wraboratory
+- Twitter: @useWraps

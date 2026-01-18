@@ -7,11 +7,12 @@ import { useState } from "react";
 
 const TemplateEditorDialog = dynamic(
   () =>
-    import(
-      "@/components/template-editor/wrappers/template-editor-dialog"
-    ).then((m) => m.TemplateEditorDialog),
+    import("@/components/template-editor/wrappers/template-editor-dialog").then(
+      (m) => m.TemplateEditorDialog
+    ),
   { ssr: false }
 );
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

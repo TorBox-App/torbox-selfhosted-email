@@ -1,25 +1,22 @@
-"use client";
+import type { Metadata } from "next";
+import CliPageContent from "./page-content";
 
-import { LandingFooter } from "@/app/landing/components/footer";
-import { LandingNavbar } from "@/app/landing/components/navbar";
-import { CliCommandsSection } from "./components/commands-section";
-import { CliConsoleSection } from "./components/console-section";
-import { CliCtaSection } from "./components/cta-section";
-import { CliHeroSection } from "./components/hero-section";
-import { CliServicesSection } from "./components/services-section";
+export const metadata: Metadata = {
+  title: "CLI & SDK",
+  description:
+    "Free, open-source CLI and SDK to deploy email infrastructure to your AWS account. One command deploys everything.",
+  openGraph: {
+    title: "CLI & SDK | Wraps",
+    description:
+      "Free, open-source CLI and SDK to deploy email infrastructure to your AWS account. One command deploys everything.",
+  },
+  twitter: {
+    title: "CLI & SDK | Wraps",
+    description:
+      "Free, open-source CLI and SDK to deploy email infrastructure to your AWS account. One command deploys everything.",
+  },
+};
 
 export default function CliPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <LandingNavbar />
-      <main>
-        <CliHeroSection />
-        <CliServicesSection />
-        <CliCommandsSection />
-        <CliConsoleSection />
-        <CliCtaSection />
-      </main>
-      <LandingFooter />
-    </div>
-  );
+  return <CliPageContent />;
 }

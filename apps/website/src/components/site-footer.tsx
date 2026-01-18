@@ -1,5 +1,5 @@
 import { Heart } from "lucide-react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 
 export function SiteFooter() {
   return (
@@ -12,9 +12,9 @@ export function SiteFooter() {
             <span>by</span>
             <Link
               className="font-medium text-foreground transition-colors hover:text-primary"
+              href="https://shadcnstore.com"
               rel="noopener noreferrer"
               target="_blank"
-              to="https://shadcnstore.com"
             >
               ShadcnStore Team
             </Link>

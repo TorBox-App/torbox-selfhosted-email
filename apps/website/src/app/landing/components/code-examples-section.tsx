@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
@@ -193,7 +194,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 };`,
 };
 
-export function CodeExamplesSection() {
+export const CodeExamplesSection = memo(function CodeExamplesSection() {
   return (
     <section className="border-y bg-gradient-to-b from-muted/30 via-background to-muted/30 py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -304,4 +305,4 @@ export function CodeExamplesSection() {
       </div>
     </section>
   );
-}
+});

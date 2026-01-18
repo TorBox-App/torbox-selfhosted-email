@@ -1,10 +1,11 @@
 "use client";
 
 import { ArrowRight, Github } from "lucide-react";
+import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "./animations";
 
-export function CTASection() {
+export const CTASection = memo(function CTASection() {
   return (
     <section className="py-20">
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
@@ -41,7 +42,10 @@ export function CTASection() {
               >
                 <Github aria-hidden="true" className="me-2 size-4" />
                 View on GitHub
-                <ArrowRight aria-hidden="true" className="ms-2 size-4 transition-transform group-hover:translate-x-1" />
+                <ArrowRight
+                  aria-hidden="true"
+                  className="ms-2 size-4 transition-transform group-hover:translate-x-1"
+                />
               </a>
             </Button>
           </div>
@@ -49,4 +53,4 @@ export function CTASection() {
       </div>
     </section>
   );
-}
+});

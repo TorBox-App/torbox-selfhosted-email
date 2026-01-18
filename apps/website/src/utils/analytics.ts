@@ -12,17 +12,21 @@ declare global {
   }
 }
 
-export const GTM_ID = import.meta.env.VITE_GTM_ID || "";
-const IS_PRODUCTION = import.meta.env.PROD;
+export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || "";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 /**
  * Initialize Google Tag Manager
- * Only loads GTM if VITE_GTM_ID environment variable is set AND in production mode
+ * Only loads GTM if NEXT_PUBLIC_GTM_ID environment variable is set AND in production mode
  */
 export const initGTM = (): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
   if (!GTM_ID) {
     console.log(
-      "GTM not initialized - VITE_GTM_ID environment variable not set"
+      "GTM not initialized - NEXT_PUBLIC_GTM_ID environment variable not set"
     );
     return;
   }
@@ -66,7 +70,11 @@ export const trackEvent = (
   eventName: string,
   parameters?: Record<string, unknown>
 ): void => {
-  if (!(GTM_ID && IS_PRODUCTION) || typeof window === "undefined") {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!(GTM_ID && IS_PRODUCTION)) {
     return;
   }
 
@@ -90,7 +98,11 @@ export const trackEvent = (
  * @param title - Optional page title
  */
 export const trackPageView = (path: string, title?: string): void => {
-  if (!(GTM_ID && IS_PRODUCTION) || typeof window === "undefined") {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!(GTM_ID && IS_PRODUCTION)) {
     return;
   }
 

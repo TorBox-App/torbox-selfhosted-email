@@ -1,7 +1,11 @@
 "use client";
 
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
+import { motion } from "motion/react";
+import { memo, useMemo } from "react";
+import { useSharedInView } from "@/hooks/use-shared-in-view";
+
+// Shared easing for consistent animations
+const EASE = [0.21, 0.47, 0.32, 0.98] as const;
 
 type FadeInProps = {
   children: React.ReactNode;
@@ -13,7 +17,7 @@ type FadeInProps = {
   once?: boolean;
 };
 
-export function FadeIn({
+export const FadeIn = memo(function FadeIn({
   children,
   className,
   delay = 0,
@@ -22,37 +26,49 @@ export function FadeIn({
   distance = 24,
   once = true,
 }: FadeInProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once, margin: "-100px" });
+  const { ref, hasBeenInView } = useSharedInView({ once, margin: "-100px" });
 
-  const directionOffset = {
-    up: { y: distance },
-    down: { y: -distance },
-    left: { x: distance },
-    right: { x: -distance },
-    none: {},
-  };
+  const directionOffset = useMemo(
+    () => ({
+      up: { y: distance },
+      down: { y: -distance },
+      left: { x: distance },
+      right: { x: -distance },
+      none: {},
+    }),
+    [distance]
+  );
+
+  const initial = useMemo(
+    () => ({ opacity: 0, ...directionOffset[direction] }),
+    [directionOffset, direction]
+  );
+
+  const animate = useMemo(
+    () =>
+      hasBeenInView
+        ? { opacity: 1, x: 0, y: 0 }
+        : { opacity: 0, ...directionOffset[direction] },
+    [hasBeenInView, directionOffset, direction]
+  );
+
+  const transition = useMemo(
+    () => ({ duration, delay, ease: EASE }),
+    [duration, delay]
+  );
 
   return (
     <motion.div
-      animate={
-        isInView
-          ? { opacity: 1, x: 0, y: 0 }
-          : { opacity: 0, ...directionOffset[direction] }
-      }
+      animate={animate}
       className={className}
-      initial={{ opacity: 0, ...directionOffset[direction] }}
+      initial={initial}
       ref={ref}
-      transition={{
-        duration,
-        delay,
-        ease: [0.21, 0.47, 0.32, 0.98],
-      }}
+      transition={transition}
     >
       {children}
     </motion.div>
   );
-}
+});
 
 type StaggerContainerProps = {
   children: React.ReactNode;
@@ -61,34 +77,38 @@ type StaggerContainerProps = {
   once?: boolean;
 };
 
-export function StaggerContainer({
+export const StaggerContainer = memo(function StaggerContainer({
   children,
   className,
   staggerDelay = 0.1,
   once = true,
 }: StaggerContainerProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once, margin: "-100px" });
+  const { ref, hasBeenInView } = useSharedInView({ once, margin: "-100px" });
+
+  const variants = useMemo(
+    () => ({
+      hidden: {},
+      visible: {
+        transition: {
+          staggerChildren: staggerDelay,
+        },
+      },
+    }),
+    [staggerDelay]
+  );
 
   return (
     <motion.div
-      animate={isInView ? "visible" : "hidden"}
+      animate={hasBeenInView ? "visible" : "hidden"}
       className={className}
       initial="hidden"
       ref={ref}
-      variants={{
-        hidden: {},
-        visible: {
-          transition: {
-            staggerChildren: staggerDelay,
-          },
-        },
-      }}
+      variants={variants}
     >
       {children}
     </motion.div>
   );
-}
+});
 
 type StaggerItemProps = {
   children: React.ReactNode;
@@ -97,40 +117,45 @@ type StaggerItemProps = {
   distance?: number;
 };
 
-export function StaggerItem({
+export const StaggerItem = memo(function StaggerItem({
   children,
   className,
   direction = "up",
   distance = 24,
 }: StaggerItemProps) {
-  const directionOffset = {
-    up: { y: distance },
-    down: { y: -distance },
-    left: { x: distance },
-    right: { x: -distance },
-    none: {},
-  };
+  const directionOffset = useMemo(
+    () => ({
+      up: { y: distance },
+      down: { y: -distance },
+      left: { x: distance },
+      right: { x: -distance },
+      none: {},
+    }),
+    [distance]
+  );
+
+  const variants = useMemo(
+    () => ({
+      hidden: { opacity: 0, ...directionOffset[direction] },
+      visible: {
+        opacity: 1,
+        x: 0,
+        y: 0,
+        transition: {
+          duration: 0.5,
+          ease: EASE,
+        },
+      },
+    }),
+    [directionOffset, direction]
+  );
 
   return (
-    <motion.div
-      className={className}
-      variants={{
-        hidden: { opacity: 0, ...directionOffset[direction] },
-        visible: {
-          opacity: 1,
-          x: 0,
-          y: 0,
-          transition: {
-            duration: 0.5,
-            ease: [0.21, 0.47, 0.32, 0.98],
-          },
-        },
-      }}
-    >
+    <motion.div className={className} variants={variants}>
       {children}
     </motion.div>
   );
-}
+});
 
 type ScaleInProps = {
   children: React.ReactNode;
@@ -140,34 +165,40 @@ type ScaleInProps = {
   once?: boolean;
 };
 
-export function ScaleIn({
+export const ScaleIn = memo(function ScaleIn({
   children,
   className,
   delay = 0,
   duration = 0.5,
   once = true,
 }: ScaleInProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once, margin: "-100px" });
+  const { ref, hasBeenInView } = useSharedInView({ once, margin: "-100px" });
+
+  const initial = useMemo(() => ({ opacity: 0, scale: 0.95 }), []);
+
+  const animate = useMemo(
+    () =>
+      hasBeenInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 },
+    [hasBeenInView]
+  );
+
+  const transition = useMemo(
+    () => ({ duration, delay, ease: EASE }),
+    [duration, delay]
+  );
 
   return (
     <motion.div
-      animate={
-        isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }
-      }
+      animate={animate}
       className={className}
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={initial}
       ref={ref}
-      transition={{
-        duration,
-        delay,
-        ease: [0.21, 0.47, 0.32, 0.98],
-      }}
+      transition={transition}
     >
       {children}
     </motion.div>
   );
-}
+});
 
 // Animated counter for numbers
 type CounterProps = {
@@ -178,34 +209,45 @@ type CounterProps = {
   duration?: number;
 };
 
-export function Counter({
+export const Counter = memo(function Counter({
   value,
   prefix = "",
   suffix = "",
   className,
   duration = 2,
 }: CounterProps) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  const { ref, hasBeenInView } = useSharedInView({
+    once: true,
+    margin: "-100px",
+  });
+
+  const animate = useMemo(
+    () => (hasBeenInView ? { opacity: 1 } : { opacity: 0 }),
+    [hasBeenInView]
+  );
+
+  const transition = useMemo(() => ({ duration: 0.5 }), []);
+
+  const innerTransition = useMemo(() => ({ duration }), [duration]);
 
   return (
     <motion.span
-      animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+      animate={animate}
       className={className}
       initial={{ opacity: 0 }}
       ref={ref}
     >
       {prefix}
       <motion.span
-        animate={isInView ? { opacity: 1 } : { opacity: 0 }}
+        animate={animate}
         initial={{ opacity: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={transition}
       >
-        {isInView ? (
+        {hasBeenInView ? (
           <motion.span
             animate={{ opacity: 1 }}
             initial={{ opacity: 1 }}
-            transition={{ duration }}
+            transition={innerTransition}
           >
             {value}
           </motion.span>
@@ -216,45 +258,63 @@ export function Counter({
       {suffix}
     </motion.span>
   );
-}
+});
 
 // Animated gradient line/divider
-export function GradientDivider({ className }: { className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
+export const GradientDivider = memo(function GradientDivider({
+  className,
+}: {
+  className?: string;
+}) {
+  const { ref, hasBeenInView } = useSharedInView({
+    once: true,
+    margin: "-50px",
+  });
+
+  const animate = useMemo(
+    () =>
+      hasBeenInView ? { scaleX: 1, opacity: 1 } : { scaleX: 0, opacity: 0 },
+    [hasBeenInView]
+  );
+
+  const transition = useMemo(
+    () => ({ duration: 1, ease: "easeOut" as const }),
+    []
+  );
 
   return (
     <motion.div
-      animate={isInView ? { scaleX: 1, opacity: 1 } : { scaleX: 0, opacity: 0 }}
+      animate={animate}
       className={`h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent ${className}`}
       initial={{ scaleX: 0, opacity: 0 }}
       ref={ref}
-      transition={{ duration: 1, ease: "easeOut" }}
+      transition={transition}
     />
   );
-}
+});
 
 // Pulse animation for emphasis
-export function Pulse({
+export const Pulse = memo(function Pulse({
   children,
   className,
 }: {
   children: React.ReactNode;
   className?: string;
 }) {
+  const animate = useMemo(() => ({ scale: [1, 1.02, 1] }), []);
+
+  const transition = useMemo(
+    () => ({
+      duration: 2,
+      repeat: Number.POSITIVE_INFINITY,
+      ease: "easeInOut" as const,
+    }),
+    []
+  );
+
   return (
-    <motion.div
-      animate={{
-        scale: [1, 1.02, 1],
-      }}
-      className={className}
-      transition={{
-        duration: 2,
-        repeat: Number.POSITIVE_INFINITY,
-        ease: "easeInOut",
-      }}
-    >
+    <motion.div animate={animate} className={className} transition={transition}>
       {children}
     </motion.div>
   );
-}
+});

@@ -7,7 +7,7 @@ import {
   EllipsisVertical,
   LogOut,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 
 import { Logo } from "@/components/logo";
 import {
@@ -80,19 +80,19 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings/account">
+                <Link href="/settings/account">
                   <CircleUser />
                   Account
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings/billing">
+                <Link href="/settings/billing">
                   <CreditCard />
                   Billing
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings/notifications">
+                <Link href="/settings/notifications">
                   <BellDot />
                   Notifications
                 </Link>
@@ -100,7 +100,7 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="cursor-pointer">
-              <Link to="/auth">
+              <Link href="/auth">
                 <LogOut />
                 Log out
               </Link>

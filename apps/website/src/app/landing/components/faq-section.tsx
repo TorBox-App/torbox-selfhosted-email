@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -65,50 +66,53 @@ const faqItems: FaqItem[] = [
   },
 ];
 
-const FaqSection = () => (
-  <section className="py-20" id="faq">
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-      {/* Simple heading */}
-      <FadeIn className="mb-8 text-center">
-        <p className="text-lg text-muted-foreground">
-          Questions? <span className="text-foreground">We've got answers.</span>
-        </p>
-      </FadeIn>
+const FaqSection = memo(function FaqSection() {
+  return (
+    <section className="py-20" id="faq">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        {/* Simple heading */}
+        <FadeIn className="mb-8 text-center">
+          <p className="text-lg text-muted-foreground">
+            Questions?{" "}
+            <span className="text-foreground">We've got answers.</span>
+          </p>
+        </FadeIn>
 
-      {/* Clean accordion */}
-      <ScaleIn delay={0.1}>
-        <Accordion className="space-y-2" collapsible type="single">
-          {faqItems.map((item) => (
-            <AccordionItem
-              className="rounded-lg border px-4 transition-colors data-[state=open]:border-orange-500/30 data-[state=open]:bg-orange-500/5"
-              key={item.value}
-              value={item.value}
+        {/* Clean accordion */}
+        <ScaleIn delay={0.1}>
+          <Accordion className="space-y-2" collapsible type="single">
+            {faqItems.map((item) => (
+              <AccordionItem
+                className="rounded-lg border px-4 transition-colors data-[state=open]:border-orange-500/30 data-[state=open]:bg-orange-500/5"
+                key={item.value}
+                value={item.value}
+              >
+                <AccordionTrigger className="cursor-pointer py-4 text-left hover:no-underline">
+                  <span className="font-medium">{item.question}</span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 text-muted-foreground">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </ScaleIn>
+
+        {/* Simple contact line */}
+        <FadeIn className="mt-8 text-center" delay={0.2}>
+          <p className="text-muted-foreground text-sm">
+            Still have questions?{" "}
+            <a
+              className="text-orange-500 underline-offset-4 hover:underline"
+              href="mailto:support@wraps.dev"
             >
-              <AccordionTrigger className="cursor-pointer py-4 text-left hover:no-underline">
-                <span className="font-medium">{item.question}</span>
-              </AccordionTrigger>
-              <AccordionContent className="pb-4 text-muted-foreground">
-                {item.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </ScaleIn>
-
-      {/* Simple contact line */}
-      <FadeIn className="mt-8 text-center" delay={0.2}>
-        <p className="text-muted-foreground text-sm">
-          Still have questions?{" "}
-          <a
-            className="text-orange-500 underline-offset-4 hover:underline"
-            href="mailto:support@wraps.dev"
-          >
-            Contact support
-          </a>
-        </p>
-      </FadeIn>
-    </div>
-  </section>
-);
+              Contact support
+            </a>
+          </p>
+        </FadeIn>
+      </div>
+    </section>
+  );
+});
 
 export { FaqSection };

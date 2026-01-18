@@ -20,8 +20,8 @@ import {
   Shield,
   User,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -126,7 +126,7 @@ type CommandSearchProps = {
 };
 
 export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const commandRef = React.useRef<HTMLDivElement>(null);
 
   const searchItems: SearchItem[] = [
@@ -275,7 +275,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   );
 
   const handleSelect = (url: string) => {
-    navigate(url);
+    router.push(url);
     onOpenChange(false);
     // Bounce effect like Vercel
     if (commandRef.current) {

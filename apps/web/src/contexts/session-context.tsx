@@ -1,7 +1,13 @@
 "use client";
 
 import posthog from "posthog-js";
-import { createContext, type ReactNode, useContext, useEffect, useRef } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+} from "react";
 import { authClient } from "@/lib/auth-client";
 
 // Use ReturnType to infer the exact type from better-auth's useSession hook

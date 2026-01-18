@@ -1,4 +1,22 @@
-import { Link } from "react-router-dom";
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "Terms and conditions for using Wraps CLI, SDK, and Platform. Covers acceptable use, AWS account requirements, and open source licensing.",
+  openGraph: {
+    title: "Terms of Service | Wraps",
+    description:
+      "Terms and conditions for using Wraps CLI, SDK, and Platform. Covers acceptable use, AWS account requirements, and open source licensing.",
+    type: "website",
+    url: "https://wraps.dev/terms",
+  },
+  twitter: {
+    title: "Terms of Service | Wraps",
+    description: "Terms and conditions for using Wraps CLI, SDK, and Platform.",
+  },
+};
 
 export default function TermsOfService() {
   return (
@@ -6,7 +24,7 @@ export default function TermsOfService() {
       <div className="mb-8">
         <Link
           className="text-muted-foreground text-sm transition-colors hover:text-foreground"
-          to="/"
+          href="/"
         >
           ← Back to Home
         </Link>
@@ -200,7 +218,7 @@ export default function TermsOfService() {
         <h3>6.2 Telemetry Data</h3>
         <p>
           We collect anonymous usage telemetry to improve Wraps. See our{" "}
-          <Link className="text-primary hover:underline" to="/privacy">
+          <Link className="text-primary hover:underline" href="/privacy">
             Privacy Policy
           </Link>{" "}
           for details on what we collect and how to opt out.
@@ -434,7 +452,7 @@ export default function TermsOfService() {
 
         <p>
           These Terms, together with our{" "}
-          <Link className="text-primary hover:underline" to="/privacy">
+          <Link className="text-primary hover:underline" href="/privacy">
             Privacy Policy
           </Link>
           , constitute the entire agreement between you and Wraps regarding the
@@ -494,7 +512,7 @@ export default function TermsOfService() {
           By using Wraps, you acknowledge that you have read, understood, and
           agree to be bound by these Terms of Service. For information about how
           we handle your data, please review our{" "}
-          <Link className="text-primary hover:underline" to="/privacy">
+          <Link className="text-primary hover:underline" href="/privacy">
             Privacy Policy
           </Link>
           .

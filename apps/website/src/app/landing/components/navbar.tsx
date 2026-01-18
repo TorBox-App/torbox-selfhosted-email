@@ -284,7 +284,11 @@ export function LandingNavbar() {
                   <Logo size={24} />
                   <div className="ml-auto flex items-center gap-2">
                     <Button
-                      aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+                      aria-label={
+                        theme === "light"
+                          ? "Switch to dark mode"
+                          : "Switch to light mode"
+                      }
                       className="h-8 w-8 cursor-pointer"
                       onClick={() =>
                         setTheme(theme === "light" ? "dark" : "light")
@@ -292,8 +296,14 @@ export function LandingNavbar() {
                       size="icon"
                       variant="ghost"
                     >
-                      <Moon aria-hidden="true" className="dark:-rotate-90 h-4 w-4 rotate-0 scale-100 transition-all dark:scale-0" />
-                      <Sun aria-hidden="true" className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                      <Moon
+                        aria-hidden="true"
+                        className="dark:-rotate-90 h-4 w-4 rotate-0 scale-100 transition-all dark:scale-0"
+                      />
+                      <Sun
+                        aria-hidden="true"
+                        className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
+                      />
                     </Button>
                     <Button
                       asChild
