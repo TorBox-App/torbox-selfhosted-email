@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { renderTipTapToHtml } from "@/lib/serializers/tiptap-to-react-email";
-import { useTemplateStore } from "@/stores/template-store";
+import { useTemplateActions, useTestData } from "@/stores/template-store";
 
 type PreviewPanelProps = {
   editor: Editor | null;
@@ -44,8 +44,8 @@ export function PreviewPanel({ editor }: PreviewPanelProps) {
   const [htmlContent, setHtmlContent] = useState<string>("");
   const [iframeHeight, setIframeHeight] = useState(600);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const testData = useTemplateStore((state) => state.localState.testData);
-  const { setTestData } = useTemplateStore((state) => state.actions);
+  const testData = useTestData();
+  const { setTestData } = useTemplateActions();
 
   // Auto-adjust iframe height based on content
   const adjustIframeHeight = useCallback(() => {
@@ -122,20 +122,42 @@ export function PreviewPanel({ editor }: PreviewPanelProps) {
     };
   }, [debouncedContent, testData]);
 
-  // Adjust iframe height when content changes
+  // Use ResizeObserver to adjust iframe height when content changes
   useEffect(() => {
-    if (!htmlContent) {
+    const iframe = iframeRef.current;
+    if (!(iframe && htmlContent)) {
       return;
     }
 
-    // Wait for iframe to render content, then adjust height
-    const timeouts = [
-      setTimeout(adjustIframeHeight, 100),
-      setTimeout(adjustIframeHeight, 300),
-      setTimeout(adjustIframeHeight, 500),
-    ];
+    let resizeObserver: ResizeObserver | null = null;
 
-    return () => timeouts.forEach(clearTimeout);
+    const setupObserver = () => {
+      const body = iframe.contentWindow?.document?.body;
+      if (!body) {
+        return;
+      }
+
+      // Initial height adjustment
+      adjustIframeHeight();
+
+      // Observe body size changes
+      resizeObserver = new ResizeObserver(() => {
+        adjustIframeHeight();
+      });
+      resizeObserver.observe(body);
+    };
+
+    // Wait for iframe to load before setting up observer
+    const handleLoad = () => setupObserver();
+    iframe.addEventListener("load", handleLoad);
+
+    // Also try immediately in case content is already loaded
+    setupObserver();
+
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+      resizeObserver?.disconnect();
+    };
   }, [htmlContent, adjustIframeHeight]);
 
   const handleTestDataChange = (key: string, value: string) => {

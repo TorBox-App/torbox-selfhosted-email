@@ -3,6 +3,7 @@
 import type { JSONContent } from "@tiptap/core";
 import { EditorContent } from "@tiptap/react";
 import { Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -17,21 +18,40 @@ import {
   useUpdateTemplate,
 } from "@/hooks/use-template-queries";
 import { cn } from "@/lib/utils";
-import { useTemplateStore } from "@/stores/template-store";
+import {
+  useEditorView,
+  useSelectedBrandKitId,
+  useShowLeftPanel,
+  useShowPropertiesPanel,
+  useShowTestDataPanel,
+  useShowVersionHistory,
+  useTemplateStore,
+} from "@/stores/template-store";
 import { CodeView } from "./code-view";
 import { EditorDndProvider } from "./dnd-context";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { EditorErrorBoundary } from "./editor-error-boundary";
-import { ImportModal } from "./import-modal";
 import { LeftPanel } from "./left-panel";
 import { PreviewPanel } from "./preview-panel";
 import { PropertiesPanel } from "./properties-panel";
-import { SaveBlockModal } from "./save-block-modal";
-import { SendTestModal } from "./send-test-modal";
 import { TemplateEditorToolbar } from "./template-editor-toolbar";
 import { TestDataPanel } from "./test-data-panel";
 import { UsagePanel } from "./usage-panel";
 import { VersionHistoryPanel } from "./version-history-panel";
+
+// Dynamic imports for modals - only loaded when opened
+const SendTestModal = dynamic(
+  () => import("./send-test-modal").then((m) => m.SendTestModal),
+  { ssr: false }
+);
+const SaveBlockModal = dynamic(
+  () => import("./save-block-modal").then((m) => m.SaveBlockModal),
+  { ssr: false }
+);
+const ImportModal = dynamic(
+  () => import("./import-modal").then((m) => m.ImportModal),
+  { ssr: false }
+);
 
 type TemplateEditorProps = {
   orgSlug: string;
@@ -133,14 +153,13 @@ function TemplateEditorContent({
   const [previewText, setPreviewText] = useState(template.description ?? "");
   const [emailType, setEmailType] = useState(template.emailType);
 
-  const {
-    view,
-    showLeftPanel,
-    showPropertiesPanel,
-    showTestDataPanel,
-    showVersionHistory,
-    selectedBrandKitId,
-  } = useTemplateStore((state) => state.localState);
+  // Use individual selectors to prevent re-renders when unrelated state changes
+  const view = useEditorView();
+  const showLeftPanel = useShowLeftPanel();
+  const showPropertiesPanel = useShowPropertiesPanel();
+  const showTestDataPanel = useShowTestDataPanel();
+  const showVersionHistory = useShowVersionHistory();
+  const selectedBrandKitId = useSelectedBrandKitId();
   const { setDocument, updateTemplate: updateTemplateStore } = useTemplateStore(
     (state) => state.actions
   );

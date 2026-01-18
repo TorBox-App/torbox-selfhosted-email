@@ -110,10 +110,7 @@ type SortState = {
 };
 
 export function TemplatesList({ orgSlug }: TemplatesListProps) {
-  const router = useRouter();
   const { data: templates, isLoading } = useTemplates(orgSlug);
-  const deleteTemplate = useDeleteTemplate(orgSlug);
-  const duplicateTemplate = useDuplicateTemplate(orgSlug);
 
   // Search, filter, and sort state
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,17 +126,6 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
       direction:
         prev.column === column && prev.direction === "asc" ? "desc" : "asc",
     }));
-  };
-
-  const handleDelete = async (templateId: string) => {
-    if (confirm("Are you sure you want to delete this template?")) {
-      deleteTemplate.mutate(templateId);
-    }
-  };
-
-  const handleDuplicate = async (templateId: string) => {
-    const result = await duplicateTemplate.mutateAsync(templateId);
-    router.push(`/${orgSlug}/emails/templates/${result.id}`);
   };
 
   const toggleFilter = <K extends keyof FilterState>(
@@ -501,8 +487,6 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
                 filteredTemplates.map((template) => (
                   <TemplateRowWithPublish
                     key={template.id}
-                    onDelete={() => handleDelete(template.id)}
-                    onDuplicate={() => handleDuplicate(template.id)}
                     orgSlug={orgSlug}
                     template={template}
                   />
@@ -523,20 +507,19 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
   );
 }
 
-// Wrapper component to handle publish/unpublish hooks per template
+// Wrapper component to handle all template actions per row
 function TemplateRowWithPublish({
   template,
   orgSlug,
-  onDelete,
-  onDuplicate,
 }: {
   template: TemplateWithUsage;
   orgSlug: string;
-  onDelete: () => void;
-  onDuplicate: () => void;
 }) {
+  const router = useRouter();
   const publishMutation = usePublishTemplate(orgSlug, template.id);
   const unpublishMutation = useUnpublishTemplate(orgSlug, template.id);
+  const deleteTemplate = useDeleteTemplate(orgSlug);
+  const duplicateTemplate = useDuplicateTemplate(orgSlug);
 
   const handlePublish = async () => {
     try {
@@ -564,11 +547,22 @@ function TemplateRowWithPublish({
     }
   };
 
+  const handleDelete = () => {
+    if (confirm("Are you sure you want to delete this template?")) {
+      deleteTemplate.mutate(template.id);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    const result = await duplicateTemplate.mutateAsync(template.id);
+    router.push(`/${orgSlug}/emails/templates/${result.id}`);
+  };
+
   return (
     <TemplateRow
       isPublishing={publishMutation.isPending || unpublishMutation.isPending}
-      onDelete={onDelete}
-      onDuplicate={onDuplicate}
+      onDelete={handleDelete}
+      onDuplicate={handleDuplicate}
       onPublish={handlePublish}
       onUnpublish={handleUnpublish}
       orgSlug={orgSlug}

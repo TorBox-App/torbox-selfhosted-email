@@ -29,7 +29,7 @@ import {
   Type,
   User,
 } from "lucide-react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -393,6 +393,13 @@ const categoryOrder: BlockItem["category"][] = [
   "dynamic",
 ];
 
+// Pre-compute blocks by category at module level (static data)
+const blocksByCategory = categoryOrder.map((category) => ({
+  category,
+  label: categoryLabels[category],
+  blocks: blocks.filter((block) => block.category === category),
+}));
+
 // Draggable block item component
 type DraggableBlockItemProps = {
   block: BlockItem;
@@ -400,7 +407,7 @@ type DraggableBlockItemProps = {
   brandKit: BrandKitValues | null;
 };
 
-function DraggableBlockItem({
+const DraggableBlockItem = memo(function DraggableBlockItemInner({
   block,
   editor,
   brandKit,
@@ -453,7 +460,7 @@ function DraggableBlockItem({
       </TooltipContent>
     </Tooltip>
   );
-}
+});
 
 export function BlockPalette({ editor, orgSlug }: BlockPaletteProps) {
   const { selectedBrandKitId } = useTemplateStore((state) => state.localState);
@@ -477,12 +484,6 @@ export function BlockPalette({ editor, orgSlug }: BlockPaletteProps) {
     return null;
   }
 
-  const blocksByCategory = categoryOrder.map((category) => ({
-    category,
-    label: categoryLabels[category],
-    blocks: blocks.filter((block) => block.category === category),
-  }));
-
   return (
     <TooltipProvider>
       <div className="flex h-full min-h-0 w-full flex-col bg-muted/30">
@@ -493,23 +494,25 @@ export function BlockPalette({ editor, orgSlug }: BlockPaletteProps) {
 
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-4 p-3">
-            {blocksByCategory.map(({ category, label, blocks }) => (
-              <div key={category}>
-                <h4 className="mb-2 px-1 font-medium text-muted-foreground text-xs uppercase tracking-wider">
-                  {label}
-                </h4>
-                <div className="space-y-2">
-                  {blocks.map((block) => (
-                    <DraggableBlockItem
-                      block={block}
-                      brandKit={brandKit}
-                      editor={editor}
-                      key={block.name}
-                    />
-                  ))}
+            {blocksByCategory.map(
+              ({ category, label, blocks: categoryBlocks }) => (
+                <div key={category}>
+                  <h4 className="mb-2 px-1 font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                    {label}
+                  </h4>
+                  <div className="space-y-2">
+                    {categoryBlocks.map((block) => (
+                      <DraggableBlockItem
+                        block={block}
+                        brandKit={brandKit}
+                        editor={editor}
+                        key={block.name}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         </ScrollArea>
       </div>
