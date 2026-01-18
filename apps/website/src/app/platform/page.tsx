@@ -9,11 +9,20 @@ export const metadata: Metadata = {
     title: "Wraps Platform | Wraps",
     description:
       "Templates, broadcasts, contacts, and analytics. The premium layer on top of your AWS infrastructure.",
+    images: [
+      {
+        url: "/wraps-platform-og.png",
+        width: 1424,
+        height: 752,
+        alt: "Wraps Platform - Templates, broadcasts, contacts, and analytics",
+      },
+    ],
   },
   twitter: {
     title: "Wraps Platform | Wraps",
     description:
       "Templates, broadcasts, contacts, and analytics. The premium layer on top of your AWS infrastructure.",
+    images: ["/wraps-platform-og.png"],
   },
 };
 
