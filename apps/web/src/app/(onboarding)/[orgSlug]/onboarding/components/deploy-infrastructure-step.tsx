@@ -394,15 +394,16 @@ export function DeployInfrastructureStep({
                   <code className="text-sm">{installCommand}</code>
                 </pre>
                 <Button
+                  aria-label={copiedInstall ? "Copied" : "Copy install command"}
                   className="absolute top-2 right-2"
                   onClick={handleCopyInstall}
                   size="icon"
                   variant="ghost"
                 >
                   {copiedInstall ? (
-                    <CheckCircle2Icon className="h-4 w-4 text-green-500" />
+                    <CheckCircle2Icon className="size-4 text-green-500" />
                   ) : (
-                    <CopyIcon className="h-4 w-4" />
+                    <CopyIcon className="size-4" />
                   )}
                 </Button>
               </div>
@@ -421,15 +422,16 @@ export function DeployInfrastructureStep({
                   <code className="text-sm">{deployCommand}</code>
                 </pre>
                 <Button
+                  aria-label={copiedDeploy ? "Copied" : "Copy deploy command"}
                   className="absolute top-2 right-2"
                   onClick={handleCopyDeploy}
                   size="icon"
                   variant="ghost"
                 >
                   {copiedDeploy ? (
-                    <CheckCircle2Icon className="h-4 w-4 text-green-500" />
+                    <CheckCircle2Icon className="size-4 text-green-500" />
                   ) : (
-                    <CopyIcon className="h-4 w-4" />
+                    <CopyIcon className="size-4" />
                   )}
                 </Button>
               </div>

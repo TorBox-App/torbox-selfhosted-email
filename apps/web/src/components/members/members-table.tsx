@@ -6,6 +6,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { MemberWithUser } from "@/actions/members";
 import { removeMember } from "@/actions/members";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +57,9 @@ export function MembersTable({
   );
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<MemberWithUser | null>(
+    null
+  );
 
   const canManageMembers = userRole === "owner" || userRole === "admin";
 
@@ -72,13 +85,11 @@ export function MembersTable({
     }
   };
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (!confirm("Are you sure you want to remove this member?")) {
-      return;
-    }
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return;
 
-    setRemovingMemberId(memberId);
-    const result = await removeMember(memberId, organizationId);
+    setRemovingMemberId(memberToRemove.id);
+    const result = await removeMember(memberToRemove.id, organizationId);
 
     if (result.success) {
       toast.success("Member removed successfully");
@@ -88,6 +99,7 @@ export function MembersTable({
     }
 
     setRemovingMemberId(null);
+    setMemberToRemove(null);
   };
 
   const handleChangeRole = (member: MemberWithUser) => {
@@ -178,9 +190,9 @@ export function MembersTable({
                         <DropdownMenuItem
                           className="text-destructive"
                           disabled={removingMemberId === member.id}
-                          onClick={() => handleRemoveMember(member.id)}
+                          onClick={() => setMemberToRemove(member)}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <Trash2 className="mr-2 size-4" />
                           Remove Member
                         </DropdownMenuItem>
                       )}
@@ -213,6 +225,30 @@ export function MembersTable({
           userRole={userRole}
         />
       )}
+
+      <AlertDialog
+        open={!!memberToRemove}
+        onOpenChange={(open) => !open && setMemberToRemove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove {memberToRemove?.user.name} from the
+              organization. They will lose access to all organization resources.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleRemoveMember}
+            >
+              Remove Member
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

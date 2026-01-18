@@ -19,7 +19,7 @@ export default function Loader({
   };
 
   const containerClass = fullScreen
-    ? "flex min-h-screen items-center justify-center"
+    ? "flex min-h-dvh items-center justify-center"
     : "flex h-full items-center justify-center pt-8";
 
   return (

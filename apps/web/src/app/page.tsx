@@ -43,7 +43,7 @@ export default async function HomePage() {
   // If not authenticated, show landing page
   if (!session?.user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="flex min-h-dvh flex-col items-center justify-center p-4">
         <div className="w-full max-w-4xl space-y-8 text-center">
           <div className="space-y-4">
             <h1 className="font-bold text-5xl tracking-tight md:text-6xl">

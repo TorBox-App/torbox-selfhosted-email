@@ -64,9 +64,9 @@ export function ModeToggle({ variant = "outline" }: ModeToggleProps) {
     >
       {/* Show the icon for the mode you can switch TO */}
       {isDarkMode ? (
-        <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-transform duration-300" />
+        <Sun className="size-[1.2rem] rotate-0 scale-100 transition-transform duration-200" />
       ) : (
-        <Moon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-transform duration-300" />
+        <Moon className="size-[1.2rem] rotate-0 scale-100 transition-transform duration-200" />
       )}
       <span className="sr-only">
         Switch to {isDarkMode ? "light" : "dark"} mode

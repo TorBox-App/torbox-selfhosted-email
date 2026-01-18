@@ -42,7 +42,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-dvh items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create Your Organization</CardTitle>

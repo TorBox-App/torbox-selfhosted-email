@@ -3,7 +3,7 @@ import { Logo } from "@/components/logo";
 
 export default function OnboardingLayout({ children }: PropsWithChildren) {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-dvh flex-col bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto flex items-center px-4 py-4">

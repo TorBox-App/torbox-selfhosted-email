@@ -17,7 +17,7 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
+    <div className="min-h-dvh bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       <main className="pb-16">{children}</main>
       <footer className="fixed right-0 bottom-0 left-0 py-4 text-center">
         <a

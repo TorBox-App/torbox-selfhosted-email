@@ -185,7 +185,7 @@ function TabsTrigger({
     <MotionHighlightItem className="size-full" value={value}>
       <motion.button
         className={cn(
-          "z-[1] inline-flex size-full cursor-pointer items-center justify-center whitespace-nowrap rounded-sm px-2 py-1 font-medium text-sm ring-offset-background transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground",
+          "z-10 inline-flex size-full cursor-pointer items-center justify-center whitespace-nowrap rounded-sm px-2 py-1 font-medium text-sm ring-offset-background transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground",
           className
         )}
         data-slot="tabs-trigger"
@@ -267,11 +267,11 @@ function TabsContent({
   const isActive = activeValue === value;
   return (
     <motion.div
-      animate={{ filter: isActive ? "blur(0px)" : "blur(4px)" }}
+      animate={{ opacity: isActive ? 1 : 0.4 }}
       className={cn("overflow-hidden", className)}
       data-slot="tabs-content"
-      exit={{ filter: "blur(0px)" }}
-      initial={{ filter: "blur(0px)" }}
+      exit={{ opacity: 1 }}
+      initial={{ opacity: 1 }}
       role="tabpanel"
       transition={{ type: "spring", stiffness: 200, damping: 25 }}
       {...(props as any)}

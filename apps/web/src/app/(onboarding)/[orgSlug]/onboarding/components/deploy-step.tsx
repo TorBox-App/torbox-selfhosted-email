@@ -57,15 +57,16 @@ export function DeployStep({ onNext, onBack, onSkip }: DeployStepProps) {
               <code className="text-sm">{deployCommand}</code>
             </pre>
             <Button
+              aria-label={copied ? "Copied" : "Copy command"}
               className="absolute top-2 right-2"
               onClick={handleCopy}
               size="icon"
               variant="outline"
             >
               {copied ? (
-                <CheckCircle2Icon className="h-4 w-4" />
+                <CheckCircle2Icon className="size-4" />
               ) : (
-                <CopyIcon className="h-4 w-4" />
+                <CopyIcon className="size-4" />
               )}
             </Button>
           </div>
