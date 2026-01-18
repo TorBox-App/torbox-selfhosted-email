@@ -22,18 +22,16 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LabeledEdge } from "./edges/labeled-edge";
 import { NodePalette } from "./node-palette";
-import {
-  ConditionNode,
-  DelayNode,
-  ExitNode,
-  SendEmailNode,
-  SendSmsNode,
-  TopicNode,
-  TriggerNode,
-  UpdateContactNode,
-  WaitForEmailEngagementNode,
-  WaitForEventNode,
-} from "./nodes";
+import { ConditionNode } from "./nodes/condition-node";
+import { DelayNode } from "./nodes/delay-node";
+import { ExitNode } from "./nodes/exit-node";
+import { SendEmailNode } from "./nodes/send-email-node";
+import { SendSmsNode } from "./nodes/send-sms-node";
+import { TopicNode } from "./nodes/topic-node";
+import { TriggerNode } from "./nodes/trigger-node";
+import { UpdateContactNode } from "./nodes/update-contact-node";
+import { WaitForEmailEngagementNode } from "./nodes/wait-for-email-engagement-node";
+import { WaitForEventNode } from "./nodes/wait-for-event-node";
 import { useWorkflowStore } from "./use-workflow-store";
 
 const nodeTypes: NodeTypes = {

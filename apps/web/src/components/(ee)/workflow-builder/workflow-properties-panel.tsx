@@ -2,8 +2,16 @@
 
 import type { WorkflowStepConfig } from "@wraps/db";
 import { AlertCircle, Pencil, Plus, Settings, Trash2, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useState } from "react";
-import { TemplateEditorDialog } from "@/components/template-editor/wrappers/template-editor-dialog";
+
+const TemplateEditorDialog = dynamic(
+  () =>
+    import(
+      "@/components/template-editor/wrappers/template-editor-dialog"
+    ).then((m) => m.TemplateEditorDialog),
+  { ssr: false }
+);
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

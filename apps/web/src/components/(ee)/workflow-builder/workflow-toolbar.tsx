@@ -12,7 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   disableWorkflow,
@@ -30,6 +30,7 @@ import {
 import {
   useIsDirty,
   useIsSaving,
+  useNodeCount,
   useSettingsPanelOpen,
   useValidationResult,
   useWorkflowStore,
@@ -63,8 +64,7 @@ export function WorkflowToolbar({
   const updateWorkflowSettings = useWorkflowStore(
     (state) => state.updateWorkflowSettings
   );
-  const _nodes = useWorkflowStore((state) => state.nodes);
-  const _edges = useWorkflowStore((state) => state.edges);
+  const nodeCount = useNodeCount();
   const settingsPanelOpen = useSettingsPanelOpen();
   const toggleSettingsPanel = useWorkflowStore(
     (state) => state.toggleSettingsPanel
@@ -75,14 +75,15 @@ export function WorkflowToolbar({
   const [editedName, setEditedName] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Run validation when nodes/edges change
-  // Note: _nodes and _edges are used as dependencies to re-run validation
+  // Run validation when workflow structure changes
+  // Use deferred isDirty to batch rapid changes and reduce CPU usage during drag operations
+  const deferredIsDirty = useDeferredValue(isDirty);
   useEffect(() => {
     // Only run validation if we have nodes (workflow is loaded)
-    if (_nodes.length > 0) {
+    if (nodeCount > 0) {
       runValidation();
     }
-  }, [runValidation, _nodes]);
+  }, [runValidation, nodeCount, deferredIsDirty]);
 
   // Focus input when editing starts
   useEffect(() => {

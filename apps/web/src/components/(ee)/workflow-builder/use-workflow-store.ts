@@ -496,16 +496,19 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
 }));
 
 // Selector hooks for common state slices
-export const useSelectedNode = () => {
-  const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
-  const nodes = useWorkflowStore((state) => state.nodes);
-  return selectedNodeId
-    ? nodes.find((node) => node.id === selectedNodeId)
-    : null;
-};
+// Uses single selector to avoid double subscription and unnecessary re-renders
+export const useSelectedNode = () =>
+  useWorkflowStore((state) =>
+    state.selectedNodeId
+      ? state.nodes.find((node) => node.id === state.selectedNodeId)
+      : null
+  );
 
 export const useIsDirty = () => useWorkflowStore((state) => state.isDirty);
 export const useIsSaving = () => useWorkflowStore((state) => state.isSaving);
+// Derived selector for node count - avoids subscribing to full nodes array
+export const useNodeCount = () =>
+  useWorkflowStore((state) => state.nodes.length);
 export const useSettingsPanelOpen = () =>
   useWorkflowStore((state) => state.settingsPanelOpen);
 export const useValidationResult = () =>
