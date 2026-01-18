@@ -267,9 +267,15 @@ function TableRow({
             {row.free}
           </span>
         ) : row.free ? (
-          <Check className="size-5 text-green-500" />
+          <>
+            <Check aria-hidden="true" className="size-5 text-green-500" />
+            <span className="sr-only">Included</span>
+          </>
         ) : (
-          <X className="size-5 text-muted-foreground/30" />
+          <>
+            <X aria-hidden="true" className="size-5 text-muted-foreground/30" />
+            <span className="sr-only">Not included</span>
+          </>
         )}
       </div>
       <div className="flex justify-center">
@@ -278,9 +284,15 @@ function TableRow({
             {row.starter}
           </span>
         ) : row.starter ? (
-          <Check className="size-5 text-green-500" />
+          <>
+            <Check aria-hidden="true" className="size-5 text-green-500" />
+            <span className="sr-only">Included</span>
+          </>
         ) : (
-          <X className="size-5 text-muted-foreground/30" />
+          <>
+            <X aria-hidden="true" className="size-5 text-muted-foreground/30" />
+            <span className="sr-only">Not included</span>
+          </>
         )}
       </div>
       <div className="flex justify-center">
@@ -289,9 +301,15 @@ function TableRow({
             {row.growth}
           </span>
         ) : row.growth ? (
-          <Check className="size-5 text-green-500" />
+          <>
+            <Check aria-hidden="true" className="size-5 text-green-500" />
+            <span className="sr-only">Included</span>
+          </>
         ) : (
-          <X className="size-5 text-muted-foreground/30" />
+          <>
+            <X aria-hidden="true" className="size-5 text-muted-foreground/30" />
+            <span className="sr-only">Not included</span>
+          </>
         )}
       </div>
       <div className="flex justify-center">
@@ -300,9 +318,15 @@ function TableRow({
             {row.scale}
           </span>
         ) : row.scale ? (
-          <Check className="size-5 text-green-500" />
+          <>
+            <Check aria-hidden="true" className="size-5 text-green-500" />
+            <span className="sr-only">Included</span>
+          </>
         ) : (
-          <X className="size-5 text-muted-foreground/30" />
+          <>
+            <X aria-hidden="true" className="size-5 text-muted-foreground/30" />
+            <span className="sr-only">Not included</span>
+          </>
         )}
       </div>
     </motion.div>
@@ -409,7 +433,7 @@ export function UpgradeSection() {
             >
               <a href="/platform">
                 See Platform Pricing
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
               </a>
             </Button>
           </div>

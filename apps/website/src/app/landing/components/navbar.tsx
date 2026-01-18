@@ -245,7 +245,7 @@ export function LandingNavbar() {
               rel="noopener noreferrer"
               target="_blank"
             >
-              <Github className="h-5 w-5" />
+              <Github aria-hidden="true" className="h-5 w-5" />
             </a>
           </Button>
           <Button asChild className="cursor-pointer" variant="outline">
@@ -269,7 +269,7 @@ export function LandingNavbar() {
         <Sheet onOpenChange={setIsOpen} open={isOpen}>
           <SheetTrigger asChild className="xl:hidden">
             <Button className="cursor-pointer" size="icon" variant="ghost">
-              <Menu className="h-5 w-5" />
+              <Menu aria-hidden="true" className="h-5 w-5" />
               <span className="sr-only">Toggle menu</span>
             </Button>
           </SheetTrigger>
@@ -284,6 +284,7 @@ export function LandingNavbar() {
                   <Logo size={24} />
                   <div className="ml-auto flex items-center gap-2">
                     <Button
+                      aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
                       className="h-8 w-8 cursor-pointer"
                       onClick={() =>
                         setTheme(theme === "light" ? "dark" : "light")
@@ -291,8 +292,8 @@ export function LandingNavbar() {
                       size="icon"
                       variant="ghost"
                     >
-                      <Moon className="dark:-rotate-90 h-4 w-4 rotate-0 scale-100 transition-all dark:scale-0" />
-                      <Sun className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                      <Moon aria-hidden="true" className="dark:-rotate-90 h-4 w-4 rotate-0 scale-100 transition-all dark:scale-0" />
+                      <Sun aria-hidden="true" className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                     </Button>
                     <Button
                       asChild
@@ -306,16 +307,17 @@ export function LandingNavbar() {
                         rel="noopener noreferrer"
                         target="_blank"
                       >
-                        <Github className="h-4 w-4" />
+                        <Github aria-hidden="true" className="h-4 w-4" />
                       </a>
                     </Button>
                     <Button
+                      aria-label="Close menu"
                       className="h-8 w-8 cursor-pointer"
                       onClick={() => setIsOpen(false)}
                       size="icon"
                       variant="ghost"
                     >
-                      <X className="h-4 w-4" />
+                      <X aria-hidden="true" className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -335,6 +337,7 @@ export function LandingNavbar() {
                             <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground">
                               {item.name}
                               <ChevronDown
+                                aria-hidden="true"
                                 className={`h-4 w-4 transition-transform ${featuresOpen ? "rotate-180" : ""}`}
                               />
                             </CollapsibleTrigger>
@@ -364,6 +367,7 @@ export function LandingNavbar() {
                             <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground">
                               {item.name}
                               <ChevronDown
+                                aria-hidden="true"
                                 className={`h-4 w-4 transition-transform ${docsOpen ? "rotate-180" : ""}`}
                               />
                             </CollapsibleTrigger>

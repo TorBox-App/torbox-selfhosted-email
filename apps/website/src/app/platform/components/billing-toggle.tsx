@@ -18,7 +18,11 @@ export function BillingToggle({
   return (
     <div className={cn("flex flex-col items-center gap-2", className)}>
       {/* Segmented control */}
-      <div className="relative inline-flex rounded-full border bg-muted/50 p-1">
+      <div
+        aria-label="Billing frequency"
+        className="relative inline-flex rounded-full border bg-muted/50 p-1"
+        role="radiogroup"
+      >
         {/* Sliding background */}
         <div
           className={cn(
@@ -31,6 +35,7 @@ export function BillingToggle({
 
         {/* Monthly option */}
         <button
+          aria-checked={value === "monthly"}
           className={cn(
             "relative z-10 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
             value === "monthly"
@@ -38,6 +43,7 @@ export function BillingToggle({
               : "text-muted-foreground hover:text-foreground"
           )}
           onClick={() => onChange("monthly")}
+          role="radio"
           type="button"
         >
           Monthly
@@ -45,6 +51,7 @@ export function BillingToggle({
 
         {/* Annual option */}
         <button
+          aria-checked={value === "annual"}
           className={cn(
             "relative z-10 rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
             value === "annual"
@@ -52,6 +59,7 @@ export function BillingToggle({
               : "text-muted-foreground hover:text-foreground"
           )}
           onClick={() => onChange("annual")}
+          role="radio"
           type="button"
         >
           Annual

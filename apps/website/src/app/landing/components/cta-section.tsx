@@ -39,9 +39,9 @@ export function CTASection() {
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                <Github className="me-2 size-4" />
+                <Github aria-hidden="true" className="me-2 size-4" />
                 View on GitHub
-                <ArrowRight className="ms-2 size-4 transition-transform group-hover:translate-x-1" />
+                <ArrowRight aria-hidden="true" className="ms-2 size-4 transition-transform group-hover:translate-x-1" />
               </a>
             </Button>
           </div>

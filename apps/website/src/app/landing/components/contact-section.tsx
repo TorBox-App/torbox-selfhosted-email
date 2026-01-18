@@ -66,18 +66,18 @@ export function ContactSection() {
             Need help or have questions?
           </h2>
           <p className="text-lg text-muted-foreground">
-            Our team is here to help you get the most out of ShadcnStore. Choose
-            the best way to reach out to us.
+            Our team is here to help you get the most out of Wraps. Choose the
+            best way to reach out to us.
           </p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Contact Options */}
           <div className="order-2 space-y-6 lg:order-1">
-            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <Card className="transition-shadow hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-primary" />
+                  <MessageCircle aria-hidden="true" className="h-5 w-5 text-primary" />
                   Discord Community
                 </CardTitle>
               </CardHeader>
@@ -103,10 +103,10 @@ export function ContactSection() {
               </CardContent>
             </Card>
 
-            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <Card className="transition-shadow hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Github className="h-5 w-5 text-primary" />
+                  <Github aria-hidden="true" className="h-5 w-5 text-primary" />
                   GitHub Issues
                 </CardTitle>
               </CardHeader>
@@ -132,10 +132,10 @@ export function ContactSection() {
               </CardContent>
             </Card>
 
-            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <Card className="transition-shadow hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-primary" />
+                  <BookOpen aria-hidden="true" className="h-5 w-5 text-primary" />
                   Documentation
                 </CardTitle>
               </CardHeader>
@@ -150,7 +150,7 @@ export function ContactSection() {
                   size="sm"
                   variant="outline"
                 >
-                  <a href="#">View Docs</a>
+                  <a href="/docs">View Docs</a>
                 </Button>
               </CardContent>
             </Card>
@@ -161,7 +161,7 @@ export function ContactSection() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5" />
+                  <Mail aria-hidden="true" className="h-5 w-5" />
                   Send us a message
                 </CardTitle>
               </CardHeader>
@@ -241,7 +241,7 @@ export function ContactSection() {
                           <FormControl>
                             <Textarea
                               className="min-h-50"
-                              placeholder="Tell us how we can help you with ShadcnStore components..."
+                              placeholder="Tell us how we can help you with Wraps..."
                               rows={10}
                               {...field}
                             />

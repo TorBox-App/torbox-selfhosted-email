@@ -455,6 +455,8 @@ export default function SPFBuilderPage() {
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                   {Object.entries(PROVIDERS).map(([key, provider]) => (
                     <button
+                      aria-label={`${provider.name}, ${provider.lookups} lookup${provider.lookups > 1 ? "s" : ""}`}
+                      aria-pressed={selectedProviders.includes(key)}
                       className={`flex items-stretch gap-3 rounded-lg border text-left transition-all ${
                         selectedProviders.includes(key)
                           ? "border-primary bg-primary/10 text-primary"
@@ -489,6 +491,7 @@ export default function SPFBuilderPage() {
                   <p className="mb-2 font-medium text-sm">Other Provider</p>
                   <div className="flex gap-2">
                     <Input
+                      aria-label="Custom SPF include domain"
                       className="flex-1 font-mono text-sm"
                       disabled={newIncludeLoading}
                       onChange={(e) => setNewInclude(e.target.value)}
@@ -497,14 +500,15 @@ export default function SPFBuilderPage() {
                       value={newInclude}
                     />
                     <Button
+                      aria-label="Add include"
                       disabled={newIncludeLoading || !newInclude.trim()}
                       onClick={addInclude}
                       variant="secondary"
                     >
                       {newIncludeLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Plus className="h-4 w-4" />
+                        <Plus aria-hidden="true" className="h-4 w-4" />
                       )}
                     </Button>
                   </div>
@@ -530,11 +534,12 @@ export default function SPFBuilderPage() {
                             )}
                           </span>
                           <button
+                            aria-label={`Remove ${inc.domain}`}
                             className="text-muted-foreground hover:text-red-500"
                             onClick={() => removeInclude(inc.domain)}
                             type="button"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
                           </button>
                         </span>
                       ))}
@@ -556,14 +561,15 @@ export default function SPFBuilderPage() {
               <CardContent>
                 <div className="mb-4 flex gap-2">
                   <Input
+                    aria-label="Custom IP address"
                     className="flex-1"
                     onChange={(e) => setNewIP(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addIP()}
                     placeholder="Enter IPv4 or IPv6 address (e.g., 192.0.2.1 or 2001:db8::1)"
                     value={newIP}
                   />
-                  <Button onClick={addIP} variant="secondary">
-                    <Plus className="h-4 w-4" />
+                  <Button aria-label="Add IP address" onClick={addIP} variant="secondary">
+                    <Plus aria-hidden="true" className="h-4 w-4" />
                   </Button>
                 </div>
                 {customIPs.length > 0 && (
@@ -576,11 +582,12 @@ export default function SPFBuilderPage() {
                         {ip.includes(":") ? "ip6:" : "ip4:"}
                         {ip}
                         <button
+                          aria-label={`Remove IP ${ip}`}
                           className="text-muted-foreground hover:text-red-500"
                           onClick={() => removeIP(ip)}
                           type="button"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
                         </button>
                       </span>
                     ))}
@@ -598,9 +605,10 @@ export default function SPFBuilderPage() {
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div aria-label="SPF qualifier" className="space-y-2" role="radiogroup">
                   {Object.entries(QUALIFIERS).map(([key, q]) => (
                     <button
+                      aria-checked={qualifier === key}
                       className={`w-full rounded-lg border p-3 text-left transition-all ${
                         qualifier === key
                           ? "border-primary bg-primary/10"
@@ -608,6 +616,7 @@ export default function SPFBuilderPage() {
                       }`}
                       key={key}
                       onClick={() => setQualifier(key)}
+                      role="radio"
                       type="button"
                     >
                       <div className="flex items-center justify-between">

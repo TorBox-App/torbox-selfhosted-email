@@ -115,6 +115,7 @@ export function WaitlistForm({
             <div className={cn("flex-1", variant === "stacked" && "w-full")}>
               <Input
                 aria-invalid={hasError}
+                aria-label="Email address"
                 className={cn(
                   variant === "inline" && "max-w-xs",
                   variant === "stacked" && "w-full"

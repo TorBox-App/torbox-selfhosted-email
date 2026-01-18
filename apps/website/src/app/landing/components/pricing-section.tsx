@@ -154,7 +154,7 @@ export function PricingSection() {
             {plan.popular && (
               <div className="absolute top-4 right-4">
                 <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2 py-1 font-medium text-white text-xs">
-                  <Sparkles className="h-3 w-3" />
+                  <Sparkles aria-hidden="true" className="h-3 w-3" />
                   Popular
                 </span>
               </div>
@@ -164,7 +164,7 @@ export function PricingSection() {
               <div className="mb-4">
                 <div className="mb-2 flex items-center gap-2">
                   {plan.id === "cli" && (
-                    <Terminal className="h-5 w-5 text-muted-foreground" />
+                    <Terminal aria-hidden="true" className="h-5 w-5 text-muted-foreground" />
                   )}
                   <h3 className="font-bold text-lg">{plan.name}</h3>
                 </div>
@@ -214,6 +214,7 @@ export function PricingSection() {
                 {plan.features.map((feature) => (
                   <li className="flex items-start gap-2" key={feature}>
                     <Check
+                      aria-hidden="true"
                       className={`mt-0.5 size-4 shrink-0 ${plan.highlight ? "text-orange-500" : "text-muted-foreground"}`}
                       strokeWidth={2.5}
                     />
@@ -236,19 +237,19 @@ export function PricingSection() {
         </div>
         <div className="grid gap-2 sm:grid-cols-2 text-orange-700 text-sm dark:text-orange-300 max-w-lg mx-auto">
           <div className="flex items-center gap-2">
-            <Check className="size-4 shrink-0" strokeWidth={2.5} />
+            <Check aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.5} />
             <span>Direct Slack access to the founder</span>
           </div>
           <div className="flex items-center gap-2">
-            <Check className="size-4 shrink-0" strokeWidth={2.5} />
+            <Check aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.5} />
             <span>Input on roadmap priorities</span>
           </div>
           <div className="flex items-center gap-2">
-            <Check className="size-4 shrink-0" strokeWidth={2.5} />
+            <Check aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.5} />
             <span>Your logo on our website</span>
           </div>
           <div className="flex items-center gap-2">
-            <Check className="size-4 shrink-0" strokeWidth={2.5} />
+            <Check aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.5} />
             <span>Locked-in pricing for life</span>
           </div>
         </div>

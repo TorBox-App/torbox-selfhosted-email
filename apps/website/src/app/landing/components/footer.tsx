@@ -83,7 +83,7 @@ export function LandingFooter() {
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  <Github className="h-4 w-4" />
+                  <Github aria-hidden="true" className="h-4 w-4" />
                 </a>
               </Button>
               <Button asChild size="icon" variant="ghost">
@@ -94,7 +94,7 @@ export function LandingFooter() {
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  <XLogo className="h-4 w-4" />
+                  <XLogo aria-hidden="true" className="h-4 w-4" />
                 </a>
               </Button>
             </div>
@@ -179,7 +179,8 @@ export function LandingFooter() {
           <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm sm:flex-row">
             <div className="flex items-center gap-1">
               <span>Built with</span>
-              <Heart className="h-4 w-4 fill-current text-red-500" />
+              <Heart aria-hidden="true" className="h-4 w-4 fill-current text-red-500" />
+              <span className="sr-only">love</span>
               <span>for developers</span>
             </div>
             <span className="hidden sm:inline">•</span>
