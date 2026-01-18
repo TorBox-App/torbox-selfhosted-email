@@ -2,8 +2,20 @@
 
 import { NodeSelection } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/react";
-import { Layout, Link2, Palette, Settings2, Type } from "lucide-react";
+import {
+  ChevronDown,
+  Layout,
+  Link2,
+  Palette,
+  Settings2,
+  Type,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -981,24 +993,39 @@ function ConditionalProperties({ attrs, onChange }: PropertyProps) {
   );
 }
 
-// Helper component for property sections
+// Helper component for collapsible property sections
 function PropertySection({
   icon,
   title,
   children,
+  defaultOpen = true,
 }: {
   icon: React.ReactNode;
   title: string;
   children: React.ReactNode;
+  defaultOpen?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 font-medium text-sm">
-        {icon}
-        {title}
+    <Collapsible onOpenChange={setIsOpen} open={isOpen}>
+      <div className="space-y-3">
+        <CollapsibleTrigger className="flex w-full items-center justify-between">
+          <div className="flex items-center gap-2 font-medium text-sm">
+            {icon}
+            {title}
+          </div>
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+              isOpen ? "" : "-rotate-90"
+            }`}
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
+          {children}
+        </CollapsibleContent>
+        <Separator className="my-4" />
       </div>
-      {children}
-      <Separator className="my-4" />
-    </div>
+    </Collapsible>
   );
 }

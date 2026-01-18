@@ -339,29 +339,46 @@ export function EditorDndProvider({
         value={{ isDragging, draggedBlock, dropIndicator }}
       >
         {children}
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay
+          dropAnimation={{
+            duration: 200,
+            easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)",
+          }}
+        >
           {draggedBlock ? (
-            <div className="flex items-center gap-3 rounded-md border bg-background px-3 py-2 shadow-lg">
-              <div className="flex-shrink-0 text-muted-foreground">
+            <div className="flex items-center gap-3 rounded-lg border-2 border-primary/50 bg-background px-4 py-3 shadow-xl ring-4 ring-primary/20">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
                 {draggedBlock.block.icon}
               </div>
-              <div className="font-medium text-sm">
-                {draggedBlock.block.name}
+              <div>
+                <div className="font-semibold text-sm">
+                  {draggedBlock.block.name}
+                </div>
+                <div className="text-muted-foreground text-xs">
+                  Drop to insert
+                </div>
               </div>
             </div>
           ) : null}
         </DragOverlay>
-        {/* Drop indicator line */}
+        {/* Drop indicator line with pulse animation */}
         {dropIndicator && (
           <div
-            className="pointer-events-none fixed z-50 h-0.5 bg-primary"
+            className="pointer-events-none fixed z-50"
             style={{
               top: dropIndicator.top,
               left: dropIndicator.left,
               width: dropIndicator.width,
               transform: "translateY(-50%)",
             }}
-          />
+          >
+            {/* Main indicator line */}
+            <div className="h-0.5 w-full animate-pulse bg-primary" />
+            {/* Left dot */}
+            <div className="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
+            {/* Right dot */}
+            <div className="absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-primary" />
+          </div>
         )}
       </EditorDndContext.Provider>
     </DndContext>

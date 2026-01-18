@@ -28,7 +28,8 @@ import {
   Undo2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +50,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { BrandKitSelector } from "./brand-kit-selector";
+import { type SaveStatus, SaveStatusIndicator } from "./save-status-indicator";
 import { SubjectEditDialog } from "./subject-edit-dialog";
 import { TemplateNameDialog } from "./wrappers/template-name-dialog";
 
@@ -59,6 +61,8 @@ type TemplateEditorToolbarProps = {
   templateDescription?: string;
   isSaving?: boolean;
   isPublishing?: boolean;
+  saveStatus?: SaveStatus;
+  lastSavedAt?: Date;
   subject?: string | null;
   previewText?: string | null;
   emailType?: EmailType;
@@ -103,6 +107,8 @@ export function TemplateEditorToolbar({
   templateDescription,
   isSaving,
   isPublishing,
+  saveStatus = "saved",
+  lastSavedAt,
   subject,
   previewText,
   emailType = "marketing",
@@ -135,6 +141,26 @@ export function TemplateEditorToolbar({
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
 
+  const handleUndo = useCallback(() => {
+    if (editor?.can().undo()) {
+      editor.chain().focus().undo().run();
+      toast("Undone", {
+        description: "Previous change has been reverted",
+        duration: 2000,
+      });
+    }
+  }, [editor]);
+
+  const handleRedo = useCallback(() => {
+    if (editor?.can().redo()) {
+      editor.chain().focus().redo().run();
+      toast("Redone", {
+        description: "Change has been restored",
+        duration: 2000,
+      });
+    }
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -144,7 +170,11 @@ export function TemplateEditorToolbar({
 
   return (
     <TooltipProvider>
-      <div className="border-b">
+      <div
+        aria-label="Template editor toolbar"
+        className="border-b"
+        role="toolbar"
+      >
         {/* Row 1: Back + Brand Kit + Subject/Preview + Status */}
         <div className="flex items-center gap-3 border-b px-3 py-2">
           {/* Back to templates */}
@@ -204,6 +234,11 @@ export function TemplateEditorToolbar({
               <TooltipContent>Edit subject & preview</TooltipContent>
             </Tooltip>
           </div>
+
+          {/* Save Status Indicator */}
+          <SaveStatusIndicator lastSavedAt={lastSavedAt} status={saveStatus} />
+
+          <Separator className="h-5" orientation="vertical" />
 
           {/* Status Badge */}
           <Badge
@@ -272,17 +307,22 @@ export function TemplateEditorToolbar({
           <Separator className="mx-1 h-6" orientation="vertical" />
 
           {/* Undo/Redo */}
-          <div className="flex items-center gap-0.5">
+          <div
+            aria-label="History controls"
+            className="flex items-center gap-0.5"
+            role="group"
+          >
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  aria-label="Undo (Cmd+Z)"
                   className="h-8 w-8 p-0"
                   disabled={!editor.can().undo()}
-                  onClick={() => editor.chain().focus().undo().run()}
+                  onClick={handleUndo}
                   size="sm"
                   variant="ghost"
                 >
-                  <Undo2 className="h-4 w-4" />
+                  <Undo2 aria-hidden="true" className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Undo (Cmd+Z)</TooltipContent>
@@ -291,13 +331,14 @@ export function TemplateEditorToolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  aria-label="Redo (Cmd+Shift+Z)"
                   className="h-8 w-8 p-0"
                   disabled={!editor.can().redo()}
-                  onClick={() => editor.chain().focus().redo().run()}
+                  onClick={handleRedo}
                   size="sm"
                   variant="ghost"
                 >
-                  <Redo2 className="h-4 w-4" />
+                  <Redo2 aria-hidden="true" className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Redo (Cmd+Shift+Z)</TooltipContent>

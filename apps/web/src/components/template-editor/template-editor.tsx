@@ -20,6 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import {
   useEditorView,
+  useLastSavedAt,
+  useSaveStatus,
   useSelectedBrandKitId,
   useShowLeftPanel,
   useShowPropertiesPanel,
@@ -30,7 +32,10 @@ import {
 import { CodeView } from "./code-view";
 import { EditorDndProvider } from "./dnd-context";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
+import { EditorEmptyState, isEditorEmpty } from "./editor-empty-state";
 import { EditorErrorBoundary } from "./editor-error-boundary";
+import { FloatingHint, useEditorHints } from "./editor-hints";
+import { useKeyboardShortcutsModal } from "./keyboard-shortcuts-modal";
 import { LeftPanel } from "./left-panel";
 import { PreviewPanel } from "./preview-panel";
 import { PropertiesPanel } from "./properties-panel";
@@ -50,6 +55,15 @@ const SaveBlockModal = dynamic(
 );
 const ImportModal = dynamic(
   () => import("./import-modal").then((m) => m.ImportModal),
+  { ssr: false }
+);
+const KeyboardShortcutsModal = dynamic(
+  () =>
+    import("./keyboard-shortcuts-modal").then((m) => m.KeyboardShortcutsModal),
+  { ssr: false }
+);
+const SuccessCelebration = dynamic(
+  () => import("./success-celebration").then((m) => m.SuccessCelebration),
   { ssr: false }
 );
 
@@ -153,6 +167,19 @@ function TemplateEditorContent({
   const [previewText, setPreviewText] = useState(template.description ?? "");
   const [emailType, setEmailType] = useState(template.emailType);
 
+  // Keyboard shortcuts modal
+  const { isOpen: showKeyboardShortcuts, setIsOpen: setShowKeyboardShortcuts } =
+    useKeyboardShortcutsModal();
+
+  // Editor hints for first-time users
+  const { shouldShowHint, dismissHint } = useEditorHints();
+
+  // Track if editor is empty for showing empty state
+  const [showEmptyState, setShowEmptyState] = useState(false);
+
+  // Success celebration for first publish
+  const [showCelebration, setShowCelebration] = useState(false);
+
   // Use individual selectors to prevent re-renders when unrelated state changes
   const view = useEditorView();
   const showLeftPanel = useShowLeftPanel();
@@ -160,9 +187,15 @@ function TemplateEditorContent({
   const showTestDataPanel = useShowTestDataPanel();
   const showVersionHistory = useShowVersionHistory();
   const selectedBrandKitId = useSelectedBrandKitId();
-  const { setDocument, updateTemplate: updateTemplateStore } = useTemplateStore(
-    (state) => state.actions
-  );
+  const saveStatus = useSaveStatus();
+  const lastSavedAt = useLastSavedAt();
+  const {
+    setDocument,
+    updateTemplate: updateTemplateStore,
+    markSaving,
+    markSaved,
+    markUnsaved,
+  } = useTemplateStore((state) => state.actions);
 
   // Update template mutation
   const updateMutation = useUpdateTemplate(orgSlug, templateId);
@@ -178,12 +211,20 @@ function TemplateEditorContent({
   // Track last saved subject to avoid redundant saves
   const lastSavedSubjectRef = useRef(template.subject ?? "");
 
-  // Handle save
+  // Handle save with status tracking
   const handleSave = useCallback(
     async (content: JSONContent) => {
-      await updateMutation.mutateAsync({ content });
+      markSaving();
+      try {
+        await updateMutation.mutateAsync({ content });
+        markSaved();
+      } catch {
+        // Keep as unsaved on error - the mutation error will be handled elsewhere
+        markUnsaved();
+        throw new Error("Failed to save");
+      }
     },
-    [updateMutation]
+    [updateMutation, markSaving, markSaved, markUnsaved]
   );
 
   // Initialize editor - template.content is guaranteed to be available here
@@ -191,7 +232,11 @@ function TemplateEditorContent({
     templateId,
     initialContent: template.content as JSONContent,
     onSave: handleSave,
-    onUpdate: setDocument,
+    onUpdate: (content) => {
+      setDocument(content);
+      // Mark as unsaved when content changes
+      markUnsaved();
+    },
   });
 
   // Fetch brand kits for DnD context
@@ -215,6 +260,24 @@ function TemplateEditorContent({
       updatedAt: template.updatedAt.toString(),
     });
   }, [template, updateTemplateStore]);
+
+  // Track if editor is empty and show empty state
+  useEffect(() => {
+    if (!editor) return;
+
+    const checkEmpty = () => {
+      setShowEmptyState(isEditorEmpty(editor));
+    };
+
+    // Check initially
+    checkEmpty();
+
+    // Listen for content changes
+    editor.on("update", checkEmpty);
+    return () => {
+      editor.off("update", checkEmpty);
+    };
+  }, [editor]);
 
   // Sync subject from template when it changes (e.g., after publish)
   useEffect(() => {
@@ -269,6 +332,8 @@ function TemplateEditorContent({
 
   // Handle publish
   const handlePublish = useCallback(async () => {
+    const isFirstPublish = template.status === "DRAFT";
+
     try {
       // Save any pending changes first (including subject)
       await saveNow();
@@ -277,15 +342,21 @@ function TemplateEditorContent({
 
       // Then publish to SES
       const result = await publishMutation.mutateAsync({});
-      toast.success("Template published to AWS SES", {
-        description: result.message,
-      });
+
+      // Show celebration for first publish
+      if (isFirstPublish) {
+        setShowCelebration(true);
+      } else {
+        toast.success("Template updated on AWS SES", {
+          description: result.message,
+        });
+      }
     } catch (error) {
       toast.error("Failed to publish template", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
-  }, [saveNow, updateMutation, subject, publishMutation]);
+  }, [saveNow, updateMutation, subject, publishMutation, template.status]);
 
   // Handle unpublish
   const handleUnpublish = useCallback(async () => {
@@ -302,15 +373,18 @@ function TemplateEditorContent({
   }, [unpublishMutation]);
 
   const handleManualSave = useCallback(async () => {
+    markSaving();
     try {
       await saveNow();
+      markSaved();
       toast.success("Template saved");
     } catch (error) {
+      markUnsaved();
       toast.error("Failed to save template", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
-  }, [saveNow]);
+  }, [saveNow, markSaving, markSaved, markUnsaved]);
 
   const handleEditorReset = useCallback(() => {
     if (editor && template?.content && editor.isEditable) {
@@ -390,6 +464,13 @@ function TemplateEditorContent({
   return (
     <EditorErrorBoundary onReset={handleEditorReset}>
       <EditorDndProvider brandKit={brandKit} editor={editor}>
+        {/* Skip navigation links for keyboard users */}
+        <a
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+          href="#editor-canvas"
+        >
+          Skip to editor
+        </a>
         <div
           className={cn(
             "flex h-[calc(100dvh-var(--header-height)-1rem)] flex-col bg-background md:h-[calc(100dvh-var(--header-height)-1.5rem)]",
@@ -404,6 +485,7 @@ function TemplateEditorContent({
               publishMutation.isPending || unpublishMutation.isPending
             }
             isSaving={updateMutation.isPending}
+            lastSavedAt={lastSavedAt ?? undefined}
             onDelete={handleDelete}
             onDuplicate={handleDuplicate}
             onImport={() => setShowImportModal(true)}
@@ -416,6 +498,7 @@ function TemplateEditorContent({
             onUnpublish={handleUnpublish}
             orgSlug={orgSlug}
             previewText={previewText}
+            saveStatus={saveStatus}
             status={template.status}
             subject={subject}
             templateDescription={template.description ?? undefined}
@@ -423,22 +506,55 @@ function TemplateEditorContent({
           />
 
           {/* Main Content Area */}
-          <div className="flex min-h-0 flex-1 overflow-hidden">
-            {/* Left Panel - AI + Blocks tabs */}
-            {showLeftPanel && view === "edit" && (
-              <LeftPanel
-                editor={editor}
-                orgSlug={orgSlug}
-                templateId={templateId}
-              />
-            )}
+          <div
+            aria-label="Template editor workspace"
+            className="flex min-h-0 flex-1 overflow-hidden"
+            role="main"
+          >
+            {/* Left Panel - AI + Blocks tabs - with slide animation */}
+            <div
+              className={cn(
+                "transition-all duration-300 ease-in-out",
+                showLeftPanel && view === "edit"
+                  ? "w-80 opacity-100"
+                  : "w-0 overflow-hidden opacity-0"
+              )}
+            >
+              {view === "edit" && (
+                <LeftPanel
+                  editor={editor}
+                  orgSlug={orgSlug}
+                  templateId={templateId}
+                />
+              )}
+            </div>
 
             {/* Center - Editor/Preview/Code/Usage */}
-            <div className={cn("flex-1 overflow-auto")}>
+            <div
+              aria-label="Email content editor"
+              className={cn("flex-1 overflow-auto")}
+              role="region"
+            >
               {/* Editor - always mounted, hidden with CSS to prevent flushSync issues */}
               <div className={cn(view !== "edit" && "hidden")}>
                 <div className="mx-auto max-w-3xl p-6">
-                  <div className="min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm">
+                  <div
+                    className="relative min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm"
+                    id="editor-canvas"
+                    tabIndex={-1}
+                  >
+                    {/* Empty state overlay */}
+                    {showEmptyState && (
+                      <EditorEmptyState
+                        editor={editor}
+                        onOpenAI={() => {
+                          const { toggleLeftPanelWithTab } =
+                            useTemplateStore.getState().actions;
+                          toggleLeftPanelWithTab("ai");
+                          setShowEmptyState(false);
+                        }}
+                      />
+                    )}
                     <EditorContent className="p-6" editor={editor} />
                     {/* Bubble menu for text formatting */}
                     <EditorBubbleMenu editor={editor} />
@@ -455,12 +571,17 @@ function TemplateEditorContent({
               {view === "usage" && <UsagePanel template={template} />}
             </div>
 
-            {/* Right Panel - Properties (always rendered in edit mode to detect selection) */}
-            {view === "edit" && (
-              <div className={showPropertiesPanel ? "" : "hidden"}>
-                <PropertiesPanel editor={editor} />
-              </div>
-            )}
+            {/* Right Panel - Properties - with slide animation */}
+            <div
+              className={cn(
+                "transition-all duration-300 ease-in-out",
+                view === "edit" && showPropertiesPanel
+                  ? "w-72 opacity-100"
+                  : "w-0 overflow-hidden opacity-0"
+              )}
+            >
+              {view === "edit" && <PropertiesPanel editor={editor} />}
+            </div>
 
             {/* Right Panel - Test Data (shown when toggled) */}
             {showTestDataPanel && (view === "edit" || view === "preview") && (
@@ -499,6 +620,39 @@ function TemplateEditorContent({
             editor={editor}
             isOpen={showImportModal}
             onClose={() => setShowImportModal(false)}
+          />
+
+          {/* Keyboard Shortcuts Modal */}
+          <KeyboardShortcutsModal
+            onOpenChange={setShowKeyboardShortcuts}
+            open={showKeyboardShortcuts}
+          />
+
+          {/* First-time user hints */}
+          {view === "edit" && showLeftPanel && (
+            <FloatingHint
+              id="drag-blocks"
+              onDismiss={dismissHint}
+              position={{ top: 200, left: 290 }}
+              show={shouldShowHint("drag-blocks") && !showEmptyState}
+            />
+          )}
+          <FloatingHint
+            id="keyboard-shortcuts"
+            onDismiss={dismissHint}
+            position={{ top: 120, left: "50%" }}
+            show={
+              shouldShowHint("keyboard-shortcuts") &&
+              !shouldShowHint("drag-blocks") &&
+              !showEmptyState
+            }
+          />
+
+          {/* Success celebration for first publish */}
+          <SuccessCelebration
+            message="Template Published!"
+            onComplete={() => setShowCelebration(false)}
+            show={showCelebration}
           />
         </div>
       </EditorDndProvider>

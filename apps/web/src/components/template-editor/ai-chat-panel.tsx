@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Bot,
   Check,
+  Heart,
   Loader2,
   RefreshCw,
   Send,
@@ -61,6 +62,56 @@ const QUICK_PROMPTS = [
   { label: "Promotional", prompt: "Create a promotional email for a sale" },
 ];
 
+// Storage key for favorite prompts
+const FAVORITE_PROMPTS_KEY = "wraps:ai:favorite-prompts";
+
+type FavoritePrompt = {
+  id: string;
+  label: string;
+  prompt: string;
+};
+
+function useFavoritePrompts() {
+  const [favorites, setFavorites] = useState<FavoritePrompt[]>([]);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(FAVORITE_PROMPTS_KEY);
+      if (stored) {
+        setFavorites(JSON.parse(stored));
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
+
+  const saveFavorite = useCallback((prompt: string) => {
+    const newFavorite: FavoritePrompt = {
+      id: Date.now().toString(),
+      label: prompt.slice(0, 30) + (prompt.length > 30 ? "..." : ""),
+      prompt,
+    };
+    setFavorites((prev) => {
+      const updated = [...prev, newFavorite];
+      localStorage.setItem(FAVORITE_PROMPTS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    toast.success("Prompt saved to favorites");
+    return newFavorite;
+  }, []);
+
+  const removeFavorite = useCallback((id: string) => {
+    setFavorites((prev) => {
+      const updated = prev.filter((f) => f.id !== id);
+      localStorage.setItem(FAVORITE_PROMPTS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  return { favorites, saveFavorite, removeFavorite };
+}
+
 export function AIChatPanel({
   editor,
   orgSlug,
@@ -82,6 +133,9 @@ export function AIChatPanel({
 
   // Fetch AI usage to show warnings
   const { data: aiUsage, refetch: refetchUsage } = useAiUsage(orgSlug);
+
+  // Favorite prompts
+  const { favorites, saveFavorite, removeFavorite } = useFavoritePrompts();
 
   const { selectedBrandKitId } = useTemplateStore((state) => state.localState);
   const { setIsGenerating, setLastGeneratedContent } = useTemplateStore(
@@ -337,6 +391,40 @@ export function AIChatPanel({
                   ))}
                 </div>
               </div>
+
+              {/* Favorite prompts */}
+              {favorites.length > 0 && (
+                <div className="space-y-2">
+                  <p className="flex items-center gap-1 px-1 font-medium text-muted-foreground text-xs">
+                    <Heart className="h-3 w-3" />
+                    Your favorites
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {favorites.map((fav) => (
+                      <div className="group relative" key={fav.id}>
+                        <Button
+                          className="h-7 pr-6 text-xs"
+                          onClick={() => handleSendMessage(fav.prompt)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          {fav.label}
+                        </Button>
+                        <button
+                          className="absolute right-1 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFavorite(fav.id);
+                          }}
+                          type="button"
+                        >
+                          <X className="h-3 w-3 text-muted-foreground" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -423,9 +511,18 @@ export function AIChatPanel({
                       <Bot className="h-3 w-3" />
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Generating...
+                  <div className="flex flex-col gap-1">
+                    <div className="inline-block rounded-lg bg-muted px-2.5 py-1.5">
+                      {/* Animated typing dots */}
+                      <div className="flex items-center gap-1">
+                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:0ms]" />
+                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:150ms]" />
+                        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:300ms]" />
+                      </div>
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      Generating your email...
+                    </span>
                   </div>
                 </div>
               )}
@@ -514,10 +611,23 @@ export function AIChatPanel({
                   disabled={aiUsage?.remaining === 0}
                   onClick={() => regenerate()}
                   size="icon"
+                  title="Regenerate"
                   type="button"
                   variant="ghost"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {input.trim().length > 10 && (
+                <Button
+                  className="h-7 w-7"
+                  onClick={() => saveFavorite(input.trim())}
+                  size="icon"
+                  title="Save to favorites"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Heart className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>

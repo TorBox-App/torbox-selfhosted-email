@@ -30,13 +30,12 @@ import {
   User,
 } from "lucide-react";
 import { memo, useMemo } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { ALL_BLOCK_EXAMPLES } from "@/lib/ai/block-examples";
 import {
@@ -400,6 +399,189 @@ const blocksByCategory = categoryOrder.map((category) => ({
   blocks: blocks.filter((block) => block.category === category),
 }));
 
+// Block preview components - visual representations for hover cards
+function BlockPreview({ blockName }: { blockName: string }) {
+  switch (blockName) {
+    case "Button":
+      return (
+        <div className="flex justify-center">
+          <div className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-xs">
+            Click Me
+          </div>
+        </div>
+      );
+    case "Section":
+      return (
+        <div className="rounded-md border-2 border-dashed border-muted-foreground/30 bg-muted/50 p-4">
+          <div className="h-2 w-3/4 rounded bg-muted-foreground/20" />
+          <div className="mt-2 h-2 w-1/2 rounded bg-muted-foreground/20" />
+        </div>
+      );
+    case "Image":
+      return (
+        <div className="flex aspect-video items-center justify-center rounded-md bg-muted">
+          <Image className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+      );
+    case "Divider":
+      return (
+        <div className="py-3">
+          <div className="h-px w-full bg-border" />
+        </div>
+      );
+    case "Spacer":
+      return (
+        <div className="flex items-center justify-center py-2">
+          <div className="flex h-8 w-full items-center justify-center rounded border-2 border-dashed border-muted-foreground/30">
+            <MoveVertical className="h-4 w-4 text-muted-foreground/50" />
+          </div>
+        </div>
+      );
+    case "Avatar":
+      return (
+        <div className="flex justify-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <User className="h-6 w-6 text-muted-foreground/50" />
+          </div>
+        </div>
+      );
+    case "Icon":
+      return (
+        <div className="flex justify-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Star className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+      );
+    case "Code Block":
+      return (
+        <div className="rounded-md bg-zinc-900 p-3 font-mono text-xs text-zinc-100">
+          <span className="text-pink-400">const</span>{" "}
+          <span className="text-blue-400">hello</span> ={" "}
+          <span className="text-green-400">"world"</span>;
+        </div>
+      );
+    case "Social Links":
+      return (
+        <div className="flex justify-center gap-2">
+          {["f", "in", "X"].map((icon) => (
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-muted font-bold text-muted-foreground text-xs"
+              key={icon}
+            >
+              {icon}
+            </div>
+          ))}
+        </div>
+      );
+    case "2 Columns":
+      return (
+        <div className="flex gap-2">
+          <div className="flex-1 rounded border-2 border-dashed border-muted-foreground/30 p-2">
+            <div className="h-2 w-full rounded bg-muted-foreground/20" />
+          </div>
+          <div className="flex-1 rounded border-2 border-dashed border-muted-foreground/30 p-2">
+            <div className="h-2 w-full rounded bg-muted-foreground/20" />
+          </div>
+        </div>
+      );
+    case "3 Columns":
+      return (
+        <div className="flex gap-1.5">
+          {[1, 2, 3].map((i) => (
+            <div
+              className="flex-1 rounded border-2 border-dashed border-muted-foreground/30 p-1.5"
+              key={i}
+            >
+              <div className="h-2 w-full rounded bg-muted-foreground/20" />
+            </div>
+          ))}
+        </div>
+      );
+    case "Text":
+      return (
+        <div className="space-y-1.5">
+          <div className="h-2 w-full rounded bg-muted-foreground/30" />
+          <div className="h-2 w-4/5 rounded bg-muted-foreground/30" />
+          <div className="h-2 w-3/5 rounded bg-muted-foreground/30" />
+        </div>
+      );
+    case "Heading 1":
+      return <div className="font-bold text-lg">Large Heading</div>;
+    case "Heading 2":
+      return <div className="font-semibold text-base">Medium Heading</div>;
+    case "Bullet List":
+      return (
+        <div className="space-y-1 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-foreground" />
+            <span>First item</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-foreground" />
+            <span>Second item</span>
+          </div>
+        </div>
+      );
+    case "Numbered List":
+      return (
+        <div className="space-y-1 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">1.</span>
+            <span>First item</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">2.</span>
+            <span>Second item</span>
+          </div>
+        </div>
+      );
+    case "Quote":
+      return (
+        <div className="border-l-2 border-muted-foreground/30 pl-3 text-muted-foreground text-xs italic">
+          "A meaningful quote here..."
+        </div>
+      );
+    case "Variable":
+      return (
+        <div className="flex items-center justify-center">
+          <span className="rounded bg-primary/10 px-2 py-1 font-mono text-primary text-xs">
+            {"{{firstName}}"}
+          </span>
+        </div>
+      );
+    case "Conditional":
+      return (
+        <div className="space-y-1 text-xs">
+          <div className="rounded bg-green-100 px-2 py-1 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+            if condition is true
+          </div>
+          <div className="rounded bg-red-100 px-2 py-1 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+            else show this
+          </div>
+        </div>
+      );
+    case "Header":
+    case "Footer":
+    case "Hero":
+    case "Features":
+    case "Testimonial":
+    case "Product Showcase":
+    case "Product Card":
+    case "Article":
+    case "CTA":
+      return (
+        <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+          <div className="h-2 w-2/3 rounded bg-muted-foreground/30" />
+          <div className="h-8 rounded bg-muted-foreground/20" />
+          <div className="h-2 w-1/2 rounded bg-muted-foreground/20" />
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
 // Draggable block item component
 type DraggableBlockItemProps = {
   block: BlockItem;
@@ -417,9 +599,11 @@ const DraggableBlockItem = memo(function DraggableBlockItemInner({
     data: { block },
   });
 
+  const preview = <BlockPreview blockName={block.name} />;
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <HoverCard closeDelay={100} openDelay={400}>
+      <HoverCardTrigger asChild>
         <div
           className={`group flex h-auto w-full cursor-grab items-center gap-2 rounded-lg border border-transparent bg-background px-3 py-2.5 shadow-sm transition-all hover:border-border hover:bg-accent ${isDragging ? "opacity-50" : ""}`}
           ref={setNodeRef}
@@ -454,11 +638,17 @@ const DraggableBlockItem = memo(function DraggableBlockItemInner({
             </div>
           </div>
         </div>
-      </TooltipTrigger>
-      <TooltipContent side="right">
-        <p>{block.description}</p>
-      </TooltipContent>
-    </Tooltip>
+      </HoverCardTrigger>
+      {preview && (
+        <HoverCardContent align="start" className="w-56" side="right">
+          <div className="space-y-2">
+            <div className="font-medium text-sm">{block.name}</div>
+            <p className="text-muted-foreground text-xs">{block.description}</p>
+            <div className="pt-2">{preview}</div>
+          </div>
+        </HoverCardContent>
+      )}
+    </HoverCard>
   );
 });
 
@@ -485,37 +675,40 @@ export function BlockPalette({ editor, orgSlug }: BlockPaletteProps) {
   }
 
   return (
-    <TooltipProvider>
-      <div className="flex h-full min-h-0 w-full flex-col bg-muted/30">
-        <div className="border-b px-4 py-3">
-          <h3 className="font-semibold text-sm">Blocks</h3>
-          <p className="text-muted-foreground text-xs">Click or drag to add</p>
-        </div>
-
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-4 p-3">
-            {blocksByCategory.map(
-              ({ category, label, blocks: categoryBlocks }) => (
-                <div key={category}>
-                  <h4 className="mb-2 px-1 font-medium text-muted-foreground text-xs uppercase tracking-wider">
-                    {label}
-                  </h4>
-                  <div className="space-y-2">
-                    {categoryBlocks.map((block) => (
-                      <DraggableBlockItem
-                        block={block}
-                        brandKit={brandKit}
-                        editor={editor}
-                        key={block.name}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        </ScrollArea>
+    <nav
+      aria-label="Block palette"
+      className="flex h-full min-h-0 w-full flex-col bg-muted/30"
+    >
+      <div className="border-b px-4 py-3">
+        <h3 className="font-semibold text-sm" id="block-palette-heading">
+          Blocks
+        </h3>
+        <p className="text-muted-foreground text-xs">Click or drag to add</p>
       </div>
-    </TooltipProvider>
+
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-4 p-3">
+          {blocksByCategory.map(
+            ({ category, label, blocks: categoryBlocks }) => (
+              <div key={category}>
+                <h4 className="mb-2 px-1 font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                  {label}
+                </h4>
+                <div className="space-y-2">
+                  {categoryBlocks.map((block) => (
+                    <DraggableBlockItem
+                      block={block}
+                      brandKit={brandKit}
+                      editor={editor}
+                      key={block.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      </ScrollArea>
+    </nav>
   );
 }

@@ -1,5 +1,6 @@
 import type { JSONContent } from "@tiptap/core";
 import { create } from "zustand";
+import type { SaveStatus } from "@/components/template-editor/save-status-indicator";
 
 type User = {
   id: string;
@@ -24,6 +25,10 @@ type LocalState = {
   // New unified left panel state
   showLeftPanel: boolean;
   leftPanelTab: LeftPanelTab;
+  // Save status tracking
+  saveStatus: SaveStatus;
+  lastSavedAt: Date | null;
+  hasUnsavedChanges: boolean;
 };
 
 type TemplateMetadata = {
@@ -69,6 +74,14 @@ type TemplateStoreActions = {
 
   // Brand kit
   setSelectedBrandKitId: (id: string | null) => void;
+
+  // Save status
+  setSaveStatus: (status: SaveStatus) => void;
+  setLastSavedAt: (date: Date) => void;
+  setHasUnsavedChanges: (hasChanges: boolean) => void;
+  markSaving: () => void;
+  markSaved: () => void;
+  markUnsaved: () => void;
 
   // Template actions
   setTemplate: (template: TemplateMetadata | null) => void;
@@ -117,6 +130,10 @@ const initialLocalState: LocalState = {
   // New unified left panel state
   showLeftPanel: true,
   leftPanelTab: "ai", // AI is the default tab
+  // Save status tracking
+  saveStatus: "saved",
+  lastSavedAt: null,
+  hasUnsavedChanges: false,
 };
 
 const initialCollaborationState: CollaborationState = {
@@ -250,6 +267,57 @@ export const useTemplateStore = create<TemplateStore>((set) => ({
         },
       })),
 
+    setSaveStatus: (status) =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          saveStatus: status,
+        },
+      })),
+
+    setLastSavedAt: (date) =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          lastSavedAt: date,
+        },
+      })),
+
+    setHasUnsavedChanges: (hasChanges) =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          hasUnsavedChanges: hasChanges,
+        },
+      })),
+
+    markSaving: () =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          saveStatus: "saving",
+        },
+      })),
+
+    markSaved: () =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          saveStatus: "saved",
+          lastSavedAt: new Date(),
+          hasUnsavedChanges: false,
+        },
+      })),
+
+    markUnsaved: () =>
+      set((state) => ({
+        localState: {
+          ...state.localState,
+          saveStatus: "unsaved",
+          hasUnsavedChanges: true,
+        },
+      })),
+
     setTemplate: (template) => set({ template }),
 
     updateTemplate: (updates) =>
@@ -310,3 +378,9 @@ export const useTemplateMetadata = () =>
 export const useAIState = () => useTemplateStore((state) => state.ai);
 export const useTemplateActions = () =>
   useTemplateStore((state) => state.actions);
+export const useSaveStatus = () =>
+  useTemplateStore((state) => state.localState.saveStatus);
+export const useLastSavedAt = () =>
+  useTemplateStore((state) => state.localState.lastSavedAt);
+export const useHasUnsavedChanges = () =>
+  useTemplateStore((state) => state.localState.hasUnsavedChanges);
