@@ -33,8 +33,8 @@ import {
 
 const data = {
   user: {
-    name: "ShadcnStore",
-    email: "store@example.com",
+    name: "Wraps",
+    email: "wraps@example.com",
     avatar: "",
   },
   navGroups: [
@@ -220,7 +220,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Logo className="text-current" size={24} />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">ShadcnStore</span>
+                  <span className="truncate font-medium">Wraps</span>
                   <span className="truncate text-xs">Admin Dashboard</span>
                 </div>
               </Link>

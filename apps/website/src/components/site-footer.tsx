@@ -12,11 +12,11 @@ export function SiteFooter() {
             <span>by</span>
             <Link
               className="font-medium text-foreground transition-colors hover:text-primary"
-              href="https://shadcnstore.com"
+              href="https://wraps.dev"
               rel="noopener noreferrer"
               target="_blank"
             >
-              ShadcnStore Team
+              Wraps Team
             </Link>
           </div>
           <p className="text-muted-foreground text-xs">

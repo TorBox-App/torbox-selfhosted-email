@@ -12,16 +12,17 @@ export function SiteFooter() {
             <span>by</span>
             <Link
               className="font-medium text-foreground transition-colors hover:text-primary"
-              href="https://shadcnstore.com"
+              href="https://wraps.dev"
               rel="noopener noreferrer"
               target="_blank"
             >
-              ShadcnStore Team
+              Wraps Team
             </Link>
           </div>
           <p className="text-muted-foreground text-xs">
-            Building beautiful, accessible blocks, templates and dashboards for
-            modern web applications.
+            Deploy production-ready email infrastructure to your AWS account in
+            minutes. Zero stored credentials, beautiful DX, and transparent AWS
+            pricing.
           </p>
         </div>
       </div>

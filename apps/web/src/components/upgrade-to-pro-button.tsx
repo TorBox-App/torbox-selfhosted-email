@@ -10,7 +10,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 
-const SHADCN_BLOCKS_URL = "https://shadcnstore.com/blocks";
+const WRAPS_URL = "https://wraps.dev";
 
 export function UpgradeToProButton() {
   return (
@@ -20,8 +20,7 @@ export function UpgradeToProButton() {
           <Button
             className="cursor-pointer bg-gradient-to-br from-slate-900 to-slate-400 px-6 py-3 font-bold text-white shadow-lg"
             onClick={() =>
-              typeof window !== "undefined" &&
-              window.open(SHADCN_BLOCKS_URL, "_blank")
+              typeof window !== "undefined" && window.open(WRAPS_URL, "_blank")
             }
             size="lg"
             style={{ minWidth: 180 }}
@@ -34,7 +33,7 @@ export function UpgradeToProButton() {
           <div className="flex flex-col items-center gap-3 text-center">
             <a
               className="cursor-pointer"
-              href={SHADCN_BLOCKS_URL}
+              href={WRAPS_URL}
               rel="noopener noreferrer"
               target="_blank"
             >
@@ -61,11 +60,7 @@ export function UpgradeToProButton() {
             </p>
             <div className="mt-2 flex w-full flex-row justify-center gap-2">
               <div className="relative w-1/2">
-                <a
-                  href={SHADCN_BLOCKS_URL}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
+                <a href={WRAPS_URL} rel="noopener noreferrer" target="_blank">
                   <Button
                     className="flex w-full cursor-pointer items-center justify-center"
                     variant="default"

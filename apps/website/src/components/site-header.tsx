@@ -44,11 +44,11 @@ export function SiteHeader() {
             >
               <a
                 className="dark:text-foreground"
-                href="https://shadcnstore.com/blocks"
+                href="https://wraps.dev"
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                Blocks
+                Wraps
               </a>
             </Button>
             <Button

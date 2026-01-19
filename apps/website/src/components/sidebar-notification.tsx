@@ -33,11 +33,11 @@ export function SidebarNotification() {
               Welcome to{" "}
               <a
                 className="text-primary hover:underline"
-                href="https://shadcnstore.com"
+                href="https://wraps.dev"
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                ShadcnStore
+                Wraps
               </a>
             </div>
           </h3>
@@ -45,7 +45,7 @@ export function SidebarNotification() {
             Explore our premium Shadcn UI{" "}
             <a
               className="text-primary underline"
-              href="https://shadcnstore.com/blocks"
+              href="https://wraps.dev"
               rel="noopener noreferrer"
               target="_blank"
             >
