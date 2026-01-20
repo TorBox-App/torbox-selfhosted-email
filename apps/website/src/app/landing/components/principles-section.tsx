@@ -34,7 +34,8 @@ const principles = [
   {
     icon: Key,
     title: "You Own It",
-    description: "Event tracking, bounce handling, and suppression lists—in your AWS account.",
+    description:
+      "Event tracking, bounce handling, and suppression lists—in your AWS account.",
   },
   {
     icon: CreditCard,

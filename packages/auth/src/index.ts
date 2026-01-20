@@ -458,7 +458,8 @@ export const auth = betterAuth<BetterAuthOptions>({
         before: async (session) => {
           // Auto-set active organization to first org user is a member of
           const memberRecord = await db.query.member.findFirst({
-            where: (members, { eq: eqFn }) => eqFn(members.userId, session.userId),
+            where: (members, { eq: eqFn }) =>
+              eqFn(members.userId, session.userId),
             orderBy: (members, { asc }) => [asc(members.createdAt)],
           });
 

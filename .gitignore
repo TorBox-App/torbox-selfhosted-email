@@ -65,3 +65,4 @@ notes/
 # SST
 .sst
 sst-env.d.ts
+.vercel

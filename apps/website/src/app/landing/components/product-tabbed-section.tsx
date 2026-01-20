@@ -1,7 +1,6 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { trackEvent } from "@/utils/analytics";
 import {
   Activity,
   ArrowRight,
@@ -27,6 +26,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { assetUrl, cn } from "@/lib/utils";
+import { trackEvent } from "@/utils/analytics";
 import { FadeIn, ScaleIn } from "./animations";
 
 type TabKey = "templates" | "broadcasts" | "automations" | "events";

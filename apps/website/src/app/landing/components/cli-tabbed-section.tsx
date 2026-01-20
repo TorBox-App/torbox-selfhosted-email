@@ -59,7 +59,8 @@ const consoleFeatures = [
   {
     icon: Globe,
     title: "Domain Management",
-    description: "Ensure your domains are configured for maximum deliverability",
+    description:
+      "Ensure your domains are configured for maximum deliverability",
   },
   {
     icon: Shield,

@@ -1,9 +1,9 @@
 "use client";
 
 import { ArrowRight, Github } from "lucide-react";
-import { trackEvent } from "@/utils/analytics";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/utils/analytics";
 import { FadeIn } from "./animations";
 
 export const CTASection = memo(function CTASection() {

@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
-import { trackEvent } from "@/utils/analytics";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -26,6 +25,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useTheme } from "@/hooks/use-theme";
+import { trackEvent } from "@/utils/analytics";
 
 const navigationItems = [
   {

@@ -92,7 +92,9 @@ export function LinkedAccounts() {
       }
 
       // Remove Google from local state
-      setAccounts(accounts.filter((account) => account.providerId !== "google"));
+      setAccounts(
+        accounts.filter((account) => account.providerId !== "google")
+      );
       toast.success("Google account unlinked successfully");
     } catch (error: any) {
       console.error("Failed to unlink Google account:", error);
@@ -137,7 +139,9 @@ export function LinkedAccounts() {
       }
 
       // Remove GitHub from local state
-      setAccounts(accounts.filter((account) => account.providerId !== "github"));
+      setAccounts(
+        accounts.filter((account) => account.providerId !== "github")
+      );
       toast.success("GitHub account unlinked successfully");
     } catch (error: any) {
       console.error("Failed to unlink GitHub account:", error);
