@@ -1,3 +1,4 @@
+import { withPostHogConfig } from "@posthog/nextjs-config";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -70,4 +71,20 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
 };
 
-export default nextConfig;
+// PostHog source map upload configuration
+// Requires POSTHOG_PERSONAL_API_KEY and POSTHOG_ENV_ID env vars
+const hasPostHogCredentials =
+  process.env.POSTHOG_PERSONAL_API_KEY && process.env.POSTHOG_ENV_ID;
+
+export default hasPostHogCredentials
+  ? withPostHogConfig(nextConfig, {
+      personalApiKey: process.env.POSTHOG_PERSONAL_API_KEY!,
+      envId: process.env.POSTHOG_ENV_ID!,
+      host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+      sourcemaps: {
+        enabled: true,
+        project: "wraps-web",
+        deleteAfterUpload: true,
+      },
+    })
+  : nextConfig;
