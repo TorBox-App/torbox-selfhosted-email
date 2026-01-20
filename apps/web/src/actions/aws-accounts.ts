@@ -877,6 +877,7 @@ export type GetVerifiedDomainsResult =
   | {
       success: false;
       error: string;
+      errorCode?: "PERMISSION_DENIED" | "UNKNOWN";
     };
 
 /**
@@ -1054,9 +1055,17 @@ export async function getVerifiedDomains(
       { err: serializeError(error) },
       "Failed to fetch verified domains"
     );
+
+    // Check for AWS permission errors
+    const isAccessDenied =
+      error instanceof Error &&
+      ((error as { name?: string }).name === "AccessDeniedException" ||
+        error.message.includes("is not authorized to perform"));
+
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to fetch domains",
+      errorCode: isAccessDenied ? "PERMISSION_DENIED" : "UNKNOWN",
     };
   }
 }

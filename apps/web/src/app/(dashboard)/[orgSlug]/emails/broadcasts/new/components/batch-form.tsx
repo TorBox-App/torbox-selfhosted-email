@@ -253,9 +253,17 @@ export function BatchForm({
           }
         }
       } else {
-        toast.error("Failed to load domains", {
-          description: result.error,
-        });
+        if (result.errorCode === "PERMISSION_DENIED") {
+          toast.error("Permission Update Required", {
+            description:
+              "Your IAM role needs updated permissions. Run: wraps platform update-role",
+            duration: Number.POSITIVE_INFINITY,
+          });
+        } else {
+          toast.error("Failed to load domains", {
+            description: result.error,
+          });
+        }
       }
     },
     [organizationId, campaignData.fromDomain]
