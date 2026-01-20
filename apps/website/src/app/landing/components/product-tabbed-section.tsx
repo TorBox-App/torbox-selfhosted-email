@@ -1,6 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import { trackEvent } from "@/utils/analytics";
 import {
   Activity,
   ArrowRight,
@@ -162,8 +163,8 @@ function BroadcastsContent() {
       </div>
 
       <p className="text-center text-muted-foreground text-sm">
-        Basic broadcasts in Starter ($10/mo). Scheduling & segments in Pro
-        ($30/mo).
+        Basic broadcasts in Starter ($10/mo). Scheduling & segments in Growth
+        ($49/mo).
       </p>
     </div>
   );
@@ -549,8 +550,16 @@ export function ProductTabbedSection() {
               className="bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
-              <a href="https://app.wraps.dev/auth?mode=signup">
-                Get Started
+              <a
+                href="https://app.wraps.dev/auth?mode=signup"
+                onClick={() =>
+                  trackEvent("cta_click", {
+                    location: "product_section",
+                    cta_text: "Get Platform",
+                  })
+                }
+              >
+                Get Platform
                 <ArrowRight className="ml-2 size-4" />
               </a>
             </Button>

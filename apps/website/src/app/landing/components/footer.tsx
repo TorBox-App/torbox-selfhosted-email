@@ -71,8 +71,8 @@ export function LandingFooter() {
               </a>
             </div>
             <p className="mb-6 text-muted-foreground max-lg:flex max-lg:justify-center max-lg:text-center">
-              Deploy production-ready email infrastructure to your AWS account.
-              Own your data, pay AWS directly, and keep full control.
+              Deploy email infrastructure with tracking, suppression, and
+              analytics to your AWS account. Own your data, pay AWS directly.
             </p>
             <div className="flex space-x-4 max-lg:justify-center">
               <Button asChild size="icon" variant="ghost">

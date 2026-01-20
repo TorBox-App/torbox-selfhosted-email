@@ -1,43 +1,14 @@
 "use client";
 
 import { ArrowRight, Check, Copy } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { useState } from "react";
 import { AsciinemaPlayer } from "@/components/asciinema-player";
 import { DotPattern } from "@/components/dot-pattern";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { assetUrl } from "@/lib/utils";
-
-const services = ["Email", "SMS", "CDN"];
-
-function RotatingService() {
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % services.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <span className="relative inline-block min-w-[80px] text-left sm:min-w-[100px]">
-      <AnimatePresence mode="wait">
-        <motion.span
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-block text-orange-500"
-          exit={{ opacity: 0, y: 30 }}
-          initial={{ opacity: 0, y: -30 }}
-          key={services[index]}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-        >
-          {services[index]}
-        </motion.span>
-      </AnimatePresence>
-    </span>
-  );
-}
+import { trackEvent } from "@/utils/analytics";
 
 const command = "npx @wraps.dev/cli email init";
 
@@ -47,6 +18,10 @@ export function HeroSection() {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(command);
     setCopied(true);
+    trackEvent("cta_click", {
+      location: "hero",
+      cta_text: "Copy CLI Command",
+    });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -88,32 +63,27 @@ export function HeroSection() {
           {/* Main Headline */}
           <motion.h1
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-5xl lg:text-6xl"
+            className="flex flex-col mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-5xl lg:text-6xl items-center"
             initial={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            Own Your <RotatingService /> Infrastructure
+            <span className="flex flex-row items-center row-span-1">
+              Deploy Email & SMS.
+            </span>
+            <span className="flex flex-row items-center row-span-1 text-orange-500">
+              Then Automate It.
+            </span>
           </motion.h1>
 
           {/* Subheadline */}
           <motion.p
             animate={{ opacity: 1, y: 0 }}
-            className="mx-auto mb-3 text-balance text-lg sm:text-xl"
+            className="mx-auto mb-10 max-w-2xl text-balance text-lg sm:text-xl"
             initial={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            One command deploys serverless pay-as-you-go infrastructure to your
-            AWS.
-          </motion.p>
-
-          {/* Platform pitch */}
-          <motion.p
-            animate={{ opacity: 1, y: 0 }}
-            className="mx-auto mb-10 text-balance text-muted-foreground"
-            initial={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-          >
-            Build workflows, templates, and broadcasts with the Wraps Platform.
+            Open-source notification infrastructure in your AWS account. Build
+            workflows, send broadcasts, pay AWS prices.
           </motion.p>
 
           {/* CTA */}
@@ -121,7 +91,7 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center justify-center gap-3 sm:flex-row"
             initial={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
           >
             <button
               aria-label={
@@ -146,8 +116,16 @@ export function HeroSection() {
               asChild
               className="h-12 cursor-pointer border-2 border-transparent bg-orange-500 px-6 text-base hover:bg-orange-600"
             >
-              <a href="/docs/quickstart">
-                Get Started Free
+              <a
+                href="/docs/quickstart"
+                onClick={() =>
+                  trackEvent("cta_click", {
+                    location: "hero",
+                    cta_text: "Deploy in 60 Seconds",
+                  })
+                }
+              >
+                Deploy in 60 Seconds
                 <ArrowRight aria-hidden="true" className="ml-2 size-4" />
               </a>
             </Button>

@@ -44,32 +44,32 @@ const consoleFeatures = [
   {
     icon: BarChart3,
     title: "Real-time Analytics",
-    description: "Track sends, deliveries, opens, clicks, bounces in real-time",
+    description: "Spot delivery issues before users complain",
   },
   {
     icon: History,
     title: "Message History",
-    description: "Search and filter through your email history with timelines",
+    description: "Debug delivery problems in seconds, not hours",
   },
   {
     icon: ListFilter,
     title: "Suppression Lists",
-    description: "View and manage bounce/complaint suppression automatically",
+    description: "Protect your sender reputation automatically",
   },
   {
     icon: Globe,
     title: "Domain Management",
-    description: "View verification status, DKIM records, and DNS config",
+    description: "Ensure your domains are configured for maximum deliverability",
   },
   {
     icon: Shield,
     title: "Reputation Metrics",
-    description: "Monitor sender reputation, bounce rates, complaint ratios",
+    description: "Catch reputation issues before they tank deliverability",
   },
   {
     icon: Key,
     title: "SMTP Credentials",
-    description: "Generate SMTP credentials for legacy integrations",
+    description: "Connect legacy systems in minutes",
   },
 ];
 
@@ -150,7 +150,7 @@ function DeployContent() {
             "Validates AWS credentials",
             "Shows cost estimates",
             "Deploys automatically",
-            "Zero stored credentials",
+            "Vercel OIDC support",
           ].map((item) => (
             <div className="flex items-center gap-2" key={item}>
               <Check className="size-4 text-orange-500" />
@@ -423,8 +423,9 @@ export function CliTabbedSection() {
             CLI + SDK + Local Console
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">
-            Deploy production-ready infrastructure to your AWS account. CLI,
-            TypeScript SDK, and local console included.
+            Deploy email infrastructure with tracking, analytics, and automatic
+            suppression to your AWS account. CLI, TypeScript SDK, and local
+            console included.
           </p>
         </FadeIn>
 

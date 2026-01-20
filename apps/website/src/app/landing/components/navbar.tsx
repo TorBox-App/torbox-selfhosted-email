@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
+import { trackEvent } from "@/utils/analytics";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -257,10 +258,16 @@ export function LandingNavbar() {
           >
             <a
               href="https://app.wraps.dev/auth?mode=signup&plan=starter"
+              onClick={() =>
+                trackEvent("cta_click", {
+                  location: "navbar_desktop",
+                  cta_text: "Get Platform",
+                })
+              }
               rel="noopener noreferrer"
               target="_blank"
             >
-              Get Started
+              Get Platform
             </a>
           </Button>
         </div>
@@ -464,11 +471,17 @@ export function LandingNavbar() {
                   >
                     <a
                       href="https://app.wraps.dev/auth?mode=signup&plan=starter"
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => {
+                        trackEvent("cta_click", {
+                          location: "navbar_mobile",
+                          cta_text: "Get Platform",
+                        });
+                        setIsOpen(false);
+                      }}
                       rel="noopener noreferrer"
                       target="_blank"
                     >
-                      Get Started
+                      Get Platform
                     </a>
                   </Button>
 

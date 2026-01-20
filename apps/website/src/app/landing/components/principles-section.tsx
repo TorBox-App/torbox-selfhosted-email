@@ -29,12 +29,12 @@ const principles = [
   {
     icon: Shield,
     title: "Zero Credentials",
-    description: "Your keys never leave your machine. Ever.",
+    description: "OIDC for Vercel. IAM roles for AWS. No stored secrets.",
   },
   {
     icon: Key,
     title: "You Own It",
-    description: "Production-ready infrastructure in your AWS account.",
+    description: "Event tracking, bounce handling, and suppression lists—in your AWS account.",
   },
   {
     icon: CreditCard,

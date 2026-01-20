@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Github } from "lucide-react";
+import { trackEvent } from "@/utils/analytics";
 import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "./animations";
@@ -16,7 +17,8 @@ export const CTASection = memo(function CTASection() {
           </p>
 
           <p className="mb-8 text-muted-foreground">
-            Deploy to your AWS in one command. No vendor lock-in. No markup.
+            Deploy to your AWS in one command. Cancel anytime—your
+            infrastructure keeps running.
           </p>
         </FadeIn>
 
@@ -27,7 +29,17 @@ export const CTASection = memo(function CTASection() {
               className="cursor-pointer bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
-              <a href="/docs/quickstart">Get Started Free</a>
+              <a
+                href="/docs/quickstart"
+                onClick={() =>
+                  trackEvent("cta_click", {
+                    location: "footer_cta",
+                    cta_text: "Free CLI Quickstart",
+                  })
+                }
+              >
+                Free CLI Quickstart
+              </a>
             </Button>
             <Button
               asChild
@@ -37,6 +49,12 @@ export const CTASection = memo(function CTASection() {
             >
               <a
                 href="https://github.com/wraps-team/wraps"
+                onClick={() =>
+                  trackEvent("cta_click", {
+                    location: "footer_cta",
+                    cta_text: "View on GitHub",
+                  })
+                }
                 rel="noopener noreferrer"
                 target="_blank"
               >
@@ -48,6 +66,13 @@ export const CTASection = memo(function CTASection() {
                 />
               </a>
             </Button>
+          </div>
+
+          {/* Trust signals */}
+          <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-muted-foreground text-sm">
+            <span>✓ No credit card</span>
+            <span>✓ Infrastructure stays if you cancel</span>
+            <span>✓ Open source</span>
           </div>
         </FadeIn>
       </div>
