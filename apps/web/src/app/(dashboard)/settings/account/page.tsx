@@ -1,6 +1,7 @@
 "use client";
 
 import { DeleteAccount } from "./components/delete-account";
+import { LinkedAccounts } from "./components/linked-accounts";
 import { PersonalInformation } from "./components/personal-information";
 
 export default function AccountSettings() {
@@ -15,6 +16,9 @@ export default function AccountSettings() {
 
       {/* Personal Information */}
       <PersonalInformation />
+
+      {/* Linked Accounts */}
+      <LinkedAccounts />
 
       {/* Danger Zone */}
       <DeleteAccount />

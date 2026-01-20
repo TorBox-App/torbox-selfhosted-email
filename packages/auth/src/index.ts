@@ -16,8 +16,60 @@ import {
   twoFactor,
 } from "better-auth/plugins";
 import { desc } from "drizzle-orm";
+import { PostHog } from "posthog-node";
 import Stripe from "stripe";
 import { handleStripeWebhook } from "./stripe-webhooks";
+
+// Initialize PostHog server client (lazy)
+let posthogClient: PostHog | null = null;
+function getPostHogClient(): PostHog | null {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+    return null;
+  }
+  if (!posthogClient) {
+    posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+      host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+      flushAt: 1,
+      flushInterval: 0,
+    });
+  }
+  return posthogClient;
+}
+
+/**
+ * Track user signup event in PostHog.
+ * Non-blocking - failures are logged but don't affect auth flow.
+ */
+function trackPostHogSignup(user: {
+  email: string;
+  name: string | null;
+  method: "email" | "google" | "github" | "passkey";
+}) {
+  try {
+    const posthog = getPostHogClient();
+    if (!posthog) return;
+
+    posthog.identify({
+      distinctId: user.email,
+      properties: {
+        email: user.email,
+        name: user.name,
+      },
+    });
+
+    posthog.capture({
+      distinctId: user.email,
+      event: "user_signed_up",
+      properties: {
+        email: user.email,
+        name: user.name,
+        method: user.method,
+      },
+    });
+  } catch (err) {
+    console.error("Error tracking PostHog signup:", err);
+  }
+}
 
 /**
  * Track user signup event for welcome automation.
@@ -219,6 +271,16 @@ export const auth = betterAuth<BetterAuthOptions>({
     schema,
   }),
   trustedOrigins: [process.env.CORS_ORIGIN || ""],
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID as string,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
@@ -338,7 +400,7 @@ export const auth = betterAuth<BetterAuthOptions>({
   ],
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
-      // Track user signup for welcome automation
+      // Track user signup for welcome automation (email/password)
       if (ctx.path.startsWith("/sign-up")) {
         const newSession = ctx.context.newSession;
         if (newSession) {
@@ -347,8 +409,47 @@ export const auth = betterAuth<BetterAuthOptions>({
             email: newSession.user.email,
             name: newSession.user.name,
           });
+          trackPostHogSignup({
+            email: newSession.user.email,
+            name: newSession.user.name,
+            method: "email",
+          });
         }
       }
+
+      // Track OAuth signup (Google, GitHub, etc.)
+      // OAuth callbacks go to /callback/:providerId
+      if (ctx.path.startsWith("/callback/")) {
+        const newSession = ctx.context.newSession;
+        // Only track if this is a new user (signup, not signin)
+        // Check if user was just created by comparing createdAt
+        if (newSession) {
+          const userCreatedAt = new Date(newSession.user.createdAt).getTime();
+          const now = Date.now();
+          const isNewUser = now - userCreatedAt < 60_000; // Created within last minute
+
+          if (isNewUser) {
+            // Extract provider from path: /callback/google -> google
+            const provider = ctx.path.split("/")[2] as
+              | "google"
+              | "github"
+              | undefined;
+
+            // Fire and forget - don't block auth flow
+            trackUserSignup({
+              email: newSession.user.email,
+              name: newSession.user.name,
+            });
+            trackPostHogSignup({
+              email: newSession.user.email,
+              name: newSession.user.name,
+              method: provider || "email",
+            });
+          }
+        }
+      }
+
+      return;
     }),
   },
   databaseHooks: {
@@ -357,7 +458,7 @@ export const auth = betterAuth<BetterAuthOptions>({
         before: async (session) => {
           // Auto-set active organization to first org user is a member of
           const memberRecord = await db.query.member.findFirst({
-            where: (members, { eq }) => eq(members.userId, session.userId),
+            where: (members, { eq: eqFn }) => eqFn(members.userId, session.userId),
             orderBy: (members, { asc }) => [asc(members.createdAt)],
           });
 
