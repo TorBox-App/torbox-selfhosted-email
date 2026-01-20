@@ -9,6 +9,8 @@ build/
 .next/
 out/
 **/lambda/**/*.mjs
+**/.bundled
+*.tsbuildinfo
 
 # Turborepo
 .turbo/
