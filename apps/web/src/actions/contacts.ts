@@ -1428,6 +1428,182 @@ export async function getContactTimeline(
 }
 
 /**
+ * Bulk create contacts from email addresses
+ * Used to create contacts from email recipients
+ */
+export async function bulkCreateContactsFromEmails(
+  organizationId: string,
+  emails: string[]
+): Promise<
+  | { success: true; created: number; skipped: number; errors: string[] }
+  | { success: false; error: string }
+> {
+  let orgSlug: string | undefined;
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+    orgSlug = access.orgSlug;
+
+    if (emails.length === 0) {
+      return { success: false, error: "No email addresses provided" };
+    }
+
+    // Deduplicate and normalize emails
+    const uniqueEmails = [
+      ...new Set(emails.map((e) => e.toLowerCase().trim()).filter(Boolean)),
+    ];
+
+    // Check contact limit
+    const limitCheck = await checkContactLimit(organizationId);
+    if (!limitCheck.allowed) {
+      return {
+        success: false,
+        error:
+          limitCheck.message ??
+          "You've reached your contact limit. Please upgrade your plan.",
+      };
+    }
+
+    // Check if we have room for all contacts
+    const remainingSlots =
+      limitCheck.limit === -1
+        ? Number.POSITIVE_INFINITY
+        : limitCheck.limit - limitCheck.current;
+
+    if (uniqueEmails.length > remainingSlots) {
+      return {
+        success: false,
+        error: `You can only add ${remainingSlots} more contact${remainingSlots === 1 ? "" : "s"} on your current plan.`,
+      };
+    }
+
+    let created = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const email of uniqueEmails) {
+      // Validate email
+      if (!email.includes("@")) {
+        errors.push(`Invalid email: ${email}`);
+        continue;
+      }
+
+      const emailHashValue = hashEmail(email);
+
+      // Check for duplicate
+      const existing = await db.query.contact.findFirst({
+        where: (c, { and, eq }) =>
+          and(
+            eq(c.organizationId, organizationId),
+            eq(c.emailHash, emailHashValue)
+          ),
+      });
+
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      // Create contact
+      try {
+        await db.insert(contact).values({
+          organizationId,
+          email,
+          emailHash: emailHashValue,
+          emailStatus: "active",
+          emailVerifiedAt: new Date(),
+          status: "active",
+          confirmedAt: new Date(),
+          createdBy: access.userId,
+        });
+        created++;
+      } catch (err) {
+        errors.push(`Failed to create contact for ${email}`);
+      }
+    }
+
+    // Revalidate
+    revalidateContacts(orgSlug);
+
+    return { success: true, created, skipped, errors };
+  } catch (error) {
+    const log = createActionLogger("bulkCreateContactsFromEmails", { orgSlug });
+    log.error(
+      { err: serializeError(error), emailCount: emails.length },
+      "Failed to bulk create contacts"
+    );
+    return { success: false, error: "Failed to create contacts" };
+  }
+}
+
+/**
+ * Check if email addresses already exist as contacts
+ * Returns a map of email -> contactId for existing contacts
+ */
+export async function checkExistingContacts(
+  organizationId: string,
+  emails: string[]
+): Promise<
+  | { success: true; existing: Record<string, string> }
+  | { success: false; error: string }
+> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    if (emails.length === 0) {
+      return { success: true, existing: {} };
+    }
+
+    // Normalize emails and compute hashes
+    const normalizedEmails = emails.map((e) => e.toLowerCase().trim());
+    const emailHashes = normalizedEmails.map((e) => hashEmail(e));
+
+    // Find existing contacts by email hash
+    const existingContacts = await db.query.contact.findMany({
+      where: (c, { and, eq, inArray }) =>
+        and(
+          eq(c.organizationId, organizationId),
+          inArray(c.emailHash, emailHashes)
+        ),
+      columns: {
+        id: true,
+        email: true,
+      },
+    });
+
+    // Build map of email -> contactId
+    const existing: Record<string, string> = {};
+    for (const contact of existingContacts) {
+      if (contact.email) {
+        existing[contact.email.toLowerCase()] = contact.id;
+      }
+    }
+
+    return { success: true, existing };
+  } catch (error) {
+    const log = createActionLogger("checkExistingContacts", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), emailCount: emails.length },
+      "Failed to check existing contacts"
+    );
+    return { success: false, error: "Failed to check contacts" };
+  }
+}
+
+/**
  * Bulk delete contacts
  */
 export async function bulkDeleteContacts(

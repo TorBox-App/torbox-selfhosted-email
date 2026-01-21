@@ -7,14 +7,25 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type RowSelectionState,
   type SortingState,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { Download, Search } from "lucide-react";
+import { Download, Search, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { bulkCreateContactsFromEmails } from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { Label } from "@/components/ui/label";
@@ -39,17 +50,27 @@ import { columns } from "./columns";
 type EmailsTableProps = {
   data: EmailListItem[];
   orgSlug: string;
+  organizationId: string;
   days: number;
 };
 
-export function EmailsTable({ data, orgSlug, days }: EmailsTableProps) {
+export function EmailsTable({
+  data,
+  orgSlug,
+  organizationId,
+  days,
+}: EmailsTableProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [sorting, setSorting] = useState<SortingState>([
     { id: "sentAt", desc: true },
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [createContactsDialogOpen, setCreateContactsDialogOpen] =
+    useState(false);
 
   // Ref for search input to enable keyboard shortcut
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +92,7 @@ export function EmailsTable({ data, orgSlug, days }: EmailsTableProps) {
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -104,14 +126,73 @@ export function EmailsTable({ data, orgSlug, days }: EmailsTableProps) {
       sorting,
       columnFilters,
       columnVisibility,
+      rowSelection,
       globalFilter,
     },
+    getRowId: (row) => row.id,
     initialState: {
       pagination: {
         pageSize: 50,
       },
     },
   });
+
+  // Get selected email IDs and extract unique recipient emails
+  const selectedEmailIds = useMemo(
+    () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
+    [rowSelection]
+  );
+
+  const uniqueRecipientEmails = useMemo(() => {
+    const emails = new Set<string>();
+    for (const emailId of selectedEmailIds) {
+      const email = data.find((e) => e.id === emailId);
+      if (email?.to) {
+        for (const recipient of email.to) {
+          emails.add(recipient.toLowerCase());
+        }
+      }
+    }
+    return [...emails];
+  }, [selectedEmailIds, data]);
+
+  // Handler for bulk create contacts
+  const handleCreateContacts = async () => {
+    if (uniqueRecipientEmails.length === 0) {
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await bulkCreateContactsFromEmails(
+        organizationId,
+        uniqueRecipientEmails
+      );
+
+      if (result.success) {
+        const messages: string[] = [];
+        if (result.created > 0) {
+          messages.push(
+            `Created ${result.created} contact${result.created === 1 ? "" : "s"}`
+          );
+        }
+        if (result.skipped > 0) {
+          messages.push(`${result.skipped} already existed`);
+        }
+        if (result.errors.length > 0) {
+          messages.push(`${result.errors.length} failed`);
+        }
+
+        toast.success("Contacts created", {
+          description: messages.join(", "),
+        });
+        setCreateContactsDialogOpen(false);
+        setRowSelection({});
+        router.refresh();
+      } else {
+        toast.error("Error", { description: result.error });
+      }
+    });
+  };
 
   const statusFilter = table.getColumn("status")?.getFilterValue() as
     | string[]
@@ -185,6 +266,18 @@ export function EmailsTable({ data, orgSlug, days }: EmailsTableProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Bulk Actions - shown when emails are selected */}
+          {selectedEmailIds.length > 0 && (
+            <Button
+              onClick={() => setCreateContactsDialogOpen(true)}
+              size="sm"
+              variant="outline"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add to contacts ({uniqueRecipientEmails.length})
+            </Button>
+          )}
 
           <Button size="icon" variant="outline">
             <Download className="h-4 w-4" />
@@ -303,6 +396,37 @@ export function EmailsTable({ data, orgSlug, days }: EmailsTableProps) {
           </Button>
         </div>
       </div>
+
+      {/* Create Contacts Confirmation Dialog */}
+      <Dialog
+        onOpenChange={setCreateContactsDialogOpen}
+        open={createContactsDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Contacts</DialogTitle>
+            <DialogDescription>
+              Create contacts from {uniqueRecipientEmails.length} unique email
+              address{uniqueRecipientEmails.length === 1 ? "" : "es"}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 text-muted-foreground text-sm">
+            Emails that already exist as contacts will be skipped automatically.
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setCreateContactsDialogOpen(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button disabled={isPending} onClick={handleCreateContacts}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              {isPending ? "Creating..." : "Create Contacts"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

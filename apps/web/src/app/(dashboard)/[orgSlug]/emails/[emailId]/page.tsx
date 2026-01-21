@@ -307,7 +307,11 @@ export default async function EmailDetailPage({
               </div>
 
               {/* To/From - Compact Grid */}
-              <EmailFields from={email.from} to={email.to} />
+              <EmailFields
+                from={email.from}
+                organizationId={orgWithMembership.id}
+                to={email.to}
+              />
             </div>
           </CardContent>
         </Card>

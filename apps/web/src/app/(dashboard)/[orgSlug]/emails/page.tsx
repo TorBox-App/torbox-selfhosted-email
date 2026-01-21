@@ -227,6 +227,7 @@ export default async function EmailsPage({
         <EmailsTable
           data={emails}
           days={Number.parseInt(days, 10)}
+          organizationId={orgWithMembership.id}
           orgSlug={orgSlug}
         />
       </div>
