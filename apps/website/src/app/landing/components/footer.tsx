@@ -122,8 +122,6 @@ export function LandingFooter() {
                   <a
                     className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
                     href={link.href}
-                    rel={link.external ? "noopener noreferrer" : undefined}
-                    target={link.external ? "_blank" : undefined}
                   >
                     {link.name}
                   </a>
