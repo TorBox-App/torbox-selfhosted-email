@@ -388,6 +388,38 @@ function calculateSMTPCredentialsCost(
 }
 
 /**
+ * Calculate cost for alerting (SNS + CloudWatch alarms)
+ *
+ * Pricing:
+ * - SNS: First 1,000 email notifications free, then $2/100k
+ * - CloudWatch Alarms: $0.10/alarm/month (standard resolution)
+ *
+ * We create 5 alarms: bounce warning, bounce critical, complaint warning, complaint critical, DLQ
+ * SNS notifications are typically very low volume (only when thresholds exceeded)
+ */
+function calculateAlertingCost(
+  config: WrapsEmailConfig
+): FeatureCost | undefined {
+  if (!config.alerts?.enabled) {
+    return;
+  }
+
+  // CloudWatch alarm cost: $0.10/alarm/month for standard resolution
+  const numAlarms = config.alerts.dlqAlerts !== false ? 5 : 4;
+  const alarmCost = numAlarms * 0.1;
+
+  // SNS cost is essentially free for alerting use cases
+  // First 1,000 email notifications/month are free
+  // We expect very few alerts (ideally zero!)
+  const snsCost = 0;
+
+  return {
+    monthly: alarmCost + snsCost,
+    description: `Reputation alerts (${numAlarms} CloudWatch alarms)`,
+  };
+}
+
+/**
  * Calculate total infrastructure costs
  *
  * @param config Email configuration
@@ -406,6 +438,7 @@ export function calculateCosts(
   const dedicatedIp = calculateDedicatedIpCost(config);
   const waf = calculateWafCost(config, emailsPerMonth);
   const smtpCredentials = calculateSMTPCredentialsCost(config);
+  const alerts = calculateAlertingCost(config);
 
   // Calculate SES base costs (always present)
   const sesEmailCost =
@@ -422,7 +455,8 @@ export function calculateCosts(
     (emailArchiving?.monthly || 0) +
     (dedicatedIp?.monthly || 0) +
     (waf?.monthly || 0) +
-    (smtpCredentials?.monthly || 0);
+    (smtpCredentials?.monthly || 0) +
+    (alerts?.monthly || 0);
 
   return {
     tracking,
@@ -433,6 +467,7 @@ export function calculateCosts(
     dedicatedIp,
     waf,
     smtpCredentials,
+    alerts,
     total: {
       monthly: totalMonthlyCost,
       perEmail: AWS_PRICING.SES_PER_EMAIL,
@@ -509,6 +544,11 @@ export function getCostSummary(
   if (costs.smtpCredentials) {
     lines.push(
       `  - ${costs.smtpCredentials.description}: ${formatCost(costs.smtpCredentials.monthly)}`
+    );
+  }
+  if (costs.alerts) {
+    lines.push(
+      `  - ${costs.alerts.description}: ${formatCost(costs.alerts.monthly)}`
     );
   }
 

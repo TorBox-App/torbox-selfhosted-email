@@ -1066,10 +1066,10 @@ export default function SESProductionArchitecture() {
                 AWS pauses sending at{" "}
                 <strong className="text-foreground">10% bounce rate</strong> or{" "}
                 <strong className="text-foreground">0.5% complaint rate</strong>
-                . Cross these thresholds and your account goes under review—emails
-                stop flowing while you scramble to fix it. A robust event
-                processing pipeline catches problems early through real-time
-                analysis and automatic suppression.
+                . Cross these thresholds and your account goes under
+                review—emails stop flowing while you scramble to fix it. A
+                robust event processing pipeline catches problems early through
+                real-time analysis and automatic suppression.
               </p>
 
               <FlowDiagram
@@ -1095,10 +1095,11 @@ export default function SESProductionArchitecture() {
                   "Target",
                   "Warning Alert",
                   "Critical Alert",
+                  "AWS Review",
                 ]}
                 rows={[
-                  ["Bounce Rate", "<2%", "2.5%", "5%"],
-                  ["Complaint Rate", "<0.1%", "0.05%", "0.1%"],
+                  ["Bounce Rate", "<2%", "2%", "4%", "5%"],
+                  ["Complaint Rate", "<0.05%", "0.05%", "0.08%", "0.1%"],
                 ]}
               />
 
@@ -1234,9 +1235,9 @@ resources:
   namespace           = "AWS/SES"
   period              = 300
   statistic           = "Maximum"
-  threshold           = 0.025  # 2.5% - warns before AWS review
+  threshold           = 0.02  # 2% - warns before AWS review (5%)
   alarm_actions       = [aws_sns_topic.alerts.arn]
-  treat_missing_data  = "ignore"
+  treat_missing_data  = "notBreaching"
 }
 
 resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
@@ -1247,13 +1248,23 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
   namespace           = "AWS/SES"
   period              = 300
   statistic           = "Maximum"
-  threshold           = 0.0005  # 0.05% - half the danger zone
+  threshold           = 0.0005  # 0.05% - warns before AWS (0.1%) and Gmail (0.3%)
   alarm_actions       = [aws_sns_topic.alerts.arn]
-  treat_missing_data  = "ignore"
+  treat_missing_data  = "notBreaching"
 }`}
                 language="hcl"
                 title="ses-alarms.tf"
               />
+
+              <Callout title="Or configure with Wraps CLI" type="success">
+                Skip the Terraform—enable these same alerts in one command:{" "}
+                <code className="text-emerald-400">wraps email upgrade</code> →
+                "Enable reputation alerts". Wraps deploys 5 CloudWatch alarms
+                with thresholds that warn <em>before</em> AWS takes action:
+                bounce rate at 2%/4% (vs AWS 5%/10%), complaint rate at
+                0.05%/0.08% (vs AWS 0.1%/0.5%), plus DLQ monitoring. You'll get
+                email notifications when your reputation needs attention.
+              </Callout>
 
               <h3 className="text-xl font-semibold mt-8 mb-4">
                 Dashboard Metrics
@@ -1337,8 +1348,8 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                 Skip the infrastructure headaches
               </h3>
               <p className="text-muted-foreground mb-4 max-w-lg mx-auto">
-                <code className="text-primary">wraps email init</code> deploys
-                7 AWS resources to your account: IAM roles, SES configuration,
+                <code className="text-primary">wraps email init</code> deploys 7
+                AWS resources to your account: IAM roles, SES configuration,
                 EventBridge rules, SQS queues, Lambda processor, and DynamoDB
                 storage. All wired together and ready to send.
               </p>

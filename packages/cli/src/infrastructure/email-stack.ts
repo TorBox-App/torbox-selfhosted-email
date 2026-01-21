@@ -2,6 +2,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import { retentionToDays } from "@wraps/core";
 import type { EmailStackConfig, StackOutputs } from "../types/index.js";
+import { createAlertingResources } from "./resources/alerting.js";
 import { createDynamoDBTables } from "./resources/dynamodb.js";
 import { createEventBridgeResources } from "./resources/eventbridge.js";
 import { createIAMRole } from "./resources/iam.js";
@@ -190,6 +191,17 @@ export async function deployEmailStack(
     });
   }
 
+  // 11. Alerting resources (if enabled)
+  let alertingResources;
+  if (emailConfig.alerts?.enabled) {
+    alertingResources = await createAlertingResources({
+      alertConfig: emailConfig.alerts,
+      configSetName: sesResources?.configSet.configurationSetName,
+      dlqName: sqsResources ? "wraps-email-events-dlq" : undefined,
+      region: config.region,
+    });
+  }
+
   // Return outputs
   return {
     roleArn: role.arn as any as string,
@@ -228,6 +240,9 @@ export async function deployEmailStack(
     smtpEndpoint: smtpResources
       ? `email-smtp.${config.region}.amazonaws.com`
       : undefined,
+    // Alerting outputs
+    alertsEnabled: emailConfig.alerts?.enabled,
+    alertTopicArn: alertingResources?.topic.arn as any as string | undefined,
   };
 }
 

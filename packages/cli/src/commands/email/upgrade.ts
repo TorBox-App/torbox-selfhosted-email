@@ -171,6 +171,15 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     console.log(`  ${pc.green("✓")} Email Archiving (${retentionLabel})`);
   }
 
+  if (config.alerts?.enabled) {
+    console.log(`  ${pc.green("✓")} Reputation Alerts`);
+    if (config.alerts.notificationEmail) {
+      console.log(
+        `    ${pc.dim("└─")} Email: ${pc.cyan(config.alerts.notificationEmail)}`
+      );
+    }
+  }
+
   // Calculate current cost
   const currentCostData = calculateCosts(config, 50_000); // Assume 50k emails/mo for estimate
   console.log(
@@ -216,6 +225,15 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         value: "dedicated-ip",
         label: "Enable dedicated IP address",
         hint: "Requires 100k+ emails/day ($50-100/mo)",
+      },
+      {
+        value: "alerts",
+        label: config.alerts?.enabled
+          ? "Manage reputation alerts"
+          : "Enable reputation alerts",
+        hint: config.alerts?.enabled
+          ? "Update thresholds or notification settings"
+          : "Get notified before AWS suspends your account",
       },
       {
         value: "custom",
@@ -773,6 +791,238 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         ...config,
         dedicatedIp: true,
       };
+      newPreset = undefined; // Custom config
+      break;
+    }
+
+    case "alerts": {
+      // Check if reputation metrics are enabled (required for alerts)
+      if (!config.reputationMetrics) {
+        clack.log.warn("Reputation metrics must be enabled to use alerting.");
+        clack.log.info(
+          "This requires the Production or Enterprise preset, or enabling reputation metrics manually."
+        );
+
+        const enableReputationMetrics = await clack.confirm({
+          message: "Enable reputation metrics now?",
+          initialValue: true,
+        });
+
+        if (
+          clack.isCancel(enableReputationMetrics) ||
+          !enableReputationMetrics
+        ) {
+          clack.cancel("Alerting not enabled.");
+          process.exit(0);
+        }
+
+        // Enable reputation metrics
+        updatedConfig = {
+          ...config,
+          reputationMetrics: true,
+        };
+      }
+
+      if (config.alerts?.enabled) {
+        // Already enabled - allow modifying or disabling
+        clack.log.info(`Alerting is currently ${pc.green("enabled")}`);
+        if (config.alerts.notificationEmail) {
+          clack.log.info(
+            `  Notification email: ${pc.cyan(config.alerts.notificationEmail)}`
+          );
+        }
+
+        const alertsAction = await clack.select({
+          message: "What would you like to do?",
+          options: [
+            {
+              value: "change-email",
+              label: "Change notification email",
+              hint: config.alerts.notificationEmail || "Not set",
+            },
+            {
+              value: "change-thresholds",
+              label: "Customize alert thresholds",
+              hint: "Adjust bounce/complaint rate thresholds",
+            },
+            {
+              value: "disable",
+              label: "Disable alerting",
+              hint: "Remove CloudWatch alarms and SNS topic",
+            },
+          ],
+        });
+
+        if (clack.isCancel(alertsAction)) {
+          clack.cancel("Upgrade cancelled.");
+          process.exit(0);
+        }
+
+        if (alertsAction === "disable") {
+          const confirmDisable = await clack.confirm({
+            message:
+              "Are you sure? You won't be notified if your reputation degrades.",
+            initialValue: false,
+          });
+
+          if (clack.isCancel(confirmDisable) || !confirmDisable) {
+            clack.log.info("Alerting not disabled.");
+            process.exit(0);
+          }
+
+          updatedConfig = {
+            ...config,
+            alerts: { enabled: false },
+          };
+        } else if (alertsAction === "change-email") {
+          const notificationEmail = await clack.text({
+            message: "Notification email address:",
+            placeholder: "alerts@yourcompany.com",
+            initialValue: config.alerts.notificationEmail || "",
+            validate: (value) => {
+              if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                return "Please enter a valid email address";
+              }
+            },
+          });
+
+          if (clack.isCancel(notificationEmail)) {
+            clack.cancel("Upgrade cancelled.");
+            process.exit(0);
+          }
+
+          updatedConfig = {
+            ...config,
+            alerts: {
+              ...config.alerts,
+              enabled: true,
+              notificationEmail: notificationEmail || undefined,
+            },
+          };
+        } else if (alertsAction === "change-thresholds") {
+          // Show current thresholds and allow customization
+          clack.log.info(`\n${pc.bold("Alert Thresholds")}`);
+          clack.log.info(
+            pc.dim("These thresholds warn you BEFORE AWS takes action:")
+          );
+          clack.log.info(pc.dim("  AWS warns at 5% bounce, 0.1% complaint"));
+          clack.log.info(pc.dim("  Gmail blocks at 0.3% complaint rate\n"));
+
+          const thresholdPreset = await clack.select({
+            message: "Choose threshold sensitivity:",
+            options: [
+              {
+                value: "standard",
+                label: "Standard (recommended)",
+                hint: "Bounce: 2%/4%, Complaint: 0.05%/0.08%",
+              },
+              {
+                value: "strict",
+                label: "Strict (enterprise)",
+                hint: "Bounce: 1%/2%, Complaint: 0.03%/0.05%",
+              },
+              {
+                value: "relaxed",
+                label: "Relaxed",
+                hint: "Bounce: 3%/5%, Complaint: 0.08%/0.1%",
+              },
+            ],
+          });
+
+          if (clack.isCancel(thresholdPreset)) {
+            clack.cancel("Upgrade cancelled.");
+            process.exit(0);
+          }
+
+          const thresholdConfigs = {
+            standard: {
+              bounceRateWarning: 0.02,
+              bounceRateCritical: 0.04,
+              complaintRateWarning: 0.0005,
+              complaintRateCritical: 0.0008,
+            },
+            strict: {
+              bounceRateWarning: 0.01,
+              bounceRateCritical: 0.02,
+              complaintRateWarning: 0.0003,
+              complaintRateCritical: 0.0005,
+            },
+            relaxed: {
+              bounceRateWarning: 0.03,
+              bounceRateCritical: 0.05,
+              complaintRateWarning: 0.0008,
+              complaintRateCritical: 0.001,
+            },
+          };
+
+          updatedConfig = {
+            ...config,
+            alerts: {
+              ...config.alerts,
+              enabled: true,
+              thresholds:
+                thresholdConfigs[
+                  thresholdPreset as keyof typeof thresholdConfigs
+                ],
+            },
+          };
+        }
+      } else {
+        // Not enabled - prompt to enable
+        clack.log.info(`\n${pc.bold("Reputation Alerts")}\n`);
+        clack.log.info(
+          pc.dim("Get notified when your email reputation is at risk:")
+        );
+        clack.log.info(pc.dim("  - Bounce rate warnings (before AWS review)"));
+        clack.log.info(
+          pc.dim("  - Complaint rate warnings (before Gmail blocks you)")
+        );
+        clack.log.info(pc.dim("  - DLQ alerts (event processing failures)"));
+        clack.log.info(pc.dim("\nCost: ~$0.50/mo (5 CloudWatch alarms)\n"));
+
+        const enableAlerts = await clack.confirm({
+          message: "Enable reputation alerts?",
+          initialValue: true,
+        });
+
+        if (clack.isCancel(enableAlerts) || !enableAlerts) {
+          clack.log.info("Alerting not enabled.");
+          process.exit(0);
+        }
+
+        const notificationEmail = await clack.text({
+          message: "Notification email address:",
+          placeholder: "alerts@yourcompany.com",
+          validate: (value) => {
+            if (!value) {
+              return "Email address is required for alerts";
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              return "Please enter a valid email address";
+            }
+          },
+        });
+
+        if (clack.isCancel(notificationEmail)) {
+          clack.cancel("Upgrade cancelled.");
+          process.exit(0);
+        }
+
+        clack.log.info(
+          pc.dim("\nYou'll receive an email to confirm your subscription.")
+        );
+
+        updatedConfig = {
+          ...config,
+          reputationMetrics: true, // Required for alerts
+          alerts: {
+            enabled: true,
+            notificationEmail: notificationEmail as string,
+            dlqAlerts: true,
+            // Uses default thresholds
+          },
+        };
+      }
       newPreset = undefined; // Custom config
       break;
     }
@@ -1560,6 +1810,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   }
   if (updatedConfig.smtpCredentials?.enabled) {
     enabledFeatures.push("smtp_credentials");
+  }
+  if (updatedConfig.alerts?.enabled) {
+    enabledFeatures.push("alerts");
   }
 
   trackServiceUpgrade("email", {

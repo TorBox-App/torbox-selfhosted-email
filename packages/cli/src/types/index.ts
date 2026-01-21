@@ -23,6 +23,9 @@ export type {
 } from "./cdn.js";
 // Re-export email types
 export type {
+  AlertConfig,
+  AlertSeverity,
+  AlertThresholds,
   EmailConfigOptions,
   EmailConfigPreset,
   EmailConnectOptions,
@@ -40,6 +43,7 @@ export type {
   WrapsEmailFeature,
   WrapsEmailFeatureMetadata,
 } from "./email.js";
+export { DEFAULT_ALERT_THRESHOLDS } from "./email.js";
 // Re-export shared types
 export type {
   ArchiveRetention,

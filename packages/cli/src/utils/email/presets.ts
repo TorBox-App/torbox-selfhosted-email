@@ -31,6 +31,10 @@ export const STARTER_PRESET: WrapsEmailConfig = {
     enabled: false,
     retention: "30days",
   },
+  // Alerting disabled for starter (no reputation metrics)
+  alerts: {
+    enabled: false,
+  },
   sendingEnabled: true,
 };
 
@@ -72,6 +76,12 @@ export const PRODUCTION_PRESET: WrapsEmailConfig = {
   emailArchiving: {
     enabled: false, // User can opt-in
     retention: "90days",
+  },
+  // Alerting enabled - warns before AWS/Gmail take action
+  alerts: {
+    enabled: true,
+    dlqAlerts: true,
+    // Uses default thresholds: bounce 2%/4%, complaint 0.05%/0.08%
   },
   sendingEnabled: true,
 };
@@ -116,6 +126,18 @@ export const ENTERPRISE_PRESET: WrapsEmailConfig = {
   emailArchiving: {
     enabled: false, // User can opt-in
     retention: "1year",
+  },
+  // Alerting with stricter thresholds for high-volume senders
+  alerts: {
+    enabled: true,
+    dlqAlerts: true,
+    thresholds: {
+      // Stricter thresholds for enterprise - catch issues earlier
+      bounceRateWarning: 0.01, // 1% (vs 2% default)
+      bounceRateCritical: 0.02, // 2% (vs 4% default)
+      complaintRateWarning: 0.0003, // 0.03% (vs 0.05% default)
+      complaintRateCritical: 0.0005, // 0.05% (vs 0.08% default)
+    },
   },
   dedicatedIp: true,
   sendingEnabled: true,
@@ -198,6 +220,7 @@ export function getPresetInfo(preset: ConfigPreset): PresetInfo {
         "Reputation tracking",
         "Real-time event tracking (EventBridge)",
         "90-day email history storage",
+        "Reputation alerts (bounce/complaint rate monitoring)",
         "Optional: Email archiving with rendered viewer",
         "Complete event visibility",
       ],
@@ -211,6 +234,7 @@ export function getPresetInfo(preset: ConfigPreset): PresetInfo {
         "Everything in Production",
         "Dedicated IP address",
         "1-year email history",
+        "Stricter alert thresholds (catch issues earlier)",
         "Optional: 1-year+ email archiving",
         "All event types tracked",
         "Priority support eligibility",

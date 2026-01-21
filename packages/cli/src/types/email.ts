@@ -74,6 +74,9 @@ export type WrapsEmailConfig = {
     createdAt?: string; // Track when credentials were created
   };
 
+  // Alerting configuration
+  alerts?: AlertConfig;
+
   // Advanced options
   ipPool?: string;
   dedicatedIp?: boolean;
@@ -101,6 +104,7 @@ export type EmailFeatureCostBreakdown = {
   dedicatedIp?: FeatureCost;
   waf?: FeatureCost;
   smtpCredentials?: FeatureCost;
+  alerts?: FeatureCost;
   total: FeatureCost;
 };
 
@@ -155,6 +159,9 @@ export type EmailStackOutputs = {
   smtpUsername?: string;
   smtpPassword?: string;
   smtpEndpoint?: string;
+  // Alerting outputs
+  alertsEnabled?: boolean;
+  alertTopicArn?: string;
 };
 
 /**
@@ -167,6 +174,60 @@ export type EmailInitOptions = {
   preset?: EmailConfigPreset;
   yes?: boolean;
   preview?: boolean;
+};
+
+/**
+ * Alert severity levels
+ */
+export type AlertSeverity = "warning" | "critical";
+
+/**
+ * Alert threshold configuration
+ * All rates are expressed as decimals (e.g., 0.02 = 2%)
+ */
+export type AlertThresholds = {
+  /** Bounce rate warning threshold (default: 0.02 = 2%) */
+  bounceRateWarning?: number;
+  /** Bounce rate critical threshold (default: 0.04 = 4%) */
+  bounceRateCritical?: number;
+  /** Complaint rate warning threshold (default: 0.0005 = 0.05%) */
+  complaintRateWarning?: number;
+  /** Complaint rate critical threshold (default: 0.0008 = 0.08%) */
+  complaintRateCritical?: number;
+  /** DLQ message count to trigger alarm (default: 1) */
+  dlqMessageThreshold?: number;
+};
+
+/**
+ * Default alert thresholds - designed to warn BEFORE AWS/Gmail take action
+ *
+ * AWS thresholds: Bounce 5% warning, 10% suspend | Complaint 0.1% warning, 0.5% suspend
+ * Gmail: Blocks at 0.3% complaint rate
+ *
+ * Our thresholds give you time to fix issues before hitting these limits.
+ */
+export const DEFAULT_ALERT_THRESHOLDS: Required<AlertThresholds> = {
+  bounceRateWarning: 0.02, // 2% - gives time before AWS 5% warning
+  bounceRateCritical: 0.04, // 4% - urgent, approaching AWS warning
+  complaintRateWarning: 0.0005, // 0.05% - half of AWS warning threshold
+  complaintRateCritical: 0.0008, // 0.08% - urgent, approaching AWS 0.1% warning
+  dlqMessageThreshold: 1, // Any failed message processing
+};
+
+/**
+ * Alerting configuration
+ */
+export type AlertConfig = {
+  /** Enable alerting (default: true for production/enterprise presets) */
+  enabled: boolean;
+  /** Email address for alert notifications */
+  notificationEmail?: string;
+  /** Webhook URL for alert notifications (Slack, Discord, PagerDuty, etc.) */
+  webhookUrl?: string;
+  /** Custom thresholds (uses sensible defaults if not specified) */
+  thresholds?: AlertThresholds;
+  /** Alert on DLQ messages (event processing failures) */
+  dlqAlerts?: boolean;
 };
 
 /**
