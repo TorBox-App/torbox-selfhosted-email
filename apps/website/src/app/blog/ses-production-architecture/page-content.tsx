@@ -867,8 +867,8 @@ export default function SESProductionArchitecture() {
           </h1>
           <p className="max-w-2xl text-lg text-muted-foreground">
             Everything you need to deploy SES at scale: dedicated IPs, bounce
-            handling, rate limiting, and the configuration patterns that keep
-            your sender reputation intact.
+            handling, rate limiting, and the patterns that protect your sender
+            reputation—and keep your emails out of spam folders.
           </p>
           <div className="flex items-center gap-4 mt-8 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
@@ -898,11 +898,11 @@ export default function SESProductionArchitecture() {
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 Amazon SES is deceptively simple to start with—verify a domain,
-                call the API, emails flow. But production deployments require a
-                constellation of supporting services: EventBridge for event
-                routing, SQS for durability, Lambda for processing, CloudWatch
-                for monitoring, and careful IP management to protect your sender
-                reputation.
+                call the API, emails flow. But production deployments need
+                supporting infrastructure: EventBridge routes events, SQS
+                ensures durability, Lambda processes data, and CloudWatch
+                monitors health. Without these, you're flying blind when
+                deliverability drops.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-6">
                 Here's what a production-ready SES architecture looks like—and
@@ -945,8 +945,9 @@ export default function SESProductionArchitecture() {
               <p className="text-muted-foreground leading-relaxed mb-6">
                 SES offers three IP strategies with distinct economics. Shared
                 IPs work for most startups, but high-volume senders need
-                dedicated IPs to isolate their reputation from other AWS
-                customers.
+                dedicated IPs to isolate their reputation. On shared IPs, if
+                another sender gets flagged for spam, your deliverability
+                suffers too—even if you did nothing wrong.
               </p>
 
               <Table
@@ -974,10 +975,11 @@ export default function SESProductionArchitecture() {
               />
 
               <Callout title="IP Warming Reality Check" type="warning">
-                New dedicated IPs need ~1,000 emails/day per major ISP to
-                maintain reputation. Drop below this threshold and your "warm"
-                IP cools off, requiring re-warming. Managed IPs solve this by
-                auto-routing overflow through shared pools.
+                New dedicated IPs typically need consistent daily volume per
+                major ISP to maintain reputation—AWS recommends ramping
+                gradually over 45 days. Drop below your established volume and
+                the IP cools off, requiring re-warming. Managed IPs solve this
+                by auto-routing overflow through shared pools.
               </Callout>
 
               <h3 className="text-xl font-semibold mt-8 mb-4">
@@ -1006,10 +1008,12 @@ export default function SESProductionArchitecture() {
                 Configuration Set Architecture
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                Configuration sets are the organizational backbone of production
-                SES. They control event tracking, IP routing, and suppression
-                behavior per email type. Large deployments may use 3-6
-                configuration sets for different email types.
+                Configuration sets let you separate email types so they don't
+                affect each other's reputation. A promotional campaign with high
+                unsubscribes won't hurt your password reset deliverability. Each
+                set controls its own event tracking, IP routing, and suppression
+                behavior. Large deployments use 3-6 configuration sets for
+                different email types.
               </p>
 
               <FlowDiagram
@@ -1062,8 +1066,10 @@ export default function SESProductionArchitecture() {
                 AWS pauses sending at{" "}
                 <strong className="text-foreground">10% bounce rate</strong> or{" "}
                 <strong className="text-foreground">0.5% complaint rate</strong>
-                . A robust event processing pipeline captures all email events
-                in real-time for analysis and automatic suppression.
+                . Cross these thresholds and your account goes under review—emails
+                stop flowing while you scramble to fix it. A robust event
+                processing pipeline catches problems early through real-time
+                analysis and automatic suppression.
               </p>
 
               <FlowDiagram
@@ -1157,9 +1163,12 @@ export async function handler(event) {
                 Rate Limiting Architecture
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                SES quotas are rolling 24-hour windows. Default production
-                quotas start around 50,000 emails/day and 14 emails/second.
-                Queue-based architectures smooth out burst traffic.
+                SES quotas use rolling 24-hour windows—your limit resets
+                continuously, not at midnight. Default production quotas start
+                around 50,000 emails/day and 14 emails/second. Without a buffer,
+                a sudden spike in signups exhausts your quota and delays
+                critical emails like password resets. Queue-based architectures
+                absorb bursts so SES processes them at a sustainable rate.
               </p>
 
               <FlowDiagram
@@ -1282,8 +1291,8 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                 Common Mistakes That Kill Deliverability
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                These patterns consistently damage sender reputation. Avoid
-                them:
+                These mistakes can wreck months of careful reputation building.
+                We've seen them tank otherwise healthy sender accounts:
               </p>
 
               <div className="space-y-4">
@@ -1302,7 +1311,7 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                   },
                   {
                     title: "Sudden volume spikes",
-                    desc: "ISPs interpret sudden increases as spam behavior. Scale 20-30% per week max.",
+                    desc: "ISPs interpret sudden increases as spam behavior. Scale gradually—doubling overnight is a red flag.",
                   },
                   {
                     title: "Region confusion",
@@ -1325,18 +1334,24 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
             {/* CTA */}
             <section className="mt-20 p-8 rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-primary/5 text-center">
               <h3 className="text-2xl font-bold mb-3">
-                Get this entire architecture in one command
+                Skip the infrastructure headaches
               </h3>
-              <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+              <p className="text-muted-foreground mb-4 max-w-lg mx-auto">
                 <code className="text-primary">wraps email init</code> deploys
-                production-ready SES infrastructure to your AWS account:
-                EventBridge routing, SQS with DLQ, Lambda processing, DynamoDB
-                storage, and full event tracking. All in under 2 minutes.
+                7 AWS resources to your account: IAM roles, SES configuration,
+                EventBridge rules, SQS queues, Lambda processor, and DynamoDB
+                storage. All wired together and ready to send.
+              </p>
+              <p className="text-muted-foreground mb-6 max-w-lg mx-auto text-sm">
+                You own everything—no vendor lock-in. Pay only AWS pricing
+                (~$0.10 per 1,000 emails). Don't like it?{" "}
+                <code className="text-primary">wraps email destroy</code>{" "}
+                removes everything cleanly.
               </p>
               <div className="flex items-center justify-center gap-4 flex-wrap">
                 <Button asChild size="lg">
                   <a href="/docs/quickstart/email">
-                    Deploy Now
+                    Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
@@ -1344,6 +1359,9 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                   <a href="/cli">View All Resources Deployed</a>
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground mt-4">
+                You'll need: AWS credentials and a verified domain. That's it.
+              </p>
             </section>
           </article>
         </div>
