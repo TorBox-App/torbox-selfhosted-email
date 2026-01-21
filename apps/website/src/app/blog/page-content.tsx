@@ -5,6 +5,7 @@ import {
   Calendar,
   Clock,
   FileCheck,
+  Network,
   Server,
   Shield,
 } from "lucide-react";
@@ -64,6 +65,16 @@ const posts: BlogPost[] = [
     readTime: "15 min read",
     icon: <FileCheck className="h-6 w-6" />,
     image: "/blog/get-out-of-sandbox.png",
+  },
+  {
+    slug: "ses-production-architecture",
+    title: "AWS SES Production Architecture Guide",
+    description:
+      "Everything you need to deploy SES at scale: dedicated IPs, bounce handling, rate limiting, configuration sets, and the patterns that protect your sender reputation.",
+    category: "Architecture",
+    date: "January 2026",
+    readTime: "15 min read",
+    icon: <Network className="h-6 w-6" />,
   },
 ];
 
