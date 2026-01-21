@@ -17,11 +17,8 @@ const footerLinks = {
     { name: "Quickstart", href: "/docs/quickstart" },
     { name: "CLI Reference", href: "/docs/cli-reference" },
     { name: "SDK Reference", href: "/docs/sdk-reference" },
-    {
-      name: "GitHub",
-      href: "https://github.com/wraps-team/wraps",
-      external: true,
-    },
+    { name: "CDK Reference", href: "/docs/cdk-reference" },
+    { name: "Pulumi Reference", href: "/docs/pulumi-reference" },
   ],
   resources: [
     { name: "Email Tools", href: "/tools" },
