@@ -16,10 +16,10 @@ export function StepProgress({ steps, currentStep }: StepProgressProps) {
 
   return (
     <Stepper
-      value={currentStep}
+      aria-label="Onboarding progress"
       className="w-full items-start"
       role="navigation"
-      aria-label="Onboarding progress"
+      value={currentStep}
     >
       {steps.map((step, index) => {
         const stepNumber = index + 1;
@@ -30,14 +30,14 @@ export function StepProgress({ steps, currentStep }: StepProgressProps) {
 
         return (
           <StepperItem
+            className={`!flex-col !items-center ${isLast ? "!flex-none" : ""}`}
             key={step}
             step={stepNumber}
-            className={`!flex-col !items-center ${isLast ? "!flex-none" : ""}`}
           >
             <div className="flex w-full items-center">
               <StepperTrigger
-                aria-labelledby={labelId}
                 aria-current={isActive ? "step" : undefined}
+                aria-labelledby={labelId}
               >
                 <StepperIndicator className="size-11 text-sm shrink-0" />
                 <span className="sr-only">
@@ -49,10 +49,10 @@ export function StepProgress({ steps, currentStep }: StepProgressProps) {
               {!isLast && <StepperSeparator className="!m-0" />}
             </div>
             <span
-              id={labelId}
               className={`mt-2 self-start translate-x-[calc(-50%+22px)] whitespace-nowrap font-medium text-xs ${
                 isActive ? "text-foreground" : "text-muted-foreground"
               }`}
+              id={labelId}
             >
               {step}
             </span>

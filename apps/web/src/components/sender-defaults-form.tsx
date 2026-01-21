@@ -165,16 +165,14 @@ export function SenderDefaultsForm({
               setCurrentFromDomain(firstDomain.identity);
             }
           }
+        } else if (result.errorCode === "PERMISSION_DENIED") {
+          toast.error("Permission Update Required", {
+            description:
+              "Your IAM role needs updated permissions. Run: wraps platform update-role",
+            duration: Number.POSITIVE_INFINITY,
+          });
         } else {
-          if (result.errorCode === "PERMISSION_DENIED") {
-            toast.error("Permission Update Required", {
-              description:
-                "Your IAM role needs updated permissions. Run: wraps platform update-role",
-              duration: Number.POSITIVE_INFINITY,
-            });
-          } else {
-            toast.error("Failed to load verified domains");
-          }
+          toast.error("Failed to load verified domains");
         }
       } catch {
         toast.error("Failed to load verified domains");
