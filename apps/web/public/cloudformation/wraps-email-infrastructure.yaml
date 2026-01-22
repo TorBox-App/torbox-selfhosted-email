@@ -616,10 +616,30 @@ Resources:
         - Id: "WrapsWebhookTarget"
           Arn: "arn:aws:events:us-east-1:905130073023:event-bus/wraps-customer-events"
           RoleArn: !GetAtt WrapsWebhookRole.Arn
-          HttpParameters:
-            HeaderParameters:
-              X-Wraps-Organization-Id: !Ref WrapsOrganizationId
-              X-Wraps-Webhook-Secret: !Ref WrapsWebhookSecret
+          InputTransformer:
+            InputPathsMap:
+              detail: "$.detail"
+              detailType: "$.detail-type"
+              source: "$.source"
+              account: "$.account"
+              region: "$.region"
+              time: "$.time"
+              id: "$.id"
+            InputTemplate: !Sub |
+              {
+                "version": "0",
+                "id": <id>,
+                "detail-type": <detailType>,
+                "source": <source>,
+                "account": <account>,
+                "time": <time>,
+                "region": <region>,
+                "detail": <detail>,
+                "wraps": {
+                  "organizationId": "${WrapsOrganizationId}",
+                  "webhookSecret": "${WrapsWebhookSecret}"
+                }
+              }
 
   WrapsWebhookRole:
     Type: AWS::IAM::Role
