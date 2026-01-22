@@ -16,6 +16,7 @@ export const authClient = createAuthClient({
     organizationClient(),
     stripeClient({
       subscription: true,
+      organization: true,
     }),
   ],
 });

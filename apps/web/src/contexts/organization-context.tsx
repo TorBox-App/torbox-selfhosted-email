@@ -43,6 +43,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           logo: item.logo || null,
           brandColor: item.brandColor || null,
           metadata: item.metadata || null,
+          stripeOrganizationId: item.stripeOrganizationId || null,
           createdAt: new Date(item.createdAt),
         }));
         setOrganizations(orgs);
@@ -73,6 +74,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
           logo: orgData.logo || null,
           brandColor: orgData.brandColor || null,
           metadata: orgData.metadata || null,
+          stripeOrganizationId: orgData.stripeOrganizationId || null,
           createdAt: orgData.createdAt
             ? new Date(orgData.createdAt)
             : new Date(),
