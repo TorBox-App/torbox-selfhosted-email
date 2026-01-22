@@ -184,8 +184,8 @@ export async function POST(request: Request, context: RouteContext) {
           accountId,
           region,
           roleArn,
-          // Generate a placeholder external ID for infrastructure deployments
-          externalId: `infrastructure-${Date.now()}`,
+          // Save the actual external ID from the CloudFormation stack
+          externalId,
           isVerified: true,
           lastVerifiedAt: new Date(),
           createdBy: session.user.id,
