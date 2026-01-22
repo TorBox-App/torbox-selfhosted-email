@@ -5,7 +5,7 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: "Vercel OIDC Configuration (Required)"
+          default: "Vercel OIDC Configuration (Optional)"
         Parameters:
           - VercelTeamSlug
           - VercelProjectName
@@ -37,16 +37,16 @@ Metadata:
           - WrapsWebhookSecret
 
 Parameters:
-  # Required - Vercel OIDC
+  # Optional - Vercel OIDC (leave empty if not using Vercel)
   VercelTeamSlug:
     Type: String
-    Description: "Your Vercel team slug (e.g., 'my-team')"
-    MinLength: 1
+    Description: "Your Vercel team slug (e.g., 'my-team') - leave empty if not using Vercel"
+    Default: ""
 
   VercelProjectName:
     Type: String
-    Description: "Your Vercel project name (e.g., 'my-app')"
-    MinLength: 1
+    Description: "Your Vercel project name (e.g., 'my-app') - leave empty if not using Vercel"
+    Default: ""
 
   # Optional - Domain
   Domain:
@@ -127,6 +127,12 @@ Parameters:
     NoEcho: true
 
 Conditions:
+  HasVercelOIDC: !And
+    - !Not [!Equals [!Ref VercelTeamSlug, ""]]
+    - !Not [!Equals [!Ref VercelProjectName, ""]]
+  NoVercelOIDC: !Or
+    - !Equals [!Ref VercelTeamSlug, ""]
+    - !Equals [!Ref VercelProjectName, ""]
   HasDomain: !Not [!Equals [!Ref Domain, ""]]
   HasEventTracking: !Equals [!Ref EnableEventTracking, "true"]
   HasHistoryStorage: !And
@@ -139,10 +145,11 @@ Conditions:
 
 Resources:
   # ===========================================
-  # OIDC Provider for Vercel
+  # OIDC Provider for Vercel (Conditional)
   # ===========================================
   VercelOIDCProvider:
     Type: AWS::IAM::OIDCProvider
+    Condition: HasVercelOIDC
     Properties:
       Url: "https://oidc.vercel.com"
       ClientIdList:
@@ -154,13 +161,14 @@ Resources:
           Value: wraps-cloudformation
 
   # ===========================================
-  # IAM Role for SDK Authentication
+  # IAM Role for SDK Authentication (Vercel OIDC)
   # ===========================================
-  WrapsEmailRole:
+  WrapsEmailRoleVercel:
     Type: AWS::IAM::Role
+    Condition: HasVercelOIDC
     Properties:
       RoleName: "wraps-email-role"
-      Description: "IAM role for Wraps SDK to send emails via SES"
+      Description: "IAM role for Wraps SDK to send emails via SES (Vercel OIDC)"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -228,25 +236,83 @@ Resources:
           Value: wraps-cloudformation
 
   # ===========================================
-  # SES Configuration Set
+  # IAM Role for SDK Authentication (Non-Vercel)
   # ===========================================
-  WrapsEmailConfigSet:
-    Type: AWS::SESv2::ConfigurationSet
+  WrapsEmailRoleStandard:
+    Type: AWS::IAM::Role
+    Condition: NoVercelOIDC
     Properties:
-      ConfigurationSetName: "wraps-email-tracking"
-      DeliveryOptions:
-        TlsPolicy: !If [HasTLS, "REQUIRE", "OPTIONAL"]
-      ReputationOptions:
-        ReputationMetricsEnabled: !If [HasReputationMetrics, true, false]
-      SendingOptions:
-        SendingEnabled: true
-      SuppressionOptions:
-        SuppressedReasons:
-          - BOUNCE
-          - COMPLAINT
+      RoleName: "wraps-email-role"
+      Description: "IAM role for Wraps SDK to send emails via SES"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # Allow IAM users/roles from the same account to assume this role
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "wraps-email-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # SES Sending Permissions
+              - Sid: "SESSending"
+                Effect: Allow
+                Action:
+                  - "ses:SendEmail"
+                  - "ses:SendRawEmail"
+                  - "ses:SendTemplatedEmail"
+                  - "ses:SendBulkTemplatedEmail"
+                  - "ses:SendBulkEmail"
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    "ses:ConfigurationSetName": "wraps-email-tracking"
+
+              # SES Read Permissions
+              - Sid: "SESRead"
+                Effect: Allow
+                Action:
+                  - "ses:GetSendQuota"
+                  - "ses:GetSendStatistics"
+                  - "ses:GetAccount"
+                Resource: "*"
+
+              # CloudWatch Metrics
+              - Sid: "CloudWatchMetrics"
+                Effect: Allow
+                Action:
+                  - "cloudwatch:GetMetricData"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:ListMetrics"
+                Resource: "*"
+
+              # DynamoDB - History Table (conditional)
+              - !If
+                - HasHistoryStorage
+                - Sid: "DynamoDBAccess"
+                  Effect: Allow
+                  Action:
+                    - "dynamodb:Query"
+                    - "dynamodb:GetItem"
+                    - "dynamodb:BatchGetItem"
+                  Resource:
+                    - !GetAtt WrapsEmailHistoryTable.Arn
+                    - !Sub "${WrapsEmailHistoryTable.Arn}/index/*"
+                - !Ref AWS::NoValue
       Tags:
         - Key: ManagedBy
           Value: wraps-cloudformation
+
+  # ===========================================
+  # SES Configuration Set
+  # ===========================================
+  WrapsEmailConfigSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties:
+      Name: "wraps-email-tracking"
 
   # ===========================================
   # SES Domain Identity (Conditional)
@@ -256,31 +322,20 @@ Resources:
     Condition: HasDomain
     Properties:
       EmailIdentity: !Ref Domain
-      ConfigurationSetAttributes:
-        ConfigurationSetName: !Ref WrapsEmailConfigSet
       DkimSigningAttributes:
         NextSigningKeyLength: RSA_2048_BIT
-
-  WrapsEmailMailFromAttributes:
-    Type: AWS::SESv2::EmailIdentityMailFromAttributes
-    Condition: HasDomain
-    DependsOn: WrapsEmailDomainIdentity
-    Properties:
-      EmailIdentity: !Ref Domain
-      MailFromDomain: !Sub "${MailFromSubdomain}.${Domain}"
-      BehaviorOnMxFailure: USE_DEFAULT_VALUE
 
   # ===========================================
   # EventBridge Event Destination (Conditional)
   # ===========================================
   WrapsEmailEventDestination:
-    Type: AWS::SESv2::ConfigurationSetEventDestination
+    Type: AWS::SES::ConfigurationSetEventDestination
     Condition: HasEventTracking
     DependsOn: WrapsEmailConfigSet
     Properties:
       ConfigurationSetName: "wraps-email-tracking"
-      EventDestinationName: "wraps-email-eventbridge"
       EventDestination:
+        Name: "wraps-email-eventbridge"
         Enabled: true
         MatchingEventTypes: !Ref EventTypes
         EventBridgeDestination:
@@ -559,7 +614,7 @@ Resources:
       State: ENABLED
       Targets:
         - Id: "WrapsWebhookTarget"
-          Arn: !Sub "arn:aws:events:us-east-1:654654531039:event-bus/wraps-customer-events"
+          Arn: "arn:aws:events:us-east-1:654654531039:event-bus/wraps-customer-events"
           RoleArn: !GetAtt WrapsWebhookRole.Arn
           HttpParameters:
             HeaderParameters:
@@ -681,7 +736,10 @@ Outputs:
   # Core Outputs
   RoleArn:
     Description: "IAM role ARN for SDK authentication (set as WRAPS_AWS_ROLE_ARN)"
-    Value: !GetAtt WrapsEmailRole.Arn
+    Value: !If
+      - HasVercelOIDC
+      - !GetAtt WrapsEmailRoleVercel.Arn
+      - !GetAtt WrapsEmailRoleStandard.Arn
     Export:
       Name: "WrapsEmailRoleArn"
 
@@ -783,9 +841,9 @@ Outputs:
 
   # Environment Variables (convenience output)
   EnvironmentVariables:
-    Description: "Environment variables to set in your application"
+    Description: "Environment variables to set in your application (copy RoleArn from above)"
     Value: !Sub |
-      WRAPS_AWS_ROLE_ARN=${WrapsEmailRole.Arn}
+      WRAPS_AWS_ROLE_ARN=<copy from RoleArn output above>
       WRAPS_AWS_REGION=${AWS::Region}
       WRAPS_CONFIG_SET=wraps-email-tracking
 

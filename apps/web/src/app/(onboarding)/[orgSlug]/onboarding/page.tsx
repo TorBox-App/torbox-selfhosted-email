@@ -135,6 +135,25 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     enabled: !!orgSlug,
   });
 
+  // Skip billing step if user already has an active subscription
+  const hasSkippedBilling = useRef(false);
+  useEffect(() => {
+    if (
+      !isInitialized ||
+      !onboardingStatus ||
+      hasSkippedBilling.current ||
+      hasShownSubscribedToast.current
+    ) {
+      return;
+    }
+
+    // If user has active subscription and is on billing step (step 2), skip to deploy step
+    if (onboardingStatus.hasActiveSubscription && currentStep === 2) {
+      hasSkippedBilling.current = true;
+      setCurrentStep(3);
+    }
+  }, [isInitialized, onboardingStatus, currentStep]);
+
   // Find the organization that matches the orgSlug
   const currentOrg = organizations?.find(
     (org) => org.slug === orgSlug || org.id === orgSlug

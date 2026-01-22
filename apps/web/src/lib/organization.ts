@@ -27,11 +27,13 @@ export const getOrganizationById = cache(async (id: string) => {
 
 /**
  * Get organization with user's membership
+ * Accepts either slug or organization ID
  */
 export const getOrganizationWithMembership = cache(
-  async (slug: string, userId: string) => {
+  async (slugOrId: string, userId: string) => {
+    // Try to find by slug first, then by ID
     const org = await db.query.organization.findFirst({
-      where: eq(organization.slug, slug),
+      where: or(eq(organization.slug, slugOrId), eq(organization.id, slugOrId)),
     });
 
     if (!org) {

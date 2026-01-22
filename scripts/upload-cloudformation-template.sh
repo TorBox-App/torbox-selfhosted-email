@@ -10,12 +10,6 @@ BUCKET_NAME="wraps-assets"
 REGION="us-east-1"
 BACKEND_ACCOUNT_ID="${AWS_BACKEND_ACCOUNT_ID:-654654531039}"
 
-# Templates to upload
-declare -A TEMPLATES=(
-  ["apps/web/public/cloudformation/wraps-console-access-role.yaml"]="cloudformation/wraps-console-access-role.yaml"
-  ["apps/web/public/cloudformation/wraps-email-infrastructure.yaml"]="cloudformation/wraps-email-infrastructure.yaml"
-)
-
 echo "📦 Uploading CloudFormation templates to S3..."
 echo "Bucket: s3://${BUCKET_NAME}"
 echo "Backend Account ID: ${BACKEND_ACCOUNT_ID}"
@@ -37,27 +31,28 @@ else
   echo "✓ Bucket ${BUCKET_NAME} already exists"
 fi
 
-# Upload each template
-for TEMPLATE_FILE in "${!TEMPLATES[@]}"; do
-  S3_KEY="${TEMPLATES[$TEMPLATE_FILE]}"
+# Upload templates directly
+upload_template() {
+  local LOCAL_FILE="$1"
+  local S3_KEY="$2"
 
-  if [ ! -f "${TEMPLATE_FILE}" ]; then
-    echo "⚠️  Skipping ${TEMPLATE_FILE} (file not found)"
-    continue
+  if [ ! -f "${LOCAL_FILE}" ]; then
+    echo "⚠️  Skipping ${LOCAL_FILE} (file not found)"
+    return
   fi
 
   echo ""
-  echo "📝 Processing ${TEMPLATE_FILE}..."
-
-  # Upload template
+  echo "📝 Processing ${LOCAL_FILE}..."
   echo "⬆️  Uploading to s3://${BUCKET_NAME}/${S3_KEY}..."
-  aws s3 cp "${TEMPLATE_FILE}" \
+  aws s3 cp "${LOCAL_FILE}" \
     "s3://${BUCKET_NAME}/${S3_KEY}" \
     --content-type "text/yaml" \
     --region ${REGION}
-
   echo "✓ Uploaded ${S3_KEY}"
-done
+}
+
+upload_template "apps/web/public/cloudformation/wraps-console-access-role.yaml" "cloudformation/wraps-console-access-role.yaml"
+upload_template "apps/web/public/cloudformation/wraps-email-infrastructure.yaml" "cloudformation/wraps-email-infrastructure.yaml"
 
 # Create bucket policy for public read access
 echo ""
@@ -87,10 +82,8 @@ echo ""
 echo "✅ All templates uploaded successfully!"
 echo ""
 echo "Template URLs:"
-for TEMPLATE_FILE in "${!TEMPLATES[@]}"; do
-  S3_KEY="${TEMPLATES[$TEMPLATE_FILE]}"
-  echo "  https://${BUCKET_NAME}.s3.amazonaws.com/${S3_KEY}"
-done
+echo "  https://${BUCKET_NAME}.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml"
+echo "  https://${BUCKET_NAME}.s3.amazonaws.com/cloudformation/wraps-email-infrastructure.yaml"
 echo ""
 echo "Quick Create URLs:"
 echo "  Console Access Role:"

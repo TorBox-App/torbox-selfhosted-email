@@ -85,14 +85,20 @@ function generateQuickCreateUrl(
   const params = new URLSearchParams({
     templateURL: templateUrl,
     stackName: "wraps-email-infrastructure",
-    param_VercelTeamSlug: config.vercelTeamSlug,
-    param_VercelProjectName: config.vercelProjectName,
     param_EnableEventTracking: config.enableEventTracking.toString(),
     param_EnableHistoryStorage: config.enableHistoryStorage.toString(),
     param_HistoryRetentionDays: config.historyRetentionDays.toString(),
     param_EnableSMTP: config.enableSMTP.toString(),
     param_TLSRequired: config.tlsRequired.toString(),
   });
+
+  // Only add Vercel OIDC params if provided (optional)
+  if (config.vercelTeamSlug) {
+    params.set("param_VercelTeamSlug", config.vercelTeamSlug);
+  }
+  if (config.vercelProjectName) {
+    params.set("param_VercelProjectName", config.vercelProjectName);
+  }
 
   // Only add domain if provided
   if (config.domain) {
@@ -152,9 +158,6 @@ export function DeployInfrastructureStep({
 
   const estimatedCost = useMemo(() => estimateMonthlyCost(config), [config]);
 
-  const isConfigValid =
-    config.vercelTeamSlug.length > 0 && config.vercelProjectName.length > 0;
-
   const installCommand = "npm install -g @wraps.dev/cli";
   const deployCommand = "wraps email init";
 
@@ -190,7 +193,7 @@ export function DeployInfrastructureStep({
     onSkip();
   };
 
-  // Track CloudFormation deployment start
+  // Track CloudFormation deployment start and open AWS Console
   const handleCloudFormationDeploy = () => {
     setCfDeploymentStarted(true);
     posthog.capture("onboarding_deployment_started", {
@@ -210,6 +213,9 @@ export function DeployInfrastructureStep({
       },
       estimated_cost: estimatedCost,
     });
+
+    // Open AWS Console in new tab - using window.open for reliable cross-browser behavior
+    window.open(quickCreateUrl, "_blank", "noopener,noreferrer");
   };
 
   // Track CLI deployment confirmed
@@ -823,25 +829,12 @@ export function DeployInfrastructureStep({
                     Deploy to AWS
                   </h3>
                   <Button
-                    asChild
                     className="w-full"
-                    disabled={!isConfigValid}
                     onClick={handleCloudFormationDeploy}
                   >
-                    <a
-                      href={isConfigValid ? quickCreateUrl : "#"}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                      Deploy to AWS Console
-                    </a>
+                    <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                    Deploy to AWS Console
                   </Button>
-                  {!isConfigValid && (
-                    <p className="text-muted-foreground text-center text-xs">
-                      Enter your Vercel team slug and project name to continue
-                    </p>
-                  )}
                 </div>
 
                 {/* What Gets Deployed */}

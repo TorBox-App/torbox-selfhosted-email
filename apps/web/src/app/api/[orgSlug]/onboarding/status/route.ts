@@ -1,7 +1,8 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount, organizationExtension } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
+import { subscription } from "@wraps/db/schema/auth";
+import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -47,11 +48,23 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const hasAwsAccount = awsAccounts.length > 0;
 
+    // Check if user has an active subscription
+    const activeSubscription = await db.query.subscription.findFirst({
+      where: and(
+        eq(subscription.referenceId, orgWithMembership.id),
+        or(
+          eq(subscription.status, "active"),
+          eq(subscription.status, "trialing")
+        )
+      ),
+    });
+
     return NextResponse.json({
       completed: extension?.onboardingCompleted ?? false,
       completedAt: extension?.onboardingCompletedAt,
       hasAwsAccount,
       awsAccountCount: awsAccounts.length,
+      hasActiveSubscription: !!activeSubscription,
     });
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
