@@ -1,10 +1,10 @@
-import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { assumeRole } from "@/lib/aws/assume-role";
 import {
   detectFeaturesFromOutputs,
   findInfrastructureStack,
@@ -79,22 +79,13 @@ export async function POST(request: Request, context: RouteContext) {
     const accountId = match[1];
     const roleName = match[2];
 
-    const stsClient = new STSClient({ region: "us-east-1" });
-
     try {
-      // Test the role assumption with ExternalId
-      const assumeRoleCommand = new AssumeRoleCommand({
-        RoleArn: roleArn,
-        RoleSessionName: `wraps-infrastructure-validation-${Date.now()}`,
-        ExternalId: externalId,
-        DurationSeconds: 900, // 15 minutes
+      // Assume the customer's role using Wraps backend credentials (Vercel OIDC)
+      const assumedCredentials = await assumeRole({
+        roleArn,
+        externalId,
+        sessionName: `wraps-infrastructure-validation-${Date.now()}`,
       });
-
-      const assumeRoleResponse = await stsClient.send(assumeRoleCommand);
-
-      if (!assumeRoleResponse.Credentials) {
-        throw new Error("Failed to get credentials from role assumption");
-      }
 
       // Try to find the infrastructure stack and get its outputs
       let detectedFeatures = null;
@@ -102,9 +93,9 @@ export async function POST(request: Request, context: RouteContext) {
 
       try {
         const stackInfo = await findInfrastructureStack(roleArn, region, {
-          accessKeyId: assumeRoleResponse.Credentials.AccessKeyId!,
-          secretAccessKey: assumeRoleResponse.Credentials.SecretAccessKey!,
-          sessionToken: assumeRoleResponse.Credentials.SessionToken,
+          accessKeyId: assumedCredentials.accessKeyId,
+          secretAccessKey: assumedCredentials.secretAccessKey,
+          sessionToken: assumedCredentials.sessionToken,
         });
 
         if (stackInfo) {
