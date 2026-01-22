@@ -11,7 +11,7 @@ Parameters:
   WrapsBackendAccountId:
     Type: String
     Description: "AWS Account ID of Wraps Platform"
-    Default: "123456789012"
+    Default: "905130073023"
     AllowedPattern: "^[0-9]{12}$"
 
   AllowEmailSending:

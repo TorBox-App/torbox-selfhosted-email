@@ -8,7 +8,7 @@ set -e
 # Configuration
 BUCKET_NAME="wraps-assets"
 REGION="us-east-1"
-BACKEND_ACCOUNT_ID="${AWS_BACKEND_ACCOUNT_ID:-654654531039}"
+BACKEND_ACCOUNT_ID="${AWS_BACKEND_ACCOUNT_ID:-905130073023}"
 
 echo "📦 Uploading CloudFormation templates to S3..."
 echo "Bucket: s3://${BUCKET_NAME}"

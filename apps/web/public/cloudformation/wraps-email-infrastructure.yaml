@@ -614,7 +614,7 @@ Resources:
       State: ENABLED
       Targets:
         - Id: "WrapsWebhookTarget"
-          Arn: "arn:aws:events:us-east-1:654654531039:event-bus/wraps-customer-events"
+          Arn: "arn:aws:events:us-east-1:905130073023:event-bus/wraps-customer-events"
           RoleArn: !GetAtt WrapsWebhookRole.Arn
           HttpParameters:
             HeaderParameters:
@@ -643,7 +643,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - "events:PutEvents"
-                Resource: "arn:aws:events:us-east-1:654654531039:event-bus/wraps-customer-events"
+                Resource: "arn:aws:events:us-east-1:905130073023:event-bus/wraps-customer-events"
       Tags:
         - Key: ManagedBy
           Value: wraps-cloudformation
@@ -662,7 +662,7 @@ Resources:
           - Effect: Allow
             Principal:
               AWS:
-                - "arn:aws:iam::654654531039:root"
+                - "arn:aws:iam::905130073023:root"
             Action: "sts:AssumeRole"
             Condition:
               StringEquals:
