@@ -364,6 +364,17 @@ export const auth = betterAuth<BetterAuthOptions>({
             },
             subscription: {
               enabled: true,
+              getCheckoutSessionParams: (
+                { user, session, plan, subscription },
+                ctx
+              ) => ({
+                params: {
+                  automatic_tax: {
+                    enabled: true,
+                  },
+                  allow_promotion_codes: true,
+                },
+              }),
               authorizeReference: async ({ user, referenceId }) => {
                 // Verify user is a member of the organization
                 const membership = await db.query.member.findFirst({
