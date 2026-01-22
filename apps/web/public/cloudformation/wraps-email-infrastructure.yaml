@@ -599,7 +599,63 @@ Resources:
 
   # ===========================================
   # Wraps Platform Webhook Integration (Conditional)
+  # Uses API Destination to send events directly to api.wraps.dev
   # ===========================================
+
+  # 1. Connection - stores API key credentials in Secrets Manager
+  WrapsWebhookConnection:
+    Type: AWS::Events::Connection
+    Condition: HasWebhook
+    Properties:
+      Name: "wraps-webhook-connection"
+      Description: "Connection for Wraps platform webhook"
+      AuthorizationType: API_KEY
+      AuthParameters:
+        ApiKeyAuthParameters:
+          ApiKeyName: "X-Wraps-Api-Key"
+          ApiKeyValue: !Ref WrapsWebhookSecret
+
+  # 2. API Destination - HTTP endpoint to call
+  WrapsWebhookApiDestination:
+    Type: AWS::Events::ApiDestination
+    Condition: HasWebhook
+    Properties:
+      Name: "wraps-webhook-destination"
+      Description: "Send SES events to Wraps platform"
+      ConnectionArn: !GetAtt WrapsWebhookConnection.Arn
+      HttpMethod: POST
+      InvocationEndpoint: !Sub "https://api.wraps.dev/webhooks/ses/${AWS::AccountId}"
+      InvocationRateLimitPerSecond: 300
+
+  # 3. IAM Role for EventBridge to invoke API Destination
+  WrapsWebhookRole:
+    Type: AWS::IAM::Role
+    Condition: HasWebhook
+    Properties:
+      RoleName: "wraps-email-webhook-role"
+      Description: "Role for EventBridge to invoke Wraps webhook API Destination"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "wraps-webhook-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "InvokeApiDestination"
+                Effect: Allow
+                Action:
+                  - "events:InvokeApiDestination"
+                Resource: !GetAtt WrapsWebhookApiDestination.Arn
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+
+  # 4. EventBridge Rule - forwards SES events to API Destination
   WrapsWebhookEventRule:
     Type: AWS::Events::Rule
     Condition: HasWebhook
@@ -614,59 +670,8 @@ Resources:
       State: ENABLED
       Targets:
         - Id: "WrapsWebhookTarget"
-          Arn: "arn:aws:events:us-east-1:905130073023:event-bus/wraps-customer-events"
+          Arn: !GetAtt WrapsWebhookApiDestination.Arn
           RoleArn: !GetAtt WrapsWebhookRole.Arn
-          InputTransformer:
-            InputPathsMap:
-              detail: "$.detail"
-              detailType: "$.detail-type"
-              source: "$.source"
-              account: "$.account"
-              region: "$.region"
-              time: "$.time"
-              id: "$.id"
-            InputTemplate: !Sub |
-              {
-                "version": "0",
-                "id": <id>,
-                "detail-type": <detailType>,
-                "source": <source>,
-                "account": <account>,
-                "time": <time>,
-                "region": <region>,
-                "detail": <detail>,
-                "wraps": {
-                  "organizationId": "${WrapsOrganizationId}",
-                  "webhookSecret": "${WrapsWebhookSecret}"
-                }
-              }
-
-  WrapsWebhookRole:
-    Type: AWS::IAM::Role
-    Condition: HasWebhook
-    Properties:
-      RoleName: "wraps-email-webhook-role"
-      Description: "Role for forwarding events to Wraps platform"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: events.amazonaws.com
-            Action: "sts:AssumeRole"
-      Policies:
-        - PolicyName: "wraps-webhook-policy"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Sid: "PutEventsToWrapsBus"
-                Effect: Allow
-                Action:
-                  - "events:PutEvents"
-                Resource: "arn:aws:events:us-east-1:905130073023:event-bus/wraps-customer-events"
-      Tags:
-        - Key: ManagedBy
-          Value: wraps-cloudformation
 
   # ===========================================
   # Console Access Role (for Wraps Dashboard)
