@@ -76,12 +76,25 @@ const DEFAULT_CONFIG: InfrastructureConfig = {
 };
 
 /**
+ * Generate a deterministic webhook secret from organization ID
+ * This is used to authenticate webhook calls from customer AWS accounts
+ */
+function generateWebhookSecret(organizationId: string): string {
+  // Use a simple hash-like approach for the webhook secret
+  // In production, this could be stored/retrieved from the database
+  return `whsec_${organizationId.replace(/-/g, "")}`;
+}
+
+/**
  * Generate CloudFormation Quick Create URL with parameters
  */
 function generateQuickCreateUrl(
   config: InfrastructureConfig,
-  templateUrl: string
+  templateUrl: string,
+  organizationId: string
 ): string {
+  const webhookSecret = generateWebhookSecret(organizationId);
+
   const params = new URLSearchParams({
     templateURL: templateUrl,
     stackName: "wraps-email-infrastructure",
@@ -90,6 +103,9 @@ function generateQuickCreateUrl(
     param_HistoryRetentionDays: config.historyRetentionDays.toString(),
     param_EnableSMTP: config.enableSMTP.toString(),
     param_TLSRequired: config.tlsRequired.toString(),
+    // Wraps platform integration
+    param_WrapsOrganizationId: organizationId,
+    param_WrapsWebhookSecret: webhookSecret,
   });
 
   // Only add Vercel OIDC params if provided (optional)
@@ -152,8 +168,8 @@ export function DeployInfrastructureStep({
     "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-email-infrastructure.yaml";
 
   const quickCreateUrl = useMemo(
-    () => generateQuickCreateUrl(config, templateUrl),
-    [config, templateUrl]
+    () => generateQuickCreateUrl(config, templateUrl, organizationId),
+    [config, templateUrl, organizationId]
   );
 
   const estimatedCost = useMemo(() => estimateMonthlyCost(config), [config]);

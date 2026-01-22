@@ -5,6 +5,14 @@ import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { assumeRole } from "@/lib/aws/assume-role";
+
+/**
+ * Generate a deterministic webhook secret from organization ID
+ * Must match the client-side generation in deploy-infrastructure-step.tsx
+ */
+function generateWebhookSecret(organizationId: string): string {
+  return `whsec_${organizationId.replace(/-/g, "")}`
+}
 import {
   detectFeaturesFromOutputs,
   findInfrastructureStack,
@@ -124,12 +132,18 @@ export async function POST(request: Request, context: RouteContext) {
       });
 
       if (existingAccount) {
+        // Generate webhook secret for this organization
+        const webhookSecret = generateWebhookSecret(orgWithMembership.id);
+
         // Update existing account with detected features
         await db
           .update(awsAccount)
           .set({
             accountId,
             region,
+            // Update external ID and webhook secret in case they changed
+            externalId,
+            webhookSecret,
             isVerified: true,
             lastVerifiedAt: new Date(),
             updatedAt: new Date(),
@@ -177,6 +191,9 @@ export async function POST(request: Request, context: RouteContext) {
           );
         }
 
+        // Generate webhook secret for this organization
+        const webhookSecret = generateWebhookSecret(orgWithMembership.id);
+
         // Create new account with detected features
         await db.insert(awsAccount).values({
           organizationId: orgWithMembership.id,
@@ -186,6 +203,8 @@ export async function POST(request: Request, context: RouteContext) {
           roleArn,
           // Save the actual external ID from the CloudFormation stack
           externalId,
+          // Save webhook secret for EventBridge webhook authentication
+          webhookSecret,
           isVerified: true,
           lastVerifiedAt: new Date(),
           createdBy: session.user.id,
