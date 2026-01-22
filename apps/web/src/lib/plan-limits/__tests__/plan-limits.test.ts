@@ -75,23 +75,9 @@ describe("Plan Limits", () => {
     it("should return plan from active subscription", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
-        plan: "pro",
-        referenceId: testOrgId,
-        status: "active",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      const plan = await getOrganizationPlan(testOrgId);
-      expect(plan).toBe("pro");
-    });
-
-    it("should return plan from trialing subscription", async () => {
-      await db.insert(subscription).values({
-        id: `sub_test_${Date.now()}`,
         plan: "growth",
         referenceId: testOrgId,
-        status: "trialing",
+        status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -100,10 +86,24 @@ describe("Plan Limits", () => {
       expect(plan).toBe("growth");
     });
 
+    it("should return plan from trialing subscription", async () => {
+      await db.insert(subscription).values({
+        id: `sub_test_${Date.now()}`,
+        plan: "scale",
+        referenceId: testOrgId,
+        status: "trialing",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const plan = await getOrganizationPlan(testOrgId);
+      expect(plan).toBe("scale");
+    });
+
     it("should return null for canceled subscription", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
-        plan: "pro",
+        plan: "growth",
         referenceId: testOrgId,
         status: "canceled",
         createdAt: new Date(),
@@ -117,7 +117,7 @@ describe("Plan Limits", () => {
     it("should return null for past_due subscription", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
-        plan: "pro",
+        plan: "growth",
         referenceId: testOrgId,
         status: "past_due",
         createdAt: new Date(),
@@ -193,7 +193,7 @@ describe("Plan Limits", () => {
       expect(result.requiredPlan).toBe("starter");
     });
 
-    it("should return not allowed for starter plan accessing pro feature", async () => {
+    it("should return not allowed for starter plan accessing growth feature", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
         plan: "starter",
@@ -206,13 +206,13 @@ describe("Plan Limits", () => {
       const result = await checkFeatureAccess(testOrgId, "topics");
 
       expect(result.allowed).toBe(false);
-      expect(result.requiredPlan).toBe("pro");
+      expect(result.requiredPlan).toBe("growth");
     });
 
-    it("should return allowed for pro plan accessing pro feature", async () => {
+    it("should return allowed for growth plan accessing growth feature", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
-        plan: "pro",
+        plan: "growth",
         referenceId: testOrgId,
         status: "active",
         createdAt: new Date(),

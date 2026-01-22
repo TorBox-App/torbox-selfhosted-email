@@ -48,9 +48,9 @@ export function BillingStep({
       ? (localStorage.getItem(`onboarding_plan_${orgSlug}`) as PlanId | null)
       : null;
   const initialPlan: PlanId =
-    (planParam && ["starter", "pro", "growth", "scale"].includes(planParam)
+    (planParam && ["starter", "growth", "scale"].includes(planParam)
       ? planParam
-      : storedPlan && ["starter", "pro", "growth", "scale"].includes(storedPlan)
+      : storedPlan && ["starter", "growth", "scale"].includes(storedPlan)
         ? storedPlan
         : null) ?? "starter";
 
@@ -129,6 +129,7 @@ export function BillingStep({
       const result = await authClient.subscription.upgrade({
         plan: selectedPlan,
         annual: billingInterval === "annual",
+        customerType: "organization",
         referenceId: organizationId,
         successUrl: `${window.location.origin}/${orgSlug}/onboarding?step=3&subscribed=true`,
         cancelUrl: `${window.location.origin}/${orgSlug}/onboarding?step=2&plan=${selectedPlan}&interval=${billingInterval}`,

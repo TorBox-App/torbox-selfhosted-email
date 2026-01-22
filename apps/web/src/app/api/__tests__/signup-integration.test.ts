@@ -274,7 +274,7 @@ describe("Signup Flow Integration Tests", () => {
       .insert(subscription)
       .values({
         id: crypto.randomUUID(),
-        plan: "pro",
+        plan: "growth",
         referenceId: testSignupOrgId,
         stripeCustomerId,
         stripeSubscriptionId,
@@ -284,7 +284,7 @@ describe("Signup Flow Integration Tests", () => {
       })
       .returning();
 
-    expect(sub[0].plan).toBe("pro");
+    expect(sub[0].plan).toBe("growth");
     expect(sub[0].stripeCustomerId).toBe(stripeCustomerId);
     expect(sub[0].stripeSubscriptionId).toBe(stripeSubscriptionId);
   });

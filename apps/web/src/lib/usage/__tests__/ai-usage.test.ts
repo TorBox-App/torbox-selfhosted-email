@@ -64,12 +64,12 @@ describe("AI Usage Functions", () => {
       expect(getAiMessageLimit("starter")).toBe(50);
     });
 
-    it("should return 250 for pro plan", () => {
-      expect(getAiMessageLimit("pro")).toBe(250);
+    it("should return 250 for growth plan", () => {
+      expect(getAiMessageLimit("growth")).toBe(250);
     });
 
-    it("should return 1000 for growth plan", () => {
-      expect(getAiMessageLimit("growth")).toBe(1000);
+    it("should return 1000 for scale plan", () => {
+      expect(getAiMessageLimit("scale")).toBe(1000);
     });
 
     it("should return default (50) for unknown plan", () => {
@@ -266,25 +266,25 @@ describe("AI Usage Functions", () => {
 
     it("should respect different plan limits", async () => {
       const periodKey = getCurrentPeriodKey();
-      mockGetOrganizationPlanId.mockResolvedValueOnce("pro");
+      mockGetOrganizationPlanId.mockResolvedValueOnce("growth");
 
-      // 100 messages - under pro limit (250) but over starter (50)
+      // 100 messages - under growth limit (250) but over starter (50)
       await db.insert(aiUsageMonthly).values({
         organizationId: testOrganization.id,
         periodKey,
         messageCount: 100,
       });
 
-      const proResult = await checkAiUsageLimit(testOrganization.id);
-      expect(proResult.allowed).toBe(true);
-      expect(proResult.limit).toBe(250);
+      const growthResult = await checkAiUsageLimit(testOrganization.id);
+      expect(growthResult.allowed).toBe(true);
+      expect(growthResult.limit).toBe(250);
     });
 
-    it("should allow high usage for growth plan", async () => {
+    it("should allow high usage for scale plan", async () => {
       const periodKey = getCurrentPeriodKey();
-      mockGetOrganizationPlanId.mockResolvedValueOnce("growth");
+      mockGetOrganizationPlanId.mockResolvedValueOnce("scale");
 
-      // 500 messages - under growth limit (1000)
+      // 500 messages - under scale limit (1000)
       await db.insert(aiUsageMonthly).values({
         organizationId: testOrganization.id,
         periodKey,
@@ -393,7 +393,7 @@ describe("AI Usage Functions", () => {
   describe("getUsageSummary", () => {
     it("should return usage summary for current period", async () => {
       const periodKey = getCurrentPeriodKey();
-      mockGetOrganizationPlanId.mockResolvedValueOnce("pro");
+      mockGetOrganizationPlanId.mockResolvedValueOnce("growth");
 
       await db.insert(aiUsageMonthly).values({
         organizationId: testOrganization.id,
@@ -406,7 +406,7 @@ describe("AI Usage Functions", () => {
         periodKey,
         messageCount: 75,
         limit: 250,
-        planId: "pro",
+        planId: "growth",
       });
     });
 

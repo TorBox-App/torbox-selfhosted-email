@@ -28,9 +28,9 @@ export function PlanSelector({
 }: PlanSelectorProps) {
   const displayPlans = getDisplayPlans();
 
-  // Filter to show Starter and Pro only (Growth coming soon)
+  // Filter to show Starter and Growth only (Scale coming soon)
   const visiblePlans = displayPlans.filter(({ id }) =>
-    ["starter", "pro"].includes(id)
+    ["starter", "growth"].includes(id)
   );
 
   return (
@@ -38,7 +38,7 @@ export function PlanSelector({
       {visiblePlans.map(({ id, plan }) => {
         const isSelected = selectedPlan === id;
         const isCurrent = currentPlan === id;
-        const isPopular = id === "pro";
+        const isPopular = id === "growth";
         const isEarlyAdopter = hasEarlyAdopterPricing(plan);
         const displayPrice = getPriceByInterval(plan, billingInterval);
         const regularPrice =

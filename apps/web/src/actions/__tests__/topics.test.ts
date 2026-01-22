@@ -164,7 +164,7 @@ beforeAll(async () => {
     .insert(subscription)
     .values({
       id: `sub_test_${testOrganization.id}`,
-      plan: "pro",
+      plan: "growth",
       referenceId: testOrganization.id,
       status: "active",
       createdAt: new Date(),
@@ -172,7 +172,7 @@ beforeAll(async () => {
     })
     .onConflictDoUpdate({
       target: subscription.id,
-      set: { plan: "pro", status: "active" },
+      set: { plan: "growth", status: "active" },
     });
 
   // Insert test members

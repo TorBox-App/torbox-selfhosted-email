@@ -240,9 +240,9 @@ export const subscriptionPlans = [
     },
   },
   {
-    name: "pro",
-    priceId: process.env.STRIPE_PRO_PRICE_ID,
-    annualDiscountPriceId: process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
+    name: "growth",
+    priceId: process.env.STRIPE_GROWTH_PRICE_ID,
+    annualDiscountPriceId: process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID,
     limits: {
       emails: -1, // Unlimited (they pay AWS)
       awsAccounts: 3,
@@ -252,9 +252,9 @@ export const subscriptionPlans = [
     },
   },
   {
-    name: "growth",
-    priceId: process.env.STRIPE_GROWTH_PRICE_ID,
-    annualDiscountPriceId: process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID,
+    name: "scale",
+    priceId: process.env.STRIPE_SCALE_PRICE_ID,
+    annualDiscountPriceId: process.env.STRIPE_SCALE_ANNUAL_PRICE_ID,
     limits: {
       emails: -1, // Unlimited
       awsAccounts: -1, // Unlimited
@@ -362,6 +362,9 @@ export const auth = betterAuth<BetterAuthOptions>({
                 console.error("Error handling Stripe webhook:", error);
               }
             },
+            organization: {
+              enabled: true,
+            },
             subscription: {
               enabled: true,
               getCheckoutSessionParams: (
@@ -403,7 +406,7 @@ export const auth = betterAuth<BetterAuthOptions>({
 
                 return true;
               },
-              plans: subscriptionPlans,
+              plans: [...subscriptionPlans],
             },
           }),
         ]

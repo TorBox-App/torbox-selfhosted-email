@@ -73,42 +73,42 @@ describe("Better-Auth Stripe Plugin - Plan Configuration", () => {
     );
   });
 
-  it("should have Pro plan configured", () => {
+  it("should have Growth plan configured", () => {
     expect(subscriptionPlans).toBeDefined();
     expect(Array.isArray(subscriptionPlans)).toBe(true);
 
-    const proPlan = subscriptionPlans.find((p) => p.name === "pro");
-    expect(proPlan).toBeDefined();
-    expect(proPlan?.name).toBe("pro");
-    expect(proPlan?.limits).toBeDefined();
-  });
-
-  it("should have Growth plan configured", () => {
     const growthPlan = subscriptionPlans.find((p) => p.name === "growth");
-
     expect(growthPlan).toBeDefined();
     expect(growthPlan?.name).toBe("growth");
     expect(growthPlan?.limits).toBeDefined();
   });
 
-  it("should have Pro plan with correct limits", () => {
-    const proPlan = subscriptionPlans.find((p) => p.name === "pro");
+  it("should have Scale plan configured", () => {
+    const scalePlan = subscriptionPlans.find((p) => p.name === "scale");
 
-    expect(proPlan?.limits.emails).toBe(-1); // Unlimited (they pay AWS)
-    expect(proPlan?.limits.awsAccounts).toBe(3);
-    expect(proPlan?.limits.aiMessages).toBe(250);
-    expect(proPlan?.limits.bulkBatchSize).toBe(1000);
-    expect(proPlan?.limits.members).toBe(-1); // Unlimited (we don't gate on team size)
+    expect(scalePlan).toBeDefined();
+    expect(scalePlan?.name).toBe("scale");
+    expect(scalePlan?.limits).toBeDefined();
   });
 
-  it("should have Growth plan with unlimited limits", () => {
+  it("should have Growth plan with correct limits", () => {
     const growthPlan = subscriptionPlans.find((p) => p.name === "growth");
 
-    expect(growthPlan?.limits.emails).toBe(-1); // Unlimited
-    expect(growthPlan?.limits.awsAccounts).toBe(-1); // Unlimited
-    expect(growthPlan?.limits.aiMessages).toBe(1000);
-    expect(growthPlan?.limits.bulkBatchSize).toBe(10_000);
-    expect(growthPlan?.limits.members).toBe(-1); // Unlimited
+    expect(growthPlan?.limits.emails).toBe(-1); // Unlimited (they pay AWS)
+    expect(growthPlan?.limits.awsAccounts).toBe(3);
+    expect(growthPlan?.limits.aiMessages).toBe(250);
+    expect(growthPlan?.limits.bulkBatchSize).toBe(1000);
+    expect(growthPlan?.limits.members).toBe(-1); // Unlimited (we don't gate on team size)
+  });
+
+  it("should have Scale plan with unlimited limits", () => {
+    const scalePlan = subscriptionPlans.find((p) => p.name === "scale");
+
+    expect(scalePlan?.limits.emails).toBe(-1); // Unlimited
+    expect(scalePlan?.limits.awsAccounts).toBe(-1); // Unlimited
+    expect(scalePlan?.limits.aiMessages).toBe(1000);
+    expect(scalePlan?.limits.bulkBatchSize).toBe(10_000);
+    expect(scalePlan?.limits.members).toBe(-1); // Unlimited
   });
 
   it("should have Starter plan with correct limits", () => {
@@ -139,11 +139,11 @@ describe("Better-Auth Environment Configuration", () => {
     ).toBe(true);
   });
 
-  it("should have Pro plan price IDs configured", () => {
+  it("should have Growth plan price IDs configured", () => {
     // Check that environment variables are expected to be set
     expect(
-      process.env.STRIPE_PRO_PRICE_ID !== undefined ||
-        process.env.STRIPE_PRO_PRICE_ID === ""
+      process.env.STRIPE_GROWTH_PRICE_ID !== undefined ||
+        process.env.STRIPE_GROWTH_PRICE_ID === ""
     ).toBe(true);
   });
 

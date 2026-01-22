@@ -259,7 +259,7 @@ export function OrganizationSettingsBilling({
       {organization.slug && <EventUsageCard orgSlug={organization.slug} />}
 
       {/* Upgrade Options */}
-      {!isCancelled && currentPlan !== "growth" && (
+      {!isCancelled && currentPlan !== "scale" && (
         <Card>
           <CardHeader>
             <CardTitle>Upgrade Your Plan</CardTitle>
@@ -279,34 +279,40 @@ export function OrganizationSettingsBilling({
               {currentPlan === "starter" && (
                 <div className="space-y-4 rounded-lg border p-6">
                   <div>
-                    <h3 className="font-semibold text-lg">{PLANS.pro.name}</h3>
+                    <h3 className="font-semibold text-lg">
+                      {PLANS.growth.name}
+                    </h3>
                     <div className="mt-2 flex items-baseline gap-1">
                       <span className="font-bold text-3xl">
-                        ${getPriceByInterval(PLANS.pro, upgradeBillingInterval)}
+                        $
+                        {getPriceByInterval(
+                          PLANS.growth,
+                          upgradeBillingInterval
+                        )}
                       </span>
-                      {hasEarlyAdopterPricing(PLANS.pro) && (
+                      {hasEarlyAdopterPricing(PLANS.growth) && (
                         <span className="text-muted-foreground text-sm line-through">
                           $
                           {upgradeBillingInterval === "annual"
-                            ? PLANS.pro.annualPrice
-                            : PLANS.pro.price}
+                            ? PLANS.growth.annualPrice
+                            : PLANS.growth.price}
                         </span>
                       )}
                       <span className="text-muted-foreground text-sm">/mo</span>
                     </div>
                     {upgradeBillingInterval === "annual" &&
-                      getAnnualTotal(PLANS.pro) && (
+                      getAnnualTotal(PLANS.growth) && (
                         <p className="mt-1 text-green-600 text-sm">
-                          ${getAnnualTotal(PLANS.pro)} billed annually
+                          ${getAnnualTotal(PLANS.growth)} billed annually
                         </p>
                       )}
                     <p className="mt-1 text-muted-foreground text-sm">
-                      {PLANS.pro.description}
+                      {PLANS.growth.description}
                     </p>
                   </div>
 
                   <ul className="space-y-2">
-                    {PLANS.pro.featureList.slice(0, 4).map((feature) => (
+                    {PLANS.growth.featureList.slice(0, 4).map((feature) => (
                       <li
                         className="flex items-start gap-2 text-sm"
                         key={feature}
@@ -323,7 +329,7 @@ export function OrganizationSettingsBilling({
                     loading={upgradeMutation.isPending}
                     onClick={() =>
                       upgradeMutation.mutate({
-                        plan: "pro",
+                        plan: "growth",
                         annual: upgradeBillingInterval === "annual",
                       })
                     }
@@ -336,35 +342,34 @@ export function OrganizationSettingsBilling({
               {/* Scale Plan */}
               <div className="space-y-4 rounded-lg border p-6">
                 <div>
-                  <h3 className="font-semibold text-lg">{PLANS.growth.name}</h3>
+                  <h3 className="font-semibold text-lg">{PLANS.scale.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="font-bold text-3xl">
-                      $
-                      {getPriceByInterval(PLANS.growth, upgradeBillingInterval)}
+                      ${getPriceByInterval(PLANS.scale, upgradeBillingInterval)}
                     </span>
-                    {hasEarlyAdopterPricing(PLANS.growth) && (
+                    {hasEarlyAdopterPricing(PLANS.scale) && (
                       <span className="text-muted-foreground text-sm line-through">
                         $
                         {upgradeBillingInterval === "annual"
-                          ? PLANS.growth.annualPrice
-                          : PLANS.growth.price}
+                          ? PLANS.scale.annualPrice
+                          : PLANS.scale.price}
                       </span>
                     )}
                     <span className="text-muted-foreground text-sm">/mo</span>
                   </div>
                   {upgradeBillingInterval === "annual" &&
-                    getAnnualTotal(PLANS.growth) && (
+                    getAnnualTotal(PLANS.scale) && (
                       <p className="mt-1 text-green-600 text-sm">
-                        ${getAnnualTotal(PLANS.growth)} billed annually
+                        ${getAnnualTotal(PLANS.scale)} billed annually
                       </p>
                     )}
                   <p className="mt-1 text-muted-foreground text-sm">
-                    {PLANS.growth.description}
+                    {PLANS.scale.description}
                   </p>
                 </div>
 
                 <ul className="space-y-2">
-                  {PLANS.growth.featureList.slice(0, 4).map((feature) => (
+                  {PLANS.scale.featureList.slice(0, 4).map((feature) => (
                     <li
                       className="flex items-start gap-2 text-sm"
                       key={feature}
@@ -381,7 +386,7 @@ export function OrganizationSettingsBilling({
                   loading={upgradeMutation.isPending}
                   onClick={() =>
                     upgradeMutation.mutate({
-                      plan: "growth",
+                      plan: "scale",
                       annual: upgradeBillingInterval === "annual",
                     })
                   }

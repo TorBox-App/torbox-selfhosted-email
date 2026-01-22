@@ -76,9 +76,7 @@ export default async function OrganizationLayout({
 
   // Get plan from subscription (source of truth)
   const rawPlanId = activeSubscription.plan;
-  const planId: PlanId = ["starter", "pro", "growth", "scale"].includes(
-    rawPlanId
-  )
+  const planId: PlanId = ["starter", "growth", "scale"].includes(rawPlanId)
     ? (rawPlanId as PlanId)
     : "starter";
   const plan = PLANS[planId];

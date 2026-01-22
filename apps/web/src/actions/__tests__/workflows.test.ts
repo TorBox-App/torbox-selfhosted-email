@@ -200,7 +200,7 @@ beforeAll(async () => {
     })
     .onConflictDoUpdate({
       target: subscription.id,
-      set: { plan: "pro", status: "active" },
+      set: { plan: "growth", status: "active" },
     });
 
   // Insert test members

@@ -60,7 +60,7 @@ export async function getOrganizationPlan(
 }
 
 function isValidPlan(plan: string): plan is PlanId {
-  return ["starter", "pro", "growth", "scale"].includes(plan);
+  return ["starter", "growth", "scale"].includes(plan);
 }
 
 /**
@@ -232,7 +232,7 @@ export async function checkFeatureAccess(
  * Get the next plan tier for upgrade suggestions
  */
 function getNextPlan(currentPlan: PlanId): PlanId | undefined {
-  const planOrder: PlanId[] = ["starter", "pro", "growth", "scale"];
+  const planOrder: PlanId[] = ["starter", "growth", "scale"];
   const currentIndex = planOrder.indexOf(currentPlan);
 
   if (currentIndex === -1 || currentIndex >= planOrder.length - 1) {

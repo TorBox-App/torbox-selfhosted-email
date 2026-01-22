@@ -101,6 +101,7 @@ export const organization = pgTable("organization", {
   logo: text("logo"),
   brandColor: text("brand_color"), // Hex color for branding (e.g., "#3b82f6")
   metadata: text("metadata"),
+  stripeOrganizationId: text("stripe_organization_id"),
   createdAt: timestamp("created_at").notNull(),
 });
 

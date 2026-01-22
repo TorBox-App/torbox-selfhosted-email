@@ -19,7 +19,7 @@
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type PlanId = "starter" | "pro" | "growth" | "scale";
+export type PlanId = "starter" | "growth" | "scale";
 
 export type PlanFeature =
   | "batch" // Starter+: Send to all contacts
@@ -138,7 +138,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     cta: "Subscribe",
   },
 
-  pro: {
+  growth: {
     name: "Growth",
     price: 49,
     earlyAdopterPrice: 49, // No early adopter discount for Growth
@@ -197,7 +197,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     cta: "Subscribe",
   },
 
-  growth: {
+  scale: {
     name: "Scale",
     price: 149,
     earlyAdopterPrice: 149, // No early adopter discount for Scale
@@ -255,60 +255,6 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     ],
     cta: "Subscribe",
   },
-
-  scale: {
-    name: "Enterprise",
-    price: 299,
-    annualPrice: 250, // ~17% savings vs monthly ($2,990/yr)
-    annualTotal: 2990, // Total billed annually
-    period: "/month",
-    description: "Enterprise with custom limits",
-    dashboardAccess: true,
-
-    // Resource Limits (2026 model: unlimited contacts)
-    maxContacts: -1, // Unlimited contacts
-    maxMembers: -1, // Unlimited
-    maxAwsAccounts: -1, // Unlimited
-    aiMessages: 2000,
-    bulkBatchSize: 50_000,
-
-    // Event-Based Pricing Limits
-    maxEvents: -1, // Unlimited events
-    maxWorkflows: -1, // Unlimited workflows
-    eventRetentionDays: 730, // 2-year retention
-
-    // Feature Access
-    features: {
-      batch: true,
-      topics: true,
-      segments: true,
-      campaigns: true,
-      workflows: true,
-      events: true,
-      advancedSegments: true,
-      customRetention: true, // Custom data retention policies
-      prioritySLA: true, // Priority support SLA
-    },
-
-    // Rate Limits
-    rateLimits: {
-      dailyRequests: 1_000_000,
-      minuteRequests: 10_000,
-    },
-
-    // Display
-    featureList: [
-      "Unlimited contacts",
-      "Unlimited events",
-      "Everything in Scale",
-      "Unlimited workflows",
-      "Custom retention policies",
-      "2-year event history",
-      "1M API requests/day",
-      "Dedicated support + SLA",
-    ],
-    cta: "Contact Sales",
-  },
 } as const;
 
 export type Plan = PlanConfig;
@@ -338,7 +284,6 @@ export function getPlan(planId: PlanId | string): PlanConfig | undefined {
 export function getDisplayPlans(): { id: PlanId; plan: PlanConfig }[] {
   return [
     { id: "starter", plan: PLANS.starter },
-    { id: "pro", plan: PLANS.pro },
     { id: "growth", plan: PLANS.growth },
     { id: "scale", plan: PLANS.scale },
   ];
@@ -523,7 +468,7 @@ export function hasFeature(
  * Get the minimum plan required for a feature
  */
 export function getRequiredPlan(feature: PlanFeature): PlanId | null {
-  const planOrder: PlanId[] = ["starter", "pro", "growth", "scale"];
+  const planOrder: PlanId[] = ["starter", "growth", "scale"];
 
   for (const planId of planOrder) {
     if (PLANS[planId].features[feature]) {
@@ -719,7 +664,7 @@ export function getWorkflowLimitMessage(planId: PlanId | string): string {
   }
 
   if (limit <= 5) {
-    return `Your ${plan.name} plan includes ${limit} workflows. Upgrade to Scale for 25 workflows.`;
+    return `Your ${plan.name} plan includes ${limit} workflows. Upgrade to Growth for 25 workflows.`;
   }
 
   return `Your ${plan.name} plan includes up to ${limit} workflows. Upgrade for unlimited.`;

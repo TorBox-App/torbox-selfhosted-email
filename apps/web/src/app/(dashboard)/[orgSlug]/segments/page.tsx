@@ -46,7 +46,7 @@ export default async function SegmentsPage({ params }: SegmentsPageProps) {
   }
 
   const currentPlanId = planId;
-  const requiredPlan = getRequiredPlan("segments") || "pro";
+  const requiredPlan = getRequiredPlan("segments") || "growth";
 
   // If feature not allowed, show upgrade prompt
   if (!featureCheck.allowed) {

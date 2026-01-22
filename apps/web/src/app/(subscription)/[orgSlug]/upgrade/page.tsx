@@ -33,7 +33,7 @@ export default function UpgradePage() {
   // Get plan from URL param, default to starter
   const planParam = searchParams.get("plan") as PlanId | null;
   const initialPlan: PlanId =
-    planParam && ["starter", "pro", "growth", "scale"].includes(planParam)
+    planParam && ["starter", "growth", "scale"].includes(planParam)
       ? planParam
       : "starter";
 
