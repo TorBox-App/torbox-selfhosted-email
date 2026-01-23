@@ -3,6 +3,7 @@
  * @module telemetry/client
  */
 
+import { createRequire } from "module";
 import pc from "picocolors";
 import { isCI } from "../utils/shared/ci-detection.js";
 import { TelemetryConfigManager } from "./config.js";
@@ -11,6 +12,8 @@ import type {
   TelemetryEvent,
   TelemetryRequest,
 } from "./types.js";
+
+const require = createRequire(import.meta.url);
 
 const DEFAULT_ENDPOINT = "https://wraps.dev/api/telemetry";
 const DEFAULT_TIMEOUT = 2000; // 2 seconds
@@ -271,8 +274,6 @@ export class TelemetryClient {
    */
   private getCLIVersion(): string {
     try {
-      // Dynamic import would be better but requires async
-      // Using require for now since this is CommonJS compatible
       const packageJson = require("../../package.json");
       return packageJson.version;
     } catch {
