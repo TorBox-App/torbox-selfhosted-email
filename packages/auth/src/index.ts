@@ -88,6 +88,7 @@ async function trackUserSignup(user: { email: string; name: string | null }) {
     const normalizedEmail = user.email.toLowerCase().trim();
 
     // Create/upsert the contact first (required for events)
+    // Subscribe to product updates topic for announcements
     const { error: contactError } = await client.POST("/v1/contacts/", {
       body: {
         email: normalizedEmail,
@@ -97,6 +98,7 @@ async function trackUserSignup(user: { email: string; name: string | null }) {
           signupAt: new Date().toISOString(),
           source: "web",
         },
+        topicSlugs: ["wraps-product-updates"],
       },
     });
 
