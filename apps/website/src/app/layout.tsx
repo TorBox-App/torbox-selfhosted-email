@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
+import { AnalyticsProvider } from "@/components/analytics-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { InViewProvider } from "@/hooks/use-shared-in-view";
@@ -80,9 +81,11 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider defaultTheme="system" storageKey="wraps-ui-theme">
-          <InViewProvider>
-            <SidebarConfigProvider>{children}</SidebarConfigProvider>
-          </InViewProvider>
+          <AnalyticsProvider>
+            <InViewProvider>
+              <SidebarConfigProvider>{children}</SidebarConfigProvider>
+            </InViewProvider>
+          </AnalyticsProvider>
         </ThemeProvider>
         <Analytics />
       </body>

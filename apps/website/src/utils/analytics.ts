@@ -1,8 +1,8 @@
 import posthog from "posthog-js";
 
 /**
- * Analytics utility for Google Tag Manager integration
- * Uses environment variables to conditionally load GTM in production
+ * Analytics utility for Google Tag Manager and PostHog integration
+ * Uses environment variables to conditionally load analytics in production
  */
 
 declare global {
@@ -13,7 +13,41 @@ declare global {
 }
 
 export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || "";
+export const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || "";
+export const POSTHOG_HOST =
+  process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+/**
+ * Initialize PostHog analytics
+ * Only loads PostHog if NEXT_PUBLIC_POSTHOG_KEY is set AND in production mode
+ */
+export const initPostHog = (): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!POSTHOG_KEY) {
+    console.log(
+      "PostHog not initialized - NEXT_PUBLIC_POSTHOG_KEY environment variable not set"
+    );
+    return;
+  }
+
+  if (!IS_PRODUCTION) {
+    console.log("PostHog not initialized - running in development mode");
+    return;
+  }
+
+  posthog.init(POSTHOG_KEY, {
+    api_host: POSTHOG_HOST,
+    capture_pageview: false, // We manually track pageviews
+    capture_pageleave: true,
+    persistence: "localStorage",
+  });
+
+  console.log("PostHog initialized successfully");
+};
 
 /**
  * Initialize Google Tag Manager
@@ -62,6 +96,17 @@ export const initGTM = (): void => {
 };
 
 /**
+ * Check if PostHog is initialized and ready
+ */
+const isPostHogReady = (): boolean => {
+  return !!(
+    POSTHOG_KEY &&
+    IS_PRODUCTION &&
+    typeof posthog?.capture === "function"
+  );
+};
+
+/**
  * Track custom events
  * @param eventName - The event name
  * @param parameters - Event parameters
@@ -70,25 +115,22 @@ export const trackEvent = (
   eventName: string,
   parameters?: Record<string, unknown>
 ): void => {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || !IS_PRODUCTION) {
     return;
   }
 
-  if (!(GTM_ID && IS_PRODUCTION)) {
-    return;
+  // Send to GTM if configured
+  if (GTM_ID) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: eventName,
+      ...parameters,
+    });
   }
 
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({
-    event: eventName,
-    ...parameters,
-  });
-
-  // Send event to PostHog
-  try {
+  // Send to PostHog if initialized
+  if (isPostHogReady()) {
     posthog.capture(eventName, parameters);
-  } catch {
-    // ignore if PostHog not initialized
   }
 };
 
@@ -98,29 +140,27 @@ export const trackEvent = (
  * @param title - Optional page title
  */
 export const trackPageView = (path: string, title?: string): void => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  if (!(GTM_ID && IS_PRODUCTION)) {
+  if (typeof window === "undefined" || !IS_PRODUCTION) {
     return;
   }
 
   const pageTitle = title || document.title;
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({
-    event: "page_view",
-    page_path: path,
-    page_title: pageTitle,
-  });
 
-  // Send pageview to PostHog
-  try {
+  // Send to GTM if configured
+  if (GTM_ID) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: "page_view",
+      page_path: path,
+      page_title: pageTitle,
+    });
+  }
+
+  // Send to PostHog if initialized
+  if (isPostHogReady()) {
     posthog.capture("$pageview", {
       page_path: path,
       page_title: pageTitle,
     });
-  } catch {
-    // ignore if PostHog not initialized
   }
 };
