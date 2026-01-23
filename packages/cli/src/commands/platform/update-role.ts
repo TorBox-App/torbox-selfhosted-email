@@ -218,12 +218,16 @@ function buildConsolePolicyDocument(
   statements.push({
     Effect: "Allow",
     Action: [
+      "ses:GetAccount", // Get SES rate limits and quotas
       "ses:GetSendStatistics",
       "ses:ListIdentities",
       "ses:GetIdentityVerificationAttributes",
       // SES v2 API for listing/getting email identities (domains)
       "ses:ListEmailIdentities",
       "ses:GetEmailIdentity",
+      // SES v2 API for configuration set scanning (needed by dashboard)
+      "ses:GetConfigurationSet",
+      "ses:GetConfigurationSetEventDestinations",
       "cloudwatch:GetMetricData",
       "cloudwatch:GetMetricStatistics",
     ],

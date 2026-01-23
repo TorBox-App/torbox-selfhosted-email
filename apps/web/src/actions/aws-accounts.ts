@@ -381,9 +381,16 @@ export async function scanAWSAccountFeatures(
           eq(m.userId, session.user.id),
           eq(m.organizationId, organizationId)
         ),
+      with: {
+        organization: {
+          columns: { slug: true },
+        },
+      },
     });
 
-    if (!(membership && ["owner", "admin"].includes(membership.role))) {
+    if (
+      !(membership?.organization.slug && ["owner", "admin"].includes(membership.role))
+    ) {
       return {
         success: false,
         error: "Insufficient permissions",
@@ -729,9 +736,10 @@ export async function scanAWSAccountFeatures(
       .where(eq(awsAccount.id, awsAccountId));
 
     // 16. Revalidate pages (layout will re-fetch products status)
-    revalidatePath(`/${organizationId}/settings/aws-accounts/${awsAccountId}`);
-    revalidatePath(`/${organizationId}/settings`);
-    revalidatePath(`/${organizationId}`);
+    const orgSlug = membership.organization.slug;
+    revalidatePath(`/${orgSlug}/settings/aws-accounts/${awsAccountId}`);
+    revalidatePath(`/${orgSlug}/settings`);
+    revalidatePath(`/${orgSlug}`);
 
     return {
       success: true,
@@ -1052,9 +1060,14 @@ export async function getVerifiedDomains(
           eq(m.userId, session.user.id),
           eq(m.organizationId, organizationId)
         ),
+      with: {
+        organization: {
+          columns: { slug: true },
+        },
+      },
     });
 
-    if (!membership) {
+    if (!membership?.organization.slug) {
       return {
         success: false,
         error: "You don't have access to this organization",
@@ -1179,7 +1192,7 @@ export async function getVerifiedDomains(
 
     // Force revalidation if requested
     if (forceRefresh) {
-      revalidatePath(`/${organizationId}/emails/broadcasts/new`);
+      revalidatePath(`/${membership.organization.slug}/emails/broadcasts/new`);
     }
 
     return {

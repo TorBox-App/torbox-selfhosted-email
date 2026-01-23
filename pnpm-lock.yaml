@@ -477,8 +477,8 @@ importers:
         specifier: 1.316.0
         version: 1.316.0
       posthog-node:
-        specifier: ^4.3.0
-        version: 4.18.0
+        specifier: ^5.24.1
+        version: 5.24.1
       qrcode.react:
         specifier: 4.2.0
         version: 4.2.0(react@19.2.3)
@@ -736,8 +736,8 @@ importers:
         specifier: 1.316.0
         version: 1.316.0
       posthog-node:
-        specifier: ^4.3.0
-        version: 4.18.0
+        specifier: ^5.24.1
+        version: 5.24.1
       radix-ui:
         specifier: 1.4.3
         version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.4))(@types/react@19.2.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -848,8 +848,8 @@ importers:
         specifier: ^0.44.2
         version: 0.44.7(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.9)(pg@8.16.3)
       posthog-node:
-        specifier: ^4.3.0
-        version: 4.18.0
+        specifier: ^5.24.1
+        version: 5.24.1
       stripe:
         specifier: 'catalog:'
         version: 19.3.1(@types/node@24.10.0)
@@ -9901,9 +9901,9 @@ packages:
   posthog-js@1.316.0:
     resolution: {integrity: sha512-Y8JKqv61HQKHB4savYnbp1+zUhfkSLSE4famJONaPuBq9lX+F8j9uNENvIWioe2roJa7FU3g5Ji/CjwwRh+/kA==}
 
-  posthog-node@4.18.0:
-    resolution: {integrity: sha512-XROs1h+DNatgKh/AlIlCtDxWzwrKdYDb2mOs58n4yN8BkGN9ewqeQwG5ApS4/IzwCb7HPttUkOVulkYatd2PIw==}
-    engines: {node: '>=15.0.0'}
+  posthog-node@5.24.1:
+    resolution: {integrity: sha512-1+wsosb5fjuor9zpp3h2uq0xKYY7rDz8gpw/10Scz8Ob/uVNrsHSwGy76D9rgt4cfyaEgpJwyYv+hPi2+YjWtw==}
+    engines: {node: ^20.20.0 || >=22.22.0}
 
   preact@10.28.2:
     resolution: {integrity: sha512-lbteaWGzGHdlIuiJ0l2Jq454m6kcpI1zNje6d8MlGAFlYvP2GO4ibnat7P74Esfz4sPTdM6UxtTwh/d3pwM9JA==}
@@ -22995,11 +22995,9 @@ snapshots:
       preact: 10.28.2
       web-vitals: 4.2.4
 
-  posthog-node@4.18.0:
+  posthog-node@5.24.1:
     dependencies:
-      axios: 1.13.2
-    transitivePeerDependencies:
-      - debug
+      '@posthog/core': 1.13.0
 
   preact@10.28.2: {}
 
