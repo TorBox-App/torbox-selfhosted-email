@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2Icon,
   CloudIcon,
+  CodeIcon,
   CopyIcon,
   DatabaseIcon,
   ExternalLinkIcon,
@@ -164,8 +165,8 @@ export function DeployInfrastructureStep({
   const queryClient = useQueryClient();
   const [config, setConfig] = useState<InfrastructureConfig>(DEFAULT_CONFIG);
   const [deploymentMethod, setDeploymentMethod] = useState<
-    "cli" | "cloudformation"
-  >("cloudformation");
+    "cli" | "cloudformation" | "iac"
+  >("cli");
   const [cfDeploymentStarted, setCfDeploymentStarted] = useState(false);
   const [cliDeployed, setCliDeployed] = useState(false);
   const [copiedInstall, setCopiedInstall] = useState(false);
@@ -185,7 +186,9 @@ export function DeployInfrastructureStep({
   const deployCommand = "wraps email init";
 
   // Track deployment method changes
-  const handleDeploymentMethodChange = (method: "cli" | "cloudformation") => {
+  const handleDeploymentMethodChange = (
+    method: "cli" | "cloudformation" | "iac"
+  ) => {
     setDeploymentMethod(method);
     posthog.capture("onboarding_deployment_method_selected", {
       step: 3,
@@ -388,27 +391,40 @@ export function DeployInfrastructureStep({
         {/* Deployment Method Selection */}
         <Tabs
           onValueChange={(v) =>
-            handleDeploymentMethodChange(v as "cli" | "cloudformation")
+            handleDeploymentMethodChange(v as "cli" | "cloudformation" | "iac")
           }
           value={deploymentMethod}
         >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger className="gap-2" value="cloudformation">
-              <CloudIcon className="h-4 w-4" />
-              AWS Console
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger className="gap-2" value="cli">
               <TerminalIcon className="h-4 w-4" />
               CLI
+              <span className="ml-1 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                Recommended
+              </span>
+            </TabsTrigger>
+            <TabsTrigger className="gap-2" value="iac">
+              <CodeIcon className="h-4 w-4" />
+              Infra as Code
+            </TabsTrigger>
+            <TabsTrigger className="gap-2" value="cloudformation">
+              <CloudIcon className="h-4 w-4" />
+              AWS Console
             </TabsTrigger>
           </TabsList>
 
           {/* CLI Tab */}
           <TabsContent className="space-y-6 pt-4" value="cli">
-            <p className="text-muted-foreground text-sm">
-              Use the Wraps CLI for interactive deployment with automatic AWS
-              credential detection and real-time progress.
-            </p>
+            <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <CheckCircle2Icon className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+              <div className="space-y-1">
+                <p className="font-medium text-sm">Best experience</p>
+                <p className="text-muted-foreground text-sm">
+                  The CLI provides interactive prompts, automatic AWS credential
+                  detection, real-time progress, and built-in error handling.
+                </p>
+              </div>
+            </div>
 
             {/* Install Command */}
             <div className="space-y-2">
@@ -497,6 +513,220 @@ export function DeployInfrastructureStep({
                 htmlFor="cliDeployed"
               >
                 I&apos;ve successfully deployed with the CLI
+              </label>
+            </div>
+
+            <Button
+              className="w-full"
+              disabled={!cliDeployed}
+              onClick={handleCliContinue}
+            >
+              Continue
+            </Button>
+          </TabsContent>
+
+          {/* IaC Tab */}
+          <TabsContent className="space-y-6 pt-4" value="iac">
+            <p className="text-muted-foreground text-sm">
+              For teams managing infrastructure with Pulumi, Terraform, or AWS
+              CDK. Copy our templates and integrate with your existing IaC
+              workflow.
+            </p>
+
+            {/* Pulumi Example */}
+            <div className="space-y-2">
+              <h3 className="flex items-center gap-2 font-semibold text-sm">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                  1
+                </span>
+                Choose your IaC tool
+              </h3>
+
+              <Accordion collapsible defaultValue="pulumi" type="single">
+                <AccordionItem value="pulumi">
+                  <AccordionTrigger className="text-sm">
+                    Pulumi (TypeScript)
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3">
+                      <p className="text-muted-foreground text-xs">
+                        Install the Wraps Pulumi package:
+                      </p>
+                      <pre className="overflow-x-auto rounded-lg bg-secondary p-3 text-xs">
+                        <code>npm install @wraps.dev/pulumi</code>
+                      </pre>
+                      <p className="text-muted-foreground text-xs">
+                        Add to your Pulumi stack:
+                      </p>
+                      <pre className="overflow-x-auto rounded-lg bg-secondary p-3 text-xs">
+                        <code>{`import { WrapsEmail } from "@wraps.dev/pulumi";
+
+const email = new WrapsEmail("wraps-email", {
+  domain: "example.com",
+  vercel: {
+    teamSlug: "my-team",
+    projectName: "my-app",
+  },
+  features: {
+    eventTracking: true,
+    historyStorage: true,
+    historyRetentionDays: 90,
+  },
+});
+
+export const roleArn = email.roleArn;`}</code>
+                      </pre>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="sst">
+                  <AccordionTrigger className="text-sm">
+                    SST (Ion)
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3">
+                      <p className="text-muted-foreground text-xs">
+                        SST v3 uses Pulumi under the hood. Install the package:
+                      </p>
+                      <pre className="overflow-x-auto rounded-lg bg-secondary p-3 text-xs">
+                        <code>npm install @wraps.dev/pulumi</code>
+                      </pre>
+                      <p className="text-muted-foreground text-xs">
+                        Add to your sst.config.ts:
+                      </p>
+                      <pre className="overflow-x-auto rounded-lg bg-secondary p-3 text-xs">
+                        <code>{`import { WrapsEmail } from "@wraps.dev/pulumi";
+
+export default $config({
+  app(input) {
+    return {
+      name: "my-app",
+      home: "aws",
+    };
+  },
+  async run() {
+    const email = new WrapsEmail("wraps-email", {
+      domain: "example.com",
+      vercel: {
+        teamSlug: "my-team",
+        projectName: "my-app",
+      },
+      features: {
+        eventTracking: true,
+        historyStorage: true,
+        historyRetentionDays: 90,
+      },
+    });
+
+    return { roleArn: email.roleArn };
+  },
+});`}</code>
+                      </pre>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="cdk">
+                  <AccordionTrigger className="text-sm">
+                    AWS CDK
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3">
+                      <p className="text-muted-foreground text-xs">
+                        Install the Wraps CDK construct:
+                      </p>
+                      <pre className="overflow-x-auto rounded-lg bg-secondary p-3 text-xs">
+                        <code>npm install @wraps.dev/cdk</code>
+                      </pre>
+                      <p className="text-muted-foreground text-xs">
+                        Add to your CDK stack:
+                      </p>
+                      <pre className="overflow-x-auto rounded-lg bg-secondary p-3 text-xs">
+                        <code>{`import { WrapsEmail } from "@wraps.dev/cdk";
+
+const email = new WrapsEmail(this, "WrapsEmail", {
+  domain: "example.com",
+  vercel: {
+    teamSlug: "my-team",
+    projectName: "my-app",
+  },
+  features: {
+    eventTracking: true,
+    historyStorage: true,
+    historyRetentionDays: 90,
+  },
+});
+
+new cdk.CfnOutput(this, "RoleArn", {
+  value: email.roleArn,
+});`}</code>
+                      </pre>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="terraform">
+                  <AccordionTrigger className="text-sm">
+                    Terraform
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3">
+                      <p className="text-muted-foreground text-xs">
+                        Use our CloudFormation template with Terraform&apos;s
+                        aws_cloudformation_stack resource:
+                      </p>
+                      <pre className="overflow-x-auto rounded-lg bg-secondary p-3 text-xs">
+                        <code>{`resource "aws_cloudformation_stack" "wraps_email" {
+  name         = "wraps-email-infrastructure"
+  template_url = "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-email-infrastructure.yaml"
+
+  parameters = {
+    VercelTeamSlug      = "my-team"
+    VercelProjectName   = "my-app"
+    Domain              = "example.com"
+    EnableEventTracking = "true"
+    EnableHistoryStorage = "true"
+    HistoryRetentionDays = "90"
+  }
+
+  capabilities = ["CAPABILITY_IAM"]
+}`}</code>
+                      </pre>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            {/* Step 2: Deploy */}
+            <div className="space-y-2">
+              <h3 className="flex items-center gap-2 font-semibold text-sm">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                  2
+                </span>
+                Deploy with your IaC tool
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Run your deployment command (pulumi up, terraform apply, cdk
+                deploy) to provision the infrastructure.
+              </p>
+            </div>
+
+            {/* Confirmation */}
+            <div className="flex items-center space-x-2 rounded-lg border p-4">
+              <Checkbox
+                checked={cliDeployed}
+                id="iacDeployed"
+                onCheckedChange={(checked) =>
+                  handleCliDeployedChange(checked as boolean)
+                }
+              />
+              <label
+                className="font-medium text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                htmlFor="iacDeployed"
+              >
+                I&apos;ve successfully deployed with my IaC tool
               </label>
             </div>
 
@@ -630,8 +860,8 @@ export function DeployInfrastructureStep({
             ) : (
               <>
                 <p className="text-muted-foreground text-sm">
-                  Deploy directly from your browser using AWS CloudFormation. No
-                  CLI installation required.
+                  Alternative: Deploy from your browser using AWS CloudFormation
+                  if you can't install the CLI.
                 </p>
 
                 {/* Step 1: Vercel Configuration */}
