@@ -57,6 +57,7 @@ type InfrastructureConfig = {
   vercelTeamSlug: string;
   vercelProjectName: string;
   domain: string;
+  route53HostedZoneId: string;
   enableEventTracking: boolean;
   enableHistoryStorage: boolean;
   historyRetentionDays: number;
@@ -68,6 +69,7 @@ const DEFAULT_CONFIG: InfrastructureConfig = {
   vercelTeamSlug: "",
   vercelProjectName: "",
   domain: "",
+  route53HostedZoneId: "",
   enableEventTracking: true,
   enableHistoryStorage: true,
   historyRetentionDays: 90,
@@ -119,6 +121,11 @@ function generateQuickCreateUrl(
   // Only add domain if provided
   if (config.domain) {
     params.set("param_Domain", config.domain);
+  }
+
+  // Only add Route53 hosted zone ID if provided (auto-creates DKIM records)
+  if (config.route53HostedZoneId) {
+    params.set("param_Route53HostedZoneId", config.route53HostedZoneId);
   }
 
   return `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?${params.toString()}`;
@@ -698,6 +705,27 @@ export function DeployInfrastructureStep({
                         deliverability
                       </p>
                     </div>
+
+                    {/* Route53 Hosted Zone ID (Optional - only shown if domain is set) */}
+                    {config.domain && (
+                      <div className="ml-6 space-y-2">
+                        <Label htmlFor="route53HostedZoneId">
+                          Route53 Hosted Zone ID (Optional)
+                        </Label>
+                        <Input
+                          id="route53HostedZoneId"
+                          onChange={(e) =>
+                            updateConfig({ route53HostedZoneId: e.target.value })
+                          }
+                          placeholder="Z1234567890ABC"
+                          value={config.route53HostedZoneId}
+                        />
+                        <p className="text-muted-foreground text-xs">
+                          If your domain is hosted in Route53, provide the Hosted
+                          Zone ID to auto-create DKIM records
+                        </p>
+                      </div>
+                    )}
 
                     {/* Event Tracking */}
                     <div className="flex items-center justify-between">
