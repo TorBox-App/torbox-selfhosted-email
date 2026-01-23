@@ -4,15 +4,24 @@ import type { awsAccount } from "@wraps/db";
 import type { InferSelectModel } from "drizzle-orm";
 import {
   Archive,
+  AtSign,
   CheckCircle2,
+  ChevronDown,
   Database,
+  Globe,
   Loader2,
+  Lock,
   Mail,
   MessageSquare,
+  MousePointerClick,
   Phone,
   RefreshCw,
-  Settings2,
+  Server,
+  Settings,
+  Shield,
+  TrendingUp,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { scanAWSAccountFeatures } from "@/actions/aws-accounts";
@@ -25,33 +34,84 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 type AccountFeaturesProps = {
   account: InferSelectModel<typeof awsAccount>;
   organizationId: string;
 };
 
+type FeatureItemProps = {
+  icon: React.ReactNode;
+  iconBgClass: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  detail?: string;
+};
+
+function FeatureItem({
+  icon,
+  iconBgClass,
+  name,
+  description,
+  enabled,
+  detail,
+}: FeatureItemProps) {
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-md",
+            iconBgClass
+          )}
+        >
+          {icon}
+        </div>
+        <div>
+          <p className="font-medium text-sm">{name}</p>
+          <p className="text-muted-foreground text-xs">{description}</p>
+          {detail && <p className="text-muted-foreground text-xs">{detail}</p>}
+        </div>
+      </div>
+      {enabled ? (
+        <Badge className="gap-1" variant="default">
+          <CheckCircle2 className="h-3 w-3" />
+          Enabled
+        </Badge>
+      ) : (
+        <Badge className="gap-1" variant="secondary">
+          <XCircle className="h-3 w-3" />
+          Disabled
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 export function AccountFeatures({
   account,
   organizationId,
 }: AccountFeaturesProps) {
   const [isPending, startTransition] = useTransition();
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [smsOpen, setSmsOpen] = useState(false);
   const [scanResult, setScanResult] = useState<{
     success: boolean;
     message: string;
-    features?: {
-      // Email features
-      archivingEnabled: boolean;
-      eventHistoryEnabled: boolean;
-      eventTrackingEnabled: boolean;
-      customTrackingDomain?: string;
-      // SMS features
-      smsEnabled: boolean;
-      smsPhoneNumberCount?: number;
-      smsEventHistoryEnabled: boolean;
-    };
   } | null>(null);
+
+  // Use scanned features from account, or empty defaults
+  const features = account.features ?? { email: {}, sms: {}, identities: [] };
+  const emailFeatures = features.email ?? {};
+  const smsFeatures = features.sms ?? {};
+  const identities = features.identities ?? [];
 
   const handleScanFeatures = () => {
     startTransition(async () => {
@@ -62,8 +122,10 @@ export function AccountFeatures({
         setScanResult({
           success: true,
           message: "Features scanned successfully",
-          features: result.features,
         });
+        // Auto-expand sections after scan
+        setEmailOpen(true);
+        setSmsOpen(true);
       } else {
         setScanResult({
           success: false,
@@ -76,22 +138,37 @@ export function AccountFeatures({
     });
   };
 
-  // Get feature status - use scan result if available, otherwise use account data
-  const features = scanResult?.features || {
-    // Email features
-    archivingEnabled: account.archivingEnabled,
-    eventHistoryEnabled: account.eventHistoryEnabled,
-    eventTrackingEnabled: account.eventTrackingEnabled,
-    customTrackingDomain: account.customTrackingDomain ?? undefined,
-    // SMS features
-    smsEnabled: account.smsEnabled ?? false,
-    smsPhoneNumberCount: account.smsPhoneNumberCount ?? 0,
-    smsEventHistoryEnabled: account.smsEventHistoryEnabled ?? false,
+  const dedicatedIpCount = emailFeatures.dedicatedIpCount ?? 0;
+  const trackedEvents = emailFeatures.trackedEvents ?? [];
+  const sesSandbox = emailFeatures.sandbox ?? true; // Default to sandbox
+  const smsPhoneNumbers = smsFeatures.phoneNumbers ?? [];
+
+  const emailFeatureStatus = {
+    // Core (always enabled with Wraps config)
+    configSet: true,
+    tlsRequired: true,
+    reputationMetrics: true,
+    suppressionList: true,
+    openClickTracking: true,
+    // Optional features (from scan)
+    eventTracking: trackedEvents.length > 0,
+    eventHistory: !!emailFeatures.eventHistoryEnabled,
+    archiving: !!emailFeatures.archivingEnabled,
+    customTrackingDomain: !!emailFeatures.customTrackingDomain,
+    dedicatedIp: dedicatedIpCount > 0,
   };
 
-  // Combined email event tracking (EventBridge + DynamoDB work together)
-  const emailEventTrackingEnabled =
-    features.eventHistoryEnabled || features.eventTrackingEnabled;
+  // Count enabled email features (total enabled / total features)
+  const emailFeaturesEnabled =
+    Object.values(emailFeatureStatus).filter(Boolean).length;
+  const emailFeaturesTotal = Object.keys(emailFeatureStatus).length;
+
+  // Count enabled SMS features
+  const smsFeaturesEnabled = [
+    smsPhoneNumbers.length > 0,
+    smsFeatures.eventHistoryEnabled,
+  ].filter(Boolean).length;
+  const smsFeaturesTotal = 2;
 
   return (
     <Card>
@@ -100,7 +177,7 @@ export function AccountFeatures({
           <div>
             <CardTitle>Deployed Features</CardTitle>
             <CardDescription>
-              Features detected in your AWS account
+              Infrastructure deployed in your AWS account
             </CardDescription>
           </div>
           <Button
@@ -126,193 +203,312 @@ export function AccountFeatures({
       <CardContent className="space-y-4">
         {/* Scan Result Message */}
         {scanResult && (
-          <>
-            <div
-              className={`rounded-md border p-3 ${
-                scanResult.success
-                  ? "border-green-200 bg-green-50 text-green-800"
-                  : "border-red-200 bg-red-50 text-red-800"
-              }`}
+          <div
+            className={cn(
+              "rounded-md border p-3",
+              scanResult.success
+                ? "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200"
+                : "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              {scanResult.success ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              <span className="text-sm">{scanResult.message}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Email Section - Collapsible */}
+        <Collapsible onOpenChange={setEmailOpen} open={emailOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              className="flex w-full items-center justify-between p-2 hover:bg-muted/50"
+              variant="ghost"
             >
               <div className="flex items-center gap-2">
-                {scanResult.success ? (
-                  <CheckCircle2 className="h-4 w-4" />
+                <Mail className="h-4 w-4 text-primary" />
+                <span className="font-semibold">Email</span>
+                {sesSandbox ? (
+                  <Badge className="ml-2" variant="outline">
+                    Sandbox
+                  </Badge>
                 ) : (
-                  <XCircle className="h-4 w-4" />
+                  <Badge className="ml-2" variant="default">
+                    Production
+                  </Badge>
                 )}
-                <span className="text-sm">{scanResult.message}</span>
+                <Badge variant="secondary">
+                  {emailFeaturesEnabled}/{emailFeaturesTotal} enabled
+                </Badge>
               </div>
-            </div>
-            <Separator />
-          </>
-        )}
-
-        {/* Email Section Header */}
-        <div className="flex items-center gap-2">
-          <Mail className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-medium text-muted-foreground text-sm">Email</h3>
-        </div>
-
-        {/* Email Archiving */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Archive className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h4 className="font-medium text-sm">Email Archiving</h4>
-              <p className="text-muted-foreground text-xs">
-                Full email content storage via SES Mail Manager
-              </p>
-            </div>
-          </div>
-          <div>
-            {features.archivingEnabled ? (
-              <Badge className="gap-1" variant="default">
-                <CheckCircle2 className="h-3 w-3" />
-                Enabled
-              </Badge>
-            ) : (
-              <Badge className="gap-1" variant="secondary">
-                <XCircle className="h-3 w-3" />
-                Not Enabled
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Event Tracking (combined EventBridge + DynamoDB) */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-              <Database className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h4 className="font-medium text-sm">Event Tracking</h4>
-              <p className="text-muted-foreground text-xs">
-                Real-time events via EventBridge + DynamoDB storage
-              </p>
-            </div>
-          </div>
-          <div>
-            {emailEventTrackingEnabled ? (
-              <Badge className="gap-1" variant="default">
-                <CheckCircle2 className="h-3 w-3" />
-                Enabled
-              </Badge>
-            ) : (
-              <Badge className="gap-1" variant="secondary">
-                <XCircle className="h-3 w-3" />
-                Not Enabled
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Custom Tracking Domain (if configured) */}
-        {features.customTrackingDomain && (
-          <>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                  <Settings2 className="h-5 w-5 text-green-600" />
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  emailOpen && "rotate-180"
+                )}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-1 pl-2">
+            {/* Sending Identities */}
+            {identities.length > 0 && (
+              <div className="mb-4 border-b pb-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <AtSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">
+                    Sending Identities ({identities.length})
+                  </span>
                 </div>
-                <div>
-                  <h4 className="font-medium text-sm">
-                    Custom Tracking Domain
-                  </h4>
-                  <p className="text-muted-foreground text-xs">
-                    {features.customTrackingDomain}
-                  </p>
+                <div className="space-y-1 pl-6">
+                  {identities.map((identity) => (
+                    <div
+                      className="flex items-center justify-between py-1"
+                      key={identity.identity}
+                    >
+                      <div className="flex items-center gap-2">
+                        {identity.type === "DOMAIN" ? (
+                          <Globe className="h-3 w-3 text-muted-foreground" />
+                        ) : (
+                          <Mail className="h-3 w-3 text-muted-foreground" />
+                        )}
+                        <span className="font-mono text-sm">
+                          {identity.identity}
+                        </span>
+                      </div>
+                      <Badge className="text-xs" variant="outline">
+                        {identity.type === "DOMAIN" ? "Domain" : "Email"}
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <Badge className="gap-1" variant="default">
-                <CheckCircle2 className="h-3 w-3" />
-                Configured
-              </Badge>
-            </div>
-          </>
-        )}
-
-        <Separator />
-
-        {/* SMS Section Header */}
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-medium text-muted-foreground text-sm">SMS</h3>
-        </div>
-
-        {/* SMS Phone Numbers */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100">
-              <Phone className="h-5 w-5 text-teal-600" />
-            </div>
-            <div>
-              <h4 className="font-medium text-sm">Phone Numbers</h4>
-              <p className="text-muted-foreground text-xs">
-                {features.smsEnabled && features.smsPhoneNumberCount
-                  ? `${features.smsPhoneNumberCount} phone number${features.smsPhoneNumberCount > 1 ? "s" : ""} configured`
-                  : "AWS End User Messaging phone numbers"}
-              </p>
-            </div>
-          </div>
-          <div>
-            {features.smsEnabled ? (
-              <Badge className="gap-1" variant="default">
-                <CheckCircle2 className="h-3 w-3" />
-                Enabled
-              </Badge>
-            ) : (
-              <Badge className="gap-1" variant="secondary">
-                <XCircle className="h-3 w-3" />
-                Not Enabled
-              </Badge>
             )}
-          </div>
-        </div>
 
-        <Separator />
+            {/* Core Infrastructure */}
+            <FeatureItem
+              description="wraps-email-tracking"
+              detail={emailFeatures.configSetName || "wraps-email-tracking"}
+              enabled={emailFeatureStatus.configSet}
+              icon={<Settings className="h-4 w-4 text-slate-600" />}
+              iconBgClass="bg-slate-100 dark:bg-slate-800"
+              name="SES Configuration Set"
+            />
 
-        {/* SMS Event Tracking */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-              <Database className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <h4 className="font-medium text-sm">Event Tracking</h4>
-              <p className="text-muted-foreground text-xs">
-                SMS event storage in DynamoDB
-              </p>
-            </div>
-          </div>
-          <div>
-            {features.smsEventHistoryEnabled ? (
-              <Badge className="gap-1" variant="default">
-                <CheckCircle2 className="h-3 w-3" />
-                Enabled
-              </Badge>
-            ) : (
-              <Badge className="gap-1" variant="secondary">
-                <XCircle className="h-3 w-3" />
-                Not Enabled
-              </Badge>
+            <FeatureItem
+              description="Enforce TLS encryption for outbound emails"
+              enabled={emailFeatureStatus.tlsRequired}
+              icon={<Lock className="h-4 w-4 text-blue-600" />}
+              iconBgClass="bg-blue-100 dark:bg-blue-900"
+              name="TLS Required"
+            />
+
+            <FeatureItem
+              description="Track bounce and complaint rates"
+              enabled={emailFeatureStatus.reputationMetrics}
+              icon={<TrendingUp className="h-4 w-4 text-green-600" />}
+              iconBgClass="bg-green-100 dark:bg-green-900"
+              name="Reputation Metrics"
+            />
+
+            <FeatureItem
+              description="Auto-suppress bounced and complained addresses"
+              enabled={emailFeatureStatus.suppressionList}
+              icon={<Shield className="h-4 w-4 text-orange-600" />}
+              iconBgClass="bg-orange-100 dark:bg-orange-900"
+              name="Suppression List"
+            />
+
+            {/* Tracking */}
+            <FeatureItem
+              description="Track email opens and link clicks"
+              enabled={emailFeatureStatus.openClickTracking}
+              icon={<MousePointerClick className="h-4 w-4 text-indigo-600" />}
+              iconBgClass="bg-indigo-100 dark:bg-indigo-900"
+              name="Open & Click Tracking"
+            />
+
+            {/* Event Tracking */}
+            <FeatureItem
+              description="Real-time event streaming via EventBridge"
+              detail={
+                trackedEvents.length > 0
+                  ? `${trackedEvents.length} event type${trackedEvents.length > 1 ? "s" : ""}`
+                  : undefined
+              }
+              enabled={emailFeatureStatus.eventTracking}
+              icon={<Zap className="h-4 w-4 text-yellow-600" />}
+              iconBgClass="bg-yellow-100 dark:bg-yellow-900"
+              name="Event Tracking"
+            />
+
+            {/* Show tracked events if any */}
+            {trackedEvents.length > 0 && (
+              <div className="ml-11 flex flex-wrap gap-1 pb-2">
+                {trackedEvents.map((event) => (
+                  <Badge
+                    className="text-xs font-normal"
+                    key={event}
+                    variant="outline"
+                  >
+                    {event}
+                  </Badge>
+                ))}
+              </div>
             )}
-          </div>
-        </div>
 
-        <Separator />
+            <FeatureItem
+              description="Store events in DynamoDB for analytics"
+              enabled={emailFeatureStatus.eventHistory}
+              icon={<Database className="h-4 w-4 text-purple-600" />}
+              iconBgClass="bg-purple-100 dark:bg-purple-900"
+              name="Event History"
+            />
+
+            {/* Archiving */}
+            <FeatureItem
+              description="Full email content storage via Mail Manager"
+              detail={
+                emailFeatures.archiveArn ? "Archive configured" : undefined
+              }
+              enabled={emailFeatureStatus.archiving}
+              icon={<Archive className="h-4 w-4 text-teal-600" />}
+              iconBgClass="bg-teal-100 dark:bg-teal-900"
+              name="Email Archiving"
+            />
+
+            {/* Custom Tracking Domain */}
+            <FeatureItem
+              description="Branded tracking URLs"
+              detail={emailFeatures.customTrackingDomain}
+              enabled={emailFeatureStatus.customTrackingDomain}
+              icon={<Globe className="h-4 w-4 text-cyan-600" />}
+              iconBgClass="bg-cyan-100 dark:bg-cyan-900"
+              name="Custom Tracking Domain"
+            />
+
+            {/* Dedicated IP */}
+            <FeatureItem
+              description="Dedicated sending IP address"
+              detail={
+                dedicatedIpCount > 0
+                  ? `${dedicatedIpCount} IP${dedicatedIpCount > 1 ? "s" : ""} assigned`
+                  : undefined
+              }
+              enabled={emailFeatureStatus.dedicatedIp}
+              icon={<Server className="h-4 w-4 text-rose-600" />}
+              iconBgClass="bg-rose-100 dark:bg-rose-900"
+              name="Dedicated IP"
+            />
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* SMS Section - Collapsible */}
+        <Collapsible onOpenChange={setSmsOpen} open={smsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              className="flex w-full items-center justify-between p-2 hover:bg-muted/50"
+              variant="ghost"
+            >
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                <span className="font-semibold">SMS</span>
+                <Badge className="ml-2" variant="secondary">
+                  {smsFeaturesEnabled}/{smsFeaturesTotal} enabled
+                </Badge>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  smsOpen && "rotate-180"
+                )}
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-1 pl-2">
+            {/* Phone Numbers */}
+            {smsPhoneNumbers.length > 0 ? (
+              <div className="mb-4 border-b pb-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">
+                    Phone Numbers ({smsPhoneNumbers.length})
+                  </span>
+                </div>
+                <div className="space-y-2 pl-6">
+                  {smsPhoneNumbers.map((pn) => (
+                    <div
+                      className="flex items-center justify-between py-1"
+                      key={pn.phoneNumber}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm">
+                          {pn.phoneNumber}
+                        </span>
+                        <Badge className="text-xs" variant="outline">
+                          {pn.type}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {pn.capabilities.includes("SMS") && (
+                          <Badge className="text-xs" variant="secondary">
+                            SMS
+                          </Badge>
+                        )}
+                        {pn.capabilities.includes("VOICE") && (
+                          <Badge className="text-xs" variant="secondary">
+                            Voice
+                          </Badge>
+                        )}
+                        <Badge
+                          className="text-xs"
+                          variant={
+                            pn.status === "ACTIVE" ? "default" : "outline"
+                          }
+                        >
+                          {pn.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <FeatureItem
+                description="AWS End User Messaging phone numbers"
+                enabled={false}
+                icon={<Phone className="h-4 w-4 text-teal-600" />}
+                iconBgClass="bg-teal-100 dark:bg-teal-900"
+                name="Phone Numbers"
+              />
+            )}
+
+            <FeatureItem
+              description="Store delivery events in DynamoDB"
+              enabled={!!smsFeatures.eventHistoryEnabled}
+              icon={<Database className="h-4 w-4 text-purple-600" />}
+              iconBgClass="bg-purple-100 dark:bg-purple-900"
+              name="SMS Event History"
+            />
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Help Text */}
         <div className="rounded-md bg-muted p-3">
           <p className="text-muted-foreground text-xs">
-            Click "Scan Features" to detect features deployed in your AWS
-            account. This queries your AWS resources to identify enabled
-            features like email archiving and SMS infrastructure.
+            Click &quot;Scan Features&quot; to detect deployed infrastructure.
+            Use{" "}
+            <code className="rounded bg-muted-foreground/20 px-1">
+              wraps email init
+            </code>{" "}
+            or{" "}
+            <code className="rounded bg-muted-foreground/20 px-1">
+              wraps email upgrade
+            </code>{" "}
+            to deploy additional features.
           </p>
         </div>
       </CardContent>

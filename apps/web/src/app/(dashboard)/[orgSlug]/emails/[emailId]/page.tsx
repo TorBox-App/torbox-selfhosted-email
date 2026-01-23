@@ -190,7 +190,7 @@ async function fetchEmail(
       textBody: undefined,
       status: finalStatus,
       sentAt: firstEvent.sentAt,
-      archivingEnabled: emailAccount.archivingEnabled,
+      archivingEnabled: emailAccount.features?.email?.archivingEnabled ?? false,
       events: emailEvents.map((event) => ({
         type: event.eventType.toLowerCase().replace(/ /g, "_") as EmailStatus,
         timestamp: event.createdAt,

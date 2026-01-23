@@ -11,8 +11,9 @@ import { assumeRole } from "@/lib/aws/assume-role";
  * Must match the client-side generation in deploy-infrastructure-step.tsx
  */
 function generateWebhookSecret(organizationId: string): string {
-  return `whsec_${organizationId.replace(/-/g, "")}`
+  return `whsec_${organizationId.replace(/-/g, "")}`;
 }
+
 import {
   detectFeaturesFromOutputs,
   findInfrastructureStack,
@@ -147,19 +148,20 @@ export async function POST(request: Request, context: RouteContext) {
             isVerified: true,
             lastVerifiedAt: new Date(),
             updatedAt: new Date(),
-            // Update feature flags from detected features
-            eventTrackingEnabled:
-              detectedFeatures?.eventTracking ??
-              existingAccount.eventTrackingEnabled,
-            eventHistoryEnabled:
-              detectedFeatures?.historyStorage ??
-              existingAccount.eventHistoryEnabled,
-            archivingEnabled:
-              detectedFeatures?.archiving ?? existingAccount.archivingEnabled,
-            archiveArn:
-              detectedFeatures?.archiveArn ?? existingAccount.archiveArn,
-            configSetName:
-              detectedFeatures?.configSetName ?? existingAccount.configSetName,
+            // Set emailEnabled if config set is detected
+            emailEnabled: !!detectedFeatures?.configSetName,
+            // Store features in JSON
+            features: detectedFeatures
+              ? {
+                  email: {
+                    configSetName: detectedFeatures.configSetName,
+                    eventTrackingEnabled: detectedFeatures.eventTracking,
+                    eventHistoryEnabled: detectedFeatures.historyStorage,
+                    archivingEnabled: detectedFeatures.archiving,
+                    archiveArn: detectedFeatures.archiveArn,
+                  },
+                }
+              : existingAccount.features,
           })
           .where(eq(awsAccount.id, existingAccount.id));
       } else {
@@ -208,12 +210,20 @@ export async function POST(request: Request, context: RouteContext) {
           isVerified: true,
           lastVerifiedAt: new Date(),
           createdBy: session.user.id,
-          // Set feature flags from detected features
-          eventTrackingEnabled: detectedFeatures?.eventTracking ?? false,
-          eventHistoryEnabled: detectedFeatures?.historyStorage ?? false,
-          archivingEnabled: detectedFeatures?.archiving ?? false,
-          archiveArn: detectedFeatures?.archiveArn,
-          configSetName: detectedFeatures?.configSetName,
+          // Set emailEnabled if config set is detected
+          emailEnabled: !!detectedFeatures?.configSetName,
+          // Store features in JSON
+          features: detectedFeatures
+            ? {
+                email: {
+                  configSetName: detectedFeatures.configSetName,
+                  eventTrackingEnabled: detectedFeatures.eventTracking,
+                  eventHistoryEnabled: detectedFeatures.historyStorage,
+                  archivingEnabled: detectedFeatures.archiving,
+                  archiveArn: detectedFeatures.archiveArn,
+                },
+              }
+            : undefined,
         });
       }
 

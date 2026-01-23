@@ -73,24 +73,38 @@ export const awsAccount = pgTable(
     isVerified: boolean("is_verified").default(false).notNull(),
     lastVerifiedAt: timestamp("last_verified_at"),
 
-    // Email Features
-    archivingEnabled: boolean("archiving_enabled").default(false).notNull(),
-    archiveArn: text("archive_arn"),
-    eventHistoryEnabled: boolean("event_history_enabled")
-      .default(false)
-      .notNull(),
-    eventTrackingEnabled: boolean("event_tracking_enabled")
-      .default(false)
-      .notNull(),
-    configSetName: text("config_set_name"),
-    customTrackingDomain: text("custom_tracking_domain"),
-
-    // SMS Features
+    // Quick product flags for navigation/menus
+    emailEnabled: boolean("email_enabled").default(false).notNull(),
     smsEnabled: boolean("sms_enabled").default(false).notNull(),
-    smsPhoneNumberCount: integer("sms_phone_number_count").default(0).notNull(),
-    smsEventHistoryEnabled: boolean("sms_event_history_enabled")
-      .default(false)
-      .notNull(),
+
+    // Detailed scanned features (populated by "Scan Features" button)
+    features: json("features").$type<{
+      email?: {
+        configSetName?: string;
+        sandbox?: boolean;
+        archivingEnabled?: boolean;
+        archiveArn?: string;
+        eventHistoryEnabled?: boolean;
+        eventTrackingEnabled?: boolean;
+        trackedEvents?: string[];
+        customTrackingDomain?: string;
+        dedicatedIpCount?: number;
+      };
+      sms?: {
+        enabled?: boolean;
+        phoneNumbers?: Array<{
+          phoneNumber: string;
+          status: string;
+          type: string;
+          capabilities: string[];
+        }>;
+        eventHistoryEnabled?: boolean;
+      };
+      identities?: Array<{
+        identity: string;
+        type: "DOMAIN" | "EMAIL_ADDRESS";
+      }>;
+    }>(),
 
     // Audit
     createdBy: text("created_by").references(() => user.id),

@@ -218,6 +218,13 @@
       "when": 1769104857047,
       "tag": "0030_adorable_scarecrow",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1769143192746,
+      "tag": "0031_material_slapstick",
+      "breakpoints": true
     }
   ]
 }

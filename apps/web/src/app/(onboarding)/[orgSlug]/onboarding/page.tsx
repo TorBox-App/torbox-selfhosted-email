@@ -139,8 +139,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const hasSkippedBilling = useRef(false);
   useEffect(() => {
     if (
-      !isInitialized ||
-      !onboardingStatus ||
+      !(isInitialized && onboardingStatus) ||
       hasSkippedBilling.current ||
       hasShownSubscribedToast.current
     ) {

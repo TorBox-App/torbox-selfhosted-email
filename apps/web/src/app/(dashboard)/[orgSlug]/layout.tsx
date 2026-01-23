@@ -68,8 +68,7 @@ export default async function OrganizationLayout({
   const accounts = await db.query.awsAccount.findMany({
     where: eq(awsAccount.organizationId, orgWithMembership.id),
     columns: {
-      eventHistoryEnabled: true,
-      eventTrackingEnabled: true,
+      emailEnabled: true,
       smsEnabled: true,
     },
   });
@@ -82,9 +81,7 @@ export default async function OrganizationLayout({
   const plan = PLANS[planId];
 
   const productsStatus = {
-    emailEnabled: accounts.some(
-      (a) => a.eventHistoryEnabled || a.eventTrackingEnabled
-    ),
+    emailEnabled: accounts.some((a) => a.emailEnabled),
     smsEnabled: accounts.some((a) => a.smsEnabled),
     hasAwsAccounts: accounts.length > 0,
     planId,

@@ -6,7 +6,10 @@ import {
   PinpointSMSVoiceV2Client,
 } from "@aws-sdk/client-pinpoint-sms-voice-v2";
 import {
+  GetAccountCommand,
   GetConfigurationSetCommand,
+  GetConfigurationSetEventDestinationsCommand,
+  GetDedicatedIpsCommand,
   GetEmailIdentityCommand,
   ListEmailIdentitiesCommand,
   SESv2Client,
@@ -321,17 +324,23 @@ export type ScanFeaturesResult =
   | {
       success: true;
       features: {
-        // Email features
-        archivingEnabled: boolean;
-        archiveArn?: string;
-        eventHistoryEnabled: boolean;
-        eventTrackingEnabled: boolean;
-        configSetName?: string;
-        customTrackingDomain?: string;
-        // SMS features
-        smsEnabled: boolean;
-        smsPhoneNumberCount?: number;
-        smsEventHistoryEnabled: boolean;
+        email?: {
+          configSetName?: string;
+          archivingEnabled?: boolean;
+          archiveArn?: string;
+          eventHistoryEnabled?: boolean;
+          eventTrackingEnabled?: boolean;
+          customTrackingDomain?: string;
+        };
+        sms?: {
+          enabled?: boolean;
+          phoneNumberCount?: number;
+          eventHistoryEnabled?: boolean;
+        };
+        identities?: Array<{
+          identity: string;
+          type: "DOMAIN" | "EMAIL_ADDRESS";
+        }>;
       };
     }
   | {
@@ -453,9 +462,10 @@ export async function scanAWSAccountFeatures(
       }
     }
 
-    // 7. Scan for SES Configuration Set and Custom Tracking Domain
+    // 7. Scan for SES Configuration Set, Custom Tracking Domain, and Tracked Events
     let configSetName: string | undefined;
     let customTrackingDomain: string | undefined;
+    let trackedEvents: string[] = [];
 
     try {
       const sesClient = new SESv2Client({
@@ -475,20 +485,38 @@ export async function scanAWSAccountFeatures(
         configSetName = "wraps-email-tracking";
 
         // Extract custom tracking domain if configured
-        // VdmOptions contains DashboardOptions with EngagementMetrics
-        const vdmOptions = configSetResponse.VdmOptions;
-        const dashboardOptions = vdmOptions?.DashboardOptions;
-        if (dashboardOptions?.EngagementMetrics === "ENABLED") {
-          // Custom tracking domain is stored in TrackingOptions
-          customTrackingDomain =
-            configSetResponse.TrackingOptions?.CustomRedirectDomain ??
-            undefined;
+        customTrackingDomain =
+          configSetResponse.TrackingOptions?.CustomRedirectDomain ?? undefined;
+
+        // Get event destinations to determine which events are tracked
+        try {
+          const eventDestResponse = await sesClient.send(
+            new GetConfigurationSetEventDestinationsCommand({
+              ConfigurationSetName: "wraps-email-tracking",
+            })
+          );
+
+          // Collect all unique event types across all destinations
+          const eventTypes = new Set<string>();
+          for (const destination of eventDestResponse.EventDestinations ?? []) {
+            for (const eventType of destination.MatchingEventTypes ?? []) {
+              eventTypes.add(eventType);
+            }
+          }
+          trackedEvents = Array.from(eventTypes).sort();
+        } catch (destError: any) {
+          // If we can't get event destinations, just continue without them
+          if (destError.name !== "AccessDeniedException") {
+            log.warn(
+              { err: serializeError(destError) },
+              "Error scanning for event destinations"
+            );
+          }
         }
       }
     } catch (error: any) {
       // ResourceNotFoundException means config set doesn't exist
       // AccessDeniedException means user hasn't granted permissions
-      // Either way, assume config set is not available
       if (
         error.name !== "NotFoundException" &&
         error.name !== "AccessDeniedException"
@@ -501,12 +529,38 @@ export async function scanAWSAccountFeatures(
     }
 
     // 8. Determine event tracking status
-    // Event tracking is enabled if DynamoDB table exists (created by EventBridge rule + Lambda)
-    const eventTrackingEnabled = eventHistoryEnabled;
+    // Event tracking is enabled if we have tracked events configured
+    const eventTrackingEnabled = trackedEvents.length > 0;
 
-    // 9. Scan for SMS infrastructure (phone numbers)
+    // 9. Check SES sandbox status
+    let sesSandbox = true; // Default to sandbox (safer assumption)
+
+    try {
+      const sesClient = new SESv2Client({
+        region: account.region,
+        credentials: awsCredentials,
+      });
+
+      const accountResponse = await sesClient.send(new GetAccountCommand({}));
+      // ProductionAccessEnabled is true when out of sandbox
+      sesSandbox = !accountResponse.ProductionAccessEnabled;
+    } catch (error: any) {
+      if (error.name !== "AccessDeniedException") {
+        log.warn(
+          { err: serializeError(error) },
+          "Error checking SES sandbox status"
+        );
+      }
+    }
+
+    // 10. Scan for SMS infrastructure (phone numbers with details)
     let smsEnabled = false;
-    let smsPhoneNumberCount = 0;
+    let smsPhoneNumbers: Array<{
+      phoneNumber: string;
+      status: string;
+      type: string;
+      capabilities: string[];
+    }> = [];
 
     try {
       const smsClient = new PinpointSMSVoiceV2Client({
@@ -518,8 +572,15 @@ export async function scanAWSAccountFeatures(
         new DescribePhoneNumbersCommand({})
       );
 
-      smsPhoneNumberCount = phoneNumbersResponse.PhoneNumbers?.length ?? 0;
-      smsEnabled = smsPhoneNumberCount > 0;
+      smsPhoneNumbers =
+        phoneNumbersResponse.PhoneNumbers?.map((pn) => ({
+          phoneNumber: pn.PhoneNumber ?? "",
+          status: pn.Status ?? "UNKNOWN",
+          type: pn.NumberType ?? "UNKNOWN",
+          capabilities: pn.NumberCapabilities ?? [],
+        })) ?? [];
+
+      smsEnabled = smsPhoneNumbers.length > 0;
     } catch (error: any) {
       // AccessDeniedException means user hasn't granted SMS permissions
       // That's fine - assume SMS is not enabled
@@ -531,7 +592,7 @@ export async function scanAWSAccountFeatures(
       }
     }
 
-    // 10. Scan for SMS event history (DynamoDB table)
+    // 11. Scan for SMS event history (DynamoDB table)
     let smsEventHistoryEnabled = false;
 
     try {
@@ -561,45 +622,120 @@ export async function scanAWSAccountFeatures(
       }
     }
 
-    // 11. Update database with discovered features
+    // 12. Scan for dedicated IPs
+    let dedicatedIpCount = 0;
+
+    try {
+      const sesClient = new SESv2Client({
+        region: account.region,
+        credentials: awsCredentials,
+      });
+
+      const dedicatedIpsResponse = await sesClient.send(
+        new GetDedicatedIpsCommand({})
+      );
+
+      dedicatedIpCount = dedicatedIpsResponse.DedicatedIps?.length ?? 0;
+    } catch (error: any) {
+      // AccessDeniedException means user hasn't granted permissions
+      // That's fine - assume no dedicated IPs
+      if (error.name !== "AccessDeniedException") {
+        log.warn(
+          { err: serializeError(error) },
+          "Error scanning for dedicated IPs"
+        );
+      }
+    }
+
+    // 13. Scan for sending identities using Wraps config set
+    const identities: Array<{
+      identity: string;
+      type: "DOMAIN" | "EMAIL_ADDRESS";
+    }> = [];
+
+    try {
+      const sesClient = new SESv2Client({
+        region: account.region,
+        credentials: awsCredentials,
+      });
+
+      const listResponse = await sesClient.send(
+        new ListEmailIdentitiesCommand({ PageSize: 100 })
+      );
+
+      // Check each sending-enabled identity for Wraps config set
+      const sendingEnabled =
+        listResponse.EmailIdentities?.filter((i) => i.SendingEnabled) ?? [];
+
+      for (const identity of sendingEnabled) {
+        try {
+          const details = await sesClient.send(
+            new GetEmailIdentityCommand({
+              EmailIdentity: identity.IdentityName,
+            })
+          );
+          if (
+            details.VerifiedForSendingStatus &&
+            details.ConfigurationSetName?.startsWith("wraps-email-")
+          ) {
+            identities.push({
+              identity: identity.IdentityName!,
+              type: identity.IdentityType as "DOMAIN" | "EMAIL_ADDRESS",
+            });
+          }
+        } catch {
+          // Skip identities we can't access
+        }
+      }
+    } catch (error: any) {
+      if (error.name !== "AccessDeniedException") {
+        log.warn({ err: serializeError(error) }, "Error scanning identities");
+      }
+    }
+
+    // 14. Build features JSON object
+    const featuresJson = {
+      email: {
+        configSetName,
+        sandbox: sesSandbox,
+        archivingEnabled,
+        archiveArn,
+        eventHistoryEnabled,
+        eventTrackingEnabled,
+        trackedEvents,
+        customTrackingDomain,
+        dedicatedIpCount,
+      },
+      sms: {
+        enabled: smsEnabled,
+        phoneNumbers: smsPhoneNumbers,
+        eventHistoryEnabled: smsEventHistoryEnabled,
+      },
+      identities,
+    };
+
+    // 15. Update database with discovered features
+    // Email is enabled if we found a config set
+    const emailEnabled = !!configSetName;
+
     await db
       .update(awsAccount)
       .set({
-        // Email features
-        archivingEnabled,
-        archiveArn: archiveArn ?? null,
-        eventHistoryEnabled,
-        eventTrackingEnabled,
-        configSetName: configSetName ?? null,
-        customTrackingDomain: customTrackingDomain ?? null,
-        // SMS features
+        emailEnabled,
         smsEnabled,
-        smsPhoneNumberCount,
-        smsEventHistoryEnabled,
+        features: featuresJson,
         updatedAt: new Date(),
       })
       .where(eq(awsAccount.id, awsAccountId));
 
-    // 12. Revalidate pages (layout will re-fetch products status)
+    // 16. Revalidate pages (layout will re-fetch products status)
     revalidatePath(`/${organizationId}/settings/aws-accounts/${awsAccountId}`);
     revalidatePath(`/${organizationId}/settings`);
     revalidatePath(`/${organizationId}`);
 
     return {
       success: true,
-      features: {
-        // Email features
-        archivingEnabled,
-        archiveArn,
-        eventHistoryEnabled,
-        eventTrackingEnabled,
-        configSetName,
-        customTrackingDomain,
-        // SMS features
-        smsEnabled,
-        smsPhoneNumberCount,
-        smsEventHistoryEnabled,
-      },
+      features: featuresJson,
     };
   } catch (error) {
     log.error(

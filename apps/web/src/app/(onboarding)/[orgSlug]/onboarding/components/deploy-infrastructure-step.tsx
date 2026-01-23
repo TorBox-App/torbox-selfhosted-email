@@ -715,14 +715,16 @@ export function DeployInfrastructureStep({
                         <Input
                           id="route53HostedZoneId"
                           onChange={(e) =>
-                            updateConfig({ route53HostedZoneId: e.target.value })
+                            updateConfig({
+                              route53HostedZoneId: e.target.value,
+                            })
                           }
                           placeholder="Z1234567890ABC"
                           value={config.route53HostedZoneId}
                         />
                         <p className="text-muted-foreground text-xs">
-                          If your domain is hosted in Route53, provide the Hosted
-                          Zone ID to auto-create DKIM records
+                          If your domain is hosted in Route53, provide the
+                          Hosted Zone ID to auto-create DKIM records
                         </p>
                       </div>
                     )}
