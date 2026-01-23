@@ -126,6 +126,12 @@ Parameters:
     Default: ""
     NoEcho: true
 
+  # Optional Route53 Integration
+  Route53HostedZoneId:
+    Type: String
+    Description: "(Optional) Route53 Hosted Zone ID - if provided, DKIM records will be created automatically"
+    Default: ""
+
 Conditions:
   HasVercelOIDC: !And
     - !Not [!Equals [!Ref VercelTeamSlug, ""]]
@@ -142,6 +148,9 @@ Conditions:
   HasTLS: !Equals [!Ref TLSRequired, "true"]
   HasReputationMetrics: !Equals [!Ref ReputationMetrics, "true"]
   HasWebhook: !Not [!Equals [!Ref WrapsWebhookSecret, ""]]
+  HasRoute53: !And
+    - !Condition HasDomain
+    - !Not [!Equals [!Ref Route53HostedZoneId, ""]]
 
 Resources:
   # ===========================================
@@ -324,6 +333,42 @@ Resources:
       EmailIdentity: !Ref Domain
       DkimSigningAttributes:
         NextSigningKeyLength: RSA_2048_BIT
+
+  # ===========================================
+  # Route53 DKIM Records (Conditional - if Route53 Hosted Zone provided)
+  # ===========================================
+  DkimRecord1:
+    Type: AWS::Route53::RecordSet
+    Condition: HasRoute53
+    Properties:
+      HostedZoneId: !Ref Route53HostedZoneId
+      Name: !GetAtt WrapsEmailDomainIdentity.DkimDNSTokenName1
+      Type: CNAME
+      TTL: "300"
+      ResourceRecords:
+        - !GetAtt WrapsEmailDomainIdentity.DkimDNSTokenValue1
+
+  DkimRecord2:
+    Type: AWS::Route53::RecordSet
+    Condition: HasRoute53
+    Properties:
+      HostedZoneId: !Ref Route53HostedZoneId
+      Name: !GetAtt WrapsEmailDomainIdentity.DkimDNSTokenName2
+      Type: CNAME
+      TTL: "300"
+      ResourceRecords:
+        - !GetAtt WrapsEmailDomainIdentity.DkimDNSTokenValue2
+
+  DkimRecord3:
+    Type: AWS::Route53::RecordSet
+    Condition: HasRoute53
+    Properties:
+      HostedZoneId: !Ref Route53HostedZoneId
+      Name: !GetAtt WrapsEmailDomainIdentity.DkimDNSTokenName3
+      Type: CNAME
+      TTL: "300"
+      ResourceRecords:
+        - !GetAtt WrapsEmailDomainIdentity.DkimDNSTokenValue3
 
   # ===========================================
   # EventBridge Event Destination (Conditional)
@@ -873,10 +918,15 @@ Outputs:
       WRAPS_CONFIG_SET=wraps-email-tracking
 
   # DNS Records (Conditional - for domain setup)
+  Route53DKIMStatus:
+    Condition: HasRoute53
+    Description: "Route53 DKIM records status"
+    Value: "DKIM records were automatically created in your Route53 hosted zone"
+
   DKIMInstructions:
     Condition: HasDomain
-    Description: "DKIM DNS record instructions"
-    Value: !Sub "Add 3 CNAME records for DKIM: Check SES console for ${Domain} identity to get the exact record values"
+    Description: "DKIM DNS record instructions (skip if using Route53 auto-setup)"
+    Value: !Sub "Add 3 CNAME records for DKIM: Check SES console for ${Domain} identity to get the exact record values. If you provided a Route53 Hosted Zone ID, these were created automatically."
 
   SPFRecord:
     Condition: HasDomain
