@@ -129,7 +129,6 @@ export function BillingStep({
       const result = await authClient.subscription.upgrade({
         plan: selectedPlan,
         annual: billingInterval === "annual",
-        customerType: "organization",
         referenceId: organizationId,
         successUrl: `${window.location.origin}/${orgSlug}/onboarding?step=3&subscribed=true`,
         cancelUrl: `${window.location.origin}/${orgSlug}/onboarding?step=2&plan=${selectedPlan}&interval=${billingInterval}`,

@@ -364,9 +364,6 @@ export const auth = betterAuth<BetterAuthOptions>({
                 console.error("Error handling Stripe webhook:", error);
               }
             },
-            organization: {
-              enabled: true,
-            },
             subscription: {
               enabled: true,
               getCheckoutSessionParams: (
