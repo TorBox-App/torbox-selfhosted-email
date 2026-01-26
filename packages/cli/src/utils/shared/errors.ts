@@ -394,7 +394,7 @@ export const errors = {
       "The Pulumi stack is locked from a previous run",
       "STACK_LOCKED",
       "This happens when a previous deployment was interrupted.\n\nTo unlock, run:\n  rm -rf ~/.wraps/pulumi/.pulumi/locks\n\nThen try your command again.",
-      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
+      "https://wraps.dev/docs/guides/aws-setup/permissions/troubleshooting"
     ),
 
   // SMS-specific errors
@@ -471,7 +471,7 @@ export const errors = {
       profile
         ? `Run: aws sso login --profile ${profile}`
         : "Run: aws sso login",
-      "https://wraps.dev/docs/guides/aws-setup"
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 
   profileNotFound: (profile: string, availableProfiles: string[]) =>
@@ -481,7 +481,7 @@ export const errors = {
       availableProfiles.length > 0
         ? `Available profiles: ${availableProfiles.join(", ")}\n\nSet a valid profile:\n  export AWS_PROFILE=<profile-name>\n\nOr configure a new profile:\n  aws configure --profile ${profile}`
         : "No AWS profiles configured.\n\nConfigure AWS credentials:\n  aws configure\n\nOr set up SSO:\n  aws configure sso",
-      "https://wraps.dev/docs/guides/aws-setup"
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 
   credentialsFileMissing: () =>
@@ -489,7 +489,7 @@ export const errors = {
       "AWS credentials file not found",
       "CREDENTIALS_FILE_MISSING",
       "Configure AWS credentials:\n  aws configure\n\nOr set environment variables:\n  export AWS_ACCESS_KEY_ID=<your-key>\n  export AWS_SECRET_ACCESS_KEY=<your-secret>",
-      "https://wraps.dev/docs/guides/aws-setup"
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 
   accessKeyInvalid: () =>
@@ -497,7 +497,7 @@ export const errors = {
       "AWS access key is invalid or has been deactivated",
       "ACCESS_KEY_INVALID",
       "Check your AWS access keys in the IAM console.\n\nReconfigure credentials:\n  aws configure\n\nOr generate new access keys in AWS IAM.",
-      "https://wraps.dev/docs/guides/aws-setup"
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 
   sessionTokenExpired: () =>
@@ -505,7 +505,7 @@ export const errors = {
       "AWS session token has expired",
       "SESSION_TOKEN_EXPIRED",
       "Your temporary credentials have expired.\n\nFor SSO users:\n  aws sso login\n\nFor assumed roles:\n  Re-run your assume-role command",
-      "https://wraps.dev/docs/guides/aws-setup"
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 
   // IAM permission errors

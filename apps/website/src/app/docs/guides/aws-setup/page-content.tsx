@@ -6,6 +6,7 @@ import {
   Clock,
   Cloud,
   Rocket,
+  Shield,
   Terminal,
   Wrench,
   Zap,
@@ -44,6 +45,15 @@ const paths = [
     icon: Rocket,
     time: "10 min",
     for: "New to AWS",
+  },
+  {
+    title: "IAM Permissions",
+    description:
+      "View and configure the exact IAM permissions required for Wraps to deploy infrastructure.",
+    href: "/docs/guides/aws-setup/permissions",
+    icon: Shield,
+    time: "5 min",
+    for: "Need specific permissions?",
   },
   {
     title: "Troubleshooting",
