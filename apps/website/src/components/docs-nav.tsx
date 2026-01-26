@@ -128,6 +128,12 @@ const navItems: NavSection[] = [
         title: "AWS Setup",
         href: "/docs/guides/aws-setup",
         icon: Cloud,
+        children: [
+          { title: "Quick Start", href: "/docs/guides/aws-setup/quick" },
+          { title: "Full Setup", href: "/docs/guides/aws-setup/full" },
+          { title: "IAM Permissions", href: "/docs/guides/aws-setup/permissions" },
+          { title: "Troubleshooting", href: "/docs/guides/aws-setup/troubleshooting" },
+        ],
       },
       {
         title: "Production Access",
