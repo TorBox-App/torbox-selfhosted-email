@@ -33,6 +33,7 @@ import { emailStatus } from "./commands/email/status.js";
 import { upgrade } from "./commands/email/upgrade.js";
 // Info commands
 import { news } from "./commands/news.js";
+import { permissions } from "./commands/permissions.js";
 // Platform commands
 import { platform as platformInfo } from "./commands/platform/index.js";
 import { updateRole } from "./commands/platform/update-role.js";
@@ -178,6 +179,7 @@ function showHelp() {
   console.log("Global Commands:");
   console.log(`  ${pc.cyan("status")}       Show overview of all services`);
   console.log(`  ${pc.cyan("destroy")}      Remove deployed infrastructure`);
+  console.log(`  ${pc.cyan("permissions")} Show required AWS IAM permissions`);
   console.log(`  ${pc.cyan("completion")}   Generate shell completion script`);
   console.log(
     `  ${pc.cyan("telemetry")}    Manage anonymous telemetry settings`
@@ -341,6 +343,12 @@ args.options([
   {
     name: "timeout",
     description: "DNS timeout in milliseconds",
+    defaultValue: undefined,
+  },
+  // Permissions command options
+  {
+    name: "service",
+    description: "Service type for permissions (email, sms, cdn)",
     defaultValue: undefined,
   },
 ]);
@@ -921,6 +929,18 @@ async function run() {
 
       case "news":
         await news();
+        break;
+
+      case "permissions":
+        await permissions({
+          json: flags.json,
+          preset: flags.preset as
+            | "starter"
+            | "production"
+            | "enterprise"
+            | undefined,
+          service: flags.service as "email" | "sms" | "cdn" | undefined,
+        });
         break;
 
       case "support":

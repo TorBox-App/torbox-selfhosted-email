@@ -76,10 +76,14 @@ describe("init command", () => {
     vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
 
     // Mock AWS utilities
-    vi.mocked(aws.validateAWSCredentials).mockResolvedValue({
-      accountId: "123456789012",
-      userId: "AIDACKCEVSQ6C2EXAMPLE",
-      arn: "arn:aws:iam::123456789012:user/test",
+    vi.mocked(aws.validateAWSCredentialsWithDetails).mockResolvedValue({
+      identity: {
+        accountId: "123456789012",
+        userId: "AIDACKCEVSQ6C2EXAMPLE",
+        arn: "arn:aws:iam::123456789012:user/test",
+      },
+      credentialSource: "profile",
+      warnings: [],
     });
     vi.mocked(aws.getAWSRegion).mockResolvedValue("us-east-1");
 
@@ -194,7 +198,7 @@ describe("init command", () => {
       await setupPulumiMock();
       await init({});
 
-      expect(aws.validateAWSCredentials).toHaveBeenCalled();
+      expect(aws.validateAWSCredentialsWithDetails).toHaveBeenCalled();
     });
 
     it("should check Pulumi installation", async () => {
@@ -299,7 +303,7 @@ describe("init command", () => {
 
   describe("Error Handling Tests", () => {
     it("should handle invalid AWS credentials", async () => {
-      vi.mocked(aws.validateAWSCredentials).mockRejectedValue(
+      vi.mocked(aws.validateAWSCredentialsWithDetails).mockRejectedValue(
         new Error("InvalidClientTokenId")
       );
 

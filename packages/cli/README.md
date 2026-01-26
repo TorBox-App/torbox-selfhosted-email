@@ -600,6 +600,91 @@ packages/cli/
     └── lambda/                   # Lambda source for deployment
 ```
 
+## AWS Permissions
+
+Wraps needs specific IAM permissions to deploy and manage infrastructure in your AWS account. Use the `wraps permissions` command to see exactly what's required.
+
+### Viewing Required Permissions
+
+```bash
+# Show permissions summary
+wraps permissions
+
+# Get full IAM policy JSON
+wraps permissions --json
+
+# Get permissions for specific preset
+wraps permissions --preset production --json
+
+# Get permissions for specific service
+wraps permissions --service email --json
+```
+
+### Minimum Permissions by Preset
+
+#### Starter Preset (~$0.05/mo)
+- **IAM** - Role management for OIDC/credential handling
+- **STS** - Credential validation
+- **SES** - Email configuration and sending
+- **CloudWatch** - Metrics access
+
+#### Production Preset (~$2-5/mo)
+All Starter permissions plus:
+- **EventBridge** - Event routing
+- **SQS** - Event queuing
+- **Lambda** - Event processing
+- **DynamoDB** - Email history storage
+
+#### Enterprise Preset (~$50-100/mo)
+All Production permissions plus:
+- **IAM User Management** - SMTP credentials
+
+### Optional Permissions
+
+These permissions enhance functionality but are not required:
+
+- **Route53** - Automatic DNS record management (can add records manually instead)
+- **IAM OIDC Provider** - Only needed for Vercel deployments
+
+### Creating an IAM Policy
+
+1. Generate the policy JSON:
+   ```bash
+   wraps permissions --json > wraps-policy.json
+   ```
+
+2. Create the policy in AWS Console:
+   - Go to IAM > Policies > Create Policy
+   - Select "JSON" tab
+   - Paste the policy content
+   - Name it "WrapsDeploymentPolicy"
+
+3. Attach to your IAM user or role:
+   - Go to IAM > Users (or Roles)
+   - Select your user/role
+   - Add permissions > Attach policies
+   - Select "WrapsDeploymentPolicy"
+
+### Using AWS Organizations / Permission Boundaries
+
+If your organization uses permission boundaries or Service Control Policies (SCPs), ensure they allow:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "ses:*",
+    "iam:CreateRole",
+    "iam:PassRole",
+    "dynamodb:CreateTable",
+    "lambda:CreateFunction",
+    "events:PutRule",
+    "sqs:CreateQueue"
+  ],
+  "Resource": ["arn:aws:*:*:*:wraps-*"]
+}
+```
+
 ## Troubleshooting
 
 ### AWS Credentials Not Found
@@ -611,6 +696,33 @@ aws configure
 # Or set environment variables
 export AWS_PROFILE=your-profile
 ```
+
+### SSO Session Expired
+
+If using AWS SSO and you see "SSO session has expired":
+
+```bash
+# Re-authenticate with SSO
+aws sso login
+
+# Or with a specific profile
+aws sso login --profile your-profile
+```
+
+### Permission Denied Errors
+
+If you see permission errors during deployment:
+
+1. Check required permissions:
+   ```bash
+   wraps permissions --json
+   ```
+
+2. Verify your IAM user/role has the policy attached
+
+3. Check for organization-level restrictions (SCPs)
+
+4. If using assumed roles, ensure the trust policy allows your principal
 
 ### Invalid Region
 

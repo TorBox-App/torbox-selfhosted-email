@@ -5,6 +5,13 @@ import {
   SESClient,
 } from "@aws-sdk/client-ses";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
+import {
+  type AWSSetupState,
+  detectAWSState,
+  getConfiguredProfiles,
+  getCurrentProfile,
+  getSSOLoginCommand,
+} from "./aws-detection.js";
 import { errors } from "./errors.js";
 
 /**
@@ -17,19 +24,107 @@ export type AWSIdentity = {
 };
 
 /**
- * Validate AWS credentials by calling STS GetCallerIdentity
+ * Result of credential validation with additional context
+ */
+export type CredentialValidationResult = {
+  /** AWS identity information */
+  identity: AWSIdentity;
+  /** Source of credentials (profile, environment, sso, instance) */
+  credentialSource: AWSSetupState["credentialSource"];
+  /** Warnings about credential state (e.g., SSO expiring soon) */
+  warnings: string[];
+};
+
+/**
+ * Validate AWS credentials with detailed error handling
+ * Uses detectAWSState() for comprehensive environment detection
+ * Maps specific errors to actionable WrapsError types
  */
 export async function validateAWSCredentials(): Promise<AWSIdentity> {
+  const result = await validateAWSCredentialsWithDetails();
+  return result.identity;
+}
+
+/**
+ * Validate AWS credentials and return detailed result with warnings
+ * Provides additional context about credential state for better UX
+ */
+export async function validateAWSCredentialsWithDetails(): Promise<CredentialValidationResult> {
+  // Get comprehensive AWS state
+  const state = await detectAWSState();
+  const warnings: string[] = [];
+
+  // Check if SSO is configured but token is expired
+  if (state.sso.configured && state.sso.tokenStatus?.expired) {
+    const profile = state.sso.activeProfile?.name;
+    throw errors.ssoSessionExpired(profile);
+  }
+
+  // Check if SSO token is about to expire (within 15 minutes)
+  if (
+    state.sso.configured &&
+    state.sso.tokenStatus?.valid &&
+    state.sso.tokenStatus.minutesRemaining !== null &&
+    state.sso.tokenStatus.minutesRemaining < 15
+  ) {
+    const minutes = state.sso.tokenStatus.minutesRemaining;
+    const loginCmd = getSSOLoginCommand(state.sso.activeProfile?.name);
+    warnings.push(
+      `SSO session expires in ${minutes} minute${minutes !== 1 ? "s" : ""}. Run "${loginCmd}" to refresh.`
+    );
+  }
+
+  // Check if specified profile exists
+  const currentProfile = getCurrentProfile();
+  if (currentProfile && currentProfile !== "default") {
+    const availableProfiles = getConfiguredProfiles();
+    if (!availableProfiles.includes(currentProfile)) {
+      throw errors.profileNotFound(currentProfile, availableProfiles);
+    }
+  }
+
+  // Try to validate credentials with STS
   const sts = new STSClient({ region: "us-east-1" });
 
   try {
     const identity = await sts.send(new GetCallerIdentityCommand({}));
+
     return {
-      accountId: identity.Account!,
-      userId: identity.UserId!,
-      arn: identity.Arn!,
+      identity: {
+        accountId: identity.Account!,
+        userId: identity.UserId!,
+        arn: identity.Arn!,
+      },
+      credentialSource: state.credentialSource,
+      warnings,
     };
-  } catch (_error) {
+  } catch (error: unknown) {
+    // Map specific AWS errors to our error types
+    if (error instanceof Error) {
+      switch (error.name) {
+        case "ExpiredTokenException":
+        case "TokenRefreshRequired":
+          throw errors.sessionTokenExpired();
+
+        case "InvalidClientTokenId":
+        case "InvalidAccessKeyId":
+        case "SignatureDoesNotMatch":
+          throw errors.accessKeyInvalid();
+
+        case "CredentialsError":
+        case "CredentialsProviderError":
+          // Check if credentials file is missing
+          if (error.message?.includes("Could not load credentials")) {
+            throw errors.credentialsFileMissing();
+          }
+          break;
+
+        case "UnrecognizedClientException":
+          throw errors.accessKeyInvalid();
+      }
+    }
+
+    // Default to generic credentials error
     throw errors.noAWSCredentials();
   }
 }

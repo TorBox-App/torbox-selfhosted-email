@@ -3,7 +3,7 @@
  * @module telemetry/client
  */
 
-import { createRequire } from "module";
+import { createRequire } from "node:module";
 import pc from "picocolors";
 import { isCI } from "../utils/shared/ci-detection.js";
 import { TelemetryConfigManager } from "./config.js";

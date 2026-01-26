@@ -18,21 +18,190 @@ export class WrapsError extends Error {
 }
 
 /**
+ * Check if an error is an AWS SDK error
+ */
+export function isAWSError(
+  error: unknown
+): error is Error & { name: string; $metadata?: { httpStatusCode?: number } } {
+  if (!(error instanceof Error)) return false;
+  const awsErrorNames = [
+    "ExpiredTokenException",
+    "InvalidClientTokenId",
+    "AccessDenied",
+    "AccessDeniedException",
+    "UnauthorizedAccess",
+    "InvalidAccessKeyId",
+    "SignatureDoesNotMatch",
+    "UnrecognizedClientException",
+    "CredentialsError",
+    "TokenRefreshRequired",
+    "SSOTokenExpired",
+  ];
+  return awsErrorNames.includes(error.name) || "$metadata" in error;
+}
+
+/**
+ * Check if an error is a Pulumi deployment error
+ */
+export function isPulumiError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message?.includes("pulumi") ||
+    error.message?.includes("Pulumi") ||
+    error.message?.includes("resource") ||
+    error.message?.includes("creating") ||
+    error.message?.includes("AccessDenied")
+  );
+}
+
+/**
+ * Parse AWS SDK error to extract code and action
+ */
+export function parseAWSError(error: Error): {
+  code: string;
+  action?: string;
+  resource?: string;
+} {
+  const errorName = error.name || "UnknownError";
+
+  // Extract action from error message if possible
+  const actionMatch = error.message?.match(/when calling the (\w+) operation/i);
+  const action = actionMatch?.[1];
+
+  // Extract resource from error message if possible
+  const resourceMatch = error.message?.match(/resource[:\s]+([^\s,]+)/i);
+  const resource = resourceMatch?.[1];
+
+  return { code: errorName, action, resource };
+}
+
+/**
+ * Parse Pulumi error to extract IAM action that failed
+ */
+export function parsePulumiError(error: Error): {
+  code: string;
+  iamAction?: string;
+  service?: string;
+} {
+  const message = error.message || "";
+
+  // Check for AccessDenied patterns
+  if (message.includes("AccessDenied") || message.includes("access denied")) {
+    // Try to extract the AWS action
+    const actionMatch = message.match(
+      /(?:action|operation)[:\s]+["']?(\w+:\w+)["']?/i
+    );
+    if (actionMatch) {
+      const [service] = actionMatch[1].split(":");
+      return {
+        code: "IAM_PERMISSION_DENIED",
+        iamAction: actionMatch[1],
+        service,
+      };
+    }
+
+    // Try to extract service from resource patterns
+    if (message.includes("ses:") || message.includes("SES")) {
+      return { code: "SES_PERMISSION_DENIED", service: "ses" };
+    }
+    if (message.includes("dynamodb:") || message.includes("DynamoDB")) {
+      return { code: "DYNAMODB_PERMISSION_DENIED", service: "dynamodb" };
+    }
+    if (message.includes("lambda:") || message.includes("Lambda")) {
+      return { code: "LAMBDA_PERMISSION_DENIED", service: "lambda" };
+    }
+    if (message.includes("events:") || message.includes("EventBridge")) {
+      return { code: "EVENTBRIDGE_PERMISSION_DENIED", service: "events" };
+    }
+    if (message.includes("sqs:") || message.includes("SQS")) {
+      return { code: "SQS_PERMISSION_DENIED", service: "sqs" };
+    }
+    if (message.includes("iam:") || message.includes("IAM")) {
+      return { code: "IAM_PERMISSION_DENIED", service: "iam" };
+    }
+
+    return { code: "IAM_PERMISSION_DENIED" };
+  }
+
+  // Check for stack locked
+  if (message.includes("stack is currently locked")) {
+    return { code: "STACK_LOCKED" };
+  }
+
+  return { code: "PULUMI_ERROR" };
+}
+
+/**
+ * Sanitize error message to remove sensitive information
+ * Removes: AWS account IDs, email addresses, domain names, ARNs with account IDs
+ */
+export function sanitizeErrorMessage(error: unknown): string {
+  if (!error) return "Unknown error";
+
+  let message = error instanceof Error ? error.message : String(error);
+
+  // Remove AWS account IDs (12 digits)
+  message = message.replace(/\b\d{12}\b/g, "[ACCOUNT_ID]");
+
+  // Remove email addresses
+  message = message.replace(
+    /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+    "[EMAIL]"
+  );
+
+  // Remove domain names (but keep AWS service domains)
+  message = message.replace(
+    /(?<!\.amazonaws\.com|\.aws\.amazon\.com)\b[a-zA-Z0-9][a-zA-Z0-9-]+\.[a-zA-Z]{2,}\b/g,
+    (match) => {
+      // Keep AWS domains
+      if (match.includes("amazonaws") || match.includes("aws.amazon")) {
+        return match;
+      }
+      return "[DOMAIN]";
+    }
+  );
+
+  // Remove ARNs (replace account ID portion)
+  message = message.replace(
+    /arn:aws:[^:]+:[^:]*:\d{12}:/g,
+    "arn:aws:[SERVICE]:[REGION]:[ACCOUNT_ID]:"
+  );
+
+  // Truncate if too long
+  if (message.length > 500) {
+    message = `${message.substring(0, 500)}...`;
+  }
+
+  return message;
+}
+
+/**
  * Global error handler for CLI errors
  * Formats and displays errors with suggestions and docs
+ * Tracks ALL errors to telemetry (with sanitized context)
+ *
+ * @param error - The error to handle
+ * @param command - Optional command name for telemetry context
  */
-export function handleCLIError(error: unknown): never {
+export function handleCLIError(error: unknown, command?: string): never {
   console.error(""); // Blank line
+
+  const cmdContext = command || "unknown";
 
   if (error instanceof WrapsError) {
     // Track error (code only, never message)
-    trackError(error.code, "unknown");
+    trackError(error.code, cmdContext);
 
     clack.log.error(error.message);
 
     if (error.suggestion) {
       console.log(`\n${pc.yellow("Suggestion:")}`);
-      console.log(`  ${pc.white(error.suggestion)}\n`);
+      // Format suggestion with proper indentation for multi-line
+      const lines = error.suggestion.split("\n");
+      for (const line of lines) {
+        console.log(`  ${pc.white(line)}`);
+      }
+      console.log();
     }
 
     if (error.docsUrl) {
@@ -43,11 +212,126 @@ export function handleCLIError(error: unknown): never {
     process.exit(1);
   }
 
-  // Unknown error
-  trackError("UNKNOWN_ERROR", "unknown");
+  // Check for AWS SDK errors
+  if (isAWSError(error)) {
+    const { code, action } = parseAWSError(error);
+    trackError(`AWS_${code}`, cmdContext, { action });
+
+    // Convert to user-friendly message based on error type
+    let wrapsError: WrapsError;
+
+    switch (code) {
+      case "ExpiredTokenException":
+      case "TokenRefreshRequired":
+      case "SSOTokenExpired":
+        wrapsError = errors.sessionTokenExpired();
+        break;
+      case "InvalidClientTokenId":
+      case "InvalidAccessKeyId":
+      case "SignatureDoesNotMatch":
+        wrapsError = errors.accessKeyInvalid();
+        break;
+      case "AccessDenied":
+      case "AccessDeniedException":
+      case "UnauthorizedAccess":
+        wrapsError = errors.iamPermissionDenied(
+          action || "unknown",
+          "AWS resource",
+          "Ensure your IAM user/role has the required permissions."
+        );
+        break;
+      default:
+        wrapsError = errors.noAWSCredentials();
+    }
+
+    clack.log.error(wrapsError.message);
+    if (wrapsError.suggestion) {
+      console.log(`\n${pc.yellow("Suggestion:")}`);
+      const lines = wrapsError.suggestion.split("\n");
+      for (const line of lines) {
+        console.log(`  ${pc.white(line)}`);
+      }
+      console.log();
+    }
+    if (wrapsError.docsUrl) {
+      console.log(`${pc.dim("Documentation:")}`);
+      console.log(`  ${pc.blue(wrapsError.docsUrl)}\n`);
+    }
+    process.exit(1);
+  }
+
+  // Check for Pulumi errors
+  if (isPulumiError(error)) {
+    const { code, iamAction, service } = parsePulumiError(error as Error);
+    trackError(`PULUMI_${code}`, cmdContext, {
+      iamAction,
+      service,
+      errorType: (error as Error)?.constructor?.name,
+    });
+
+    // Convert to user-friendly message based on error type
+    let wrapsError: WrapsError;
+
+    switch (code) {
+      case "STACK_LOCKED":
+        wrapsError = errors.stackLocked();
+        break;
+      case "SES_PERMISSION_DENIED":
+        wrapsError = errors.sesPermissionDenied(iamAction || "unknown");
+        break;
+      case "DYNAMODB_PERMISSION_DENIED":
+        wrapsError = errors.dynamoDBPermissionDenied();
+        break;
+      case "LAMBDA_PERMISSION_DENIED":
+        wrapsError = errors.lambdaPermissionDenied();
+        break;
+      case "EVENTBRIDGE_PERMISSION_DENIED":
+        wrapsError = errors.eventBridgePermissionDenied();
+        break;
+      case "SQS_PERMISSION_DENIED":
+        wrapsError = errors.sqsPermissionDenied();
+        break;
+      case "IAM_PERMISSION_DENIED":
+        wrapsError = errors.iamPermissionDenied(
+          iamAction || "unknown",
+          "AWS resource",
+          service
+            ? `Your IAM user/role needs ${service.toUpperCase()} permissions.`
+            : "Ensure your IAM user/role has the required permissions."
+        );
+        break;
+      default:
+        wrapsError = errors.pulumiError(sanitizeErrorMessage(error));
+    }
+
+    clack.log.error(wrapsError.message);
+    if (wrapsError.suggestion) {
+      console.log(`\n${pc.yellow("Suggestion:")}`);
+      const lines = wrapsError.suggestion.split("\n");
+      for (const line of lines) {
+        console.log(`  ${pc.white(line)}`);
+      }
+      console.log();
+    }
+    if (wrapsError.docsUrl) {
+      console.log(`${pc.dim("Documentation:")}`);
+      console.log(`  ${pc.blue(wrapsError.docsUrl)}\n`);
+    }
+    process.exit(1);
+  }
+
+  // Unknown error - still track with sanitized context
+  trackError("UNHANDLED_ERROR", cmdContext, {
+    errorType: error instanceof Error ? error.constructor.name : typeof error,
+    message: sanitizeErrorMessage(error),
+  });
 
   clack.log.error("An unexpected error occurred");
-  console.error(error);
+  if (error instanceof Error) {
+    console.error(pc.dim(error.message));
+  } else if (typeof error === "string") {
+    console.error(error);
+  }
   console.log(`\n${pc.dim("If this persists, please report at:")}`);
   console.log(`  ${pc.blue("https://github.com/wraps-team/wraps/issues")}\n`);
   process.exit(1);
@@ -177,5 +461,107 @@ export const errors = {
       "SMTP_CREDENTIALS_NOT_FOUND",
       "Enable SMTP credentials:\n  wraps email upgrade\nAnd select 'Enable SMTP credentials'",
       "https://wraps.dev/docs/cli-reference"
+    ),
+
+  // Credential-specific errors
+  ssoSessionExpired: (profile?: string) =>
+    new WrapsError(
+      `AWS SSO session has expired${profile ? ` for profile "${profile}"` : ""}`,
+      "SSO_SESSION_EXPIRED",
+      profile
+        ? `Run: aws sso login --profile ${profile}`
+        : "Run: aws sso login",
+      "https://wraps.dev/docs/guides/aws-setup"
+    ),
+
+  profileNotFound: (profile: string, availableProfiles: string[]) =>
+    new WrapsError(
+      `AWS profile "${profile}" not found`,
+      "PROFILE_NOT_FOUND",
+      availableProfiles.length > 0
+        ? `Available profiles: ${availableProfiles.join(", ")}\n\nSet a valid profile:\n  export AWS_PROFILE=<profile-name>\n\nOr configure a new profile:\n  aws configure --profile ${profile}`
+        : "No AWS profiles configured.\n\nConfigure AWS credentials:\n  aws configure\n\nOr set up SSO:\n  aws configure sso",
+      "https://wraps.dev/docs/guides/aws-setup"
+    ),
+
+  credentialsFileMissing: () =>
+    new WrapsError(
+      "AWS credentials file not found",
+      "CREDENTIALS_FILE_MISSING",
+      "Configure AWS credentials:\n  aws configure\n\nOr set environment variables:\n  export AWS_ACCESS_KEY_ID=<your-key>\n  export AWS_SECRET_ACCESS_KEY=<your-secret>",
+      "https://wraps.dev/docs/guides/aws-setup"
+    ),
+
+  accessKeyInvalid: () =>
+    new WrapsError(
+      "AWS access key is invalid or has been deactivated",
+      "ACCESS_KEY_INVALID",
+      "Check your AWS access keys in the IAM console.\n\nReconfigure credentials:\n  aws configure\n\nOr generate new access keys in AWS IAM.",
+      "https://wraps.dev/docs/guides/aws-setup"
+    ),
+
+  sessionTokenExpired: () =>
+    new WrapsError(
+      "AWS session token has expired",
+      "SESSION_TOKEN_EXPIRED",
+      "Your temporary credentials have expired.\n\nFor SSO users:\n  aws sso login\n\nFor assumed roles:\n  Re-run your assume-role command",
+      "https://wraps.dev/docs/guides/aws-setup"
+    ),
+
+  // IAM permission errors
+  iamPermissionDenied: (action: string, resource: string, suggestion: string) =>
+    new WrapsError(
+      `Permission denied: ${action} on ${resource}`,
+      "IAM_PERMISSION_DENIED",
+      `Your AWS credentials lack the "${action}" permission.\n\n${suggestion}\n\nView required permissions:\n  wraps permissions --json`,
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  sesPermissionDenied: (action: string) =>
+    new WrapsError(
+      `SES permission denied: ${action}`,
+      "SES_PERMISSION_DENIED",
+      `Your IAM user/role needs the "ses:${action}" permission.\n\nView required SES permissions:\n  wraps permissions --service email --json`,
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  dynamoDBPermissionDenied: () =>
+    new WrapsError(
+      "DynamoDB permission denied",
+      "DYNAMODB_PERMISSION_DENIED",
+      "Your IAM user/role needs DynamoDB permissions.\nRequired actions: CreateTable, DeleteTable, DescribeTable, UpdateTable\n\nView required permissions:\n  wraps permissions --json",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  lambdaPermissionDenied: () =>
+    new WrapsError(
+      "Lambda permission denied",
+      "LAMBDA_PERMISSION_DENIED",
+      "Your IAM user/role needs Lambda permissions.\nRequired actions: CreateFunction, UpdateFunctionCode, DeleteFunction\n\nView required permissions:\n  wraps permissions --json",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  eventBridgePermissionDenied: () =>
+    new WrapsError(
+      "EventBridge permission denied",
+      "EVENTBRIDGE_PERMISSION_DENIED",
+      "Your IAM user/role needs EventBridge permissions.\nRequired actions: PutRule, PutTargets, DeleteRule\n\nView required permissions:\n  wraps permissions --json",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  sqsPermissionDenied: () =>
+    new WrapsError(
+      "SQS permission denied",
+      "SQS_PERMISSION_DENIED",
+      "Your IAM user/role needs SQS permissions.\nRequired actions: CreateQueue, DeleteQueue, GetQueueAttributes\n\nView required permissions:\n  wraps permissions --json",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  route53PermissionDenied: () =>
+    new WrapsError(
+      "Route53 permission denied",
+      "ROUTE53_PERMISSION_DENIED",
+      "Your IAM user/role needs Route53 permissions for automatic DNS management.\nRequired actions: ChangeResourceRecordSets, ListHostedZones\n\nThis is optional - you can add DNS records manually instead.",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 };

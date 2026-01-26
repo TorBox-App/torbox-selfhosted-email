@@ -16,9 +16,13 @@ import { getCostSummary } from "../../utils/email/costs.js";
 import { getPreset, validateConfig } from "../../utils/email/presets.js";
 import {
   getAWSRegion,
-  validateAWSCredentials,
+  validateAWSCredentialsWithDetails,
 } from "../../utils/shared/aws.js";
-import { errors } from "../../utils/shared/errors.js";
+import {
+  errors,
+  isPulumiError,
+  parsePulumiError,
+} from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -75,12 +79,25 @@ export async function init(options: InitOptions): Promise<void> {
   }
 
   // 2. Validate AWS credentials
-  const identity = await progress.execute(
+  const credentialResult = await progress.execute(
     "Validating AWS credentials",
-    async () => validateAWSCredentials()
+    async () => validateAWSCredentialsWithDetails()
   );
 
+  const identity = credentialResult.identity;
   progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
+
+  // Display any credential warnings (e.g., SSO expiring soon)
+  for (const warning of credentialResult.warnings) {
+    clack.log.warn(warning);
+  }
+
+  // Show credential source for transparency
+  if (credentialResult.credentialSource) {
+    progress.info(
+      `Using credentials from: ${pc.dim(credentialResult.credentialSource)}`
+    );
+  }
 
   // 3. Get configuration (from options or prompts)
   let provider = options.provider;
@@ -374,6 +391,39 @@ export async function init(options: InitOptions): Promise<void> {
     if (error.message?.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "email:init", { step: "deploy" });
       throw errors.stackLocked();
+    }
+
+    // Check for IAM permission errors in Pulumi deployment
+    if (isPulumiError(error)) {
+      const { code, iamAction, service } = parsePulumiError(error);
+
+      trackError(`PULUMI_${code}`, "email:init", {
+        step: "deploy",
+        iamAction,
+        service,
+      });
+
+      // Throw specific errors based on the service that failed
+      switch (code) {
+        case "SES_PERMISSION_DENIED":
+          throw errors.sesPermissionDenied(iamAction || "unknown");
+        case "DYNAMODB_PERMISSION_DENIED":
+          throw errors.dynamoDBPermissionDenied();
+        case "LAMBDA_PERMISSION_DENIED":
+          throw errors.lambdaPermissionDenied();
+        case "EVENTBRIDGE_PERMISSION_DENIED":
+          throw errors.eventBridgePermissionDenied();
+        case "SQS_PERMISSION_DENIED":
+          throw errors.sqsPermissionDenied();
+        case "IAM_PERMISSION_DENIED":
+          throw errors.iamPermissionDenied(
+            iamAction || "unknown",
+            "AWS resource",
+            service
+              ? `Your IAM user/role needs ${service.toUpperCase()} permissions.`
+              : "Ensure your IAM user/role has the required permissions."
+          );
+      }
     }
 
     trackError("DEPLOYMENT_FAILED", "email:init", { step: "deploy" });

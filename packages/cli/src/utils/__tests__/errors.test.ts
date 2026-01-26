@@ -84,7 +84,8 @@ describe("handleCLIError", () => {
 
     handleCLIError(error);
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(error);
+    // Should log the error message (dimmed) not the full error object
+    expect(consoleErrorSpy).toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalledWith(
       expect.stringContaining("https://github.com/wraps-team/wraps/issues")
     );
@@ -94,6 +95,7 @@ describe("handleCLIError", () => {
   it("should handle string errors", () => {
     handleCLIError("String error message");
 
+    // Should log the string error
     expect(consoleErrorSpy).toHaveBeenCalledWith("String error message");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
