@@ -10,21 +10,46 @@ import { PostHog } from "posthog-node";
  * PostHog client singleton for serverless function
  */
 let posthogClient: PostHog | null = null;
+let posthogInitError: string | null = null;
 
-function getPostHogClient(): PostHog {
+function getPostHogClient(): PostHog | null {
+  if (posthogInitError) {
+    // Already logged the error, return null
+    return null;
+  }
+
   if (!posthogClient) {
     const apiKey = process.env.POSTHOG_API_KEY;
     const host = process.env.POSTHOG_HOST || "https://app.posthog.com";
 
     if (!apiKey) {
-      throw new Error("POSTHOG_API_KEY environment variable is required");
+      posthogInitError = "POSTHOG_API_KEY environment variable is not set";
+      console.error("🚨🚨🚨 TELEMETRY CONFIGURATION ERROR 🚨🚨🚨");
+      console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.error("POSTHOG_API_KEY is NOT SET in environment variables!");
+      console.error("CLI telemetry events are being SILENTLY DROPPED!");
+      console.error("");
+      console.error("To fix: Add POSTHOG_API_KEY to your Vercel environment variables");
+      console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      return null;
     }
 
-    posthogClient = new PostHog(apiKey, {
-      host,
-      flushAt: 20,
-      flushInterval: 10_000,
-    });
+    try {
+      posthogClient = new PostHog(apiKey, {
+        host,
+        flushAt: 20,
+        flushInterval: 10_000,
+      });
+      console.log("✅ PostHog client initialized successfully for telemetry");
+    } catch (error) {
+      posthogInitError = error instanceof Error ? error.message : "Unknown initialization error";
+      console.error("🚨🚨🚨 POSTHOG INITIALIZATION FAILED 🚨🚨🚨");
+      console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.error("Error:", posthogInitError);
+      console.error("CLI telemetry events are being SILENTLY DROPPED!");
+      console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      return null;
+    }
   }
 
   return posthogClient;
@@ -167,11 +192,14 @@ export async function OPTIONS() {
  * Telemetry API handler
  */
 export async function POST(request: NextRequest) {
+  const requestId = Math.random().toString(36).substring(2, 10);
+
   try {
     const body = (await request.json()) as TelemetryRequest;
 
     // Validate request
     if (!(body.events && Array.isArray(body.events))) {
+      console.warn(`[telemetry:${requestId}] Invalid request - missing events array`);
       return NextResponse.json(
         { error: "Invalid request: events array required" },
         { status: 400, headers: corsHeaders }
@@ -187,8 +215,15 @@ export async function POST(request: NextRequest) {
 
     // Validate all events
     const validEvents = body.events.filter(isValidEvent);
+    const invalidCount = body.events.length - validEvents.length;
+
+    if (invalidCount > 0) {
+      console.warn(`[telemetry:${requestId}] ${invalidCount} invalid events filtered out of ${body.events.length} total`);
+    }
 
     if (validEvents.length === 0) {
+      console.warn(`[telemetry:${requestId}] No valid events in request. Event names received:`,
+        body.events.map(e => e.event).join(", "));
       return NextResponse.json(
         { error: "No valid events in request" },
         { status: 400, headers: corsHeaders }
@@ -198,15 +233,40 @@ export async function POST(request: NextRequest) {
     // Check rate limit (use first event's anonymousId)
     const anonymousId = validEvents[0].anonymousId;
     if (!checkRateLimit(anonymousId)) {
+      console.warn(`[telemetry:${requestId}] Rate limit exceeded for anonymousId: ${anonymousId.substring(0, 8)}...`);
       return NextResponse.json(
         { error: "Rate limit exceeded" },
         { status: 429, headers: corsHeaders }
       );
     }
 
-    // Send to PostHog
+    // Get PostHog client
     const posthog = getPostHogClient();
 
+    if (!posthog) {
+      // PostHog not configured - log prominently and return success to not break CLI
+      console.error("🚨🚨🚨 TELEMETRY EVENTS DROPPED 🚨🚨🚨");
+      console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.error(`[telemetry:${requestId}] PostHog client not available!`);
+      console.error(`[telemetry:${requestId}] Dropping ${validEvents.length} events:`);
+      for (const event of validEvents) {
+        console.error(`  - ${event.event} (user: ${event.anonymousId.substring(0, 8)}...)`);
+      }
+      console.error("");
+      console.error("FIX: Set POSTHOG_API_KEY in Vercel environment variables");
+      console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+      return NextResponse.json(
+        {
+          ok: true,
+          processed: 0,
+          _debug: "PostHog not configured - events dropped",
+        },
+        { headers: corsHeaders }
+      );
+    }
+
+    // Send to PostHog
     for (const event of validEvents) {
       const sanitizedProperties = sanitizeProperties(event.properties);
 
@@ -219,7 +279,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Flush events before returning (critical for serverless functions)
-    await posthog.flush();
+    try {
+      await posthog.flush();
+      console.log(`[telemetry:${requestId}] ✅ Flushed ${validEvents.length} events to PostHog:`,
+        validEvents.map(e => e.event).join(", "));
+    } catch (flushError) {
+      console.error("🚨🚨🚨 POSTHOG FLUSH FAILED 🚨🚨🚨");
+      console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.error(`[telemetry:${requestId}] Failed to flush events to PostHog!`);
+      console.error(`[telemetry:${requestId}] Error:`, flushError);
+      console.error(`[telemetry:${requestId}] ${validEvents.length} events may have been lost`);
+      console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+      // Still return success to not break CLI, but log the error
+      return NextResponse.json(
+        {
+          ok: true,
+          processed: 0,
+          _debug: "Flush failed - events may be lost",
+        },
+        { headers: corsHeaders }
+      );
+    }
 
     // Return success
     return NextResponse.json(
@@ -230,7 +311,12 @@ export async function POST(request: NextRequest) {
       { headers: corsHeaders }
     );
   } catch (error) {
-    console.error("Telemetry API error:", error);
+    console.error("🚨🚨🚨 TELEMETRY API ERROR 🚨🚨🚨");
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.error(`[telemetry:${requestId}] Unexpected error in telemetry handler!`);
+    console.error(`[telemetry:${requestId}] Error:`, error);
+    console.error(`[telemetry:${requestId}] Stack:`, error instanceof Error ? error.stack : "N/A");
+    console.error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     // Always return 200 to CLI (don't break their workflow)
     return NextResponse.json(
