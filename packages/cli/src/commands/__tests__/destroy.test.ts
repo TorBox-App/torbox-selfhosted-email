@@ -367,9 +367,10 @@ describe("email destroy command", () => {
       await emailDestroy({ force: true });
 
       const pulumi = await import("@pulumi/pulumi");
+      // Fallback should match init.ts format: wraps-${accountId}-${region} (no -email- prefix)
       expect(pulumi.automation.LocalWorkspace.selectStack).toHaveBeenCalledWith(
         {
-          stackName: "wraps-email-123456789012-us-east-1",
+          stackName: "wraps-123456789012-us-east-1",
           workDir: "/mock/.wraps/pulumi",
         }
       );

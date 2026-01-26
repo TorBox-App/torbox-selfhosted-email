@@ -23,6 +23,10 @@ import {
   displayPreview,
 } from "../../utils/shared/output.js";
 import { previewWithResourceChanges } from "../../utils/shared/pulumi.js";
+import {
+  DEFAULT_PULUMI_TIMEOUT_MS,
+  withTimeout,
+} from "../../utils/shared/timeout.js";
 
 /**
  * Get DKIM tokens and MAIL FROM domain for a domain from SES
@@ -179,8 +183,9 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
           await ensurePulumiWorkDir();
 
           // Use stored stack name from metadata, fallback to generated name
+          // Note: init.ts creates stacks as `wraps-${accountId}-${region}` (without -email- prefix)
           const stackName =
-            storedStackName || `wraps-email-${identity.accountId}-${region}`;
+            storedStackName || `wraps-${identity.accountId}-${region}`;
 
           // Try to select the stack
           let stack;
@@ -271,8 +276,9 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         await ensurePulumiWorkDir();
 
         // Use stored stack name from metadata, fallback to generated name
+        // Note: init.ts creates stacks as `wraps-${accountId}-${region}` (without -email- prefix)
         const stackName =
-          storedStackName || `wraps-email-${identity.accountId}-${region}`;
+          storedStackName || `wraps-${identity.accountId}-${region}`;
 
         // Try to select the stack
         let stack;
@@ -285,8 +291,12 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
           throw new Error("No email infrastructure found to destroy");
         }
 
-        // Run destroy
-        await stack.destroy({ onOutput: () => {} }); // Suppress Pulumi output
+        // Run destroy with timeout protection
+        await withTimeout(
+          stack.destroy({ onOutput: () => {} }), // Suppress Pulumi output
+          DEFAULT_PULUMI_TIMEOUT_MS,
+          "Pulumi destroy"
+        );
 
         // Remove the stack from workspace
         await stack.workspace.removeStack(stackName);

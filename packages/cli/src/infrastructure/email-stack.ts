@@ -1,5 +1,4 @@
 import * as aws from "@pulumi/aws";
-import * as pulumi from "@pulumi/pulumi";
 import { retentionToDays } from "@wraps/core";
 import type { EmailStackConfig, StackOutputs } from "../types/index.js";
 import { createAlertingResources } from "./resources/alerting.js";
@@ -243,42 +242,5 @@ export async function deployEmailStack(
     // Alerting outputs
     alertsEnabled: emailConfig.alerts?.enabled,
     alertTopicArn: alertingResources?.topic.arn as any as string | undefined,
-  };
-}
-
-/**
- * Run Pulumi program inline
- */
-export async function runPulumiProgram(
-  stackName: string,
-  program: () => Promise<StackOutputs>
-): Promise<StackOutputs> {
-  const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
-    {
-      stackName,
-      projectName: "wraps-email",
-      program,
-    },
-    {
-      workDir: `${process.env.HOME}/.wraps/pulumi`,
-    }
-  );
-
-  // Set AWS region
-  await stack.setConfig("aws:region", { value: "us-east-1" });
-
-  // Run the deployment
-  const upResult = await stack.up({
-    onOutput: (msg) => process.stdout.write(msg),
-  });
-
-  // Get outputs
-  const outputs = upResult.outputs;
-
-  return {
-    roleArn: outputs.roleArn?.value as string,
-    configSetName: outputs.configSetName?.value as string | undefined,
-    tableName: outputs.tableName?.value as string | undefined,
-    region: outputs.region?.value as string,
   };
 }

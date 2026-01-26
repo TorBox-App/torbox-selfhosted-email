@@ -28,6 +28,11 @@ import {
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
 import {
+  checkIAMPermissions,
+  formatDeniedActions,
+  getRequiredActions,
+} from "../../utils/shared/iam-check.js";
+import {
   createConnectionMetadata,
   loadConnectionMetadata,
   saveConnectionMetadata,
@@ -51,6 +56,10 @@ import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
 } from "../../utils/shared/pulumi.js";
+import {
+  DEFAULT_PULUMI_TIMEOUT_MS,
+  withTimeout,
+} from "../../utils/shared/timeout.js";
 
 /**
  * Init command - Deploy new email infrastructure
@@ -200,7 +209,28 @@ export async function init(options: InitOptions): Promise<void> {
     }
   }
 
-  // 7. Build stack configuration
+  // 7. Pre-flight IAM permission check (non-blocking)
+  if (!options.preview) {
+    const iamCheckResult = await progress.execute(
+      "Checking IAM permissions",
+      async () => {
+        const requiredActions = getRequiredActions(emailConfig);
+        return checkIAMPermissions(identity.arn, requiredActions, region);
+      }
+    );
+
+    if (iamCheckResult.skipped && iamCheckResult.skipReason) {
+      progress.info(pc.dim(iamCheckResult.skipReason));
+    } else if (!iamCheckResult.success) {
+      // Show warning but don't block - let Pulumi give the definitive error
+      clack.log.warn(
+        pc.yellow("Some IAM permissions may be missing. Deployment may fail.")
+      );
+      clack.log.info(formatDeniedActions(iamCheckResult.deniedActions));
+    }
+  }
+
+  // 8. Build stack configuration
   const stackConfig: EmailStackConfig = {
     provider,
     region,
@@ -344,8 +374,12 @@ export async function init(options: InitOptions): Promise<void> {
         // Set AWS region
         await stack.setConfig("aws:region", { value: region });
 
-        // Run the deployment
-        const upResult = await stack.up({ onOutput: () => {} }); // Suppress Pulumi output
+        // Run the deployment with timeout protection
+        const upResult = await withTimeout(
+          stack.up({ onOutput: () => {} }), // Suppress Pulumi output
+          DEFAULT_PULUMI_TIMEOUT_MS,
+          "Pulumi deployment"
+        );
 
         // Get outputs
         const pulumiOutputs = upResult.outputs;

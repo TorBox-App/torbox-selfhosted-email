@@ -65,6 +65,22 @@ import {
 } from "./utils/shared/completion.js";
 import { handleCLIError } from "./utils/shared/errors.js";
 
+// Check Node.js version (requires 20+)
+const [nodeMajorVersion] = process.versions.node.split(".").map(Number);
+if (nodeMajorVersion < 20) {
+  console.error(
+    "\x1b[31mError: Wraps CLI requires Node.js 20 or higher.\x1b[0m"
+  );
+  console.error(`Current version: ${process.versions.node}`);
+  console.error("");
+  console.error("To upgrade Node.js:");
+  console.error("  macOS/Linux (nvm): nvm install 20 && nvm use 20");
+  console.error("  macOS (Homebrew):  brew install node@20");
+  console.error("  Windows:           Download from https://nodejs.org/");
+  console.error("");
+  process.exit(1);
+}
+
 // Get package version
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
