@@ -10,8 +10,12 @@ import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { inter } from "@/lib/fonts";
 
 export const metadata: Metadata = {
-  title: "Shadcn Dashboard",
-  description: "A dashboard built with Next.js and shadcn/ui",
+  title: {
+    default: "Wraps",
+    template: "%s | Wraps",
+  },
+  description:
+    "Deploy production-ready email infrastructure to your AWS account in minutes. Zero stored credentials, beautiful DX, and transparent AWS pricing.",
   icons: {
     icon: [
       { url: "/favicon-light.png", media: "(prefers-color-scheme: light)" },

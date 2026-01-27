@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import type { PropsWithChildren } from "react";
 import { Logo } from "@/components/logo";
+
+export const metadata: Metadata = {
+  title: "Get Started",
+  description: "Set up your Wraps account and deploy email infrastructure.",
+};
 
 export default function OnboardingLayout({ children }: PropsWithChildren) {
   return (
