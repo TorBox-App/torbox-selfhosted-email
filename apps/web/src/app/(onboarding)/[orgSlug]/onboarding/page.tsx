@@ -210,7 +210,12 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     // Only redirect if organizations have fully loaded (not from stale cache) AND org is not found
     // The server-side layout already validates org membership, so this is a fallback
     // We wait for !isOrgsLoading to ensure we have fresh data, not stale cache
-    if (!isOrgsLoading && organizations !== undefined && orgSlug && !currentOrg) {
+    if (
+      !isOrgsLoading &&
+      organizations !== undefined &&
+      orgSlug &&
+      !currentOrg
+    ) {
       hasRedirected.current = true;
       router.push("/");
     }
