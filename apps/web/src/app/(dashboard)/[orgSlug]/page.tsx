@@ -24,6 +24,12 @@ export type SetupStatus = {
   emailCount: number;
 };
 
+export type AwsAccountData = {
+  id: string;
+  webhookSecret: string | null;
+  features: AccountFeatures;
+} | null;
+
 type AwsAccountRecord = {
   id: string;
   isVerified: boolean;
@@ -31,12 +37,23 @@ type AwsAccountRecord = {
   features: unknown;
 };
 
-type AccountFeatures = {
+export type AccountFeatures = {
   email?: {
+    configSetName?: string;
+    archivingEnabled?: boolean;
+    archiveArn?: string;
+    eventHistoryEnabled?: boolean;
+    eventTrackingEnabled?: boolean;
+    customTrackingDomain?: string;
     identities?: Array<{
       identity: string;
       type: "DOMAIN" | "EMAIL_ADDRESS";
     }>;
+  };
+  sms?: {
+    enabled?: boolean;
+    phoneNumberCount?: number;
+    eventHistoryEnabled?: boolean;
   };
 } | null;
 
@@ -115,7 +132,10 @@ async function checkHasBroadcasts(organizationId: string): Promise<boolean> {
   return (result?.count ?? 0) > 0;
 }
 
-async function getSetupStatus(organizationId: string): Promise<SetupStatus> {
+async function getSetupStatus(organizationId: string): Promise<{
+  setupStatus: SetupStatus;
+  awsAccount: AwsAccountData;
+}> {
   // Get AWS accounts for this organization
   const accounts = await db.query.awsAccount.findMany({
     where: eq(awsAccount.organizationId, organizationId),
@@ -138,16 +158,29 @@ async function getSetupStatus(organizationId: string): Promise<SetupStatus> {
     checkHasBroadcasts(organizationId),
   ]);
 
+  // Get first verified account for inline actions
+  const firstVerifiedAccount = accounts.find((a) => a.isVerified);
+  const awsAccountData: AwsAccountData = firstVerifiedAccount
+    ? {
+        id: firstVerifiedAccount.id,
+        webhookSecret: firstVerifiedAccount.webhookSecret,
+        features: firstVerifiedAccount.features as AccountFeatures,
+      }
+    : null;
+
   return {
-    hasAwsAccount,
-    hasPlatformConnection,
-    hasVerifiedDomain,
-    hasSentEmail: emailStatus.hasSentEmail,
-    hasTemplate,
-    hasBroadcast,
-    verifiedDomains,
-    awsRegion,
-    emailCount: emailStatus.emailCount,
+    setupStatus: {
+      hasAwsAccount,
+      hasPlatformConnection,
+      hasVerifiedDomain,
+      hasSentEmail: emailStatus.hasSentEmail,
+      hasTemplate,
+      hasBroadcast,
+      verifiedDomains,
+      awsRegion,
+      emailCount: emailStatus.emailCount,
+    },
+    awsAccount: awsAccountData,
   };
 }
 
@@ -172,7 +205,9 @@ export default async function OrganizationDashboard({
     redirect("/");
   }
 
-  const setupStatus = await getSetupStatus(orgWithMembership.id);
+  const { setupStatus, awsAccount: awsAccountData } = await getSetupStatus(
+    orgWithMembership.id
+  );
 
   // Calculate completion percentage
   const requiredSteps = [
@@ -193,7 +228,9 @@ export default async function OrganizationDashboard({
 
   return (
     <GettingStartedDashboard
+      awsAccount={awsAccountData}
       completionPercent={completionPercent}
+      organizationId={orgWithMembership.id}
       organizationName={orgWithMembership.name}
       orgSlug={orgSlug}
       setupStatus={setupStatus}

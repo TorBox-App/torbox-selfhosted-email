@@ -5,18 +5,27 @@ import {
   BookOpenIcon,
   CheckCircle2Icon,
   CheckIcon,
+  ChevronDownIcon,
   CloudIcon,
   CodeIcon,
   CopyIcon,
   GlobeIcon,
   LayoutTemplateIcon,
   LinkIcon,
+  Loader2Icon,
   MailIcon,
   MegaphoneIcon,
+  RefreshCwIcon,
   ServerIcon,
+  XCircleIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import {
+  saveWebhookSecretAction,
+  scanAWSAccountFeatures,
+} from "@/actions/aws-accounts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,15 +35,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import type { SetupStatus } from "../page";
+import type { AccountFeatures, AwsAccountData, SetupStatus } from "../page";
 
 type GettingStartedDashboardProps = {
   orgSlug: string;
+  organizationId: string;
   organizationName: string;
   setupStatus: SetupStatus;
   completionPercent: number;
+  awsAccount: AwsAccountData;
 };
 
 const SDK_CODE = `import { Wraps } from '@wraps.dev/email';
@@ -49,84 +66,6 @@ await wraps.emails.send({
 });`;
 
 const INSTALL_CODE = "npm install @wraps.dev/email";
-
-type ChecklistItemProps = {
-  title: string;
-  description: string;
-  isComplete: boolean;
-  href?: string;
-  icon: React.ReactNode;
-  isOptional?: boolean;
-};
-
-function ChecklistItem({
-  title,
-  description,
-  isComplete,
-  href,
-  icon,
-  isOptional,
-}: ChecklistItemProps) {
-  const content = (
-    <div
-      className={cn(
-        "flex items-start gap-4 rounded-lg border p-4 transition-colors",
-        href && !isComplete && "cursor-pointer hover:bg-accent",
-        isComplete && "bg-muted/30"
-      )}
-    >
-      <div
-        className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-          isComplete
-            ? "bg-green-500/10 text-green-600"
-            : "bg-primary/10 text-primary"
-        )}
-      >
-        {isComplete ? <CheckCircle2Icon className="h-5 w-5" /> : icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h4
-            className={cn("font-medium", isComplete && "text-muted-foreground")}
-          >
-            {title}
-          </h4>
-          {isOptional && (
-            <Badge className="text-xs" variant="secondary">
-              Optional
-            </Badge>
-          )}
-          {isComplete && (
-            <Badge
-              className="text-xs text-green-600 border-green-200 bg-green-50"
-              variant="outline"
-            >
-              Complete
-            </Badge>
-          )}
-        </div>
-        <p
-          className={cn(
-            "mt-1 text-sm",
-            isComplete ? "text-muted-foreground/70" : "text-muted-foreground"
-          )}
-        >
-          {description}
-        </p>
-      </div>
-      {href && !isComplete && (
-        <ArrowRightIcon className="h-5 w-5 text-muted-foreground shrink-0" />
-      )}
-    </div>
-  );
-
-  if (href && !isComplete) {
-    return <Link href={href}>{content}</Link>;
-  }
-
-  return content;
-}
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -153,11 +92,552 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
+type ChecklistItemContentProps = {
+  title: string;
+  description: string;
+  isComplete: boolean;
+  icon: React.ReactNode;
+  isOptional?: boolean;
+};
+
+function ChecklistItemIcon({
+  isComplete,
+  icon,
+}: {
+  isComplete: boolean;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+        isComplete
+          ? "bg-green-500/10 text-green-600"
+          : "bg-primary/10 text-primary"
+      )}
+    >
+      {isComplete ? <CheckCircle2Icon className="h-5 w-5" /> : icon}
+    </div>
+  );
+}
+
+function ChecklistItemBadges({
+  isComplete,
+  isOptional,
+}: {
+  isComplete: boolean;
+  isOptional?: boolean;
+}) {
+  return (
+    <>
+      {isOptional && (
+        <Badge className="text-xs" variant="secondary">
+          Optional
+        </Badge>
+      )}
+      {isComplete && (
+        <Badge
+          className="text-xs text-green-600 border-green-200 bg-green-50"
+          variant="outline"
+        >
+          Complete
+        </Badge>
+      )}
+    </>
+  );
+}
+
+function ChecklistItemContent({
+  title,
+  description,
+  isComplete,
+  icon,
+  isOptional,
+}: ChecklistItemContentProps) {
+  return (
+    <>
+      <ChecklistItemIcon icon={icon} isComplete={isComplete} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h4
+            className={cn("font-medium", isComplete && "text-muted-foreground")}
+          >
+            {title}
+          </h4>
+          <ChecklistItemBadges
+            isComplete={isComplete}
+            isOptional={isOptional}
+          />
+        </div>
+        <p
+          className={cn(
+            "mt-1 text-sm",
+            isComplete ? "text-muted-foreground/70" : "text-muted-foreground"
+          )}
+        >
+          {description}
+        </p>
+      </div>
+    </>
+  );
+}
+
+type ExpandableChecklistItemProps = ChecklistItemContentProps & {
+  href?: string;
+  children?: React.ReactNode;
+  defaultOpen?: boolean;
+};
+
+function ExpandableChecklistItem({
+  title,
+  description,
+  isComplete,
+  href,
+  icon,
+  isOptional,
+  children,
+  defaultOpen = false,
+}: ExpandableChecklistItemProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  // Simple link-based item when no children
+  if (!children) {
+    const content = (
+      <div
+        className={cn(
+          "flex items-start gap-4 rounded-lg border p-4 transition-colors",
+          href && !isComplete && "cursor-pointer hover:bg-accent",
+          isComplete && "bg-muted/30"
+        )}
+      >
+        <ChecklistItemContent
+          description={description}
+          icon={icon}
+          isComplete={isComplete}
+          isOptional={isOptional}
+          title={title}
+        />
+        {href && !isComplete && (
+          <ArrowRightIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+        )}
+      </div>
+    );
+
+    return href && !isComplete ? <Link href={href}>{content}</Link> : content;
+  }
+
+  // Expandable collapsible item
+  return (
+    <Collapsible onOpenChange={setIsOpen} open={isOpen}>
+      <div
+        className={cn(
+          "rounded-lg border transition-colors",
+          isComplete && "bg-muted/30"
+        )}
+      >
+        <CollapsibleTrigger asChild>
+          <button
+            className="flex w-full items-start gap-4 p-4 text-left hover:bg-accent/50 transition-colors rounded-t-lg"
+            type="button"
+          >
+            <ChecklistItemContent
+              description={description}
+              icon={icon}
+              isComplete={isComplete}
+              isOptional={isOptional}
+              title={title}
+            />
+            <ChevronDownIcon
+              className={cn(
+                "h-5 w-5 text-muted-foreground shrink-0 transition-transform",
+                isOpen && "rotate-180"
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t px-4 py-4">{children}</div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
+
+function FeatureStatusRow({
+  enabled,
+  label,
+}: {
+  enabled: boolean;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      {enabled ? (
+        <CheckCircle2Icon className="h-4 w-4 text-green-600" />
+      ) : (
+        <XCircleIcon className="h-4 w-4 text-muted-foreground" />
+      )}
+      <span className="text-sm">{label}</span>
+    </div>
+  );
+}
+
+function ResultMessage({
+  success,
+  message,
+}: {
+  success: boolean;
+  message: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-md border p-3",
+        success
+          ? "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200"
+          : "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200"
+      )}
+    >
+      <div className="flex items-center gap-2 text-sm">
+        {success ? (
+          <CheckCircle2Icon className="h-4 w-4" />
+        ) : (
+          <XCircleIcon className="h-4 w-4" />
+        )}
+        {message}
+      </div>
+    </div>
+  );
+}
+
+type ScanFeaturesActionProps = {
+  awsAccountId: string;
+  organizationId: string;
+  features: AccountFeatures;
+};
+
+function ScanFeaturesAction({
+  awsAccountId,
+  organizationId,
+  features,
+}: ScanFeaturesActionProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [scanResult, setScanResult] = useState<{
+    success: boolean;
+    message: string;
+    features?: AccountFeatures;
+  } | null>(null);
+
+  const handleScan = () => {
+    startTransition(async () => {
+      setScanResult(null);
+      const result = await scanAWSAccountFeatures(awsAccountId, organizationId);
+
+      if (result.success) {
+        setScanResult({
+          success: true,
+          message: "Features scanned successfully",
+          features: result.features,
+        });
+        router.refresh();
+      } else {
+        setScanResult({ success: false, message: result.error });
+      }
+    });
+  };
+
+  const displayFeatures = scanResult?.features || features;
+  const emailFeatures = displayFeatures?.email;
+  const hasConfigSet = !!emailFeatures?.configSetName;
+  const identityCount = emailFeatures?.identities?.length || 0;
+
+  return (
+    <div className="space-y-4">
+      <Button disabled={isPending} onClick={handleScan} variant="outline">
+        {isPending ? (
+          <>
+            <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+            Scanning...
+          </>
+        ) : (
+          <>
+            <RefreshCwIcon className="mr-2 h-4 w-4" />
+            Scan Features
+          </>
+        )}
+      </Button>
+
+      {scanResult && (
+        <ResultMessage
+          message={scanResult.message}
+          success={scanResult.success}
+        />
+      )}
+
+      {displayFeatures && (
+        <div className="space-y-2">
+          <FeatureStatusRow
+            enabled={hasConfigSet}
+            label={
+              hasConfigSet
+                ? `Configuration set (${emailFeatures?.configSetName})`
+                : "Configuration set not found"
+            }
+          />
+          <FeatureStatusRow
+            enabled={!!emailFeatures?.eventTrackingEnabled}
+            label={`Event tracking ${emailFeatures?.eventTrackingEnabled ? "enabled" : "not enabled"}`}
+          />
+          <FeatureStatusRow
+            enabled={!!emailFeatures?.eventHistoryEnabled}
+            label={`Event history ${emailFeatures?.eventHistoryEnabled ? "enabled" : "not enabled"}`}
+          />
+          <FeatureStatusRow
+            enabled={identityCount > 0}
+            label={`${identityCount} verified ${identityCount === 1 ? "domain" : "domains"} found`}
+          />
+        </div>
+      )}
+
+      {!hasConfigSet && (
+        <p className="text-muted-foreground text-xs">
+          Run{" "}
+          <code className="rounded bg-muted px-1 py-0.5">wraps email init</code>{" "}
+          to deploy email infrastructure.
+        </p>
+      )}
+    </div>
+  );
+}
+
+type WebhookSecretFormProps = {
+  awsAccountId: string;
+  isConnected: boolean;
+};
+
+function WebhookSecretForm({
+  awsAccountId,
+  isConnected,
+}: WebhookSecretFormProps) {
+  const router = useRouter();
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const handleSave = () => {
+    if (!webhookSecret.trim()) {
+      setResult({ success: false, message: "Please enter a webhook secret" });
+      return;
+    }
+
+    startTransition(async () => {
+      setResult(null);
+      const response = await saveWebhookSecretAction(
+        awsAccountId,
+        webhookSecret
+      );
+
+      if (response.success) {
+        setResult({ success: true, message: response.message });
+        setWebhookSecret("");
+        // Refresh to update completion status
+        router.refresh();
+      } else {
+        setResult({ success: false, message: response.error });
+      }
+    });
+  };
+
+  if (isConnected) {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge className="text-green-600 border-green-200 bg-green-50">
+          <CheckCircle2Icon className="mr-1 h-3 w-3" />
+          Connected
+        </Badge>
+        <span className="text-muted-foreground text-sm">
+          Events are streaming to the dashboard
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <Input
+            className="font-mono text-sm"
+            onChange={(e) => setWebhookSecret(e.target.value)}
+            placeholder="Paste webhook secret from CLI"
+            type="text"
+            value={webhookSecret}
+          />
+          <Button
+            disabled={isPending || !webhookSecret.trim()}
+            onClick={handleSave}
+          >
+            {isPending ? (
+              <Loader2Icon className="h-4 w-4 animate-spin" />
+            ) : (
+              "Save"
+            )}
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          Run{" "}
+          <code className="rounded bg-muted px-1 py-0.5">
+            wraps platform connect
+          </code>{" "}
+          to generate a webhook secret.
+        </p>
+      </div>
+
+      {result && (
+        <div
+          className={cn(
+            "rounded-md border p-3",
+            result.success
+              ? "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200"
+              : "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200"
+          )}
+        >
+          <div className="flex items-center gap-2 text-sm">
+            {result.success ? (
+              <CheckCircle2Icon className="h-4 w-4" />
+            ) : (
+              <XCircleIcon className="h-4 w-4" />
+            )}
+            {result.message}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type DomainVerificationProps = {
+  verifiedDomains: string[];
+};
+
+function DomainVerification({ verifiedDomains }: DomainVerificationProps) {
+  if (verifiedDomains.length === 0) {
+    return (
+      <div className="space-y-3">
+        <p className="text-muted-foreground text-sm">
+          No verified domains found. Use the CLI to add and verify a domain.
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Run{" "}
+          <code className="rounded bg-muted px-1 py-0.5">
+            wraps email domains add -d yourdomain.com
+          </code>{" "}
+          to add a domain, then configure the DNS records shown.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        {verifiedDomains.map((domain) => (
+          <div className="flex items-center gap-2" key={domain}>
+            <CheckCircle2Icon className="h-4 w-4 text-green-600" />
+            <span className="font-mono text-sm">{domain}</span>
+            <Badge
+              className="text-xs text-green-600 border-green-200 bg-green-50"
+              variant="outline"
+            >
+              Verified
+            </Badge>
+          </div>
+        ))}
+      </div>
+      <p className="text-muted-foreground text-xs">
+        To add more domains, run{" "}
+        <code className="rounded bg-muted px-1 py-0.5">
+          wraps email domains add -d yourdomain.com
+        </code>
+      </p>
+    </div>
+  );
+}
+
+function SendFirstEmailGuide({ orgSlug }: { orgSlug: string }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-muted-foreground text-sm">
+        Before sending, configure your sender defaults to set a consistent
+        &quot;From&quot; name and email address.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/${orgSlug}/settings/sender-defaults`}>
+            Configure Sender Defaults
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="default">
+          <a href="/docs/quickstart" rel="noopener noreferrer" target="_blank">
+            View SDK Guide
+          </a>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CreateTemplateGuide({ orgSlug }: { orgSlug: string }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-muted-foreground text-sm">
+        Start by creating a brand kit with your colors, fonts, and logo. This
+        ensures consistency across all your email templates.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/${orgSlug}/emails/brand-kits`}>Create Brand Kit</Link>
+        </Button>
+        <Button asChild size="sm" variant="default">
+          <Link href={`/${orgSlug}/emails/templates/new`}>Create Template</Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SendBroadcastGuide({ orgSlug }: { orgSlug: string }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-muted-foreground text-sm">
+        First, add yourself as a contact to test your broadcasts before sending
+        to your full audience.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/${orgSlug}/contacts`}>Add Contacts</Link>
+        </Button>
+        <Button asChild size="sm" variant="default">
+          <Link href={`/${orgSlug}/emails/broadcasts/new`}>
+            Create Broadcast
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function GettingStartedDashboard({
   orgSlug,
+  organizationId,
   organizationName,
   setupStatus,
   completionPercent,
+  awsAccount,
 }: GettingStartedDashboardProps) {
   const {
     hasAwsAccount,
@@ -225,69 +705,96 @@ export function GettingStartedDashboard({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <ChecklistItem
-                  description="Set up AWS SES, DynamoDB, and event tracking in your account"
-                  href={hasAwsAccount ? undefined : `/${orgSlug}/onboarding`}
-                  icon={<CloudIcon className="h-5 w-5" />}
-                  isComplete={hasAwsAccount}
-                  title="Deploy email infrastructure"
-                />
+                {/* Deploy infrastructure - expandable with scan action if account exists */}
+                {awsAccount ? (
+                  <ExpandableChecklistItem
+                    description="Set up AWS SES, DynamoDB, and event tracking in your account"
+                    icon={<CloudIcon className="h-5 w-5" />}
+                    isComplete={hasAwsAccount}
+                    title="Deploy email infrastructure"
+                  >
+                    <ScanFeaturesAction
+                      awsAccountId={awsAccount.id}
+                      features={awsAccount.features}
+                      organizationId={organizationId}
+                    />
+                  </ExpandableChecklistItem>
+                ) : (
+                  <ExpandableChecklistItem
+                    description="Set up AWS SES, DynamoDB, and event tracking in your account"
+                    href={`/${orgSlug}/onboarding`}
+                    icon={<CloudIcon className="h-5 w-5" />}
+                    isComplete={hasAwsAccount}
+                    title="Deploy email infrastructure"
+                  />
+                )}
 
-                <ChecklistItem
-                  description="Run 'wraps platform connect' (v2.5.0+) to stream events and grant dashboard access"
-                  href={
-                    hasPlatformConnection
-                      ? undefined
-                      : "https://wraps.dev/docs/platform-connection"
-                  }
-                  icon={<LinkIcon className="h-5 w-5" />}
-                  isComplete={hasPlatformConnection}
-                  title="Connect to platform"
-                />
+                {/* Connect to platform - expandable with webhook form if account exists */}
+                {awsAccount ? (
+                  <ExpandableChecklistItem
+                    description="Stream events and grant dashboard access"
+                    icon={<LinkIcon className="h-5 w-5" />}
+                    isComplete={hasPlatformConnection}
+                    title="Connect to platform"
+                  >
+                    <WebhookSecretForm
+                      awsAccountId={awsAccount.id}
+                      isConnected={hasPlatformConnection}
+                    />
+                  </ExpandableChecklistItem>
+                ) : (
+                  <ExpandableChecklistItem
+                    description="Stream events and grant dashboard access"
+                    href="https://wraps.dev/docs/platform-connection"
+                    icon={<LinkIcon className="h-5 w-5" />}
+                    isComplete={hasPlatformConnection}
+                    title="Connect to platform"
+                  />
+                )}
 
-                <ChecklistItem
+                {/* Verify domain - expandable with domain list */}
+                <ExpandableChecklistItem
                   description="Configure DNS records to send emails from your domain"
                   href={
-                    hasVerifiedDomain
+                    awsAccount || hasVerifiedDomain
                       ? undefined
                       : `/${orgSlug}/settings/aws-accounts`
                   }
                   icon={<GlobeIcon className="h-5 w-5" />}
                   isComplete={hasVerifiedDomain}
                   title="Verify your domain"
-                />
+                >
+                  <DomainVerification verifiedDomains={verifiedDomains} />
+                </ExpandableChecklistItem>
 
-                <ChecklistItem
-                  description="Use the SDK to send a test email and see it tracked"
-                  href={hasSentEmail ? undefined : "/docs/quickstart"}
+                <ExpandableChecklistItem
+                  description="Configure sender defaults and use the SDK to send a test email"
                   icon={<MailIcon className="h-5 w-5" />}
                   isComplete={hasSentEmail}
                   title="Send your first email"
-                />
+                >
+                  <SendFirstEmailGuide orgSlug={orgSlug} />
+                </ExpandableChecklistItem>
 
-                <ChecklistItem
-                  description="Build reusable templates with our visual editor"
-                  href={
-                    hasTemplate ? undefined : `/${orgSlug}/emails/templates/new`
-                  }
+                <ExpandableChecklistItem
+                  description="Create a brand kit and build reusable templates"
                   icon={<LayoutTemplateIcon className="h-5 w-5" />}
                   isComplete={hasTemplate}
                   isOptional
                   title="Create an email template"
-                />
+                >
+                  <CreateTemplateGuide orgSlug={orgSlug} />
+                </ExpandableChecklistItem>
 
-                <ChecklistItem
-                  description="Send emails to multiple recipients at once"
-                  href={
-                    hasBroadcast
-                      ? undefined
-                      : `/${orgSlug}/emails/broadcasts/new`
-                  }
+                <ExpandableChecklistItem
+                  description="Add yourself as a contact and send a test broadcast"
                   icon={<MegaphoneIcon className="h-5 w-5" />}
                   isComplete={hasBroadcast}
                   isOptional
                   title="Send a broadcast"
-                />
+                >
+                  <SendBroadcastGuide orgSlug={orgSlug} />
+                </ExpandableChecklistItem>
               </CardContent>
             </Card>
           </div>
