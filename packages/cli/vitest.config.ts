@@ -22,6 +22,10 @@ export default defineConfig({
         "src/console/middleware/**",
         "src/console/services/**",
         "src/console/server.ts",
+        // Interactive CLI commands - tested through integration tests
+        "src/commands/email/upgrade.ts",
+        "src/commands/email/destroy.ts",
+        "src/commands/shared/destroy.ts",
         // Archive utility used primarily by console
         "src/utils/archive.ts",
         // CLI entry point
@@ -31,6 +35,8 @@ export default defineConfig({
         "src/utils/shared/output.ts",
         "src/utils/shared/prompts.ts",
         "src/utils/route53.ts",
+        // DNS credentials - complex interactive prompts
+        "src/utils/dns/credentials.ts",
       ],
       thresholds: {
         lines: 70,

@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { errors, handleCLIError, WrapsError } from "../shared/errors.js";
+import {
+  errors,
+  handleCLIError,
+  isAWSError,
+  isPulumiError,
+  parseAWSError,
+  parsePulumiError,
+  sanitizeErrorMessage,
+  WrapsError,
+} from "../shared/errors.js";
 
 describe("WrapsError", () => {
   it("should create error with all properties", () => {
@@ -230,5 +239,514 @@ describe("error factory functions", () => {
       expect(error.suggestion).toContain("curl -fsSL https://get.pulumi.com");
       expect(error.docsUrl).toBe("https://www.pulumi.com/docs/install/");
     });
+  });
+
+  describe("stackLocked", () => {
+    it("should create proper error", () => {
+      const error = errors.stackLocked();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("stack is locked");
+      expect(error.code).toBe("STACK_LOCKED");
+      expect(error.suggestion).toContain("rm -rf");
+      expect(error.suggestion).toContain("locks");
+    });
+  });
+
+  describe("smsNotConfigured", () => {
+    it("should create proper error", () => {
+      const error = errors.smsNotConfigured();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("SMS infrastructure not found");
+      expect(error.code).toBe("SMS_NOT_CONFIGURED");
+      expect(error.suggestion).toContain("wraps sms init");
+    });
+  });
+
+  describe("smsPhoneNotVerified", () => {
+    it("should create proper error", () => {
+      const error = errors.smsPhoneNotVerified();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("Phone number registration not complete");
+      expect(error.code).toBe("SMS_PHONE_NOT_VERIFIED");
+    });
+  });
+
+  describe("smsOptedOut", () => {
+    it("should create proper error with phone number", () => {
+      const error = errors.smsOptedOut("+14155551234");
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("+14155551234");
+      expect(error.message).toContain("opted out");
+      expect(error.code).toBe("SMS_OPTED_OUT");
+      expect(error.suggestion).toContain("START");
+    });
+  });
+
+  describe("smsSpendingLimit", () => {
+    it("should create proper error", () => {
+      const error = errors.smsSpendingLimit();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("spending limit");
+      expect(error.code).toBe("SMS_SPENDING_LIMIT");
+    });
+  });
+
+  describe("smsInvalidPhoneNumber", () => {
+    it("should create proper error with phone number", () => {
+      const error = errors.smsInvalidPhoneNumber("123-456");
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("123-456");
+      expect(error.code).toBe("SMS_INVALID_PHONE_NUMBER");
+      expect(error.suggestion).toContain("E.164");
+    });
+  });
+
+  describe("smsSimulatorLimit", () => {
+    it("should create proper error", () => {
+      const error = errors.smsSimulatorLimit();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("Simulator");
+      expect(error.message).toContain("100 messages");
+      expect(error.code).toBe("SMS_SIMULATOR_LIMIT");
+    });
+  });
+
+  describe("smtpRequiresSending", () => {
+    it("should create proper error", () => {
+      const error = errors.smtpRequiresSending();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("SMTP");
+      expect(error.message).toContain("sending");
+      expect(error.code).toBe("SMTP_REQUIRES_SENDING");
+    });
+  });
+
+  describe("smtpCredentialsNotFound", () => {
+    it("should create proper error", () => {
+      const error = errors.smtpCredentialsNotFound();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("SMTP credentials not found");
+      expect(error.code).toBe("SMTP_CREDENTIALS_NOT_FOUND");
+    });
+  });
+
+  describe("ssoSessionExpired", () => {
+    it("should create error without profile", () => {
+      const error = errors.ssoSessionExpired();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("SSO session has expired");
+      expect(error.code).toBe("SSO_SESSION_EXPIRED");
+      expect(error.suggestion).toContain("aws sso login");
+    });
+
+    it("should create error with profile", () => {
+      const error = errors.ssoSessionExpired("my-profile");
+
+      expect(error.message).toContain("my-profile");
+      expect(error.suggestion).toContain("--profile my-profile");
+    });
+  });
+
+  describe("profileNotFound", () => {
+    it("should create error with available profiles", () => {
+      const error = errors.profileNotFound("missing", ["default", "dev", "prod"]);
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("missing");
+      expect(error.code).toBe("PROFILE_NOT_FOUND");
+      expect(error.suggestion).toContain("default, dev, prod");
+    });
+
+    it("should create error with no available profiles", () => {
+      const error = errors.profileNotFound("missing", []);
+
+      expect(error.suggestion).toContain("No AWS profiles configured");
+      expect(error.suggestion).toContain("aws configure");
+    });
+  });
+
+  describe("credentialsFileMissing", () => {
+    it("should create proper error", () => {
+      const error = errors.credentialsFileMissing();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("credentials file not found");
+      expect(error.code).toBe("CREDENTIALS_FILE_MISSING");
+      expect(error.suggestion).toContain("aws configure");
+    });
+  });
+
+  describe("accessKeyInvalid", () => {
+    it("should create proper error", () => {
+      const error = errors.accessKeyInvalid();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("access key is invalid");
+      expect(error.code).toBe("ACCESS_KEY_INVALID");
+    });
+  });
+
+  describe("sessionTokenExpired", () => {
+    it("should create proper error", () => {
+      const error = errors.sessionTokenExpired();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("session token has expired");
+      expect(error.code).toBe("SESSION_TOKEN_EXPIRED");
+      expect(error.suggestion).toContain("aws sso login");
+    });
+  });
+
+  describe("iamPermissionDenied", () => {
+    it("should create error with action and resource", () => {
+      const error = errors.iamPermissionDenied(
+        "ses:SendEmail",
+        "SES identity",
+        "Add ses:SendEmail permission to your IAM role"
+      );
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("ses:SendEmail");
+      expect(error.message).toContain("SES identity");
+      expect(error.code).toBe("IAM_PERMISSION_DENIED");
+      expect(error.suggestion).toContain("ses:SendEmail");
+    });
+  });
+
+  describe("sesPermissionDenied", () => {
+    it("should create proper error with action", () => {
+      const error = errors.sesPermissionDenied("CreateEmailIdentity");
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("SES permission denied");
+      expect(error.message).toContain("CreateEmailIdentity");
+      expect(error.code).toBe("SES_PERMISSION_DENIED");
+    });
+  });
+
+  describe("dynamoDBPermissionDenied", () => {
+    it("should create proper error", () => {
+      const error = errors.dynamoDBPermissionDenied();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("DynamoDB permission denied");
+      expect(error.code).toBe("DYNAMODB_PERMISSION_DENIED");
+      expect(error.suggestion).toContain("CreateTable");
+    });
+  });
+
+  describe("lambdaPermissionDenied", () => {
+    it("should create proper error", () => {
+      const error = errors.lambdaPermissionDenied();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("Lambda permission denied");
+      expect(error.code).toBe("LAMBDA_PERMISSION_DENIED");
+      expect(error.suggestion).toContain("CreateFunction");
+    });
+  });
+
+  describe("eventBridgePermissionDenied", () => {
+    it("should create proper error", () => {
+      const error = errors.eventBridgePermissionDenied();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("EventBridge permission denied");
+      expect(error.code).toBe("EVENTBRIDGE_PERMISSION_DENIED");
+      expect(error.suggestion).toContain("PutRule");
+    });
+  });
+
+  describe("sqsPermissionDenied", () => {
+    it("should create proper error", () => {
+      const error = errors.sqsPermissionDenied();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("SQS permission denied");
+      expect(error.code).toBe("SQS_PERMISSION_DENIED");
+      expect(error.suggestion).toContain("CreateQueue");
+    });
+  });
+
+  describe("route53PermissionDenied", () => {
+    it("should create proper error", () => {
+      const error = errors.route53PermissionDenied();
+
+      expect(error).toBeInstanceOf(WrapsError);
+      expect(error.message).toContain("Route53 permission denied");
+      expect(error.code).toBe("ROUTE53_PERMISSION_DENIED");
+      expect(error.suggestion).toContain("optional");
+    });
+  });
+});
+
+describe("isAWSError", () => {
+  it("should return true for known AWS error names", () => {
+    const awsErrorNames = [
+      "ExpiredTokenException",
+      "InvalidClientTokenId",
+      "AccessDenied",
+      "AccessDeniedException",
+      "UnauthorizedAccess",
+      "InvalidAccessKeyId",
+      "SignatureDoesNotMatch",
+      "UnrecognizedClientException",
+      "CredentialsError",
+      "TokenRefreshRequired",
+      "SSOTokenExpired",
+    ];
+
+    for (const name of awsErrorNames) {
+      const error = new Error("Test error");
+      error.name = name;
+      expect(isAWSError(error)).toBe(true);
+    }
+  });
+
+  it("should return true for errors with $metadata", () => {
+    const error = new Error("Test error") as any;
+    error.$metadata = { httpStatusCode: 403 };
+
+    expect(isAWSError(error)).toBe(true);
+  });
+
+  it("should return false for regular errors", () => {
+    const error = new Error("Regular error");
+    expect(isAWSError(error)).toBe(false);
+  });
+
+  it("should return false for non-Error values", () => {
+    expect(isAWSError(null)).toBe(false);
+    expect(isAWSError(undefined)).toBe(false);
+    expect(isAWSError("string error")).toBe(false);
+    expect(isAWSError(123)).toBe(false);
+    expect(isAWSError({ message: "object" })).toBe(false);
+  });
+});
+
+describe("isPulumiError", () => {
+  it("should return true for errors containing pulumi", () => {
+    expect(isPulumiError(new Error("pulumi failed"))).toBe(true);
+    expect(isPulumiError(new Error("Pulumi error occurred"))).toBe(true);
+  });
+
+  it("should return true for resource creation errors", () => {
+    expect(isPulumiError(new Error("Error creating resource"))).toBe(true);
+    expect(isPulumiError(new Error("resource not found"))).toBe(true);
+  });
+
+  it("should return true for AccessDenied errors", () => {
+    expect(isPulumiError(new Error("AccessDenied when creating IAM role"))).toBe(
+      true
+    );
+  });
+
+  it("should return false for regular errors", () => {
+    expect(isPulumiError(new Error("Connection timeout"))).toBe(false);
+    expect(isPulumiError(new Error("Network error"))).toBe(false);
+  });
+
+  it("should return false for non-Error values", () => {
+    expect(isPulumiError(null)).toBe(false);
+    expect(isPulumiError(undefined)).toBe(false);
+    expect(isPulumiError("string error")).toBe(false);
+  });
+});
+
+describe("parseAWSError", () => {
+  it("should extract error code from error name", () => {
+    const error = new Error("Test");
+    error.name = "AccessDenied";
+
+    const result = parseAWSError(error);
+
+    expect(result.code).toBe("AccessDenied");
+  });
+
+  it("should extract action from error message", () => {
+    const error = new Error(
+      "User is not authorized when calling the SendEmail operation"
+    );
+
+    const result = parseAWSError(error);
+
+    expect(result.action).toBe("SendEmail");
+  });
+
+  it("should extract resource from error message", () => {
+    const error = new Error("Access denied for resource: arn:aws:ses:us-east-1");
+
+    const result = parseAWSError(error);
+
+    expect(result.resource).toBe("arn:aws:ses:us-east-1");
+  });
+
+  it("should handle error without action or resource", () => {
+    const error = new Error("Something failed");
+    error.name = "UnknownError";
+
+    const result = parseAWSError(error);
+
+    expect(result.code).toBe("UnknownError");
+    expect(result.action).toBeUndefined();
+    expect(result.resource).toBeUndefined();
+  });
+});
+
+describe("parsePulumiError", () => {
+  it("should detect IAM permission denied with action", () => {
+    const error = new Error(
+      'AccessDenied: action: "ses:CreateEmailIdentity" is not allowed'
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("IAM_PERMISSION_DENIED");
+    expect(result.iamAction).toBe("ses:CreateEmailIdentity");
+    expect(result.service).toBe("ses");
+  });
+
+  it("should detect SES permission denied", () => {
+    const error = new Error("access denied for ses:SendEmail operation");
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("SES_PERMISSION_DENIED");
+    expect(result.service).toBe("ses");
+  });
+
+  it("should detect DynamoDB permission denied", () => {
+    const error = new Error("AccessDenied for dynamodb:CreateTable");
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("DYNAMODB_PERMISSION_DENIED");
+    expect(result.service).toBe("dynamodb");
+  });
+
+  it("should detect Lambda permission denied", () => {
+    const error = new Error("AccessDenied for lambda:CreateFunction");
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("LAMBDA_PERMISSION_DENIED");
+    expect(result.service).toBe("lambda");
+  });
+
+  it("should detect EventBridge permission denied", () => {
+    const error = new Error("AccessDenied for events:PutRule");
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("EVENTBRIDGE_PERMISSION_DENIED");
+    expect(result.service).toBe("events");
+  });
+
+  it("should detect SQS permission denied", () => {
+    const error = new Error("AccessDenied for sqs:CreateQueue");
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("SQS_PERMISSION_DENIED");
+    expect(result.service).toBe("sqs");
+  });
+
+  it("should detect IAM permission denied", () => {
+    const error = new Error("AccessDenied for iam:CreateRole");
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("IAM_PERMISSION_DENIED");
+    expect(result.service).toBe("iam");
+  });
+
+  it("should detect stack locked error", () => {
+    const error = new Error("the stack is currently locked by another process");
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("STACK_LOCKED");
+  });
+
+  it("should return generic error for unknown Pulumi errors", () => {
+    const error = new Error("Unknown Pulumi error");
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("PULUMI_ERROR");
+  });
+});
+
+describe("sanitizeErrorMessage", () => {
+  it("should redact AWS account IDs", () => {
+    const message = sanitizeErrorMessage(
+      new Error("Error in account 123456789012")
+    );
+
+    expect(message).toContain("[ACCOUNT_ID]");
+    expect(message).not.toContain("123456789012");
+  });
+
+  it("should redact email addresses", () => {
+    const message = sanitizeErrorMessage(
+      new Error("Failed for user@example.com")
+    );
+
+    expect(message).toContain("[EMAIL]");
+    expect(message).not.toContain("user@example.com");
+  });
+
+  it("should redact domain names but keep AWS domains", () => {
+    const message = sanitizeErrorMessage(
+      new Error("Error with myapp.com and ses.amazonaws.com")
+    );
+
+    expect(message).toContain("[DOMAIN]");
+    expect(message).not.toContain("myapp.com");
+    // AWS domains should be preserved
+    expect(message).toContain("amazonaws.com");
+  });
+
+  it("should redact ARNs with account IDs", () => {
+    const message = sanitizeErrorMessage(
+      new Error("Resource arn:aws:ses:us-east-1:123456789012:identity not found")
+    );
+
+    expect(message).toContain("[ACCOUNT_ID]");
+  });
+
+  it("should truncate very long messages", () => {
+    const longMessage = "A".repeat(600);
+    const message = sanitizeErrorMessage(new Error(longMessage));
+
+    expect(message.length).toBeLessThanOrEqual(503); // 500 + "..."
+    expect(message).toContain("...");
+  });
+
+  it("should handle null/undefined", () => {
+    expect(sanitizeErrorMessage(null)).toBe("Unknown error");
+    expect(sanitizeErrorMessage(undefined)).toBe("Unknown error");
+  });
+
+  it("should handle string errors", () => {
+    const message = sanitizeErrorMessage("Simple string error");
+
+    expect(message).toBe("Simple string error");
+  });
+
+  it("should handle Error objects", () => {
+    const message = sanitizeErrorMessage(new Error("Error message"));
+
+    expect(message).toBe("Error message");
   });
 });

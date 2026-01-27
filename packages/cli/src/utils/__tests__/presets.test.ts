@@ -9,7 +9,7 @@ import {
   PRODUCTION_PRESET,
   STARTER_PRESET,
   validateConfig,
-} from "../presets.js";
+} from "../email/presets.js";
 
 describe("Preset Configurations", () => {
   describe("STARTER_PRESET", () => {
@@ -79,9 +79,9 @@ describe("Preset Configurations", () => {
       ]);
     });
 
-    it("should have DynamoDB history enabled with 3-month retention", () => {
+    it("should have DynamoDB history enabled with 90-day retention", () => {
       expect(PRODUCTION_PRESET.eventTracking?.dynamoDBHistory).toBe(true);
-      expect(PRODUCTION_PRESET.eventTracking?.archiveRetention).toBe("3months");
+      expect(PRODUCTION_PRESET.eventTracking?.archiveRetention).toBe("90days");
     });
 
     it("should not have dedicated IP", () => {
@@ -191,7 +191,7 @@ describe("Preset Configurations", () => {
         expect(info.features).toContain(
           "Real-time event tracking (EventBridge)"
         );
-        expect(info.features).toContain("3-month email history storage");
+        expect(info.features).toContain("90-day email history storage");
       });
 
       it("should have higher cost than starter", () => {
@@ -341,7 +341,7 @@ describe("Preset Configurations", () => {
         eventTracking: {
           enabled: true,
           dynamoDBHistory: true,
-          archiveRetention: "3months",
+          archiveRetention: "90days",
         },
       };
 
@@ -355,7 +355,7 @@ describe("Preset Configurations", () => {
 
       const changes = getUpgradePath(current, target);
 
-      expect(changes).toContain("Upgrade retention: 3months → 1year");
+      expect(changes).toContain("Upgrade retention: 90days → 1year");
     });
 
     it("should detect dedicated IP upgrade", () => {
@@ -416,7 +416,7 @@ describe("Preset Configurations", () => {
       const changes = getUpgradePath(PRODUCTION_PRESET, ENTERPRISE_PRESET);
 
       expect(changes.length).toBeGreaterThan(0);
-      expect(changes).toContain("Upgrade retention: 3months → 1year");
+      expect(changes).toContain("Upgrade retention: 90days → 1year");
       expect(changes).toContain("Add dedicated IP address");
     });
 
@@ -458,12 +458,12 @@ describe("Preset Configurations", () => {
       );
     });
 
-    it("should warn about permanent retention", () => {
+    it("should warn about indefinite retention", () => {
       const config: WrapsEmailConfig = {
         eventTracking: {
           enabled: true,
           dynamoDBHistory: true,
-          archiveRetention: "permanent",
+          archiveRetention: "indefinite",
         },
       };
 
@@ -471,7 +471,7 @@ describe("Preset Configurations", () => {
 
       expect(warnings.length).toBeGreaterThan(0);
       expect(warnings).toContain(
-        "⚠️  Permanent retention can become expensive. Consider 3-month or 1-year retention."
+        "⚠️  Indefinite retention can become expensive. Consider 90-day or 1-year retention."
       );
     });
 
@@ -481,7 +481,7 @@ describe("Preset Configurations", () => {
         eventTracking: {
           enabled: true,
           dynamoDBHistory: true,
-          archiveRetention: "permanent",
+          archiveRetention: "indefinite",
         },
       };
 
@@ -560,7 +560,7 @@ describe("Preset Configurations", () => {
       expect(ENTERPRISE_PRESET.dedicatedIp).toBe(true);
       expect(ENTERPRISE_PRESET.eventTracking?.archiveRetention).toBe("1year");
       expect(PRODUCTION_PRESET.dedicatedIp).toBeUndefined();
-      expect(PRODUCTION_PRESET.eventTracking?.archiveRetention).toBe("3months");
+      expect(PRODUCTION_PRESET.eventTracking?.archiveRetention).toBe("90days");
     });
 
     it("should have increasing event types coverage", () => {

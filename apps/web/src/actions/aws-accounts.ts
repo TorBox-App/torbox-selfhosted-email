@@ -331,16 +331,16 @@ export type ScanFeaturesResult =
           eventHistoryEnabled?: boolean;
           eventTrackingEnabled?: boolean;
           customTrackingDomain?: string;
+          identities?: Array<{
+            identity: string;
+            type: "DOMAIN" | "EMAIL_ADDRESS";
+          }>;
         };
         sms?: {
           enabled?: boolean;
           phoneNumberCount?: number;
           eventHistoryEnabled?: boolean;
         };
-        identities?: Array<{
-          identity: string;
-          type: "DOMAIN" | "EMAIL_ADDRESS";
-        }>;
       };
     }
   | {
@@ -715,13 +715,13 @@ export async function scanAWSAccountFeatures(
         trackedEvents,
         customTrackingDomain,
         dedicatedIpCount,
+        identities,
       },
       sms: {
         enabled: smsEnabled,
         phoneNumbers: smsPhoneNumbers,
         eventHistoryEnabled: smsEventHistoryEnabled,
       },
-      identities,
     };
 
     // 15. Update database with discovered features
