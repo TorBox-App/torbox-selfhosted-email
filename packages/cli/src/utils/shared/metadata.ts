@@ -13,6 +13,7 @@ import type {
   WrapsSMSConfig,
 } from "../../types/index.js";
 import { ensureWrapsDir, getWrapsDir } from "./fs.js";
+import type { DNSProviderType } from "./prompts.js";
 
 /**
  * SMTP credentials metadata (IAM user tracking, not actual credentials)
@@ -35,6 +36,8 @@ export type ServiceConfig<TConfig, TPreset> = {
   webhookSecret?: string; // API key for webhook authentication (uses metadata.accountId as AWS account number)
   // SMTP credentials metadata (actual credentials shown once, only ARN stored)
   smtpCredentials?: SMTPCredentialsMetadata;
+  // DNS provider used for automatic DNS record management
+  dnsProvider?: DNSProviderType;
 };
 
 /**

@@ -8,6 +8,17 @@ import type {
   UpgradeOptions,
   WrapsEmailConfig,
 } from "../../types/index.js";
+import {
+  buildEmailDNSRecords,
+  createDNSRecordsForProvider,
+  formatDNSRecordsForDisplay,
+  getDNSProviderDisplayName,
+  getDNSProviderTokenUrl,
+} from "../../utils/dns/create-records.js";
+import {
+  detectAvailableDNSProviders,
+  getDNSCredentials,
+} from "../../utils/dns/credentials.js";
 import { calculateCosts, formatCost } from "../../utils/email/costs.js";
 import { getAllPresetInfo, getPreset } from "../../utils/email/presets.js";
 import {
@@ -31,7 +42,11 @@ import {
   displayPreview,
   displaySuccess,
 } from "../../utils/shared/output.js";
-import { promptVercelConfig } from "../../utils/shared/prompts.js";
+import {
+  type DNSProviderType,
+  promptDNSProvider,
+  promptVercelConfig,
+} from "../../utils/shared/prompts.js";
 import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
@@ -571,39 +586,62 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           )
         );
 
-        // Check if domain has Route53 hosted zone
-        const { findHostedZone } = await import("../../utils/route53.js");
-        const hostedZone = await progress.execute(
-          "Checking for Route53 hosted zone",
-          async () =>
-            await findHostedZone(trackingDomain || config.domain!, region)
-        );
+        // Check DNS provider - use stored provider or detect available providers
+        let trackingDnsProvider: DNSProviderType | undefined =
+          metadata.services.email?.dnsProvider;
+        let canAutomateDNS = false;
 
-        if (hostedZone) {
-          progress.info(
-            `Found Route53 hosted zone: ${pc.cyan(hostedZone.name)} ${pc.green("✓")}`
-          );
-          clack.log.info(
-            pc.dim(
-              "DNS records (SSL certificate validation + CloudFront) will be created automatically."
-            )
-          );
+        if (trackingDnsProvider) {
+          // Use stored DNS provider
+          canAutomateDNS = trackingDnsProvider !== "manual";
+          if (canAutomateDNS) {
+            progress.info(
+              `Will use ${pc.cyan(getDNSProviderDisplayName(trackingDnsProvider))} for DNS records ${pc.green("✓")}`
+            );
+          }
         } else {
-          clack.log.warn(
-            `No Route53 hosted zone found for ${pc.cyan(trackingDomain || config.domain!)}`
+          // No stored DNS provider, detect available providers
+          const availableProviders = await progress.execute(
+            "Detecting available DNS providers",
+            async () =>
+              await detectAvailableDNSProviders(
+                trackingDomain || config.domain!,
+                region
+              )
           );
-          clack.log.info(
-            pc.dim(
-              "You'll need to manually create DNS records for SSL certificate validation and CloudFront."
-            )
+
+          const detectedProvider = availableProviders.find(
+            (p) => p.detected && p.provider !== "manual"
           );
-          clack.log.info(
-            pc.dim("DNS record details will be shown after deployment.")
-          );
+          if (detectedProvider) {
+            trackingDnsProvider = detectedProvider.provider;
+            canAutomateDNS = true;
+            progress.info(
+              `Found ${pc.cyan(getDNSProviderDisplayName(detectedProvider.provider))} ${pc.green("✓")}`
+            );
+            clack.log.info(
+              pc.dim(
+                "DNS records (SSL certificate validation + CloudFront) will be created automatically."
+              )
+            );
+          } else {
+            canAutomateDNS = false;
+            clack.log.warn(
+              `No automatic DNS provider detected for ${pc.cyan(trackingDomain || config.domain!)}`
+            );
+            clack.log.info(
+              pc.dim(
+                "You'll need to manually create DNS records for SSL certificate validation and CloudFront."
+              )
+            );
+            clack.log.info(
+              pc.dim("DNS record details will be shown after deployment.")
+            );
+          }
         }
 
         const confirmHttps = await clack.confirm({
-          message: hostedZone
+          message: canAutomateDNS
             ? "Proceed with automatic HTTPS setup?"
             : "Proceed with manual HTTPS setup (requires DNS configuration)?",
           initialValue: true,
@@ -1590,39 +1628,133 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     throw new Error(`Pulumi upgrade failed: ${error.message}`);
   }
 
-  // 13. Create DNS records in Route53 (if hosted zone exists)
+  // 13. Create DNS records using stored provider (or detect if not stored)
+  let dnsAutoCreated = false;
   if (outputs.domain && outputs.dkimTokens && outputs.dkimTokens.length > 0) {
-    const { findHostedZone, createDNSRecords } = await import(
-      "../../utils/route53.js"
-    );
-    const hostedZone = await findHostedZone(outputs.domain, region);
+    // Use stored DNS provider or detect available providers
+    let dnsProvider: DNSProviderType | undefined =
+      metadata.services.email?.dnsProvider;
 
-    if (hostedZone) {
-      try {
-        progress.start("Creating DNS records in Route53");
+    if (!dnsProvider) {
+      // No stored DNS provider, detect available providers
+      const availableProviders = await progress.execute(
+        "Detecting available DNS providers",
+        async () => await detectAvailableDNSProviders(outputs.domain!, region)
+      );
 
-        // Determine mailFromDomain - use updatedConfig if available, otherwise construct default
+      // Check if any provider is available (auto-detected)
+      const detectedProvider = availableProviders.find(
+        (p) => p.detected && p.provider !== "manual"
+      );
+      if (detectedProvider) {
+        // Prompt for DNS provider selection
+        dnsProvider = await promptDNSProvider(
+          outputs.domain!,
+          availableProviders
+        );
+
+        // Store the provider for future upgrades
+        if (
+          dnsProvider &&
+          dnsProvider !== "manual" &&
+          metadata.services.email
+        ) {
+          metadata.services.email.dnsProvider = dnsProvider;
+        }
+      }
+    }
+
+    if (dnsProvider && dnsProvider !== "manual") {
+      // Get credentials for the DNS provider
+      const credResult = await progress.execute(
+        `Validating ${getDNSProviderDisplayName(dnsProvider)} credentials`,
+        async () =>
+          await getDNSCredentials(dnsProvider!, outputs.domain!, region)
+      );
+
+      if (credResult.valid && credResult.credentials) {
+        // Determine mailFromDomain
         const mailFromDomain =
           updatedConfig.mailFromDomain || `mail.${outputs.domain}`;
 
-        await createDNSRecords(
-          hostedZone.id,
-          outputs.domain,
-          outputs.dkimTokens,
-          region,
-          outputs.customTrackingDomain,
+        // Build DNS record data
+        const dnsData = {
+          domain: outputs.domain!,
+          dkimTokens: outputs.dkimTokens!,
           mailFromDomain,
-          outputs.cloudFrontDomain
+          region,
+        };
+
+        try {
+          progress.start(
+            `Creating DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
+          );
+
+          const result = await createDNSRecordsForProvider(
+            credResult.credentials,
+            dnsData
+          );
+
+          if (result.success) {
+            progress.succeed(
+              `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
+            );
+            dnsAutoCreated = true;
+          } else {
+            progress.fail(
+              `Failed to create some DNS records: ${result.errors?.join(", ")}`
+            );
+            progress.info(
+              "You can manually add the required DNS records shown below"
+            );
+          }
+        } catch (error: any) {
+          progress.fail(
+            `Failed to create DNS records automatically: ${error.message}`
+          );
+          progress.info(
+            "You can manually add the required DNS records shown below"
+          );
+        }
+      } else {
+        // Credential validation failed
+        clack.log.warn(
+          credResult.error ||
+            `Unable to validate ${getDNSProviderDisplayName(dnsProvider)} credentials`
         );
-        progress.succeed("DNS records created in Route53");
-      } catch (error: any) {
-        progress.fail(
-          `Failed to create DNS records automatically: ${error.message}`
-        );
-        progress.info(
-          "You can manually add the required DNS records shown below"
-        );
+
+        if (dnsProvider === "vercel" || dnsProvider === "cloudflare") {
+          clack.log.info(
+            `Set ${dnsProvider === "vercel" ? "VERCEL_TOKEN" : "CLOUDFLARE_API_TOKEN"} to enable automatic DNS management.`
+          );
+          clack.log.info(
+            `You can create a token at: ${pc.cyan(getDNSProviderTokenUrl(dnsProvider))}`
+          );
+        }
       }
+    }
+
+    // Show manual DNS records if not auto-created
+    if (!dnsAutoCreated) {
+      const mailFromDomain =
+        updatedConfig.mailFromDomain || `mail.${outputs.domain}`;
+      const dnsData = {
+        domain: outputs.domain!,
+        dkimTokens: outputs.dkimTokens!,
+        mailFromDomain,
+        region,
+      };
+      const dnsRecords = buildEmailDNSRecords(dnsData);
+      const displayRecords = formatDNSRecordsForDisplay(dnsRecords);
+
+      console.log(
+        `\n${pc.bold("Add these DNS records to your DNS provider:")}\n`
+      );
+      for (const record of displayRecords) {
+        console.log(`  ${pc.cyan(record.type)} ${record.name}`);
+        console.log(`       ${pc.dim(record.value)}`);
+      }
+      console.log("");
     }
   }
 

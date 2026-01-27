@@ -7,8 +7,30 @@
  * - Vercel
  */
 
-// Providers
+// Provider clients
 export { CloudflareDNSClient } from "./cloudflare.js";
+// Unified record creation
+export {
+  buildEmailDNSRecords,
+  createDNSRecordsForProvider,
+  type DNSRecordInfo,
+  formatDNSRecordsForDisplay,
+  getDNSProviderDisplayName,
+  getDNSProviderTokenUrl,
+} from "./create-records.js";
+
+// Credentials management
+export {
+  type CredentialValidationResult,
+  type DNSCredentials,
+  detectAvailableDNSProviders,
+  findCloudflareZoneId,
+  getDNSCredentials,
+  getDNSProviderEnvVars,
+  getDNSProviderOptionalEnvVars,
+  hasCloudflareToken,
+  hasVercelToken,
+} from "./credentials.js";
 // Types
 export type {
   DNSConfig,

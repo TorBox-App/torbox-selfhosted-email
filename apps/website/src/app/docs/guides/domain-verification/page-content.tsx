@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Shield,
+  Zap,
 } from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +109,228 @@ export default function DomainVerificationPageContent() {
             </div>
           </CardContent>
         </Card>
+      </section>
+
+      {/* Automatic DNS Management */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Zap className="h-6 w-6 text-primary" />
+          Automatic DNS Management
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          The Wraps CLI can automatically create all required DNS records during{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            wraps email init
+          </code>{" "}
+          if you have the appropriate environment variables set for your DNS
+          provider.
+        </p>
+
+        <Card className="mb-4">
+          <CardContent className="p-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">DNS Provider</th>
+                  <th className="pb-2 text-left">
+                    Required Environment Variable
+                  </th>
+                  <th className="pb-2 text-left">Optional</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-foreground">
+                    AWS Route53
+                  </td>
+                  <td className="py-2">
+                    <span className="text-muted-foreground/70">
+                      (uses AWS credentials)
+                    </span>
+                  </td>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      AWS_PROFILE
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 font-medium text-foreground">
+                    Vercel DNS
+                  </td>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      VERCEL_TOKEN
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      VERCEL_TEAM_ID
+                    </code>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 font-medium text-foreground">
+                    Cloudflare
+                  </td>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      CLOUDFLARE_API_TOKEN
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      CLOUDFLARE_ZONE_ID
+                    </code>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        <h3 className="mb-3 font-medium text-lg">Setup Instructions</h3>
+        <div className="space-y-4">
+          <div className="rounded-lg border p-4">
+            <h4 className="mb-2 font-medium">Vercel DNS</h4>
+            <p className="mb-2 text-muted-foreground text-sm">
+              Create an API token at{" "}
+              <a
+                className="font-medium text-primary underline"
+                href="https://vercel.com/account/tokens"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                vercel.com/account/tokens
+              </a>
+            </p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "bash",
+                  filename: "terminal.sh",
+                  code: `export VERCEL_TOKEN=your_token_here
+# Optional: for team accounts
+export VERCEL_TEAM_ID=team_xxxxx`,
+                },
+              ]}
+              defaultValue="bash"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div className="rounded-lg border p-4">
+            <h4 className="mb-2 font-medium">Cloudflare</h4>
+            <p className="mb-2 text-muted-foreground text-sm">
+              Create an API token at{" "}
+              <a
+                className="font-medium text-primary underline"
+                href="https://dash.cloudflare.com/profile/api-tokens"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                dash.cloudflare.com/profile/api-tokens
+              </a>
+              . The token needs <strong>Zone.DNS (Edit)</strong> permission.
+            </p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "bash",
+                  filename: "terminal.sh",
+                  code: `export CLOUDFLARE_API_TOKEN=your_token_here
+# Optional: auto-detected if not set
+export CLOUDFLARE_ZONE_ID=your_zone_id`,
+                },
+              ]}
+              defaultValue="bash"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div className="rounded-lg border p-4">
+            <h4 className="mb-2 font-medium">AWS Route53</h4>
+            <p className="text-muted-foreground text-sm">
+              No additional setup required if you have a hosted zone for your
+              domain. The CLI uses your existing AWS credentials.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
+          <p className="font-medium text-sm">Skip manual DNS setup</p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            With automatic DNS management, you can skip Steps 2-4 below. The CLI
+            will create DKIM, SPF, DMARC, and MX records for you during{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">
+              wraps email init
+            </code>
+            .
+          </p>
+        </div>
+      </section>
+
+      {/* Manual DNS Setup Header */}
+      <section className="mb-8">
+        <h2 className="mb-2 font-bold text-2xl">Manual DNS Setup</h2>
+        <p className="text-muted-foreground">
+          If you prefer to add DNS records manually, or your DNS provider isn't
+          supported, follow the steps below.
+        </p>
       </section>
 
       {/* Step 1: Add Domain */}

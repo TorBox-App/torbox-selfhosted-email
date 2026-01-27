@@ -24,12 +24,14 @@ vi.mock("../../utils/shared/fs.js");
 vi.mock("../../utils/shared/metadata.js");
 vi.mock("../../utils/route53.js");
 vi.mock("../../utils/shared/prompts.js");
+vi.mock("../../utils/dns/index.js");
 vi.mock("../../infrastructure/email-stack.js");
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as prompts from "@clack/prompts";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
+import * as dnsUtils from "../../utils/dns/index.js";
 import * as route53Utils from "../../utils/route53.js";
 import * as aws from "../../utils/shared/aws.js";
 import * as fsUtils from "../../utils/shared/fs.js";
@@ -127,6 +129,54 @@ describe("init command", () => {
       undefined
     );
 
+    // Mock DNS utilities
+    vi.mocked(dnsUtils.detectAvailableDNSProviders).mockResolvedValue([
+      { provider: "route53", detected: false },
+      { provider: "vercel", detected: false },
+      { provider: "cloudflare", detected: false },
+      {
+        provider: "manual",
+        detected: true,
+        hint: "I'll add DNS records myself",
+      },
+    ]);
+    vi.mocked(dnsUtils.getDNSCredentials).mockResolvedValue({
+      valid: false,
+      error: "No credentials available",
+    });
+    vi.mocked(dnsUtils.createDNSRecordsForProvider).mockResolvedValue({
+      success: true,
+      recordsCreated: 5,
+    });
+    vi.mocked(dnsUtils.getDNSProviderDisplayName).mockImplementation(
+      (provider) => {
+        const names: Record<string, string> = {
+          route53: "AWS Route53",
+          vercel: "Vercel DNS",
+          cloudflare: "Cloudflare",
+          manual: "Manual",
+        };
+        return names[provider] || provider;
+      }
+    );
+    vi.mocked(dnsUtils.getDNSProviderTokenUrl).mockImplementation(
+      (provider) => {
+        const urls: Record<string, string> = {
+          vercel: "https://vercel.com/account/tokens",
+          cloudflare: "https://dash.cloudflare.com/profile/api-tokens",
+        };
+        return urls[provider] || "";
+      }
+    );
+    vi.mocked(dnsUtils.buildEmailDNSRecords).mockReturnValue([
+      {
+        name: "token1._domainkey.example.com",
+        type: "CNAME",
+        value: "token1.dkim.amazonses.com",
+        category: "dkim",
+      },
+    ]);
+
     // Mock prompt utilities
     vi.mocked(promptUtils.promptProvider).mockResolvedValue("vercel");
     vi.mocked(promptUtils.promptRegion).mockResolvedValue("us-east-1");
@@ -142,6 +192,8 @@ describe("init command", () => {
       shouldCreate: true,
       selectedCategories: new Set(["dkim", "spf", "dmarc"]),
     });
+    vi.mocked(promptUtils.promptDNSProvider).mockResolvedValue("manual");
+    vi.mocked(promptUtils.promptContinueManualDNS).mockResolvedValue(true);
 
     // Mock deployEmailStack
     vi.mocked(deployEmailStack).mockResolvedValue({
@@ -336,35 +388,47 @@ describe("init command", () => {
   });
 
   describe("DNS Integration Tests", () => {
-    it("should check for Route53 hosted zone", async () => {
+    it("should detect available DNS providers", async () => {
       await setupPulumiMock();
       await init({});
 
-      expect(route53Utils.findHostedZone).toHaveBeenCalled();
+      // New flow uses detectAvailableDNSProviders instead of direct findHostedZone
+      expect(dnsUtils.detectAvailableDNSProviders).toHaveBeenCalled();
     });
 
-    it("should create DNS records when hosted zone exists and user confirms", async () => {
+    it("should prompt for DNS provider selection", async () => {
       await setupPulumiMock();
-      vi.mocked(route53Utils.findHostedZone).mockResolvedValue({
-        Id: "/hostedzone/Z1234567890ABC",
-        Name: "example.com.",
-      } as never);
+      await init({});
 
-      vi.mocked(prompts.confirm).mockResolvedValue(true as never);
+      expect(promptUtils.promptDNSProvider).toHaveBeenCalled();
+    });
+
+    it("should create DNS records when provider selected and credentials valid", async () => {
+      await setupPulumiMock();
+      // Mock Route53 detection and credentials
+      vi.mocked(dnsUtils.detectAvailableDNSProviders).mockResolvedValue([
+        { provider: "route53", detected: true, hint: "Hosted zone detected" },
+        {
+          provider: "manual",
+          detected: true,
+          hint: "I'll add DNS records myself",
+        },
+      ]);
+      vi.mocked(promptUtils.promptDNSProvider).mockResolvedValue("route53");
+      vi.mocked(dnsUtils.getDNSCredentials).mockResolvedValue({
+        valid: true,
+        credentials: { provider: "route53", hostedZoneId: "Z1234567890ABC" },
+      });
 
       await init({});
 
-      // Note: actual DNS creation happens based on user prompt
-      // This test verifies the hosted zone is found
-      expect(route53Utils.findHostedZone).toHaveBeenCalledWith(
-        "example.com",
-        "us-east-1"
-      );
+      // DNS provider prompt should have been called
+      expect(promptUtils.promptDNSProvider).toHaveBeenCalled();
     });
 
-    it("should display manual DNS instructions when no hosted zone", async () => {
+    it("should display manual DNS instructions when manual provider selected", async () => {
       await setupPulumiMock();
-      vi.mocked(route53Utils.findHostedZone).mockResolvedValue(null);
+      vi.mocked(promptUtils.promptDNSProvider).mockResolvedValue("manual");
 
       await init({});
 

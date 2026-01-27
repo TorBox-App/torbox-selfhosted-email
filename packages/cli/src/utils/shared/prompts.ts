@@ -8,6 +8,11 @@ import type { ArchiveRetention } from "../../types/index.js";
 export type Provider = "vercel" | "aws" | "railway" | "other";
 
 /**
+ * DNS provider type for automatic DNS record management
+ */
+export type DNSProviderType = "route53" | "vercel" | "cloudflare" | "manual";
+
+/**
  * Prompt for hosting provider
  */
 export async function promptProvider(): Promise<Provider> {
@@ -1002,4 +1007,89 @@ export async function promptDNSManagement(domain: string): Promise<boolean> {
   }
 
   return manage;
+}
+
+/**
+ * DNS provider option with detection info
+ */
+export type DNSProviderOption = {
+  provider: DNSProviderType;
+  detected: boolean;
+  hint?: string;
+};
+
+/**
+ * Prompt for DNS provider selection
+ * @param domain The domain being configured
+ * @param availableProviders List of providers with detection info
+ */
+export async function promptDNSProvider(
+  domain: string,
+  availableProviders: DNSProviderOption[]
+): Promise<DNSProviderType> {
+  const options = availableProviders.map((p) => {
+    let label: string;
+    let hint: string;
+
+    switch (p.provider) {
+      case "route53":
+        label = "AWS Route53";
+        hint = p.detected
+          ? "Hosted zone detected"
+          : "Requires Route53 hosted zone";
+        break;
+      case "vercel":
+        label = "Vercel DNS";
+        hint = p.detected ? "Token found" : "Requires VERCEL_TOKEN";
+        break;
+      case "cloudflare":
+        label = "Cloudflare";
+        hint = p.detected ? "Token found" : "Requires CLOUDFLARE_API_TOKEN";
+        break;
+      case "manual":
+        label = "Manual";
+        hint = "I'll add DNS records myself";
+        break;
+    }
+
+    // Add recommended tag if detected
+    if (p.detected && p.provider !== "manual") {
+      label = `${label} (Recommended)`;
+    }
+
+    return {
+      value: p.provider,
+      label,
+      hint: p.hint || hint,
+    };
+  });
+
+  const provider = await clack.select({
+    message: `Where do you manage DNS for ${pc.cyan(domain)}?`,
+    options,
+  });
+
+  if (clack.isCancel(provider)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  return provider as DNSProviderType;
+}
+
+/**
+ * Prompt to continue with manual DNS setup when credentials are missing
+ */
+export async function promptContinueManualDNS(): Promise<boolean> {
+  const continueManual = await clack.confirm({
+    message: "Continue with manual DNS setup?",
+    initialValue: true,
+  });
+
+  if (clack.isCancel(continueManual)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  return continueManual;
 }

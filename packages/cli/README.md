@@ -474,6 +474,61 @@ The CLI offers four presets that control which AWS resources are created:
 ### Custom
 Select individual features. Useful if you want event storage without a dedicated IP, or specific event types only.
 
+## Automatic DNS Management
+
+During `wraps email init` and `wraps email upgrade`, the CLI can automatically create DNS records (DKIM, SPF, DMARC, MX) for your domain. Set the appropriate environment variable for your DNS provider:
+
+### Supported DNS Providers
+
+| Provider | Environment Variable | Optional |
+|----------|---------------------|----------|
+| AWS Route53 | *(uses AWS credentials)* | `AWS_PROFILE` |
+| Vercel DNS | `VERCEL_TOKEN` | `VERCEL_TEAM_ID` |
+| Cloudflare | `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_ZONE_ID` |
+
+### Setup
+
+**Vercel DNS:**
+```bash
+# Create token at: https://vercel.com/account/tokens
+export VERCEL_TOKEN=your_token_here
+
+# Optional: specify team (for team accounts)
+export VERCEL_TEAM_ID=team_xxxxx
+```
+
+**Cloudflare:**
+```bash
+# Create token at: https://dash.cloudflare.com/profile/api-tokens
+# Token needs: Zone.DNS (Edit) permission
+export CLOUDFLARE_API_TOKEN=your_token_here
+
+# Optional: specify zone ID (auto-detected if not set)
+export CLOUDFLARE_ZONE_ID=your_zone_id
+```
+
+**AWS Route53:**
+```bash
+# Uses your existing AWS credentials
+# No additional setup required if you have a hosted zone for your domain
+aws configure
+```
+
+### Manual DNS
+
+If you don't set up a DNS provider token, the CLI will show you the DNS records to add manually:
+
+```
+Add these DNS records to your DNS provider:
+
+  CNAME abc123._domainkey.example.com
+       abc123.dkim.amazonses.com
+  TXT example.com
+       "v=spf1 include:amazonses.com ~all"
+  TXT _dmarc.example.com
+       "v=DMARC1; p=quarantine; rua=mailto:postmaster@example.com"
+```
+
 ## Hosting Provider Integration
 
 ### Vercel

@@ -480,67 +480,183 @@ export async function init(options: InitOptions): Promise<void> {
         outputs.customTrackingDomain;
     }
   }
+  // Note: dnsProvider will be set after DNS configuration step below
   await saveConnectionMetadata(metadata);
 
   progress.info("Connection metadata saved for upgrade and restore capability");
 
-  // 10. Check if Route53 hosted zone exists and offer to create DNS records
+  // 10. DNS Configuration - Support multiple DNS providers
   let dnsAutoCreated = false;
+  let dnsProvider: "route53" | "vercel" | "cloudflare" | "manual" | undefined;
+
   if (outputs.domain && outputs.dkimTokens && outputs.dkimTokens.length > 0) {
-    const { findHostedZone, previewDNSChanges, createSelectedDNSRecords } =
-      await import("../../utils/route53.js");
-    const { promptDNSManagement, promptDNSConfirmation } = await import(
-      "../../utils/shared/prompts.js"
+    const {
+      detectAvailableDNSProviders,
+      getDNSCredentials,
+      createDNSRecordsForProvider,
+      getDNSProviderDisplayName,
+      getDNSProviderTokenUrl,
+      buildEmailDNSRecords,
+    } = await import("../../utils/dns/index.js");
+    const {
+      promptDNSProvider,
+      promptDNSConfirmation,
+      promptContinueManualDNS,
+    } = await import("../../utils/shared/prompts.js");
+    const { previewDNSChanges } = await import("../../utils/route53.js");
+
+    // Detect available DNS providers
+    progress.start("Detecting DNS providers");
+    const availableProviders = await detectAvailableDNSProviders(
+      outputs.domain,
+      region
     );
-    const hostedZone = await findHostedZone(outputs.domain, region);
+    progress.stop();
 
-    if (hostedZone) {
-      // Ask if user wants to manage DNS via Route53
-      const manageDNS = await promptDNSManagement(outputs.domain);
+    // Prompt user to select DNS provider
+    const selectedProvider = await promptDNSProvider(
+      outputs.domain,
+      availableProviders
+    );
+    dnsProvider = selectedProvider;
 
-      if (manageDNS) {
-        try {
-          // Preview DNS changes and show conflicts
-          progress.start("Checking existing DNS records");
-          const dnsPreview = await previewDNSChanges(
-            hostedZone.id,
-            outputs.domain,
-            outputs.dkimTokens,
-            region,
-            outputs.customTrackingDomain,
-            outputs.mailFromDomain
-          );
-          progress.stop();
+    if (selectedProvider !== "manual") {
+      // Get and validate credentials for selected provider
+      progress.start(
+        `Validating ${getDNSProviderDisplayName(selectedProvider)} credentials`
+      );
+      const credentialResult = await getDNSCredentials(
+        selectedProvider,
+        outputs.domain,
+        region
+      );
+      progress.stop();
 
-          // Show preview and get user confirmation
-          const { shouldCreate, selectedCategories } =
-            await promptDNSConfirmation(dnsPreview);
+      if (credentialResult.valid && credentialResult.credentials) {
+        const credentials = credentialResult.credentials;
 
-          if (shouldCreate && selectedCategories.size > 0) {
-            progress.start("Creating selected DNS records in Route53");
-            await createSelectedDNSRecords(
-              hostedZone.id,
+        // For Route53, use the existing preview/confirmation flow
+        if (credentials.provider === "route53") {
+          try {
+            progress.start("Checking existing DNS records");
+            const dnsPreview = await previewDNSChanges(
+              credentials.hostedZoneId,
               outputs.domain,
               outputs.dkimTokens,
               region,
-              selectedCategories as Set<any>,
               outputs.customTrackingDomain,
               outputs.mailFromDomain
             );
+            progress.stop();
+
+            // Show preview and get user confirmation
+            const { shouldCreate, selectedCategories } =
+              await promptDNSConfirmation(dnsPreview);
+
+            if (shouldCreate && selectedCategories.size > 0) {
+              progress.start("Creating selected DNS records in Route53");
+              const result = await createDNSRecordsForProvider(
+                credentials,
+                {
+                  domain: outputs.domain,
+                  dkimTokens: outputs.dkimTokens,
+                  mailFromDomain: outputs.mailFromDomain,
+                  region,
+                },
+                selectedCategories as Set<any>
+              );
+              if (result.success) {
+                progress.succeed(
+                  `Created ${selectedCategories.size} DNS record group(s) in Route53`
+                );
+                dnsAutoCreated = true;
+              } else {
+                progress.fail("Failed to create some DNS records");
+                if (result.errors) {
+                  for (const error of result.errors) {
+                    clack.log.warn(error);
+                  }
+                }
+              }
+            } else {
+              clack.log.info(
+                "Skipping DNS record creation. You can add them manually."
+              );
+            }
+          } catch (error: any) {
+            progress.stop();
+            clack.log.warn(`Could not manage DNS records: ${error.message}`);
+          }
+        } else {
+          // For Vercel and Cloudflare, create records directly
+          const recordData = {
+            domain: outputs.domain,
+            dkimTokens: outputs.dkimTokens,
+            mailFromDomain: outputs.mailFromDomain,
+            region,
+          };
+
+          // Show what will be created
+          const records = buildEmailDNSRecords(recordData);
+          clack.log.info(pc.bold("DNS records to create:"));
+          for (const record of records) {
+            clack.log.info(
+              pc.dim(`  ${record.type} ${record.name} → ${record.value}`)
+            );
+          }
+
+          progress.start(
+            `Creating DNS records in ${getDNSProviderDisplayName(credentials.provider)}`
+          );
+          const result = await createDNSRecordsForProvider(
+            credentials,
+            recordData
+          );
+          if (result.success) {
             progress.succeed(
-              `Created ${selectedCategories.size} DNS record group(s) in Route53`
+              `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(credentials.provider)}`
             );
             dnsAutoCreated = true;
           } else {
-            clack.log.info(
-              "Skipping DNS record creation. You can add them manually."
-            );
+            progress.fail("Failed to create some DNS records");
+            if (result.errors) {
+              for (const error of result.errors) {
+                clack.log.warn(error);
+              }
+            }
           }
-        } catch (error: any) {
-          progress.stop();
-          clack.log.warn(`Could not manage DNS records: ${error.message}`);
+        }
+      } else {
+        // Credentials missing or invalid
+        clack.log.warn(
+          credentialResult.error || "Could not validate credentials"
+        );
+
+        // Show how to get credentials for the provider
+        if (
+          selectedProvider === "vercel" ||
+          selectedProvider === "cloudflare"
+        ) {
+          clack.log.info(
+            `Set the ${selectedProvider === "vercel" ? "VERCEL_TOKEN" : "CLOUDFLARE_API_TOKEN"} environment variable to enable automatic DNS management.`
+          );
+          clack.log.info(
+            `You can create a token at: ${pc.cyan(getDNSProviderTokenUrl(selectedProvider))}`
+          );
+        }
+
+        // Ask if user wants to continue with manual setup
+        const continueManual = await promptContinueManualDNS();
+        if (continueManual) {
+          dnsProvider = "manual";
         }
       }
+    }
+
+    // Save DNS provider to metadata for future upgrades
+    if (dnsProvider && metadata.services.email) {
+      metadata.services.email.dnsProvider = dnsProvider;
+      await saveConnectionMetadata(metadata);
     }
   }
 
