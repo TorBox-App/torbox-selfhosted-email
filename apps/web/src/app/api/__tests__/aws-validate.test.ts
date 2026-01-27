@@ -1,5 +1,5 @@
 import { awsAccount, db } from "@wraps/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testOrganization, testUser, testUserNoAccess } from "./setup";
 
@@ -188,16 +188,16 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
   });
 
   it("should update existing AWS account connection", async () => {
-    // Create an existing account first
+    // Create an existing account first (same AWS account ID as the one we'll reconnect)
     const existingAccount = await db
       .insert(awsAccount)
       .values({
         organizationId: testOrganization.id,
         name: "Old Connection",
-        accountId: "999999999999",
+        accountId: "123456789012", // Same account ID as the reconnection
         region: "us-east-1",
-        roleArn: "arn:aws:iam::999999999999:role/old-role",
-        externalId: "existing-external-id",
+        roleArn: "arn:aws:iam::123456789012:role/old-role",
+        externalId: "old-external-id",
         isVerified: false,
         createdBy: testUser.id,
       })
@@ -216,8 +216,8 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
     const { POST } = await import("../[orgSlug]/aws/validate/route");
 
     const requestBody = {
-      roleArn: "arn:aws:iam::123456789012:role/new-role",
-      externalId: existingAccount[0].externalId, // Same external ID
+      roleArn: "arn:aws:iam::123456789012:role/new-role", // Same account, new role
+      externalId: "new-external-id", // New external ID (e.g., after re-deploying CF stack)
     };
 
     const request = new Request(
@@ -239,15 +239,20 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
 
-    // Verify account was updated, not created
+    // Verify account was updated, not created (lookup by accountId + organizationId)
     const accounts = await db
       .select()
       .from(awsAccount)
-      .where(eq(awsAccount.externalId, existingAccount[0].externalId));
+      .where(
+        and(
+          eq(awsAccount.organizationId, testOrganization.id),
+          eq(awsAccount.accountId, "123456789012")
+        )
+      );
 
     expect(accounts.length).toBe(1);
     expect(accounts[0].roleArn).toBe(requestBody.roleArn);
-    expect(accounts[0].accountId).toBe("123456789012");
+    expect(accounts[0].externalId).toBe(requestBody.externalId); // External ID should be updated
     expect(accounts[0].isVerified).toBe(true);
   });
 

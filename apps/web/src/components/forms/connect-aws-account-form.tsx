@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle, Copy, ExternalLink } from "lucide-react";
 import posthog from "posthog-js";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { uuidv7 } from "uuidv7";
 import { connectAWSAccountAction } from "@/actions/aws-accounts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,8 @@ export function ConnectAWSAccountForm({
     if (saved) {
       setExternalId(saved);
     } else {
-      const newId = crypto.randomUUID();
+      // Generate unique External ID with UUIDv7 (time-sortable, unique)
+      const newId = `wraps_${uuidv7()}`;
       localStorage.setItem(storageKey, newId);
       setExternalId(newId);
     }

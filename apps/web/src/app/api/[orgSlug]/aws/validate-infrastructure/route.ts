@@ -124,11 +124,12 @@ export async function POST(request: Request, context: RouteContext) {
       }
 
       // Check AWS account limit before creating/updating
+      // Look up by accountId (from the role ARN) to handle role name changes
       const existingAccount = await db.query.awsAccount.findFirst({
         where: (table, { and, eq }) =>
           and(
             eq(table.organizationId, orgWithMembership.id),
-            eq(table.roleArn, roleArn)
+            eq(table.accountId, accountId)
           ),
       });
 
@@ -140,7 +141,7 @@ export async function POST(request: Request, context: RouteContext) {
         await db
           .update(awsAccount)
           .set({
-            accountId,
+            roleArn,
             region,
             // Update external ID and webhook secret in case they changed
             externalId,

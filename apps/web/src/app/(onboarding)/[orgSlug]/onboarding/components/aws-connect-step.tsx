@@ -4,7 +4,9 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CloudIcon, ExternalLinkIcon } from "lucide-react";
 import posthog from "posthog-js";
+import { useMemo } from "react";
 import { toast } from "sonner";
+import { uuidv7 } from "uuidv7";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,9 +34,14 @@ export function AwsConnectStep({
   organizationId,
 }: AwsConnectStepProps) {
   const queryClient = useQueryClient();
+
+  // Generate a unique external ID for this connection (stable across re-renders)
+  // Using UUIDv7 ensures uniqueness and time-ordering
+  const externalId = useMemo(() => `wraps_${uuidv7()}`, []);
+
   const cfTemplateUrl =
     "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml";
-  const awsConsoleUrl = `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=${encodeURIComponent(cfTemplateUrl)}&stackName=wraps-console-access`;
+  const awsConsoleUrl = `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=${encodeURIComponent(cfTemplateUrl)}&stackName=wraps-console-access&param_ExternalId=${encodeURIComponent(externalId)}`;
 
   // Track back button
   const handleBack = () => {
@@ -104,17 +111,16 @@ export function AwsConnectStep({
   const form = useForm({
     defaultValues: {
       roleArn: "",
-      externalId: "",
     },
     onSubmit: async ({ value }) => {
-      validateAwsMutation.mutate(value);
+      // Include the generated externalId with the form submission
+      validateAwsMutation.mutate({ ...value, externalId });
     },
     validators: {
       onSubmit: z.object({
         roleArn: z
           .string()
           .regex(/^arn:aws:iam::\d{12}:role\/.*$/, "Invalid IAM Role ARN"),
-        externalId: z.string().min(1, "External ID is required"),
       }),
     },
   });
@@ -155,10 +161,10 @@ export function AwsConnectStep({
 
         {/* Step 2: Copy Outputs */}
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm">2. Copy the stack outputs</h3>
+          <h3 className="font-semibold text-sm">2. Copy the Role ARN</h3>
           <p className="text-muted-foreground text-sm">
             After the stack is created, go to the <strong>Outputs</strong> tab
-            and copy the Role ARN and External ID.
+            and copy the <strong>RoleArn</strong> value.
           </p>
         </div>
 
@@ -185,27 +191,6 @@ export function AwsConnectStep({
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder="arn:aws:iam::123456789012:role/wraps-console-access"
-                  value={field.state.value}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p className="text-destructive text-sm" key={error?.message}>
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-
-          <form.Field name="externalId">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>External ID</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
                   value={field.state.value}
                 />
                 {field.state.meta.errors.map((error) => (

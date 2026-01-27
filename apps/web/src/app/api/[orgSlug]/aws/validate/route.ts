@@ -84,11 +84,12 @@ export async function POST(request: Request, context: RouteContext) {
       await stsClient.send(assumeRoleCommand);
 
       // Role assumption successful - save the connection
+      // Look up by accountId (from the role ARN) to handle multiple AWS accounts per org
       const existingAccount = await db.query.awsAccount.findFirst({
         where: (table, { and, eq }) =>
           and(
             eq(table.organizationId, orgWithMembership.id),
-            eq(table.externalId, externalId)
+            eq(table.accountId, accountId)
           ),
       });
 
@@ -98,7 +99,7 @@ export async function POST(request: Request, context: RouteContext) {
           .update(awsAccount)
           .set({
             roleArn,
-            accountId,
+            externalId,
             isVerified: true,
             lastVerifiedAt: new Date(),
             updatedAt: new Date(),

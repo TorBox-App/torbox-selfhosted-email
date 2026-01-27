@@ -83,9 +83,13 @@ export async function POST(request: Request, context: RouteContext) {
       }
 
       // Save to database
-      // Check if account already exists for this org
+      // Check if this AWS account already exists for this org (by AWS account ID)
       const existingAccount = await db.query.awsAccount.findFirst({
-        where: eq(awsAccount.organizationId, orgWithMembership.id),
+        where: (table, { and, eq }) =>
+          and(
+            eq(table.organizationId, orgWithMembership.id),
+            eq(table.accountId, accountId)
+          ),
       });
 
       if (existingAccount) {
