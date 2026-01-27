@@ -1,10 +1,10 @@
-import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { assumeRole } from "@/lib/aws/assume-role";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
@@ -68,20 +68,13 @@ export async function POST(request: Request, context: RouteContext) {
     const accountId = match[1];
     const roleName = match[2];
 
-    // Extract region from role ARN or use default
-    // For cross-account roles, region is typically us-east-1 for STS
-    const stsClient = new STSClient({ region: "us-east-1" });
-
     try {
-      // Test the role assumption
-      const assumeRoleCommand = new AssumeRoleCommand({
-        RoleArn: roleArn,
-        RoleSessionName: `wraps-onboarding-validation-${Date.now()}`,
-        ExternalId: externalId,
-        DurationSeconds: 900, // 15 minutes (minimum)
+      // Test the role assumption using our helper that handles Vercel OIDC correctly
+      await assumeRole({
+        roleArn,
+        externalId,
+        sessionName: `wraps-onboarding-validation-${Date.now()}`,
       });
-
-      await stsClient.send(assumeRoleCommand);
 
       // Role assumption successful - save the connection
       // Look up by accountId (from the role ARN) to handle multiple AWS accounts per org
@@ -158,12 +151,19 @@ export async function POST(request: Request, context: RouteContext) {
       log.error({ err: serializeError(error) }, "Error assuming role");
 
       // Provide user-friendly error messages
+      // The assumeRole helper wraps AWS errors with descriptive messages
       let errorMessage = "Failed to validate AWS connection";
 
-      if (error.name === "AccessDenied") {
+      if (
+        error.name === "AccessDenied" ||
+        error.message?.toLowerCase().includes("access denied")
+      ) {
         errorMessage =
           "Access denied. Please verify the External ID matches the CloudFormation stack output.";
-      } else if (error.name === "InvalidClientTokenId") {
+      } else if (
+        error.name === "InvalidClientTokenId" ||
+        error.message?.includes("Invalid AWS credentials")
+      ) {
         errorMessage =
           "Invalid credentials. Please check your AWS configuration.";
       } else if (error.message?.includes("not authorized to perform")) {

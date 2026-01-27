@@ -1,13 +1,9 @@
-import {
-  AssumeRoleCommand,
-  GetCallerIdentityCommand,
-  STSClient,
-} from "@aws-sdk/client-sts";
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { assumeRole } from "@/lib/aws/assume-role";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -49,38 +45,27 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Validate AWS Credentials by assuming the role
-    const sts = new STSClient({ region: "us-east-1" });
+    // Validate role ARN format and extract account ID
+    const roleArnRegex = /^arn:aws:iam::(\d{12}):role\/(.+)$/;
+    const match = roleArn.match(roleArnRegex);
+
+    if (!match) {
+      return NextResponse.json(
+        { error: "Invalid IAM Role ARN format" },
+        { status: 400 }
+      );
+    }
+
+    const accountId = match[1];
 
     try {
-      const assumeRoleCommand = new AssumeRoleCommand({
-        RoleArn: roleArn,
-        RoleSessionName: "WrapsOnboardingValidation",
-        ExternalId: externalId,
+      // Validate AWS Credentials by assuming the role
+      // Uses our helper that handles Vercel OIDC correctly
+      await assumeRole({
+        roleArn,
+        externalId,
+        sessionName: "WrapsOnboardingValidation",
       });
-
-      const assumedRole = await sts.send(assumeRoleCommand);
-
-      if (!assumedRole.Credentials) {
-        throw new Error("Failed to retrieve credentials from AssumeRole");
-      }
-
-      // Verify we can use the credentials and get the Account ID
-      const tempSts = new STSClient({
-        region: "us-east-1",
-        credentials: {
-          accessKeyId: assumedRole.Credentials.AccessKeyId!,
-          secretAccessKey: assumedRole.Credentials.SecretAccessKey!,
-          sessionToken: assumedRole.Credentials.SessionToken,
-        },
-      });
-
-      const identity = await tempSts.send(new GetCallerIdentityCommand({}));
-      const accountId = identity.Account;
-
-      if (!accountId) {
-        throw new Error("Failed to retrieve Account ID");
-      }
 
       // Save to database
       // Check if this AWS account already exists for this org (by AWS account ID)
