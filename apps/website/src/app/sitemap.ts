@@ -19,6 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/blog",
     "/blog/your-dmarc-policy-is-useless",
     "/blog/ses-sandbox-guide",
+    "/blog/ses-production-architecture",
     "/blog/spf-guide",
     "/docs",
     "/docs/quickstart",
