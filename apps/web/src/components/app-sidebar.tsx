@@ -107,7 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             title: "Events",
             url: `/${orgSlug}/events`,
           },
-          // Topics - requires Growth plan
+          // Topics - requires Starter plan
           ...(planFeatures?.topics
             ? [
                 {
@@ -116,7 +116,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 },
               ]
             : []),
-          // Segments - requires Growth plan
+          // Segments - requires Starter plan
           ...(planFeatures?.segments
             ? [
                 {

@@ -4,7 +4,7 @@ import { Check, Sparkles } from "lucide-react";
 import {
   type BillingInterval,
   getAnnualTotal,
-  getDisplayPlans,
+  getPaidPlans,
   getPriceByInterval,
   hasEarlyAdopterPricing,
   type PlanId,
@@ -17,6 +17,7 @@ type PlanSelectorProps = {
   currentPlan?: PlanId | null;
   showCurrentBadge?: boolean;
   billingInterval?: BillingInterval;
+  showFreeTier?: boolean;
 };
 
 export function PlanSelector({
@@ -25,10 +26,12 @@ export function PlanSelector({
   currentPlan,
   showCurrentBadge = false,
   billingInterval = "monthly",
+  showFreeTier = false,
 }: PlanSelectorProps) {
-  const displayPlans = getDisplayPlans();
+  // Get paid plans only (exclude free tier unless explicitly requested)
+  const displayPlans = getPaidPlans();
 
-  // Filter to show Starter and Growth only (Scale coming soon)
+  // Show Starter and Growth for most cases, Scale on upgrade page
   const visiblePlans = displayPlans.filter(({ id }) =>
     ["starter", "growth"].includes(id)
   );

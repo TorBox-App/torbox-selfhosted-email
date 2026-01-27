@@ -98,13 +98,8 @@ export const initGTM = (): void => {
 /**
  * Check if PostHog is initialized and ready
  */
-const isPostHogReady = (): boolean => {
-  return !!(
-    POSTHOG_KEY &&
-    IS_PRODUCTION &&
-    typeof posthog?.capture === "function"
-  );
-};
+const isPostHogReady = (): boolean =>
+  !!(POSTHOG_KEY && IS_PRODUCTION && typeof posthog?.capture === "function");
 
 /**
  * Track custom events

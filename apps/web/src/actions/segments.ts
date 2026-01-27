@@ -364,13 +364,12 @@ export async function createSegment(
       };
     }
 
-    // Check if segments feature is available for this plan
+    // Check if segments feature is available for this plan (Starter+)
     const featureCheck = await checkFeatureAccess(organizationId, "segments");
     if (!featureCheck.allowed) {
       return {
         success: false,
-        error:
-          featureCheck.message ?? "Segments require a Growth plan or higher.",
+        error: featureCheck.message ?? "Segments require a paid plan.",
       };
     }
 

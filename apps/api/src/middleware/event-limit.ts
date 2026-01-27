@@ -15,7 +15,7 @@ import { Elysia } from "elysia";
 
 import type { AuthContext } from "./auth";
 
-// Event limits per plan (events per month)
+// Tracked event limits per plan (tracked events per month)
 const EVENT_LIMITS = {
   starter: 50_000,
   pro: 250_000, // Growth tier (now named "pro" in DB)

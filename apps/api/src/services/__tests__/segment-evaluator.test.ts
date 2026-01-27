@@ -1026,7 +1026,7 @@ describe("Segment Evaluator", () => {
       });
     });
 
-    describe("Event-based Segment Use Cases", () => {
+    describe("Behavioral Segment Use Cases", () => {
       it("should support purchase history segmentation", () => {
         // Segment: Customers who made a purchase
         const filter: SegmentFilter = {

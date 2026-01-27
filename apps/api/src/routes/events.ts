@@ -1,13 +1,13 @@
 /**
  * Event Ingestion Routes
  *
- * Receives custom events from customer's API, triggers matching workflows,
+ * Receives tracked events from customer's API, triggers matching workflows,
  * and resumes waiting executions.
  *
- * Event limits (2026 pricing model):
- * - Starter: 50,000 events/month
- * - Growth: 250,000 events/month
- * - Scale: 1,000,000 events/month
+ * Tracked event limits (2026 pricing model):
+ * - Starter: 50,000 tracked events/month
+ * - Growth: 250,000 tracked events/month
+ * - Scale: 1,000,000 tracked events/month
  * - Enterprise: Unlimited
  *
  * Soft cap with 25% grace period (blocks at 125% of limit).

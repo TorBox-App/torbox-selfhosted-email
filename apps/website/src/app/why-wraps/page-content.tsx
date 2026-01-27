@@ -20,11 +20,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const costComparison = [
-  { volume: "10K/mo", saas: "$40-80", aws: "~$3", total: "~$13" },
-  { volume: "50K/mo", saas: "$100-200", aws: "~$8", total: "~$18" },
-  { volume: "100K/mo", saas: "$200-400", aws: "~$15", total: "~$64" },
-  { volume: "500K/mo", saas: "$500-1,000", aws: "~$55", total: "~$104" },
-  { volume: "1M/mo", saas: "$1,000+", aws: "~$105", total: "~$254" },
+  { volume: "1K/mo", saas: "$20-40", aws: "~$0.10", total: "Free" },
+  { volume: "10K/mo", saas: "$40-80", aws: "~$1", total: "~$30" },
+  { volume: "50K/mo", saas: "$150-300", aws: "~$5", total: "~$104" },
+  { volume: "250K/mo", saas: "$400-800", aws: "~$25", total: "~$274" },
+  { volume: "500K/mo", saas: "$700-1,200", aws: "~$50", total: "~$549" },
 ];
 
 const securityPoints = [
@@ -48,7 +48,7 @@ const faqItems = [
     id: "cost",
     question: "What's the total cost of ownership?",
     answer:
-      "AWS costs: $0.10/1K emails + ~$2-5/mo infrastructure (DynamoDB, Lambda, etc.). The CLI and SDK are free forever. The Wraps Platform starts at $10/mo for the full dashboard experience. No hidden fees, no per-seat pricing.",
+      "AWS costs: $0.10/1K emails + ~$2-5/mo infrastructure. There's a free tier with 1,000 messages/month and hosted dashboard. Paid plans start at $29/mo for 10,000 messages with usage-based overages. No hidden fees, no per-seat pricing.",
   },
   {
     id: "support",
@@ -166,9 +166,8 @@ export default function WhyWrapsPageContent() {
               </CardContent>
             </Card>
             <p className="mt-4 text-muted-foreground text-sm">
-              AWS costs include SES ($0.10/1K) + infrastructure (~$2-5/mo).
-              Wraps Total includes Wraps Platform ($10-149/mo depending on
-              tier).{" "}
+              AWS costs: SES at $0.10/1K emails. Wraps Total includes platform
+              fee ($0-249/mo) plus message overages ($1-2/1K).{" "}
               <a className="text-primary underline" href="/platform#pricing">
                 See pricing tiers
               </a>

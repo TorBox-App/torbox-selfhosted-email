@@ -14,7 +14,7 @@ import { useRef } from "react";
 const eventTypes = [
   {
     icon: Zap,
-    title: "Custom Events",
+    title: "Tracked Events",
     description:
       "Track any action: signups, purchases, page views, button clicks",
     counted: true,
@@ -47,13 +47,13 @@ const benefits = [
     icon: CircleDollarSign,
     title: "Pay for Actions",
     description:
-      "Only custom events count. Email engagement tracking is always free.",
+      "Only tracked events count. Email engagement tracking is always free.",
   },
   {
     icon: Clock,
     title: "Flexible Retention",
     description:
-      "30 days to 1 year history. Events power segments and automations.",
+      "30 days to 1 year history. Tracked events power segments and automations.",
   },
 ];
 
@@ -78,7 +78,7 @@ export function DashboardEventsSection() {
             What counts as an event?
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">
-            We only charge for custom events you explicitly track. Email opens,
+            We only charge for tracked events you explicitly send. Email opens,
             clicks, and delivery events are always free.
           </p>
         </motion.div>

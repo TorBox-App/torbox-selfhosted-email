@@ -55,7 +55,7 @@ export default async function AutomationsPage({
   }
 
   const currentPlanId = planId;
-  const requiredPlan = getRequiredPlan("workflows") || "growth";
+  const requiredPlan = getRequiredPlan("workflows") || "free";
 
   // If feature not allowed, show upgrade prompt
   if (!featureCheck.allowed) {

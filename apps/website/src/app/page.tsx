@@ -4,13 +4,11 @@ import { FaqSection } from "./landing/components/faq-section";
 import { LandingFooter } from "./landing/components/footer";
 import { HeroSection } from "./landing/components/hero-section";
 import { LandingNavbar } from "./landing/components/navbar";
+import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
 import { ProductTabbedSection } from "./landing/components/product-tabbed-section";
 import { TrustedBySection } from "./landing/components/trusted-by-section";
-import {
-  premiumBgClass,
-  UpgradeSection,
-} from "./landing/components/upgrade-section";
+import { WorkflowBuilderSection } from "./landing/components/workflow-builder-section";
 
 export default function LandingPage() {
   return (
@@ -25,18 +23,21 @@ export default function LandingPage() {
         <TrustedBySection />
         <PrinciplesSection />
 
-        {/* Free Tier - CLI + SDK + Console */}
+        {/* Primary: Wraps Platform */}
+        <ProductTabbedSection />
+
+        {/* Interactive Workflow Builder */}
+        <WorkflowBuilderSection />
+
+        {/* Pricing */}
+        <PricingSection />
+
+        {/* Free Tier - CLI + SDK */}
         <CliTabbedSection />
 
-        {/* Transition to Premium */}
-        <UpgradeSection />
-
-        {/* Premium Tier - Wraps Platform */}
-        <div className={premiumBgClass}>
-          <ProductTabbedSection />
-          <FaqSection />
-          <CTASection />
-        </div>
+        {/* Footer sections */}
+        <FaqSection />
+        <CTASection />
       </main>
 
       {/* Footer */}

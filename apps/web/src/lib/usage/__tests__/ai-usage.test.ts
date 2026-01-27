@@ -236,7 +236,7 @@ describe("AI Usage Functions", () => {
       const periodKey = getCurrentPeriodKey();
       mockGetOrganizationPlanId.mockResolvedValueOnce("starter");
 
-      // Set usage at limit
+      // Set usage at limit (starter = 50)
       await db.insert(aiUsageMonthly).values({
         organizationId: testOrganization.id,
         periodKey,
@@ -268,11 +268,11 @@ describe("AI Usage Functions", () => {
       const periodKey = getCurrentPeriodKey();
       mockGetOrganizationPlanId.mockResolvedValueOnce("growth");
 
-      // 100 messages - under growth limit (250) but over starter (50)
+      // 150 messages - under growth limit (250) but over starter (50)
       await db.insert(aiUsageMonthly).values({
         organizationId: testOrganization.id,
         periodKey,
-        messageCount: 100,
+        messageCount: 150,
       });
 
       const growthResult = await checkAiUsageLimit(testOrganization.id);
@@ -284,11 +284,11 @@ describe("AI Usage Functions", () => {
       const periodKey = getCurrentPeriodKey();
       mockGetOrganizationPlanId.mockResolvedValueOnce("scale");
 
-      // 500 messages - under scale limit (1000)
+      // 800 messages - under scale limit (1000)
       await db.insert(aiUsageMonthly).values({
         organizationId: testOrganization.id,
         periodKey,
-        messageCount: 500,
+        messageCount: 800,
       });
 
       const result = await checkAiUsageLimit(testOrganization.id);

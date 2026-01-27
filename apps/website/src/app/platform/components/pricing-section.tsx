@@ -4,72 +4,17 @@ import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  type BillingInterval,
+  OVERAGE_RATES,
+  PRICING_COPY,
+  PRICING_TIERS,
+  type PricingTier,
+} from "@/config/pricing";
 import { BillingToggle } from "./billing-toggle";
 
-type BillingInterval = "monthly" | "annual";
-
-const tiers = [
-  {
-    name: "Starter",
-    price: 10,
-    annualPrice: 100,
-    events: "50,000",
-    workflows: "5",
-    retention: "30 days",
-    description: "Templates + transactional email",
-    features: [
-      "Unlimited contacts",
-      "Unlimited templates",
-      "50 AI generations/mo",
-      "Basic broadcasts",
-      "Email analytics",
-      "1 AWS account",
-    ],
-    highlighted: false,
-    planId: "starter",
-    ctaText: "Get Started",
-  },
-  {
-    name: "Growth",
-    price: 49,
-    annualPrice: 490,
-    events: "250,000",
-    workflows: "25",
-    retention: "90 days",
-    description: "Add audience management & targeting",
-    features: [
-      "Everything in Starter",
-      "Topics & preference center",
-      "Segments & targeting",
-      "Scheduled campaigns",
-      "250 AI generations/mo",
-      "3 AWS accounts",
-    ],
-    highlighted: true,
-    popular: true,
-    planId: "pro",
-    ctaText: "Get Started",
-  },
-  {
-    name: "Scale",
-    price: 149,
-    annualPrice: 1490,
-    events: "1,000,000",
-    workflows: "Unlimited",
-    retention: "1 year",
-    description: "High-volume + workflow automation",
-    features: [
-      "Everything in Growth",
-      "Workflow automations",
-      "1,000 AI generations/mo",
-      "Unlimited AWS accounts",
-      "Dedicated support",
-    ],
-    highlighted: false,
-    planId: "growth",
-    ctaText: "Get Started",
-  },
-];
+// Only show paid tiers on the platform page
+const paidTiers = PRICING_TIERS.filter((t) => t.id !== "free");
 
 export function DashboardPricingSection() {
   const ref = useRef<HTMLDivElement>(null);
@@ -77,14 +22,13 @@ export function DashboardPricingSection() {
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("monthly");
 
-  const getCtaLink = (tier: (typeof tiers)[0]) => {
+  const getCtaLink = (tier: PricingTier) => {
     const annual = billingInterval === "annual" ? "&annual=true" : "";
-    return `https://app.wraps.dev/auth?mode=signup&plan=${tier.planId}${annual}`;
+    return `https://app.wraps.dev/auth?mode=signup&plan=${tier.id}${annual}`;
   };
 
-  const getDisplayPrice = (tier: (typeof tiers)[0]) => {
-    if (billingInterval === "annual") {
-      // Annual price per month (17% off)
+  const getDisplayPrice = (tier: PricingTier) => {
+    if (billingInterval === "annual" && tier.annualPrice) {
       return Math.round(tier.annualPrice / 12);
     }
     return tier.price;
@@ -115,7 +59,7 @@ export function DashboardPricingSection() {
             Simple, predictable pricing
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground mb-6">
-            Unlimited contacts. Gate on events. No per-seat fees.
+            Unlimited contacts. Pay per message. No per-seat fees.
           </p>
           <BillingToggle
             onChange={setBillingInterval}
@@ -125,14 +69,15 @@ export function DashboardPricingSection() {
 
         {/* Pricing cards */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {tiers.map((tier, index) => {
+          {paidTiers.map((tier, index) => {
+            const overage = OVERAGE_RATES[tier.id];
             return (
               <motion.div
                 animate={
                   isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }
                 }
                 className={`relative flex flex-col overflow-hidden rounded-2xl border-2 bg-background ${
-                  tier.highlighted ? "border-orange-500" : "border-border"
+                  tier.highlight ? "border-orange-500" : "border-border"
                 }`}
                 initial={{ opacity: 0, y: 30 }}
                 key={tier.name}
@@ -151,12 +96,12 @@ export function DashboardPricingSection() {
                 {/* Header */}
                 <div
                   className={`border-b px-6 py-6 ${
-                    tier.highlighted ? "bg-orange-500/5" : "bg-muted/30"
+                    tier.highlight ? "bg-orange-500/5" : "bg-muted/30"
                   }`}
                 >
                   <div
                     className={`mb-1 font-semibold ${
-                      tier.highlighted ? "text-orange-500" : "text-foreground"
+                      tier.highlight ? "text-orange-500" : "text-foreground"
                     }`}
                   >
                     {tier.name}
@@ -167,31 +112,32 @@ export function DashboardPricingSection() {
                     </span>
                     <span className="text-muted-foreground">/mo</span>
                   </div>
-                  {billingInterval === "annual" ? (
-                    <div className="mt-1 text-green-600 text-sm dark:text-green-400">
-                      ${tier.annualPrice} billed annually (save 17%)
-                    </div>
-                  ) : (
-                    <div className="mt-1 text-muted-foreground text-sm">
-                      or ${tier.annualPrice}/yr (save 17%)
-                    </div>
-                  )}
+                  {tier.annualPrice &&
+                    (billingInterval === "annual" ? (
+                      <div className="mt-1 text-green-600 text-sm dark:text-green-400">
+                        ${tier.annualPrice} billed annually (save 17%)
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-muted-foreground text-sm">
+                        or ${tier.annualPrice}/yr (save 17%)
+                      </div>
+                    ))}
                   <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                     <div>
                       <span className="block font-medium text-foreground">
-                        {tier.events}
+                        {tier.limits.messagesDisplay}
                       </span>
-                      events/mo
+                      messages
                     </div>
                     <div>
                       <span className="block font-medium text-foreground">
-                        {tier.workflows}
+                        {tier.limits.workflowsDisplay}
                       </span>
                       workflows
                     </div>
                     <div>
                       <span className="block font-medium text-foreground">
-                        {tier.retention}
+                        {tier.limits.retention}
                       </span>
                       history
                     </div>
@@ -204,14 +150,30 @@ export function DashboardPricingSection() {
                 {/* Features */}
                 <div className="flex flex-1 flex-col p-6">
                   <ul className="mb-6 space-y-2.5">
-                    {tier.features.map((feature) => (
+                    <li className="flex items-start gap-2 text-sm">
+                      <Check
+                        className={`mt-0.5 size-4 shrink-0 ${
+                          tier.highlight ? "text-orange-500" : "text-green-500"
+                        }`}
+                      />
+                      <span>Unlimited contacts</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm">
+                      <Check
+                        className={`mt-0.5 size-4 shrink-0 ${
+                          tier.highlight ? "text-orange-500" : "text-green-500"
+                        }`}
+                      />
+                      <span>Then {overage.display}</span>
+                    </li>
+                    {tier.features.slice(2).map((feature) => (
                       <li
                         className="flex items-start gap-2 text-sm"
                         key={feature}
                       >
                         <Check
                           className={`mt-0.5 size-4 shrink-0 ${
-                            tier.highlighted
+                            tier.highlight
                               ? "text-orange-500"
                               : "text-green-500"
                           }`}
@@ -223,12 +185,12 @@ export function DashboardPricingSection() {
 
                   <Button
                     asChild
-                    className={`mt-auto w-full ${tier.highlighted ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                    className={`mt-auto w-full ${tier.highlight ? "bg-orange-500 hover:bg-orange-600" : ""}`}
                     size="lg"
-                    variant={tier.highlighted ? "default" : "outline"}
+                    variant={tier.highlight ? "default" : "outline"}
                   >
                     <a href={getCtaLink(tier)}>
-                      {tier.ctaText}
+                      Get Started
                       <ArrowRight className="ml-2 size-4" />
                     </a>
                   </Button>
@@ -248,26 +210,16 @@ export function DashboardPricingSection() {
           <div className="flex items-center justify-center gap-2 mb-3">
             <span className="text-xl">🚀</span>
             <p className="font-semibold text-orange-800 dark:text-orange-200">
-              Founding Member Program — First 100 Customers
+              {PRICING_COPY.foundingMemberTitle}
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 text-orange-700 text-sm dark:text-orange-300 max-w-lg mx-auto">
-            <div className="flex items-center gap-2">
-              <Check className="size-4 shrink-0" strokeWidth={2.5} />
-              <span>Direct Slack access to the founder</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="size-4 shrink-0" strokeWidth={2.5} />
-              <span>Input on roadmap priorities</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="size-4 shrink-0" strokeWidth={2.5} />
-              <span>Your logo on our website</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="size-4 shrink-0" strokeWidth={2.5} />
-              <span>Locked-in pricing for life</span>
-            </div>
+            {PRICING_COPY.foundingMemberPerks.map((perk) => (
+              <div className="flex items-center gap-2" key={perk}>
+                <Check className="size-4 shrink-0" strokeWidth={2.5} />
+                <span>{perk}</span>
+              </div>
+            ))}
           </div>
         </motion.div>
 
@@ -278,8 +230,8 @@ export function DashboardPricingSection() {
           initial={{ opacity: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
         >
-          AWS costs billed separately by AWS (~$0.10 per 1,000 emails). CLI and
-          SDK are free forever.
+          AWS costs billed separately by AWS (~$0.10 per 1,000 emails). Free
+          tier available with 1,000 messages/month.
         </motion.p>
       </div>
     </section>

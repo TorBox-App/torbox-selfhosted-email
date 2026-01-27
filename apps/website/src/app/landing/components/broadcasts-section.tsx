@@ -81,8 +81,8 @@ function PlaceholderImage({
 export function BroadcastsSection() {
   return (
     <SectionWrapper
-      badge="Broadcasts · Starter + Pro"
-      description="Send newsletters, announcements, and marketing campaigns to your contacts. Schedule sends and target specific segments with Pro."
+      badge="Broadcasts · Starter + Growth"
+      description="Send newsletters, announcements, and marketing campaigns to your contacts. Schedule sends and target specific segments with Growth."
       id="broadcasts"
       premium
       title="Reach Your Audience"
@@ -208,7 +208,7 @@ export function BroadcastsSection() {
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-xl">Schedule Broadcasts</h3>
                 <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-orange-600 text-xs dark:text-orange-400">
-                  Pro
+                  Growth
                 </span>
               </div>
             </div>
@@ -248,8 +248,8 @@ export function BroadcastsSection() {
           className="cursor-pointer bg-orange-500 hover:bg-orange-600"
           size="lg"
         >
-          <a href="https://app.wraps.dev/auth?mode=signup&plan=pro">
-            Start with Pro
+          <a href="https://app.wraps.dev/auth?mode=signup&plan=growth">
+            Start with Growth
             <ArrowRight className="ml-2 h-4 w-4" />
           </a>
         </Button>
@@ -258,8 +258,8 @@ export function BroadcastsSection() {
         </Button>
       </div>
       <p className="mt-4 text-center text-muted-foreground text-sm">
-        Basic broadcasts in Starter ($10/mo). Scheduling & segments in Pro
-        ($30/mo).
+        Basic broadcasts in Starter ($29/mo). Scheduling & segments in Growth
+        ($99/mo).
       </p>
     </SectionWrapper>
   );

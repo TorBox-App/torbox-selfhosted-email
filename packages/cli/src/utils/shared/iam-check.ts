@@ -63,7 +63,7 @@ const LAMBDA_ACTIONS = [
 /**
  * Result of an IAM permission check
  */
-export interface IAMCheckResult {
+export type IAMCheckResult = {
   /** Whether the check was successful (user has permissions or check was skipped) */
   success: boolean;
   /** Actions that were denied */
@@ -74,7 +74,7 @@ export interface IAMCheckResult {
   skipped: boolean;
   /** Reason for skipping the check */
   skipReason?: string;
-}
+};
 
 /**
  * Gets the list of IAM actions required based on email configuration

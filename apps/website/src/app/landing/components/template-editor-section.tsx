@@ -203,7 +203,7 @@ export function TemplateEditorSection() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                50 AI messages/month (more coming soon)
+                100 AI generations/month on Starter
               </li>
             </ul>
           </div>
@@ -272,7 +272,7 @@ export function TemplateEditorSection() {
         </Button>
       </div>
       <p className="mt-4 text-center text-muted-foreground text-sm">
-        Template editor included in Starter plan ($10/mo)
+        Template editor included in Starter plan ($29/mo)
       </p>
     </SectionWrapper>
   );

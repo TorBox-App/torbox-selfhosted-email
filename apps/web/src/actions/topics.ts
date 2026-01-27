@@ -212,13 +212,12 @@ export async function createTopic(
       };
     }
 
-    // Check if topics feature is available for this plan
+    // Check if topics feature is available for this plan (Starter+)
     const featureCheck = await checkFeatureAccess(organizationId, "topics");
     if (!featureCheck.allowed) {
       return {
         success: false,
-        error:
-          featureCheck.message ?? "Topics require a Growth plan or higher.",
+        error: featureCheck.message ?? "Topics require a paid plan.",
       };
     }
 

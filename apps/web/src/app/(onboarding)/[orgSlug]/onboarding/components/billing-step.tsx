@@ -48,9 +48,10 @@ export function BillingStep({
       ? (localStorage.getItem(`onboarding_plan_${orgSlug}`) as PlanId | null)
       : null;
   const initialPlan: PlanId =
-    (planParam && ["starter", "growth", "scale"].includes(planParam)
+    (planParam && ["free", "starter", "growth", "scale"].includes(planParam)
       ? planParam
-      : storedPlan && ["starter", "growth", "scale"].includes(storedPlan)
+      : storedPlan &&
+          ["free", "starter", "growth", "scale"].includes(storedPlan)
         ? storedPlan
         : null) ?? "starter";
 
@@ -110,8 +111,20 @@ export function BillingStep({
     onBack();
   };
 
-  const handleSubscribe = async () => {
+  const handleContinue = async () => {
     setIsLoading(true);
+
+    // Free tier - just continue to next step without Stripe
+    if (selectedPlan === "free") {
+      posthog.capture("onboarding_free_tier_selected", {
+        step: 2,
+        step_name: "Billing",
+        organization_id: organizationId,
+        plan: "free",
+      });
+      onNext();
+      return;
+    }
 
     // Track subscription checkout started
     posthog.capture("onboarding_subscription_started", {
@@ -220,29 +233,32 @@ export function BillingStep({
           </p>
         </div>
 
-        {/* CLI-only alternative */}
-        <div className="rounded-lg border border-dashed p-4 text-center">
-          <p className="text-muted-foreground text-sm">
-            Just want the CLI?{" "}
-            <a
-              className="font-medium text-primary hover:underline"
-              href="https://wraps.dev/docs/cli"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Use Wraps free forever
-            </a>{" "}
-            without a dashboard account.
-          </p>
-        </div>
+        {/* Free tier option */}
+        {selectedPlan !== "free" && (
+          <div className="rounded-lg border border-dashed p-4 text-center">
+            <p className="text-muted-foreground text-sm">
+              Not ready to commit?{" "}
+              <button
+                className="font-medium text-primary hover:underline"
+                onClick={() => handlePlanChange("free")}
+                type="button"
+              >
+                Start with the Free plan
+              </button>{" "}
+              (1K messages/month, 1 workflow)
+            </p>
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="flex items-center justify-between">
         <Button disabled={isLoading} onClick={handleBack} variant="outline">
           Back
         </Button>
-        <Button loading={isLoading} onClick={handleSubscribe} size="lg">
-          Subscribe to {plan.name}
+        <Button loading={isLoading} onClick={handleContinue} size="lg">
+          {selectedPlan === "free"
+            ? "Continue with Free"
+            : `Subscribe to ${plan.name}`}
         </Button>
       </CardFooter>
     </Card>

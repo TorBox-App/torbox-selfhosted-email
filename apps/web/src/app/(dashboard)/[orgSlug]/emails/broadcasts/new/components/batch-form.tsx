@@ -1578,14 +1578,14 @@ function ReviewStep({
                     Schedule for later
                     {!schedulingEnabled && (
                       <span className="ml-2 text-muted-foreground text-xs">
-                        (Growth plan)
+                        (Starter plan)
                       </span>
                     )}
                   </label>
                   <p className="mt-1 text-muted-foreground text-xs">
                     {schedulingEnabled
                       ? "Choose a specific date and time to send"
-                      : "Upgrade to Growth to schedule broadcasts for later"}
+                      : "Upgrade to Starter to schedule broadcasts for later"}
                   </p>
                 </div>
                 {data.scheduleType === "later" && (

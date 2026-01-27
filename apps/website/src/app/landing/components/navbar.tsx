@@ -260,17 +260,17 @@ export function LandingNavbar() {
             className="cursor-pointer bg-orange-500 text-white hover:bg-orange-600"
           >
             <a
-              href="https://app.wraps.dev/auth?mode=signup&plan=starter"
+              href="https://app.wraps.dev/auth?mode=signup"
               onClick={() =>
                 trackEvent("cta_click", {
                   location: "navbar_desktop",
-                  cta_text: "Get Platform",
+                  cta_text: "Start for free",
                 })
               }
               rel="noopener noreferrer"
               target="_blank"
             >
-              Get Platform
+              Start for free
             </a>
           </Button>
         </div>

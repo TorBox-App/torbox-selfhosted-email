@@ -14,8 +14,8 @@ import {
   type SubscriptionData,
 } from "@/actions/subscriptions";
 import { BillingToggle } from "@/components/billing-toggle";
-import { EventUsageCard } from "@/components/event-usage-card";
 import Loader from "@/components/loader";
+import { MessageUsageCard } from "@/components/message-usage-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,9 +68,12 @@ export function OrganizationSettingsBilling({
   const { data: subscriptionResult, isLoading: loadingSubscriptions } =
     useQuery({
       queryKey: ["subscription", organization.id],
-      queryFn: async () => {
+      queryFn: () => {
         if (!organization.id) {
-          return { success: true, subscription: null } as const;
+          return Promise.resolve({
+            success: true,
+            subscription: null,
+          } as const);
         }
         return getOrganizationSubscription(organization.id);
       },
@@ -86,8 +89,8 @@ export function OrganizationSettingsBilling({
       ? subscription
       : null;
 
-  const currentPlan = (activeSubscription?.plan || "starter") as PlanId;
-  const planConfig = PLANS[currentPlan] || PLANS.starter;
+  const currentPlan = (activeSubscription?.plan || "free") as PlanId;
+  const planConfig = PLANS[currentPlan] || PLANS.free;
   const isTrialing = activeSubscription?.status === "trialing";
   const isCancelled = activeSubscription?.cancelAtPeriodEnd === true;
   // Detect annual billing - check if billing period is yearly
@@ -255,8 +258,8 @@ export function OrganizationSettingsBilling({
         </CardContent>
       </Card>
 
-      {/* Event Usage */}
-      {organization.slug && <EventUsageCard orgSlug={organization.slug} />}
+      {/* Message Usage */}
+      {organization.slug && <MessageUsageCard orgSlug={organization.slug} />}
 
       {/* Upgrade Options */}
       {!isCancelled && currentPlan !== "scale" && (
@@ -275,8 +278,72 @@ export function OrganizationSettingsBilling({
             />
 
             <div className="grid gap-4 md:grid-cols-2">
-              {/* Growth Plan */}
-              {currentPlan === "starter" && (
+              {/* Starter Plan - show for Free tier */}
+              {currentPlan === "free" && (
+                <div className="space-y-4 rounded-lg border p-6">
+                  <div>
+                    <h3 className="font-semibold text-lg">
+                      {PLANS.starter.name}
+                    </h3>
+                    <div className="mt-2 flex items-baseline gap-1">
+                      <span className="font-bold text-3xl">
+                        $
+                        {getPriceByInterval(
+                          PLANS.starter,
+                          upgradeBillingInterval
+                        )}
+                      </span>
+                      {hasEarlyAdopterPricing(PLANS.starter) && (
+                        <span className="text-muted-foreground text-sm line-through">
+                          $
+                          {upgradeBillingInterval === "annual"
+                            ? PLANS.starter.annualPrice
+                            : PLANS.starter.price}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-sm">/mo</span>
+                    </div>
+                    {upgradeBillingInterval === "annual" &&
+                      getAnnualTotal(PLANS.starter) && (
+                        <p className="mt-1 text-green-600 text-sm">
+                          ${getAnnualTotal(PLANS.starter)} billed annually
+                        </p>
+                      )}
+                    <p className="mt-1 text-muted-foreground text-sm">
+                      {PLANS.starter.description}
+                    </p>
+                  </div>
+
+                  <ul className="space-y-2">
+                    {PLANS.starter.featureList.slice(0, 4).map((feature) => (
+                      <li
+                        className="flex items-start gap-2 text-sm"
+                        key={feature}
+                      >
+                        <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    className="w-full"
+                    disabled={!canManageBilling}
+                    loading={upgradeMutation.isPending}
+                    onClick={() =>
+                      upgradeMutation.mutate({
+                        plan: "starter",
+                        annual: upgradeBillingInterval === "annual",
+                      })
+                    }
+                  >
+                    Upgrade to Starter
+                  </Button>
+                </div>
+              )}
+
+              {/* Growth Plan - show for Free and Starter */}
+              {(currentPlan === "free" || currentPlan === "starter") && (
                 <div className="space-y-4 rounded-lg border p-6">
                   <div>
                     <h3 className="font-semibold text-lg">
@@ -333,68 +400,141 @@ export function OrganizationSettingsBilling({
                         annual: upgradeBillingInterval === "annual",
                       })
                     }
+                    variant={currentPlan === "free" ? "outline" : "default"}
                   >
                     Upgrade to Growth
                   </Button>
                 </div>
               )}
 
-              {/* Scale Plan */}
-              <div className="space-y-4 rounded-lg border p-6">
-                <div>
-                  <h3 className="font-semibold text-lg">{PLANS.scale.name}</h3>
-                  <div className="mt-2 flex items-baseline gap-1">
-                    <span className="font-bold text-3xl">
-                      ${getPriceByInterval(PLANS.scale, upgradeBillingInterval)}
-                    </span>
-                    {hasEarlyAdopterPricing(PLANS.scale) && (
-                      <span className="text-muted-foreground text-sm line-through">
+              {/* Scale Plan - show for Free and Starter (as third option) */}
+              {(currentPlan === "free" || currentPlan === "starter") && (
+                <div className="space-y-4 rounded-lg border p-6">
+                  <div>
+                    <h3 className="font-semibold text-lg">
+                      {PLANS.scale.name}
+                    </h3>
+                    <div className="mt-2 flex items-baseline gap-1">
+                      <span className="font-bold text-3xl">
                         $
-                        {upgradeBillingInterval === "annual"
-                          ? PLANS.scale.annualPrice
-                          : PLANS.scale.price}
+                        {getPriceByInterval(
+                          PLANS.scale,
+                          upgradeBillingInterval
+                        )}
                       </span>
-                    )}
-                    <span className="text-muted-foreground text-sm">/mo</span>
+                      {hasEarlyAdopterPricing(PLANS.scale) && (
+                        <span className="text-muted-foreground text-sm line-through">
+                          $
+                          {upgradeBillingInterval === "annual"
+                            ? PLANS.scale.annualPrice
+                            : PLANS.scale.price}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-sm">/mo</span>
+                    </div>
+                    {upgradeBillingInterval === "annual" &&
+                      getAnnualTotal(PLANS.scale) && (
+                        <p className="mt-1 text-green-600 text-sm">
+                          ${getAnnualTotal(PLANS.scale)} billed annually
+                        </p>
+                      )}
+                    <p className="mt-1 text-muted-foreground text-sm">
+                      {PLANS.scale.description}
+                    </p>
                   </div>
-                  {upgradeBillingInterval === "annual" &&
-                    getAnnualTotal(PLANS.scale) && (
-                      <p className="mt-1 text-green-600 text-sm">
-                        ${getAnnualTotal(PLANS.scale)} billed annually
-                      </p>
-                    )}
-                  <p className="mt-1 text-muted-foreground text-sm">
-                    {PLANS.scale.description}
-                  </p>
+
+                  <ul className="space-y-2">
+                    {PLANS.scale.featureList.slice(0, 4).map((feature) => (
+                      <li
+                        className="flex items-start gap-2 text-sm"
+                        key={feature}
+                      >
+                        <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    className="w-full"
+                    disabled={!canManageBilling}
+                    loading={upgradeMutation.isPending}
+                    onClick={() =>
+                      upgradeMutation.mutate({
+                        plan: "scale",
+                        annual: upgradeBillingInterval === "annual",
+                      })
+                    }
+                    variant="outline"
+                  >
+                    Upgrade to Scale
+                  </Button>
                 </div>
+              )}
 
-                <ul className="space-y-2">
-                  {PLANS.scale.featureList.slice(0, 4).map((feature) => (
-                    <li
-                      className="flex items-start gap-2 text-sm"
-                      key={feature}
-                    >
-                      <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+              {/* Scale Plan - show for Growth tier as the only upgrade option */}
+              {currentPlan === "growth" && (
+                <div className="space-y-4 rounded-lg border p-6">
+                  <div>
+                    <h3 className="font-semibold text-lg">
+                      {PLANS.scale.name}
+                    </h3>
+                    <div className="mt-2 flex items-baseline gap-1">
+                      <span className="font-bold text-3xl">
+                        $
+                        {getPriceByInterval(
+                          PLANS.scale,
+                          upgradeBillingInterval
+                        )}
+                      </span>
+                      {hasEarlyAdopterPricing(PLANS.scale) && (
+                        <span className="text-muted-foreground text-sm line-through">
+                          $
+                          {upgradeBillingInterval === "annual"
+                            ? PLANS.scale.annualPrice
+                            : PLANS.scale.price}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-sm">/mo</span>
+                    </div>
+                    {upgradeBillingInterval === "annual" &&
+                      getAnnualTotal(PLANS.scale) && (
+                        <p className="mt-1 text-green-600 text-sm">
+                          ${getAnnualTotal(PLANS.scale)} billed annually
+                        </p>
+                      )}
+                    <p className="mt-1 text-muted-foreground text-sm">
+                      {PLANS.scale.description}
+                    </p>
+                  </div>
 
-                <Button
-                  className="w-full"
-                  disabled={!canManageBilling}
-                  loading={upgradeMutation.isPending}
-                  onClick={() =>
-                    upgradeMutation.mutate({
-                      plan: "scale",
-                      annual: upgradeBillingInterval === "annual",
-                    })
-                  }
-                  variant={currentPlan === "starter" ? "outline" : "default"}
-                >
-                  Upgrade to Scale
-                </Button>
-              </div>
+                  <ul className="space-y-2">
+                    {PLANS.scale.featureList.slice(0, 4).map((feature) => (
+                      <li
+                        className="flex items-start gap-2 text-sm"
+                        key={feature}
+                      >
+                        <CheckCircle2Icon className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    className="w-full"
+                    disabled={!canManageBilling}
+                    loading={upgradeMutation.isPending}
+                    onClick={() =>
+                      upgradeMutation.mutate({
+                        plan: "scale",
+                        annual: upgradeBillingInterval === "annual",
+                      })
+                    }
+                  >
+                    Upgrade to Scale
+                  </Button>
+                </div>
+              )}
             </div>
 
             {!canManageBilling && (

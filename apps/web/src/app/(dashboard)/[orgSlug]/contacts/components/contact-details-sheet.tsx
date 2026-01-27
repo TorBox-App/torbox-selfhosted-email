@@ -781,12 +781,12 @@ export function ContactDetailsSheet({
               <div className="rounded-md border border-dashed p-3">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <Lock className="h-4 w-4" />
-                  <span>Topics &amp; custom properties require</span>
+                  <span>Topics &amp; custom properties require a</span>
                   <Link
                     className="font-medium text-primary hover:underline"
                     href={`/${orgSlug}/settings/billing`}
                   >
-                    Growth plan
+                    paid plan
                   </Link>
                 </div>
               </div>

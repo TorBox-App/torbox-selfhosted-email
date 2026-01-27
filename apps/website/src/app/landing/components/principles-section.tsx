@@ -24,18 +24,19 @@ const principles = [
   {
     icon: GitHubIcon,
     title: "Open Source",
-    description: "AGPLv3 licensed. Audit every line we deploy.",
+    description:
+      "See exactly what we deploy to your AWS and what we run in our infrastructure.",
   },
   {
     icon: Shield,
     title: "Zero Credentials",
-    description: "OIDC for Vercel. IAM roles for AWS. No stored secrets.",
+    description:
+      "OIDC for Vercel. IAM roles for AWS. We never store your secrets.",
   },
   {
     icon: Key,
-    title: "You Own It",
-    description:
-      "Event tracking, bounce handling, and suppression lists—in your AWS account.",
+    title: "Your Sending, Your AWS",
+    description: "Emails send through your SES. Events store in your DynamoDB.",
   },
   {
     icon: CreditCard,

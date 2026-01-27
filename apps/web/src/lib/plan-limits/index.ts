@@ -2,13 +2,23 @@
  * Plan Limits Enforcement Library
  *
  * Provides utilities for checking plan-based limits:
- * - Contact limits (5K, 25K, 100K, 500K)
+ * - Message limits (1K, 10K, 50K, 250K per plan)
  * - Feature access (batch, topics, segments, etc.)
  * - Rate limits (daily/minute requests)
  * - AWS account limits
+ * - Team member limits (free tier: 1, paid: unlimited)
+ * - Workflow limits (free tier: 1, paid: unlimited)
  */
 
-import { awsAccount, contact, db, eq, subscription, workflow } from "@wraps/db";
+import {
+  awsAccount,
+  contact,
+  db,
+  eq,
+  member,
+  subscription,
+  workflow,
+} from "@wraps/db";
 import {
   getRequiredPlan,
   hasFeature,
@@ -35,12 +45,12 @@ export type FeatureCheckResult = {
  * Get the current plan for an organization
  * Source of truth: subscription table (managed by Better-Auth Stripe plugin)
  *
- * Note: There is no free tier. All users must have an active subscription.
- * Returns null if no valid subscription exists.
+ * Returns "free" if no valid paid subscription exists.
+ * The free tier allows basic dashboard access with limited features.
  */
 export async function getOrganizationPlan(
   organizationId: string
-): Promise<PlanId | null> {
+): Promise<PlanId> {
   const [sub] = await db
     .select({ plan: subscription.plan, status: subscription.status })
     .from(subscription)
@@ -50,16 +60,16 @@ export async function getOrganizationPlan(
   if (
     sub &&
     (sub.status === "active" || sub.status === "trialing") &&
-    isValidPlan(sub.plan)
+    isValidPaidPlan(sub.plan)
   ) {
     return sub.plan as PlanId;
   }
 
-  // No valid subscription - user needs to subscribe
-  return null;
+  // No valid paid subscription - default to free tier
+  return "free";
 }
 
-function isValidPlan(plan: string): plan is PlanId {
+function isValidPaidPlan(plan: string): boolean {
   return ["starter", "growth", "scale"].includes(plan);
 }
 
@@ -70,18 +80,6 @@ export async function checkContactLimit(
   organizationId: string
 ): Promise<LimitCheckResult> {
   const planId = await getOrganizationPlan(organizationId);
-
-  // No valid subscription - user must subscribe
-  if (!planId) {
-    return {
-      allowed: false,
-      current: 0,
-      limit: 0,
-      message: "No active subscription. Please subscribe to continue.",
-      requiredPlan: "starter",
-    };
-  }
-
   const plan = PLANS[planId];
 
   const contactCount = await db
@@ -111,18 +109,6 @@ export async function checkAwsAccountLimit(
   organizationId: string
 ): Promise<LimitCheckResult> {
   const planId = await getOrganizationPlan(organizationId);
-
-  // No valid subscription - user must subscribe
-  if (!planId) {
-    return {
-      allowed: false,
-      current: 0,
-      limit: 0,
-      message: "No active subscription. Please subscribe to continue.",
-      requiredPlan: "starter",
-    };
-  }
-
   const plan = PLANS[planId];
 
   const accounts = await db
@@ -152,18 +138,6 @@ export async function checkWorkflowLimit(
   organizationId: string
 ): Promise<LimitCheckResult> {
   const planId = await getOrganizationPlan(organizationId);
-
-  // No valid subscription - user must subscribe
-  if (!planId) {
-    return {
-      allowed: false,
-      current: 0,
-      limit: 0,
-      message: "No active subscription. Please subscribe to continue.",
-      requiredPlan: "starter",
-    };
-  }
-
   const plan = PLANS[planId];
 
   const workflows = await db
@@ -195,15 +169,6 @@ export async function checkFeatureAccess(
 ): Promise<FeatureCheckResult> {
   const planId = await getOrganizationPlan(organizationId);
 
-  // No valid subscription - user must subscribe
-  if (!planId) {
-    return {
-      allowed: false,
-      requiredPlan: "starter",
-      message: "No active subscription. Please subscribe to continue.",
-    };
-  }
-
   const allowed = hasFeature(planId, feature);
   const requiredPlan = getRequiredPlan(feature);
 
@@ -229,10 +194,39 @@ export async function checkFeatureAccess(
 }
 
 /**
+ * Check if an organization can add more team members based on their plan
+ */
+export async function checkTeamMemberLimit(
+  organizationId: string
+): Promise<LimitCheckResult> {
+  const planId = await getOrganizationPlan(organizationId);
+  const plan = PLANS[planId];
+
+  const members = await db
+    .select()
+    .from(member)
+    .where(eq(member.organizationId, organizationId));
+
+  const current = members.length;
+  const limit = plan.maxTeamMembers;
+  const allowed = limit === -1 || current < limit;
+
+  return {
+    allowed,
+    current,
+    limit,
+    message: allowed
+      ? undefined
+      : `Your ${plan.name} plan includes ${limit} team member${limit !== 1 ? "s" : ""}. Upgrade to Starter for unlimited team members.`,
+    requiredPlan: allowed ? undefined : getNextPlan(planId),
+  };
+}
+
+/**
  * Get the next plan tier for upgrade suggestions
  */
 function getNextPlan(currentPlan: PlanId): PlanId | undefined {
-  const planOrder: PlanId[] = ["starter", "growth", "scale"];
+  const planOrder: PlanId[] = ["free", "starter", "growth", "scale"];
   const currentIndex = planOrder.indexOf(currentPlan);
 
   if (currentIndex === -1 || currentIndex >= planOrder.length - 1) {
@@ -247,25 +241,6 @@ function getNextPlan(currentPlan: PlanId): PlanId | undefined {
  */
 export async function getUsageSummary(organizationId: string) {
   const planId = await getOrganizationPlan(organizationId);
-
-  // No valid subscription - return empty summary
-  if (!planId) {
-    return {
-      planId: null as PlanId | null,
-      planName: "No Plan",
-      contacts: { current: 0, limit: 0, percentUsed: 0 },
-      awsAccounts: { current: 0, limit: 0, percentUsed: 0 },
-      features: {
-        batch: false,
-        topics: false,
-        segments: false,
-        campaigns: false,
-        workflows: false,
-        events: false,
-      },
-    };
-  }
-
   const plan = PLANS[planId];
 
   const [contactResult, awsAccountResult] = await Promise.all([

@@ -4,9 +4,9 @@ import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import {
-  checkEventUsageLimit,
-  getEventUsageWarning,
-} from "@/lib/usage/event-usage";
+  checkMessageUsageLimit,
+  getMessageUsageWarning,
+} from "@/lib/usage/message-usage";
 
 type RouteContext = {
   params: Promise<{
@@ -15,15 +15,15 @@ type RouteContext = {
 };
 
 /**
- * GET /api/[orgSlug]/events/usage - Get current tracked event usage status
+ * GET /api/[orgSlug]/messages/usage - Get current message usage status
  *
- * Tracked event usage is tracked per calendar month and resets on the 1st.
+ * Message usage is tracked per calendar month and resets on the 1st.
  *
- * Tracked event limits (2026 pricing model):
- * - Starter: 50,000 tracked events/month
- * - Growth: 250,000 tracked events/month
- * - Scale: 1,000,000 tracked events/month
- * - Enterprise: Unlimited
+ * Message limits (2026 pricing model):
+ * - Free: 1,000 messages/month
+ * - Starter: 10,000 messages/month
+ * - Growth: 50,000 messages/month
+ * - Scale: 250,000 messages/month
  *
  * Thresholds:
  * - 80%: warning
@@ -54,8 +54,8 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     // Get usage info (tracked per calendar month)
-    const usage = await checkEventUsageLimit(orgWithMembership.id);
-    const warning = getEventUsageWarning(
+    const usage = await checkMessageUsageLimit(orgWithMembership.id);
+    const warning = getMessageUsageWarning(
       usage.current,
       usage.limit,
       usage.threshold
@@ -76,12 +76,12 @@ export async function GET(_request: Request, context: RouteContext) {
     });
   } catch (error) {
     const log = createRequestLogger({
-      path: "/api/[orgSlug]/events/usage",
+      path: "/api/[orgSlug]/messages/usage",
       method: "GET",
     });
-    log.error({ err: serializeError(error) }, "Error fetching event usage");
+    log.error({ err: serializeError(error) }, "Error fetching message usage");
     return NextResponse.json(
-      { error: "Failed to fetch event usage" },
+      { error: "Failed to fetch message usage" },
       { status: 500 }
     );
   }

@@ -4,80 +4,64 @@ import { ArrowRight, Check, X } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { PRICING_TIERS } from "@/config/pricing";
 import { FadeIn } from "./animations";
+
+// Get prices from config
+const freeTier = PRICING_TIERS.find((t) => t.id === "free")!;
+const starterTier = PRICING_TIERS.find((t) => t.id === "starter")!;
+const growthTier = PRICING_TIERS.find((t) => t.id === "growth")!;
+const scaleTier = PRICING_TIERS.find((t) => t.id === "scale")!;
 
 const comparisonFeatures = [
   {
-    feature: "CLI deployment",
+    feature: "Hosted dashboard",
     free: true,
     starter: true,
     growth: true,
     scale: true,
   },
   {
-    feature: "TypeScript SDK",
+    feature: "CLI + SDK",
     free: true,
     starter: true,
     growth: true,
     scale: true,
   },
   {
-    feature: "Event tracking",
-    free: true,
-    starter: true,
-    growth: true,
-    scale: true,
+    feature: "Messages/month",
+    free: "1K",
+    starter: "10K",
+    growth: "50K",
+    scale: "250K",
   },
   {
-    feature: "Local console",
-    free: true,
-    starter: true,
-    growth: true,
-    scale: true,
+    feature: "Overage rate",
+    free: "—",
+    starter: "$2/1K",
+    growth: "$1.50/1K",
+    scale: "$1/1K",
   },
   {
-    feature: "Email analytics",
-    free: "Local",
-    starter: true,
-    growth: true,
-    scale: true,
-  },
-  {
-    feature: "Wraps Platform",
-    free: false,
-    starter: true,
-    growth: true,
-    scale: true,
-  },
-  {
-    feature: "Events/month",
-    free: false,
-    starter: "50K",
-    growth: "250K",
-    scale: "1M",
-    link: "/platform#events",
-  },
-  {
-    feature: "Event history",
-    free: false,
+    feature: "Message history",
+    free: "7 days",
     starter: "30 days",
     growth: "90 days",
     scale: "1 year",
-    link: "/platform#events",
   },
   {
     feature: "Workflows",
-    free: false,
-    starter: "5",
-    growth: "25",
+    free: "1",
+    starter: "Unlimited",
+    growth: "Unlimited",
     scale: "Unlimited",
   },
   {
     feature: "AI generations",
-    free: false,
-    starter: "50/mo",
-    growth: "250/mo",
-    scale: "1,000/mo",
+    free: "10/mo",
+    starter: "100/mo",
+    growth: "500/mo",
+    scale: "2,000/mo",
   },
   {
     feature: "Contacts",
@@ -88,17 +72,24 @@ const comparisonFeatures = [
   },
   {
     feature: "Templates",
-    free: false,
+    free: true,
+    starter: true,
+    growth: true,
+    scale: true,
+  },
+  {
+    feature: "Team members",
+    free: "1",
     starter: "Unlimited",
     growth: "Unlimited",
     scale: "Unlimited",
   },
   {
-    feature: "Team members",
+    feature: "Batch sending",
     free: false,
-    starter: "3",
-    growth: "Unlimited",
-    scale: "Unlimited",
+    starter: true,
+    growth: true,
+    scale: true,
   },
   {
     feature: "Topics & segments",
@@ -115,6 +106,13 @@ const comparisonFeatures = [
     scale: true,
   },
   {
+    feature: "Event tracking",
+    free: false,
+    starter: false,
+    growth: false,
+    scale: true,
+  },
+  {
     feature: "Advanced segments",
     free: false,
     starter: false,
@@ -122,25 +120,18 @@ const comparisonFeatures = [
     scale: true,
   },
   {
-    feature: "Multi-tenant",
-    free: false,
-    starter: false,
-    growth: false,
-    scale: true,
-  },
-  {
     feature: "AWS accounts",
-    free: false,
+    free: "1",
     starter: "1",
     growth: "3",
     scale: "Unlimited",
   },
   {
     feature: "Support",
-    free: "GitHub",
-    starter: "48hr",
-    growth: "24hr",
-    scale: "Priority",
+    free: "Community",
+    starter: "Email (48hr)",
+    growth: "Priority (24hr)",
+    scale: "Priority + SLA",
   },
 ];
 
@@ -249,18 +240,7 @@ function TableRow({
       initial={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3, delay: index * 0.03 }}
     >
-      <div className="text-sm">
-        {row.link ? (
-          <a
-            className="underline decoration-muted-foreground/50 underline-offset-2 hover:decoration-foreground"
-            href={row.link}
-          >
-            {row.feature}
-          </a>
-        ) : (
-          row.feature
-        )}
-      </div>
+      <div className="text-sm">{row.feature}</div>
       <div className="flex justify-center">
         {typeof row.free === "string" ? (
           <span className="text-muted-foreground text-xs sm:text-sm">
@@ -348,8 +328,8 @@ export function UpgradeSection() {
           Compare Plans
         </h2>
         <p className="mx-auto max-w-2xl text-pretty text-muted-foreground">
-          Start free with CLI + SDK. Upgrade to the Platform when you need
-          templates, broadcasts, and automations.
+          Start free with 1,000 messages/month. Upgrade when you need more
+          volume, batch sending, or marketing features.
         </p>
       </FadeIn>
 
@@ -382,21 +362,29 @@ export function UpgradeSection() {
                     <span className="font-semibold text-green-600 text-sm dark:text-green-400">
                       Free
                     </span>
-                    <p className="text-muted-foreground text-xs">$0/mo</p>
+                    <p className="text-muted-foreground text-xs">
+                      ${freeTier.price}/mo
+                    </p>
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm">Starter</span>
-                    <p className="text-muted-foreground text-xs">$10/mo</p>
+                    <p className="text-muted-foreground text-xs">
+                      ${starterTier.price}/mo
+                    </p>
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm">Growth</span>
-                    <p className="text-muted-foreground text-xs">$49/mo</p>
+                    <p className="text-muted-foreground text-xs">
+                      ${growthTier.price}/mo
+                    </p>
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-orange-500 text-sm">
                       Scale
                     </span>
-                    <p className="text-muted-foreground text-xs">$149/mo</p>
+                    <p className="text-muted-foreground text-xs">
+                      ${scaleTier.price}/mo
+                    </p>
                   </div>
                 </div>
 
@@ -424,7 +412,9 @@ export function UpgradeSection() {
               size="lg"
               variant="outline"
             >
-              <a href="/cli">Learn About Free Tier</a>
+              <a href="https://app.wraps.dev/auth?mode=signup&plan=free">
+                Start Free
+              </a>
             </Button>
             <Button
               asChild
@@ -432,7 +422,7 @@ export function UpgradeSection() {
               size="lg"
             >
               <a href="/platform">
-                See Platform Pricing
+                See Platform Details
                 <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
               </a>
             </Button>

@@ -225,22 +225,78 @@ export const apiRateLimitWindowRelations = relations(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EVENT USAGE TRACKING (for event-based pricing limits)
+// MESSAGE USAGE TRACKING (for message-based pricing limits)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Message Usage Monthly Summary
+ *
+ * One row per organization per month for fast message limit checks.
+ * Uses upsert pattern: increment count on each message sent (email/SMS).
+ *
+ * The periodKey is formatted as "YYYY-MM" (e.g., "2025-01")
+ * Combined with organizationId creates a unique constraint.
+ *
+ * Message limits per plan:
+ * - Free: 1,000 messages/month
+ * - Starter: 10,000 messages/month
+ * - Growth: 50,000 messages/month
+ * - Scale: 250,000 messages/month
+ */
+export const messageUsageMonthly = pgTable(
+  "message_usage_monthly",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+
+    organizationId: text("organization_id")
+      .references(() => organization.id, { onDelete: "cascade" })
+      .notNull(),
+
+    // Period key formatted as "YYYY-MM" for easy querying
+    periodKey: text("period_key").notNull(),
+
+    // Count of messages sent this period
+    messageCount: integer("message_count").default(0).notNull(),
+
+    // Track when limits were last checked/updated
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // Fast lookup: org + period (most common query for limit checks)
+    uniqueIndex("message_usage_monthly_org_period_idx").on(
+      table.organizationId,
+      table.periodKey
+    ),
+    // For admin: find all orgs in a period
+    index("message_usage_monthly_period_idx").on(table.periodKey),
+  ]
+);
+
+// Relations for message usage
+export const messageUsageMonthlyRelations = relations(
+  messageUsageMonthly,
+  ({ one }) => ({
+    organization: one(organization, {
+      fields: [messageUsageMonthly.organizationId],
+      references: [organization.id],
+    }),
+  })
+);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVENT USAGE TRACKING (for analytics - no billing limits)
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Event Usage Monthly Summary
  *
- * One row per organization per month for fast event limit checks.
- * Uses upsert pattern: increment count on each event ingestion.
+ * One row per organization per month for analytics tracking.
+ * Events are now unlimited - this table is kept for analytics purposes.
  *
  * The periodKey is formatted as "YYYY-MM" (e.g., "2025-01")
  * Combined with organizationId creates a unique constraint.
- *
- * Event limits per plan:
- * - Starter: 50,000 events/month
- * - Growth: 250,000 events/month
- * - Scale: 1,000,000 events/month
  */
 export const eventUsageMonthly = pgTable(
   "event_usage_monthly",

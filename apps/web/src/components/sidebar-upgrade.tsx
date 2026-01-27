@@ -47,7 +47,13 @@ export function SidebarUpgrade() {
   // Get next plan info
   const _currentPlan = PLANS[planId];
   const nextPlanId =
-    planId === "starter" ? "growth" : planId === "growth" ? "scale" : null;
+    planId === "free"
+      ? "starter"
+      : planId === "starter"
+        ? "growth"
+        : planId === "growth"
+          ? "scale"
+          : null;
   const nextPlan = nextPlanId ? PLANS[nextPlanId] : null;
 
   if (!nextPlan) {

@@ -117,12 +117,12 @@ beforeAll(async () => {
       set: { updatedAt: new Date() },
     });
 
-  // Set up Growth plan subscription (required for segments feature)
+  // Set up Starter plan subscription (required for segments feature)
   await db
     .insert(subscription)
     .values({
       id: `sub_test_${testOrganization.id}`,
-      plan: "growth",
+      plan: "starter",
       referenceId: testOrganization.id,
       status: "active",
       createdAt: new Date(),

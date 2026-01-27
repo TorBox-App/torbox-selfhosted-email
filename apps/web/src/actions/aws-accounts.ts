@@ -389,7 +389,10 @@ export async function scanAWSAccountFeatures(
     });
 
     if (
-      !(membership?.organization.slug && ["owner", "admin"].includes(membership.role))
+      !(
+        membership?.organization.slug &&
+        ["owner", "admin"].includes(membership.role)
+      )
     ) {
       return {
         success: false,

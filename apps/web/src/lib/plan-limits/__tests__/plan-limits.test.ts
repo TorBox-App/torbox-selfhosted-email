@@ -67,9 +67,10 @@ describe("Plan Limits", () => {
   });
 
   describe("getOrganizationPlan", () => {
-    it("should return null when no subscription exists", async () => {
+    it("should return free when no subscription exists", async () => {
+      // With 2026 pricing model, orgs without subscription get free tier
       const plan = await getOrganizationPlan(testOrgId);
-      expect(plan).toBeNull();
+      expect(plan).toBe("free");
     });
 
     it("should return plan from active subscription", async () => {
@@ -100,7 +101,7 @@ describe("Plan Limits", () => {
       expect(plan).toBe("scale");
     });
 
-    it("should return null for canceled subscription", async () => {
+    it("should return free for canceled subscription", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
         plan: "growth",
@@ -111,10 +112,10 @@ describe("Plan Limits", () => {
       });
 
       const plan = await getOrganizationPlan(testOrgId);
-      expect(plan).toBeNull();
+      expect(plan).toBe("free"); // Canceled subscriptions fall back to free tier
     });
 
-    it("should return null for past_due subscription", async () => {
+    it("should return free for past_due subscription", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
         plan: "growth",
@@ -125,17 +126,17 @@ describe("Plan Limits", () => {
       });
 
       const plan = await getOrganizationPlan(testOrgId);
-      expect(plan).toBeNull();
+      expect(plan).toBe("free"); // Past due subscriptions fall back to free tier
     });
   });
 
   describe("checkContactLimit", () => {
-    it("should return not allowed when no subscription", async () => {
+    it("should return allowed for free plan (unlimited contacts)", async () => {
+      // Free tier has unlimited contacts
       const result = await checkContactLimit(testOrgId);
 
-      expect(result.allowed).toBe(false);
-      expect(result.message).toContain("No active subscription");
-      expect(result.requiredPlan).toBe("starter");
+      expect(result.allowed).toBe(true);
+      expect(result.limit).toBe(-1); // Unlimited
     });
 
     it("should return allowed for starter plan within limit", async () => {
@@ -158,12 +159,13 @@ describe("Plan Limits", () => {
   });
 
   describe("checkAwsAccountLimit", () => {
-    it("should return not allowed when no subscription", async () => {
+    it("should return allowed for free plan (no subscription) within limit", async () => {
+      // Free tier allows 1 AWS account
       const result = await checkAwsAccountLimit(testOrgId);
 
-      expect(result.allowed).toBe(false);
-      expect(result.message).toContain("No active subscription");
-      expect(result.requiredPlan).toBe("starter");
+      expect(result.allowed).toBe(true);
+      expect(result.current).toBe(0);
+      expect(result.limit).toBe(1); // Free plan has 1 AWS account
     });
 
     it("should return allowed for starter plan within limit", async () => {
@@ -185,15 +187,16 @@ describe("Plan Limits", () => {
   });
 
   describe("checkFeatureAccess", () => {
-    it("should return not allowed when no subscription", async () => {
+    it("should return not allowed for free plan accessing starter feature", async () => {
+      // Free tier doesn't have topics - requires Starter plan
       const result = await checkFeatureAccess(testOrgId, "topics");
 
       expect(result.allowed).toBe(false);
-      expect(result.message).toContain("No active subscription");
+      expect(result.message).toContain("requires a Starter plan");
       expect(result.requiredPlan).toBe("starter");
     });
 
-    it("should return not allowed for starter plan accessing growth feature", async () => {
+    it("should return allowed for starter plan accessing starter feature", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
         plan: "starter",
@@ -205,23 +208,24 @@ describe("Plan Limits", () => {
 
       const result = await checkFeatureAccess(testOrgId, "topics");
 
-      expect(result.allowed).toBe(false);
-      expect(result.requiredPlan).toBe("growth");
+      expect(result.allowed).toBe(true);
+      expect(result.requiredPlan).toBe("starter");
     });
 
-    it("should return allowed for growth plan accessing growth feature", async () => {
+    it("should return not allowed for starter plan accessing scale feature", async () => {
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
-        plan: "growth",
+        plan: "starter",
         referenceId: testOrgId,
         status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
-      const result = await checkFeatureAccess(testOrgId, "topics");
+      const result = await checkFeatureAccess(testOrgId, "advancedSegments");
 
-      expect(result.allowed).toBe(true);
+      expect(result.allowed).toBe(false);
+      expect(result.requiredPlan).toBe("scale");
     });
 
     it("should return allowed for starter plan accessing batch feature", async () => {
@@ -240,7 +244,7 @@ describe("Plan Limits", () => {
     });
 
     it("should return allowed for starter plan accessing workflows", async () => {
-      // Workflows are available for all tiers (starter+) with different limits
+      // Workflows are available for all tiers (free+) with different limits
       await db.insert(subscription).values({
         id: `sub_test_${Date.now()}`,
         plan: "starter",
@@ -253,7 +257,7 @@ describe("Plan Limits", () => {
       const result = await checkFeatureAccess(testOrgId, "workflows");
 
       expect(result.allowed).toBe(true);
-      expect(result.requiredPlan).toBe("starter");
+      expect(result.requiredPlan).toBe("free"); // Workflows available on free tier
     });
   });
 });

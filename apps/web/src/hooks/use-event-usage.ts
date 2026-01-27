@@ -14,10 +14,10 @@ type EventUsageResponse = {
 /**
  * Hook to fetch and track event usage for an organization
  *
- * Event limits (2026 pricing model):
- * - Starter: 50,000 events/month
- * - Growth: 250,000 events/month
- * - Scale: 1,000,000 events/month
+ * Tracked event limits (2026 pricing model):
+ * - Starter: 50,000 tracked events/month
+ * - Growth: 250,000 tracked events/month
+ * - Scale: 1,000,000 tracked events/month
  * - Enterprise: Unlimited
  */
 export function useEventUsage(orgSlug: string) {

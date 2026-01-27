@@ -14,7 +14,6 @@ import {
   LayoutGrid,
   MousePointerClick,
   Palette,
-  Play,
   Send,
   Sparkles,
   Tag,
@@ -66,7 +65,7 @@ const eventFeatures = [
 function TemplatesContent() {
   return (
     <div className="space-y-8">
-      {/* Screenshot */}
+      {/* Screenshot - full width */}
       <div className="group relative">
         <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
@@ -88,30 +87,28 @@ function TemplatesContent() {
         </div>
       </div>
 
-      {/* Feature Pills */}
-      <div className="flex flex-wrap justify-center gap-3">
-        {templateFeatures.map((feature) => (
-          <div
-            className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
-            key={feature.title}
-          >
-            <feature.icon className="size-4 text-orange-500" />
-            <span className="font-medium text-sm">{feature.title}</span>
-            {feature.badge && (
-              <Badge
-                className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
-                variant="secondary"
-              >
-                {feature.badge}
-              </Badge>
-            )}
-          </div>
-        ))}
+      {/* Feature Pills - constrained */}
+      <div className="mx-auto max-w-5xl">
+        <div className="flex flex-wrap justify-center gap-3">
+          {templateFeatures.map((feature) => (
+            <div
+              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              key={feature.title}
+            >
+              <feature.icon className="size-4 text-orange-500" />
+              <span className="font-medium text-sm">{feature.title}</span>
+              {feature.badge && (
+                <Badge
+                  className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                  variant="secondary"
+                >
+                  {feature.badge}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-
-      <p className="text-center text-muted-foreground text-sm">
-        Included in Starter plan ($10/mo)
-      </p>
     </div>
   );
 }
@@ -119,7 +116,7 @@ function TemplatesContent() {
 function BroadcastsContent() {
   return (
     <div className="space-y-8">
-      {/* Screenshot */}
+      {/* Screenshot - full width */}
       <div className="group relative">
         <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
@@ -141,31 +138,28 @@ function BroadcastsContent() {
         </div>
       </div>
 
-      {/* Feature Pills */}
-      <div className="flex flex-wrap justify-center gap-3">
-        {broadcastFeatures.map((feature) => (
-          <div
-            className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
-            key={feature.title}
-          >
-            <feature.icon className="size-4 text-orange-500" />
-            <span className="font-medium text-sm">{feature.title}</span>
-            {feature.badge && (
-              <Badge
-                className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
-                variant="secondary"
-              >
-                {feature.badge}
-              </Badge>
-            )}
-          </div>
-        ))}
+      {/* Feature Pills - constrained */}
+      <div className="mx-auto max-w-5xl">
+        <div className="flex flex-wrap justify-center gap-3">
+          {broadcastFeatures.map((feature) => (
+            <div
+              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              key={feature.title}
+            >
+              <feature.icon className="size-4 text-orange-500" />
+              <span className="font-medium text-sm">{feature.title}</span>
+              {feature.badge && (
+                <Badge
+                  className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                  variant="secondary"
+                >
+                  {feature.badge}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-
-      <p className="text-center text-muted-foreground text-sm">
-        Basic broadcasts in Starter ($10/mo). Scheduling & segments in Growth
-        ($49/mo).
-      </p>
     </div>
   );
 }
@@ -173,18 +167,7 @@ function BroadcastsContent() {
 function AutomationsContent() {
   return (
     <div className="space-y-8">
-      {/* Coming Soon Badge */}
-      <div className="flex justify-center">
-        <Badge
-          className="bg-blue-500/10 px-4 py-1 text-blue-600 dark:text-blue-400"
-          variant="secondary"
-        >
-          <Play className="mr-2 size-3" />
-          Coming Soon in Growth
-        </Badge>
-      </div>
-
-      {/* Screenshot */}
+      {/* Screenshot - full width */}
       <div className="group relative">
         <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
@@ -206,30 +189,28 @@ function AutomationsContent() {
         </div>
       </div>
 
-      {/* Feature Pills */}
-      <div className="flex flex-wrap justify-center gap-3">
-        {automationFeatures.map((feature) => (
-          <div
-            className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
-            key={feature.title}
-          >
-            <feature.icon className="size-4 text-orange-500" />
-            <span className="font-medium text-sm">{feature.title}</span>
-            {feature.badge && (
-              <Badge
-                className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
-                variant="secondary"
-              >
-                {feature.badge}
-              </Badge>
-            )}
-          </div>
-        ))}
+      {/* Feature Pills - constrained */}
+      <div className="mx-auto max-w-5xl">
+        <div className="flex flex-wrap justify-center gap-3">
+          {automationFeatures.map((feature) => (
+            <div
+              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              key={feature.title}
+            >
+              <feature.icon className="size-4 text-orange-500" />
+              <span className="font-medium text-sm">{feature.title}</span>
+              {feature.badge && (
+                <Badge
+                  className="bg-orange-500/10 text-orange-600 text-xs dark:text-orange-400"
+                  variant="secondary"
+                >
+                  {feature.badge}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-
-      <p className="text-center text-muted-foreground text-sm">
-        Workflow automations will be available in Scale plan
-      </p>
     </div>
   );
 }
@@ -395,35 +376,33 @@ function EventsContent() {
       {/* Event → Workflow Examples */}
       <EventWorkflowExamples />
 
-      {/* Feature Pills */}
-      <div className="flex flex-wrap justify-center gap-3">
-        {eventFeatures.map((feature) => (
-          <div
-            className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
-            key={feature.title}
-          >
-            <feature.icon className="size-4 text-orange-500" />
-            <span className="font-medium text-sm">{feature.title}</span>
-            {feature.badge && (
-              <Badge
-                className={cn(
-                  "text-xs",
-                  feature.badge === "Free"
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                    : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                )}
-                variant="secondary"
-              >
-                {feature.badge}
-              </Badge>
-            )}
-          </div>
-        ))}
+      {/* Feature Pills - constrained */}
+      <div className="mx-auto max-w-5xl">
+        <div className="flex flex-wrap justify-center gap-3">
+          {eventFeatures.map((feature) => (
+            <div
+              className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
+              key={feature.title}
+            >
+              <feature.icon className="size-4 text-orange-500" />
+              <span className="font-medium text-sm">{feature.title}</span>
+              {feature.badge && (
+                <Badge
+                  className={cn(
+                    "text-xs",
+                    feature.badge === "Free"
+                      ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                      : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                  )}
+                  variant="secondary"
+                >
+                  {feature.badge}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-
-      <p className="text-center text-muted-foreground text-sm">
-        Unlimited contacts on all plans. Events start at 50K/mo ($10/mo).
-      </p>
     </div>
   );
 }
@@ -493,40 +472,34 @@ function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
 }
 
 export function ProductTabbedSection() {
-  const [activeTab, setActiveTab] = useState<TabKey>("templates");
+  const [activeTab, setActiveTab] = useState<TabKey>("automations");
 
   const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
-    { key: "templates", label: "Templates", icon: LayoutGrid },
-    { key: "broadcasts", label: "Broadcasts", icon: Send },
     { key: "automations", label: "Automations", icon: Workflow },
-    { key: "events", label: "Events", icon: Activity },
+    { key: "events", label: "Tracked Events", icon: Activity },
+    { key: "broadcasts", label: "Broadcasts", icon: Send },
+    { key: "templates", label: "Templates", icon: LayoutGrid },
   ];
 
   return (
     <section className="py-24" id="platform">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <FadeIn className="mb-12 text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2">
-            <Sparkles className="size-4 text-orange-500" />
-            <span className="font-semibold text-orange-600 text-sm dark:text-orange-400">
-              Wraps Platform
-            </span>
-            <span className="text-muted-foreground text-sm">from $10/mo</span>
-          </div>
+        <FadeIn className="mx-auto mb-12 max-w-5xl text-center">
           <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-            Build. Send.{" "}
             <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
               Automate.
-            </span>
+            </span>{" "}
+            Broadcast. Design.
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Design emails with AI assistance, send targeted campaigns, and build
-            automated workflows — all from your browser.
+            Build workflows that trigger on user behavior. Send broadcasts to
+            segments. Design templates with AI. All while sending through your
+            AWS at $0.10/1K
           </p>
         </FadeIn>
 
-        <ScaleIn delay={0.2}>
+        <ScaleIn className="mx-auto max-w-5xl" delay={0.2}>
           <GlowingTabBar
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -543,7 +516,7 @@ export function ProductTabbedSection() {
         </div>
 
         {/* CTA */}
-        <FadeIn delay={0.3}>
+        <FadeIn className="mx-auto max-w-5xl" delay={0.3}>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button
               asChild
@@ -555,11 +528,11 @@ export function ProductTabbedSection() {
                 onClick={() =>
                   trackEvent("cta_click", {
                     location: "product_section",
-                    cta_text: "Get Platform",
+                    cta_text: "Start for free",
                   })
                 }
               >
-                Get Platform
+                Start for free
                 <ArrowRight className="ml-2 size-4" />
               </a>
             </Button>

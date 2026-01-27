@@ -79,9 +79,7 @@ describe("IAM check utility", () => {
             });
           }
         },
-        SimulatePrincipalPolicyCommand: class {
-          constructor() {}
-        },
+        SimulatePrincipalPolicyCommand: class {},
       }));
 
       // Re-import after mocking
@@ -114,9 +112,7 @@ describe("IAM check utility", () => {
             });
           }
         },
-        SimulatePrincipalPolicyCommand: class {
-          constructor() {}
-        },
+        SimulatePrincipalPolicyCommand: class {},
       }));
 
       // Re-import after mocking
@@ -137,14 +133,14 @@ describe("IAM check utility", () => {
       vi.doMock("@aws-sdk/client-iam", () => ({
         IAMClient: class {
           send() {
-            const error = new Error("User: ... is not authorized to perform: iam:SimulatePrincipalPolicy");
+            const error = new Error(
+              "User: ... is not authorized to perform: iam:SimulatePrincipalPolicy"
+            );
             error.name = "AccessDenied";
             return Promise.reject(error);
           }
         },
-        SimulatePrincipalPolicyCommand: class {
-          constructor() {}
-        },
+        SimulatePrincipalPolicyCommand: class {},
       }));
 
       // Re-import after mocking
@@ -168,9 +164,7 @@ describe("IAM check utility", () => {
             return Promise.reject(new Error("Network error"));
           }
         },
-        SimulatePrincipalPolicyCommand: class {
-          constructor() {}
-        },
+        SimulatePrincipalPolicyCommand: class {},
       }));
 
       // Re-import after mocking

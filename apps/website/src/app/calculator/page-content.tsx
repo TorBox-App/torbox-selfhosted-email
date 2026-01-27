@@ -21,6 +21,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  OVERAGE_RATES,
+  PRICING_TIERS,
+  TIER_LIMITS,
+  type TierId,
+} from "@/config/pricing";
 
 /**
  * AWS pricing constants (as of 2025)
@@ -106,7 +112,9 @@ function calculateStorageGrowth(
 }
 
 export default function CostCalculatorPageContent() {
-  const [emailsPerMonth, setEmailsPerMonth] = useState(10_000);
+  const [emailsPerMonth, setEmailsPerMonth] = useState(50_000);
+  const [eventsPerMonth, setEventsPerMonth] = useState(25_000);
+  const [selectedTier, setSelectedTier] = useState<TierId>("starter");
   const [eventTrackingEnabled, setEventTrackingEnabled] = useState(true);
   const [eventBridgeEnabled, setEventBridgeEnabled] = useState(true);
   const [dynamoDBEnabled, setDynamoDBEnabled] = useState(true);
@@ -116,6 +124,37 @@ export default function CostCalculatorPageContent() {
   const [customDomain, setCustomDomain] = useState(false);
   const [httpsTracking, setHttpsTracking] = useState(false);
   const [wafEnabled, setWafEnabled] = useState(false);
+
+  // Calculate Wraps platform costs (based on events, not emails)
+  const calculateWrapsCosts = () => {
+    const tier = PRICING_TIERS.find((t) => t.id === selectedTier);
+    const limits = TIER_LIMITS[selectedTier];
+    const overage = OVERAGE_RATES[selectedTier];
+
+    if (!tier) return { platformCost: 0, overageCost: 0, totalWrapsCost: 0 };
+
+    const platformCost = tier.price;
+    const includedEvents =
+      typeof limits.messages === "number"
+        ? limits.messages
+        : Number.POSITIVE_INFINITY;
+    const overageEvents = Math.max(0, eventsPerMonth - includedEvents);
+    const overageCost =
+      overage.perThousand > 0
+        ? (overageEvents / 1000) * overage.perThousand
+        : 0;
+
+    return {
+      platformCost,
+      overageCost,
+      totalWrapsCost: platformCost + overageCost,
+      includedEvents,
+      overageEvents,
+      requiresUpgrade: overageEvents > 0 && overage.perThousand === 0,
+    };
+  };
+
+  const wrapsCosts = calculateWrapsCosts();
 
   // Calculate costs
   const calculateCosts = () => {
@@ -306,9 +345,74 @@ export default function CostCalculatorPageContent() {
                 <CardTitle>Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Email Volume */}
+                {/* Wraps Plan Selection */}
+                <div className="space-y-3">
+                  <Label>Wraps Plan</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PRICING_TIERS.map((tier) => {
+                      const isSelected = selectedTier === tier.id;
+                      const limits = TIER_LIMITS[tier.id];
+                      const overage = OVERAGE_RATES[tier.id];
+                      return (
+                        <button
+                          className={`rounded-lg border-2 p-3 text-left transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-muted hover:border-muted-foreground/50"
+                          }`}
+                          key={tier.id}
+                          onClick={() => setSelectedTier(tier.id)}
+                          type="button"
+                        >
+                          <div className="font-semibold">{tier.name}</div>
+                          <div className="font-bold text-lg">
+                            ${tier.price}
+                            <span className="font-normal text-muted-foreground text-sm">
+                              /mo
+                            </span>
+                          </div>
+                          <div className="mt-1 text-muted-foreground text-xs">
+                            {limits.messagesDisplay} tracked events
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            {overage.perThousand > 0
+                              ? overage.display.replace(
+                                  "events",
+                                  "tracked events"
+                                )
+                              : "Upgrade if over"}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Monthly Tracked Events (Wraps billing) */}
                 <div className="space-y-2">
-                  <Label htmlFor="emails">Monthly Email Volume</Label>
+                  <Label htmlFor="events">Monthly Tracked Events</Label>
+                  <Input
+                    id="events"
+                    max={10_000_000}
+                    min={0}
+                    onChange={(e) =>
+                      setEventsPerMonth(
+                        Number.parseInt(e.target.value, 10) || 0
+                      )
+                    }
+                    placeholder="Enter monthly tracked events"
+                    type="number"
+                    value={eventsPerMonth}
+                  />
+                  <p className="text-muted-foreground text-sm">
+                    Behavioral events you send to Wraps (user actions, workflow
+                    triggers)
+                  </p>
+                </div>
+
+                {/* Email Volume (AWS billing) */}
+                <div className="space-y-2">
+                  <Label htmlFor="emails">Monthly Emails (AWS)</Label>
                   <Input
                     id="emails"
                     max={10_000_000}
@@ -323,17 +427,20 @@ export default function CostCalculatorPageContent() {
                     value={emailsPerMonth}
                   />
                   <p className="text-muted-foreground text-sm">
-                    {emailsPerMonth.toLocaleString()} emails per month
+                    Emails sent via AWS SES
                   </p>
                 </div>
 
-                {/* Event Tracking */}
+                {/* Email Event Tracking (SES events, not Wraps custom events) */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="event-tracking">Event Tracking</Label>
+                      <Label htmlFor="event-tracking">
+                        Email Event Tracking
+                      </Label>
                       <p className="text-muted-foreground text-sm">
-                        Track delivery, opens, clicks, bounces
+                        SES delivery events: opens, clicks, bounces (stored in
+                        your AWS)
                       </p>
                     </div>
                     <Switch
@@ -519,32 +626,98 @@ export default function CostCalculatorPageContent() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="mb-6">
-                    <div className="mb-2 font-bold text-5xl">
-                      {formatCost(total)}
+                  {wrapsCosts.requiresUpgrade ? (
+                    <div className="mb-6">
+                      <div className="mb-2 rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
+                        <p className="font-semibold text-amber-700 dark:text-amber-400">
+                          Upgrade Required
+                        </p>
+                        <p className="mt-1 text-amber-600 text-sm dark:text-amber-300">
+                          Your tracked events ({eventsPerMonth.toLocaleString()}
+                          ) exceed the{" "}
+                          {
+                            PRICING_TIERS.find((t) => t.id === selectedTier)
+                              ?.name
+                          }{" "}
+                          plan limit of{" "}
+                          {wrapsCosts.includedEvents?.toLocaleString()} tracked
+                          events/month.
+                        </p>
+                        <p className="mt-2 text-sm">
+                          Consider upgrading to{" "}
+                          <strong>
+                            {selectedTier === "free"
+                              ? "Starter"
+                              : selectedTier === "starter"
+                                ? "Growth"
+                                : "Scale"}
+                          </strong>{" "}
+                          for more tracked events or overage billing.
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-muted-foreground">
-                      {formatCost(perThousandEmails)} per 1,000 emails
+                  ) : (
+                    <div className="mb-6">
+                      <div className="mb-2 font-bold text-5xl">
+                        {formatCost(wrapsCosts.totalWrapsCost + total)}
+                      </div>
+                      <div className="text-muted-foreground">
+                        Wraps + AWS combined
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 border-t pt-4 text-sm">
+                    <div className="flex justify-between font-medium">
+                      <span>Wraps Platform</span>
+                      <span>{formatCost(wrapsCosts.platformCost)}/mo</span>
+                    </div>
+                    {wrapsCosts.overageCost > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span className="ml-4">
+                          + Overage (
+                          {wrapsCosts.overageEvents?.toLocaleString()} events)
+                        </span>
+                        <span>{formatCost(wrapsCosts.overageCost)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-medium">
+                      <span>AWS Infrastructure</span>
+                      <span>{formatCost(total)}/mo</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2 font-bold">
+                      <span>Total Monthly Cost</span>
+                      <span>
+                        {wrapsCosts.requiresUpgrade
+                          ? "—"
+                          : formatCost(wrapsCosts.totalWrapsCost + total)}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="space-y-1 border-t pt-4 text-sm">
+                  <div className="mt-4 space-y-1 border-t pt-4 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Monthly Volume:
+                        Tracked Events:
                       </span>
                       <span className="font-medium">
-                        {emailsPerMonth.toLocaleString()} emails
+                        {eventsPerMonth.toLocaleString()}/mo
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Cost per Email:
+                        Included in Plan:
                       </span>
                       <span className="font-medium">
-                        {emailsPerMonth > 0
-                          ? `$${(total / emailsPerMonth).toFixed(6)}`
-                          : "$0.00"}
+                        {wrapsCosts.includedEvents?.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Emails Sent:
+                      </span>
+                      <span className="font-medium">
+                        {emailsPerMonth.toLocaleString()}/mo
                       </span>
                     </div>
                   </div>
@@ -724,11 +897,22 @@ export default function CostCalculatorPageContent() {
                 </ul>
               </div>
               <div>
-                <h4 className="mb-2 font-semibold">Wraps CLI & SDK</h4>
+                <h4 className="mb-2 font-semibold">Wraps Platform Fee</h4>
                 <p className="text-muted-foreground">
-                  The Wraps CLI and TypeScript SDK are completely free and open
-                  source. You only pay for the AWS infrastructure that gets
-                  deployed to your account. No vendor lock-in, no hidden fees.
+                  Wraps is a platform fee for email infrastructure you own. You
+                  pay us for tooling (dashboard, workflows, AI, analytics) and
+                  AWS directly for sending ($0.10/1K emails). Free tier includes
+                  5K tracked events/month. Paid plans unlock more volume, longer
+                  history retention, and features like topics, segments, and
+                  campaigns.
+                </p>
+              </div>
+              <div>
+                <h4 className="mb-2 font-semibold">CLI & SDK</h4>
+                <p className="text-muted-foreground">
+                  The Wraps CLI and TypeScript SDK work with all plans,
+                  including Free. Deploy to your AWS account — no vendor
+                  lock-in, no hidden fees.
                 </p>
               </div>
             </CardContent>

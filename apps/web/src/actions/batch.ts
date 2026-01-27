@@ -322,7 +322,7 @@ export async function createBatchSend(
       };
     }
 
-    // Check if scheduling is available (requires campaigns feature - Pro+)
+    // Check if scheduling is available (requires campaigns feature - Starter+)
     if (data.scheduledFor) {
       const schedulingCheck = await checkFeatureAccess(
         organizationId,
@@ -331,7 +331,9 @@ export async function createBatchSend(
       if (!schedulingCheck.allowed) {
         return {
           success: false,
-          error: "Scheduling broadcasts requires a Growth plan or higher.",
+          error:
+            schedulingCheck.message ??
+            "Scheduling broadcasts requires a paid plan.",
         };
       }
     }

@@ -172,7 +172,7 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
   it("should return 429 when usage exceeds limit", async () => {
     const periodKey = getCurrentPeriodKey();
 
-    // Set usage over the starter limit
+    // Set usage over the starter limit (50)
     await db.insert(aiUsageMonthly).values({
       organizationId: testOrganization.id,
       periodKey,
@@ -399,7 +399,7 @@ describe("AI Generate API - POST /api/[orgSlug]/emails/templates/ai/generate", (
     await db.insert(aiUsageMonthly).values({
       organizationId: testOrganization.id,
       periodKey,
-      messageCount: 50,
+      messageCount: 100,
     });
 
     const { POST } = await import(

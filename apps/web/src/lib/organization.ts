@@ -89,12 +89,13 @@ export const getOrganizationSubscription = cache(
 );
 
 /**
- * Get the plan ID for an organization (defaults to "starter")
+ * Get the plan ID for an organization (defaults to "free")
  */
 export const getOrganizationPlanId = cache(
   async (organizationId: string): Promise<string> => {
     const sub = await getOrganizationSubscription(organizationId);
-    return sub?.plan || "starter";
+    // Default to free tier if no active subscription
+    return sub?.plan || "free";
   }
 );
 

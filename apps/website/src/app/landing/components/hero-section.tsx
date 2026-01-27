@@ -1,180 +1,104 @@
 "use client";
 
-import { ArrowRight, Check, Copy } from "lucide-react";
+import { ArrowRight, Github } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
-import { AsciinemaPlayer } from "@/components/asciinema-player";
 import { DotPattern } from "@/components/dot-pattern";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { assetUrl } from "@/lib/utils";
 import { trackEvent } from "@/utils/analytics";
 
-const command = "npx @wraps.dev/cli email init";
-
 export function HeroSection() {
-  const [copied, setCopied] = useState(false);
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(command);
-    setCopied(true);
-    trackEvent("cta_click", {
-      location: "hero",
-      cta_text: "Copy CLI Command",
-    });
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
-    <section className="relative overflow-hidden bg-linear-to-b from-background to-background/80 pt-20 pb-16 sm:pt-32">
+    <section className="relative overflow-hidden pt-20 pb-16 md:pt-24 lg:pt-32">
       {/* Background Pattern */}
       <div className="absolute inset-0">
-        {/* Dot pattern overlay using reusable component */}
         <DotPattern className="opacity-100" fadeStyle="ellipse" size="md" />
       </div>
 
-      <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl text-center">
-          {/* Announcement Badge */}
+      <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-start">
+          {/* Badge */}
           <motion.div
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 flex justify-center gap-2"
+            className="mb-6"
             initial={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <a href="/cli">
-              <Badge
-                className="border-green-500/50 bg-green-500/10 px-3 py-1.5 text-green-700 transition-colors hover:bg-green-500/20 dark:text-green-400"
-                variant="outline"
-              >
-                Free CLI + SDK
-              </Badge>
-            </a>
-            <a href="/platform">
-              <Badge
-                className="border-orange-500/50 bg-orange-500/10 px-3 py-1.5 text-orange-700 transition-colors hover:bg-orange-500/20 dark:text-orange-400"
-                variant="outline"
-              >
-                Platform from $10/mo
-              </Badge>
+            <a
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-orange-500 transition-colors hover:border-orange-500/50"
+              href="https://github.com/wraps-team/wraps"
+            >
+              <Github className="size-4" />
+              <span>Open Source</span>
+              <span className="text-muted-foreground">·</span>
+              <span>AGPLv3 Licensed</span>
             </a>
           </motion.div>
 
           {/* Main Headline */}
           <motion.h1
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-5xl lg:text-6xl items-center"
+            className="max-w-[864px] text-left text-[28px] font-medium leading-[32px] md:text-[34px] md:leading-[40px] lg:text-[48px] lg:leading-[56px]"
             initial={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <span className="flex flex-row items-center row-span-1">
-              Deploy Email & SMS.
-            </span>
-            <span className="flex flex-row items-center row-span-1 text-orange-500">
-              Then Automate It.
-            </span>
+            The email platform that sends through your AWS.
           </motion.h1>
 
           {/* Subheadline */}
           <motion.p
             animate={{ opacity: 1, y: 0 }}
-            className="mx-auto mb-10 max-w-2xl text-balance text-lg sm:text-xl"
+            className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-muted-foreground md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]"
             initial={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            Open-source notification infrastructure in your AWS account. Build
-            workflows, send broadcasts, pay AWS prices.
+            Automate on user behavior. Design templates. Schedule broadcasts.
+            <br />
+            Transparent pricing. Sending infrastructure you own.
           </motion.p>
 
           {/* CTA */}
           <motion.div
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center gap-3 sm:flex-row"
+            className="mt-8 flex items-center gap-3"
             initial={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <button
-              aria-label={
-                copied ? "Copied to clipboard" : "Copy command to clipboard"
-              }
-              className="flex h-12 items-center gap-2 rounded-lg border-2 border-orange-500/30 bg-background px-5 font-mono text-sm transition-colors hover:border-orange-500 hover:bg-orange-500/5"
-              onClick={copyToClipboard}
-              type="button"
-            >
-              <span className="text-muted-foreground">$</span>
-              <span>{command}</span>
-              {copied ? (
-                <Check aria-hidden="true" className="size-4 text-green-500" />
-              ) : (
-                <Copy
-                  aria-hidden="true"
-                  className="size-4 text-muted-foreground"
-                />
-              )}
-            </button>
             <Button
               asChild
-              className="h-12 cursor-pointer border-2 border-transparent bg-orange-500 px-6 text-base hover:bg-orange-600"
+              className="cursor-pointer rounded bg-orange-500 px-4 py-2 text-sm font-semibold hover:bg-orange-600"
             >
               <a
-                href="/docs/quickstart"
+                href="https://app.wraps.dev/auth?mode=signup"
                 onClick={() =>
                   trackEvent("cta_click", {
                     location: "hero",
-                    cta_text: "Deploy in 60 Seconds",
+                    cta_text: "Get started",
                   })
                 }
               >
-                Deploy in 60 Seconds
-                <ArrowRight aria-hidden="true" className="ml-2 size-4" />
+                Start for free
+                <ArrowRight className="ml-2 size-5" />
+              </a>
+            </Button>
+            <Button
+              asChild
+              className="cursor-pointer rounded border-[0.5px] bg-white px-4 py-2 text-sm font-medium text-foreground hover:text-orange-500 dark:bg-transparent"
+              variant="outline"
+            >
+              <a
+                href="/docs"
+                onClick={() =>
+                  trackEvent("cta_click", {
+                    location: "hero",
+                    cta_text: "Read the docs",
+                  })
+                }
+              >
+                Read the docs
               </a>
             </Button>
           </motion.div>
         </div>
-
-        {/* Terminal Demo */}
-        <motion.div
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-auto mt-16 max-w-4xl"
-          initial={{ opacity: 0, y: 40 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-        >
-          <div className="group relative">
-            {/* Top background glow effect */}
-            <div className="-translate-x-1/2 absolute top-0 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
-
-            {/* Terminal */}
-            <div className="relative overflow-hidden rounded-xl border-2 shadow-2xl">
-              {/* Terminal header */}
-              <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-3">
-                <div className="flex gap-1.5">
-                  <div className="size-3 rounded-full bg-red-500" />
-                  <div className="size-3 rounded-full bg-yellow-500" />
-                  <div className="size-3 rounded-full bg-green-500" />
-                </div>
-                <span className="ml-2 font-medium text-muted-foreground text-xs">
-                  terminal — wraps email init
-                </span>
-              </div>
-              {/* Asciinema Player */}
-              <div className="bg-[#121314]">
-                <AsciinemaPlayer
-                  cols={100}
-                  fit="width"
-                  idleTimeLimit={1}
-                  loop={true}
-                  rows={30}
-                  speed={1.2}
-                  src={assetUrl("demos/email-init.cast")}
-                  terminalFontSize="13px"
-                />
-              </div>
-            </div>
-
-            {/* Bottom fade effect */}
-            <div className="absolute bottom-0 left-0 h-12 w-full rounded-b-xl bg-linear-to-b from-background/0 via-background/20 to-background/60 lg:h-16" />
-          </div>
-        </motion.div>
       </div>
     </section>
   );
