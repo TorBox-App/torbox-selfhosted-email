@@ -136,12 +136,12 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     enabled: !!orgSlug,
   });
 
-  // Skip billing step if user already has an active subscription
-  const hasSkippedBilling = useRef(false);
+  // Handle billing step navigation based on subscription status
+  const hasAdjustedBillingStep = useRef(false);
   useEffect(() => {
     if (
       !(isInitialized && onboardingStatus) ||
-      hasSkippedBilling.current ||
+      hasAdjustedBillingStep.current ||
       hasShownSubscribedToast.current
     ) {
       return;
@@ -149,8 +149,16 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
 
     // If user has active subscription and is on billing step (step 2), skip to deploy step
     if (onboardingStatus.hasActiveSubscription && currentStep === 2) {
-      hasSkippedBilling.current = true;
+      hasAdjustedBillingStep.current = true;
       setCurrentStep(3);
+      return;
+    }
+
+    // If user is past billing step but has NO subscription, reset to billing step
+    // This handles the case where localStorage saved a later step but subscription was never created
+    if (!onboardingStatus.hasActiveSubscription && currentStep > 2) {
+      hasAdjustedBillingStep.current = true;
+      setCurrentStep(2);
     }
   }, [isInitialized, onboardingStatus, currentStep]);
 
