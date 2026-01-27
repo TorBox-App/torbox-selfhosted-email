@@ -37,7 +37,7 @@ const posts: BlogPost[] = [
     description:
       "82% of domains have no DMARC. Of those that do, most set p=none—which tells receivers not to enforce. An interactive deep-dive into email authentication.",
     category: "Security",
-    date: "January 2025",
+    date: "January 2026",
     readTime: "12 min read",
     featured: true,
     icon: <Shield className="h-6 w-6" />,
@@ -55,7 +55,7 @@ const posts: BlogPost[] = [
   },
   {
     slug: "ses-sandbox-guide",
-    title: "How to Get Out of AWS SES Sandbox",
+    title: "How to Get Out of Amazon SES Sandbox",
     description:
       "The complete guide to SES production access approval. Interactive checklists, request templates, and everything you need to escape the sandbox on your first try.",
     category: "Guide",

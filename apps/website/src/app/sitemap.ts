@@ -42,6 +42,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/docs/guides/aws-setup",
     "/docs/guides/aws-setup/quick",
     "/docs/guides/aws-setup/full",
+    "/docs/guides/aws-setup/permissions",
     "/docs/guides/aws-setup/troubleshooting",
     "/docs/telemetry",
   ];

@@ -29,16 +29,19 @@ const breadcrumbSchema = {
 
 export const metadata: Metadata = {
   title: "Email Quickstart",
-  description: "Send your first email with Wraps in under 2 minutes.",
+  description:
+    "Deploy AWS SES email infrastructure and send your first email in under 2 minutes. Step-by-step guide with CLI commands and TypeScript SDK examples.",
   openGraph: {
     title: "Email Quickstart | Wraps",
-    description: "Send your first email with Wraps in under 2 minutes.",
+    description:
+      "Deploy AWS SES email infrastructure and send your first email in under 2 minutes. Step-by-step guide with CLI commands and TypeScript SDK examples.",
     type: "website",
     url: "https://wraps.dev/docs/quickstart/email",
   },
   twitter: {
     title: "Email Quickstart | Wraps",
-    description: "Send your first email with Wraps in under 2 minutes.",
+    description:
+      "Deploy AWS SES email infrastructure and send your first email in under 2 minutes. Step-by-step guide.",
   },
   alternates: {
     canonical: "https://wraps.dev/docs/quickstart/email",

@@ -23,16 +23,19 @@ const breadcrumbSchema = {
 
 export const metadata: Metadata = {
   title: "Email SDK Reference",
-  description: "Complete reference for @wraps.dev/email TypeScript SDK.",
+  description:
+    "Complete API reference for @wraps.dev/email TypeScript SDK. Send emails, use templates, handle errors, and integrate with AWS SES in your Node.js app.",
   openGraph: {
     title: "Email SDK Reference | Wraps",
-    description: "Complete reference for @wraps.dev/email TypeScript SDK.",
+    description:
+      "Complete API reference for @wraps.dev/email TypeScript SDK. Send emails, use templates, and integrate with AWS SES.",
     type: "website",
     url: "https://wraps.dev/docs/sdk-reference",
   },
   twitter: {
     title: "Email SDK Reference | Wraps",
-    description: "Complete reference for @wraps.dev/email TypeScript SDK.",
+    description:
+      "Complete API reference for @wraps.dev/email TypeScript SDK. Send emails, use templates, and integrate with AWS SES.",
   },
   alternates: {
     canonical: "https://wraps.dev/docs/sdk-reference",

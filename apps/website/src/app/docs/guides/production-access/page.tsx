@@ -3,16 +3,19 @@ import ProductionAccessPageContent from "./page-content";
 
 export const metadata: Metadata = {
   title: "Production Access Guide",
-  description: "How to get AWS SES production access approval.",
+  description:
+    "Step-by-step guide to getting AWS SES production access approval. Includes request templates, common rejection reasons, and best practices for approval.",
   openGraph: {
     title: "Production Access Guide | Wraps",
-    description: "How to get AWS SES production access approval.",
+    description:
+      "Step-by-step guide to getting AWS SES production access approval. Includes request templates and best practices.",
     type: "website",
     url: "https://wraps.dev/docs/guides/production-access",
   },
   twitter: {
     title: "Production Access Guide | Wraps",
-    description: "How to get AWS SES production access approval.",
+    description:
+      "Step-by-step guide to getting AWS SES production access approval. Includes templates and best practices.",
   },
   alternates: {
     canonical: "https://wraps.dev/docs/guides/production-access",

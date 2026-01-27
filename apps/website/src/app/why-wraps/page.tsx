@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import WhyWrapsPageContent from "./page-content";
 
 export const metadata: Metadata = {
-  title: "Why Wraps",
+  title: "Why Wraps - AWS SES Pricing with Modern Developer Experience",
   description:
     "Own your infrastructure, pay AWS prices, keep the great DX. No vendor lock-in, full data control.",
   openGraph: {
