@@ -40,8 +40,8 @@ const principles = [
   },
   {
     icon: CreditCard,
-    title: "AWS Pricing",
-    description: "Pay AWS directly. Zero markup, zero fees.",
+    title: "No Sending Markup",
+    description: "Pay AWS directly for sending. $0.10 per 1,000 emails.",
   },
 ];
 

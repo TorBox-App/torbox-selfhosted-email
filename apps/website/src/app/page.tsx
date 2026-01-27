@@ -4,6 +4,7 @@ import { FaqSection } from "./landing/components/faq-section";
 import { LandingFooter } from "./landing/components/footer";
 import { HeroSection } from "./landing/components/hero-section";
 import { LandingNavbar } from "./landing/components/navbar";
+import { PricingComparisonSection } from "./landing/components/pricing-comparison-section";
 import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
 import { ProductTabbedSection } from "./landing/components/product-tabbed-section";
@@ -31,6 +32,9 @@ export default function LandingPage() {
 
         {/* Pricing */}
         <PricingSection />
+
+        {/* Pricing Comparison */}
+        <PricingComparisonSection />
 
         {/* Free Tier - CLI + SDK */}
         <CliTabbedSection />

@@ -415,12 +415,12 @@ export function CliTabbedSection() {
         {/* Simple header */}
         <FadeIn className="mb-12 text-center">
           <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-            Deploy in a few Minutes, Not Hours
+            Production Email in Under 2 Minutes
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">
             One command deploys SES, DynamoDB, Lambda, and EventBridge to your
-            AWS. Create alerts, customize tracking domains, custom FROM DOMAIN,
-            and more.
+            AWS. No console clicking. No sandbox approval essays. No DNS waiting
+            rooms.
           </p>
         </FadeIn>
 

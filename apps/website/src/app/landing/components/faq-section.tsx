@@ -38,7 +38,13 @@ const faqItems: FaqItem[] = [
     value: "item-2",
     question: "What are the costs for running Wraps?",
     answer:
-      "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs ~$5 to AWS. There's a free tier with 1,000 messages/month included. Paid plans start at $29/month for 10,000 messages. The infrastructure is yours forever—no vendor lock-in, no surprise bills.",
+      "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs ~$5 to AWS. There's a free tier with 1,000 tracked events/month included. Paid plans start at $29/month for 10,000 tracked events. The infrastructure is yours forever—no vendor lock-in, no surprise bills.",
+  },
+  {
+    value: "item-2b",
+    question: "What counts as a tracked event?",
+    answer:
+      "Tracked events are custom behavioral events you send to our API—things like user.signed_up, order.completed, or plan.upgraded. Use them to trigger workflows or as wait-for-event conditions. Email sends, contacts stored, opens/clicks/deliveries, and template previews don't count against your tracked event limit.",
   },
   {
     value: "item-3",
