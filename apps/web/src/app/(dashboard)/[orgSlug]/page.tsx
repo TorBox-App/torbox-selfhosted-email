@@ -14,6 +14,7 @@ type OrganizationDashboardProps = {
 
 export type SetupStatus = {
   hasAwsAccount: boolean;
+  hasPlatformConnection: boolean;
   hasVerifiedDomain: boolean;
   hasSentEmail: boolean;
   hasTemplate: boolean;
@@ -123,6 +124,9 @@ async function getSetupStatus(organizationId: string): Promise<SetupStatus> {
   const hasAwsAccount =
     accounts.length > 0 && accounts.some((a) => a.isVerified);
 
+  // Check if platform connection is configured (webhookSecret set)
+  const hasPlatformConnection = accounts.some((a) => a.webhookSecret !== null);
+
   // Get domain and region info
   const { verifiedDomains, awsRegion } = getDomainsAndRegion(accounts);
   const hasVerifiedDomain = verifiedDomains.length > 0;
@@ -136,6 +140,7 @@ async function getSetupStatus(organizationId: string): Promise<SetupStatus> {
 
   return {
     hasAwsAccount,
+    hasPlatformConnection,
     hasVerifiedDomain,
     hasSentEmail: emailStatus.hasSentEmail,
     hasTemplate,
@@ -172,6 +177,7 @@ export default async function OrganizationDashboard({
   // Calculate completion percentage
   const requiredSteps = [
     setupStatus.hasAwsAccount,
+    setupStatus.hasPlatformConnection,
     setupStatus.hasVerifiedDomain,
     setupStatus.hasSentEmail,
   ];

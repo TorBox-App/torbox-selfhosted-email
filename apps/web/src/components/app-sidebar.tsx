@@ -192,7 +192,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg">
-              <Link href={orgSlug ? `/${orgSlug}/emails` : "/"}>
+              <Link href={orgSlug ? `/${orgSlug}` : "/"}>
                 <Logo className="rounded-sm" size={32} />
               </Link>
             </SidebarMenuButton>
