@@ -205,7 +205,7 @@ export const PRICING_TIERS: PricingTier[] = [
     features: [
       "50,000 tracked events/month",
       "Unlimited workflows",
-      "Topics, segments & campaigns",
+      "Topics, segments & broadcasts",
       "30-day history",
       "50 AI generations/month",
       "Unlimited team members",
