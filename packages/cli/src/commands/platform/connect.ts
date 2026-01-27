@@ -557,10 +557,11 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
     }
 
     console.log(`\n${pc.bold("Next Steps:")}`);
-    console.log(`  1. Go to ${pc.cyan("https://app.wraps.dev/settings/aws")}`);
-    console.log(`  2. Add your AWS account: ${pc.cyan(identity.accountId)}`);
+    console.log(`  1. Go to ${pc.cyan("https://app.wraps.dev")}`);
+    console.log(`  2. Navigate to ${pc.dim("Settings → AWS Accounts")}`);
+    console.log(`  3. Add your AWS account: ${pc.cyan(identity.accountId)}`);
     if (webhookSecret) {
-      console.log("  3. Paste the webhook secret shown above");
+      console.log("  4. Paste the webhook secret shown above");
     }
     console.log();
     console.log(
