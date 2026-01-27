@@ -38,7 +38,8 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Get organization details
-  const { data: organizations } = authClient.useListOrganizations();
+  const { data: organizations, isPending: isOrgsLoading } =
+    authClient.useListOrganizations();
 
   // Get orgSlug from route params
   useEffect(() => {
@@ -206,15 +207,16 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
 
   useEffect(() => {
     if (hasRedirected.current) return;
-    // Only redirect if organizations have loaded AND org is not found
-    // organizations will be an array (possibly empty) when loaded, undefined when loading
-    if (organizations !== undefined && orgSlug && !currentOrg) {
+    // Only redirect if organizations have fully loaded (not from stale cache) AND org is not found
+    // The server-side layout already validates org membership, so this is a fallback
+    // We wait for !isOrgsLoading to ensure we have fresh data, not stale cache
+    if (!isOrgsLoading && organizations !== undefined && orgSlug && !currentOrg) {
       hasRedirected.current = true;
       router.push("/");
     }
-  }, [currentOrg, organizations, orgSlug, router]);
+  }, [currentOrg, organizations, orgSlug, router, isOrgsLoading]);
 
-  if (isPending || !isInitialized || !orgSlug) {
+  if (isPending || !isInitialized || !orgSlug || isOrgsLoading) {
     return <Loader fullScreen />;
   }
 
