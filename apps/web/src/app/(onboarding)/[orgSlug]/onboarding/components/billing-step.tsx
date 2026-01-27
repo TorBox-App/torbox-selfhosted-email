@@ -245,7 +245,7 @@ export function BillingStep({
               >
                 Start with the Free plan
               </button>{" "}
-              (1K messages/month, 1 workflow)
+              (5K tracked events/month, 1 workflow)
             </p>
           </div>
         )}

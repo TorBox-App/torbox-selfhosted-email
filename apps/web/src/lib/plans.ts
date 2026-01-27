@@ -90,6 +90,7 @@ export type PlanConfig = {
 
 // Early adopter pricing is active until we reach 50 customers
 // After that, prices return to normal (and SMS features will be added)
+// TODO: Move to database to auto-disable at 50 customers
 export const EARLY_ADOPTER_ACTIVE = true;
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -535,7 +535,7 @@ export const PRICING_COPY = {
     "AWS costs are separate. You pay AWS directly for sending at $0.10 per 1,000 emails. Your sending infrastructure stays in your account — leave anytime, keep everything.",
   enterpriseNote:
     "Need custom limits or on-prem deployment? Contact us for Enterprise.",
-  foundingMemberTitle: "Founding Member Program — First 100 Customers",
+  foundingMemberTitle: "Founding Member Program — First 50 Customers",
   foundingMemberPerks: [
     "Direct Slack access to the founder",
     "Input on roadmap priorities",
