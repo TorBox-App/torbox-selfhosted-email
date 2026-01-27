@@ -32,7 +32,8 @@ export function AwsConnectStep({
   organizationId,
 }: AwsConnectStepProps) {
   const queryClient = useQueryClient();
-  const cfTemplateUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cloudformation/wraps-console-access-role`;
+  const cfTemplateUrl =
+    "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-console-access-role.yaml";
   const awsConsoleUrl = `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?templateURL=${encodeURIComponent(cfTemplateUrl)}&stackName=wraps-console-access`;
 
   // Track back button
