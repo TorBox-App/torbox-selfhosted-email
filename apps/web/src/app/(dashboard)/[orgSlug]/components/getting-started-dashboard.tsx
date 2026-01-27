@@ -10,6 +10,7 @@ import {
   CopyIcon,
   GlobeIcon,
   LayoutTemplateIcon,
+  LinkIcon,
   MailIcon,
   MegaphoneIcon,
   ServerIcon,
@@ -160,6 +161,7 @@ export function GettingStartedDashboard({
 }: GettingStartedDashboardProps) {
   const {
     hasAwsAccount,
+    hasPlatformConnection,
     hasVerifiedDomain,
     hasSentEmail,
     hasTemplate,
@@ -232,6 +234,18 @@ export function GettingStartedDashboard({
                 />
 
                 <ChecklistItem
+                  description="Run 'wraps platform connect' (v2.5.0+) to stream events and grant dashboard access"
+                  href={
+                    hasPlatformConnection
+                      ? undefined
+                      : "https://wraps.dev/docs/platform-connection"
+                  }
+                  icon={<LinkIcon className="h-5 w-5" />}
+                  isComplete={hasPlatformConnection}
+                  title="Connect to platform"
+                />
+
+                <ChecklistItem
                   description="Configure DNS records to send emails from your domain"
                   href={
                     hasVerifiedDomain
@@ -300,6 +314,23 @@ export function GettingStartedDashboard({
                     </Badge>
                   ) : (
                     <Badge variant="secondary">Not connected</Badge>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Platform Events</span>
+                  </div>
+                  {hasPlatformConnection ? (
+                    <Badge
+                      className="text-green-600 border-green-200 bg-green-50"
+                      variant="outline"
+                    >
+                      Streaming
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Not configured</Badge>
                   )}
                 </div>
 

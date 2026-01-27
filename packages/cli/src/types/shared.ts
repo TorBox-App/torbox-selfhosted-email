@@ -90,3 +90,12 @@ export type UpdateRoleOptions = {
   region?: string;
   force?: boolean; // Skip confirmation prompt
 };
+
+/**
+ * Command options for platform connect
+ */
+export type PlatformConnectOptions = {
+  region?: string;
+  force?: boolean; // Skip confirmation prompts
+  yes?: boolean; // Auto-confirm non-destructive operations
+};

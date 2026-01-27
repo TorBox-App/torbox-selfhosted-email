@@ -47,12 +47,15 @@ export async function platform(): Promise<void> {
   console.log(`  ${pc.bold("Platform Commands:")}`);
   console.log();
   console.log(
-    `    ${pc.cyan("wraps platform update-role")}  Update IAM permissions for hosted dashboard`
+    `    ${pc.cyan("wraps platform connect")}      Connect infrastructure to Wraps Platform`
+  );
+  console.log(
+    `    ${pc.cyan("wraps platform update-role")}  Update IAM permissions for dashboard`
   );
   console.log();
   console.log(
-    pc.dim("  Run this after deploying new infrastructure to grant the hosted")
+    pc.dim("  The connect command sets up event streaming and IAM permissions")
   );
-  console.log(pc.dim("  dashboard access to your AWS resources."));
+  console.log(pc.dim("  in one step. Run it after deploying infrastructure."));
   console.log();
 }

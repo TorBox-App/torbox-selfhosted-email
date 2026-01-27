@@ -51,6 +51,7 @@ export type {
   DashboardOptions,
   DestroyOptions,
   FeatureCost,
+  PlatformConnectOptions,
   Provider,
   ServiceType,
   StatusOptions,

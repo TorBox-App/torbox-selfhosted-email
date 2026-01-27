@@ -35,6 +35,7 @@ import { upgrade } from "./commands/email/upgrade.js";
 import { news } from "./commands/news.js";
 import { permissions } from "./commands/permissions.js";
 // Platform commands
+import { connect as platformConnect } from "./commands/platform/connect.js";
 import { platform as platformInfo } from "./commands/platform/index.js";
 import { updateRole } from "./commands/platform/update-role.js";
 // Shared commands
@@ -181,6 +182,9 @@ function showHelp() {
   console.log("Platform:");
   console.log(
     `  ${pc.cyan("platform")}              Show platform info and pricing`
+  );
+  console.log(
+    `  ${pc.cyan("platform connect")}      Connect to Wraps Platform (events + IAM)`
   );
   console.log(
     `  ${pc.cyan("platform update-role")} Update platform IAM permissions\n`
@@ -860,6 +864,14 @@ async function run() {
       }
 
       switch (subCommand) {
+        case "connect":
+          await platformConnect({
+            region: flags.region,
+            force: flags.force,
+            yes: flags.yes,
+          });
+          break;
+
         case "update-role":
           await updateRole({
             region: flags.region,
@@ -869,7 +881,9 @@ async function run() {
 
         default:
           clack.log.error(`Unknown platform command: ${subCommand}`);
-          console.log(`\nAvailable commands: ${pc.cyan("update-role")}\n`);
+          console.log(
+            `\nAvailable commands: ${pc.cyan("connect")}, ${pc.cyan("update-role")}\n`
+          );
           console.log(
             `Run ${pc.cyan("wraps platform")} for more information.\n`
           );
