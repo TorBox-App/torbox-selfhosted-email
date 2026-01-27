@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
+import { createFreeSubscription } from "@/actions/subscriptions";
 import Loader from "@/components/loader";
 import { PlanSelector } from "@/components/plan-selector";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ export default function UpgradePage() {
 
   const [selectedPlan, setSelectedPlan] = useState<PlanId>(initialPlan);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFreeLoading, setIsFreeLoading] = useState(false);
 
   // Fetch organizations to find the current one
   const { data: organizations, isPending: orgsLoading } =
@@ -70,6 +72,34 @@ export default function UpgradePage() {
   if (activeSubscription && !subsLoading) {
     router.push(`/${orgSlug}/emails`);
     return null;
+  }
+
+  async function handleContinueWithFree() {
+    if (!organization?.id) {
+      toast.error("Organization not found");
+      return;
+    }
+
+    setIsFreeLoading(true);
+
+    posthog.capture("upgrade_free_tier_selected", {
+      organization_id: organization.id,
+      organization_slug: orgSlug,
+    });
+
+    try {
+      const result = await createFreeSubscription(organization.id);
+      if (!result.success) {
+        toast.error(result.error || "Failed to activate free plan");
+        setIsFreeLoading(false);
+        return;
+      }
+
+      router.push(`/${orgSlug}/emails`);
+    } catch (_error) {
+      toast.error("Failed to activate free plan. Please try again.");
+      setIsFreeLoading(false);
+    }
   }
 
   async function handleSubscribe() {
@@ -182,12 +212,16 @@ export default function UpgradePage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 sm:flex-row sm:justify-between">
-            <Button asChild variant="ghost">
-              <a href="https://wraps.dev/docs/cli">Continue with CLI Only</a>
+            <Button
+              disabled={isFreeLoading || isLoading}
+              onClick={handleContinueWithFree}
+              variant="ghost"
+            >
+              {isFreeLoading ? "Activating..." : "Continue with Free"}
             </Button>
             <Button
               className="w-full sm:w-auto"
-              disabled={isLoading}
+              disabled={isLoading || isFreeLoading}
               onClick={handleSubscribe}
               size="lg"
             >

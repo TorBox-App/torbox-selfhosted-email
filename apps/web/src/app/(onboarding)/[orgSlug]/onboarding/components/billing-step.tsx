@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
+import { createFreeSubscription } from "@/actions/subscriptions";
 import { BillingToggle } from "@/components/billing-toggle";
 import { PlanSelector } from "@/components/plan-selector";
 import { Button } from "@/components/ui/button";
@@ -114,7 +115,7 @@ export function BillingStep({
   const handleContinue = async () => {
     setIsLoading(true);
 
-    // Free tier - just continue to next step without Stripe
+    // Free tier - create subscription record and continue
     if (selectedPlan === "free") {
       posthog.capture("onboarding_free_tier_selected", {
         step: 2,
@@ -122,6 +123,15 @@ export function BillingStep({
         organization_id: organizationId,
         plan: "free",
       });
+
+      // Create a subscription record for free users
+      const result = await createFreeSubscription(organizationId);
+      if (!result.success) {
+        toast.error(result.error || "Failed to activate free plan");
+        setIsLoading(false);
+        return;
+      }
+
       onNext();
       return;
     }
