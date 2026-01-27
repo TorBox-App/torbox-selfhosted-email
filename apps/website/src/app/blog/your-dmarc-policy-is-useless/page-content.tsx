@@ -1669,6 +1669,21 @@ export default function DMARCSucks() {
           </div>
           <TheFix />
 
+          <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-foreground/90 text-sm">
+              <strong>Tip:</strong> If you're using AWS SES,{" "}
+              <a className="text-primary hover:underline" href="/cli">
+                Wraps CLI
+              </a>{" "}
+              automatically configures SPF, DKIM, and DMARC when you deploy your
+              email infrastructure. Check your current setup with our{" "}
+              <a className="text-primary hover:underline" href="/tools">
+                free domain analyzer
+              </a>
+              .
+            </p>
+          </div>
+
           <div className="prose prose-neutral dark:prose-invert mt-8 max-w-none">
             <p className="text-foreground/80 text-xl leading-relaxed">
               The ROI is clear. Average data breach costs hit{" "}
@@ -1684,6 +1699,57 @@ export default function DMARCSucks() {
               happens when you don't act: a data breach becomes an ongoing
               phishing campaign against your own users.
             </p>
+          </div>
+        </section>
+
+        {/* Related Resources */}
+        <section className="space-y-4">
+          <h2 className="font-bold text-2xl">Continue Learning</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <a
+              className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
+              href="/blog/spf-guide"
+            >
+              <h3 className="font-semibold group-hover:text-primary">
+                The SPF 10-Lookup Limit
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Why your SPF record might be failing silently
+              </p>
+            </a>
+            <a
+              className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
+              href="/blog/ses-sandbox-guide"
+            >
+              <h3 className="font-semibold group-hover:text-primary">
+                Escape AWS SES Sandbox
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Get production access on your first try
+              </p>
+            </a>
+            <a
+              className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
+              href="/docs/guides/domain-verification"
+            >
+              <h3 className="font-semibold group-hover:text-primary">
+                Domain Verification Guide
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Set up DKIM, SPF, and DMARC step by step
+              </p>
+            </a>
+            <a
+              className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
+              href="/tools"
+            >
+              <h3 className="font-semibold group-hover:text-primary">
+                Email Tools
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Check your domain's email authentication setup
+              </p>
+            </a>
           </div>
         </section>
 
@@ -1738,13 +1804,14 @@ export default function DMARCSucks() {
           </Card>
           <p className="text-muted-foreground">
             Built by{" "}
-            <a
-              className="text-foreground hover:text-primary"
-              href="https://wraps.dev"
-            >
+            <a className="text-foreground hover:text-primary" href="/">
               Wraps
             </a>{" "}
-            &mdash; Email infrastructure for developers who own their data.
+            &mdash;{" "}
+            <a className="hover:text-primary" href="/cli">
+              Deploy email infrastructure
+            </a>{" "}
+            to your AWS account with one command.
           </p>
         </footer>
       </div>

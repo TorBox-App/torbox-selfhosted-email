@@ -14,8 +14,24 @@ export const metadata: Metadata = {
     title: "Production Access Guide | Wraps",
     description: "How to get AWS SES production access approval.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/guides/production-access",
+  },
 };
 
 export default function ProductionAccessPage() {
-  return <ProductionAccessPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>Production Access Guide</h1>
+        <p>How to get AWS SES production access approval.</p>
+        <h2>Prerequisites</h2>
+        <h2>Request Process</h2>
+        <h2>Common Rejection Reasons</h2>
+        <h2>Best Practices</h2>
+      </article>
+      <ProductionAccessPageContent />
+    </>
+  );
 }

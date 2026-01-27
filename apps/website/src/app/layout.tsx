@@ -62,6 +62,26 @@ const themeScript = `
 })();
 `;
 
+// Organization structured data for SEO
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Wraps",
+  url: "https://wraps.dev",
+  logo: "https://wraps.dev/logo.png",
+  description:
+    "Email infrastructure platform that deploys to your AWS account. AWS pricing with modern developer experience.",
+  sameAs: [
+    "https://github.com/wraps-team/wraps",
+    "https://twitter.com/useWraps",
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    email: "support@wraps.dev",
+    contactType: "customer support",
+  },
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -77,6 +97,12 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{ __html: themeScript }}
           suppressHydrationWarning
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationSchema),
+          }}
         />
       </head>
       <body className={inter.className}>

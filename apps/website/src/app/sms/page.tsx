@@ -15,8 +15,26 @@ export const metadata: Metadata = {
     description:
       "Coming soon: Deploy SMS infrastructure to your AWS account with the same great DX as email.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/sms",
+  },
 };
 
 export default function SmsPage() {
-  return <SmsPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>SMS Infrastructure</h1>
+        <p>
+          Coming soon: Deploy SMS infrastructure to your AWS account with the
+          same great DX as email.
+        </p>
+        <h2>Features</h2>
+        <h2>Pricing</h2>
+        <h2>SDK</h2>
+      </article>
+      <SmsPageContent />
+    </>
+  );
 }

@@ -16,6 +16,9 @@ export const metadata: Metadata = {
     title: "Terms of Service | Wraps",
     description: "Terms and conditions for using Wraps CLI, SDK, and Platform.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/terms",
+  },
 };
 
 export default function TermsOfService() {

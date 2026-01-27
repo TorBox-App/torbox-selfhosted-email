@@ -267,6 +267,20 @@ export default function SPFGuidePage() {
           <CodeBlock label="Example SPF Record">
             v=spf1 include:_spf.google.com include:amazonses.com -all
           </CodeBlock>
+
+          <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-foreground/90 text-sm">
+              <strong>Quick check:</strong> Not sure what your current SPF record looks like?{" "}
+              <a className="text-primary hover:underline" href="/tools">
+                Analyze your domain
+              </a>{" "}
+              to see your SPF record and lookup count, or use our{" "}
+              <a className="text-primary hover:underline" href="/tools/spf-builder">
+                SPF builder
+              </a>{" "}
+              to create a new one.
+            </p>
+          </div>
         </section>
 
         {/* The 10-Lookup Problem */}
@@ -654,6 +668,42 @@ export default function SPFGuidePage() {
             <h2 className="font-bold text-2xl">Additional Resources</h2>
           </div>
 
+          <h3 className="mb-3 mt-6 font-semibold text-lg">Wraps Resources</h3>
+          <div className="space-y-3 mb-6">
+            <a
+              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+              href="/blog/your-dmarc-policy-is-useless"
+            >
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <span>Your DMARC Policy Is Useless (and How to Fix It)</span>
+            </a>
+
+            <a
+              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+              href="/blog/ses-production-architecture"
+            >
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <span>AWS SES Production Architecture Guide</span>
+            </a>
+
+            <a
+              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+              href="/blog/ses-sandbox-guide"
+            >
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <span>How to Get Out of AWS SES Sandbox</span>
+            </a>
+
+            <a
+              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+              href="/docs/guides/domain-verification"
+            >
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <span>Domain Verification Guide (DKIM, SPF, DMARC)</span>
+            </a>
+          </div>
+
+          <h3 className="mb-3 font-semibold text-lg">External Resources</h3>
           <div className="space-y-3">
             <a
               className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
@@ -663,22 +713,6 @@ export default function SPFGuidePage() {
             >
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
               <span>RFC 7208: Sender Policy Framework (SPF)</span>
-            </a>
-
-            <a
-              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
-              href="/blog/your-dmarc-policy-is-useless"
-            >
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <span>Related: Your DMARC Policy Is Useless</span>
-            </a>
-
-            <a
-              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
-              href="/blog/ses-sandbox-guide"
-            >
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <span>Related: How to Get Out of AWS SES Sandbox</span>
             </a>
           </div>
         </section>

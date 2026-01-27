@@ -18,6 +18,9 @@ export const metadata: Metadata = {
     description:
       "Deep dives into email infrastructure, security, and developer experience.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/blog",
+  },
 };
 
 export default function BlogPage() {

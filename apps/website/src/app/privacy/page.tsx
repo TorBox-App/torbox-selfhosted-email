@@ -16,6 +16,9 @@ export const metadata: Metadata = {
     title: "Privacy Policy | Wraps",
     description: "Learn how Wraps collects, uses, and protects your data.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/privacy",
+  },
 };
 
 export default function PrivacyPolicy() {

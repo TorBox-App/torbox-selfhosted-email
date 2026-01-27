@@ -468,7 +468,7 @@ export default function SPFBuilderPageContent() {
                     >
                       <div className="flex w-12 shrink-0 items-center justify-center rounded-l-lg bg-muted/50 p-2">
                         <img
-                          alt={provider.name}
+                          alt={`${provider.name} logo`}
                           className="h-8 w-8 object-contain grayscale"
                           src={`/logos/${provider.logo}`}
                         />

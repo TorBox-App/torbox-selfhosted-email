@@ -1,10 +1,6 @@
-"use client";
-
 import { ArrowRight, Check, Mail, Send, Workflow } from "lucide-react";
-import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FadeIn, ScaleIn } from "./animations";
 
 type ComparisonScenario = {
   id: string;
@@ -165,49 +161,47 @@ function ComparisonCard({ scenario }: { scenario: ComparisonScenario }) {
   );
 }
 
-export const PricingComparisonSection = memo(
-  function PricingComparisonSection() {
-    return (
-      <section className="py-20" id="comparison">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <FadeIn className="mx-auto mb-12 max-w-3xl text-center">
-            <Badge className="mb-4 bg-orange-500/10 text-orange-600 dark:text-orange-400">
-              Pricing Comparison
-            </Badge>
-            <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-              Same Capabilities.{" "}
-              <span className="text-orange-500">Fraction of the Cost.</span>
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              You pay Wraps for the platform. You pay AWS directly for sending.
-              Tracked events are only needed for behavioral automations.
-            </p>
-          </FadeIn>
-
-          {/* Comparison Cards */}
-          <ScaleIn delay={0.1}>
-            <div className="grid gap-6 lg:grid-cols-3">
-              {scenarios.map((scenario) => (
-                <ComparisonCard key={scenario.id} scenario={scenario} />
-              ))}
-            </div>
-          </ScaleIn>
-
-          {/* CTA */}
-          <FadeIn className="mt-12 text-center" delay={0.2}>
-            <Button asChild size="lg" variant="outline">
-              <a href="/calculator">
-                Calculate Your Exact Costs
-                <ArrowRight className="ml-2 size-4" />
-              </a>
-            </Button>
-            <p className="mt-3 text-muted-foreground text-sm">
-              Enter your volume and see a detailed breakdown
-            </p>
-          </FadeIn>
+export function PricingComparisonSection() {
+  return (
+    <section className="py-20" id="comparison">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Header - server rendered */}
+        <div className="mx-auto mb-12 max-w-3xl text-center animate-fade-in-up">
+          <Badge className="mb-4 bg-orange-500/10 text-orange-600 dark:text-orange-400">
+            Pricing Comparison
+          </Badge>
+          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+            Same Capabilities.{" "}
+            <span className="text-orange-500">Fraction of the Cost.</span>
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            You pay Wraps for the platform. You pay AWS directly for sending.
+            Tracked events are only needed for behavioral automations.
+          </p>
         </div>
-      </section>
-    );
-  }
-);
+
+        {/* Comparison Cards - server rendered */}
+        <div className="animate-fade-in-up animation-delay-100">
+          <div className="grid gap-6 lg:grid-cols-3">
+            {scenarios.map((scenario) => (
+              <ComparisonCard key={scenario.id} scenario={scenario} />
+            ))}
+          </div>
+        </div>
+
+        {/* CTA - server rendered */}
+        <div className="mt-12 text-center animate-fade-in-up animation-delay-200">
+          <Button asChild size="lg" variant="outline">
+            <a href="/calculator">
+              Calculate Your Exact Costs
+              <ArrowRight className="ml-2 size-4" />
+            </a>
+          </Button>
+          <p className="mt-3 text-muted-foreground text-sm">
+            Enter your volume and see a detailed breakdown
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}

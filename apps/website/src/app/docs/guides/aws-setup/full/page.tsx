@@ -14,8 +14,20 @@ export const metadata: Metadata = {
     title: "Full AWS Setup | Wraps",
     description: "Complete AWS setup guide for Wraps.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/guides/aws-setup/full",
+  },
 };
 
 export default function FullGuidePage() {
-  return <FullGuidePageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>Full AWS Setup</h1>
+        <p>Complete AWS setup guide for Wraps with detailed explanations.</p>
+      </article>
+      <FullGuidePageContent />
+    </>
+  );
 }

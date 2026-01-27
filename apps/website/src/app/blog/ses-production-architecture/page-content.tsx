@@ -935,6 +935,21 @@ export default function SESProductionArchitecture() {
                 processor, and DynamoDB for event history. All tagged with{" "}
                 <code className="text-emerald-400">ManagedBy: wraps-cli</code>.
               </Callout>
+
+              <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <p className="text-foreground/90 text-sm">
+                  <strong>Before you start:</strong> Make sure your domain has
+                  proper email authentication configured.{" "}
+                  <a className="text-primary hover:underline" href="/blog/your-dmarc-policy-is-useless">
+                    Check your DMARC policy
+                  </a>{" "}
+                  and{" "}
+                  <a className="text-primary hover:underline" href="/tools">
+                    verify your DNS records
+                  </a>{" "}
+                  are correct before deploying production infrastructure.
+                </p>
+              </div>
             </section>
 
             {/* Dedicated IPs */}
@@ -973,6 +988,14 @@ export default function SESProductionArchitecture() {
                   ],
                 ]}
               />
+
+              <p className="text-muted-foreground text-sm mt-4">
+                See our{" "}
+                <a className="text-primary hover:underline" href="/pricing">
+                  pricing page
+                </a>{" "}
+                for full cost breakdowns including Wraps platform features.
+              </p>
 
               <Callout title="IP Warming Reality Check" type="warning">
                 New dedicated IPs typically need consistent daily volume per
@@ -1306,15 +1329,27 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                 We've seen them tank otherwise healthy sender accounts:
               </p>
 
+              <p className="text-muted-foreground text-sm mb-6">
+                <strong>Related:</strong>{" "}
+                <a className="text-primary hover:underline" href="/blog/your-dmarc-policy-is-useless">
+                  Why your DMARC policy is useless
+                </a>{" "}
+                covers SPF/DKIM alignment in detail, and our{" "}
+                <a className="text-primary hover:underline" href="/blog/spf-guide">
+                  SPF configuration guide
+                </a>{" "}
+                explains the include mechanism.
+              </p>
+
               <div className="space-y-4">
                 {[
                   {
                     title: "Missing Custom MAIL FROM",
-                    desc: "SPF alignment fails without it, causing DMARC failures even with valid SPF records.",
+                    desc: "SPF alignment fails without it, causing DMARC failures even with valid SPF records. See our DMARC guide for proper alignment.",
                   },
                   {
                     title: "Testing with real addresses",
-                    desc: "Use bounce@simulator.amazonses.com for testing—real bounces hurt your reputation.",
+                    desc: "Use bounce@simulator.amazonses.com for testing—real bounces hurt your reputation. Learn proper testing in our sandbox guide.",
                   },
                   {
                     title: "Ignoring soft bounces",
@@ -1339,6 +1374,57 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                     <p className="text-sm text-muted-foreground">{item.desc}</p>
                   </div>
                 ))}
+              </div>
+            </section>
+
+            {/* Continue Learning */}
+            <section className="mt-16">
+              <h2 className="text-2xl font-bold mb-6">Continue Learning</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <a
+                  className="group p-4 rounded-xl border bg-muted/30 hover:bg-muted/50 transition-colors"
+                  href="/blog/ses-sandbox-guide"
+                >
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                    AWS SES Sandbox Exit Guide
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Step-by-step guide to getting production access with proper DNS configuration.
+                  </p>
+                </a>
+                <a
+                  className="group p-4 rounded-xl border bg-muted/30 hover:bg-muted/50 transition-colors"
+                  href="/blog/your-dmarc-policy-is-useless"
+                >
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Fix Your DMARC Policy
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Most DMARC policies don't protect you. Learn what actually works.
+                  </p>
+                </a>
+                <a
+                  className="group p-4 rounded-xl border bg-muted/30 hover:bg-muted/50 transition-colors"
+                  href="/platform"
+                >
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Wraps Platform Dashboard
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Monitor deliverability, track events, and manage your email infrastructure.
+                  </p>
+                </a>
+                <a
+                  className="group p-4 rounded-xl border bg-muted/30 hover:bg-muted/50 transition-colors"
+                  href="/docs/guides/domain-verification"
+                >
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Domain Verification Guide
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Configure DKIM, SPF, and DMARC records for your sending domain.
+                  </p>
+                </a>
               </div>
             </section>
 

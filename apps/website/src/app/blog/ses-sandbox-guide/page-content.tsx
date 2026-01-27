@@ -1019,6 +1019,17 @@ export default function SESSandboxGuide() {
               propagate.
             </p>
           </Collapsible>
+
+          <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-foreground/90 text-sm">
+              <strong>Verify your setup:</strong> Use our{" "}
+              <a className="text-primary hover:underline" href="/tools">
+                free domain analyzer
+              </a>{" "}
+              to check if your SPF, DKIM, and DMARC records are correctly
+              configured before submitting your production request.
+            </p>
+          </div>
         </section>
 
         {/* Template Builder */}
@@ -1249,26 +1260,62 @@ export default function SESSandboxGuide() {
             <h2 className="font-bold text-2xl">Additional Resources</h2>
           </div>
 
-          <div className="space-y-3">
-            <a
-              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
-              href="https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              <span>AWS Official Documentation: Request Production Access</span>
-            </a>
+          <div className="mb-4">
+            <h3 className="mb-3 font-semibold text-muted-foreground text-sm">
+              Wraps Resources
+            </h3>
+            <div className="space-y-3">
+              <a
+                className="flex items-center gap-3 rounded-lg border bg-primary/5 p-4 transition-colors hover:bg-primary/10"
+                href="/blog/ses-production-architecture"
+              >
+                <ArrowRight className="h-4 w-4 text-primary" />
+                <span>AWS SES Production Architecture Guide</span>
+              </a>
+              <a
+                className="flex items-center gap-3 rounded-lg border bg-primary/5 p-4 transition-colors hover:bg-primary/10"
+                href="/blog/your-dmarc-policy-is-useless"
+              >
+                <ArrowRight className="h-4 w-4 text-primary" />
+                <span>Your DMARC Policy is Useless</span>
+              </a>
+              <a
+                className="flex items-center gap-3 rounded-lg border bg-primary/5 p-4 transition-colors hover:bg-primary/10"
+                href="/docs/guides/domain-verification"
+              >
+                <ArrowRight className="h-4 w-4 text-primary" />
+                <span>Domain Verification Guide</span>
+              </a>
+            </div>
+          </div>
 
-            <a
-              className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
-              href="https://docs.aws.amazon.com/ses/latest/dg/send-email-authentication.html"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              <span>AWS Email Authentication Guide (SPF, DKIM, DMARC)</span>
-            </a>
+          <div>
+            <h3 className="mb-3 font-semibold text-muted-foreground text-sm">
+              AWS Documentation
+            </h3>
+            <div className="space-y-3">
+              <a
+                className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+                href="https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  AWS Official Documentation: Request Production Access
+                </span>
+              </a>
+
+              <a
+                className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+                href="https://docs.aws.amazon.com/ses/latest/dg/send-email-authentication.html"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <span>AWS Email Authentication Guide (SPF, DKIM, DMARC)</span>
+              </a>
+            </div>
           </div>
         </section>
 

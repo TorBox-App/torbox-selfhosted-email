@@ -14,8 +14,23 @@ export const metadata: Metadata = {
     title: "CDN CLI Commands | Wraps",
     description: "CLI commands for managing CDN infrastructure.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/cli-reference/cdn",
+  },
 };
 
 export default function CLIReferenceCdnPage() {
-  return <CLIReferenceCdnPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>CDN CLI Commands</h1>
+        <p>CLI commands for managing CDN infrastructure.</p>
+        <h2>wraps cdn init</h2>
+        <h2>wraps cdn status</h2>
+        <h2>wraps cdn destroy</h2>
+      </article>
+      <CLIReferenceCdnPageContent />
+    </>
+  );
 }

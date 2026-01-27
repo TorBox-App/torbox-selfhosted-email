@@ -14,8 +14,25 @@ export const metadata: Metadata = {
     title: "Email CLI Commands | Wraps",
     description: "CLI commands for managing email infrastructure.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/cli-reference/email",
+  },
 };
 
 export default function CLIReferenceEmailPage() {
-  return <CLIReferenceEmailPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>Email CLI Commands</h1>
+        <p>CLI commands for managing email infrastructure.</p>
+        <h2>wraps email init</h2>
+        <h2>wraps email status</h2>
+        <h2>wraps email domains</h2>
+        <h2>wraps email upgrade</h2>
+        <h2>wraps email destroy</h2>
+      </article>
+      <CLIReferenceEmailPageContent />
+    </>
+  );
 }

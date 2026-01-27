@@ -17,8 +17,20 @@ export const metadata: Metadata = {
     description:
       "Required AWS IAM permissions for deploying Wraps infrastructure.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/guides/aws-setup/permissions",
+  },
 };
 
 export default function PermissionsPage() {
-  return <PermissionsPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>IAM Permissions</h1>
+        <p>Required AWS IAM permissions for deploying Wraps infrastructure.</p>
+      </article>
+      <PermissionsPageContent />
+    </>
+  );
 }

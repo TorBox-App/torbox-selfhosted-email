@@ -15,8 +15,23 @@ export const metadata: Metadata = {
     description:
       "Latest updates, improvements, and releases for Wraps CLI, SDK, and Platform.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/changelog",
+  },
 };
 
 export default function ChangelogPage() {
-  return <ChangelogPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>Changelog</h1>
+        <p>
+          Latest updates, improvements, and releases for Wraps CLI, SDK, and
+          Platform.
+        </p>
+      </article>
+      <ChangelogPageContent />
+    </>
+  );
 }

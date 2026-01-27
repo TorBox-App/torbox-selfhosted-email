@@ -14,8 +14,23 @@ export const metadata: Metadata = {
     title: "CDK Construct Reference | Wraps",
     description: "Deploy Wraps infrastructure with AWS CDK.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/cdk-reference",
+  },
 };
 
 export default function CDKReferencePage() {
-  return <CDKReferencePageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>CDK Construct Reference</h1>
+        <p>Deploy Wraps infrastructure with AWS CDK.</p>
+        <h2>Installation</h2>
+        <h2>Usage</h2>
+        <h2>Configuration Options</h2>
+      </article>
+      <CDKReferencePageContent />
+    </>
+  );
 }

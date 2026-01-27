@@ -14,8 +14,20 @@ export const metadata: Metadata = {
     title: "AWS Troubleshooting | Wraps",
     description: "Troubleshoot common AWS setup issues.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/guides/aws-setup/troubleshooting",
+  },
 };
 
 export default function TroubleshootingPage() {
-  return <TroubleshootingPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>AWS Troubleshooting</h1>
+        <p>Troubleshoot common AWS setup issues.</p>
+      </article>
+      <TroubleshootingPageContent />
+    </>
+  );
 }

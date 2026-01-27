@@ -1,7 +1,4 @@
-"use client";
-
 import { CreditCard, Key, Shield } from "lucide-react";
-import { StaggerContainer, StaggerItem } from "./animations";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -26,22 +23,26 @@ const principles = [
     title: "Open Source",
     description:
       "See exactly what we deploy to your AWS and what we run in our infrastructure.",
+    delay: "animation-delay-0",
   },
   {
     icon: Shield,
     title: "Zero Credentials",
     description:
       "OIDC for Vercel. IAM roles for AWS. We never store your secrets.",
+    delay: "animation-delay-100",
   },
   {
     icon: Key,
     title: "Your Sending, Your AWS",
     description: "Emails send through your SES. Events store in your DynamoDB.",
+    delay: "animation-delay-200",
   },
   {
     icon: CreditCard,
     title: "No Sending Markup",
     description: "Pay AWS directly for sending. $0.10 per 1,000 emails.",
+    delay: "animation-delay-300",
   },
 ];
 
@@ -100,14 +101,14 @@ export function PrinciplesSection() {
 
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Principles Grid */}
-        <StaggerContainer
-          className="grid gap-4 grid-cols-2 lg:grid-cols-4"
-          staggerDelay={0.1}
-        >
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           {principles.map((principle) => {
             const Icon = principle.icon;
             return (
-              <StaggerItem key={principle.title}>
+              <div
+                key={principle.title}
+                className={`animate-fade-in-up ${principle.delay}`}
+              >
                 <div className="group relative h-full overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 pt-12 transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
                   {/* Large background icon */}
                   <div className="absolute -right-3 -top-3 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
@@ -126,10 +127,10 @@ export function PrinciplesSection() {
                     {principle.description}
                   </p>
                 </div>
-              </StaggerItem>
+              </div>
             );
           })}
-        </StaggerContainer>
+        </div>
       </div>
     </section>
   );

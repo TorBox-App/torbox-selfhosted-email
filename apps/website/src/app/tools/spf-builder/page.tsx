@@ -15,8 +15,58 @@ export const metadata: Metadata = {
     description:
       "Build and validate your SPF record. Avoid the 10-lookup limit with our interactive tool.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/tools/spf-builder",
+  },
+};
+
+const webAppSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "SPF Record Builder",
+  description:
+    "Interactive tool to build and validate SPF records while tracking the 10-lookup limit. Select email providers and generate correct SPF syntax.",
+  url: "https://wraps.dev/tools/spf-builder",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Any",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  provider: {
+    "@type": "Organization",
+    name: "Wraps",
+    url: "https://wraps.dev",
+  },
+  featureList: [
+    "Real-time DNS lookup counter",
+    "Pre-configured email provider includes",
+    "Custom IP address support",
+    "SPF syntax validation",
+    "Copy-to-clipboard functionality",
+  ],
 };
 
 export default function SPFBuilderPage() {
-  return <SPFBuilderPageContent />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
+      />
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>SPF Record Builder</h1>
+        <p>
+          Build and validate your SPF record. Avoid the 10-lookup limit with our
+          interactive tool.
+        </p>
+        <h2>Select Email Providers</h2>
+        <h2>Preview SPF Record</h2>
+        <h2>Lookup Count</h2>
+      </article>
+      <SPFBuilderPageContent />
+    </>
+  );
 }

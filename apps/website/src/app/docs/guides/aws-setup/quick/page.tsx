@@ -14,8 +14,20 @@ export const metadata: Metadata = {
     title: "Quick AWS Setup | Wraps",
     description: "Fast track AWS setup for Wraps.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/guides/aws-setup/quick",
+  },
 };
 
 export default function QuickStartPage() {
-  return <QuickStartPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>Quick AWS Setup</h1>
+        <p>Fast track AWS setup for Wraps - get started in minutes.</p>
+      </article>
+      <QuickStartPageContent />
+    </>
+  );
 }

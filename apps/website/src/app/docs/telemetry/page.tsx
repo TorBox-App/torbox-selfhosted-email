@@ -14,8 +14,20 @@ export const metadata: Metadata = {
     title: "Telemetry | Wraps",
     description: "Learn about Wraps CLI telemetry and how to opt out.",
   },
+  alternates: {
+    canonical: "https://wraps.dev/docs/telemetry",
+  },
 };
 
 export default function TelemetryPage() {
-  return <TelemetryPageContent />;
+  return (
+    <>
+      {/* Server-rendered content for SEO */}
+      <article className="sr-only" aria-hidden="true">
+        <h1>Telemetry</h1>
+        <p>Learn about Wraps CLI telemetry and how to opt out.</p>
+      </article>
+      <TelemetryPageContent />
+    </>
+  );
 }
