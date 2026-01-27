@@ -359,7 +359,11 @@ describe("error factory functions", () => {
 
   describe("profileNotFound", () => {
     it("should create error with available profiles", () => {
-      const error = errors.profileNotFound("missing", ["default", "dev", "prod"]);
+      const error = errors.profileNotFound("missing", [
+        "default",
+        "dev",
+        "prod",
+      ]);
 
       expect(error).toBeInstanceOf(WrapsError);
       expect(error.message).toContain("missing");
@@ -546,9 +550,9 @@ describe("isPulumiError", () => {
   });
 
   it("should return true for AccessDenied errors", () => {
-    expect(isPulumiError(new Error("AccessDenied when creating IAM role"))).toBe(
-      true
-    );
+    expect(
+      isPulumiError(new Error("AccessDenied when creating IAM role"))
+    ).toBe(true);
   });
 
   it("should return false for regular errors", () => {
@@ -584,7 +588,9 @@ describe("parseAWSError", () => {
   });
 
   it("should extract resource from error message", () => {
-    const error = new Error("Access denied for resource: arn:aws:ses:us-east-1");
+    const error = new Error(
+      "Access denied for resource: arn:aws:ses:us-east-1"
+    );
 
     const result = parseAWSError(error);
 
@@ -719,7 +725,9 @@ describe("sanitizeErrorMessage", () => {
 
   it("should redact ARNs with account IDs", () => {
     const message = sanitizeErrorMessage(
-      new Error("Resource arn:aws:ses:us-east-1:123456789012:identity not found")
+      new Error(
+        "Resource arn:aws:ses:us-east-1:123456789012:identity not found"
+      )
     );
 
     expect(message).toContain("[ACCOUNT_ID]");

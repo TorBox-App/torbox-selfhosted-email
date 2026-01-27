@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   buildEmailDNSRecords,
+  type DNSRecordInfo,
   formatDNSRecordsForDisplay,
   getDNSProviderDisplayName,
   getDNSProviderTokenUrl,
-  type DNSRecordInfo,
 } from "../create-records.js";
 
 describe("buildEmailDNSRecords", () => {
