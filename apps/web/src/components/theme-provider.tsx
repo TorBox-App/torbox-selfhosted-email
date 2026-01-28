@@ -11,6 +11,11 @@ type ThemeProviderProps = {
   storageKey?: string;
 };
 
+function setThemeCookie(resolvedTheme: "dark" | "light") {
+  // Set cookie with 1 year expiry, accessible to server
+  document.cookie = `theme=${resolvedTheme};path=/;max-age=31536000;SameSite=Lax`;
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -24,26 +29,42 @@ export function ThemeProvider({
       defaultTheme
   );
 
+  // Sync theme class and cookie on mount and when theme changes
   React.useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
     const root = window.document.documentElement;
+    const resolvedTheme =
+      theme === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : theme;
 
     root.classList.remove("light", "dark");
+    root.classList.add(resolvedTheme);
+    setThemeCookie(resolvedTheme);
+  }, [theme]);
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-
-      root.classList.add(systemTheme);
+  // Listen for system theme changes when in "system" mode
+  React.useEffect(() => {
+    if (typeof window === "undefined" || theme !== "system") {
       return;
     }
 
-    root.classList.add(theme);
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      const root = window.document.documentElement;
+      root.classList.remove("light", "dark");
+      const newTheme = e.matches ? "dark" : "light";
+      root.classList.add(newTheme);
+      setThemeCookie(newTheme);
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, [theme]);
 
   const value = {
