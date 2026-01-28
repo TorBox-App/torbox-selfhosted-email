@@ -115,12 +115,10 @@ export function DashboardPricingSection() {
                   {tier.annualPrice &&
                     (billingInterval === "annual" ? (
                       <div className="mt-1 text-green-600 text-sm dark:text-green-400">
-                        ${tier.annualPrice} billed annually (save 17%)
-                      </div>
+                        ${tier.annualPrice} billed annually                      </div>
                     ) : (
                       <div className="mt-1 text-muted-foreground text-sm">
-                        or ${tier.annualPrice}/yr (save 17%)
-                      </div>
+                        or ${tier.annualPrice}/yr                      </div>
                     ))}
                   <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                     <div>
