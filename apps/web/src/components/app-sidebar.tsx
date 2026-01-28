@@ -2,6 +2,7 @@
 
 import { Mail, MessageSquare, Settings, Users, Workflow } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import type * as React from "react";
 import { Logo } from "@/components/logo";
 import { NavMain } from "@/components/nav-main";
@@ -23,7 +24,8 @@ import { useProductsStore } from "@/stores/products-store";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { activeOrganization } = useActiveOrganization();
-  const orgSlug = activeOrganization?.slug ?? "";
+  const params = useParams<{ orgSlug?: string }>();
+  const orgSlug = activeOrganization?.slug ?? params.orgSlug ?? "";
   const productsStatus = useProductsStore((s) => s.status);
 
   // Check if products are enabled (hydrated from server, no flash)
