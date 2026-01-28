@@ -100,8 +100,12 @@ export function OrganizationSettingsMembers({
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
 
   // Client-side state for when data isn't provided via props
-  const [members, setMembers] = useState<MemberWithUser[]>(initialMembers ?? []);
-  const [invitations, setInvitations] = useState<PendingInvitation[]>(initialInvitations ?? []);
+  const [members, setMembers] = useState<MemberWithUser[]>(
+    initialMembers ?? []
+  );
+  const [invitations, setInvitations] = useState<PendingInvitation[]>(
+    initialInvitations ?? []
+  );
   const [isLoading, setIsLoading] = useState(!initialMembers);
 
   // Fetch data client-side only if not provided via props (for tabs usage)
@@ -144,7 +148,9 @@ export function OrganizationSettingsMembers({
     members,
     (
       state,
-      action: { type: "remove"; memberId: string } | { type: "updateRole"; memberId: string; newRole: string }
+      action:
+        | { type: "remove"; memberId: string }
+        | { type: "updateRole"; memberId: string; newRole: string }
     ) => {
       if (action.type === "remove") {
         return state.filter((m) => m.id !== action.memberId);
@@ -177,17 +183,19 @@ export function OrganizationSettingsMembers({
     setInviteSubmitting(true);
     const email = inviteEmail;
 
-    const promise = inviteMember(email, inviteRole, organization.id).then((result) => {
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      setInviteDialogOpen(false);
-      setInviteEmail("");
-      setInviteRole("member");
-      return result;
-    }).finally(() => {
-      setInviteSubmitting(false);
-    });
+    const promise = inviteMember(email, inviteRole, organization.id)
+      .then((result) => {
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        setInviteDialogOpen(false);
+        setInviteEmail("");
+        setInviteRole("member");
+        return result;
+      })
+      .finally(() => {
+        setInviteSubmitting(false);
+      });
 
     toast.promise(promise, {
       loading: `Sending invitation to ${email}...`,
@@ -203,12 +211,14 @@ export function OrganizationSettingsMembers({
     startTransition(() => {
       updateOptimisticMembers({ type: "updateRole", memberId, newRole });
 
-      const promise = updateMemberRole(memberId, newRole, organization.id).then((result) => {
-        if (!result.success) {
-          throw new Error(result.error);
+      const promise = updateMemberRole(memberId, newRole, organization.id).then(
+        (result) => {
+          if (!result.success) {
+            throw new Error(result.error);
+          }
+          return result;
         }
-        return result;
-      });
+      );
 
       toast.promise(promise, {
         loading: "Updating role...",
@@ -245,12 +255,14 @@ export function OrganizationSettingsMembers({
     startTransition(() => {
       removeOptimisticInvitation(invitationId);
 
-      const promise = cancelInvitation(invitationId, organization.id).then((result) => {
-        if (!result.success) {
-          throw new Error(result.error);
+      const promise = cancelInvitation(invitationId, organization.id).then(
+        (result) => {
+          if (!result.success) {
+            throw new Error(result.error);
+          }
+          return result;
         }
-        return result;
-      });
+      );
 
       toast.promise(promise, {
         loading: "Cancelling invitation...",
@@ -401,7 +413,11 @@ export function OrganizationSettingsMembers({
                   {canEdit && member.role !== "owner" && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button disabled={isPending} size="icon" variant="ghost">
+                        <Button
+                          disabled={isPending}
+                          size="icon"
+                          variant="ghost"
+                        >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

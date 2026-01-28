@@ -31,7 +31,7 @@ function FeatureText({ text }: { text: string }) {
           <TrackedEventTooltip key={i}>{part}</TrackedEventTooltip>
         ) : (
           part
-        ),
+        )
       )}
     </>
   );
@@ -83,10 +83,12 @@ export const PricingCards = memo(function PricingCards() {
                 {plan.annualPrice &&
                   (billingInterval === "annual" ? (
                     <div className="mt-1 text-green-600 text-sm">
-                      ${plan.annualPrice} billed annually                    </div>
+                      ${plan.annualPrice} billed annually{" "}
+                    </div>
                   ) : (
                     <div className="mt-1 text-muted-foreground text-sm">
-                      or ${plan.annualPrice}/yr                    </div>
+                      or ${plan.annualPrice}/yr{" "}
+                    </div>
                   ))}
               </div>
 

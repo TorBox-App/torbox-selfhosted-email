@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,8 +23,6 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { authClient } from "@/lib/auth-client";
-import { useState } from "react";
-import { toast } from "sonner";
 
 export function DeleteAccount() {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -77,9 +77,9 @@ export function DeleteAccount() {
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
-                  variant="destructive"
                   disabled={isDeleting}
                   onClick={handleDeleteAccount}
+                  variant="destructive"
                 >
                   {isDeleting ? "Deleting..." : "Delete Account"}
                 </AlertDialogAction>
