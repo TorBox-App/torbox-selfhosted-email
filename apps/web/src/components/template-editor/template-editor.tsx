@@ -7,6 +7,8 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { SenderDefaults } from "@/actions/organizations";
+import { getSenderDefaultsAction } from "@/actions/organizations";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
@@ -166,6 +168,18 @@ function TemplateEditorContent({
   const [subject, setSubject] = useState(template.subject ?? "");
   const [previewText, setPreviewText] = useState(template.description ?? "");
   const [emailType, setEmailType] = useState(template.emailType);
+
+  // Sender defaults for test email modal
+  const [senderDefaults, setSenderDefaults] = useState<SenderDefaults | null>(
+    null
+  );
+  useEffect(() => {
+    getSenderDefaultsAction(orgSlug).then((result) => {
+      if (result.success) {
+        setSenderDefaults(result.defaults);
+      }
+    });
+  }, [orgSlug]);
 
   // Keyboard shortcuts modal
   const { isOpen: showKeyboardShortcuts, setIsOpen: setShowKeyboardShortcuts } =
@@ -600,6 +614,8 @@ function TemplateEditorContent({
 
           {/* Send Test Modal */}
           <SendTestModal
+            defaultFrom={senderDefaults?.defaultFrom}
+            defaultFromName={senderDefaults?.defaultFromName}
             editor={editor}
             isOpen={showSendTestModal}
             onClose={() => setShowSendTestModal(false)}

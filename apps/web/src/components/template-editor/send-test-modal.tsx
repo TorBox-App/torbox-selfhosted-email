@@ -38,6 +38,8 @@ type SendTestModalProps = {
   templateId: string;
   isOpen: boolean;
   onClose: () => void;
+  defaultFrom?: string | null;
+  defaultFromName?: string | null;
 };
 
 // Extract variable names from template content (e.g., {{variableName}})
@@ -58,6 +60,8 @@ export function SendTestModal({
   templateId,
   isOpen,
   onClose,
+  defaultFrom,
+  defaultFromName,
 }: SendTestModalProps) {
   const { data: session } = useSession();
   const [isSending, setIsSending] = useState(false);
@@ -82,6 +86,7 @@ export function SendTestModal({
     }
 
     return z.object({
+      from: z.string().email("Please enter a valid sender email address"),
       to: z.string().email("Please enter a valid email address"),
       subject: z.string().min(1, "Subject is required"),
       ...variableFields,
@@ -93,6 +98,7 @@ export function SendTestModal({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      from: defaultFrom || "",
       to: "",
       subject: "",
       ...Object.fromEntries(variables.map((v) => [v, ""])),
@@ -103,6 +109,7 @@ export function SendTestModal({
   useEffect(() => {
     if (isOpen) {
       form.reset({
+        from: defaultFrom || "",
         to: "",
         subject: "",
         ...Object.fromEntries(variables.map((v) => [v, ""])),
@@ -156,6 +163,7 @@ export function SendTestModal({
           body: JSON.stringify({
             recipients: [values.to],
             subject: values.subject,
+            from: values.from,
             testData,
           }),
         }
@@ -216,11 +224,29 @@ export function SendTestModal({
               >
                 <FormField
                   control={form.control}
+                  name="from"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>From</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="hello@yourdomain.com"
+                          type="email"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="to"
                   render={({ field }) => (
                     <FormItem>
                       <div className="flex items-center justify-between">
-                        <FormLabel>Recipient Email</FormLabel>
+                        <FormLabel>To</FormLabel>
                         {userEmail && (
                           <Button
                             className="h-auto p-0 text-xs"

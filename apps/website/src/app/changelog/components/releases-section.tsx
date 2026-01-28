@@ -56,8 +56,7 @@ const releases: Release[] = [
     version: "0.12.0",
     date: "January 2026",
     icon: Layers,
-    iconColor:
-      "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
+    iconColor: "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
     title: "Infrastructure as Code",
     items: [
       <>

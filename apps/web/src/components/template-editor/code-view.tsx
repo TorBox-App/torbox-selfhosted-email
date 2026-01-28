@@ -35,6 +35,7 @@ import {
 import { parseHTMLToTipTap } from "@/lib/serializers/html-to-tiptap";
 import { parseReactEmailToTipTap } from "@/lib/serializers/react-email-to-tiptap";
 import {
+  extractWrapperConfig,
   generateReactEmailCode,
   renderTipTapToHtml,
 } from "@/lib/serializers/tiptap-to-react-email";
@@ -79,7 +80,10 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
 
     switch (format) {
       case "react-email":
-        return generateReactEmailCode(content, 0, { previewText });
+        // Wrapper classNames are stored in doc attrs and read by generateReactEmailCode
+        return generateReactEmailCode(content, 0, {
+          previewText,
+        });
       case "json":
         return JSON.stringify(content, null, 2);
       case "html":
@@ -159,7 +163,7 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
   };
 
   // Apply changes to TipTap editor
-  const applyChanges = async () => {
+  const applyChanges = () => {
     if (!(tiptapEditor && hasChanges)) {
       return;
     }
@@ -168,31 +172,55 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
     setParseError(null);
 
     try {
+      // Parse content first (synchronous, may throw)
+      let parsed: JSONContent;
+      let wrapperConfig: {
+        bodyClassName?: string;
+        containerClassName?: string;
+      } | null = null;
+
       if (format === "json") {
-        // Parse JSON and set content directly
-        const parsed = JSON.parse(editedCode) as JSONContent;
-        tiptapEditor.commands.setContent(parsed);
-        toast.success("JSON changes applied to editor");
+        parsed = JSON.parse(editedCode) as JSONContent;
       } else if (format === "html") {
-        // Parse HTML to TipTap JSON
-        const parsed = parseHTMLToTipTap(editedCode);
-        tiptapEditor.commands.setContent(parsed);
-        toast.success("HTML changes applied to editor");
-      } else if (format === "react-email") {
-        // Parse React Email JSX to TipTap JSON
-        const parsed = parseReactEmailToTipTap(editedCode);
-        tiptapEditor.commands.setContent(parsed);
-        toast.success("React Email changes applied to editor");
+        parsed = parseHTMLToTipTap(editedCode);
+      } else {
+        wrapperConfig = extractWrapperConfig(editedCode);
+        parsed = parseReactEmailToTipTap(editedCode);
       }
 
-      setIsEditing(false);
-      setOriginalCode(editedCode);
-      setHasChanges(false);
+      // Defer TipTap operations to avoid flushSync-inside-lifecycle errors.
+      // TipTap internally uses flushSync when updating content, which conflicts
+      // with React's render cycle if called during a state update.
+      queueMicrotask(() => {
+        tiptapEditor.commands.setContent(parsed);
+
+        if (wrapperConfig) {
+          // setContent only replaces doc children, not doc-level attrs.
+          // Use ProseMirror's setDocAttribute to persist wrapper classNames.
+          const { tr } = tiptapEditor.state;
+          tr.setDocAttribute(
+            "bodyClassName",
+            wrapperConfig.bodyClassName || null
+          );
+          tr.setDocAttribute(
+            "containerClassName",
+            wrapperConfig.containerClassName || null
+          );
+          tiptapEditor.view.dispatch(tr);
+        }
+
+        setIsEditing(false);
+        setOriginalCode(editedCode);
+        setHasChanges(false);
+        setIsApplying(false);
+        toast.success(
+          `${format === "react-email" ? "React Email" : format === "json" ? "JSON" : "HTML"} changes applied to editor`
+        );
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Invalid code";
       setParseError(message);
       toast.error(`Failed to apply changes: ${message}`);
-    } finally {
       setIsApplying(false);
     }
   };

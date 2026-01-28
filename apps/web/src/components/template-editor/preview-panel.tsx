@@ -108,7 +108,8 @@ export function PreviewPanel({ editor }: PreviewPanelProps) {
         if (!cancelled) {
           setHtmlContent(html);
         }
-      } catch {
+      } catch (err) {
+        console.error("Error generating preview:", err);
         if (!cancelled) {
           setHtmlContent("<p>Error generating preview</p>");
         }

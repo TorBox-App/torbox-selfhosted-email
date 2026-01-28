@@ -1,7 +1,7 @@
 "use client";
 
 import { useDebouncer } from "@tanstack/react-pacer";
-import type { JSONContent } from "@tiptap/core";
+import { type JSONContent, Node } from "@tiptap/core";
 import Blockquote from "@tiptap/extension-blockquote";
 import BulletList from "@tiptap/extension-bullet-list";
 import { Color } from "@tiptap/extension-color";
@@ -44,6 +44,23 @@ import {
   toSuggestionFormat,
 } from "../variables/variable-definitions";
 import type { VariableContext } from "./editor-context";
+
+/**
+ * Custom Document extension that stores Body/Container classNames
+ * as attributes on the doc node. This allows wrapper styling to persist
+ * through save/reload cycles since doc attrs are included in getJSON().
+ */
+const EmailDocument = Node.create({
+  name: "doc",
+  topNode: true,
+  content: "block+",
+  addAttributes() {
+    return {
+      bodyClassName: { default: null },
+      containerClassName: { default: null },
+    };
+  },
+});
 
 export type UseEditorInstanceOptions = {
   /**
@@ -151,6 +168,8 @@ export function useEditorInstance({
 
     extensions: [
       StarterKit.configure({
+        // Use custom EmailDocument with wrapper className attrs
+        document: false,
         // Disable extensions we're replacing with draggable versions
         paragraph: false,
         heading: false,
@@ -161,6 +180,9 @@ export function useEditorInstance({
         codeBlock: false,
         code: false,
       }),
+
+      // Custom Document with bodyClassName/containerClassName attrs
+      EmailDocument,
 
       // Text blocks with draggable enabled
       Paragraph.extend({ draggable: true }),

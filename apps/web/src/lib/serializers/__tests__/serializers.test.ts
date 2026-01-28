@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseHTMLToTipTap } from "../html-to-tiptap";
 import { parseReactEmailToTipTap } from "../react-email-to-tiptap";
 import {
+  extractWrapperConfig,
   generateReactEmailCode,
   renderTipTapToHtml,
   tiptapToReactEmail,
@@ -867,13 +868,9 @@ describe("Edge Cases", () => {
       expect(section?.content).toBeDefined();
     });
 
-    it("should handle invalid JSX gracefully", () => {
+    it("should throw on invalid JSX so callers can handle the error", () => {
       const code = "not valid jsx";
-      const result = parseReactEmailToTipTap(code);
-
-      // Should return error message in paragraph
-      expect(result.type).toBe("doc");
-      expect(result.content?.[0].type).toBe("paragraph");
+      expect(() => parseReactEmailToTipTap(code)).toThrow();
     });
 
     it("should handle Preview component (skip it)", () => {
@@ -1649,6 +1646,602 @@ describe("Full Round-Trip Tests", () => {
     );
     expect(parsedDoc.content?.some((n) => n.type === "emailSpacer")).toBe(true);
     expect(parsedDoc.content?.some((n) => n.type === "emailButton")).toBe(true);
+  });
+});
+
+// ============================================================================
+// Code Editing Round-Trip Tests (reproduces user bug: editing className breaks)
+// ============================================================================
+
+describe("Code Editing Round-Trip", () => {
+  it("should parse generated code back after adding Tailwind classes to className", () => {
+    // Step 1: Generate code from a TipTap doc
+    const originalDoc: JSONContent = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Hello world" }],
+        },
+      ],
+    };
+    const code = generateReactEmailCode(originalDoc);
+
+    // Step 2: Simulate user adding a Tailwind class to the Container className
+    const editedCode = code.replace(
+      'className="bg-white mx-auto p-[20px] max-w-[600px]"',
+      'className="bg-white mx-auto p-[20px] max-w-[600px] rounded-lg"'
+    );
+    expect(editedCode).not.toBe(code); // Ensure the replacement happened
+
+    // Step 3: Parse the edited code back - should NOT throw
+    const parsedDoc = parseReactEmailToTipTap(editedCode);
+    expect(parsedDoc.type).toBe("doc");
+    expect(parsedDoc.content?.some((n) => n.type === "paragraph")).toBe(true);
+  });
+
+  it("should parse generated code back after editing Text className", () => {
+    const originalDoc: JSONContent = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Some text" }],
+        },
+      ],
+    };
+    const code = generateReactEmailCode(originalDoc);
+
+    // Add text-center to the Text component
+    const editedCode = code.replace(
+      'className="my-4 leading-relaxed text-left"',
+      'className="my-4 leading-relaxed text-center font-bold"'
+    );
+    expect(editedCode).not.toBe(code);
+
+    const parsedDoc = parseReactEmailToTipTap(editedCode);
+    expect(parsedDoc.type).toBe("doc");
+  });
+
+  it("should parse generated code back after editing Section className", () => {
+    const originalDoc: JSONContent = {
+      type: "doc",
+      content: [
+        {
+          type: "emailSection",
+          attrs: {
+            backgroundColor: "#ffffff",
+            padding: "24px",
+            borderRadius: "0",
+          },
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "In a section" }],
+            },
+          ],
+        },
+      ],
+    };
+    const code = generateReactEmailCode(originalDoc);
+
+    // Add rounded-lg to the Section
+    const editedCode = code.replace(
+      /(<Section className="[^"]+)"/,
+      '$1 rounded-lg"'
+    );
+    expect(editedCode).not.toBe(code);
+
+    const parsedDoc = parseReactEmailToTipTap(editedCode);
+    expect(parsedDoc.type).toBe("doc");
+    expect(parsedDoc.content?.some((n) => n.type === "emailSection")).toBe(
+      true
+    );
+  });
+
+  it("should parse code with variables (props.name) after editing", () => {
+    const originalDoc: JSONContent = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Hello " },
+            {
+              type: "variable",
+              attrs: {
+                name: "userName",
+                label: "userName",
+                fallback: "",
+                format: null,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const code = generateReactEmailCode(originalDoc);
+
+    // Should contain {props.userName}
+    expect(code).toContain("{props.userName}");
+
+    // Edit the code - add a class
+    const editedCode = code.replace(
+      'className="my-4 leading-relaxed text-left"',
+      'className="my-4 leading-relaxed text-left text-lg"'
+    );
+
+    const parsedDoc = parseReactEmailToTipTap(editedCode);
+    expect(parsedDoc.type).toBe("doc");
+  });
+
+  it("should parse generated code with styled text (highlight/textStyle marks)", () => {
+    // This tests the triple-brace bug: style={{{ ... }}} was generated instead of style={{ ... }}
+    const originalDoc: JSONContent = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Highlighted text",
+              marks: [{ type: "highlight", attrs: { color: "#ffff00" } }],
+            },
+          ],
+        },
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Colored text",
+              marks: [
+                {
+                  type: "textStyle",
+                  attrs: { color: "#ff0000", fontSize: "18px" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const code = generateReactEmailCode(originalDoc);
+
+    // Verify the generated code has correct style syntax (double braces, not triple)
+    expect(code).toContain("style={{");
+    expect(code).not.toContain("style={{{");
+
+    // Should parse back without errors
+    const parsedDoc = parseReactEmailToTipTap(code);
+    expect(parsedDoc.type).toBe("doc");
+  });
+
+  it("should parse generated code with linked text that has styles", () => {
+    const originalDoc: JSONContent = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Click here",
+              marks: [
+                { type: "link", attrs: { href: "https://example.com" } },
+                { type: "textStyle", attrs: { color: "#0000ff" } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const code = generateReactEmailCode(originalDoc);
+
+    // Verify correct style syntax
+    expect(code).not.toContain("style={{{");
+
+    const parsedDoc = parseReactEmailToTipTap(code);
+    expect(parsedDoc.type).toBe("doc");
+  });
+
+  it("should parse code with preview text containing template vars", () => {
+    const code = `import { Html, Head, Body, Container, Text, Button, Section, Row, Column, Img, Hr, Heading, Link, Preview, Tailwind, pixelBasedPreset } from "@react-email/components";
+
+export default function EmailTemplate() {
+  return (
+    <Html>
+      <Tailwind config={{ presets: [pixelBasedPreset] }}>
+        <Head />
+        <Preview>{props.inviterName} invited you to join Wraps</Preview>
+        <Body className="bg-gray-100 font-sans">
+          <Container className="bg-white mx-auto p-[20px] max-w-[600px]">
+            <Text className="my-4 leading-relaxed text-left">Welcome!</Text>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  );
+}`;
+    const parsedDoc = parseReactEmailToTipTap(code);
+    expect(parsedDoc.type).toBe("doc");
+    expect(parsedDoc.content?.some((n) => n.type === "paragraph")).toBe(true);
+  });
+});
+
+// ============================================================================
+// Wrapper Config Extraction & Preservation Tests
+// ============================================================================
+
+describe("extractWrapperConfig", () => {
+  it("should extract Body and Container classNames from code", () => {
+    const code = `<Body className="bg-gray-100 font-sans py-2.5">
+      <Container className="bg-white mx-auto p-[20px] max-w-[600px] rounded-lg">`;
+    const config = extractWrapperConfig(code);
+    expect(config.bodyClassName).toBe("bg-gray-100 font-sans py-2.5");
+    expect(config.containerClassName).toBe(
+      "bg-white mx-auto p-[20px] max-w-[600px] rounded-lg"
+    );
+  });
+
+  it("should return undefined when elements are missing", () => {
+    const config = extractWrapperConfig("<Text>Hello</Text>");
+    expect(config.bodyClassName).toBeUndefined();
+    expect(config.containerClassName).toBeUndefined();
+  });
+});
+
+describe("Wrapper className preservation", () => {
+  it("should preserve custom Body className through code generation", () => {
+    const doc: JSONContent = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "Hello" }] },
+      ],
+    };
+    const code = generateReactEmailCode(doc, 0, {
+      bodyClassName: "bg-gray-100 font-sans py-2.5",
+    });
+    expect(code).toContain('className="bg-gray-100 font-sans py-2.5"');
+  });
+
+  it("should preserve custom Container className through code generation", () => {
+    const doc: JSONContent = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "Hello" }] },
+      ],
+    };
+    const code = generateReactEmailCode(doc, 0, {
+      containerClassName: "bg-white mx-auto p-[20px] max-w-[600px] rounded-lg",
+    });
+    expect(code).toContain(
+      'className="bg-white mx-auto p-[20px] max-w-[600px] rounded-lg"'
+    );
+  });
+
+  it("should use defaults when no wrapper options provided", () => {
+    const doc: JSONContent = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "Hello" }] },
+      ],
+    };
+    const code = generateReactEmailCode(doc);
+    expect(code).toContain('<Body className="bg-gray-100 font-sans">');
+    expect(code).toContain(
+      '<Container className="bg-white mx-auto p-[20px] max-w-[600px]">'
+    );
+  });
+
+  it("should round-trip Body className: edit code → extract → regenerate", () => {
+    // Step 1: Generate initial code
+    const doc: JSONContent = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "Hello" }] },
+      ],
+    };
+    const initialCode = generateReactEmailCode(doc);
+
+    // Step 2: Simulate user editing Body className
+    const editedCode = initialCode.replace(
+      'className="bg-gray-100 font-sans"',
+      'className="bg-gray-100 font-sans py-2.5"'
+    );
+
+    // Step 3: Extract wrapper config from edited code
+    const wrapperConfig = extractWrapperConfig(editedCode);
+    expect(wrapperConfig.bodyClassName).toBe("bg-gray-100 font-sans py-2.5");
+
+    // Step 4: Parse edited code to TipTap
+    const parsed = parseReactEmailToTipTap(editedCode);
+
+    // Step 5: Regenerate code with preserved wrapper config
+    const regeneratedCode = generateReactEmailCode(parsed, 0, {
+      ...wrapperConfig,
+    });
+
+    // Body className should be preserved
+    expect(regeneratedCode).toContain(
+      'className="bg-gray-100 font-sans py-2.5"'
+    );
+  });
+
+  it("should read wrapper classNames from doc attrs (persisted in DB)", () => {
+    // Simulate a doc that was saved with wrapper classNames in attrs
+    const doc: JSONContent = {
+      type: "doc",
+      attrs: {
+        bodyClassName: "bg-gray-100 font-sans py-2.5",
+        containerClassName:
+          "bg-white mx-auto p-[20px] max-w-[600px] rounded-lg",
+      },
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "Hello" }] },
+      ],
+    };
+
+    // generateReactEmailCode should use the doc attrs
+    const code = generateReactEmailCode(doc);
+    expect(code).toContain('<Body className="bg-gray-100 font-sans py-2.5">');
+    expect(code).toContain(
+      '<Container className="bg-white mx-auto p-[20px] max-w-[600px] rounded-lg">'
+    );
+  });
+
+  it("should persist wrapper classNames through full round-trip with doc attrs", () => {
+    // Step 1: Generate code from doc with custom attrs
+    const doc: JSONContent = {
+      type: "doc",
+      attrs: {
+        bodyClassName: "bg-gray-100 font-sans py-2.5",
+        containerClassName: "bg-white mx-auto p-[20px] max-w-[600px]",
+      },
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "Hello" }] },
+      ],
+    };
+    const code = generateReactEmailCode(doc);
+    expect(code).toContain('className="bg-gray-100 font-sans py-2.5"');
+
+    // Step 2: Parse code back to TipTap
+    const parsed = parseReactEmailToTipTap(code);
+
+    // Step 3: Extract wrapper config and inject into doc attrs (as code-view does)
+    const wrapperConfig = extractWrapperConfig(code);
+    if (parsed.type === "doc") {
+      parsed.attrs = {
+        ...parsed.attrs,
+        bodyClassName: wrapperConfig.bodyClassName || null,
+        containerClassName: wrapperConfig.containerClassName || null,
+      };
+    }
+
+    // Step 4: Regenerate code from the parsed doc (with attrs)
+    const regenerated = generateReactEmailCode(parsed);
+    expect(regenerated).toContain(
+      '<Body className="bg-gray-100 font-sans py-2.5">'
+    );
+  });
+});
+
+// ============================================================================
+// React Email Demo Template Parsing Tests
+// These test that real-world React Email patterns are parseable
+// ============================================================================
+
+describe("React Email Template Patterns", () => {
+  it("should parse a Vercel invite-style template", () => {
+    const code = `import { Body, Button, Container, Head, Heading, Hr, Html, Img, Link, Preview, Section, Text, Tailwind, pixelBasedPreset } from "@react-email/components";
+
+export default function VercelInviteEmail() {
+  return (
+    <Html>
+      <Tailwind config={{ presets: [pixelBasedPreset] }}>
+        <Head />
+        <Preview>Join the team on Vercel</Preview>
+        <Body className="bg-white font-sans">
+          <Container className="mx-auto py-[20px] px-[12px] max-w-[560px]">
+            <Img src="https://example.com/logo.png" width="48" height="48" alt="Logo" />
+            <Heading as="h1" className="text-2xl font-bold my-4">Join the team</Heading>
+            <Text className="my-4 leading-relaxed text-left">Hello there,</Text>
+            <Text className="my-4 leading-relaxed text-left">You have been invited to join a team.</Text>
+            <Section className="bg-gray-50 p-6 rounded-lg my-4">
+              <Text className="my-4 leading-relaxed text-center">
+                Team Name
+              </Text>
+            </Section>
+            <Button href="https://example.com/invite" className="bg-indigo-600 text-white px-6 py-3 rounded-md font-semibold">
+              Join Team
+            </Button>
+            <Hr className="border-gray-200 my-6" />
+            <Text className="my-4 leading-relaxed text-left text-sm text-gray-500">
+              If you did not expect this invitation, you can ignore this email.
+            </Text>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  );
+}`;
+    const result = parseReactEmailToTipTap(code);
+    expect(result.type).toBe("doc");
+    expect(result.content?.some((n) => n.type === "emailSection")).toBe(true);
+    expect(result.content?.some((n) => n.type === "emailButton")).toBe(true);
+    expect(result.content?.some((n) => n.type === "heading")).toBe(true);
+    expect(result.content?.some((n) => n.type === "emailDivider")).toBe(true);
+    expect(result.content?.some((n) => n.type === "emailImage")).toBe(true);
+  });
+
+  it("should parse a welcome email template with multiple sections", () => {
+    const code = `import { Body, Button, Container, Head, Heading, Hr, Html, Img, Link, Preview, Section, Row, Column, Text, Tailwind, pixelBasedPreset } from "@react-email/components";
+
+export default function WelcomeEmail() {
+  return (
+    <Html>
+      <Tailwind config={{ presets: [pixelBasedPreset] }}>
+        <Head />
+        <Preview>Welcome to our platform</Preview>
+        <Body className="bg-gray-100 font-sans">
+          <Container className="bg-white mx-auto p-[20px] max-w-[600px]">
+            <Section className="bg-indigo-600 p-8 rounded-lg">
+              <Heading as="h1" className="text-3xl font-bold text-center">Welcome!</Heading>
+            </Section>
+            <Section className="bg-white p-6">
+              <Text className="my-4 leading-relaxed text-left">Thanks for signing up. Here are some things you can do:</Text>
+              <Row>
+                <Column className="w-[50%]">
+                  <Text className="my-4 leading-relaxed text-left">Feature One</Text>
+                </Column>
+                <Column className="w-[50%]">
+                  <Text className="my-4 leading-relaxed text-left">Feature Two</Text>
+                </Column>
+              </Row>
+            </Section>
+            <Button href="https://example.com/dashboard" className="bg-blue-600 text-white px-8 py-3 rounded-md">
+              Go to Dashboard
+            </Button>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  );
+}`;
+    const result = parseReactEmailToTipTap(code);
+    expect(result.type).toBe("doc");
+    expect(
+      result.content?.filter((n) => n.type === "emailSection").length
+    ).toBeGreaterThanOrEqual(2);
+    expect(result.content?.some((n) => n.type === "emailButton")).toBe(true);
+  });
+
+  it("should parse a receipt email template with inline styles", () => {
+    const code = `import { Body, Container, Head, Heading, Hr, Html, Img, Link, Preview, Section, Row, Column, Text, Tailwind, pixelBasedPreset } from "@react-email/components";
+
+export default function ReceiptEmail() {
+  return (
+    <Html>
+      <Tailwind config={{ presets: [pixelBasedPreset] }}>
+        <Head />
+        <Preview>Your receipt from Acme</Preview>
+        <Body className="bg-white font-sans">
+          <Container className="mx-auto p-[20px] max-w-[600px]">
+            <Heading as="h1" className="text-2xl font-bold my-4">Receipt</Heading>
+            <Text className="my-4 leading-relaxed text-left text-gray-500">Order #12345</Text>
+            <Hr className="border-gray-200 my-6" />
+            <Row>
+              <Column className="w-[60%]">
+                <Text className="my-4 leading-relaxed text-left font-semibold">Item</Text>
+              </Column>
+              <Column className="w-[40%]">
+                <Text className="my-4 leading-relaxed text-right font-semibold">Price</Text>
+              </Column>
+            </Row>
+            <Hr className="border-gray-200 my-6" />
+            <Row>
+              <Column className="w-[60%]">
+                <Text className="my-4 leading-relaxed text-left">Widget Pro</Text>
+              </Column>
+              <Column className="w-[40%]">
+                <Text className="my-4 leading-relaxed text-right">$49.99</Text>
+              </Column>
+            </Row>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  );
+}`;
+    const result = parseReactEmailToTipTap(code);
+    expect(result.type).toBe("doc");
+    expect(result.content?.some((n) => n.type === "heading")).toBe(true);
+    expect(result.content?.some((n) => n.type === "emailDivider")).toBe(true);
+    expect(result.content?.some((n) => n.type === "emailRow")).toBe(true);
+  });
+
+  it("should parse a notification email template", () => {
+    const code = `import { Body, Button, Container, Head, Html, Img, Link, Preview, Section, Text, Tailwind, pixelBasedPreset } from "@react-email/components";
+
+export default function NotificationEmail() {
+  return (
+    <Html>
+      <Tailwind config={{ presets: [pixelBasedPreset] }}>
+        <Head />
+        <Preview>New notification</Preview>
+        <Body className="bg-gray-100 font-sans">
+          <Container className="bg-white mx-auto p-[20px] max-w-[600px] rounded-lg">
+            <Img src="https://example.com/avatar.png" width="40" height="40" alt="User" className="rounded-full" />
+            <Text className="my-4 leading-relaxed text-left">
+              <Link href="https://example.com/user/jane">Jane</Link> commented on your post.
+            </Text>
+            <Section className="bg-gray-50 p-4 rounded-md">
+              <Text className="my-4 leading-relaxed text-left text-gray-600">
+                This looks great! I would love to collaborate on this project.
+              </Text>
+            </Section>
+            <Button href="https://example.com/post/123" className="bg-blue-500 text-white px-6 py-3 rounded-md">
+              View Comment
+            </Button>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  );
+}`;
+    const result = parseReactEmailToTipTap(code);
+    expect(result.type).toBe("doc");
+    expect(result.content?.some((n) => n.type === "emailImage")).toBe(true);
+    expect(result.content?.some((n) => n.type === "emailSection")).toBe(true);
+    expect(result.content?.some((n) => n.type === "emailButton")).toBe(true);
+  });
+
+  it("should parse a minimal React Email template", () => {
+    const code = `import { Html, Text } from "@react-email/components";
+
+export default function Email() {
+  return (
+    <Html>
+      <Text>Hello</Text>
+    </Html>
+  );
+}`;
+    const result = parseReactEmailToTipTap(code);
+    expect(result.type).toBe("doc");
+    expect(result.content?.some((n) => n.type === "paragraph")).toBe(true);
+  });
+
+  it("should parse template with JSX fragment", () => {
+    const code = `import { Text, Heading } from "@react-email/components";
+
+export default function Email() {
+  return (
+    <>
+      <Heading as="h1">Title</Heading>
+      <Text>Content</Text>
+    </>
+  );
+}`;
+    const result = parseReactEmailToTipTap(code);
+    expect(result.type).toBe("doc");
+    expect(result.content?.some((n) => n.type === "heading")).toBe(true);
+    expect(result.content?.some((n) => n.type === "paragraph")).toBe(true);
+  });
+
+  it("should parse template with style objects", () => {
+    const code = `import { Section, Text } from "@react-email/components";
+
+export default function Email() {
+  return (
+    <Section style={{ backgroundColor: "#f0f0f0", padding: "16px", borderRadius: "8px" }}>
+      <Text style={{ color: "#333333", fontSize: "14px" }}>Styled text</Text>
+    </Section>
+  );
+}`;
+    const result = parseReactEmailToTipTap(code);
+    expect(result.type).toBe("doc");
+    expect(result.content?.some((n) => n.type === "emailSection")).toBe(true);
   });
 });
 

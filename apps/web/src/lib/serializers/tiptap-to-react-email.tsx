@@ -835,6 +835,15 @@ export function tiptapToReactEmail(
   });
   const tailwindConfig = createTailwindConfig(options.brandKit);
 
+  // Use wrapper classNames from doc attrs if present (persisted from code editor),
+  // otherwise fall back to brand-kit defaults
+  const bodyClassName =
+    (content.attrs?.bodyClassName as string) ||
+    "bg-gray-50 font-sans text-brand-text dark:bg-gray-900 dark:text-brand-dark-text";
+  const containerClassName =
+    (content.attrs?.containerClassName as string) ||
+    "mx-auto max-w-[600px] bg-brand-background p-5 dark:bg-brand-dark-background";
+
   return (
     <Html>
       <Tailwind config={tailwindConfig}>
@@ -846,10 +855,8 @@ export function tiptapToReactEmail(
           <style>{":root { color-scheme: light dark; }"}</style>
         </Head>
         {options.previewText && <Preview>{options.previewText}</Preview>}
-        <Body className="bg-gray-50 font-sans text-brand-text dark:bg-gray-900 dark:text-brand-dark-text">
-          <Container className="mx-auto max-w-[600px] bg-brand-background p-5 dark:bg-brand-dark-background">
-            {emailContent}
-          </Container>
+        <Body className={bodyClassName}>
+          <Container className={containerClassName}>{emailContent}</Container>
         </Body>
       </Tailwind>
     </Html>
@@ -868,9 +875,14 @@ export async function renderTipTapToHtml(
 ): Promise<string> {
   const emailComponent = tiptapToReactEmail(content, testData, options);
   const html = await render(emailComponent);
-  // Prettify the HTML output for better readability
-  const prettyHtml = await pretty(html);
-  return prettyHtml;
+  // Prettify the HTML output for better readability.
+  // The prettifier may fail on complex/nested HTML (e.g. nested <p> tags),
+  // so fall back to the raw rendered HTML which is still valid for email clients.
+  try {
+    return await pretty(html);
+  } catch {
+    return html;
+  }
 }
 
 // ============================================================================
@@ -962,13 +974,33 @@ function getOperatorCodeString(operator: string): string {
 }
 
 /**
+ * Extract wrapper element classNames from React Email code.
+ * Used to preserve Body/Container classNames across code editing round-trips.
+ */
+export function extractWrapperConfig(code: string): {
+  bodyClassName?: string;
+  containerClassName?: string;
+} {
+  const bodyMatch = code.match(/<Body\s+className="([^"]*)"/);
+  const containerMatch = code.match(/<Container\s+className="([^"]*)"/);
+  return {
+    bodyClassName: bodyMatch?.[1],
+    containerClassName: containerMatch?.[1],
+  };
+}
+
+/**
  * Generates React Email code as a string from TipTap JSON content
  * Uses Tailwind CSS classes for styling, preserving actual attribute values
  */
 export function generateReactEmailCode(
   content: JSONContent,
   indent = 0,
-  options?: { previewText?: string }
+  options?: {
+    previewText?: string;
+    bodyClassName?: string;
+    containerClassName?: string;
+  }
 ): string {
   const spaces = "  ".repeat(indent);
 
@@ -1004,6 +1036,16 @@ export function generateReactEmailCode(
         ? `\n        <Preview>${previewText}</Preview>`
         : "";
 
+      // Read wrapper classNames from doc attrs first (persisted), then options, then defaults
+      const bodyClass =
+        (content.attrs?.bodyClassName as string) ||
+        options?.bodyClassName ||
+        "bg-gray-100 font-sans";
+      const containerClass =
+        (content.attrs?.containerClassName as string) ||
+        options?.containerClassName ||
+        "bg-white mx-auto p-[20px] max-w-[600px]";
+
       return `import { Html, Head, Body, Container, Text, Button, Section, Row, Column, Img, Hr, Heading, Link, Preview, Tailwind, pixelBasedPreset } from "@react-email/components";
 
 export default function EmailTemplate() {
@@ -1011,8 +1053,8 @@ export default function EmailTemplate() {
     <Html>
       <Tailwind config={{ presets: [pixelBasedPreset] }}>
         <Head />${previewLine}
-        <Body className="bg-gray-100 font-sans">
-          <Container className="bg-white mx-auto p-[20px] max-w-[600px]">
+        <Body className="${bodyClass}">
+          <Container className="${containerClass}">
 ${children}
           </Container>
         </Body>
@@ -1123,7 +1165,7 @@ ${children}
         const attrs = [
           `href="${linkHref}"`,
           className ? `className="${className}"` : "",
-          styleStr ? `style={${styleStr}}` : "",
+          styleStr ? `style=${styleStr}` : "",
         ]
           .filter(Boolean)
           .join(" ");
@@ -1133,7 +1175,7 @@ ${children}
       if (className || styleStr) {
         const attrs = [
           className ? `className="${className}"` : "",
-          styleStr ? `style={${styleStr}}` : "",
+          styleStr ? `style=${styleStr}` : "",
         ]
           .filter(Boolean)
           .join(" ");

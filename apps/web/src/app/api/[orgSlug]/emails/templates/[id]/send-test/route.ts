@@ -1,7 +1,13 @@
 import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
-import { awsAccount, brandKit, db, template } from "@wraps/db";
+import {
+  awsAccount,
+  brandKit,
+  db,
+  organizationExtension,
+  template,
+} from "@wraps/db";
 import { WrapsEmail } from "@wraps.dev/email";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -186,14 +192,36 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
 
-    // Determine sender address from request or org defaults
-    const senderEmail = from || process.env.EMAIL_FROM || "noreply@wraps.dev";
+    // Resolve sender from request body, then org defaults
+    let senderEmail = from;
+    let senderName: string | undefined;
+
+    if (!senderEmail) {
+      const orgExtension = await db.query.organizationExtension.findFirst({
+        where: eq(organizationExtension.organizationId, orgWithMembership.id),
+      });
+      senderEmail = orgExtension?.defaultFrom ?? undefined;
+      senderName = orgExtension?.defaultFromName ?? undefined;
+    }
+
+    if (!senderEmail) {
+      return NextResponse.json(
+        {
+          error:
+            "No sender email configured. Set a default sender in Settings > Sender Defaults, or provide a 'from' address.",
+        },
+        { status: 400 }
+      );
+    }
 
     // Send to each recipient
     const results = await Promise.allSettled(
       recipients.map(async (recipient: string) => {
+        const fromAddress = senderName
+          ? `${senderName} <${senderEmail}>`
+          : senderEmail;
         const result = await wraps.send({
-          from: senderEmail,
+          from: fromAddress,
           to: recipient,
           subject,
           html,
