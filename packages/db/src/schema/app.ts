@@ -89,6 +89,10 @@ export const awsAccount = pgTable(
         trackedEvents?: string[];
         customTrackingDomain?: string;
         dedicatedIpCount?: number;
+        identities?: Array<{
+          identity: string;
+          type: "DOMAIN" | "EMAIL_ADDRESS";
+        }>;
       };
       sms?: {
         enabled?: boolean;
@@ -99,11 +103,11 @@ export const awsAccount = pgTable(
           capabilities: string[];
         }>;
         eventHistoryEnabled?: boolean;
+        identities?: Array<{
+          identity: string;
+          type: string;
+        }>;
       };
-      identities?: Array<{
-        identity: string;
-        type: "DOMAIN" | "EMAIL_ADDRESS";
-      }>;
     }>(),
 
     // Audit

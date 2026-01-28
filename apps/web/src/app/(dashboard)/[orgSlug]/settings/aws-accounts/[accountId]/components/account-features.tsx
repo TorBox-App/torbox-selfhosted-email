@@ -107,11 +107,11 @@ export function AccountFeatures({
     message: string;
   } | null>(null);
 
-  // Use scanned features from account, or empty defaults
-  const features = account.features ?? { email: {}, sms: {}, identities: [] };
-  const emailFeatures = features.email ?? {};
-  const smsFeatures = features.sms ?? {};
-  const identities = features.identities ?? [];
+  // Use scanned features from account
+  const features = account.features;
+  const emailFeatures = features?.email;
+  const smsFeatures = features?.sms;
+  const identities = emailFeatures?.identities ?? [];
 
   const handleScanFeatures = () => {
     startTransition(async () => {
@@ -138,10 +138,10 @@ export function AccountFeatures({
     });
   };
 
-  const dedicatedIpCount = emailFeatures.dedicatedIpCount ?? 0;
-  const trackedEvents = emailFeatures.trackedEvents ?? [];
-  const sesSandbox = emailFeatures.sandbox ?? true; // Default to sandbox
-  const smsPhoneNumbers = smsFeatures.phoneNumbers ?? [];
+  const dedicatedIpCount = emailFeatures?.dedicatedIpCount ?? 0;
+  const trackedEvents = emailFeatures?.trackedEvents ?? [];
+  const sesSandbox = emailFeatures?.sandbox ?? true; // Default to sandbox
+  const smsPhoneNumbers = smsFeatures?.phoneNumbers ?? [];
 
   const emailFeatureStatus = {
     // Core (always enabled with Wraps config)
@@ -152,9 +152,9 @@ export function AccountFeatures({
     openClickTracking: true,
     // Optional features (from scan)
     eventTracking: trackedEvents.length > 0,
-    eventHistory: !!emailFeatures.eventHistoryEnabled,
-    archiving: !!emailFeatures.archivingEnabled,
-    customTrackingDomain: !!emailFeatures.customTrackingDomain,
+    eventHistory: !!emailFeatures?.eventHistoryEnabled,
+    archiving: !!emailFeatures?.archivingEnabled,
+    customTrackingDomain: !!emailFeatures?.customTrackingDomain,
     dedicatedIp: dedicatedIpCount > 0,
   };
 
@@ -166,7 +166,7 @@ export function AccountFeatures({
   // Count enabled SMS features
   const smsFeaturesEnabled = [
     smsPhoneNumbers.length > 0,
-    smsFeatures.eventHistoryEnabled,
+    smsFeatures?.eventHistoryEnabled,
   ].filter(Boolean).length;
   const smsFeaturesTotal = 2;
 
@@ -291,7 +291,7 @@ export function AccountFeatures({
             {/* Core Infrastructure */}
             <FeatureItem
               description="wraps-email-tracking"
-              detail={emailFeatures.configSetName || "wraps-email-tracking"}
+              detail={emailFeatures?.configSetName || "wraps-email-tracking"}
               enabled={emailFeatureStatus.configSet}
               icon={<Settings className="h-4 w-4 text-slate-600" />}
               iconBgClass="bg-slate-100 dark:bg-slate-800"
@@ -372,7 +372,7 @@ export function AccountFeatures({
             <FeatureItem
               description="Full email content storage via Mail Manager"
               detail={
-                emailFeatures.archiveArn ? "Archive configured" : undefined
+                emailFeatures?.archiveArn ? "Archive configured" : undefined
               }
               enabled={emailFeatureStatus.archiving}
               icon={<Archive className="h-4 w-4 text-teal-600" />}
@@ -383,7 +383,7 @@ export function AccountFeatures({
             {/* Custom Tracking Domain */}
             <FeatureItem
               description="Branded tracking URLs"
-              detail={emailFeatures.customTrackingDomain}
+              detail={emailFeatures?.customTrackingDomain}
               enabled={emailFeatureStatus.customTrackingDomain}
               icon={<Globe className="h-4 w-4 text-cyan-600" />}
               iconBgClass="bg-cyan-100 dark:bg-cyan-900"
@@ -488,7 +488,7 @@ export function AccountFeatures({
 
             <FeatureItem
               description="Store delivery events in DynamoDB"
-              enabled={!!smsFeatures.eventHistoryEnabled}
+              enabled={!!smsFeatures?.eventHistoryEnabled}
               icon={<Database className="h-4 w-4 text-purple-600" />}
               iconBgClass="bg-purple-100 dark:bg-purple-900"
               name="SMS Event History"
