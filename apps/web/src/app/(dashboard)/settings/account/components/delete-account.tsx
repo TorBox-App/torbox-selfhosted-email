@@ -20,8 +20,29 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { authClient } from "@/lib/auth-client";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export function DeleteAccount() {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function handleDeleteAccount() {
+    setIsDeleting(true);
+    try {
+      const { error } = await authClient.deleteUser();
+      if (error) {
+        toast.error(error.message || "Failed to delete account");
+        return;
+      }
+      window.location.href = "/";
+    } catch {
+      toast.error("Failed to delete account. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -52,9 +73,15 @@ export function DeleteAccount() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction variant="destructive">
-                  Delete Account
+                <AlertDialogCancel disabled={isDeleting}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={isDeleting}
+                  onClick={handleDeleteAccount}
+                >
+                  {isDeleting ? "Deleting..." : "Delete Account"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

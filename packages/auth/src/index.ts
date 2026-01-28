@@ -272,6 +272,11 @@ export const auth = betterAuth<BetterAuthOptions>({
     provider: "pg",
     schema,
   }),
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
+  },
   trustedOrigins: [process.env.CORS_ORIGIN || ""],
   socialProviders: {
     google: {
