@@ -44,6 +44,12 @@ export function AcceptInvitationForm({
     const result = await acceptInvitation(invitationId);
 
     if (result.success) {
+      // Set the accepted org as the active organization in the session
+      // so the sidebar and other org-scoped UI renders correctly
+      await authClient.organization.setActive({
+        organizationSlug: result.organizationSlug,
+      });
+
       // Capture invitation accepted event in PostHog
       posthog.capture("invitation_accepted", {
         organization_name: invitation.organization.name,
