@@ -2,7 +2,9 @@
 
 import {
   Blocks,
+  Gift,
   HardDrive,
+  Layers,
   LayoutTemplate,
   Lightbulb,
   type LucideIcon,
@@ -32,6 +34,46 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "0.13.0",
+    date: "January 2026",
+    icon: Gift,
+    iconColor:
+      "border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400",
+    title: "Free Plan",
+    items: [
+      "Free tier with contacts, topics, broadcasts, and workflows",
+      "Getting Started dashboard with guided activation checklist",
+      "Google and GitHub OAuth sign-in",
+      "Events log with search, filtering, and usage tracking",
+      "Monthly and annual billing toggle with promo code support",
+      <>
+        CLI: <Code>wraps permissions</Code> command for IAM troubleshooting
+      </>,
+    ],
+  },
+  {
+    version: "0.12.0",
+    date: "January 2026",
+    icon: Layers,
+    iconColor:
+      "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
+    title: "Infrastructure as Code",
+    items: [
+      <>
+        Published <Code>@wraps.dev/cdk</Code> and <Code>@wraps.dev/pulumi</Code>{" "}
+        npm packages
+      </>,
+      "One-click CloudFormation deployment from the dashboard",
+      "Multi-provider DNS support (Route53, Cloudflare, Vercel)",
+      <>
+        CLI: <Code>wraps platform connect</Code> to link CLI deployments to the
+        dashboard
+      </>,
+      "CloudWatch reputation alerting for SES metrics",
+      "DKIM, SPF, and DMARC DNS record outputs for all IaC providers",
+    ],
+  },
   {
     version: "0.11.0",
     date: "January 2026",
