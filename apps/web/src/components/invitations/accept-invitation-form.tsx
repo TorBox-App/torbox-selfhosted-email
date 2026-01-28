@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useSession } from "@/lib/auth-client";
+import { authClient, useSession } from "@/lib/auth-client";
 
 type AcceptInvitationFormProps = {
   invitation: InvitationDetails;
@@ -36,7 +36,7 @@ export function AcceptInvitationForm({
     if (!session?.user) {
       // Redirect to auth with return URL
       const returnUrl = `/invitations/${invitationId}/accept`;
-      router.push(`/auth?returnUrl=${encodeURIComponent(returnUrl)}`);
+      router.push(`/auth?redirect=${encodeURIComponent(returnUrl)}`);
       return;
     }
 

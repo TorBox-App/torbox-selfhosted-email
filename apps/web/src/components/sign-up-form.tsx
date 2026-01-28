@@ -30,22 +30,25 @@ export default function SignUpForm({
 } & React.ComponentProps<"div">) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const _redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = searchParams.get("redirect");
   const plan = searchParams.get("plan");
   const interval = searchParams.get("interval") || "monthly";
   const { isPending } = authClient.useSession();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
 
-  // Compute onboarding URL with plan params for OAuth callback
-  const onboardingUrl = useMemo(() => {
+  const isInviteRedirect = redirectTo?.startsWith("/invitations/");
+
+  // Compute callback URL for OAuth - use invite redirect or onboarding
+  const callbackUrl = useMemo(() => {
+    if (isInviteRedirect && redirectTo) return redirectTo;
     const params = new URLSearchParams();
     if (plan) params.set("plan", plan);
     if (interval) params.set("interval", interval);
     return params.toString() !== ""
       ? `/onboarding?${params.toString()}`
       : "/onboarding";
-  }, [plan, interval]);
+  }, [plan, interval, isInviteRedirect, redirectTo]);
 
   const form = useForm({
     defaultValues: {
@@ -92,16 +95,20 @@ export default function SignUpForm({
         billing_interval: interval,
       });
 
-      // Step 4: Redirect to onboarding to create organization
+      // Step 4: Redirect to invite page or onboarding
       toast.success("Account created successfully!");
-      const onboardingParams = new URLSearchParams();
-      if (plan) onboardingParams.set("plan", plan);
-      if (interval) onboardingParams.set("interval", interval);
-      const onboardingUrl =
-        onboardingParams.toString() !== ""
-          ? `/onboarding?${onboardingParams.toString()}`
-          : "/onboarding";
-      router.push(onboardingUrl);
+      if (isInviteRedirect && redirectTo) {
+        router.push(redirectTo);
+      } else {
+        const onboardingParams = new URLSearchParams();
+        if (plan) onboardingParams.set("plan", plan);
+        if (interval) onboardingParams.set("interval", interval);
+        const onboardingUrl =
+          onboardingParams.toString() !== ""
+            ? `/onboarding?${onboardingParams.toString()}`
+            : "/onboarding";
+        router.push(onboardingUrl);
+      }
     },
     validators: {
       onSubmit: z.object({
@@ -245,7 +252,7 @@ export default function SignUpForm({
                   try {
                     await authClient.signIn.social({
                       provider: "google",
-                      callbackURL: onboardingUrl,
+                      callbackURL: callbackUrl,
                     });
                   } catch (error: any) {
                     console.error("Google sign-up error:", error);
@@ -291,7 +298,7 @@ export default function SignUpForm({
                   try {
                     await authClient.signIn.social({
                       provider: "github",
-                      callbackURL: onboardingUrl,
+                      callbackURL: callbackUrl,
                     });
                   } catch (error: any) {
                     console.error("GitHub sign-up error:", error);
