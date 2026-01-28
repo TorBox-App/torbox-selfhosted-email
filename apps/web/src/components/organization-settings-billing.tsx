@@ -14,8 +14,8 @@ import {
   type SubscriptionData,
 } from "@/actions/subscriptions";
 import { BillingToggle } from "@/components/billing-toggle";
-import Loader from "@/components/loader";
 import { EventUsageCard } from "@/components/event-usage-card";
+import Loader from "@/components/loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

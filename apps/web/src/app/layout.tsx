@@ -35,7 +35,10 @@ export default async function RootLayout({
   const isDark = themeCookie === "dark";
 
   return (
-    <html className={`${inter.variable} antialiased${isDark ? " dark" : ""}`} lang="en">
+    <html
+      className={`${inter.variable} antialiased${isDark ? " dark" : ""}`}
+      lang="en"
+    >
       <body className={inter.className}>
         <NuqsAdapter>
           <QueryProvider>
