@@ -246,7 +246,7 @@ export async function updateMemberRole(
     });
 
     if (org?.slug) {
-      revalidatePath(`/${org.slug}/members`);
+      revalidatePath(`/${org.slug}/settings/members`);
     }
 
     return {
@@ -413,7 +413,7 @@ export async function inviteMember(
 
     // Revalidate the members page
     if (org.slug) {
-      revalidatePath(`/${org.slug}/members`);
+      revalidatePath(`/${org.slug}/settings/members`);
     }
 
     return {
@@ -521,7 +521,7 @@ export async function removeMember(
     });
 
     if (org?.slug) {
-      revalidatePath(`/${org.slug}/members`);
+      revalidatePath(`/${org.slug}/settings/members`);
     }
 
     return {
@@ -600,7 +600,7 @@ export async function cancelInvitation(
     });
 
     if (org?.slug) {
-      revalidatePath(`/${org.slug}/members`);
+      revalidatePath(`/${org.slug}/settings/members`);
     }
 
     return {
