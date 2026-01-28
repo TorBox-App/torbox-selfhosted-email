@@ -3,7 +3,7 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { invitation, member, user } from "@wraps/db/schema/auth";
-import { sendInvitationEmail } from "@wraps/email/emails/invitation";
+import { getWrapsClient } from "@wraps/email/lib/client";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { createActionLogger, serializeError } from "@/lib/logger";
@@ -392,12 +392,20 @@ export async function inviteMember(
 
     // Send invitation email using @wraps.dev/email
     try {
-      await sendInvitationEmail({
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const wraps = await getWrapsClient();
+
+      await wraps.sendTemplate({
+        from: process.env.EMAIL_FROM || "Wraps <info@wraps.dev>",
         to: email,
-        inviterName: session.user.name,
-        organizationName: org.name,
-        role,
-        invitationId: newInvitation.id,
+        template: "Wraps-Organization-Member-Invite",
+        templateData: {
+          declineLink: `${appUrl}/invitations/${newInvitation.id}/decline`,
+          inviteLink: `${appUrl}/invitations/${newInvitation.id}/accept`,
+          organizationName: org.name,
+          inviterName: session.user.name,
+          role,
+        },
       });
     } catch (emailError) {
       const log = createActionLogger("inviteMember", {
