@@ -71,7 +71,7 @@ export function EventUsageCard({ orgSlug, className }: EventUsageCardProps) {
             </span>
           )}
         </div>
-        <CardDescription>Custom events this month</CardDescription>
+        <CardDescription>Tracked events this month</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {isUnlimited ? (

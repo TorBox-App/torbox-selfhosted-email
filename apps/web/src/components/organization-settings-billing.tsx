@@ -15,7 +15,7 @@ import {
 } from "@/actions/subscriptions";
 import { BillingToggle } from "@/components/billing-toggle";
 import Loader from "@/components/loader";
-import { MessageUsageCard } from "@/components/message-usage-card";
+import { EventUsageCard } from "@/components/event-usage-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -258,8 +258,8 @@ export function OrganizationSettingsBilling({
         </CardContent>
       </Card>
 
-      {/* Message Usage */}
-      {organization.slug && <MessageUsageCard orgSlug={organization.slug} />}
+      {/* Event Usage */}
+      {organization.slug && <EventUsageCard orgSlug={organization.slug} />}
 
       {/* Upgrade Options */}
       {!isCancelled && currentPlan !== "scale" && (
