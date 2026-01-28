@@ -33,7 +33,7 @@ export default function DashboardPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Wraps Platform</h1>
         <p>
           Templates, broadcasts, contacts, and analytics. The premium layer on

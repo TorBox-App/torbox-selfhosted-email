@@ -24,7 +24,7 @@ export default function ChangelogPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Changelog</h1>
         <p>
           Latest updates, improvements, and releases for Wraps CLI, SDK, and

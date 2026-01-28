@@ -40,12 +40,12 @@ export default function DocsPage() {
   return (
     <>
       <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         id="breadcrumb-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       {/* Server-rendered content for SEO - visually hidden but accessible to crawlers */}
-      <nav className="sr-only" aria-hidden="true">
+      <nav aria-hidden="true" className="sr-only">
         <h1>Wraps Documentation</h1>
         <p>
           Deploy production-ready email infrastructure to your AWS account in

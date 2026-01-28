@@ -23,7 +23,7 @@ export default function DomainVerificationPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Domain Verification Guide</h1>
         <p>Set up DKIM, SPF, and DMARC for your domain.</p>
         <h2>DKIM Setup</h2>

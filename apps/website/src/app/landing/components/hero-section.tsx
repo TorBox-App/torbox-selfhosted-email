@@ -1,6 +1,5 @@
-import { ArrowRight, Github } from "lucide-react";
+import { Github } from "lucide-react";
 import { DotPattern } from "@/components/dot-pattern";
-import { Button } from "@/components/ui/button";
 import { HeroAnimatedCTA } from "./hero-cta";
 
 // Static content - server rendered, visible immediately

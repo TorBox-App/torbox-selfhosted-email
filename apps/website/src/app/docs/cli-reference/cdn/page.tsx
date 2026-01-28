@@ -23,7 +23,7 @@ export default function CLIReferenceCdnPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>CDN CLI Commands</h1>
         <p>CLI commands for managing CDN infrastructure.</p>
         <h2>wraps cdn init</h2>

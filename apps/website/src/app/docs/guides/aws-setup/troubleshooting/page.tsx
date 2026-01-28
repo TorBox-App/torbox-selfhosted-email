@@ -23,7 +23,7 @@ export default function TroubleshootingPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>AWS Troubleshooting</h1>
         <p>Troubleshoot common AWS setup issues.</p>
       </article>

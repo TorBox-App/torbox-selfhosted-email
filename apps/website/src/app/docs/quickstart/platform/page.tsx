@@ -26,7 +26,7 @@ export default function PlatformQuickstartPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Platform Quickstart</h1>
         <p>Get started with the Wraps Platform for contacts and broadcasts.</p>
         <h2>Prerequisites</h2>

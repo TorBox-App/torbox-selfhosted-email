@@ -64,10 +64,7 @@ const articleSchema = {
     url: "https://wraps.dev",
     description:
       "Email infrastructure experts building tools to deploy production-ready email systems to AWS. Specialists in email deliverability, authentication (SPF, DKIM, DMARC), and AWS SES.",
-    sameAs: [
-      "https://github.com/wraps-team",
-      "https://twitter.com/wrapsdev",
-    ],
+    sameAs: ["https://github.com/wraps-team", "https://twitter.com/wrapsdev"],
   },
   publisher: {
     "@type": "Organization",
@@ -120,17 +117,17 @@ export default function Page() {
   return (
     <>
       <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
         id="article-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
       <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         id="faq-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
       {/* Server-rendered content for SEO - visually hidden but accessible to crawlers */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>How to Get Out of AWS SES Sandbox</h1>
         <p>
           The complete guide to SES production access approval. Interactive

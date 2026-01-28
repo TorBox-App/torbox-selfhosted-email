@@ -23,7 +23,7 @@ export default function TelemetryPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Telemetry</h1>
         <p>Learn about Wraps CLI telemetry and how to opt out.</p>
       </article>

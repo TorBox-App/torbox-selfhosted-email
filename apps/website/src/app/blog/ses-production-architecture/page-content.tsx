@@ -940,7 +940,10 @@ export default function SESProductionArchitecture() {
                 <p className="text-foreground/90 text-sm">
                   <strong>Before you start:</strong> Make sure your domain has
                   proper email authentication configured.{" "}
-                  <a className="text-primary hover:underline" href="/blog/your-dmarc-policy-is-useless">
+                  <a
+                    className="text-primary hover:underline"
+                    href="/blog/your-dmarc-policy-is-useless"
+                  >
                     Check your DMARC policy
                   </a>{" "}
                   and{" "}
@@ -1331,11 +1334,17 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
 
               <p className="text-muted-foreground text-sm mb-6">
                 <strong>Related:</strong>{" "}
-                <a className="text-primary hover:underline" href="/blog/your-dmarc-policy-is-useless">
+                <a
+                  className="text-primary hover:underline"
+                  href="/blog/your-dmarc-policy-is-useless"
+                >
                   Why your DMARC policy is useless
                 </a>{" "}
                 covers SPF/DKIM alignment in detail, and our{" "}
-                <a className="text-primary hover:underline" href="/blog/spf-guide">
+                <a
+                  className="text-primary hover:underline"
+                  href="/blog/spf-guide"
+                >
                   SPF configuration guide
                 </a>{" "}
                 explains the include mechanism.
@@ -1389,7 +1398,8 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                     AWS SES Sandbox Exit Guide
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Step-by-step guide to getting production access with proper DNS configuration.
+                    Step-by-step guide to getting production access with proper
+                    DNS configuration.
                   </p>
                 </a>
                 <a
@@ -1400,7 +1410,8 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                     Fix Your DMARC Policy
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Most DMARC policies don't protect you. Learn what actually works.
+                    Most DMARC policies don't protect you. Learn what actually
+                    works.
                   </p>
                 </a>
                 <a
@@ -1411,7 +1422,8 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                     Wraps Platform Dashboard
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Monitor deliverability, track events, and manage your email infrastructure.
+                    Monitor deliverability, track events, and manage your email
+                    infrastructure.
                   </p>
                 </a>
                 <a
@@ -1422,7 +1434,8 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                     Domain Verification Guide
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Configure DKIM, SPF, and DMARC records for your sending domain.
+                    Configure DKIM, SPF, and DMARC records for your sending
+                    domain.
                   </p>
                 </a>
               </div>

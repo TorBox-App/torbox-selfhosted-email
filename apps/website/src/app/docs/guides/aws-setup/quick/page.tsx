@@ -23,7 +23,7 @@ export default function QuickStartPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Quick AWS Setup</h1>
         <p>Fast track AWS setup for Wraps - get started in minutes.</p>
       </article>

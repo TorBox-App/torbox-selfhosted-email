@@ -5,7 +5,6 @@ import {
   Calendar,
   Clock,
   Filter,
-  Mail,
   Send,
   Tag,
   Users,

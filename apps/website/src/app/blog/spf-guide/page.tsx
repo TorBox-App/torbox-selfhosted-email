@@ -17,10 +17,7 @@ const articleSchema = {
     url: "https://wraps.dev",
     description:
       "Email infrastructure experts building tools to deploy production-ready email systems to AWS. Specialists in email deliverability, authentication (SPF, DKIM, DMARC), and AWS SES.",
-    sameAs: [
-      "https://github.com/wraps-team",
-      "https://twitter.com/wrapsdev",
-    ],
+    sameAs: ["https://github.com/wraps-team", "https://twitter.com/wrapsdev"],
   },
   publisher: {
     "@type": "Organization",
@@ -73,12 +70,12 @@ export default function Page() {
   return (
     <>
       <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
         id="article-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
       {/* Server-rendered content for SEO - visually hidden but accessible to crawlers */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>The SPF 10-Lookup Limit: Why Your Email Might Be Failing</h1>
         <p>
           SPF looks simple until you hit the 10-lookup limit. Learn how lookups

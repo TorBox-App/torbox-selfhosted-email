@@ -52,11 +52,11 @@ export default function SPFBuilderPage() {
   return (
     <>
       <script
-        type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
+        type="application/ld+json"
       />
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>SPF Record Builder</h1>
         <p>
           Build and validate your SPF record. Avoid the 10-lookup limit with our

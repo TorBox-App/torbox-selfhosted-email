@@ -46,12 +46,12 @@ export default function SDKReferencePage() {
   return (
     <>
       <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         id="breadcrumb-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Email SDK Reference</h1>
         <p>Complete reference for @wraps.dev/email TypeScript SDK.</p>
         <h2>Installation</h2>

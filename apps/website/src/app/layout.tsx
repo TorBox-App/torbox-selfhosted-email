@@ -99,10 +99,10 @@ export default function RootLayout({
           suppressHydrationWarning
         />
         <script
-          type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(organizationSchema),
           }}
+          type="application/ld+json"
         />
       </head>
       <body className={inter.className}>

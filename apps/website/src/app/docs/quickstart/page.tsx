@@ -46,14 +46,17 @@ export default function QuickstartPage() {
   return (
     <>
       <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         id="breadcrumb-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Wraps Quickstart Guide</h1>
-        <p>Deploy your first email infrastructure in 2 minutes with the Wraps CLI.</p>
+        <p>
+          Deploy your first email infrastructure in 2 minutes with the Wraps
+          CLI.
+        </p>
         <h2>Choose Your Quickstart</h2>
         <ul>
           <li>Email - Send emails through AWS SES</li>

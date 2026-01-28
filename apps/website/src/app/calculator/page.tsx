@@ -24,7 +24,7 @@ export default function CostCalculatorPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Email Cost Calculator</h1>
         <p>
           Compare email provider pricing. See exactly how much you'll save with

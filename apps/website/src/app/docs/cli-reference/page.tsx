@@ -23,7 +23,7 @@ export default function CLIReferencePage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Wraps CLI Reference</h1>
         <p>Complete reference for all Wraps CLI commands.</p>
         <h2>Installation</h2>

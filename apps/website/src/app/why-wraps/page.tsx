@@ -24,7 +24,7 @@ export default function WhyWrapsPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Why Wraps</h1>
         <p>
           Own your infrastructure, pay AWS prices, keep the great DX. No vendor

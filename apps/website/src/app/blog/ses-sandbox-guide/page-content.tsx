@@ -923,7 +923,7 @@ export default function SESSandboxGuide() {
             <h2 className="font-bold text-2xl">Why Most Requests Get Denied</h2>
           </div>
           <p className="mb-6 text-lg text-muted-foreground">
-            AWS SES sandbox restrictions exist to protect their email
+            Amazon SES sandbox restrictions exist to protect their email
             infrastructure's reputation. Getting out requires proving you
             understand email deliverability — not just that you have a
             legitimate business.

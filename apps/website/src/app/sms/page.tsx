@@ -24,7 +24,7 @@ export default function SmsPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>SMS Infrastructure</h1>
         <p>
           Coming soon: Deploy SMS infrastructure to your AWS account with the

@@ -465,11 +465,7 @@ export function ProductTabs() {
       </div>
 
       <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <Button
-          asChild
-          className="bg-orange-500 hover:bg-orange-600"
-          size="lg"
-        >
+        <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
           <a
             href="https://app.wraps.dev/auth?mode=signup"
             onClick={() =>

@@ -46,14 +46,17 @@ export default function GuidesPage() {
   return (
     <>
       <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         id="breadcrumb-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       {/* Server-rendered content for SEO */}
-      <nav className="sr-only" aria-hidden="true">
+      <nav aria-hidden="true" className="sr-only">
         <h1>Wraps Guides</h1>
-        <p>In-depth guides for production access, domain verification, and AWS setup.</p>
+        <p>
+          In-depth guides for production access, domain verification, and AWS
+          setup.
+        </p>
         <h2>Available Guides</h2>
         <ul>
           <li>AWS Setup - Configure your AWS account for Wraps</li>

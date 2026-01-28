@@ -23,7 +23,7 @@ export default function CDKReferencePage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>CDK Construct Reference</h1>
         <p>Deploy Wraps infrastructure with AWS CDK.</p>
         <h2>Installation</h2>

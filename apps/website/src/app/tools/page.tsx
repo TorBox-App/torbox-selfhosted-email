@@ -52,11 +52,11 @@ export default function ToolsPage() {
   return (
     <>
       <script
-        type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
+        type="application/ld+json"
       />
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Email Tools</h1>
         <p>
           Free tools to check your email deliverability setup. DMARC analyzer,

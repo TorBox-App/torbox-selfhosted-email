@@ -106,8 +106,8 @@ export function PrinciplesSection() {
             const Icon = principle.icon;
             return (
               <div
-                key={principle.title}
                 className={`animate-fade-in-up ${principle.delay}`}
+                key={principle.title}
               >
                 <div className="group relative h-full overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 pt-12 transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
                   {/* Large background icon */}

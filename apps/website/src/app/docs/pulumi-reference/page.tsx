@@ -23,7 +23,7 @@ export default function PulumiReferencePage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Pulumi Component Reference</h1>
         <p>Deploy Wraps infrastructure with Pulumi.</p>
         <h2>Installation</h2>

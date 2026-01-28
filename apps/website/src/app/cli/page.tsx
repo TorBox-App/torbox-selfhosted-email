@@ -59,12 +59,12 @@ export default function CliPage() {
   return (
     <>
       <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
         id="software-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
       />
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Wraps CLI & SDK</h1>
         <p>
           Free, open-source CLI and SDK to deploy email infrastructure to your

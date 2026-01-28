@@ -23,7 +23,7 @@ export default function CLIReferenceSMSPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>SMS CLI Commands</h1>
         <p>CLI commands for managing SMS infrastructure.</p>
         <h2>wraps sms init</h2>

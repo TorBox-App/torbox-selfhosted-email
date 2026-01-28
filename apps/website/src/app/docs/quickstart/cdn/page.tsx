@@ -23,7 +23,7 @@ export default function CdnQuickstartPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>CDN Quickstart</h1>
         <p>Deploy a CDN for your email assets with Wraps.</p>
         <h2>Prerequisites</h2>

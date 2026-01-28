@@ -23,7 +23,7 @@ export default function SmsQuickstartPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>SMS Quickstart</h1>
         <p>Send SMS messages through AWS with the Wraps SMS SDK.</p>
         <h2>Prerequisites</h2>

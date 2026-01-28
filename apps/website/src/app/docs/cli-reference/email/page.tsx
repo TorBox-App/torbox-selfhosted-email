@@ -23,7 +23,7 @@ export default function CLIReferenceEmailPage() {
   return (
     <>
       {/* Server-rendered content for SEO */}
-      <article className="sr-only" aria-hidden="true">
+      <article aria-hidden="true" className="sr-only">
         <h1>Email CLI Commands</h1>
         <p>CLI commands for managing email infrastructure.</p>
         <h2>wraps email init</h2>

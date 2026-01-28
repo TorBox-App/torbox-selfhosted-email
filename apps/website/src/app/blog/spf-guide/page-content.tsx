@@ -270,12 +270,16 @@ export default function SPFGuidePage() {
 
           <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-foreground/90 text-sm">
-              <strong>Quick check:</strong> Not sure what your current SPF record looks like?{" "}
+              <strong>Quick check:</strong> Not sure what your current SPF
+              record looks like?{" "}
               <a className="text-primary hover:underline" href="/tools">
                 Analyze your domain
               </a>{" "}
               to see your SPF record and lookup count, or use our{" "}
-              <a className="text-primary hover:underline" href="/tools/spf-builder">
+              <a
+                className="text-primary hover:underline"
+                href="/tools/spf-builder"
+              >
                 SPF builder
               </a>{" "}
               to create a new one.

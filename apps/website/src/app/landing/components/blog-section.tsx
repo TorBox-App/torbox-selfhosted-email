@@ -69,9 +69,7 @@ export function BlogSection() {
                   <p className="text-muted-foreground text-xs uppercase tracking-widest">
                     {blog.category}
                   </p>
-                  <h3 className="font-bold text-xl">
-                    {blog.title}
-                  </h3>
+                  <h3 className="font-bold text-xl">{blog.title}</h3>
                   <p className="text-muted-foreground">{blog.description}</p>
                   <span className="inline-flex items-center gap-2 text-primary">
                     Learn More
