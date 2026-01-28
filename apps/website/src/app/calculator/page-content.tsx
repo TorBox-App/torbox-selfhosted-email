@@ -2,6 +2,7 @@
 
 import { ArrowRight, Calculator, DollarSign, Info } from "lucide-react";
 import { useState } from "react";
+import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -390,7 +391,10 @@ export default function CostCalculatorPageContent() {
 
                 {/* Monthly Tracked Events (Wraps billing) */}
                 <div className="space-y-2">
-                  <Label htmlFor="events">Monthly Tracked Events</Label>
+                  <Label className="flex items-center gap-1" htmlFor="events">
+                    Monthly{" "}
+                    <TrackedEventTooltip>Tracked Events</TrackedEventTooltip>
+                  </Label>
                   <Input
                     id="events"
                     max={10_000_000}

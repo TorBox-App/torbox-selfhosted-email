@@ -2,6 +2,7 @@
 
 import { Check, Sparkles } from "lucide-react";
 import { memo, useState } from "react";
+import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Button } from "@/components/ui/button";
 import {
   type BillingInterval,
@@ -10,6 +11,31 @@ import {
   PRICING_TIERS,
 } from "@/config/pricing";
 import { BillingToggle } from "./billing-toggle";
+
+/**
+ * Renders a feature string, replacing only "tracked events" with a tooltip
+ * while keeping surrounding text (numbers, "/month", etc.) as regular text
+ */
+function FeatureText({ text }: { text: string }) {
+  if (!text.toLowerCase().includes("tracked events")) {
+    return <>{text}</>;
+  }
+
+  // Split on "tracked events" (case-insensitive) and reassemble with tooltip
+  const parts = text.split(/(tracked events)/i);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === "tracked events" ? (
+          <TrackedEventTooltip key={i}>{part}</TrackedEventTooltip>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
 
 export const PricingCards = memo(function PricingCards() {
   const [billingInterval, setBillingInterval] =
@@ -94,7 +120,9 @@ export const PricingCards = memo(function PricingCards() {
                       className={`mt-0.5 size-4 shrink-0 ${plan.highlight ? "text-orange-500" : "text-muted-foreground"}`}
                       strokeWidth={2.5}
                     />
-                    <span className="text-sm">{feature}</span>
+                    <span className="text-sm">
+                      <FeatureText text={feature} />
+                    </span>
                   </li>
                 ))}
               </ul>

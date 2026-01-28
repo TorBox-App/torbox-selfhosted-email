@@ -1,4 +1,5 @@
 import { ArrowRight, Check, Mail, Send, Workflow } from "lucide-react";
+import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -129,7 +130,7 @@ function ComparisonCard({ scenario }: { scenario: ComparisonScenario }) {
               <span className="font-medium text-foreground">
                 {scenario.wraps.trackedEvents}
               </span>{" "}
-              tracked events
+              <TrackedEventTooltip />
             </p>
             <p className="text-muted-foreground">
               <span className="font-medium text-foreground">
@@ -175,8 +176,9 @@ export function PricingComparisonSection() {
             <span className="text-orange-500">Fraction of the Cost.</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            You pay Wraps for the platform. You pay AWS directly for sending.
-            Tracked events are only needed for behavioral automations.
+            You pay Wraps for the platform. You pay AWS directly for sending.{" "}
+            <TrackedEventTooltip>Tracked events</TrackedEventTooltip> are only
+            needed for behavioral automations.
           </p>
         </div>
 

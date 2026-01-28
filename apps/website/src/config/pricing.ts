@@ -182,12 +182,12 @@ export const PRICING_TIERS: PricingTier[] = [
     limits: TIER_LIMITS.free,
     features: [
       "Hosted dashboard",
-      "5,000 tracked events/month",
+      "5K tracked events/mo",
       "1 workflow",
       "7-day history",
       "Unlimited contacts",
       "CLI & SDK access",
-      "10 AI generations/month",
+      "10 AI generations/mo",
       "Community support",
     ],
   },
@@ -203,11 +203,11 @@ export const PRICING_TIERS: PricingTier[] = [
     ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=starter",
     limits: TIER_LIMITS.starter,
     features: [
-      "50,000 tracked events/month",
+      "50K tracked events/mo",
       "Unlimited workflows",
       "Topics, segments & broadcasts",
       "30-day history",
-      "50 AI generations/month",
+      "50 AI generations/mo",
       "Unlimited team members",
       "Email support",
     ],
@@ -225,11 +225,11 @@ export const PRICING_TIERS: PricingTier[] = [
     ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=growth",
     limits: TIER_LIMITS.growth,
     features: [
-      "250,000 tracked events/month",
+      "250K tracked events/mo",
       "Then $0.50/1K tracked events",
       "Everything in Starter",
       "90-day history",
-      "250 AI generations/month",
+      "250 AI generations/mo",
       "3 AWS accounts",
       "Priority support (24hr)",
     ],
@@ -246,12 +246,12 @@ export const PRICING_TIERS: PricingTier[] = [
     ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=scale",
     limits: TIER_LIMITS.scale,
     features: [
-      "1,000,000 tracked events/month",
+      "1M tracked events/mo",
       "Then $0.15/1K tracked events",
       "Everything in Growth",
       "Behavioral segments",
       "1-year history",
-      "1,000 AI generations/month",
+      "1K AI generations/mo",
       "Unlimited AWS accounts",
       "Priority support + SLA",
     ],
@@ -530,7 +530,7 @@ export const FEATURE_COMPARISON: FeatureComparison[] = [
 export const PRICING_COPY = {
   headline: "Platform Fee for Email Infrastructure You Own",
   subheadline:
-    "Start free with 5,000 tracked events/month. Unlimited contacts. Pay AWS directly for sending.",
+    "Start free with 5K tracked events/mo. Unlimited contacts. Pay AWS directly for sending.",
   awsNote:
     "AWS costs are separate. You pay AWS directly for sending at $0.10 per 1,000 emails. Your sending infrastructure stays in your account — leave anytime, keep everything.",
   enterpriseNote:
