@@ -29,7 +29,7 @@
     "@better-auth/passkey": "1.4.17",
     "@better-auth/stripe": "1.4.17",
     "@wraps.dev/client": "0.4.0",
-    "@wraps.dev/email": "^0.4.0",
+    "@wraps.dev/email": "^0.5.1",
     "@wraps.dev/sms": "^0.1.1",
     "@wraps/db": "workspace:*",
     "@wraps/email": "workspace:*",
