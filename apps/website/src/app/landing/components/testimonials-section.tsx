@@ -142,15 +142,9 @@ export function TestimonialsSection() {
                   </Avatar>
 
                   <div className="min-w-0 flex-1">
-                    <a
-                      className="cursor-pointer"
-                      href="#"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      <h3 className="font-medium transition-colors hover:text-primary">
-                        {testimonial.name}
-                      </h3>
-                    </a>
+                    <h3 className="font-medium">
+                      {testimonial.name}
+                    </h3>
                     <span className="block text-muted-foreground text-sm tracking-wide">
                       {testimonial.role}
                     </span>

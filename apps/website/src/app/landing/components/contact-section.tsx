@@ -34,9 +34,8 @@ const ContactSection = memo(function ContactSection() {
     validators: {
       onSubmit: contactFormSchema,
     },
-    onSubmit: async ({ value }) => {
+    onSubmit: async () => {
       // Here you would typically send the form data to your backend
-      console.log(value);
       toast.success("Message sent successfully!");
       setIsSubmitted(true);
       form.reset();

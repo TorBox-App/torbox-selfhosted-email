@@ -9,6 +9,7 @@ import {
   Palette,
   Sparkles,
 } from "lucide-react";
+import Image from "next/image";
 import { Image3D } from "@/components/image-3d";
 import { Button } from "@/components/ui/button";
 import { assetUrl } from "@/lib/utils";
@@ -116,32 +117,22 @@ export function TemplateEditorSection() {
 
           <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
             {/* Light mode image */}
-            <img
+            <Image
               alt="Template Editor - Light Mode"
               className="block w-full rounded-xl object-cover dark:hidden"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-                e.currentTarget.nextElementSibling?.classList.remove("hidden");
-              }}
+              height={675}
               src={assetUrl("template-editor-full-light.webp")}
+              width={1200}
             />
-            <div className="hidden dark:hidden">
-              <PlaceholderImage alt="Template Editor Preview" />
-            </div>
 
             {/* Dark mode image */}
-            <img
+            <Image
               alt="Template Editor - Dark Mode"
               className="hidden w-full rounded-xl object-cover dark:block"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-                e.currentTarget.nextElementSibling?.classList.remove("!hidden");
-              }}
+              height={675}
               src={assetUrl("template-editor-full-dark.webp")}
+              width={1200}
             />
-            <div className="!hidden dark:!hidden">
-              <PlaceholderImage alt="Template Editor Preview" />
-            </div>
 
             {/* Bottom fade effect */}
             <div className="absolute bottom-0 left-0 h-32 w-full rounded-b-xl bg-linear-to-b from-background/0 via-background/70 to-background md:h-40" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -54,12 +55,13 @@ export function BlogSection() {
           {blogs.map((blog) => (
             <Card className="overflow-hidden py-0" key={blog.id}>
               <CardContent className="px-0">
-                <div className="aspect-video">
-                  <img
+                <div className="relative aspect-video">
+                  <Image
                     alt={blog.title}
                     className="size-full object-cover dark:brightness-[0.95] dark:invert"
-                    decoding="async"
+                    fill
                     loading="lazy"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     src={blog.image}
                   />
                 </div>
@@ -67,24 +69,14 @@ export function BlogSection() {
                   <p className="text-muted-foreground text-xs uppercase tracking-widest">
                     {blog.category}
                   </p>
-                  <a
-                    className="cursor-pointer"
-                    href="#"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <h3 className="font-bold text-xl transition-colors hover:text-primary">
-                      {blog.title}
-                    </h3>
-                  </a>
+                  <h3 className="font-bold text-xl">
+                    {blog.title}
+                  </h3>
                   <p className="text-muted-foreground">{blog.description}</p>
-                  <a
-                    className="inline-flex cursor-pointer items-center gap-2 text-primary hover:underline"
-                    href="#"
-                    onClick={(e) => e.preventDefault()}
-                  >
+                  <span className="inline-flex items-center gap-2 text-primary">
                     Learn More
                     <ArrowRight className="size-4" />
-                  </a>
+                  </span>
                 </div>
               </CardContent>
             </Card>

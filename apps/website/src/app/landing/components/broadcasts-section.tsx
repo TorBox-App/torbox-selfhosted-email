@@ -10,6 +10,7 @@ import {
   Tag,
   Users,
 } from "lucide-react";
+import Image from "next/image";
 import { Image3D } from "@/components/image-3d";
 import { Button } from "@/components/ui/button";
 import { assetUrl } from "@/lib/utils";
@@ -95,32 +96,22 @@ export function BroadcastsSection() {
 
           <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
             {/* Light mode image */}
-            <img
+            <Image
               alt="Broadcast Dashboard - Light Mode"
               className="block w-full rounded-xl object-cover dark:hidden"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-                e.currentTarget.nextElementSibling?.classList.remove("hidden");
-              }}
+              height={675}
               src={assetUrl("broadcasts-list-light.webp")}
+              width={1200}
             />
-            <div className="hidden dark:hidden">
-              <PlaceholderImage alt="Broadcast Dashboard" icon={Mail} />
-            </div>
 
             {/* Dark mode image */}
-            <img
+            <Image
               alt="Broadcast Dashboard - Dark Mode"
               className="hidden w-full rounded-xl object-cover dark:block"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-                e.currentTarget.nextElementSibling?.classList.remove("!hidden");
-              }}
+              height={675}
               src={assetUrl("broadcasts-list-dark.webp")}
+              width={1200}
             />
-            <div className="!hidden dark:!hidden">
-              <PlaceholderImage alt="Broadcast Dashboard" icon={Mail} />
-            </div>
 
             {/* Bottom fade effect */}
             <div className="absolute bottom-0 left-0 h-32 w-full rounded-b-xl bg-linear-to-b from-background/0 via-background/70 to-background md:h-40" />

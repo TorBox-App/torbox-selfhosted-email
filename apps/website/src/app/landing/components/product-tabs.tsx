@@ -21,6 +21,7 @@ import {
   Workflow,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,19 +67,21 @@ function TemplatesContent() {
       <div className="group relative">
         <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
-          <img
+          <Image
             alt="Template Editor - Light Mode"
             className="block w-full rounded-xl object-cover dark:hidden"
-            decoding="async"
+            height={675}
             loading="lazy"
             src={assetUrl("template-editor-full-light.webp")}
+            width={1200}
           />
-          <img
+          <Image
             alt="Template Editor - Dark Mode"
             className="hidden w-full rounded-xl object-cover dark:block"
-            decoding="async"
+            height={675}
             loading="lazy"
             src={assetUrl("template-editor-full-dark.webp")}
+            width={1200}
           />
           <div className="absolute bottom-0 left-0 h-24 w-full rounded-b-xl bg-linear-to-b from-background/0 via-background/70 to-background md:h-32" />
         </div>
@@ -114,19 +117,21 @@ function BroadcastsContent() {
       <div className="group relative">
         <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
-          <img
+          <Image
             alt="Broadcasts Dashboard - Light Mode"
             className="block w-full rounded-xl object-cover dark:hidden"
-            decoding="async"
+            height={675}
             loading="lazy"
             src={assetUrl("broadcasts-list-light.webp")}
+            width={1200}
           />
-          <img
+          <Image
             alt="Broadcasts Dashboard - Dark Mode"
             className="hidden w-full rounded-xl object-cover dark:block"
-            decoding="async"
+            height={675}
             loading="lazy"
             src={assetUrl("broadcasts-list-dark.webp")}
+            width={1200}
           />
           <div className="absolute bottom-0 left-0 h-24 w-full rounded-b-xl bg-linear-to-b from-background/0 via-background/70 to-background md:h-32" />
         </div>
@@ -162,19 +167,21 @@ function AutomationsContent() {
       <div className="group relative">
         <div className="-translate-x-1/2 lg:-top-4 absolute top-2 left-1/2 mx-auto h-16 w-[70%] transform rounded-full bg-orange-500/10 blur-2xl lg:h-32" />
         <div className="relative overflow-hidden rounded-2xl border-2 bg-card shadow-2xl">
-          <img
+          <Image
             alt="Workflow Builder - Light Mode"
             className="block w-full rounded-xl object-cover dark:hidden"
-            decoding="async"
+            height={675}
             loading="lazy"
             src={assetUrl("automations-builder-light.avif")}
+            width={1200}
           />
-          <img
+          <Image
             alt="Workflow Builder - Dark Mode"
             className="hidden w-full rounded-xl object-cover dark:block"
-            decoding="async"
+            height={675}
             loading="lazy"
             src={assetUrl("automations-builder-dark.avif")}
+            width={1200}
           />
           <div className="absolute bottom-0 left-0 h-24 w-full rounded-b-xl bg-linear-to-b from-background/0 via-background/70 to-background md:h-32" />
         </div>
