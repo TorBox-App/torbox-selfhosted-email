@@ -308,14 +308,16 @@ export function OrganizationSettingsAwsAccounts({
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Link
-                      href={`/${orgSlug}/settings/aws-accounts/${account.id}`}
-                    >
-                      <Button variant="outline">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Manage
-                      </Button>
-                    </Link>
+                    {canEdit && (
+                      <Link
+                        href={`/${orgSlug}/settings/aws-accounts/${account.id}`}
+                      >
+                        <Button variant="outline">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Manage
+                        </Button>
+                      </Link>
+                    )}
                     {canEdit && (
                       <Button
                         className="text-destructive hover:bg-destructive/10 hover:text-destructive"
