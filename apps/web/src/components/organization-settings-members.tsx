@@ -10,8 +10,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   cancelInvitation,
@@ -63,6 +62,8 @@ type OrganizationSettingsMembersProps = {
     name: string;
   };
   userRole: "owner" | "admin" | "member";
+  initialMembers?: MemberWithUser[];
+  initialInvitations?: PendingInvitation[];
 };
 
 const roleConfig = {
@@ -89,37 +90,75 @@ const roleConfig = {
 export function OrganizationSettingsMembers({
   organization,
   userRole,
+  initialMembers,
+  initialInvitations,
 }: OrganizationSettingsMembersProps) {
-  const _router = useRouter();
-  const [members, setMembers] = useState<MemberWithUser[]>([]);
-  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
-  const [_refreshKey, setRefreshKey] = useState(0);
+
+  // Client-side state for when data isn't provided via props
+  const [members, setMembers] = useState<MemberWithUser[]>(initialMembers ?? []);
+  const [invitations, setInvitations] = useState<PendingInvitation[]>(initialInvitations ?? []);
+  const [isLoading, setIsLoading] = useState(!initialMembers);
+
+  // Fetch data client-side only if not provided via props (for tabs usage)
+  useEffect(() => {
+    if (initialMembers === undefined) {
+      setIsLoading(true);
+      listMembers(organization.id).then((result) => {
+        if (result.success) {
+          setMembers(result.members);
+          setInvitations(result.invitations);
+        } else {
+          toast.error(result.error);
+        }
+        setIsLoading(false);
+      });
+    }
+  }, [organization.id, initialMembers]);
+
+  // Update local state when props change (for server-side data)
+  useEffect(() => {
+    if (initialMembers !== undefined) {
+      setMembers(initialMembers);
+    }
+  }, [initialMembers]);
+
+  useEffect(() => {
+    if (initialInvitations !== undefined) {
+      setInvitations(initialInvitations);
+    }
+  }, [initialInvitations]);
+
+  // Optimistic updates for instant UI feedback
+  const [optimisticInvitations, removeOptimisticInvitation] = useOptimistic(
+    invitations,
+    (state, invitationId: string) =>
+      state.filter((inv) => inv.id !== invitationId)
+  );
+
+  const [optimisticMembers, updateOptimisticMembers] = useOptimistic(
+    members,
+    (
+      state,
+      action: { type: "remove"; memberId: string } | { type: "updateRole"; memberId: string; newRole: string }
+    ) => {
+      if (action.type === "remove") {
+        return state.filter((m) => m.id !== action.memberId);
+      }
+      if (action.type === "updateRole") {
+        return state.map((m) =>
+          m.id === action.memberId ? { ...m, role: action.newRole } : m
+        );
+      }
+      return state;
+    }
+  );
 
   const canEdit = userRole === "owner" || userRole === "admin";
-
-  // Trigger a refresh
-  const refreshData = () => setRefreshKey((prev) => prev + 1);
-
-  // Load members and invitations
-  useEffect(() => {
-    async function loadData(organizationId: string) {
-      setLoading(true);
-      const result = await listMembers(organizationId);
-      if (result.success) {
-        setMembers(result.members);
-        setInvitations(result.invitations);
-      } else {
-        toast.error(result.error);
-      }
-      setLoading(false);
-    }
-    loadData(organization.id);
-  }, [organization.id]);
 
   const getInitials = (name: string) =>
     name
@@ -136,31 +175,47 @@ export function OrganizationSettingsMembers({
     }
 
     setInviteSubmitting(true);
-    const result = await inviteMember(inviteEmail, inviteRole, organization.id);
-    setInviteSubmitting(false);
+    const email = inviteEmail;
 
-    if (result.success) {
-      toast.success(`Invitation sent to ${inviteEmail}`);
+    const promise = inviteMember(email, inviteRole, organization.id).then((result) => {
+      if (!result.success) {
+        throw new Error(result.error);
+      }
       setInviteDialogOpen(false);
       setInviteEmail("");
       setInviteRole("member");
-      refreshData(); // Reload to show new invitation
-    } else {
-      toast.error(result.error);
-    }
+      return result;
+    }).finally(() => {
+      setInviteSubmitting(false);
+    });
+
+    toast.promise(promise, {
+      loading: `Sending invitation to ${email}...`,
+      success: `Invitation sent to ${email}`,
+      error: (err) => err.message,
+    });
   }
 
   async function handleUpdateRole(
     memberId: string,
     newRole: "owner" | "admin" | "member"
   ) {
-    const result = await updateMemberRole(memberId, newRole, organization.id);
-    if (result.success) {
-      toast.success("Member role updated");
-      refreshData();
-    } else {
-      toast.error(result.error);
-    }
+    startTransition(() => {
+      updateOptimisticMembers({ type: "updateRole", memberId, newRole });
+
+      const promise = updateMemberRole(memberId, newRole, organization.id).then((result) => {
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        return result;
+      });
+
+      toast.promise(promise, {
+        loading: "Updating role...",
+        success: "Member role updated",
+        error: (err) => err.message,
+      });
+    });
   }
 
   async function handleRemoveMember(memberId: string) {
@@ -168,26 +223,44 @@ export function OrganizationSettingsMembers({
       return;
     }
 
-    const result = await removeMember(memberId, organization.id);
-    if (result.success) {
-      toast.success("Member removed");
-      refreshData();
-    } else {
-      toast.error(result.error);
-    }
+    startTransition(() => {
+      updateOptimisticMembers({ type: "remove", memberId });
+
+      const promise = removeMember(memberId, organization.id).then((result) => {
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        return result;
+      });
+
+      toast.promise(promise, {
+        loading: "Removing member...",
+        success: "Member removed",
+        error: (err) => err.message,
+      });
+    });
   }
 
   async function handleCancelInvitation(invitationId: string) {
-    const result = await cancelInvitation(invitationId, organization.id);
-    if (result.success) {
-      toast.success("Invitation cancelled");
-      refreshData();
-    } else {
-      toast.error(result.error);
-    }
+    startTransition(() => {
+      removeOptimisticInvitation(invitationId);
+
+      const promise = cancelInvitation(invitationId, organization.id).then((result) => {
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        return result;
+      });
+
+      toast.promise(promise, {
+        loading: "Cancelling invitation...",
+        success: "Invitation cancelled",
+        error: (err) => err.message,
+      });
+    });
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -277,7 +350,7 @@ export function OrganizationSettingsMembers({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {members.map((member) => {
+            {optimisticMembers.map((member) => {
               const roleInfo =
                 roleConfig[member.role as keyof typeof roleConfig];
               const RoleIcon = roleInfo.icon;
@@ -328,7 +401,7 @@ export function OrganizationSettingsMembers({
                   {canEdit && member.role !== "owner" && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost">
+                        <Button disabled={isPending} size="icon" variant="ghost">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -362,7 +435,7 @@ export function OrganizationSettingsMembers({
       </Card>
 
       {/* Pending Invitations */}
-      {canEdit && invitations.length > 0 && (
+      {canEdit && optimisticInvitations.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Pending Invitations</CardTitle>
@@ -372,7 +445,7 @@ export function OrganizationSettingsMembers({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {invitations.map((invitation) => (
+              {optimisticInvitations.map((invitation) => (
                 <div
                   className="flex items-center justify-between rounded-lg border border-dashed p-4"
                   key={invitation.id}
@@ -403,6 +476,7 @@ export function OrganizationSettingsMembers({
                     </div>
                   </div>
                   <Button
+                    disabled={isPending}
                     onClick={() => handleCancelInvitation(invitation.id)}
                     size="icon"
                     variant="ghost"

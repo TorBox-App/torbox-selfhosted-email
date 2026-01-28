@@ -1,5 +1,6 @@
 import { auth } from "@wraps/auth";
 import { redirect } from "next/navigation";
+import { listMembers } from "@/actions/members";
 import { OrganizationSettingsMembers } from "@/components/organization-settings-members";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -28,6 +29,11 @@ export default async function MembersPage({ params }: MembersPageProps) {
     redirect("/");
   }
 
+  // Fetch members and invitations on the server
+  const membersResult = await listMembers(orgWithMembership.id);
+  const members = membersResult.success ? membersResult.members : [];
+  const invitations = membersResult.success ? membersResult.invitations : [];
+
   return (
     <div className="space-y-6 px-4 lg:px-6">
       <div>
@@ -38,6 +44,8 @@ export default async function MembersPage({ params }: MembersPageProps) {
       </div>
 
       <OrganizationSettingsMembers
+        initialInvitations={invitations}
+        initialMembers={members}
         organization={orgWithMembership}
         userRole={orgWithMembership.userRole}
       />
