@@ -3,6 +3,7 @@
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useMemo } from "react";
 
 import {
   Collapsible,
@@ -24,6 +25,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useSidebarSections } from "@/hooks/use-sidebar-sections";
 
 export function NavMain({
   items,
@@ -42,16 +44,35 @@ export function NavMain({
   const { state, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
 
+  const sectionTitles = useMemo(() => items.map((item) => item.title), [items]);
+  const { isSectionOpen, toggleSection, openSection, isHydrated } =
+    useSidebarSections(sectionTitles);
+
   // Check if any subitem is active to determine if parent should be open
-  const isGroupActive = (group: (typeof items)[0]) => {
-    if (group.isActive) {
-      return true;
+  const isGroupActive = useCallback(
+    (group: (typeof items)[0]) => {
+      if (group.isActive) {
+        return true;
+      }
+      return group.items.some(
+        (subItem) =>
+          pathname === subItem.url || pathname.startsWith(`${subItem.url}/`)
+      );
+    },
+    [pathname]
+  );
+
+  // Auto-open sections when navigating to them
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
     }
-    return group.items.some(
-      (subItem) =>
-        pathname === subItem.url || pathname.startsWith(`${subItem.url}/`)
-    );
-  };
+    for (const item of items) {
+      if (isGroupActive(item)) {
+        openSection(item.title);
+      }
+    }
+  }, [isHydrated, items, openSection, isGroupActive]);
 
   // Check if a sub-item is active, preferring the most specific match
   const isSubItemActive = (url: string, siblings: { url: string }[]) => {
@@ -117,8 +138,9 @@ export function NavMain({
             <Collapsible
               asChild
               className="group/collapsible"
-              defaultOpen={isGroupActive(item)}
               key={item.title}
+              onOpenChange={() => toggleSection(item.title)}
+              open={isSectionOpen(item.title)}
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
