@@ -83,12 +83,14 @@ export async function createCdnBucket(
   });
 
   // Configure CORS for browser uploads
-  // Include common dev ports: Vite (5173), Next.js (3000/3001), Wraps Console (5556)
+  // Include common dev ports: Next.js (3000/3001), API (3002), Console (3003), Vite (5173)
   const corsOrigins = [
     "https://wraps.dev",
     "https://*.wraps.dev",
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:3003",
     "http://localhost:4000",
     "http://localhost:5173",
     "http://localhost:5174",
