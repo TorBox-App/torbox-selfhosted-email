@@ -1,18 +1,27 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
 import { AwsConnectStep } from "./components/aws-connect-step";
 import { BillingStep } from "./components/billing-step";
-import { DeployInfrastructureStep } from "./components/deploy-infrastructure-step";
 import { StepProgress } from "./components/step-progress";
 import { SuccessStep } from "./components/success-step";
 import { WelcomeStep } from "./components/welcome-step";
+
+// Dynamic import for heavy component (1,159 lines) - loaded when user reaches step 3
+const DeployInfrastructureStep = dynamic(
+  () =>
+    import("./components/deploy-infrastructure-step").then(
+      (m) => m.DeployInfrastructureStep
+    ),
+  { loading: () => <Loader fullScreen /> }
+);
 
 const STEPS = [
   { id: 1, title: "Welcome", component: WelcomeStep },
@@ -21,6 +30,36 @@ const STEPS = [
   { id: 4, title: "Connect AWS", component: AwsConnectStep },
   { id: 5, title: "Success", component: SuccessStep },
 ];
+
+/**
+ * Determine initial step from URL params or localStorage
+ */
+function getInitialStep(
+  searchParams: URLSearchParams,
+  orgSlug: string
+): number {
+  // Check URL param first
+  const stepParam = searchParams.get("step");
+  if (stepParam) {
+    const step = Number.parseInt(stepParam, 10);
+    if (!Number.isNaN(step) && step >= 1 && step <= STEPS.length) {
+      return step;
+    }
+  }
+
+  // Fall back to localStorage
+  if (typeof window !== "undefined") {
+    const savedStep = localStorage.getItem(`onboarding_step_${orgSlug}`);
+    if (savedStep) {
+      const step = Number.parseInt(savedStep, 10);
+      if (!Number.isNaN(step) && step >= 1 && step <= STEPS.length) {
+        return step;
+      }
+    }
+  }
+
+  return 1;
+}
 
 type OnboardingPageProps = {
   params: Promise<{ orgSlug: string }>;
@@ -32,6 +71,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const queryClient = useQueryClient();
   const { data: session, isPending } = authClient.useSession();
   const [orgSlug, setOrgSlug] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   // Get step from URL or localStorage
   const [currentStep, setCurrentStep] = useState(1);
@@ -41,84 +81,70 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const { data: organizations, isPending: isOrgsLoading } =
     authClient.useListOrganizations();
 
-  // Get orgSlug from route params
-  useEffect(() => {
-    params.then((p) => setOrgSlug(p.orgSlug));
-  }, [params]);
-
-  // Initialize step from URL or localStorage
-  useEffect(() => {
-    if (!orgSlug) {
-      return;
-    }
-
-    const stepParam = searchParams.get("step");
-    if (stepParam) {
-      const step = Number.parseInt(stepParam, 10);
-      if (!Number.isNaN(step) && step >= 1 && step <= STEPS.length) {
-        setCurrentStep(step);
-        setIsInitialized(true);
-        return;
-      }
-    }
-
-    const savedStep = localStorage.getItem(`onboarding_step_${orgSlug}`);
-    if (savedStep) {
-      const step = Number.parseInt(savedStep, 10);
-      if (!Number.isNaN(step) && step >= 1 && step <= STEPS.length) {
-        setCurrentStep(step);
-      }
-    }
-    setIsInitialized(true);
-  }, [orgSlug, searchParams]);
-
-  // Store plan and billing interval preferences in localStorage
-  useEffect(() => {
-    if (!orgSlug) {
-      return;
-    }
-
-    const planParam = searchParams.get("plan");
-    const intervalParam = searchParams.get("interval");
-
-    // Only store if params exist in URL (coming from signup)
-    if (planParam) {
-      localStorage.setItem(`onboarding_plan_${orgSlug}`, planParam);
-    }
-    if (intervalParam) {
-      localStorage.setItem(`onboarding_interval_${orgSlug}`, intervalParam);
-    }
-  }, [orgSlug, searchParams]);
-
-  // Handle returning from Stripe checkout with subscribed=true
+  // Refs to prevent duplicate actions
   const hasShownSubscribedToast = useRef(false);
-  useEffect(() => {
-    if (!isInitialized || hasShownSubscribedToast.current) {
-      return;
-    }
+  const hasAdjustedBillingStep = useRef(false);
+  const hasTrackedStart = useRef(false);
+  const previousStep = useRef<number | null>(null);
+  const hasRedirected = useRef(false);
 
-    const subscribed = searchParams.get("subscribed");
-    if (subscribed === "true") {
-      hasShownSubscribedToast.current = true;
-      toast.success(
-        "Payment successful! Let's set up your AWS infrastructure."
-      );
-      // Advance to Deploy Infrastructure step (step 3) if on billing step
-      if (currentStep === 2) {
-        setCurrentStep(3);
+  // EFFECT 1: Initialize orgSlug, step, and URL params together
+  // Consolidates: orgSlug resolution, step initialization, plan/interval storage
+  useEffect(() => {
+    let mounted = true;
+
+    params.then((p) => {
+      if (!mounted) return;
+
+      const slug = p.orgSlug;
+      const initialStep = getInitialStep(searchParams, slug);
+
+      // Store plan and billing interval preferences from URL
+      const planParam = searchParams.get("plan");
+      const intervalParam = searchParams.get("interval");
+      if (planParam) {
+        localStorage.setItem(`onboarding_plan_${slug}`, planParam);
+      }
+      if (intervalParam) {
+        localStorage.setItem(`onboarding_interval_${slug}`, intervalParam);
+      }
+
+      // Batch state updates in a transition to reduce renders
+      startTransition(() => {
+        setOrgSlug(slug);
+        setCurrentStep(initialStep);
+        setIsInitialized(true);
+      });
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [params, searchParams]);
+
+  // EFFECT 2: Handle Stripe checkout return and step persistence
+  // Consolidates: subscribed toast, step localStorage save
+  useEffect(() => {
+    if (!(isInitialized && orgSlug)) return;
+
+    // Handle Stripe checkout return
+    if (!hasShownSubscribedToast.current) {
+      const subscribed = searchParams.get("subscribed");
+      if (subscribed === "true") {
+        hasShownSubscribedToast.current = true;
+        toast.success(
+          "Payment successful! Let's set up your AWS infrastructure."
+        );
+        if (currentStep === 2) {
+          setCurrentStep(3);
+          return; // Skip localStorage save since we're changing step
+        }
       }
     }
-  }, [searchParams, isInitialized, currentStep]);
 
-  // Save step to localStorage
-  useEffect(() => {
-    if (orgSlug && isInitialized) {
-      localStorage.setItem(
-        `onboarding_step_${orgSlug}`,
-        currentStep.toString()
-      );
-    }
-  }, [currentStep, orgSlug, isInitialized]);
+    // Save current step to localStorage
+    localStorage.setItem(`onboarding_step_${orgSlug}`, currentStep.toString());
+  }, [isInitialized, orgSlug, currentStep, searchParams]);
 
   // Check if onboarding is already completed
   const { data: onboardingStatus } = useQuery({
@@ -134,10 +160,16 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       return res.json();
     },
     enabled: !!orgSlug,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
-  // Handle billing step navigation based on subscription status
-  const hasAdjustedBillingStep = useRef(false);
+  // Find the organization that matches the orgSlug
+  const currentOrg = organizations?.find(
+    (org) => org.slug === orgSlug || org.id === orgSlug
+  );
+
+  // EFFECT 3: Handle billing step adjustment based on subscription status
   useEffect(() => {
     if (
       !(isInitialized && onboardingStatus) ||
@@ -155,34 +187,27 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     }
 
     // If user is past billing step but has NO subscription, reset to billing step
-    // This handles the case where localStorage saved a later step but subscription was never created
     if (!onboardingStatus.hasActiveSubscription && currentStep > 2) {
       hasAdjustedBillingStep.current = true;
       setCurrentStep(2);
     }
   }, [isInitialized, onboardingStatus, currentStep]);
 
-  // Find the organization that matches the orgSlug
-  const currentOrg = organizations?.find(
-    (org) => org.slug === orgSlug || org.id === orgSlug
-  );
-
-  // Track onboarding started (only once per session)
-  const hasTrackedStart = useRef(false);
+  // EFFECT 4: Analytics tracking (onboarding started + step views)
   useEffect(() => {
-    if (isInitialized && currentOrg && !hasTrackedStart.current) {
+    if (!(isInitialized && currentOrg)) return;
+
+    // Track onboarding started once per session
+    if (!hasTrackedStart.current) {
       hasTrackedStart.current = true;
       posthog.capture("onboarding_started", {
         organization_id: currentOrg.id,
         initial_step: currentStep,
       });
     }
-  }, [isInitialized, currentOrg, currentStep]);
 
-  // Track step views
-  const previousStep = useRef<number | null>(null);
-  useEffect(() => {
-    if (isInitialized && currentOrg && previousStep.current !== currentStep) {
+    // Track step views when step changes
+    if (previousStep.current !== currentStep) {
       previousStep.current = currentStep;
       posthog.capture("onboarding_step_viewed", {
         step: currentStep,
@@ -192,32 +217,25 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     }
   }, [isInitialized, currentOrg, currentStep]);
 
-  // Handle redirects in useEffect to avoid setState during render
-  // Use refs to prevent multiple redirects
-  const hasRedirected = useRef(false);
-
+  // EFFECT 5: Handle all redirects in a single effect
   useEffect(() => {
     if (hasRedirected.current) return;
+
+    // Redirect if onboarding is completed
     if (onboardingStatus?.completed && orgSlug) {
       hasRedirected.current = true;
       router.push(`/${orgSlug}/emails`);
+      return;
     }
-  }, [onboardingStatus, router, orgSlug]);
 
-  useEffect(() => {
-    if (hasRedirected.current) return;
-    // Only redirect if auth check is complete and there's no session
+    // Redirect if no session (auth check complete)
     if (!isPending && session === null) {
       hasRedirected.current = true;
       router.push("/auth");
+      return;
     }
-  }, [isPending, session, router]);
 
-  useEffect(() => {
-    if (hasRedirected.current) return;
-    // Only redirect if organizations have fully loaded (not from stale cache) AND org is not found
-    // The server-side layout already validates org membership, so this is a fallback
-    // We wait for !isOrgsLoading to ensure we have fresh data, not stale cache
+    // Redirect if org not found (after organizations fully loaded)
     if (
       !isOrgsLoading &&
       organizations !== undefined &&
@@ -227,7 +245,16 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       hasRedirected.current = true;
       router.push("/");
     }
-  }, [currentOrg, organizations, orgSlug, router, isOrgsLoading]);
+  }, [
+    onboardingStatus,
+    orgSlug,
+    isPending,
+    session,
+    isOrgsLoading,
+    organizations,
+    currentOrg,
+    router,
+  ]);
 
   if (isPending || !isInitialized || !orgSlug || isOrgsLoading) {
     return <Loader fullScreen />;

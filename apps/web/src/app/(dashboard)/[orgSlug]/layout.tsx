@@ -1,12 +1,11 @@
 import { auth } from "@wraps/auth";
-import { db } from "@wraps/db";
-import { awsAccount, organizationExtension } from "@wraps/db/schema/app";
-import { subscription } from "@wraps/db/schema/auth";
-import { and, eq, or } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { ProductsStatusHydrator } from "@/components/products-status-hydrator";
-import { getOrganizationWithMembership } from "@/lib/organization";
+import {
+  getOrganizationWithDashboardData,
+  getOrganizationWithMembership,
+} from "@/lib/organization";
 import { PLANS, type PlanId } from "@/lib/plans";
 
 type OrganizationLayoutProps = {
@@ -29,52 +28,29 @@ export default async function OrganizationLayout({
     redirect("/auth");
   }
 
-  // Validate user has access to this organization
-  const orgWithMembership = await getOrganizationWithMembership(
+  // Single relational query to fetch organization with all dashboard data
+  const orgData = await getOrganizationWithDashboardData(
     orgSlug,
     session.user.id
   );
 
-  if (!orgWithMembership) {
+  if (!orgData) {
     // User doesn't have access to this organization
     redirect("/");
   }
 
-  // Check if onboarding is completed
-  const extension = await db.query.organizationExtension.findFirst({
-    where: eq(organizationExtension.organizationId, orgWithMembership.id),
-  });
-
   // Redirect to onboarding if not completed
-  if (!extension?.onboardingCompleted) {
+  if (!orgData.extension?.onboardingCompleted) {
     redirect(`/${orgSlug}/onboarding`);
   }
 
-  // Verify user has an active subscription (required for dashboard access)
-  // Users must subscribe during onboarding to access the dashboard
-  const activeSubscription = await db.query.subscription.findFirst({
-    where: and(
-      eq(subscription.referenceId, orgWithMembership.id),
-      or(eq(subscription.status, "active"), eq(subscription.status, "trialing"))
-    ),
-  });
-
   // If subscription is cancelled/expired, redirect to upgrade page
-  if (!activeSubscription) {
+  if (!orgData.activeSubscription) {
     redirect(`/${orgSlug}/upgrade`);
   }
 
-  // Fetch products status from AWS accounts
-  const accounts = await db.query.awsAccount.findMany({
-    where: eq(awsAccount.organizationId, orgWithMembership.id),
-    columns: {
-      emailEnabled: true,
-      smsEnabled: true,
-    },
-  });
-
   // Get plan from subscription (source of truth)
-  const rawPlanId = activeSubscription.plan;
+  const rawPlanId = orgData.activeSubscription.plan;
   const planId: PlanId = ["free", "starter", "growth", "scale"].includes(
     rawPlanId
   )
@@ -83,9 +59,9 @@ export default async function OrganizationLayout({
   const plan = PLANS[planId];
 
   const productsStatus = {
-    emailEnabled: accounts.some((a) => a.emailEnabled),
-    smsEnabled: accounts.some((a) => a.smsEnabled),
-    hasAwsAccounts: accounts.length > 0,
+    emailEnabled: orgData.awsAccounts.some((a) => a.emailEnabled),
+    smsEnabled: orgData.awsAccounts.some((a) => a.smsEnabled),
+    hasAwsAccounts: orgData.awsAccounts.length > 0,
     planId,
     planFeatures: {
       batch: plan.features.batch,
@@ -99,10 +75,7 @@ export default async function OrganizationLayout({
 
   return (
     <>
-      <ProductsStatusHydrator
-        orgId={orgWithMembership.id}
-        status={productsStatus}
-      />
+      <ProductsStatusHydrator orgId={orgData.id} status={productsStatus} />
       {children}
     </>
   );
