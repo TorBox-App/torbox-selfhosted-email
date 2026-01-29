@@ -20,9 +20,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 import {
   type BillingInterval,
-  getAnnualTotal,
   getPriceByInterval,
-  hasEarlyAdopterPricing,
   PLANS,
   type PlanId,
 } from "@/lib/plans";
@@ -196,40 +194,6 @@ export function BillingStep({
           selectedPlan={selectedPlan}
           showFreeTier
         />
-
-        {/* Selected Plan Summary */}
-        <div className="rounded-lg border-2 border-primary bg-primary/5 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">{plan.name} Plan</h3>
-              <p className="text-muted-foreground text-sm">
-                {plan.description}
-              </p>
-            </div>
-            <div className="text-right">
-              <span className="font-bold text-2xl">
-                ${getPriceByInterval(plan, billingInterval)}
-              </span>
-              {hasEarlyAdopterPricing(plan) && (
-                <span className="ml-1 text-muted-foreground line-through">
-                  $
-                  {billingInterval === "annual" ? plan.annualPrice : plan.price}
-                </span>
-              )}
-              <span className="text-muted-foreground">/mo</span>
-            </div>
-          </div>
-          {billingInterval === "annual" && getAnnualTotal(plan) && (
-            <p className="mt-1 text-green-600 text-sm">
-              ${getAnnualTotal(plan)} billed annually
-            </p>
-          )}
-          {hasEarlyAdopterPricing(plan) && (
-            <p className="mt-2 text-green-600 text-xs">
-              Early adopter pricing - your rate stays locked forever
-            </p>
-          )}
-        </div>
 
         {/* AWS Costs Note */}
         <div className="space-y-2 rounded-lg bg-muted/50 p-4">

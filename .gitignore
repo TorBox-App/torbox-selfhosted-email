@@ -68,3 +68,5 @@ notes/
 .sst
 sst-env.d.ts
 .vercel
+# next-agents-md
+.next-docs/
