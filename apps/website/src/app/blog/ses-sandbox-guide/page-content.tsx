@@ -20,14 +20,11 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { LandingFooter } from "@/app/landing/components/footer";
-import { LandingNavbar } from "@/app/landing/components/navbar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 // ============================================================================
-// DATA - Checklist items
+// DATA
 // ============================================================================
 const checklistData = [
   {
@@ -825,7 +822,7 @@ const ProgressHeader = ({
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
-export default function SESSandboxGuide() {
+export default function SandboxGuideContent() {
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
   const [formData, setFormData] = useState(templateDefaults);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -866,49 +863,7 @@ export default function SESSandboxGuide() {
   const approval = getApprovalLikelihood();
 
   return (
-    <div className="min-h-screen bg-background">
-      <LandingNavbar />
-
-      {/* Hero Section */}
-      <header className="relative overflow-hidden border-b pb-16 pt-24">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-        <div className="container relative mx-auto px-4">
-          <Badge className="mb-4" variant="outline">
-            <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
-            Updated January 2026
-          </Badge>
-          <h1 className="mb-4 max-w-3xl font-bold text-4xl tracking-tight md:text-5xl">
-            How to Get Out of{" "}
-            <span className="text-primary">AWS SES Sandbox</span>
-          </h1>
-          <p className="max-w-2xl text-lg text-muted-foreground">
-            The complete guide to production access approval. Interactive
-            checklists, request templates, and everything you need to escape the
-            sandbox on your first try.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-8">
-            <div>
-              <div className="font-mono text-2xl text-primary">Common</div>
-              <div className="text-muted-foreground text-sm">
-                First-time denials
-              </div>
-            </div>
-            <div>
-              <div className="font-mono text-2xl text-primary">24h</div>
-              <div className="text-muted-foreground text-sm">
-                Typical response time
-              </div>
-            </div>
-            <div>
-              <div className="font-mono text-2xl text-primary">~1000</div>
-              <div className="text-muted-foreground text-sm">
-                Words recommended
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <>
       {/* Progress Bar */}
       <ProgressHeader approval={approval} progress={progress} />
 
@@ -1342,8 +1297,6 @@ export default function SESSandboxGuide() {
           </div>
         </section>
       </main>
-
-      <LandingFooter />
-    </div>
+    </>
   );
 }
