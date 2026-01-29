@@ -7,8 +7,8 @@ import {
   getPaidPlans,
   getPriceByInterval,
   hasEarlyAdopterPricing,
-  type PlanId,
   PLANS,
+  type PlanId,
 } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
@@ -138,13 +138,9 @@ export function PlanSelector({
                   No credit card required
                 </p>
               )}
-              {id !== "free" &&
-                billingInterval === "annual" &&
-                annualTotal && (
-                  <p className="mt-1 text-green-600 text-sm">
-                    ${annualTotal}/yr
-                  </p>
-                )}
+              {id !== "free" && billingInterval === "annual" && annualTotal && (
+                <p className="mt-1 text-green-600 text-sm">${annualTotal}/yr</p>
+              )}
             </div>
 
             {/* Key features */}

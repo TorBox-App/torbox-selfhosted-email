@@ -243,7 +243,6 @@ export function BillingStep({
             infrastructure (~$2-5/mo for most apps).
           </p>
         </div>
-
       </CardContent>
 
       <CardFooter className="flex items-center justify-between">
