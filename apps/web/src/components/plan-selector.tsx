@@ -8,6 +8,7 @@ import {
   getPriceByInterval,
   hasEarlyAdopterPricing,
   type PlanId,
+  PLANS,
 } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +33,22 @@ export function PlanSelector({
   const displayPlans = getPaidPlans();
 
   // Show Starter and Growth for most cases, Scale on upgrade page
-  const visiblePlans = displayPlans.filter(({ id }) =>
+  const paidPlans = displayPlans.filter(({ id }) =>
     ["starter", "growth"].includes(id)
   );
 
+  // Include free tier as a proper card when requested
+  const visiblePlans = showFreeTier
+    ? [{ id: "free" as PlanId, plan: PLANS.free }, ...paidPlans]
+    : paidPlans;
+
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div
+      className={cn(
+        "grid gap-4",
+        showFreeTier ? "md:grid-cols-3" : "md:grid-cols-2"
+      )}
+    >
       {visiblePlans.map(({ id, plan }) => {
         const isSelected = selectedPlan === id;
         const isCurrent = currentPlan === id;
@@ -111,16 +122,29 @@ export function PlanSelector({
 
             {/* Price */}
             <div className="mb-4">
-              <span className="font-bold text-3xl">${displayPrice}</span>
-              {isEarlyAdopter && regularPrice && (
+              <span className="font-bold text-3xl">
+                {id === "free" ? "Free" : `$${displayPrice}`}
+              </span>
+              {id !== "free" && isEarlyAdopter && regularPrice && (
                 <span className="ml-2 text-lg text-muted-foreground line-through">
                   ${regularPrice}
                 </span>
               )}
-              <span className="text-muted-foreground">/mo</span>
-              {billingInterval === "annual" && annualTotal && (
-                <p className="mt-1 text-green-600 text-sm">${annualTotal}/yr</p>
+              {id !== "free" && (
+                <span className="text-muted-foreground">/mo</span>
               )}
+              {id === "free" && (
+                <p className="mt-1 text-muted-foreground text-sm">
+                  No credit card required
+                </p>
+              )}
+              {id !== "free" &&
+                billingInterval === "annual" &&
+                annualTotal && (
+                  <p className="mt-1 text-green-600 text-sm">
+                    ${annualTotal}/yr
+                  </p>
+                )}
             </div>
 
             {/* Key features */}

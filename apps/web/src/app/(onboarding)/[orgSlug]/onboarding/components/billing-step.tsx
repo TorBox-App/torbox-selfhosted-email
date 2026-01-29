@@ -42,7 +42,7 @@ export function BillingStep({
   const searchParams = useSearchParams();
   const orgSlug = params.orgSlug as string;
 
-  // Get plan from URL param or localStorage, default to starter
+  // Get plan from URL param or localStorage, default to free
   const planParam = searchParams.get("plan") as PlanId | null;
   const storedPlan =
     typeof window !== "undefined"
@@ -54,7 +54,7 @@ export function BillingStep({
       : storedPlan &&
           ["free", "starter", "growth", "scale"].includes(storedPlan)
         ? storedPlan
-        : null) ?? "starter";
+        : null) ?? "free";
 
   // Get billing interval from URL param or localStorage, default to monthly
   const intervalParam = searchParams.get("interval") as BillingInterval | null;
@@ -194,6 +194,7 @@ export function BillingStep({
           billingInterval={billingInterval}
           onSelectPlan={handlePlanChange}
           selectedPlan={selectedPlan}
+          showFreeTier
         />
 
         {/* Selected Plan Summary */}
@@ -243,22 +244,6 @@ export function BillingStep({
           </p>
         </div>
 
-        {/* Free tier option */}
-        {selectedPlan !== "free" && (
-          <div className="rounded-lg border border-dashed p-4 text-center">
-            <p className="text-muted-foreground text-sm">
-              Not ready to commit?{" "}
-              <button
-                className="font-medium text-primary hover:underline"
-                onClick={() => handlePlanChange("free")}
-                type="button"
-              >
-                Start with the Free plan
-              </button>{" "}
-              (5K tracked events/month, 1 workflow)
-            </p>
-          </div>
-        )}
       </CardContent>
 
       <CardFooter className="flex items-center justify-between">
