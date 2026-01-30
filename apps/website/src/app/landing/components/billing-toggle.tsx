@@ -8,12 +8,14 @@ type BillingToggleProps = {
   value: BillingInterval;
   onChange: (value: BillingInterval) => void;
   className?: string;
+  compact?: boolean;
 };
 
 export function BillingToggle({
   value,
   onChange,
   className,
+  compact,
 }: BillingToggleProps) {
   return (
     <div className={cn("flex flex-col items-center gap-2", className)}>
@@ -67,9 +69,11 @@ export function BillingToggle({
       </div>
 
       {/* Savings note */}
-      <p className="text-center text-green-600 text-xs font-medium dark:text-green-400">
-        Save with annual billing
-      </p>
+      {!compact && (
+        <p className="text-center text-green-600 text-xs font-medium dark:text-green-400">
+          Save with annual billing
+        </p>
+      )}
     </div>
   );
 }

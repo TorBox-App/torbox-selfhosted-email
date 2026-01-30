@@ -1,16 +1,32 @@
 "use client";
 
-import { ArrowRight, Calculator, DollarSign, Info } from "lucide-react";
+import {
+  ArrowRight,
+  Calculator,
+  ChevronDown,
+  DollarSign,
+  Info,
+  Mail,
+  Minus,
+  Plus,
+  Zap,
+} from "lucide-react";
 import {
   parseAsBoolean,
   parseAsInteger,
   parseAsStringLiteral,
   useQueryStates,
 } from "nuqs";
+import { BillingToggle } from "@/app/landing/components/billing-toggle";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -21,7 +37,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { OVERAGE_RATES, PRICING_TIERS, TIER_LIMITS } from "@/config/pricing";
+import {
+  getCtaLink,
+  getDisplayPrice,
+  OVERAGE_RATES,
+  PRICING_TIERS,
+  TIER_LIMITS,
+} from "@/config/pricing";
+import type { BillingInterval } from "@/config/pricing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -108,6 +131,30 @@ function calculateStorageGrowth(
 }
 
 const TIER_IDS = ["free", "starter", "growth", "scale"] as const;
+const BILLING_INTERVALS = ["monthly", "annual"] as const;
+
+const VOLUME_PRESETS = [
+  { label: "Side Project", emails: 1_000, events: 500, tier: "free" as const },
+  {
+    label: "Startup",
+    emails: 50_000,
+    events: 25_000,
+    tier: "starter" as const,
+  },
+  {
+    label: "Growth",
+    emails: 250_000,
+    events: 125_000,
+    tier: "growth" as const,
+  },
+  {
+    label: "Scale",
+    emails: 1_000_000,
+    events: 500_000,
+    tier: "scale" as const,
+  },
+];
+
 const RETENTION_PERIODS = [
   "7days",
   "30days",
@@ -116,10 +163,20 @@ const RETENTION_PERIODS = [
   "indefinite",
 ] as const;
 
+/** Returns a human-friendly step size based on the current value. */
+function getStepSize(value: number): number {
+  if (value < 1_000) return 100;
+  if (value < 10_000) return 1_000;
+  if (value < 100_000) return 5_000;
+  if (value < 1_000_000) return 50_000;
+  return 100_000;
+}
+
 const calculatorParsers = {
   emails: parseAsInteger.withDefault(50_000),
   events: parseAsInteger.withDefault(25_000),
   tier: parseAsStringLiteral(TIER_IDS).withDefault("starter"),
+  billing: parseAsStringLiteral(BILLING_INTERVALS).withDefault("monthly"),
   tracking: parseAsBoolean.withDefault(true),
   eventbridge: parseAsBoolean.withDefault(true),
   dynamodb: parseAsBoolean.withDefault(true),
@@ -139,6 +196,7 @@ export default function CostCalculatorPageContent() {
   const emailsPerMonth = state.emails;
   const eventsPerMonth = state.events;
   const selectedTier = state.tier;
+  const billingInterval = state.billing as BillingInterval;
   const eventTrackingEnabled = state.tracking;
   const eventBridgeEnabled = state.eventbridge;
   const dynamoDBEnabled = state.dynamodb;
@@ -149,15 +207,32 @@ export default function CostCalculatorPageContent() {
   const httpsTracking = state.https;
   const wafEnabled = state.waf;
 
+  const activePreset = VOLUME_PRESETS.find(
+    (p) =>
+      p.emails === emailsPerMonth &&
+      p.events === eventsPerMonth &&
+      p.tier === selectedTier
+  );
+
   // Calculate Wraps platform costs (based on events, not emails)
   const calculateWrapsCosts = () => {
     const tier = PRICING_TIERS.find((t) => t.id === selectedTier);
     const limits = TIER_LIMITS[selectedTier];
     const overage = OVERAGE_RATES[selectedTier];
 
-    if (!tier) return { platformCost: 0, overageCost: 0, totalWrapsCost: 0 };
+    if (!tier)
+      return {
+        platformCost: 0,
+        overageCost: 0,
+        totalWrapsCost: 0,
+        annualSavings: 0,
+      };
 
-    const platformCost = tier.price;
+    const platformCost = getDisplayPrice(tier, billingInterval);
+    const annualSavings =
+      billingInterval === "annual" && tier.annualPrice
+        ? tier.price * 12 - tier.annualPrice
+        : 0;
     const includedEvents =
       typeof limits.messages === "number"
         ? limits.messages
@@ -172,6 +247,7 @@ export default function CostCalculatorPageContent() {
       platformCost,
       overageCost,
       totalWrapsCost: platformCost + overageCost,
+      annualSavings,
       includedEvents,
       overageEvents,
       requiresUpgrade: overageEvents > 0 && overage.perThousand === 0,
@@ -376,15 +452,58 @@ export default function CostCalculatorPageContent() {
                 <CardTitle>Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Volume Presets */}
+                <div className="space-y-2">
+                  <Label>Quick Presets</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {VOLUME_PRESETS.map((preset) => {
+                      const isActive = activePreset === preset;
+                      return (
+                        <button
+                          aria-pressed={isActive}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                            isActive
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-muted-foreground/25 text-muted-foreground hover:border-foreground/50 hover:text-foreground"
+                          )}
+                          key={preset.label}
+                          onClick={() =>
+                            setState({
+                              emails: preset.emails,
+                              events: preset.events,
+                              tier: preset.tier,
+                            })
+                          }
+                          type="button"
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Wraps Plan Selection */}
                 <div className="space-y-3">
-                  <Label>Wraps Plan</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Wraps Plan</Label>
+                    <BillingToggle
+                      compact
+                      onChange={(v) => setState({ billing: v })}
+                      value={billingInterval}
+                    />
+                  </div>
                   <fieldset className="grid grid-cols-2 gap-2 border-none p-0 m-0">
                     <legend className="sr-only">Wraps plan selection</legend>
                     {PRICING_TIERS.map((tier) => {
                       const isSelected = selectedTier === tier.id;
                       const limits = TIER_LIMITS[tier.id];
                       const overage = OVERAGE_RATES[tier.id];
+                      const displayPrice = getDisplayPrice(
+                        tier,
+                        billingInterval
+                      );
                       return (
                         <button
                           aria-pressed={isSelected}
@@ -408,7 +527,7 @@ export default function CostCalculatorPageContent() {
                         >
                           <div className="font-semibold">{tier.name}</div>
                           <div className="tabular-nums font-bold text-lg">
-                            ${tier.price}
+                            ${displayPrice}
                             <span className="font-normal text-muted-foreground text-sm">
                               /mo
                             </span>
@@ -436,20 +555,63 @@ export default function CostCalculatorPageContent() {
                     Monthly{" "}
                     <TrackedEventTooltip>Tracked Events</TrackedEventTooltip>
                   </Label>
-                  <Input
-                    autoComplete="off"
-                    id="events"
-                    max={10_000_000}
-                    min={0}
-                    onChange={(e) =>
-                      setState({
-                        events: Number.parseInt(e.target.value, 10) || 0,
-                      })
-                    }
-                    placeholder="Enter monthly tracked events\u2026"
-                    type="number"
-                    value={eventsPerMonth}
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      aria-label="Decrease tracked events"
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                      disabled={eventsPerMonth <= 0}
+                      onClick={() =>
+                        setState({
+                          events: Math.max(
+                            0,
+                            eventsPerMonth - getStepSize(eventsPerMonth)
+                          ),
+                        })
+                      }
+                      type="button"
+                    >
+                      <Minus aria-hidden="true" className="size-4" />
+                    </button>
+                    <div className="relative flex-1">
+                      <Zap
+                        aria-hidden="true"
+                        className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-muted-foreground"
+                      />
+                      <Input
+                        autoComplete="off"
+                        className="pl-9 text-center"
+                        id="events"
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9]/g, "");
+                          setState({
+                            events: Math.min(
+                              Number.parseInt(raw, 10) || 0,
+                              10_000_000
+                            ),
+                          });
+                        }}
+                        placeholder="0"
+                        value={eventsPerMonth.toLocaleString()}
+                      />
+                    </div>
+                    <button
+                      aria-label="Increase tracked events"
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                      disabled={eventsPerMonth >= 10_000_000}
+                      onClick={() =>
+                        setState({
+                          events: Math.min(
+                            10_000_000,
+                            eventsPerMonth + getStepSize(eventsPerMonth)
+                          ),
+                        })
+                      }
+                      type="button"
+                    >
+                      <Plus aria-hidden="true" className="size-4" />
+                    </button>
+                  </div>
                   <p className="text-muted-foreground text-sm">
                     Behavioral events you send to Wraps (user actions, workflow
                     triggers)
@@ -459,20 +621,63 @@ export default function CostCalculatorPageContent() {
                 {/* Email Volume (AWS billing) */}
                 <div className="space-y-2">
                   <Label htmlFor="emails">Monthly Emails (AWS)</Label>
-                  <Input
-                    autoComplete="off"
-                    id="emails"
-                    max={10_000_000}
-                    min={0}
-                    onChange={(e) =>
-                      setState({
-                        emails: Number.parseInt(e.target.value, 10) || 0,
-                      })
-                    }
-                    placeholder="Enter monthly emails\u2026"
-                    type="number"
-                    value={emailsPerMonth}
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      aria-label="Decrease monthly emails"
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                      disabled={emailsPerMonth <= 0}
+                      onClick={() =>
+                        setState({
+                          emails: Math.max(
+                            0,
+                            emailsPerMonth - getStepSize(emailsPerMonth)
+                          ),
+                        })
+                      }
+                      type="button"
+                    >
+                      <Minus aria-hidden="true" className="size-4" />
+                    </button>
+                    <div className="relative flex-1">
+                      <Mail
+                        aria-hidden="true"
+                        className="-translate-y-1/2 absolute top-1/2 left-3 size-4 text-muted-foreground"
+                      />
+                      <Input
+                        autoComplete="off"
+                        className="pl-9 text-center"
+                        id="emails"
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9]/g, "");
+                          setState({
+                            emails: Math.min(
+                              Number.parseInt(raw, 10) || 0,
+                              10_000_000
+                            ),
+                          });
+                        }}
+                        placeholder="0"
+                        value={emailsPerMonth.toLocaleString()}
+                      />
+                    </div>
+                    <button
+                      aria-label="Increase monthly emails"
+                      className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                      disabled={emailsPerMonth >= 10_000_000}
+                      onClick={() =>
+                        setState({
+                          emails: Math.min(
+                            10_000_000,
+                            emailsPerMonth + getStepSize(emailsPerMonth)
+                          ),
+                        })
+                      }
+                      type="button"
+                    >
+                      <Plus aria-hidden="true" className="size-4" />
+                    </button>
+                  </div>
                   <p className="text-muted-foreground text-sm">
                     Emails sent via AWS SES
                   </p>
@@ -723,6 +928,14 @@ export default function CostCalculatorPageContent() {
                         {formatCost(wrapsCosts.platformCost)}/mo
                       </span>
                     </div>
+                    {wrapsCosts.annualSavings > 0 && (
+                      <div className="flex justify-between text-green-600 dark:text-green-400">
+                        <span className="ml-4">Annual savings</span>
+                        <span className="tabular-nums font-medium">
+                          Save ${wrapsCosts.annualSavings}/yr
+                        </span>
+                      </div>
+                    )}
                     {wrapsCosts.overageCost > 0 && (
                       <div className="flex justify-between text-muted-foreground">
                         <span className="ml-4">
@@ -785,26 +998,73 @@ export default function CostCalculatorPageContent() {
                   <CardTitle>Cost Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {breakdown.map((item) => (
-                      <div
-                        className="flex items-start justify-between gap-4 border-b pb-3 last:border-0"
-                        key={item.name}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <span className="font-medium">{item.name}</span>
-                          {item.details && (
-                            <p className="mt-1 text-muted-foreground text-xs">
-                              {item.details}
-                            </p>
-                          )}
-                        </div>
-                        <span className="tabular-nums font-mono text-sm">
-                          {formatCost(item.cost)}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between font-medium">
+                      <span>Wraps Platform</span>
+                      <span className="tabular-nums">
+                        {formatCost(wrapsCosts.platformCost)}/mo
+                      </span>
+                    </div>
+                    {wrapsCosts.overageCost > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span className="ml-4">
+                          + Overage (
+                          {wrapsCosts.overageEvents?.toLocaleString()} events)
+                        </span>
+                        <span className="tabular-nums">
+                          {formatCost(wrapsCosts.overageCost)}
                         </span>
                       </div>
-                    ))}
+                    )}
+                    <div className="flex justify-between font-medium">
+                      <span>AWS Infrastructure</span>
+                      <span className="tabular-nums">
+                        {formatCost(total)}/mo
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2 font-bold">
+                      <span>Total</span>
+                      <span className="tabular-nums">
+                        {wrapsCosts.requiresUpgrade
+                          ? "—"
+                          : formatCost(wrapsCosts.totalWrapsCost + total)}
+                        /mo
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Collapsible AWS service breakdown */}
+                  <Collapsible className="mt-4">
+                    <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors [&[data-state=open]>svg]:rotate-180">
+                      View AWS breakdown
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="size-4 transition-transform duration-200"
+                      />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                      <div className="space-y-3 pt-3 border-t mt-2">
+                        {breakdown.map((item) => (
+                          <div
+                            className="flex items-start justify-between gap-4 border-b pb-3 last:border-0"
+                            key={item.name}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="font-medium">{item.name}</span>
+                              {item.details && (
+                                <p className="mt-1 text-muted-foreground text-xs">
+                                  {item.details}
+                                </p>
+                              )}
+                            </div>
+                            <span className="tabular-nums font-mono text-sm">
+                              {formatCost(item.cost)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </CardContent>
               </Card>
 
@@ -897,7 +1157,14 @@ export default function CostCalculatorPageContent() {
               <div className="flex flex-col gap-3">
                 <Button asChild className="w-full" size="lg">
                   <a
-                    href={`https://app.wraps.dev/auth?mode=signup&plan=${selectedTier}`}
+                    href={(() => {
+                      const tier = PRICING_TIERS.find(
+                        (t) => t.id === selectedTier
+                      );
+                      return tier
+                        ? getCtaLink(tier, billingInterval)
+                        : `https://app.wraps.dev/auth?mode=signup&plan=${selectedTier}`;
+                    })()}
                   >
                     Get Started with{" "}
                     {PRICING_TIERS.find((t) => t.id === selectedTier)?.name ??
