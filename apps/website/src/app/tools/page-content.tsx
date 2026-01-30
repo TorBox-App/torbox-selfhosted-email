@@ -7,6 +7,7 @@ import {
   Check,
   ChevronDown,
   Globe,
+  Info,
   Key,
   Loader2,
   Mail,
@@ -17,6 +18,7 @@ import {
   ShieldCheck,
   Sparkles,
   X,
+  XCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -405,6 +407,7 @@ export default function ToolsPageContent() {
                 <div className="relative flex-1">
                   <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
                   <Input
+                    aria-label="Domain to check"
                     className="h-12 pl-10 text-lg"
                     disabled={isLoading}
                     onChange={(e) => setDomain(e.target.value)}
@@ -445,12 +448,16 @@ export default function ToolsPageContent() {
                   <div className="mt-4 rounded-lg border bg-muted/30 p-4">
                     <div className="space-y-3">
                       <div>
-                        <label className="mb-1.5 flex items-center gap-2 font-medium text-sm">
+                        <label
+                          className="mb-1.5 flex items-center gap-2 font-medium text-sm"
+                          htmlFor="dkim-selectors"
+                        >
                           <Key className="h-4 w-4" />
                           DKIM Selectors
                         </label>
                         <Input
                           disabled={isLoading}
+                          id="dkim-selectors"
                           onChange={(e) => setDkimSelector(e.target.value)}
                           placeholder="e.g., selector1, selector2, selector3"
                           value={dkimSelector}
@@ -474,7 +481,7 @@ export default function ToolsPageContent() {
 
           {/* Error State */}
           {error && (
-            <Card className="mb-8 border-red-500/20 bg-red-500/5">
+            <Card className="mb-8 border-red-500/20 bg-red-500/5" role="alert">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -617,7 +624,14 @@ export default function ToolsPageContent() {
                               {data.score}/{data.max}
                             </span>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            aria-label={`${label} score`}
+                            aria-valuemax={data.max}
+                            aria-valuemin={0}
+                            aria-valuenow={data.score}
+                            className="h-2 overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                          >
                             <div
                               className={`h-full transition-all ${
                                 data.score === data.max
@@ -645,7 +659,14 @@ export default function ToolsPageContent() {
                               {result.score.breakdown.bonus.possible}
                             </span>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            aria-label="Bonus points score"
+                            aria-valuemax={result.score.breakdown.bonus.possible}
+                            aria-valuemin={0}
+                            aria-valuenow={result.score.breakdown.bonus.earned}
+                            className="h-2 overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                          >
                             <div
                               className="h-full bg-purple-500 transition-all"
                               style={{
@@ -692,7 +713,18 @@ export default function ToolsPageContent() {
                             key={`issue-${i}`}
                           >
                             <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1">
+                              <div className="flex flex-1 items-start gap-2">
+                                {(() => {
+                                  const iconClass = "mt-0.5 h-4 w-4 flex-shrink-0";
+                                  if (issue.severity === "critical") {
+                                    return <XCircle className={`${iconClass} text-red-500`} />;
+                                  }
+                                  if (issue.severity === "warning") {
+                                    return <AlertTriangle className={`${iconClass} text-yellow-500`} />;
+                                  }
+                                  return <Info className={`${iconClass} text-blue-500`} />;
+                                })()}
+                                <div>
                                 <div className="mb-1 font-medium">
                                   {issue.check}
                                 </div>
@@ -713,6 +745,7 @@ export default function ToolsPageContent() {
                                     </>
                                   )}
                                 </p>
+                                </div>
                               </div>
                               <Badge
                                 variant={

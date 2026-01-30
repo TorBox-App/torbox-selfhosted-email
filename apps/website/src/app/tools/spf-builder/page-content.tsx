@@ -412,7 +412,14 @@ export default function SPFBuilderPageContent() {
                     {lookupCount} / 10
                   </span>
                 </div>
-                <div className="h-3 overflow-hidden rounded-full bg-muted">
+                <div
+                  aria-label="DNS lookups used"
+                  aria-valuemax={10}
+                  aria-valuemin={0}
+                  aria-valuenow={lookupCount}
+                  className="h-3 overflow-hidden rounded-full bg-muted"
+                  role="progressbar"
+                >
                   <div
                     className={`h-full transition-all duration-500 ${getProgressColor()}`}
                     style={{
@@ -421,7 +428,7 @@ export default function SPFBuilderPageContent() {
                   />
                 </div>
                 {lookupCount > 10 && (
-                  <div className="mt-3 flex items-start gap-2 text-red-500 text-sm">
+                  <div className="mt-3 flex items-start gap-2 text-red-500 text-sm" role="alert">
                     <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                     <span>
                       Exceeds 10-lookup limit! SPF will return PermError and
@@ -431,7 +438,7 @@ export default function SPFBuilderPageContent() {
                   </div>
                 )}
                 {lookupCount > 7 && lookupCount <= 10 && (
-                  <div className="mt-3 flex items-start gap-2 text-yellow-500 text-sm">
+                  <div aria-live="polite" className="mt-3 flex items-start gap-2 text-yellow-500 text-sm">
                     <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
                     <span>
                       Approaching limit. Consider using ip4/ip6 mechanisms
@@ -615,43 +622,45 @@ export default function SPFBuilderPageContent() {
                 </p>
               </CardHeader>
               <CardContent>
-                <div
-                  aria-label="SPF qualifier"
-                  className="space-y-2"
-                  role="radiogroup"
-                >
+                <fieldset aria-label="SPF qualifier" className="space-y-2">
                   {Object.entries(QUALIFIERS).map(([key, q]) => (
-                    <button
-                      aria-checked={qualifier === key}
-                      className={`w-full rounded-lg border p-3 text-left transition-all ${
+                    <label
+                      className={`flex w-full cursor-pointer rounded-lg border p-3 text-left transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 ${
                         qualifier === key
                           ? "border-primary bg-primary/10"
                           : "border-border bg-muted/30 hover:border-muted-foreground/50"
                       }`}
                       key={key}
-                      onClick={() => setQualifier(key)}
-                      role="radio"
-                      type="button"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono font-medium">
-                          {q.label}
-                          {q.recommended && (
-                            <Badge className="ml-2" variant="secondary">
-                              Recommended
-                            </Badge>
+                      <input
+                        checked={qualifier === key}
+                        className="sr-only"
+                        name="spf-qualifier"
+                        onChange={() => setQualifier(key)}
+                        type="radio"
+                        value={key}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-medium">
+                            {q.label}
+                            {q.recommended && (
+                              <Badge className="ml-2" variant="secondary">
+                                Recommended
+                              </Badge>
+                            )}
+                          </span>
+                          {qualifier === key && (
+                            <Check className="h-5 w-5 text-primary" />
                           )}
-                        </span>
-                        {qualifier === key && (
-                          <Check className="h-5 w-5 text-primary" />
-                        )}
+                        </div>
+                        <p className="mt-1 text-muted-foreground text-sm">
+                          {q.description}
+                        </p>
                       </div>
-                      <p className="mt-1 text-muted-foreground text-sm">
-                        {q.description}
-                      </p>
-                    </button>
+                    </label>
                   ))}
-                </div>
+                </fieldset>
               </CardContent>
             </Card>
 

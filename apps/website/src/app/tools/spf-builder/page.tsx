@@ -55,17 +55,6 @@ export default function SPFBuilderPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
         type="application/ld+json"
       />
-      {/* Server-rendered content for SEO */}
-      <article aria-hidden="true" className="sr-only">
-        <h1>SPF Record Builder</h1>
-        <p>
-          Build and validate your SPF record. Avoid the 10-lookup limit with our
-          interactive tool.
-        </p>
-        <h2>Select Email Providers</h2>
-        <h2>Preview SPF Record</h2>
-        <h2>Lookup Count</h2>
-      </article>
       <SPFBuilderPageContent />
     </>
   );

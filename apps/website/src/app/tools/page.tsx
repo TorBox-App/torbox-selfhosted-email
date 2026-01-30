@@ -55,18 +55,6 @@ export default function ToolsPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
         type="application/ld+json"
       />
-      {/* Server-rendered content for SEO */}
-      <article aria-hidden="true" className="sr-only">
-        <h1>Email Tools</h1>
-        <p>
-          Free tools to check your email deliverability setup. DMARC analyzer,
-          SPF validator, and more.
-        </p>
-        <h2>DMARC Analyzer</h2>
-        <h2>SPF Validator</h2>
-        <h2>SPF Builder</h2>
-        <h2>Domain Checker</h2>
-      </article>
       <ToolsPageContent />
     </>
   );
