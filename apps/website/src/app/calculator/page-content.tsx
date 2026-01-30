@@ -362,7 +362,13 @@ export default function CostCalculatorPageContent() {
                               : "border-muted hover:border-muted-foreground/50"
                           }`}
                           key={tier.id}
-                          onClick={() => setSelectedTier(tier.id)}
+                          onClick={() => {
+                            setSelectedTier(tier.id);
+                            const maxEvents = limits.messages;
+                            if (typeof maxEvents === "number") {
+                              setEventsPerMonth(maxEvents);
+                            }
+                          }}
                           type="button"
                         >
                           <div className="font-semibold">{tier.name}</div>
