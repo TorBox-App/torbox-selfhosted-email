@@ -53,6 +53,7 @@ const TEXT_COLORS = [
   { name: "Blue", color: "#2563eb" },
   { name: "Purple", color: "#9333ea" },
   { name: "Pink", color: "#db2777" },
+  { name: "White", color: "#ffffff" },
 ];
 
 // Common highlight/background colors
@@ -432,7 +433,14 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                       <RemoveFormatting className="h-3 w-3 text-muted-foreground" />
                     )}
                     {currentColor === item.color && item.color && (
-                      <Check className="h-3 w-3 text-white drop-shadow" />
+                      <Check
+                        className={cn(
+                          "h-3 w-3 drop-shadow",
+                          item.color === "#ffffff"
+                            ? "text-black"
+                            : "text-white"
+                        )}
+                      />
                     )}
                   </button>
                 ))}
