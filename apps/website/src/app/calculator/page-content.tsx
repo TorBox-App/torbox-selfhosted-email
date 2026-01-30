@@ -17,12 +17,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   OVERAGE_RATES,
   PRICING_TIERS,
   TIER_LIMITS,
@@ -31,7 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * AWS pricing constants (as of 2025)
+ * AWS pricing constants (as of 2026)
  * All costs in USD (US East N. Virginia region)
  */
 const AWS_PRICING = {
@@ -298,14 +292,21 @@ export default function CostCalculatorPageContent() {
     ? calculateStorageGrowth(emailsPerMonth, retention, numEventTypes)
     : [];
 
+  const costFormatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
   const formatCost = (cost: number) => {
     if (cost === 0) {
-      return "$0.00";
+      return costFormatter.format(0);
     }
     if (cost < 0.01) {
-      return "< $0.01";
+      return `< ${costFormatter.format(0.01)}`;
     }
-    return `$${cost.toFixed(2)}`;
+    return costFormatter.format(cost);
   };
 
   return (
@@ -350,7 +351,8 @@ export default function CostCalculatorPageContent() {
                 {/* Wraps Plan Selection */}
                 <div className="space-y-3">
                   <Label>Wraps Plan</Label>
-                  <fieldset aria-label="Wraps plan selection" className="grid grid-cols-2 gap-2 border-none p-0 m-0">
+                  <fieldset className="grid grid-cols-2 gap-2 border-none p-0 m-0">
+                    <legend className="sr-only">Wraps plan selection</legend>
                     {PRICING_TIERS.map((tier) => {
                       const isSelected = selectedTier === tier.id;
                       const limits = TIER_LIMITS[tier.id];
@@ -359,7 +361,7 @@ export default function CostCalculatorPageContent() {
                         <button
                           aria-pressed={isSelected}
                           className={cn(
-                            "rounded-lg border-2 p-3 text-left",
+                            "rounded-lg border-2 p-3 text-left touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                             isSelected
                               ? "border-primary bg-primary/5"
                               : "border-muted hover:border-muted-foreground/50"
@@ -405,6 +407,7 @@ export default function CostCalculatorPageContent() {
                     <TrackedEventTooltip>Tracked Events</TrackedEventTooltip>
                   </Label>
                   <Input
+                    autoComplete="off"
                     id="events"
                     max={10_000_000}
                     min={0}
@@ -413,7 +416,7 @@ export default function CostCalculatorPageContent() {
                         Number.parseInt(e.target.value, 10) || 0
                       )
                     }
-                    placeholder="Enter monthly tracked events"
+                    placeholder="Enter monthly tracked events\u2026"
                     type="number"
                     value={eventsPerMonth}
                   />
@@ -427,6 +430,7 @@ export default function CostCalculatorPageContent() {
                 <div className="space-y-2">
                   <Label htmlFor="emails">Monthly Emails (AWS)</Label>
                   <Input
+                    autoComplete="off"
                     id="emails"
                     max={10_000_000}
                     min={0}
@@ -435,7 +439,7 @@ export default function CostCalculatorPageContent() {
                         Number.parseInt(e.target.value, 10) || 0
                       )
                     }
-                    placeholder="Enter monthly emails"
+                    placeholder="Enter monthly emails\u2026"
                     type="number"
                     value={emailsPerMonth}
                   />
@@ -683,7 +687,9 @@ export default function CostCalculatorPageContent() {
                   <div className="space-y-2 border-t pt-4 text-sm">
                     <div className="flex justify-between font-medium">
                       <span>Wraps Platform</span>
-                      <span className="tabular-nums">{formatCost(wrapsCosts.platformCost)}/mo</span>
+                      <span className="tabular-nums">
+                        {formatCost(wrapsCosts.platformCost)}/mo
+                      </span>
                     </div>
                     {wrapsCosts.overageCost > 0 && (
                       <div className="flex justify-between text-muted-foreground">
@@ -691,12 +697,16 @@ export default function CostCalculatorPageContent() {
                           + Overage (
                           {wrapsCosts.overageEvents?.toLocaleString()} events)
                         </span>
-                        <span className="tabular-nums">{formatCost(wrapsCosts.overageCost)}</span>
+                        <span className="tabular-nums">
+                          {formatCost(wrapsCosts.overageCost)}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between font-medium">
                       <span>AWS Infrastructure</span>
-                      <span className="tabular-nums">{formatCost(total)}/mo</span>
+                      <span className="tabular-nums">
+                        {formatCost(total)}/mo
+                      </span>
                     </div>
                     <div className="flex justify-between border-t pt-2 font-bold">
                       <span>Total Monthly Cost</span>
@@ -749,26 +759,8 @@ export default function CostCalculatorPageContent() {
                         className="flex items-start justify-between gap-4 border-b pb-3 last:border-0"
                         key={item.name}
                       >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{item.name}</span>
-                            {item.details && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button aria-label={`Details about ${item.name}`} type="button">
-                                      <Info aria-hidden="true" className="size-4 text-muted-foreground" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="max-w-xs text-xs">
-                                      {item.details}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium">{item.name}</span>
                           {item.details && (
                             <p className="mt-1 text-muted-foreground text-xs">
                               {item.details}
@@ -789,7 +781,10 @@ export default function CostCalculatorPageContent() {
                 <Card className="border-blue-500/20 bg-blue-500/5">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Info aria-hidden="true" className="size-5 text-blue-600" />
+                      <Info
+                        aria-hidden="true"
+                        className="size-5 text-blue-600"
+                      />
                       Storage Growth Over Time
                     </CardTitle>
                   </CardHeader>
@@ -847,7 +842,10 @@ export default function CostCalculatorPageContent() {
               <Card className="border-green-500/20 bg-green-500/5">
                 <CardContent className="pt-6">
                   <div className="flex gap-3">
-                    <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-green-600" />
+                    <Info
+                      aria-hidden="true"
+                      className="mt-0.5 size-5 shrink-0 text-green-600"
+                    />
                     <div className="space-y-2 text-sm">
                       <p className="font-semibold text-green-900 dark:text-green-100">
                         AWS Free Tier Included
@@ -866,7 +864,9 @@ export default function CostCalculatorPageContent() {
               {/* CTA */}
               <div className="flex flex-col gap-3">
                 <Button asChild className="w-full" size="lg">
-                  <a href={`https://app.wraps.dev/auth?mode=signup&plan=${selectedTier}`}>
+                  <a
+                    href={`https://app.wraps.dev/auth?mode=signup&plan=${selectedTier}`}
+                  >
                     Get Started with{" "}
                     {PRICING_TIERS.find((t) => t.id === selectedTier)?.name ??
                       "Wraps"}
@@ -889,7 +889,7 @@ export default function CostCalculatorPageContent() {
               <div>
                 <h4 className="mb-2 font-semibold">How We Calculate Costs</h4>
                 <p className="text-pretty text-muted-foreground">
-                  All costs are based on official AWS pricing as of January 2025
+                  All costs are based on official AWS pricing as of January 2026
                   for US East (N. Virginia) region. Costs include AWS free tier
                   benefits where applicable. Storage costs shown represent{" "}
                   <strong>steady-state</strong> (after retention period fills

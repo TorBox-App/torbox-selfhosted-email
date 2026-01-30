@@ -29,14 +29,16 @@ export function TrackedEventTooltip({
   return (
     <HoverCard openDelay={200}>
       <HoverCardTrigger asChild>
-        <span
-          className={`cursor-help border-b border-dashed border-current hover:border-solid ${className}`}
-          role="button"
-          tabIndex={0}
+        <button
+          className={`inline cursor-help border-b border-dashed border-current bg-transparent p-0 font-inherit text-inherit hover:border-solid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm ${className}`}
+          type="button"
         >
           {children}
-          <Info className="ml-0.5 inline size-3 align-middle" />
-        </span>
+          <Info
+            aria-hidden="true"
+            className="ml-0.5 inline size-3 align-middle"
+          />
+        </button>
       </HoverCardTrigger>
       <HoverCardContent align="center" className="w-80" side="top">
         <div className="space-y-3">
