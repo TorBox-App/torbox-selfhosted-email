@@ -331,7 +331,7 @@ export default function Page() {
 
                 <p className="text-muted-foreground text-sm mt-4">
                   See our{" "}
-                  <a className="text-primary hover:underline" href="/pricing">
+                  <a className="text-primary hover:underline" href="/#pricing">
                     pricing page
                   </a>{" "}
                   for full cost breakdowns including Wraps platform features.
