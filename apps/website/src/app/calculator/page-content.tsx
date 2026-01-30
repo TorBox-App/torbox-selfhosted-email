@@ -1,7 +1,12 @@
 "use client";
 
 import { ArrowRight, Calculator, DollarSign, Info } from "lucide-react";
-import { useState } from "react";
+import {
+  parseAsBoolean,
+  parseAsInteger,
+  parseAsStringLiteral,
+  useQueryStates,
+} from "nuqs";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,12 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import {
-  OVERAGE_RATES,
-  PRICING_TIERS,
-  TIER_LIMITS,
-  type TierId,
-} from "@/config/pricing";
+import { OVERAGE_RATES, PRICING_TIERS, TIER_LIMITS } from "@/config/pricing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -107,19 +107,47 @@ function calculateStorageGrowth(
   });
 }
 
+const TIER_IDS = ["free", "starter", "growth", "scale"] as const;
+const RETENTION_PERIODS = [
+  "7days",
+  "30days",
+  "90days",
+  "1year",
+  "indefinite",
+] as const;
+
+const calculatorParsers = {
+  emails: parseAsInteger.withDefault(50_000),
+  events: parseAsInteger.withDefault(25_000),
+  tier: parseAsStringLiteral(TIER_IDS).withDefault("starter"),
+  tracking: parseAsBoolean.withDefault(true),
+  eventbridge: parseAsBoolean.withDefault(true),
+  dynamodb: parseAsBoolean.withDefault(true),
+  retention: parseAsStringLiteral(RETENTION_PERIODS).withDefault("90days"),
+  eventTypes: parseAsInteger.withDefault(8),
+  dedicatedIp: parseAsBoolean.withDefault(false),
+  customDomain: parseAsBoolean.withDefault(false),
+  https: parseAsBoolean.withDefault(false),
+  waf: parseAsBoolean.withDefault(false),
+};
+
 export default function CostCalculatorPageContent() {
-  const [emailsPerMonth, setEmailsPerMonth] = useState(50_000);
-  const [eventsPerMonth, setEventsPerMonth] = useState(25_000);
-  const [selectedTier, setSelectedTier] = useState<TierId>("starter");
-  const [eventTrackingEnabled, setEventTrackingEnabled] = useState(true);
-  const [eventBridgeEnabled, setEventBridgeEnabled] = useState(true);
-  const [dynamoDBEnabled, setDynamoDBEnabled] = useState(true);
-  const [retention, setRetention] = useState<RetentionPeriod>("90days");
-  const [numEventTypes, setNumEventTypes] = useState(8);
-  const [dedicatedIp, setDedicatedIp] = useState(false);
-  const [customDomain, setCustomDomain] = useState(false);
-  const [httpsTracking, setHttpsTracking] = useState(false);
-  const [wafEnabled, setWafEnabled] = useState(false);
+  const [state, setState] = useQueryStates(calculatorParsers, {
+    history: "replace",
+  });
+
+  const emailsPerMonth = state.emails;
+  const eventsPerMonth = state.events;
+  const selectedTier = state.tier;
+  const eventTrackingEnabled = state.tracking;
+  const eventBridgeEnabled = state.eventbridge;
+  const dynamoDBEnabled = state.dynamodb;
+  const retention = state.retention;
+  const numEventTypes = state.eventTypes;
+  const dedicatedIp = state.dedicatedIp;
+  const customDomain = state.customDomain;
+  const httpsTracking = state.https;
+  const wafEnabled = state.waf;
 
   // Calculate Wraps platform costs (based on events, not emails)
   const calculateWrapsCosts = () => {
@@ -368,11 +396,13 @@ export default function CostCalculatorPageContent() {
                           )}
                           key={tier.id}
                           onClick={() => {
-                            setSelectedTier(tier.id);
                             const maxEvents = limits.messages;
-                            if (typeof maxEvents === "number") {
-                              setEventsPerMonth(maxEvents);
-                            }
+                            setState({
+                              tier: tier.id,
+                              ...(typeof maxEvents === "number"
+                                ? { events: maxEvents }
+                                : {}),
+                            });
                           }}
                           type="button"
                         >
@@ -412,9 +442,9 @@ export default function CostCalculatorPageContent() {
                     max={10_000_000}
                     min={0}
                     onChange={(e) =>
-                      setEventsPerMonth(
-                        Number.parseInt(e.target.value, 10) || 0
-                      )
+                      setState({
+                        events: Number.parseInt(e.target.value, 10) || 0,
+                      })
                     }
                     placeholder="Enter monthly tracked events\u2026"
                     type="number"
@@ -435,9 +465,9 @@ export default function CostCalculatorPageContent() {
                     max={10_000_000}
                     min={0}
                     onChange={(e) =>
-                      setEmailsPerMonth(
-                        Number.parseInt(e.target.value, 10) || 0
-                      )
+                      setState({
+                        emails: Number.parseInt(e.target.value, 10) || 0,
+                      })
                     }
                     placeholder="Enter monthly emails\u2026"
                     type="number"
@@ -463,7 +493,7 @@ export default function CostCalculatorPageContent() {
                     <Switch
                       checked={eventTrackingEnabled}
                       id="event-tracking"
-                      onCheckedChange={setEventTrackingEnabled}
+                      onCheckedChange={(v) => setState({ tracking: v })}
                     />
                   </div>
 
@@ -482,7 +512,7 @@ export default function CostCalculatorPageContent() {
                         <Switch
                           checked={eventBridgeEnabled}
                           id="eventbridge"
-                          onCheckedChange={setEventBridgeEnabled}
+                          onCheckedChange={(v) => setState({ eventbridge: v })}
                         />
                       </div>
 
@@ -497,7 +527,7 @@ export default function CostCalculatorPageContent() {
                         <Switch
                           checked={dynamoDBEnabled}
                           id="dynamodb"
-                          onCheckedChange={setDynamoDBEnabled}
+                          onCheckedChange={(v) => setState({ dynamodb: v })}
                         />
                       </div>
 
@@ -507,7 +537,7 @@ export default function CostCalculatorPageContent() {
                           <Label htmlFor="retention">Retention Period</Label>
                           <Select
                             onValueChange={(value: RetentionPeriod) => {
-                              setRetention(value);
+                              setState({ retention: value });
                             }}
                             value={retention}
                           >
@@ -532,7 +562,9 @@ export default function CostCalculatorPageContent() {
                         <Label htmlFor="event-types">Event Types Tracked</Label>
                         <Select
                           onValueChange={(value) =>
-                            setNumEventTypes(Number.parseInt(value, 10))
+                            setState({
+                              eventTypes: Number.parseInt(value, 10),
+                            })
                           }
                           value={numEventTypes.toString()}
                         >
@@ -572,7 +604,7 @@ export default function CostCalculatorPageContent() {
                     <Switch
                       checked={dedicatedIp}
                       id="dedicated-ip"
-                      onCheckedChange={setDedicatedIp}
+                      onCheckedChange={(v) => setState({ dedicatedIp: v })}
                     />
                   </div>
 
@@ -588,7 +620,7 @@ export default function CostCalculatorPageContent() {
                     <Switch
                       checked={customDomain}
                       id="custom-domain"
-                      onCheckedChange={setCustomDomain}
+                      onCheckedChange={(v) => setState({ customDomain: v })}
                     />
                   </div>
 
@@ -605,10 +637,10 @@ export default function CostCalculatorPageContent() {
                       checked={httpsTracking}
                       id="https-tracking"
                       onCheckedChange={(checked) => {
-                        setHttpsTracking(checked);
-                        if (!checked) {
-                          setWafEnabled(false);
-                        }
+                        setState({
+                          https: checked,
+                          ...(!checked ? { waf: false } : {}),
+                        });
                       }}
                     />
                   </div>
@@ -624,7 +656,7 @@ export default function CostCalculatorPageContent() {
                       <Switch
                         checked={wafEnabled}
                         id="waf-enabled"
-                        onCheckedChange={setWafEnabled}
+                        onCheckedChange={(v) => setState({ waf: v })}
                       />
                     </div>
                   )}

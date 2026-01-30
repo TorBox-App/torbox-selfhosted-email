@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
@@ -106,13 +107,15 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <ThemeProvider defaultTheme="system" storageKey="wraps-ui-theme">
-          <AnalyticsProvider>
-            <InViewProvider>
-              <SidebarConfigProvider>{children}</SidebarConfigProvider>
-            </InViewProvider>
-          </AnalyticsProvider>
-        </ThemeProvider>
+        <NuqsAdapter>
+          <ThemeProvider defaultTheme="system" storageKey="wraps-ui-theme">
+            <AnalyticsProvider>
+              <InViewProvider>
+                <SidebarConfigProvider>{children}</SidebarConfigProvider>
+              </InViewProvider>
+            </AnalyticsProvider>
+          </ThemeProvider>
+        </NuqsAdapter>
         <Analytics />
       </body>
     </html>
