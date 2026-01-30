@@ -40,7 +40,7 @@ function getPostHogClient(): PostHog | null {
  * Track user signup event in PostHog.
  * Non-blocking - failures are logged but don't affect auth flow.
  */
-function trackPostHogSignup(user: {
+async function trackPostHogSignup(user: {
   email: string;
   name: string | null;
   method: "email" | "google" | "github" | "passkey";
@@ -66,6 +66,8 @@ function trackPostHogSignup(user: {
         method: user.method,
       },
     });
+
+    await posthog.flush();
   } catch (err) {
     console.error("Error tracking PostHog signup:", err);
   }
@@ -422,16 +424,17 @@ export const auth = betterAuth<BetterAuthOptions>({
       if (ctx.path.startsWith("/sign-up")) {
         const newSession = ctx.context.newSession;
         if (newSession) {
-          // Fire and forget - don't block auth flow
-          trackUserSignup({
-            email: newSession.user.email,
-            name: newSession.user.name,
-          });
-          trackPostHogSignup({
-            email: newSession.user.email,
-            name: newSession.user.name,
-            method: "email",
-          });
+          await Promise.allSettled([
+            trackUserSignup({
+              email: newSession.user.email,
+              name: newSession.user.name,
+            }),
+            trackPostHogSignup({
+              email: newSession.user.email,
+              name: newSession.user.name,
+              method: "email",
+            }),
+          ]);
         }
       }
 
@@ -453,16 +456,17 @@ export const auth = betterAuth<BetterAuthOptions>({
               | "github"
               | undefined;
 
-            // Fire and forget - don't block auth flow
-            trackUserSignup({
-              email: newSession.user.email,
-              name: newSession.user.name,
-            });
-            trackPostHogSignup({
-              email: newSession.user.email,
-              name: newSession.user.name,
-              method: provider || "email",
-            });
+            await Promise.allSettled([
+              trackUserSignup({
+                email: newSession.user.email,
+                name: newSession.user.name,
+              }),
+              trackPostHogSignup({
+                email: newSession.user.email,
+                name: newSession.user.name,
+                method: provider || "email",
+              }),
+            ]);
           }
         }
       }
