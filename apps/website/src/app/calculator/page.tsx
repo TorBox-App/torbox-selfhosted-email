@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import CostCalculatorPageContent from "./page-content";
 
 export const metadata: Metadata = {
@@ -21,5 +22,9 @@ export const metadata: Metadata = {
 };
 
 export default function CostCalculatorPage() {
-  return <CostCalculatorPageContent />;
+  return (
+    <Suspense>
+      <CostCalculatorPageContent />
+    </Suspense>
+  );
 }
