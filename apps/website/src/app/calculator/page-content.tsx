@@ -860,9 +860,11 @@ export default function CostCalculatorPageContent() {
 
               {/* CTA */}
               <div className="flex flex-col gap-3">
-                <Button className="w-full" size="lg">
-                  <a className="flex items-center" href="/docs/quickstart">
-                    Get Started with Wraps
+                <Button asChild className="w-full" size="lg">
+                  <a href={`https://app.wraps.dev/auth?mode=signup&plan=${selectedTier}`}>
+                    Get Started with{" "}
+                    {PRICING_TIERS.find((t) => t.id === selectedTier)?.name ??
+                      "Wraps"}
                     <ArrowRight className="ml-2 size-4" />
                   </a>
                 </Button>
