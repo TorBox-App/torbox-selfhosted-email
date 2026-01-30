@@ -21,22 +21,5 @@ export const metadata: Metadata = {
 };
 
 export default function CostCalculatorPage() {
-  return (
-    <>
-      {/* Server-rendered content for SEO */}
-      <article aria-hidden="true" className="sr-only">
-        <h1>Email Cost Calculator</h1>
-        <p>
-          Compare email provider pricing. See exactly how much you'll save with
-          AWS SES vs Resend, Postmark, and more.
-        </p>
-        <h2>AWS SES Pricing</h2>
-        <h2>Resend Pricing</h2>
-        <h2>Postmark Pricing</h2>
-        <h2>Mailgun Pricing</h2>
-        <h2>SendGrid Pricing</h2>
-      </article>
-      <CostCalculatorPageContent />
-    </>
-  );
+  return <CostCalculatorPageContent />;
 }

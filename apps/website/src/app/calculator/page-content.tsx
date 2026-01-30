@@ -28,6 +28,7 @@ import {
   TIER_LIMITS,
   type TierId,
 } from "@/config/pricing";
+import { cn } from "@/lib/utils";
 
 /**
  * AWS pricing constants (as of 2025)
@@ -308,12 +309,12 @@ export default function CostCalculatorPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <a className="flex items-center gap-2 font-bold text-xl" href="/">
-            <Calculator className="size-6" />
+            <Calculator aria-hidden="true" className="size-6" />
             Wraps Cost Calculator
           </a>
           <Button asChild variant="outline">
@@ -330,10 +331,10 @@ export default function CostCalculatorPageContent() {
             <Badge className="mb-4" variant="outline">
               Cost Estimator
             </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight">
+            <h1 className="mb-4 text-balance font-bold text-4xl tracking-tight">
               Calculate Your AWS Email Costs
             </h1>
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+            <p className="mx-auto max-w-2xl text-pretty text-lg text-muted-foreground">
               Transparent pricing calculator using real AWS rates. See exactly
               what you'll pay for your email infrastructure.
             </p>
@@ -349,18 +350,20 @@ export default function CostCalculatorPageContent() {
                 {/* Wraps Plan Selection */}
                 <div className="space-y-3">
                   <Label>Wraps Plan</Label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <fieldset aria-label="Wraps plan selection" className="grid grid-cols-2 gap-2 border-none p-0 m-0">
                     {PRICING_TIERS.map((tier) => {
                       const isSelected = selectedTier === tier.id;
                       const limits = TIER_LIMITS[tier.id];
                       const overage = OVERAGE_RATES[tier.id];
                       return (
                         <button
-                          className={`rounded-lg border-2 p-3 text-left transition-all ${
+                          aria-pressed={isSelected}
+                          className={cn(
+                            "rounded-lg border-2 p-3 text-left",
                             isSelected
                               ? "border-primary bg-primary/5"
                               : "border-muted hover:border-muted-foreground/50"
-                          }`}
+                          )}
                           key={tier.id}
                           onClick={() => {
                             setSelectedTier(tier.id);
@@ -372,7 +375,7 @@ export default function CostCalculatorPageContent() {
                           type="button"
                         >
                           <div className="font-semibold">{tier.name}</div>
-                          <div className="font-bold text-lg">
+                          <div className="tabular-nums font-bold text-lg">
                             ${tier.price}
                             <span className="font-normal text-muted-foreground text-sm">
                               /mo
@@ -392,7 +395,7 @@ export default function CostCalculatorPageContent() {
                         </button>
                       );
                     })}
-                  </div>
+                  </fieldset>
                 </div>
 
                 {/* Monthly Tracked Events (Wraps billing) */}
@@ -626,12 +629,12 @@ export default function CostCalculatorPageContent() {
             </Card>
 
             {/* Cost Breakdown Panel */}
-            <div className="space-y-6">
+            <div className="space-y-6 lg:sticky lg:top-8 lg:self-start">
               {/* Total Cost Card */}
               <Card className="border-2 border-primary">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="size-5" />
+                    <DollarSign aria-hidden="true" className="size-5" />
                     Estimated Monthly Cost
                   </CardTitle>
                 </CardHeader>
@@ -668,7 +671,7 @@ export default function CostCalculatorPageContent() {
                     </div>
                   ) : (
                     <div className="mb-6">
-                      <div className="mb-2 font-bold text-5xl">
+                      <div className="mb-2 tabular-nums font-bold text-5xl">
                         {formatCost(wrapsCosts.totalWrapsCost + total)}
                       </div>
                       <div className="text-muted-foreground">
@@ -680,7 +683,7 @@ export default function CostCalculatorPageContent() {
                   <div className="space-y-2 border-t pt-4 text-sm">
                     <div className="flex justify-between font-medium">
                       <span>Wraps Platform</span>
-                      <span>{formatCost(wrapsCosts.platformCost)}/mo</span>
+                      <span className="tabular-nums">{formatCost(wrapsCosts.platformCost)}/mo</span>
                     </div>
                     {wrapsCosts.overageCost > 0 && (
                       <div className="flex justify-between text-muted-foreground">
@@ -688,16 +691,16 @@ export default function CostCalculatorPageContent() {
                           + Overage (
                           {wrapsCosts.overageEvents?.toLocaleString()} events)
                         </span>
-                        <span>{formatCost(wrapsCosts.overageCost)}</span>
+                        <span className="tabular-nums">{formatCost(wrapsCosts.overageCost)}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-medium">
                       <span>AWS Infrastructure</span>
-                      <span>{formatCost(total)}/mo</span>
+                      <span className="tabular-nums">{formatCost(total)}/mo</span>
                     </div>
                     <div className="flex justify-between border-t pt-2 font-bold">
                       <span>Total Monthly Cost</span>
-                      <span>
+                      <span className="tabular-nums">
                         {wrapsCosts.requiresUpgrade
                           ? "—"
                           : formatCost(wrapsCosts.totalWrapsCost + total)}
@@ -710,7 +713,7 @@ export default function CostCalculatorPageContent() {
                       <span className="text-muted-foreground">
                         Tracked Events:
                       </span>
-                      <span className="font-medium">
+                      <span className="tabular-nums font-medium">
                         {eventsPerMonth.toLocaleString()}/mo
                       </span>
                     </div>
@@ -718,7 +721,7 @@ export default function CostCalculatorPageContent() {
                       <span className="text-muted-foreground">
                         Included in Plan:
                       </span>
-                      <span className="font-medium">
+                      <span className="tabular-nums font-medium">
                         {wrapsCosts.includedEvents?.toLocaleString()}
                       </span>
                     </div>
@@ -726,7 +729,7 @@ export default function CostCalculatorPageContent() {
                       <span className="text-muted-foreground">
                         Emails Sent:
                       </span>
-                      <span className="font-medium">
+                      <span className="tabular-nums font-medium">
                         {emailsPerMonth.toLocaleString()}/mo
                       </span>
                     </div>
@@ -752,8 +755,10 @@ export default function CostCalculatorPageContent() {
                             {item.details && (
                               <TooltipProvider>
                                 <Tooltip>
-                                  <TooltipTrigger>
-                                    <Info className="size-4 text-muted-foreground" />
+                                  <TooltipTrigger asChild>
+                                    <button aria-label={`Details about ${item.name}`} type="button">
+                                      <Info aria-hidden="true" className="size-4 text-muted-foreground" />
+                                    </button>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p className="max-w-xs text-xs">
@@ -770,7 +775,7 @@ export default function CostCalculatorPageContent() {
                             </p>
                           )}
                         </div>
-                        <span className="font-mono text-sm">
+                        <span className="tabular-nums font-mono text-sm">
                           {formatCost(item.cost)}
                         </span>
                       </div>
@@ -784,7 +789,7 @@ export default function CostCalculatorPageContent() {
                 <Card className="border-blue-500/20 bg-blue-500/5">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Info className="size-5 text-blue-600" />
+                      <Info aria-hidden="true" className="size-5 text-blue-600" />
                       Storage Growth Over Time
                     </CardTitle>
                   </CardHeader>
@@ -817,10 +822,10 @@ export default function CostCalculatorPageContent() {
                               {isLastMonth && "+ (steady-state)"}:
                             </span>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono">
+                              <span className="tabular-nums font-mono">
                                 {point.storageGB.toFixed(3)} GB
                               </span>
-                              <span className="text-muted-foreground">
+                              <span className="tabular-nums text-muted-foreground">
                                 ({formatCost(storageCost)} storage)
                               </span>
                             </div>
@@ -842,7 +847,7 @@ export default function CostCalculatorPageContent() {
               <Card className="border-green-500/20 bg-green-500/5">
                 <CardContent className="pt-6">
                   <div className="flex gap-3">
-                    <Info className="mt-0.5 size-5 shrink-0 text-green-600" />
+                    <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-green-600" />
                     <div className="space-y-2 text-sm">
                       <p className="font-semibold text-green-900 dark:text-green-100">
                         AWS Free Tier Included
@@ -865,7 +870,7 @@ export default function CostCalculatorPageContent() {
                     Get Started with{" "}
                     {PRICING_TIERS.find((t) => t.id === selectedTier)?.name ??
                       "Wraps"}
-                    <ArrowRight className="ml-2 size-4" />
+                    <ArrowRight aria-hidden="true" className="ml-2 size-4" />
                   </a>
                 </Button>
                 <Button asChild className="w-full" size="lg" variant="outline">
@@ -883,7 +888,7 @@ export default function CostCalculatorPageContent() {
             <CardContent className="space-y-4 text-sm">
               <div>
                 <h4 className="mb-2 font-semibold">How We Calculate Costs</h4>
-                <p className="text-muted-foreground">
+                <p className="text-pretty text-muted-foreground">
                   All costs are based on official AWS pricing as of January 2025
                   for US East (N. Virginia) region. Costs include AWS free tier
                   benefits where applicable. Storage costs shown represent{" "}
@@ -910,7 +915,7 @@ export default function CostCalculatorPageContent() {
               </div>
               <div>
                 <h4 className="mb-2 font-semibold">Wraps Platform Fee</h4>
-                <p className="text-muted-foreground">
+                <p className="text-pretty text-muted-foreground">
                   Wraps is a platform fee for email infrastructure you own. You
                   pay us for tooling (dashboard, workflows, AI, analytics) and
                   AWS directly for sending ($0.10/1K emails). Free tier includes
@@ -921,7 +926,7 @@ export default function CostCalculatorPageContent() {
               </div>
               <div>
                 <h4 className="mb-2 font-semibold">CLI & SDK</h4>
-                <p className="text-muted-foreground">
+                <p className="text-pretty text-muted-foreground">
                   The Wraps CLI and TypeScript SDK work with all plans,
                   including Free. Deploy to your AWS account — no vendor
                   lock-in, no hidden fees.
