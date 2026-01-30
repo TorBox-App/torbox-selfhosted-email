@@ -13,8 +13,7 @@ import {
 } from "@/config/pricing";
 import { BillingToggle } from "./billing-toggle";
 
-// Only show paid tiers on the platform page
-const paidTiers = PRICING_TIERS.filter((t) => t.id !== "free");
+const allTiers = PRICING_TIERS;
 
 export function DashboardPricingSection() {
   const ref = useRef<HTMLDivElement>(null);
@@ -68,8 +67,8 @@ export function DashboardPricingSection() {
         </motion.div>
 
         {/* Pricing cards */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {paidTiers.map((tier, index) => {
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {allTiers.map((tier, index) => {
             const overage = OVERAGE_RATES[tier.id];
             return (
               <motion.div

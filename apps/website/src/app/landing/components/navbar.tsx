@@ -36,7 +36,7 @@ const navigationItems = [
   },
   { name: "Docs", href: "/docs", hasSubmenu: true, submenuType: "docs" },
   { name: "Blog", href: "/blog" },
-  { name: "Pricing", href: "/platform#pricing" },
+  { name: "Pricing", href: "/#pricing" },
   { name: "SMS", href: "/sms", badge: "Soon" },
 ];
 
