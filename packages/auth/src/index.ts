@@ -37,6 +37,45 @@ function getPostHogClient(): PostHog | null {
 }
 
 /**
+ * Emit user.deleted platform event and track in PostHog.
+ * Non-blocking - failures are logged but don't affect auth flow.
+ */
+async function trackUserDeleted(user: { email: string; name: string | null }) {
+  try {
+    const apiKey = process.env.WRAPS_API_KEY;
+    if (apiKey) {
+      const client = createPlatformClient({ apiKey });
+      const normalizedEmail = user.email.toLowerCase().trim();
+      await client.POST("/v1/events/", {
+        body: {
+          name: "user.deleted",
+          contactEmail: normalizedEmail,
+          properties: {
+            name: user.name || undefined,
+            deletedAt: new Date().toISOString(),
+          },
+        },
+      });
+    }
+
+    const posthog = getPostHogClient();
+    if (posthog) {
+      posthog.capture({
+        distinctId: user.email,
+        event: "user_deleted",
+        properties: {
+          email: user.email,
+          name: user.name,
+        },
+      });
+      await posthog.flush();
+    }
+  } catch (err) {
+    console.error("Error tracking user.deleted event:", err);
+  }
+}
+
+/**
  * Track user signup event in PostHog.
  * Non-blocking - failures are logged but don't affect auth flow.
  */
@@ -277,6 +316,12 @@ export const auth = betterAuth<BetterAuthOptions>({
   user: {
     deleteUser: {
       enabled: true,
+      afterDelete: async (user) => {
+        await trackUserDeleted({
+          email: user.email,
+          name: user.name,
+        });
+      },
     },
   },
   trustedOrigins: [process.env.CORS_ORIGIN || ""],
