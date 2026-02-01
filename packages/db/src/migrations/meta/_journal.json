@@ -232,6 +232,13 @@
       "when": 1769492267596,
       "tag": "0032_hot_dust",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1769971870786,
+      "tag": "0033_slow_deathbird",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,7 @@
 
 import { createHash } from "node:crypto";
 import { and, apiKey, db, eq, member, session, subscription } from "@wraps/db";
+import { sql } from "drizzle-orm";
 import { Elysia } from "elysia";
 
 export type AuthContext = {
@@ -22,25 +23,21 @@ function hashApiKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
 }
 
-// Get plan for an organization
-// Source of truth: subscription table (managed by Better-Auth Stripe plugin)
-// Note: There is no free tier. Returns null if no valid subscription.
-async function getPlanForOrg(organizationId: string): Promise<string | null> {
-  const [sub] = await db
-    .select({ plan: subscription.plan, status: subscription.status })
-    .from(subscription)
-    .where(eq(subscription.referenceId, organizationId))
-    .limit(1);
-
-  if (sub && (sub.status === "active" || sub.status === "trialing")) {
+// Extract plan from a subscription join result
+function extractPlan(sub: {
+  plan: string | null;
+  subStatus: string | null;
+}): string | null {
+  if (
+    sub.subStatus &&
+    (sub.subStatus === "active" || sub.subStatus === "trialing")
+  ) {
     return sub.plan;
   }
-
-  // No valid subscription - user needs to subscribe
   return null;
 }
 
-// Validate API key and return auth context
+// Validate API key and return auth context (1 SELECT + 1 UPDATE)
 async function validateApiKey(key: string): Promise<AuthContext | null> {
   if (!key.startsWith("wraps_")) {
     return null;
@@ -48,100 +45,105 @@ async function validateApiKey(key: string): Promise<AuthContext | null> {
 
   const keyHash = hashApiKey(key);
 
-  // Look up API key by hash (the only reliable way to match)
-  const [keyRecord] = await db
+  // JOIN api_key + subscription in one query
+  const [result] = await db
     .select({
       id: apiKey.id,
       organizationId: apiKey.organizationId,
       createdBy: apiKey.createdBy,
       expiresAt: apiKey.expiresAt,
+      plan: subscription.plan,
+      subStatus: subscription.status,
     })
     .from(apiKey)
+    .leftJoin(subscription, eq(subscription.referenceId, apiKey.organizationId))
     .where(eq(apiKey.keyHash, keyHash))
     .limit(1);
 
-  if (!keyRecord) {
+  if (!result) {
     return null;
   }
 
-  if (keyRecord.expiresAt && keyRecord.expiresAt < new Date()) {
+  if (result.expiresAt && result.expiresAt < new Date()) {
     return null;
   }
 
-  // Update last used timestamp (fire and forget)
-  db.update(apiKey)
+  // Update last used timestamp
+  await db
+    .update(apiKey)
     .set({ lastUsedAt: new Date() })
-    .where(eq(apiKey.id, keyRecord.id))
-    .catch(() => {});
-
-  const planId = await getPlanForOrg(keyRecord.organizationId);
+    .where(eq(apiKey.id, result.id));
 
   return {
-    apiKeyId: keyRecord.id,
-    organizationId: keyRecord.organizationId,
-    userId: keyRecord.createdBy,
-    planId,
+    apiKeyId: result.id,
+    organizationId: result.organizationId,
+    userId: result.createdBy,
+    planId: extractPlan(result),
   };
 }
 
-// Validate session by direct database lookup
+// Validate session by direct database lookup (1 SELECT with JOINs)
 async function validateSessionWithReason(
   sessionToken: string,
   organizationId?: string
 ): Promise<{ auth: AuthContext | null; reason: string }> {
   try {
-    // Look up session by token directly in database
-    const [sessionRecord] = await db
+    // JOIN session + member + subscription in one query
+    // When organizationId is provided via header, use it; otherwise use the session's activeOrganizationId
+    const [result] = await db
       .select({
-        id: session.id,
+        sessionId: session.id,
         userId: session.userId,
         expiresAt: session.expiresAt,
         activeOrganizationId: session.activeOrganizationId,
+        memberRole: member.role,
+        plan: subscription.plan,
+        subStatus: subscription.status,
       })
       .from(session)
+      .leftJoin(
+        member,
+        and(
+          eq(member.userId, session.userId),
+          organizationId
+            ? eq(member.organizationId, sql`${organizationId}`)
+            : eq(member.organizationId, session.activeOrganizationId)
+        )
+      )
+      .leftJoin(
+        subscription,
+        eq(
+          subscription.referenceId,
+          organizationId ? sql`${organizationId}` : session.activeOrganizationId
+        )
+      )
       .where(eq(session.token, sessionToken))
       .limit(1);
 
-    if (!sessionRecord) {
+    if (!result) {
       return { auth: null, reason: "session not found" };
     }
 
-    // Check if session is expired
-    if (sessionRecord.expiresAt < new Date()) {
+    if (result.expiresAt < new Date()) {
       return { auth: null, reason: "session expired" };
     }
 
-    // Use provided organizationId or fall back to active org from session
-    const orgId = organizationId || sessionRecord.activeOrganizationId;
+    const orgId = organizationId || result.activeOrganizationId;
 
     if (!orgId) {
       return { auth: null, reason: "no org id" };
     }
 
-    // Verify user is a member of this organization
-    const [memberRecord] = await db
-      .select({ role: member.role })
-      .from(member)
-      .where(
-        and(
-          eq(member.userId, sessionRecord.userId),
-          eq(member.organizationId, orgId)
-        )
-      )
-      .limit(1);
-
-    if (!memberRecord) {
+    if (!result.memberRole) {
       return { auth: null, reason: "user not member of org" };
     }
-
-    const planId = await getPlanForOrg(orgId);
 
     return {
       auth: {
         apiKeyId: null,
         organizationId: orgId,
-        userId: sessionRecord.userId,
-        planId,
+        userId: result.userId,
+        planId: extractPlan(result),
       },
       reason: "ok",
     };

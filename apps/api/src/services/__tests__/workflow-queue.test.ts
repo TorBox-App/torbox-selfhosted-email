@@ -222,6 +222,79 @@ describe("enqueueWorkflowStep behavior", () => {
   });
 });
 
+// =============================================================================
+// enqueueWorkflowStepBatch
+// =============================================================================
+
+describe("enqueueWorkflowStepBatch behavior", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it("should no-op for empty jobs array", async () => {
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    process.env.WORKFLOW_QUEUE_URL = "";
+    process.env.NODE_ENV = "development";
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+
+    await enqueueWorkflowStepBatch([]);
+
+    // Should not even warn — just returns immediately
+    expect(consoleSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it("should warn when queue URL not configured in dev", async () => {
+    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    process.env.WORKFLOW_QUEUE_URL = "";
+    process.env.NODE_ENV = "development";
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+
+    await enqueueWorkflowStepBatch([
+      {
+        type: "trigger",
+        workflowId: "wf-1",
+        contactId: "c-1",
+        organizationId: "org-1",
+      },
+    ]);
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Skipping batch enqueue"),
+      expect.objectContaining({ count: 1 })
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it("should throw when queue URL not configured in production", async () => {
+    process.env.WORKFLOW_QUEUE_URL = "";
+    process.env.NODE_ENV = "production";
+
+    const { enqueueWorkflowStepBatch } = await import("../workflow-queue");
+
+    await expect(
+      enqueueWorkflowStepBatch([
+        {
+          type: "trigger",
+          workflowId: "wf-1",
+          contactId: "c-1",
+          organizationId: "org-1",
+        },
+      ])
+    ).rejects.toThrow("WORKFLOW_QUEUE_URL not configured");
+  });
+});
+
 describe("scheduleWorkflowStep behavior", () => {
   const originalEnv = process.env;
 

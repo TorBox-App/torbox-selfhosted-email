@@ -9,7 +9,11 @@ import {
   DeleteScheduleCommand,
   SchedulerClient,
 } from "@aws-sdk/client-scheduler";
-import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
+import {
+  SendMessageBatchCommand,
+  SendMessageCommand,
+  SQSClient,
+} from "@aws-sdk/client-sqs";
 
 const sqs = new SQSClient({});
 const scheduler = new SchedulerClient({});
@@ -94,6 +98,40 @@ export async function enqueueWorkflowStep(job: WorkflowJob): Promise<void> {
       MessageBody: JSON.stringify(job),
     })
   );
+}
+
+/**
+ * Enqueue multiple workflow steps in batch (up to 10 per SQS SendMessageBatch call)
+ */
+export async function enqueueWorkflowStepBatch(
+  jobs: WorkflowJob[]
+): Promise<void> {
+  if (jobs.length === 0) return;
+
+  if (!WORKFLOW_QUEUE_URL) {
+    if (IS_PRODUCTION) {
+      throw new Error("WORKFLOW_QUEUE_URL not configured");
+    }
+    console.warn(
+      "[workflow-queue] Skipping batch enqueue - queue not configured",
+      { count: jobs.length }
+    );
+    return;
+  }
+
+  // SQS SendMessageBatch supports max 10 messages per call
+  for (let i = 0; i < jobs.length; i += 10) {
+    const chunk = jobs.slice(i, i + 10);
+    await sqs.send(
+      new SendMessageBatchCommand({
+        QueueUrl: WORKFLOW_QUEUE_URL,
+        Entries: chunk.map((job, idx) => ({
+          Id: String(i + idx),
+          MessageBody: JSON.stringify(job),
+        })),
+      })
+    );
+  }
 }
 
 /**

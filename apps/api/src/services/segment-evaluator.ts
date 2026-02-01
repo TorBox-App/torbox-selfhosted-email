@@ -17,7 +17,7 @@ import {
 import { and, gte, inArray } from "drizzle-orm";
 
 // Contact with topic IDs for evaluation
-type ContactWithTopics = typeof contact.$inferSelect & {
+export type ContactWithTopics = typeof contact.$inferSelect & {
   topicIds: string[];
 };
 
@@ -345,7 +345,7 @@ async function evaluateGroupAsync(
  * Evaluate a filter condition (groups combined with AND/OR logic)
  * Async version that handles event-based operators
  */
-async function evaluateConditionAsync(
+export async function evaluateConditionAsync(
   condition: FilterCondition,
   contactData: ContactWithTopics
 ): Promise<boolean> {
@@ -620,4 +620,55 @@ export async function evaluateContactsForSegment(
   }
 
   return results;
+}
+
+/**
+ * Load a contact with their topic subscriptions (2 queries)
+ */
+export async function loadContactWithTopics(
+  contactId: string
+): Promise<ContactWithTopics | null> {
+  const [contactRecord] = await db
+    .select()
+    .from(contact)
+    .where(eq(contact.id, contactId))
+    .limit(1);
+
+  if (!contactRecord) return null;
+
+  const subscriptions = await db
+    .select({ topicId: contactTopic.topicId })
+    .from(contactTopic)
+    .where(
+      and(
+        eq(contactTopic.contactId, contactId),
+        eq(contactTopic.status, "subscribed")
+      )
+    );
+
+  return {
+    ...contactRecord,
+    topicIds: subscriptions.map((s) => s.topicId),
+  };
+}
+
+/**
+ * Batch-fetch segments by IDs (1 query)
+ */
+export async function getSegmentsByIds(
+  segmentIds: string[]
+): Promise<Map<string, typeof segment.$inferSelect>> {
+  const result = new Map<string, typeof segment.$inferSelect>();
+  if (segmentIds.length === 0) return result;
+
+  const segments = await db
+    .select()
+    .from(segment)
+    .where(inArray(segment.id, segmentIds));
+
+  for (const seg of segments) {
+    result.set(seg.id, seg);
+  }
+
+  return result;
 }

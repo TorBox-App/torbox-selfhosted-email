@@ -5,18 +5,20 @@
  * Used for contact lifecycle events, topic subscriptions, etc.
  */
 
-import {
-  contactEvent,
-  db,
-  eq,
-  segment,
-  workflow,
-  workflowExecution,
-} from "@wraps/db";
+import { contactEvent, db, eq, workflow, workflowExecution } from "@wraps/db";
 import { and, inArray, sql } from "drizzle-orm";
 
-import { contactMatchesSegment } from "./segment-evaluator";
-import { deleteScheduledStep, enqueueWorkflowStep } from "./workflow-queue";
+import {
+  evaluateConditionAsync,
+  getSegmentsByIds,
+  loadContactWithTopics,
+} from "./segment-evaluator";
+import {
+  deleteScheduledStep,
+  enqueueWorkflowStep,
+  enqueueWorkflowStepBatch,
+  type WorkflowJob,
+} from "./workflow-queue";
 
 /**
  * Emit an internal event that may trigger workflows
@@ -273,14 +275,14 @@ export async function emitTopicUnsubscribed(params: {
  * Check and emit segment entry events for a contact
  * Call this after a contact is created or updated
  *
- * Note: This triggers workflows for segments the contact NOW matches.
- * For proper entry/exit tracking, segment membership history would be needed.
+ * Optimized: loads contact data once (2 queries), batch-fetches segments (1 query),
+ * then evaluates in-memory. Total: 4 queries regardless of workflow count.
  */
 export async function checkSegmentEntry(params: {
   contactId: string;
   organizationId: string;
 }): Promise<{ workflowsTriggered: number }> {
-  // Get workflows with segment_entry trigger
+  // 1. Get workflows with segment_entry trigger
   const segmentWorkflows = await db
     .select({
       id: workflow.id,
@@ -299,43 +301,56 @@ export async function checkSegmentEntry(params: {
     return { workflowsTriggered: 0 };
   }
 
-  let triggered = 0;
+  // 2. Extract unique segment IDs from workflow configs
+  const segmentIds = [
+    ...new Set(
+      segmentWorkflows
+        .map(
+          (wf) => (wf.triggerConfig as { segmentId?: string } | null)?.segmentId
+        )
+        .filter((id): id is string => !!id)
+    ),
+  ];
 
-  // For each segment workflow, check if contact matches segment
+  if (segmentIds.length === 0) {
+    return { workflowsTriggered: 0 };
+  }
+
+  // 3. Load contact with topics (2 queries)
+  const contactData = await loadContactWithTopics(params.contactId);
+  if (!contactData) {
+    return { workflowsTriggered: 0 };
+  }
+
+  // 4. Batch-fetch all segments (1 query)
+  const segmentsMap = await getSegmentsByIds(segmentIds);
+
+  // 5. Evaluate in-memory and collect trigger jobs
+  const jobs: WorkflowJob[] = [];
+
   for (const wf of segmentWorkflows) {
     const config = wf.triggerConfig as { segmentId?: string } | null;
-    if (!config?.segmentId) {
-      continue;
-    }
+    if (!config?.segmentId) continue;
+
+    const seg = segmentsMap.get(config.segmentId);
+    if (!seg) continue;
 
     try {
-      // Check if contact matches the segment
-      const matches = await contactMatchesSegment(
-        params.contactId,
-        config.segmentId
-      );
+      const matches = await evaluateConditionAsync(seg.condition, contactData);
 
       if (matches) {
-        // Fetch segment name for event data
-        const [seg] = await db
-          .select({ name: segment.name })
-          .from(segment)
-          .where(eq(segment.id, config.segmentId))
-          .limit(1);
-
-        await enqueueWorkflowStep({
+        jobs.push({
           type: "trigger",
           workflowId: wf.id,
           contactId: params.contactId,
           organizationId: params.organizationId,
           eventData: {
             segmentId: config.segmentId,
-            segmentName: seg?.name,
+            segmentName: seg.name,
             enteredAt: new Date().toISOString(),
           },
         });
 
-        triggered++;
         console.log(
           `[workflow-events] Segment entry: contact ${params.contactId} entered segment ${config.segmentId}, triggered workflow ${wf.id}`
         );
@@ -348,23 +363,27 @@ export async function checkSegmentEntry(params: {
     }
   }
 
-  return { workflowsTriggered: triggered };
+  // 6. Batch enqueue all trigger jobs
+  if (jobs.length > 0) {
+    await enqueueWorkflowStepBatch(jobs);
+  }
+
+  return { workflowsTriggered: jobs.length };
 }
 
 /**
  * Check and emit segment exit events for a contact
  * Call this after a contact is updated
  *
- * Note: For true segment exit detection, we'd need to track previous
- * segment membership. This implementation checks if the contact
- * does NOT match segments that have exit triggers.
+ * Optimized: loads contact data once (2 queries), batch-fetches segments (1 query),
+ * then evaluates in-memory. Total: 4 queries regardless of workflow count.
  */
 export async function checkSegmentExit(params: {
   contactId: string;
   organizationId: string;
   previousSegmentIds?: string[]; // Optional: segments contact was previously in
 }): Promise<{ workflowsTriggered: number }> {
-  // Get workflows with segment_exit trigger
+  // 1. Get workflows with segment_exit trigger
   const segmentWorkflows = await db
     .select({
       id: workflow.id,
@@ -383,15 +402,47 @@ export async function checkSegmentExit(params: {
     return { workflowsTriggered: 0 };
   }
 
-  let triggered = 0;
+  // 2. Extract unique segment IDs, filtering by previousSegmentIds if provided
+  const segmentIds = [
+    ...new Set(
+      segmentWorkflows
+        .map(
+          (wf) => (wf.triggerConfig as { segmentId?: string } | null)?.segmentId
+        )
+        .filter((id): id is string => {
+          if (!id) return false;
+          if (
+            params.previousSegmentIds &&
+            !params.previousSegmentIds.includes(id)
+          ) {
+            return false;
+          }
+          return true;
+        })
+    ),
+  ];
+
+  if (segmentIds.length === 0) {
+    return { workflowsTriggered: 0 };
+  }
+
+  // 3. Load contact with topics (2 queries)
+  const contactData = await loadContactWithTopics(params.contactId);
+  if (!contactData) {
+    return { workflowsTriggered: 0 };
+  }
+
+  // 4. Batch-fetch all segments (1 query)
+  const segmentsMap = await getSegmentsByIds(segmentIds);
+
+  // 5. Evaluate in-memory and collect trigger jobs
+  const jobs: WorkflowJob[] = [];
 
   for (const wf of segmentWorkflows) {
     const config = wf.triggerConfig as { segmentId?: string } | null;
-    if (!config?.segmentId) {
-      continue;
-    }
+    if (!config?.segmentId) continue;
 
-    // Only check exit if we know the contact was previously in the segment
+    // Skip if not in previousSegmentIds
     if (
       params.previousSegmentIds &&
       !params.previousSegmentIds.includes(config.segmentId)
@@ -399,34 +450,26 @@ export async function checkSegmentExit(params: {
       continue;
     }
 
+    const seg = segmentsMap.get(config.segmentId);
+    if (!seg) continue;
+
     try {
       // Check if contact NO LONGER matches the segment
-      const matches = await contactMatchesSegment(
-        params.contactId,
-        config.segmentId
-      );
+      const matches = await evaluateConditionAsync(seg.condition, contactData);
 
       if (!matches) {
-        // Contact exited the segment
-        const [seg] = await db
-          .select({ name: segment.name })
-          .from(segment)
-          .where(eq(segment.id, config.segmentId))
-          .limit(1);
-
-        await enqueueWorkflowStep({
+        jobs.push({
           type: "trigger",
           workflowId: wf.id,
           contactId: params.contactId,
           organizationId: params.organizationId,
           eventData: {
             segmentId: config.segmentId,
-            segmentName: seg?.name,
+            segmentName: seg.name,
             exitedAt: new Date().toISOString(),
           },
         });
 
-        triggered++;
         console.log(
           `[workflow-events] Segment exit: contact ${params.contactId} exited segment ${config.segmentId}, triggered workflow ${wf.id}`
         );
@@ -439,7 +482,12 @@ export async function checkSegmentExit(params: {
     }
   }
 
-  return { workflowsTriggered: triggered };
+  // 6. Batch enqueue all trigger jobs
+  if (jobs.length > 0) {
+    await enqueueWorkflowStepBatch(jobs);
+  }
+
+  return { workflowsTriggered: jobs.length };
 }
 
 /**

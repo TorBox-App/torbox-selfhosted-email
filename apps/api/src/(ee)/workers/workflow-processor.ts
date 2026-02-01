@@ -19,7 +19,6 @@ import {
   eq,
   messageSend,
   organization,
-  segment,
   type TriggerConfig,
   template,
   type WorkflowStep,
@@ -41,10 +40,11 @@ import Handlebars from "handlebars";
 import { generateUnsubscribeToken } from "../../lib/unsubscribe-token";
 
 import { getCredentials } from "../../services/credentials";
-import { contactMatchesSegment } from "../../services/segment-evaluator";
+import { evaluateContactsForSegment } from "../../services/segment-evaluator";
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
+  enqueueWorkflowStepBatch,
   scheduleWaitTimeout,
   scheduleWorkflowStep,
   type WorkflowJob,
@@ -308,10 +308,10 @@ async function processScheduleTrigger(
     `[schedule-trigger] Triggering workflow ${workflowId} for ${contacts.length} contacts`
   );
 
-  // Enqueue individual trigger jobs for each contact
-  for (const c of contacts) {
-    await enqueueWorkflowStep({
-      type: "trigger",
+  // Batch enqueue trigger jobs for all contacts
+  await enqueueWorkflowStepBatch(
+    contacts.map((c) => ({
+      type: "trigger" as const,
       workflowId,
       contactId: c.id,
       organizationId,
@@ -320,8 +320,8 @@ async function processScheduleTrigger(
         triggeredAt: now.toISOString(),
         cronExpression: config.schedule,
       },
-    });
-  }
+    }))
+  );
 
   // Update last triggered timestamp
   await db
@@ -344,26 +344,12 @@ async function processScheduleTrigger(
 
 /**
  * Get contacts that match a segment's filter criteria.
- * Evaluates the segment condition for each active contact in the org.
+ * Uses bulk evaluation (3 queries total) instead of per-contact evaluation.
  */
 async function getSegmentContacts(
   segmentId: string,
   organizationId: string
 ): Promise<{ id: string }[]> {
-  // Verify the segment exists
-  const [seg] = await db
-    .select({ id: segment.id })
-    .from(segment)
-    .where(
-      and(eq(segment.id, segmentId), eq(segment.organizationId, organizationId))
-    )
-    .limit(1);
-
-  if (!seg) {
-    console.log(`[schedule-trigger] Segment ${segmentId} not found`);
-    return [];
-  }
-
   // Get all active contacts in the organization
   const allContacts = await db
     .select({ id: contact.id })
@@ -376,26 +362,21 @@ async function getSegmentContacts(
     )
     .limit(MAX_CONTACTS_PER_TRIGGER);
 
+  if (allContacts.length === 0) return [];
+
   console.log(
     `[schedule-trigger] Evaluating segment ${segmentId} for ${allContacts.length} contacts`
   );
 
-  // Filter contacts by segment membership
-  const matchingContacts: { id: string }[] = [];
+  // Bulk evaluate all contacts against the segment (3 queries: segment + contacts + topics)
+  const results = await evaluateContactsForSegment(
+    allContacts.map((c) => c.id),
+    segmentId
+  );
 
-  for (const c of allContacts) {
-    try {
-      const matches = await contactMatchesSegment(c.id, segmentId);
-      if (matches) {
-        matchingContacts.push(c);
-      }
-    } catch (error) {
-      console.error(
-        `[schedule-trigger] Error evaluating contact ${c.id} for segment ${segmentId}:`,
-        error
-      );
-    }
-  }
+  const matchingContacts = allContacts.filter(
+    (c) => results.get(c.id) === true
+  );
 
   console.log(
     `[schedule-trigger] Found ${matchingContacts.length} contacts matching segment ${segmentId}`

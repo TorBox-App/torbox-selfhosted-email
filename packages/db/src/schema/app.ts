@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import {
   invitation,
@@ -205,6 +206,7 @@ export const apiKey = pgTable(
   (table) => ({
     orgIdx: index("api_key_org_idx").on(table.organizationId),
     prefixIdx: index("api_key_prefix_idx").on(table.prefix),
+    keyHashIdx: uniqueIndex("api_key_key_hash_idx").on(table.keyHash),
   })
 );
 

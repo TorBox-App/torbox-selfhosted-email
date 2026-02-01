@@ -21,7 +21,7 @@ import {
   workflow,
   workflowExecution,
 } from "@wraps/db";
-import { and, sql } from "drizzle-orm";
+import { and, inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
 
 import {
@@ -36,6 +36,8 @@ import {
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
+  enqueueWorkflowStepBatch,
+  type WorkflowJob,
 } from "../services/workflow-queue";
 
 // Common response schemas
@@ -244,107 +246,201 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         errors: [] as string[],
       };
 
-      for (const event of body.events) {
-        try {
-          // Find contact
-          let contactRecord: typeof contact.$inferSelect | undefined;
+      const events = body.events;
+      if (events.length === 0) {
+        return { success: true, ...results };
+      }
 
-          if (event.contactId) {
-            const [c] = await db
-              .select()
-              .from(contact)
-              .where(
-                and(
-                  eq(contact.id, event.contactId),
-                  eq(contact.organizationId, auth.organizationId)
-                )
-              )
-              .limit(1);
-            contactRecord = c;
-          } else if (event.contactEmail) {
-            const [c] = await db
-              .select()
-              .from(contact)
-              .where(
-                and(
-                  eq(contact.email, event.contactEmail),
-                  eq(contact.organizationId, auth.organizationId)
-                )
-              )
-              .limit(1);
-            contactRecord = c;
-          }
+      // Phase 1: Batch contact resolution (up to 2 queries)
+      const contactIdEvents = events.filter((e) => e.contactId);
+      const contactEmailEvents = events.filter(
+        (e) => !e.contactId && e.contactEmail
+      );
 
-          if (!contactRecord) {
-            results.errors.push(`Contact not found for event ${event.name}`);
-            continue;
-          }
+      const contactMap = new Map<string, typeof contact.$inferSelect>();
 
-          // Store the event in contactEvent table with 2-year TTL
-          await db.insert(contactEvent).values({
-            contactId: contactRecord.id,
-            organizationId: auth.organizationId,
-            eventName: event.name,
-            eventData: event.properties || {},
-            expiresAt: getEventTTLExpiration(),
-          });
-
-          // Trigger matching workflows
-          const matchingWorkflows = await db
-            .select()
-            .from(workflow)
-            .where(
-              and(
-                eq(workflow.organizationId, auth.organizationId),
-                eq(workflow.status, "enabled"),
-                eq(workflow.triggerType, "event"),
-                sql`${workflow.triggerConfig}->>'eventName' = ${event.name}`
-              )
-            );
-
-          for (const wf of matchingWorkflows) {
-            await enqueueWorkflowStep({
-              type: "trigger",
-              workflowId: wf.id,
-              contactId: contactRecord.id,
-              organizationId: auth.organizationId,
-              eventData: event.properties || {},
-            });
-            results.workflowsTriggered++;
-          }
-
-          // Resume waiting executions
-          const waitingExecutions = await db
-            .select()
-            .from(workflowExecution)
-            .where(
-              and(
-                eq(workflowExecution.organizationId, auth.organizationId),
-                eq(workflowExecution.contactId, contactRecord.id),
-                eq(workflowExecution.status, "waiting"),
-                eq(workflowExecution.waitingForEvent, event.name)
-              )
-            );
-
-          for (const execution of waitingExecutions) {
-            if (execution.waitTimeoutSchedulerName) {
-              await deleteScheduledStep(execution.waitTimeoutSchedulerName);
-            }
-            await enqueueWorkflowStep({
-              type: "resume",
-              executionId: execution.id,
-              branch: "yes",
-              organizationId: auth.organizationId,
-            });
-            results.executionsResumed++;
-          }
-
-          results.processed++;
-        } catch (error) {
-          results.errors.push(
-            `Error processing event ${event.name}: ${error instanceof Error ? error.message : "Unknown error"}`
+      if (contactIdEvents.length > 0) {
+        const uniqueIds = [
+          ...new Set(contactIdEvents.map((e) => e.contactId!)),
+        ];
+        const contactsById = await db
+          .select()
+          .from(contact)
+          .where(
+            and(
+              inArray(contact.id, uniqueIds),
+              eq(contact.organizationId, auth.organizationId)
+            )
           );
+        for (const c of contactsById) {
+          contactMap.set(c.id, c);
         }
+      }
+
+      if (contactEmailEvents.length > 0) {
+        const uniqueEmails = [
+          ...new Set(contactEmailEvents.map((e) => e.contactEmail!)),
+        ];
+        const contactsByEmail = await db
+          .select()
+          .from(contact)
+          .where(
+            and(
+              inArray(contact.email, uniqueEmails),
+              eq(contact.organizationId, auth.organizationId)
+            )
+          );
+        for (const c of contactsByEmail) {
+          if (c.email) {
+            contactMap.set(c.email, c);
+          }
+        }
+      }
+
+      // Resolve each event to a contact
+      type ResolvedEvent = {
+        name: string;
+        contactRecord: typeof contact.$inferSelect;
+        properties: Record<string, unknown>;
+      };
+
+      const resolvedEvents: ResolvedEvent[] = [];
+
+      for (const event of events) {
+        const contactRecord = event.contactId
+          ? contactMap.get(event.contactId)
+          : event.contactEmail
+            ? contactMap.get(event.contactEmail)
+            : undefined;
+
+        if (!contactRecord) {
+          results.errors.push(`Contact not found for event ${event.name}`);
+          continue;
+        }
+
+        resolvedEvents.push({
+          name: event.name,
+          contactRecord,
+          properties: (event.properties as Record<string, unknown>) || {},
+        });
+      }
+
+      if (resolvedEvents.length === 0) {
+        return { success: results.errors.length === 0, ...results };
+      }
+
+      // Phase 2: Batch event insert (1 query)
+      const expiresAt = getEventTTLExpiration();
+      await db.insert(contactEvent).values(
+        resolvedEvents.map((e) => ({
+          contactId: e.contactRecord.id,
+          organizationId: auth.organizationId,
+          eventName: e.name,
+          eventData: e.properties,
+          expiresAt,
+        }))
+      );
+
+      results.processed = resolvedEvents.length;
+
+      // Phase 3: Batch workflow matching (1 query)
+      const uniqueEventNames = [...new Set(resolvedEvents.map((e) => e.name))];
+      const matchingWorkflows = await db
+        .select({
+          id: workflow.id,
+          triggerConfig: workflow.triggerConfig,
+        })
+        .from(workflow)
+        .where(
+          and(
+            eq(workflow.organizationId, auth.organizationId),
+            eq(workflow.status, "enabled"),
+            eq(workflow.triggerType, "event"),
+            sql`${workflow.triggerConfig}->>'eventName' IN ${uniqueEventNames}`
+          )
+        );
+
+      // Index workflows by event name
+      const workflowsByEvent = new Map<
+        string,
+        { id: string; triggerConfig: unknown }[]
+      >();
+      for (const wf of matchingWorkflows) {
+        const eventName = (wf.triggerConfig as { eventName?: string })
+          ?.eventName;
+        if (!eventName) continue;
+        const existing = workflowsByEvent.get(eventName) || [];
+        existing.push(wf);
+        workflowsByEvent.set(eventName, existing);
+      }
+
+      // Phase 4: Batch waiting execution lookup (1 query)
+      const uniqueContactIds = [
+        ...new Set(resolvedEvents.map((e) => e.contactRecord.id)),
+      ];
+      const waitingExecutions = await db
+        .select()
+        .from(workflowExecution)
+        .where(
+          and(
+            eq(workflowExecution.organizationId, auth.organizationId),
+            inArray(workflowExecution.contactId, uniqueContactIds),
+            eq(workflowExecution.status, "waiting"),
+            inArray(workflowExecution.waitingForEvent, uniqueEventNames)
+          )
+        );
+
+      // Index waiting executions by contactId+eventName
+      const waitingByKey = new Map<
+        string,
+        (typeof waitingExecutions)[number][]
+      >();
+      for (const exec of waitingExecutions) {
+        const key = `${exec.contactId}:${exec.waitingForEvent}`;
+        const existing = waitingByKey.get(key) || [];
+        existing.push(exec);
+        waitingByKey.set(key, existing);
+      }
+
+      // Phase 5: Collect all SQS jobs and batch enqueue
+      const allJobs: WorkflowJob[] = [];
+
+      for (const event of resolvedEvents) {
+        // Trigger matching workflows
+        const wfs = workflowsByEvent.get(event.name) || [];
+        for (const wf of wfs) {
+          allJobs.push({
+            type: "trigger",
+            workflowId: wf.id,
+            contactId: event.contactRecord.id,
+            organizationId: auth.organizationId,
+            eventData: event.properties,
+          });
+          results.workflowsTriggered++;
+        }
+
+        // Resume waiting executions
+        const key = `${event.contactRecord.id}:${event.name}`;
+        const executions = waitingByKey.get(key) || [];
+        for (const execution of executions) {
+          // Cancel timeout scheduler (EventBridge API, must be individual)
+          if (execution.waitTimeoutSchedulerName) {
+            await deleteScheduledStep(execution.waitTimeoutSchedulerName);
+          }
+
+          allJobs.push({
+            type: "resume",
+            executionId: execution.id,
+            branch: "yes",
+            organizationId: auth.organizationId,
+          });
+          results.executionsResumed++;
+        }
+      }
+
+      // Batch enqueue all SQS jobs
+      if (allJobs.length > 0) {
+        await enqueueWorkflowStepBatch(allJobs);
       }
 
       // Increment event usage counter with total processed count

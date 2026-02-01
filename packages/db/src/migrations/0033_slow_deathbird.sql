@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "api_key_key_hash_idx" ON "api_key" USING btree ("key_hash");
