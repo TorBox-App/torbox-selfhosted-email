@@ -16,6 +16,7 @@ import { healthRoutes } from "./routes/health";
 import { toolsRoutes } from "./routes/tools";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
+import { workflowScheduleRoutes } from "./routes/workflow-schedules";
 
 /**
  * OpenAPI documentation configuration
@@ -118,7 +119,8 @@ export const app = new Elysia()
   .use(workflowsRoutes)
   .use(webhooksRoutes)
   .use(unsubscribeRoutes)
-  .use(toolsRoutes);
+  .use(toolsRoutes)
+  .use(workflowScheduleRoutes);
 
 // Export type for Eden Treaty client
 export type App = typeof app;

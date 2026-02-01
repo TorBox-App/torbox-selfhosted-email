@@ -19,6 +19,8 @@ import {
   eq,
   messageSend,
   organization,
+  segment,
+  type TriggerConfig,
   template,
   type WorkflowStep,
   type WorkflowStepConfig,
@@ -39,6 +41,7 @@ import Handlebars from "handlebars";
 import { generateUnsubscribeToken } from "../../lib/unsubscribe-token";
 
 import { getCredentials } from "../../services/credentials";
+import { contactMatchesSegment } from "../../services/segment-evaluator";
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
@@ -46,6 +49,7 @@ import {
   scheduleWorkflowStep,
   type WorkflowJob,
 } from "../../services/workflow-queue";
+import { createNextWorkflowSchedule } from "../../services/workflow-scheduler";
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
   for (const record of event.Records) {
@@ -66,6 +70,9 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
             job.organizationId,
             job.eventData
           );
+          break;
+        case "schedule-trigger":
+          await processScheduleTrigger(job.workflowId, job.organizationId);
           break;
       }
     } catch (error) {
@@ -221,6 +228,180 @@ async function triggerWorkflow(
     stepId: firstStepId,
     organizationId,
   });
+}
+
+// Maximum contacts to process per schedule trigger
+const MAX_CONTACTS_PER_TRIGGER = 1000;
+
+/**
+ * Process a schedule-trigger job.
+ *
+ * Fires when a one-time EventBridge Schedule goes off for a workflow.
+ * Loads the workflow, verifies it's still enabled, fans out trigger jobs
+ * to all matching contacts, then chains the next schedule.
+ */
+async function processScheduleTrigger(
+  workflowId: string,
+  organizationId: string
+): Promise<void> {
+  const now = new Date();
+
+  // Load workflow
+  const [wf] = await db
+    .select()
+    .from(workflow)
+    .where(
+      and(
+        eq(workflow.id, workflowId),
+        eq(workflow.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  if (!wf) {
+    console.log(
+      `[schedule-trigger] Workflow ${workflowId} not found, chain stops`
+    );
+    return;
+  }
+
+  if (wf.status !== "enabled" || wf.triggerType !== "schedule") {
+    console.log(
+      `[schedule-trigger] Workflow ${workflowId} is ${wf.status}/${wf.triggerType}, chain stops`
+    );
+    return;
+  }
+
+  const config = wf.triggerConfig as TriggerConfig;
+
+  if (!config.schedule) {
+    console.log(
+      `[schedule-trigger] Workflow ${workflowId} has no cron schedule, chain stops`
+    );
+    return;
+  }
+
+  console.log(
+    `[schedule-trigger] Processing workflow ${workflowId} "${wf.name}"`
+  );
+
+  // Get contacts to trigger for
+  let contacts: { id: string }[];
+
+  if (config.segmentId) {
+    contacts = await getSegmentContacts(config.segmentId, organizationId);
+  } else {
+    // Get all active contacts in the organization
+    contacts = await db
+      .select({ id: contact.id })
+      .from(contact)
+      .where(
+        and(
+          eq(contact.organizationId, organizationId),
+          eq(contact.status, "active")
+        )
+      )
+      .limit(MAX_CONTACTS_PER_TRIGGER);
+  }
+
+  console.log(
+    `[schedule-trigger] Triggering workflow ${workflowId} for ${contacts.length} contacts`
+  );
+
+  // Enqueue individual trigger jobs for each contact
+  for (const c of contacts) {
+    await enqueueWorkflowStep({
+      type: "trigger",
+      workflowId,
+      contactId: c.id,
+      organizationId,
+      eventData: {
+        triggerType: "schedule",
+        triggeredAt: now.toISOString(),
+        cronExpression: config.schedule,
+      },
+    });
+  }
+
+  // Update last triggered timestamp
+  await db
+    .update(workflow)
+    .set({ lastTriggeredAt: now })
+    .where(eq(workflow.id, workflowId));
+
+  // Chain: create the next schedule
+  await createNextWorkflowSchedule({
+    workflowId,
+    organizationId,
+    cronExpression: config.schedule,
+    timezone: config.timezone,
+  });
+
+  console.log(
+    `[schedule-trigger] Complete. Triggered ${contacts.length} executions for workflow ${workflowId}, next schedule chained.`
+  );
+}
+
+/**
+ * Get contacts that match a segment's filter criteria.
+ * Evaluates the segment condition for each active contact in the org.
+ */
+async function getSegmentContacts(
+  segmentId: string,
+  organizationId: string
+): Promise<{ id: string }[]> {
+  // Verify the segment exists
+  const [seg] = await db
+    .select({ id: segment.id })
+    .from(segment)
+    .where(
+      and(eq(segment.id, segmentId), eq(segment.organizationId, organizationId))
+    )
+    .limit(1);
+
+  if (!seg) {
+    console.log(`[schedule-trigger] Segment ${segmentId} not found`);
+    return [];
+  }
+
+  // Get all active contacts in the organization
+  const allContacts = await db
+    .select({ id: contact.id })
+    .from(contact)
+    .where(
+      and(
+        eq(contact.organizationId, organizationId),
+        eq(contact.status, "active")
+      )
+    )
+    .limit(MAX_CONTACTS_PER_TRIGGER);
+
+  console.log(
+    `[schedule-trigger] Evaluating segment ${segmentId} for ${allContacts.length} contacts`
+  );
+
+  // Filter contacts by segment membership
+  const matchingContacts: { id: string }[] = [];
+
+  for (const c of allContacts) {
+    try {
+      const matches = await contactMatchesSegment(c.id, segmentId);
+      if (matches) {
+        matchingContacts.push(c);
+      }
+    } catch (error) {
+      console.error(
+        `[schedule-trigger] Error evaluating contact ${c.id} for segment ${segmentId}:`,
+        error
+      );
+    }
+  }
+
+  console.log(
+    `[schedule-trigger] Found ${matchingContacts.length} contacts matching segment ${segmentId}`
+  );
+
+  return matchingContacts;
 }
 
 /**

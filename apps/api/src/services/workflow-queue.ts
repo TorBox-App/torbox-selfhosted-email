@@ -66,6 +66,11 @@ export type WorkflowJob =
       contactId: string;
       organizationId: string;
       eventData?: Record<string, unknown>;
+    }
+  | {
+      type: "schedule-trigger";
+      workflowId: string;
+      organizationId: string;
     };
 
 /**

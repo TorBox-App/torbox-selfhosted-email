@@ -92,7 +92,11 @@ async function verifyOrgAccess(
     return null;
   }
 
-  return { userId: session.user.id, userEmail: session.user.email, role: membership.role };
+  return {
+    userId: session.user.id,
+    userEmail: session.user.email,
+    role: membership.role,
+  };
 }
 
 /**
@@ -134,6 +138,87 @@ function validateWorkflowDefinition(
   }
 
   return { valid: errors.length === 0, errors };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKFLOW SCHEDULE API HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Call the workflow schedule API to manage EventBridge schedules.
+ * Follows the same pattern as batch.ts for auth + org headers.
+ */
+async function callWorkflowScheduleApi(
+  workflowId: string,
+  organizationId: string,
+  action: "enable" | "disable" | "update",
+  body?: { cronExpression: string; timezone?: string }
+): Promise<{ success: boolean; error?: string }> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) {
+    console.error("[workflow-schedule] NEXT_PUBLIC_API_URL not configured");
+    return { success: false, error: "API URL not configured" };
+  }
+
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.session?.token) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const baseHeaders: Record<string, string> = {
+    Authorization: `Bearer ${session.session.token}`,
+    "X-Organization-Id": organizationId,
+  };
+
+  let url: string;
+  let method: string;
+  let fetchBody: string | undefined;
+
+  switch (action) {
+    case "enable":
+      url = `${apiUrl}/v1/workflow-schedules/${workflowId}/enable`;
+      method = "POST";
+      fetchBody = JSON.stringify(body);
+      baseHeaders["Content-Type"] = "application/json";
+      break;
+    case "disable":
+      url = `${apiUrl}/v1/workflow-schedules/${workflowId}/disable`;
+      method = "POST";
+      break;
+    case "update":
+      url = `${apiUrl}/v1/workflow-schedules/${workflowId}`;
+      method = "PUT";
+      fetchBody = JSON.stringify(body);
+      baseHeaders["Content-Type"] = "application/json";
+      break;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: baseHeaders,
+      body: fetchBody,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(
+        `[workflow-schedule] API ${action} failed for ${workflowId}: ${response.status} ${text}`
+      );
+      return { success: false, error: text };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error(
+      `[workflow-schedule] API ${action} error for ${workflowId}:`,
+      error
+    );
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "API call failed",
+    };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -520,6 +605,46 @@ export async function updateWorkflow(
         )
       );
 
+    // Handle schedule changes for enabled workflows
+    if (existing.status === "enabled") {
+      const oldTriggerType = existing.triggerType;
+      const newTriggerType = data.triggerType ?? oldTriggerType;
+      const oldConfig = existing.triggerConfig as TriggerConfig;
+      const newConfig = data.triggerConfig ?? oldConfig;
+
+      // TriggerType changed FROM schedule → delete old schedule
+      if (oldTriggerType === "schedule" && newTriggerType !== "schedule") {
+        await callWorkflowScheduleApi(workflowId, organizationId, "disable");
+      }
+
+      // TriggerType changed TO schedule → create new schedule
+      if (
+        oldTriggerType !== "schedule" &&
+        newTriggerType === "schedule" &&
+        newConfig.schedule
+      ) {
+        await callWorkflowScheduleApi(workflowId, organizationId, "enable", {
+          cronExpression: newConfig.schedule,
+          timezone: newConfig.timezone,
+        });
+      }
+
+      // TriggerType stayed schedule but cron/timezone changed → reschedule
+      if (
+        oldTriggerType === "schedule" &&
+        newTriggerType === "schedule" &&
+        data.triggerConfig !== undefined &&
+        newConfig.schedule &&
+        (oldConfig.schedule !== newConfig.schedule ||
+          oldConfig.timezone !== newConfig.timezone)
+      ) {
+        await callWorkflowScheduleApi(workflowId, organizationId, "update", {
+          cronExpression: newConfig.schedule,
+          timezone: newConfig.timezone,
+        });
+      }
+    }
+
     // Revalidate
     revalidatePath("/[orgSlug]/automations", "page");
     revalidatePath(`/[orgSlug]/automations/${workflowId}`, "page");
@@ -591,6 +716,11 @@ export async function deleteWorkflow(
         success: false,
         error: `Cannot delete workflow with ${activeCount?.count} active execution(s). Disable the workflow first and wait for executions to complete.`,
       };
+    }
+
+    // Clean up pending schedule before delete (best effort)
+    if (existing.triggerType === "schedule") {
+      await callWorkflowScheduleApi(workflowId, organizationId, "disable");
     }
 
     // Delete workflow (cascades to executions)
@@ -765,6 +895,36 @@ export async function enableWorkflow(
         )
       );
 
+    // If schedule trigger, create EventBridge schedule
+    if (existing.triggerType === "schedule" && triggerConfig.schedule) {
+      const scheduleResult = await callWorkflowScheduleApi(
+        workflowId,
+        organizationId,
+        "enable",
+        {
+          cronExpression: triggerConfig.schedule,
+          timezone: triggerConfig.timezone,
+        }
+      );
+
+      if (!scheduleResult.success) {
+        // Rollback to paused on failure
+        await db
+          .update(workflow)
+          .set({ status: "paused", updatedAt: new Date() })
+          .where(
+            and(
+              eq(workflow.id, workflowId),
+              eq(workflow.organizationId, organizationId)
+            )
+          );
+        return {
+          success: false,
+          error: `Failed to create schedule: ${scheduleResult.error}`,
+        };
+      }
+    }
+
     // Revalidate
     revalidatePath("/[orgSlug]/automations", "page");
     revalidatePath(`/[orgSlug]/automations/${workflowId}`, "page");
@@ -833,6 +993,11 @@ export async function disableWorkflow(
           eq(workflow.organizationId, organizationId)
         )
       );
+
+    // If schedule trigger, delete pending EventBridge schedule (best effort)
+    if (existing.triggerType === "schedule") {
+      await callWorkflowScheduleApi(workflowId, organizationId, "disable");
+    }
 
     // Revalidate
     revalidatePath("/[orgSlug]/automations", "page");

@@ -38,8 +38,6 @@ export default $config({
     );
     const { schedulerGroup, schedulerRole } = await import("./infra/scheduler");
     const { api } = await import("./infra/api");
-    // Cron jobs for scheduled workflows
-    const { scheduleTriggerCron } = await import("./infra/cron");
 
     return {
       apiUrl: api.url,
@@ -50,7 +48,6 @@ export default $config({
       rateLimitTableName: rateLimitTable.name,
       schedulerGroupName: schedulerGroup.name,
       schedulerRoleArn: schedulerRole.arn,
-      scheduleTriggerCronName: scheduleTriggerCron.nodes.job.name,
     };
   },
 });
