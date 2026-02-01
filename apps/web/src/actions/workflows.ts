@@ -15,6 +15,7 @@ import {
 import { and, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { trackWorkflowCreated } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess, checkWorkflowLimit } from "@/lib/plan-limits";
 
@@ -73,7 +74,7 @@ export type DuplicateWorkflowResult =
  */
 async function verifyOrgAccess(
   organizationId: string
-): Promise<{ userId: string; role: string } | null> {
+): Promise<{ userId: string; userEmail: string; role: string } | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -91,7 +92,7 @@ async function verifyOrgAccess(
     return null;
   }
 
-  return { userId: session.user.id, role: membership.role };
+  return { userId: session.user.id, userEmail: session.user.email, role: membership.role };
 }
 
 /**
@@ -344,6 +345,9 @@ export async function createWorkflow(
 
     // Revalidate
     revalidatePath("/[orgSlug]/automations", "page");
+
+    // Track activation event (fire-and-forget)
+    trackWorkflowCreated(access.userEmail, organizationId);
 
     return await getWorkflow(newWorkflow.id, organizationId);
   } catch (error) {

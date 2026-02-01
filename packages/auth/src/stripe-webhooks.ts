@@ -2,8 +2,40 @@ import { db, eq } from "@wraps/db";
 import * as schema from "@wraps/db/schema/auth";
 import { getWrapsClient } from "@wraps/email";
 import { createPlatformClient } from "@wraps.dev/client";
+import { PostHog } from "posthog-node";
 import type Stripe from "stripe";
 import { stripeClient } from "./index";
+
+// PostHog client for subscription tracking (lazy singleton)
+let posthogClient: PostHog | null = null;
+function getPostHogClient(): PostHog | null {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+    return null;
+  }
+  if (!posthogClient) {
+    posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+      host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+      flushAt: 1,
+      flushInterval: 0,
+    });
+  }
+  return posthogClient;
+}
+
+/** Fire-and-forget PostHog capture for subscription events. Never throws. */
+function capturePostHog(
+  distinctId: string,
+  event: string,
+  properties: Record<string, unknown>
+) {
+  try {
+    const posthog = getPostHogClient();
+    if (!posthog) return;
+    posthog.capture({ distinctId, event, properties });
+  } catch {
+    // intentionally swallowed
+  }
+}
 
 /**
  * Emit a subscription lifecycle event to the Platform API.
@@ -300,6 +332,16 @@ export async function handleCheckoutCompleted(
     if (emitted) eventsEmitted++;
   }
 
+  // Track in PostHog for activation analytics
+  for (const admin of admins) {
+    if (!admin.user?.email) continue;
+    capturePostHog(admin.user.email, "subscription_activated", {
+      organization_id: org.id,
+      plan: sub.plan,
+      annual: isAnnual,
+    });
+  }
+
   console.log(
     `Subscription activated for org ${org.id} (${org.name}) - plan: ${sub.plan}, annual: ${isAnnual}`
   );
@@ -355,6 +397,16 @@ export async function handleSubscriptionDeleted(
       }
     );
     if (emitted) eventsEmitted++;
+  }
+
+  // Track in PostHog for activation analytics
+  for (const admin of admins) {
+    if (!admin.user?.email) continue;
+    capturePostHog(admin.user.email, "subscription_canceled", {
+      organization_id: org.id,
+      plan: sub.plan,
+      reason: cancelReason,
+    });
   }
 
   console.log(
@@ -435,6 +487,19 @@ export async function handleSubscriptionUpdated(
       changedAt: new Date().toISOString(),
     });
     if (emitted) eventsEmitted++;
+  }
+
+  // Track in PostHog for activation analytics
+  const posthogEvent = isUpgrade
+    ? "subscription_upgraded"
+    : "subscription_downgraded";
+  for (const admin of admins) {
+    if (!admin.user?.email) continue;
+    capturePostHog(admin.user.email, posthogEvent, {
+      organization_id: org.id,
+      from_plan: previousPlan,
+      to_plan: sub.plan,
+    });
   }
 
   console.log(

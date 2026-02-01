@@ -6,6 +6,7 @@ import { apiKey, db } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { trackApiKeyCreated } from "@/lib/activation-tracking";
 import {
   API_KEY_PREFIXES,
   type ApiKeyPermission,
@@ -216,6 +217,9 @@ export async function createApiKey(
 
     // Revalidate settings page
     revalidatePath("/[orgSlug]/settings", "page");
+
+    // Track activation event (fire-and-forget)
+    trackApiKeyCreated(session.user.email, organizationId);
 
     return {
       success: true,

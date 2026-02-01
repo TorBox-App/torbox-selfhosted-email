@@ -4,6 +4,7 @@ import { batchSend, db, template, workflow } from "@wraps/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { trackTemplateCreated } from "@/lib/activation-tracking";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -193,6 +194,9 @@ export async function POST(request: Request, context: RouteContext) {
         status: "DRAFT",
       })
       .returning();
+
+    // Track activation event (fire-and-forget)
+    trackTemplateCreated(session.user.email, orgWithMembership.id);
 
     return NextResponse.json(newTemplate, { status: 201 });
   } catch (error) {

@@ -29,6 +29,7 @@ import type {
   RecipientFilter,
   SampleContact,
 } from "@/lib/batch";
+import { trackBroadcastCreated } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
@@ -54,7 +55,7 @@ export type {
  */
 async function verifyOrgAccess(
   organizationId: string
-): Promise<{ userId: string; role: string } | null> {
+): Promise<{ userId: string; userEmail: string; role: string } | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -72,7 +73,7 @@ async function verifyOrgAccess(
     return null;
   }
 
-  return { userId: session.user.id, role: membership.role };
+  return { userId: session.user.id, userEmail: session.user.email, role: membership.role };
 }
 
 /**
@@ -506,6 +507,12 @@ export async function createBatchSend(
     console.log("[batch] Batch created successfully:", result.id);
 
     revalidatePath("/[orgSlug]/emails/broadcasts", "page");
+
+    // Track activation event (fire-and-forget)
+    trackBroadcastCreated(access.userEmail, organizationId, {
+      channel: data.channel ?? "email",
+      recipientCount: recipientCount,
+    });
 
     return await getBatchSend(result.id, organizationId);
   } catch (error) {

@@ -25,6 +25,10 @@ import type {
   SmsStatus,
   UpdateContactResult,
 } from "@/lib/contacts";
+import {
+  trackContactCreated,
+  trackContactsImported,
+} from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 
@@ -72,7 +76,7 @@ function revalidateContacts(orgSlug: string): void {
  */
 async function verifyOrgAccess(
   organizationId: string
-): Promise<{ userId: string; role: string; orgSlug: string } | null> {
+): Promise<{ userId: string; userEmail: string; role: string; orgSlug: string } | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -97,6 +101,7 @@ async function verifyOrgAccess(
 
   return {
     userId: session.user.id,
+    userEmail: session.user.email,
     role: membership.role,
     orgSlug: membership.organization.slug,
   };
@@ -532,6 +537,9 @@ export async function createContact(
 
     // Revalidate
     revalidateContacts(orgSlug);
+
+    // Track activation event (fire-and-forget)
+    trackContactCreated(access.userEmail, organizationId);
 
     // Return the created contact
     return await getContact(newContact.id, organizationId);
@@ -1529,6 +1537,13 @@ export async function bulkCreateContactsFromEmails(
 
     // Revalidate
     revalidateContacts(orgSlug);
+
+    // Track activation event (fire-and-forget)
+    if (created > 0) {
+      trackContactsImported(access.userEmail, organizationId, {
+        count: created,
+      });
+    }
 
     return { success: true, created, skipped, errors };
   } catch (error) {

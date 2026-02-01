@@ -2,6 +2,7 @@
 
 import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
+import { auth } from "@wraps/auth";
 import { awsAccount, brandKit, db, template } from "@wraps/db";
 import {
   generateSESTemplateName,
@@ -9,6 +10,8 @@ import {
   upsertSESTemplate,
 } from "@wraps/email";
 import { and, eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { trackTemplatePublished } from "@/lib/activation-tracking";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
@@ -165,6 +168,16 @@ export async function publishTemplateToSES(
       .where(eq(template.id, templateId));
 
     log.info({ templateId, sesTemplateName }, "Template published to SES");
+
+    // Track activation event (fire-and-forget)
+    try {
+      const session = await auth.api.getSession({ headers: await headers() });
+      if (session?.user?.email) {
+        trackTemplatePublished(session.user.email, organizationId);
+      }
+    } catch {
+      // tracking should never fail the publish
+    }
 
     return { success: true, sesTemplateName };
   } catch (error) {
