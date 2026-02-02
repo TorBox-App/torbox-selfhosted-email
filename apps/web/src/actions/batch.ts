@@ -16,6 +16,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getVariablesForContext } from "@/components/template-editor/variables/variable-definitions";
+import { trackBroadcastCreated } from "@/lib/activation-tracking";
 import type {
   BatchStatus,
   CancelBatchResult,
@@ -29,7 +30,6 @@ import type {
   RecipientFilter,
   SampleContact,
 } from "@/lib/batch";
-import { trackBroadcastCreated } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
@@ -73,7 +73,11 @@ async function verifyOrgAccess(
     return null;
   }
 
-  return { userId: session.user.id, userEmail: session.user.email, role: membership.role };
+  return {
+    userId: session.user.id,
+    userEmail: session.user.email,
+    role: membership.role,
+  };
 }
 
 /**
@@ -511,7 +515,7 @@ export async function createBatchSend(
     // Track activation event (fire-and-forget)
     trackBroadcastCreated(access.userEmail, organizationId, {
       channel: data.channel ?? "email",
-      recipientCount: recipientCount,
+      recipientCount,
     });
 
     return await getBatchSend(result.id, organizationId);

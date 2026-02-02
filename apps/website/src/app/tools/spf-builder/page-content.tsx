@@ -428,7 +428,10 @@ export default function SPFBuilderPageContent() {
                   />
                 </div>
                 {lookupCount > 10 && (
-                  <div className="mt-3 flex items-start gap-2 text-red-500 text-sm" role="alert">
+                  <div
+                    className="mt-3 flex items-start gap-2 text-red-500 text-sm"
+                    role="alert"
+                  >
                     <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                     <span>
                       Exceeds 10-lookup limit! SPF will return PermError and
@@ -438,7 +441,10 @@ export default function SPFBuilderPageContent() {
                   </div>
                 )}
                 {lookupCount > 7 && lookupCount <= 10 && (
-                  <div aria-live="polite" className="mt-3 flex items-start gap-2 text-yellow-500 text-sm">
+                  <div
+                    aria-live="polite"
+                    className="mt-3 flex items-start gap-2 text-yellow-500 text-sm"
+                  >
                     <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
                     <span>
                       Approaching limit. Consider using ip4/ip6 mechanisms

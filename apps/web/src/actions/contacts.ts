@@ -15,6 +15,10 @@ import {
 import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import {
+  trackContactCreated,
+  trackContactsImported,
+} from "@/lib/activation-tracking";
 import type {
   ContactStatus,
   CreateContactResult,
@@ -25,10 +29,6 @@ import type {
   SmsStatus,
   UpdateContactResult,
 } from "@/lib/contacts";
-import {
-  trackContactCreated,
-  trackContactsImported,
-} from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
 
@@ -74,9 +74,12 @@ function revalidateContacts(orgSlug: string): void {
 /**
  * Verify user has access to organization
  */
-async function verifyOrgAccess(
-  organizationId: string
-): Promise<{ userId: string; userEmail: string; role: string; orgSlug: string } | null> {
+async function verifyOrgAccess(organizationId: string): Promise<{
+  userId: string;
+  userEmail: string;
+  role: string;
+  orgSlug: string;
+} | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });

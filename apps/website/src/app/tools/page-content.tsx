@@ -661,7 +661,9 @@ export default function ToolsPageContent() {
                           </div>
                           <div
                             aria-label="Bonus points score"
-                            aria-valuemax={result.score.breakdown.bonus.possible}
+                            aria-valuemax={
+                              result.score.breakdown.bonus.possible
+                            }
                             aria-valuemin={0}
                             aria-valuenow={result.score.breakdown.bonus.earned}
                             className="h-2 overflow-hidden rounded-full bg-muted"
@@ -715,36 +717,49 @@ export default function ToolsPageContent() {
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex flex-1 items-start gap-2">
                                 {(() => {
-                                  const iconClass = "mt-0.5 h-4 w-4 flex-shrink-0";
+                                  const iconClass =
+                                    "mt-0.5 h-4 w-4 flex-shrink-0";
                                   if (issue.severity === "critical") {
-                                    return <XCircle className={`${iconClass} text-red-500`} />;
+                                    return (
+                                      <XCircle
+                                        className={`${iconClass} text-red-500`}
+                                      />
+                                    );
                                   }
                                   if (issue.severity === "warning") {
-                                    return <AlertTriangle className={`${iconClass} text-yellow-500`} />;
+                                    return (
+                                      <AlertTriangle
+                                        className={`${iconClass} text-yellow-500`}
+                                      />
+                                    );
                                   }
-                                  return <Info className={`${iconClass} text-blue-500`} />;
+                                  return (
+                                    <Info
+                                      className={`${iconClass} text-blue-500`}
+                                    />
+                                  );
                                 })()}
                                 <div>
-                                <div className="mb-1 font-medium">
-                                  {issue.check}
-                                </div>
-                                <p className="text-muted-foreground text-sm">
-                                  {issue.reason}
-                                  {showSpfBuilderLink && (
-                                    <>
-                                      {" "}
-                                      <a
-                                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                                        href="/tools/spf-builder"
-                                      >
-                                        <ArrowRight className="h-3 w-3" />
-                                        {result.spf.exists
-                                          ? "Fix with SPF Builder"
-                                          : "Create with SPF Builder"}
-                                      </a>
-                                    </>
-                                  )}
-                                </p>
+                                  <div className="mb-1 font-medium">
+                                    {issue.check}
+                                  </div>
+                                  <p className="text-muted-foreground text-sm">
+                                    {issue.reason}
+                                    {showSpfBuilderLink && (
+                                      <>
+                                        {" "}
+                                        <a
+                                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                                          href="/tools/spf-builder"
+                                        >
+                                          <ArrowRight className="h-3 w-3" />
+                                          {result.spf.exists
+                                            ? "Fix with SPF Builder"
+                                            : "Create with SPF Builder"}
+                                        </a>
+                                      </>
+                                    )}
+                                  </p>
                                 </div>
                               </div>
                               <Badge

@@ -436,9 +436,7 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                       <Check
                         className={cn(
                           "h-3 w-3 drop-shadow",
-                          item.color === "#ffffff"
-                            ? "text-black"
-                            : "text-white"
+                          item.color === "#ffffff" ? "text-black" : "text-white"
                         )}
                       />
                     )}

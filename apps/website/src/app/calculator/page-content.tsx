@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import type { BillingInterval } from "@/config/pricing";
 import {
   getCtaLink,
   getDisplayPrice,
@@ -44,7 +45,6 @@ import {
   PRICING_TIERS,
   TIER_LIMITS,
 } from "@/config/pricing";
-import type { BillingInterval } from "@/config/pricing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -134,7 +134,7 @@ const TIER_IDS = ["free", "starter", "growth", "scale"] as const;
 const BILLING_INTERVALS = ["monthly", "annual"] as const;
 
 const VOLUME_PRESETS = [
-  { label: "Side Project", emails: 1_000, events: 500, tier: "free" as const },
+  { label: "Side Project", emails: 1000, events: 500, tier: "free" as const },
   {
     label: "Startup",
     emails: 50_000,
@@ -165,9 +165,9 @@ const RETENTION_PERIODS = [
 
 /** Returns a human-friendly step size based on the current value. */
 function getStepSize(value: number): number {
-  if (value < 1_000) return 100;
-  if (value < 10_000) return 1_000;
-  if (value < 100_000) return 5_000;
+  if (value < 1000) return 100;
+  if (value < 10_000) return 1000;
+  if (value < 100_000) return 5000;
   if (value < 1_000_000) return 50_000;
   return 100_000;
 }
@@ -844,7 +844,7 @@ export default function CostCalculatorPageContent() {
                       onCheckedChange={(checked) => {
                         setState({
                           https: checked,
-                          ...(!checked ? { waf: false } : {}),
+                          ...(checked ? {} : { waf: false }),
                         });
                       }}
                     />
