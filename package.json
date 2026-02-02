@@ -20,6 +20,7 @@
     "fix": "npx ultracite@latest fix",
     "clean": "turbo run clean && rm -rf node_modules",
     "cli": "node packages/cli/dist/cli.js",
+    "tui": "pnpm -F=tui tui",
     "sst:dev": "dotenv -e apps/web/.env.local -- sst dev",
     "sst:deploy": "sst deploy",
     "sst:remove": "sst remove"
