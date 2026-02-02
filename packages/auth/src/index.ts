@@ -7,7 +7,6 @@ import { createPlatformClient } from "@wraps.dev/client";
 import { WrapsSMS } from "@wraps.dev/sms";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import {
   haveIBeenPwned,
@@ -463,63 +462,39 @@ export const auth = betterAuth<BetterAuthOptions>({
         ]
       : []),
   ],
-  hooks: {
-    after: createAuthMiddleware(async (ctx) => {
-      // Track user signup for welcome automation (email/password)
-      if (ctx.path.startsWith("/sign-up")) {
-        const newSession = ctx.context.newSession;
-        if (newSession) {
-          await Promise.allSettled([
-            trackUserSignup({
-              email: newSession.user.email,
-              name: newSession.user.name,
-            }),
-            trackPostHogSignup({
-              email: newSession.user.email,
-              name: newSession.user.name,
-              method: "email",
-            }),
-          ]);
-        }
-      }
-
-      // Track OAuth signup (Google, GitHub, etc.)
-      // OAuth callbacks go to /callback/:providerId
-      if (ctx.path.startsWith("/callback/")) {
-        const newSession = ctx.context.newSession;
-        // Only track if this is a new user (signup, not signin)
-        // Check if user was just created by comparing createdAt
-        if (newSession) {
-          const userCreatedAt = new Date(newSession.user.createdAt).getTime();
-          const now = Date.now();
-          const isNewUser = now - userCreatedAt < 60_000; // Created within last minute
-
-          if (isNewUser) {
-            // Extract provider from path: /callback/google -> google
-            const provider = ctx.path.split("/")[2] as
-              | "google"
-              | "github"
-              | undefined;
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user, context) => {
+          // Track all new user signups (email/password + OAuth)
+          // Uses databaseHooks instead of response-level after hook because
+          // Better-Auth's after hooks are skipped for OAuth redirect responses.
+          try {
+            // Detect signup method from the request path
+            let method: "email" | "google" | "github" | "passkey" = "email";
+            if (context?.path?.includes("/callback/google")) {
+              method = "google";
+            } else if (context?.path?.includes("/callback/github")) {
+              method = "github";
+            }
 
             await Promise.allSettled([
               trackUserSignup({
-                email: newSession.user.email,
-                name: newSession.user.name,
+                email: user.email,
+                name: user.name,
               }),
               trackPostHogSignup({
-                email: newSession.user.email,
-                name: newSession.user.name,
-                method: provider || "email",
+                email: user.email,
+                name: user.name,
+                method,
               }),
             ]);
+          } catch (error) {
+            console.error("Error in user create tracking hook:", error);
           }
-        }
-      }
-
-      return;
-    }),
-  },
-  databaseHooks: {
+        },
+      },
+    },
     session: {
       create: {
         before: async (session) => {
