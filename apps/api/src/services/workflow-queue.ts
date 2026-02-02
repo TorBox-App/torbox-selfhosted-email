@@ -106,7 +106,9 @@ export async function enqueueWorkflowStep(job: WorkflowJob): Promise<void> {
 export async function enqueueWorkflowStepBatch(
   jobs: WorkflowJob[]
 ): Promise<void> {
-  if (jobs.length === 0) return;
+  if (jobs.length === 0) {
+    return;
+  }
 
   if (!WORKFLOW_QUEUE_URL) {
     if (IS_PRODUCTION) {

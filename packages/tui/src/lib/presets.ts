@@ -94,14 +94,14 @@ export function getPreset(preset: ConfigPreset): WrapsEmailConfig | null {
   }
 }
 
-export interface PresetInfo {
+export type PresetInfo = {
   name: string;
   description: string;
   recommended: string;
   volume: string;
   estimatedCost: string;
   features: string[];
-}
+};
 
 export function getPresetInfo(preset: ConfigPreset): PresetInfo {
   const config = getPreset(preset);
@@ -200,8 +200,6 @@ export function presetToFeatures(preset: ConfigPreset): FeatureConfig {
         alerts: true,
         dedicatedIp: true,
       };
-    case "production":
-    case "custom":
     default:
       return {
         tracking: true,
@@ -267,7 +265,9 @@ export function featuresToEmailConfig(
 }
 
 export function derivePreset(features: FeatureConfig): ConfigPreset {
-  if (features.dedicatedIp) return "enterprise";
+  if (features.dedicatedIp) {
+    return "enterprise";
+  }
   if (features.eventTracking || features.emailHistory || features.alerts) {
     return "production";
   }

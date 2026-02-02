@@ -23,7 +23,9 @@ export class WrapsError extends Error {
 export function isAWSError(
   error: unknown
 ): error is Error & { name: string; $metadata?: { httpStatusCode?: number } } {
-  if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) {
+    return false;
+  }
   const awsErrorNames = [
     "ExpiredTokenException",
     "InvalidClientTokenId",
@@ -44,7 +46,9 @@ export function isAWSError(
  * Check if an error is a Pulumi deployment error
  */
 export function isPulumiError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+  if (!(error instanceof Error)) {
+    return false;
+  }
   return (
     error.message?.includes("pulumi") ||
     error.message?.includes("Pulumi") ||
@@ -136,7 +140,9 @@ export function parsePulumiError(error: Error): {
  * Removes: AWS account IDs, email addresses, domain names, ARNs with account IDs
  */
 export function sanitizeErrorMessage(error: unknown): string {
-  if (!error) return "Unknown error";
+  if (!error) {
+    return "Unknown error";
+  }
 
   let message = error instanceof Error ? error.message : String(error);
 

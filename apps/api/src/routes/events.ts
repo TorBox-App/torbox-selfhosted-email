@@ -368,7 +368,9 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       for (const wf of matchingWorkflows) {
         const eventName = (wf.triggerConfig as { eventName?: string })
           ?.eventName;
-        if (!eventName) continue;
+        if (!eventName) {
+          continue;
+        }
         const existing = workflowsByEvent.get(eventName) || [];
         existing.push(wf);
         workflowsByEvent.set(eventName, existing);

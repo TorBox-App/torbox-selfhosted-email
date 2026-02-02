@@ -134,12 +134,22 @@ export async function createDNSRecordsForProvider(
 
         // Count records created based on selected categories
         let recordsCreated = 0;
-        if (categories.has("dkim")) recordsCreated += data.dkimTokens.length;
-        if (categories.has("spf")) recordsCreated += 1;
-        if (categories.has("dmarc")) recordsCreated += 1;
+        if (categories.has("dkim")) {
+          recordsCreated += data.dkimTokens.length;
+        }
+        if (categories.has("spf")) {
+          recordsCreated += 1;
+        }
+        if (categories.has("dmarc")) {
+          recordsCreated += 1;
+        }
         if (data.mailFromDomain) {
-          if (categories.has("mailfrom_mx")) recordsCreated += 1;
-          if (categories.has("mailfrom_spf")) recordsCreated += 1;
+          if (categories.has("mailfrom_mx")) {
+            recordsCreated += 1;
+          }
+          if (categories.has("mailfrom_spf")) {
+            recordsCreated += 1;
+          }
         }
 
         return {

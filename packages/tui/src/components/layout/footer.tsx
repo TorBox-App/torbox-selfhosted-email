@@ -70,20 +70,20 @@ function getShortcuts(route: Route): Shortcut[] {
   }
 }
 
-interface FooterProps {
+type FooterProps = {
   route: Route;
-}
+};
 
 export function Footer({ route }: FooterProps) {
   const { width } = useTerminalDimensions();
   const { overrides } = useShortcuts();
   const shortcuts = overrides ?? getShortcuts(route);
   const parts = shortcuts.map((s) => `${s.key} ${s.label}`);
-  const line = " " + parts.join("   ");
+  const line = ` ${parts.join("   ")}`;
 
   return (
     <box flexDirection="column" width="100%">
-      <text fg="#444444">{" " + "─".repeat(Math.max(0, width - 2))}</text>
+      <text fg="#444444">{` ${"─".repeat(Math.max(0, width - 2))}`}</text>
       <text fg="#888888">{line}</text>
     </box>
   );

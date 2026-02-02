@@ -9,14 +9,14 @@ const STEP_ORDER: InitStep[] = [
   "deploy",
 ];
 
-export interface UseInitWizardReturn {
+export type UseInitWizardReturn = {
   step: InitStep;
   config: Partial<InitConfig>;
   updateConfig: (partial: Partial<InitConfig>) => void;
   goToStep: (step: InitStep) => void;
   goNext: () => void;
   goBack: () => boolean;
-}
+};
 
 export function useInitWizard(): UseInitWizardReturn {
   const [step, setStep] = useState<InitStep>("welcome");

@@ -117,7 +117,7 @@ export function SendTestModal({
       setPreviewHtml(null);
       setActiveTab("form");
     }
-  }, [isOpen, form, variables]);
+  }, [isOpen, form, variables, defaultFrom]);
 
   // Fill recipient with user's email
   const handleSendToSelf = useCallback(() => {

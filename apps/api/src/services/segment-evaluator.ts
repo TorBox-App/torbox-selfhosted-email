@@ -634,7 +634,9 @@ export async function loadContactWithTopics(
     .where(eq(contact.id, contactId))
     .limit(1);
 
-  if (!contactRecord) return null;
+  if (!contactRecord) {
+    return null;
+  }
 
   const subscriptions = await db
     .select({ topicId: contactTopic.topicId })
@@ -659,7 +661,9 @@ export async function getSegmentsByIds(
   segmentIds: string[]
 ): Promise<Map<string, typeof segment.$inferSelect>> {
   const result = new Map<string, typeof segment.$inferSelect>();
-  if (segmentIds.length === 0) return result;
+  if (segmentIds.length === 0) {
+    return result;
+  }
 
   const segments = await db
     .select()

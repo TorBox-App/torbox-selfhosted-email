@@ -1,21 +1,21 @@
 import { type ReactNode, useCallback, useState } from "react";
 
-export interface WizardStepProps {
+export type WizardStepProps = {
   onNext: (data: Record<string, unknown>) => void;
   onBack: () => void;
   accumulated: Record<string, unknown>;
-}
+};
 
-export interface WizardStep {
+export type WizardStep = {
   title: string;
   render: (props: WizardStepProps) => ReactNode;
-}
+};
 
-interface WizardProps {
+type WizardProps = {
   steps: WizardStep[];
   onComplete: (data: Record<string, unknown>) => void;
   onCancel: () => void;
-}
+};
 
 export function Wizard({ steps, onComplete, onCancel }: WizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -44,7 +44,9 @@ export function Wizard({ steps, onComplete, onCancel }: WizardProps) {
   }, [currentStep, onCancel]);
 
   const step = steps[currentStep];
-  if (!step) return null;
+  if (!step) {
+    return null;
+  }
 
   return (
     <box flexDirection="column" height="100%" width="100%">
@@ -54,7 +56,7 @@ export function Wizard({ steps, onComplete, onCancel }: WizardProps) {
         </text>
         <text fg="#666666">{`Step ${currentStep + 1} of ${steps.length}`}</text>
       </box>
-      <text fg="#444444">{" " + "─".repeat(60)}</text>
+      <text fg="#444444">{` ${"─".repeat(60)}`}</text>
       <box flexGrow={1} width="100%">
         {step.render({ onNext, onBack, accumulated })}
       </box>

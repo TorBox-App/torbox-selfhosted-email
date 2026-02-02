@@ -24,9 +24,13 @@ function AppInner() {
   const { inputActive } = useFocus();
 
   useKeyboard((key) => {
-    if (inputActive) return;
+    if (inputActive) {
+      return;
+    }
 
-    if (key.name === "q") renderer.destroy();
+    if (key.name === "q") {
+      renderer.destroy();
+    }
 
     // Monitoring and email init handle their own escape/navigation
     if (
@@ -39,13 +43,27 @@ function AppInner() {
 
     // Dashboard-only shortcuts
     if (route.view === "dashboard") {
-      if (key.name === "e") navigate({ view: "email", sub: "overview" });
-      if (key.name === "t") navigate({ view: "templates" });
-      if (key.name === "w") navigate({ view: "workflows" });
-      if (key.name === "m") navigate({ view: "monitoring" });
-      if (key.name === "1") setTimespan("24h");
-      if (key.name === "2") setTimespan("7d");
-      if (key.name === "3") setTimespan("30d");
+      if (key.name === "e") {
+        navigate({ view: "email", sub: "overview" });
+      }
+      if (key.name === "t") {
+        navigate({ view: "templates" });
+      }
+      if (key.name === "w") {
+        navigate({ view: "workflows" });
+      }
+      if (key.name === "m") {
+        navigate({ view: "monitoring" });
+      }
+      if (key.name === "1") {
+        setTimespan("24h");
+      }
+      if (key.name === "2") {
+        setTimespan("7d");
+      }
+      if (key.name === "3") {
+        setTimespan("30d");
+      }
       if (key.name === "tab") {
         setTimespan((prev) => {
           const idx = TIMESPANS.indexOf(prev);
@@ -54,7 +72,9 @@ function AppInner() {
       }
     }
 
-    if (key.name === "r") refresh();
+    if (key.name === "r") {
+      refresh();
+    }
   });
 
   if (loading) {

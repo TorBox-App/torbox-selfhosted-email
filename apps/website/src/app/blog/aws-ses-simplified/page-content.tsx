@@ -34,7 +34,9 @@ function useTypingEffect(
   }, [startDelay]);
 
   useEffect(() => {
-    if (!hasStarted) return;
+    if (!hasStarted) {
+      return;
+    }
     let i = 0;
     const timer = setInterval(() => {
       if (i < text.length) {
@@ -143,12 +145,16 @@ export function AnimatedCounter({
       },
       { threshold: 0.1 }
     );
-    if (ref.current) observer.observe(ref.current);
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      return;
+    }
     let start = 0;
     const increment = end / (duration / 16);
     const timer = setInterval(() => {
@@ -201,7 +207,9 @@ export function ArchitectureDiagram() {
   ];
 
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying) {
+      return;
+    }
     const timer = setInterval(() => {
       setActiveStep((prev) => (prev + 1) % steps.length);
     }, 1500);

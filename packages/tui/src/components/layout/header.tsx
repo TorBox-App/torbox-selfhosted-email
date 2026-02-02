@@ -28,10 +28,10 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-interface HeaderProps {
+type HeaderProps = {
   route: Route;
   region: string | null;
-}
+};
 
 export function Header({ route, region }: HeaderProps) {
   const { width } = useTerminalDimensions();
@@ -51,7 +51,7 @@ export function Header({ route, region }: HeaderProps) {
         <text>{spacer}</text>
         <text fg="#888888">{`${right} `}</text>
       </box>
-      <text fg="#444444">{" " + "━".repeat(Math.max(0, width - 2))}</text>
+      <text fg="#444444">{` ${"━".repeat(Math.max(0, width - 2))}`}</text>
     </box>
   );
 }

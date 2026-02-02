@@ -2,12 +2,12 @@ import { useCallback, useRef, useState } from "react";
 import { buildInitCommand, spawnDeploy } from "../lib/deploy";
 import type { InitConfig } from "../types";
 
-export interface UseDeployReturn {
+export type UseDeployReturn = {
   status: "idle" | "running" | "done" | "error";
   output: string[];
   error: string | null;
   start: (config: InitConfig) => void;
-}
+};
 
 export function useDeploy(): UseDeployReturn {
   const [status, setStatus] = useState<UseDeployReturn["status"]>("idle");

@@ -177,7 +177,7 @@ export function DeployInfrastructureStep({
 
   const quickCreateUrl = useMemo(
     () => generateQuickCreateUrl(config, templateUrl, organizationId),
-    [config, templateUrl, organizationId]
+    [config, organizationId]
   );
 
   const estimatedCost = useMemo(() => estimateMonthlyCost(config), [config]);

@@ -387,7 +387,7 @@ describe("Schedule name format", () => {
     });
 
     expect(name).not.toBeNull();
-    expect(name!.length).toBeLessThanOrEqual(64);
+    expect(name?.length).toBeLessThanOrEqual(64);
   });
 
   it("should start with wraps-wf-sched prefix", async () => {

@@ -14,7 +14,9 @@ export function useNavigation(initial: Route = { view: "dashboard" }) {
 
   const back = useCallback(() => {
     setHistory((prev) => {
-      if (prev.length === 0) return prev;
+      if (prev.length === 0) {
+        return prev;
+      }
       const next = [...prev];
       const last = next.pop()!;
       setRoute(last);

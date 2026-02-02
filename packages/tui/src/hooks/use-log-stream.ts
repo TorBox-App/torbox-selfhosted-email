@@ -11,7 +11,7 @@ import {
 const MAX_LOG_BUFFER = 1000;
 const BACKFILL_MINUTES = 5;
 
-interface UseLogStreamResult {
+type UseLogStreamResult = {
   logs: LogEntry[];
   logGroups: LogGroup[];
   selectedGroups: string[];
@@ -25,7 +25,7 @@ interface UseLogStreamResult {
   startStream: () => void;
   stopStream: () => void;
   clearLogs: () => void;
-}
+};
 
 export function useLogStream(region: string): UseLogStreamResult {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -46,17 +46,23 @@ export function useLogStream(region: string): UseLogStreamResult {
     async function discover() {
       try {
         const groups = await discoverLogGroups(region);
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setLogGroups(groups);
         // Auto-select all discovered groups
         setSelectedGroups(groups.map((g) => g.name));
       } catch (err: unknown) {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         setError(
           err instanceof Error ? err.message : "Failed to discover log groups"
         );
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -78,7 +84,9 @@ export function useLogStream(region: string): UseLogStreamResult {
   }, []);
 
   const startStream = useCallback(async () => {
-    if (selectedGroups.length === 0) return;
+    if (selectedGroups.length === 0) {
+      return;
+    }
 
     // Stop existing session
     if (sessionRef.current) {
@@ -136,7 +144,9 @@ export function useLogStream(region: string): UseLogStreamResult {
       (async () => {
         try {
           for await (const batch of session.stream) {
-            if (!mountedRef.current) break;
+            if (!mountedRef.current) {
+              break;
+            }
             appendLogs(batch);
           }
           // Stream ended naturally (timeout after 3h, or server closed)
@@ -145,7 +155,9 @@ export function useLogStream(region: string): UseLogStreamResult {
             setStreaming(false);
           }
         } catch (err: unknown) {
-          if (!mountedRef.current) return;
+          if (!mountedRef.current) {
+            return;
+          }
           const errName = err instanceof Error ? err.name : "";
           const message = err instanceof Error ? err.message : "Stream error";
           // AbortError is expected when user stops the stream

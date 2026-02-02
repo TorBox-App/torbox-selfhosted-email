@@ -6,10 +6,10 @@ const STATUS_CONFIG: Record<Status, { label: string; color: string }> = {
   error: { label: "ERR", color: "#FF4444" },
 };
 
-interface StatusBadgeProps {
+type StatusBadgeProps = {
   status: Status;
   label?: string;
-}
+};
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
   const config = STATUS_CONFIG[status];

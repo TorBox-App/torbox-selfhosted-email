@@ -14,49 +14,49 @@ export type Route =
 
 export type View = Route["view"];
 
-export interface Shortcut {
+export type Shortcut = {
   key: string;
   label: string;
-}
+};
 
-export interface ServiceInfo {
+export type ServiceInfo = {
   name: string;
   tier: string;
   region: string;
   details: string[];
-}
+};
 
 export type DnsStatus = "ok" | "pending" | "error";
 
-export interface DomainInfo {
+export type DomainInfo = {
   name: string;
   dkim: DnsStatus;
   spf: DnsStatus;
   dmarc: DnsStatus;
-}
+};
 
-export interface ActivityEntry {
+export type ActivityEntry = {
   label: string;
   value: number;
   max: number;
   color: string;
-}
+};
 
-export interface DomainStatus {
+export type DomainStatus = {
   name: string;
   verified: boolean;
   dkimStatus: DnsStatus;
   spfStatus: DnsStatus;
   dmarcStatus: DnsStatus;
-}
+};
 
-export interface SendQuota {
+export type SendQuota = {
   sentLast24Hours: number;
   max24HourSend: number;
   maxSendRate: number;
-}
+};
 
-export interface SendStats {
+export type SendStats = {
   sent: number;
   delivered: number;
   opened: number;
@@ -64,16 +64,16 @@ export interface SendStats {
   bounced: number;
   complaints: number;
   rejected: number;
-}
+};
 
 export type Timespan = "24h" | "7d" | "30d";
 
-export interface EmailEvent {
+export type EmailEvent = {
   timestamp: number;
   eventType: string;
-}
+};
 
-export interface ConnectionMetadata {
+export type ConnectionMetadata = {
   version: string;
   accountId: string;
   region: string;
@@ -99,9 +99,9 @@ export interface ConnectionMetadata {
       deployedAt: string;
     };
   };
-}
+};
 
-export interface AccountData {
+export type AccountData = {
   accountId: string;
   arn: string;
   region: string;
@@ -109,7 +109,7 @@ export interface AccountData {
   domains: DomainStatus[];
   quota: SendQuota;
   events: EmailEvent[];
-}
+};
 
 // --- Email Init Wizard Types ---
 
@@ -194,13 +194,13 @@ export type WrapsEmailConfig = {
   sendingEnabled?: boolean;
 };
 
-export interface FeatureCost {
+export type FeatureCost = {
   monthly: number;
   perEmail?: number;
   description: string;
-}
+};
 
-export interface FeatureCostBreakdown {
+export type FeatureCostBreakdown = {
   tracking?: FeatureCost;
   reputationMetrics?: FeatureCost;
   eventTracking?: FeatureCost;
@@ -211,9 +211,9 @@ export interface FeatureCostBreakdown {
   smtpCredentials?: FeatureCost;
   alerts?: FeatureCost;
   total: FeatureCost;
-}
+};
 
-export interface FeatureConfig {
+export type FeatureConfig = {
   tracking: boolean;
   reputationMetrics: boolean;
   eventTracking: boolean;
@@ -223,9 +223,9 @@ export interface FeatureConfig {
   archiveRetention: ArchiveRetention;
   alerts: boolean;
   dedicatedIp: boolean;
-}
+};
 
-export interface InitConfig {
+export type InitConfig = {
   provider: Provider;
   region: string;
   domain: string;
@@ -233,6 +233,6 @@ export interface InitConfig {
   preset: ConfigPreset;
   features: FeatureConfig;
   estimatedVolume: number;
-}
+};
 
 export type InitStep = "welcome" | "config" | "features" | "review" | "deploy";

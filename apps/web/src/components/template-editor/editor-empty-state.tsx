@@ -410,10 +410,14 @@ export function EditorEmptyState({ editor, onOpenAI }: EditorEmptyStateProps) {
  * Check if the editor content is "empty" (only has default placeholder content)
  */
 export function isEditorEmpty(editor: Editor | null): boolean {
-  if (!editor) return true;
+  if (!editor) {
+    return true;
+  }
 
   const json = editor.getJSON();
-  if (!json.content) return true;
+  if (!json.content) {
+    return true;
+  }
 
   // Filter out emailPreview nodes (they're always present)
   const contentNodes = json.content.filter(
@@ -421,12 +425,16 @@ export function isEditorEmpty(editor: Editor | null): boolean {
   );
 
   // Empty if no content nodes
-  if (contentNodes.length === 0) return true;
+  if (contentNodes.length === 0) {
+    return true;
+  }
 
   // Empty if only one paragraph with default text or empty
   if (contentNodes.length === 1 && contentNodes[0].type === "paragraph") {
     const para = contentNodes[0];
-    if (!para.content || para.content.length === 0) return true;
+    if (!para.content || para.content.length === 0) {
+      return true;
+    }
     if (para.content.length === 1 && para.content[0].type === "text") {
       const textNode = para.content[0] as { type: "text"; text?: string };
       if (

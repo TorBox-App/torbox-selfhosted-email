@@ -1,8 +1,8 @@
 const STEP_LABELS = ["Welcome", "Config", "Features", "Review", "Deploy"];
 
-interface StepIndicatorProps {
+type StepIndicatorProps = {
   currentIndex: number;
-}
+};
 
 export function StepIndicator({ currentIndex }: StepIndicatorProps) {
   return (

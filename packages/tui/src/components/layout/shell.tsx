@@ -3,11 +3,11 @@ import type { Route } from "../../types";
 import { Footer } from "./footer";
 import { Header } from "./header";
 
-interface ShellProps {
+type ShellProps = {
   route: Route;
   region: string | null;
   children: ReactNode;
-}
+};
 
 export function Shell({ route, region, children }: ShellProps) {
   return (

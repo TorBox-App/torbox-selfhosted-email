@@ -85,7 +85,9 @@ function calculateEventTrackingCost(
   config: WrapsEmailConfig,
   emailsPerMonth: number
 ): FeatureCost | undefined {
-  if (!config.eventTracking?.enabled) return;
+  if (!config.eventTracking?.enabled) {
+    return;
+  }
 
   let monthlyCost = 0;
   const components: string[] = [];
@@ -130,7 +132,9 @@ function calculateDynamoDBCost(
   config: WrapsEmailConfig,
   emailsPerMonth: number
 ): FeatureCost | undefined {
-  if (!config.eventTracking?.dynamoDBHistory) return;
+  if (!config.eventTracking?.dynamoDBHistory) {
+    return;
+  }
 
   const retention = config.eventTracking.archiveRetention || "90days";
   const numEventTypes = config.eventTracking.events?.length || 8;
@@ -158,7 +162,9 @@ function calculateDynamoDBCost(
 function calculateTrackingCost(
   config: WrapsEmailConfig
 ): FeatureCost | undefined {
-  if (!config.tracking?.enabled) return;
+  if (!config.tracking?.enabled) {
+    return;
+  }
   return {
     monthly: 0,
     description: "Open/click tracking (no additional cost)",
@@ -169,7 +175,9 @@ function calculateWafCost(
   config: WrapsEmailConfig,
   emailsPerMonth: number
 ): FeatureCost | undefined {
-  if (!(config.tracking?.httpsEnabled && config.tracking?.wafEnabled)) return;
+  if (!(config.tracking?.httpsEnabled && config.tracking?.wafEnabled)) {
+    return;
+  }
 
   const baseCost =
     AWS_PRICING.WAF_WEB_ACL_PER_MONTH + AWS_PRICING.WAF_RULE_PER_MONTH;
@@ -186,7 +194,9 @@ function calculateWafCost(
 function calculateReputationMetricsCost(
   config: WrapsEmailConfig
 ): FeatureCost | undefined {
-  if (!config.reputationMetrics) return;
+  if (!config.reputationMetrics) {
+    return;
+  }
   return {
     monthly: 0,
     description: "Reputation metrics (no additional cost)",
@@ -196,7 +206,9 @@ function calculateReputationMetricsCost(
 function calculateDedicatedIpCost(
   config: WrapsEmailConfig
 ): FeatureCost | undefined {
-  if (!config.dedicatedIp) return;
+  if (!config.dedicatedIp) {
+    return;
+  }
   return {
     monthly: AWS_PRICING.DEDICATED_IP_PER_MONTH,
     description: "Dedicated IP address",
@@ -207,7 +219,9 @@ function calculateEmailArchivingCost(
   config: WrapsEmailConfig,
   emailsPerMonth: number
 ): FeatureCost | undefined {
-  if (!config.emailArchiving?.enabled) return;
+  if (!config.emailArchiving?.enabled) {
+    return;
+  }
 
   const retention = config.emailArchiving.retention;
   const storageGB = estimateArchiveStorageSize(emailsPerMonth, retention);
@@ -226,7 +240,9 @@ function calculateEmailArchivingCost(
 function calculateSMTPCredentialsCost(
   config: WrapsEmailConfig
 ): FeatureCost | undefined {
-  if (!config.smtpCredentials?.enabled) return;
+  if (!config.smtpCredentials?.enabled) {
+    return;
+  }
   return {
     monthly: 0,
     description: "SMTP credentials (no additional cost)",
@@ -236,7 +252,9 @@ function calculateSMTPCredentialsCost(
 function calculateAlertingCost(
   config: WrapsEmailConfig
 ): FeatureCost | undefined {
-  if (!config.alerts?.enabled) return;
+  if (!config.alerts?.enabled) {
+    return;
+  }
 
   const numAlarms = config.alerts.dlqAlerts !== false ? 5 : 4;
   const alarmCost = numAlarms * 0.1;
@@ -296,7 +314,11 @@ export function calculateCosts(
 }
 
 export function formatCost(cost: number): string {
-  if (cost === 0) return "Free";
-  if (cost < 0.01) return "< $0.01";
+  if (cost === 0) {
+    return "Free";
+  }
+  if (cost < 0.01) {
+    return "< $0.01";
+  }
   return `$${cost.toFixed(2)}`;
 }

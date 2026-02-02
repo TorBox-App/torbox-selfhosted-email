@@ -32,7 +32,7 @@ export function SaveStatusIndicator({
       return () => clearTimeout(timer);
     }
     setShowSavedCheck(false);
-  }, [status, lastSavedAt]);
+  }, [status]);
 
   const getStatusConfig = () => {
     switch (status) {

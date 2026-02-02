@@ -7,11 +7,11 @@ import {
 } from "react";
 import type { Shortcut } from "../types";
 
-interface ShortcutsContextValue {
+type ShortcutsContextValue = {
   overrides: Shortcut[] | null;
   setShortcuts: (shortcuts: Shortcut[]) => void;
   clearShortcuts: () => void;
-}
+};
 
 const ShortcutsContext = createContext<ShortcutsContextValue>({
   overrides: null,

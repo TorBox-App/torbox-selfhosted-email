@@ -30,7 +30,9 @@ export function ThemeProvider({
   }, [storageKey]);
 
   React.useEffect(() => {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     const root = window.document.documentElement;
 

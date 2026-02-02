@@ -54,7 +54,7 @@ const features = [
   },
 ];
 
-function PlaceholderImage({
+function _PlaceholderImage({
   alt,
   icon: Icon,
 }: {

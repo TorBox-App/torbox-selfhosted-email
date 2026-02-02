@@ -1,9 +1,9 @@
 import type { DomainStatus } from "../../types";
 import { StatusBadge } from "../shared/status-badge";
 
-interface DomainsPanelProps {
+type DomainsPanelProps = {
   domains: DomainStatus[];
-}
+};
 
 export function DomainsPanel({ domains }: DomainsPanelProps) {
   return (

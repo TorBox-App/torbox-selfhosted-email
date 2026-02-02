@@ -6,12 +6,15 @@ import { isEnter } from "../../../lib/keys";
 import type { InitConfig } from "../../../types";
 import { StepIndicator } from "../../shared/step-indicator";
 
-interface DeployStepProps {
+// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes require control characters
+const ANSI_REGEX = /\x1B\[[0-9;]*m/g;
+
+type DeployStepProps = {
   config: InitConfig;
   onComplete: () => void;
   onBack: () => void;
   stepIndex: number;
-}
+};
 
 export function DeployStep({
   config,
@@ -49,10 +52,7 @@ export function DeployStep({
     if (status === "done" && (isEnter(key.name) || key.name === "escape")) {
       onComplete();
     }
-    if (
-      status === "error" &&
-      (key.name === "escape" || isEnter(key.name))
-    ) {
+    if (status === "error" && (key.name === "escape" || isEnter(key.name))) {
       onBack();
     }
   });
@@ -160,15 +160,15 @@ export function DeployStep({
   );
 }
 
-interface ParsedLine {
+type ParsedLine = {
   prefix: string;
   text: string;
   color: string;
-}
+};
 
 function parseLine(line: string): ParsedLine {
   // Strip ANSI codes
-  const clean = line.replace(/\x1B\[[0-9;]*m/g, "").trim();
+  const clean = line.replace(ANSI_REGEX, "").trim();
 
   if (clean.includes("✓") || clean.includes("✔") || clean.includes("done")) {
     return {

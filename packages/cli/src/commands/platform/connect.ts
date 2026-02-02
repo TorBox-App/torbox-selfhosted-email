@@ -319,11 +319,11 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
     let needsDeployment = false;
 
     if (hasEmail) {
-      const emailConfig = metadata.services.email!.config;
-      const existingSecret = metadata.services.email!.webhookSecret;
+      const emailConfig = metadata.services.email?.config;
+      const existingSecret = metadata.services.email?.webhookSecret;
 
       // Check if event tracking is enabled (required for webhook)
-      if (!emailConfig.eventTracking?.enabled) {
+      if (!emailConfig?.eventTracking?.enabled) {
         progress.stop();
         log.warn(
           "Event tracking must be enabled to connect to the Wraps Platform."
@@ -357,9 +357,9 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
               "COMPLAINT",
             ],
             dynamoDBHistory:
-              emailConfig.eventTracking?.dynamoDBHistory ?? false,
+              emailConfig?.eventTracking?.dynamoDBHistory ?? false,
             archiveRetention:
-              emailConfig.eventTracking?.archiveRetention ?? "90days",
+              emailConfig?.eventTracking?.archiveRetention ?? "90days",
           },
         };
         needsDeployment = true;
@@ -446,7 +446,7 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
         provider: metadata.provider,
         region,
         vercel: vercelConfig,
-        emailConfig: metadata.services.email!.config as WrapsEmailConfig,
+        emailConfig: metadata.services.email?.config as WrapsEmailConfig,
         webhook: webhookSecret
           ? {
               awsAccountNumber: metadata.accountId,

@@ -14,11 +14,11 @@ const STEP_ORDER: InitStep[] = [
   "deploy",
 ];
 
-interface EmailInitProps {
+type EmailInitProps = {
   data: AccountData;
   onBack: () => void;
   onComplete: () => void;
-}
+};
 
 export function EmailInit({ data, onBack, onComplete }: EmailInitProps) {
   const { step, config, updateConfig, goNext, goBack } = useInitWizard();
@@ -34,7 +34,12 @@ export function EmailInit({ data, onBack, onComplete }: EmailInitProps) {
   switch (step) {
     case "welcome":
       return (
-        <WelcomeStep data={data} onBack={onBack} onNext={goNext} stepIndex={stepIndex} />
+        <WelcomeStep
+          data={data}
+          onBack={onBack}
+          onNext={goNext}
+          stepIndex={stepIndex}
+        />
       );
 
     case "config":

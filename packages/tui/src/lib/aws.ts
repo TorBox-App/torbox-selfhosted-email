@@ -11,10 +11,10 @@ import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
 import type { EmailEvent, SendQuota } from "../types";
 
-export interface AWSIdentity {
+export type AWSIdentity = {
   accountId: string;
   arn: string;
-}
+};
 
 export function getRegion(): string {
   return (
@@ -31,12 +31,12 @@ export async function getCallerIdentity(region: string): Promise<AWSIdentity> {
   };
 }
 
-export interface SESIdentity {
+export type SESIdentity = {
   name: string;
   verified: boolean;
   dkimStatus: string;
   dkimTokens: string[];
-}
+};
 
 export async function listDomains(region: string): Promise<SESIdentity[]> {
   const sesv2 = new SESv2Client({ region });
@@ -133,11 +133,11 @@ export async function fetchEmailEvents(
   return events;
 }
 
-export interface CreateDomainResult {
+export type CreateDomainResult = {
   name: string;
   dkimTokens: string[];
   verified: boolean;
-}
+};
 
 export async function createDomain(
   region: string,

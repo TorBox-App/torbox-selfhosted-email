@@ -32,8 +32,12 @@ export default function OnboardingPage() {
   // Handle successful org creation - pass plan and interval params to org onboarding
   const handleSuccess = (orgSlug: string) => {
     const params = new URLSearchParams();
-    if (plan) params.set("plan", plan);
-    if (interval) params.set("interval", interval);
+    if (plan) {
+      params.set("plan", plan);
+    }
+    if (interval) {
+      params.set("interval", interval);
+    }
     const url =
       params.toString() !== ""
         ? `/${orgSlug}/onboarding?${params.toString()}`

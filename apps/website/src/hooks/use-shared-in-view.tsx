@@ -44,7 +44,9 @@ export function InViewProvider({ children }: { children: React.ReactNode }) {
 
   const getObserver = useCallback((margin: string) => {
     const existing = observersRef.current.get(margin);
-    if (existing) return existing;
+    if (existing) {
+      return existing;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -137,7 +139,9 @@ export function useSharedInView(options?: { once?: boolean; margin?: string }) {
 
   useEffect(() => {
     const element = ref.current;
-    if (!element) return;
+    if (!element) {
+      return;
+    }
 
     // Use shared observer if available
     if (context) {

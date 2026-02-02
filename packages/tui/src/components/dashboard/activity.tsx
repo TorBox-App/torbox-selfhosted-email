@@ -2,11 +2,11 @@ import { aggregateStats, getTimespanLabel } from "../../lib/stats";
 import type { EmailEvent, SendQuota, Timespan } from "../../types";
 import { BarChart } from "../shared/bar-chart";
 
-interface ActivityPanelProps {
+type ActivityPanelProps = {
   quota: SendQuota;
   events: EmailEvent[];
   timespan: Timespan;
-}
+};
 
 export function ActivityPanel({ quota, events, timespan }: ActivityPanelProps) {
   const stats = aggregateStats(events, timespan);

@@ -336,7 +336,7 @@ describe("handleCheckoutCompleted", () => {
     vi.clearAllMocks();
     process.env.WRAPS_API_KEY = "test-api-key";
     // Default mock for Stripe subscription - monthly
-    vi.mocked(stripeClient!.subscriptions.retrieve).mockResolvedValue({
+    vi.mocked(stripeClient?.subscriptions.retrieve).mockResolvedValue({
       id: "sub_stripe_123",
       items: {
         data: [{ price: { recurring: { interval: "month" } } }],
@@ -406,7 +406,7 @@ describe("handleCheckoutCompleted", () => {
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     // Mock Stripe subscription with yearly interval
-    vi.mocked(stripeClient!.subscriptions.retrieve).mockResolvedValue({
+    vi.mocked(stripeClient?.subscriptions.retrieve).mockResolvedValue({
       id: "sub_stripe_123",
       items: {
         data: [{ price: { recurring: { interval: "year" } } }],
@@ -445,7 +445,7 @@ describe("handleCheckoutCompleted", () => {
 
     expect(result.success).toBe(true);
     expect(
-      vi.mocked(stripeClient!.subscriptions.retrieve)
+      vi.mocked(stripeClient?.subscriptions.retrieve)
     ).toHaveBeenCalledWith("sub_stripe_123");
     expect(db.update).toHaveBeenCalled();
   });
@@ -455,7 +455,7 @@ describe("handleCheckoutCompleted", () => {
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     // Mock Stripe subscription with monthly interval (already default in beforeEach)
-    vi.mocked(stripeClient!.subscriptions.retrieve).mockResolvedValue({
+    vi.mocked(stripeClient?.subscriptions.retrieve).mockResolvedValue({
       id: "sub_stripe_123",
       items: {
         data: [{ price: { recurring: { interval: "month" } } }],
@@ -501,7 +501,7 @@ describe("handleCheckoutCompleted", () => {
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     // Mock Stripe subscription with yearly interval
-    vi.mocked(stripeClient!.subscriptions.retrieve).mockResolvedValue({
+    vi.mocked(stripeClient?.subscriptions.retrieve).mockResolvedValue({
       id: "sub_stripe_123",
       items: {
         data: [{ price: { recurring: { interval: "year" } } }],

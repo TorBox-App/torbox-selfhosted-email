@@ -146,8 +146,12 @@ export async function checkIAMPermissions(
         const decision = result.EvalDecision;
 
         if (decision === "allowed") {
-          if (actionName) allowedActions.push(actionName);
-        } else if (actionName) deniedActions.push(actionName);
+          if (actionName) {
+            allowedActions.push(actionName);
+          }
+        } else if (actionName) {
+          deniedActions.push(actionName);
+        }
       }
     }
 
@@ -193,7 +197,9 @@ export async function checkIAMPermissions(
  * Format denied actions for display
  */
 export function formatDeniedActions(actions: string[]): string {
-  if (actions.length === 0) return "";
+  if (actions.length === 0) {
+    return "";
+  }
 
   // Group by service
   const byService: Record<string, string[]> = {};

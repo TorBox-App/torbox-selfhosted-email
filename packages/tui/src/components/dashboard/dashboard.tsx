@@ -21,10 +21,10 @@ function QuickActions() {
   );
 }
 
-interface DashboardProps {
+type DashboardProps = {
   data: AccountData;
   timespan: Timespan;
-}
+};
 
 export function Dashboard({ data, timespan }: DashboardProps) {
   return (

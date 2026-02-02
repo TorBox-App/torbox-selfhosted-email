@@ -3,11 +3,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useFocus } from "../../contexts/focus";
 import { type CreateDomainResult, createDomain } from "../../lib/aws";
 
-interface DomainsAddProps {
+type DomainsAddProps = {
   region: string;
   onBack: () => void;
   onComplete: () => void;
-}
+};
 
 type Phase = "input" | "creating" | "success" | "error";
 
@@ -25,7 +25,9 @@ export function DomainsAdd({ region, onBack, onComplete }: DomainsAddProps) {
 
   const handleSubmit = useCallback(async () => {
     const trimmed = domain.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
 
     setPhase("creating");
     try {

@@ -206,7 +206,9 @@ export function FloatingHint({
 }) {
   const config = HINT_CONFIGS[id];
 
-  if (!show) return null;
+  if (!show) {
+    return null;
+  }
 
   return (
     <div

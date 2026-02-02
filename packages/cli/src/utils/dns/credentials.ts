@@ -364,10 +364,18 @@ export async function detectAvailableDNSProviders(
 
   // Sort so detected providers come first (except manual at end)
   return providers.sort((a, b) => {
-    if (a.provider === "manual") return 1;
-    if (b.provider === "manual") return -1;
-    if (a.detected && !b.detected) return -1;
-    if (!a.detected && b.detected) return 1;
+    if (a.provider === "manual") {
+      return 1;
+    }
+    if (b.provider === "manual") {
+      return -1;
+    }
+    if (a.detected && !b.detected) {
+      return -1;
+    }
+    if (!a.detected && b.detected) {
+      return 1;
+    }
     return 0;
   });
 }

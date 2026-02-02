@@ -44,7 +44,9 @@ function DotGrid() {
           const distance = (row + (cols - 1 - col)) / (rows + cols - 2);
           const opacity = Math.max(0, 1 - distance * 1.2);
 
-          if (opacity <= 0.05) return <div className="size-1" key={i} />;
+          if (opacity <= 0.05) {
+            return <div className="size-1" key={i} />;
+          }
 
           return (
             <div

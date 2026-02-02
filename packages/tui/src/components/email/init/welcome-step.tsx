@@ -5,12 +5,12 @@ import { isEnter } from "../../../lib/keys";
 import type { AccountData } from "../../../types";
 import { StepIndicator } from "../../shared/step-indicator";
 
-interface WelcomeStepProps {
+type WelcomeStepProps = {
   data: AccountData;
   onNext: () => void;
   onBack: () => void;
   stepIndex: number;
-}
+};
 
 export function WelcomeStep({
   data,

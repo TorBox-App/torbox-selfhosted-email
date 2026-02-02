@@ -330,10 +330,14 @@ export async function checkSegmentEntry(params: {
 
   for (const wf of segmentWorkflows) {
     const config = wf.triggerConfig as { segmentId?: string } | null;
-    if (!config?.segmentId) continue;
+    if (!config?.segmentId) {
+      continue;
+    }
 
     const seg = segmentsMap.get(config.segmentId);
-    if (!seg) continue;
+    if (!seg) {
+      continue;
+    }
 
     try {
       const matches = await evaluateConditionAsync(seg.condition, contactData);
@@ -410,7 +414,9 @@ export async function checkSegmentExit(params: {
           (wf) => (wf.triggerConfig as { segmentId?: string } | null)?.segmentId
         )
         .filter((id): id is string => {
-          if (!id) return false;
+          if (!id) {
+            return false;
+          }
           if (
             params.previousSegmentIds &&
             !params.previousSegmentIds.includes(id)
@@ -440,7 +446,9 @@ export async function checkSegmentExit(params: {
 
   for (const wf of segmentWorkflows) {
     const config = wf.triggerConfig as { segmentId?: string } | null;
-    if (!config?.segmentId) continue;
+    if (!config?.segmentId) {
+      continue;
+    }
 
     // Skip if not in previousSegmentIds
     if (
@@ -451,7 +459,9 @@ export async function checkSegmentExit(params: {
     }
 
     const seg = segmentsMap.get(config.segmentId);
-    if (!seg) continue;
+    if (!seg) {
+      continue;
+    }
 
     try {
       // Check if contact NO LONGER matches the segment

@@ -10,12 +10,12 @@ import { checkDomainDns } from "../lib/dns";
 import { loadConnectionMetadata } from "../lib/metadata";
 import type { AccountData } from "../types";
 
-interface UseAccountResult {
+type UseAccountResult = {
   loading: boolean;
   error: string | null;
   data: AccountData | null;
   refresh: () => void;
-}
+};
 
 export function useAccount(): UseAccountResult {
   const [loading, setLoading] = useState(true);

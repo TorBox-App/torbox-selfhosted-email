@@ -112,7 +112,7 @@ export function EventsTable({
       return;
     }
     updateSearchParams({ search: debouncedSearch || undefined, page: "1" });
-  }, [debouncedSearch]);
+  }, [debouncedSearch, updateSearchParams]);
 
   // Keyboard shortcut: Cmd+F to focus search
   useEffect(() => {

@@ -86,7 +86,7 @@ describe("WorkflowPropertiesPanel with selected node", () => {
       errorsByNodeId: new Map(),
     });
     mockUseWorkflowStore.mockImplementation(
-      (selector: (state: unknown) => unknown) => {
+      (_selector: (state: unknown) => unknown) => {
         // Return mock functions for store selectors
         return vi.fn();
       }

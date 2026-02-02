@@ -362,7 +362,9 @@ async function getSegmentContacts(
     )
     .limit(MAX_CONTACTS_PER_TRIGGER);
 
-  if (allContacts.length === 0) return [];
+  if (allContacts.length === 0) {
+    return [];
+  }
 
   console.log(
     `[schedule-trigger] Evaluating segment ${segmentId} for ${allContacts.length} contacts`

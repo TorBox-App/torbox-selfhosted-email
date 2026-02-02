@@ -833,7 +833,7 @@ export default function SandboxGuideContent() {
     if (saved) {
       try {
         setCheckedItems(JSON.parse(saved));
-      } catch (e) {
+      } catch (_e) {
         console.error("Failed to parse saved checklist");
       }
     }
@@ -855,8 +855,12 @@ export default function SandboxGuideContent() {
   const progress = Math.round((checkedItems.length / totalItems) * 100);
 
   const getApprovalLikelihood = () => {
-    if (progress >= 80) return { level: "high", text: "High likelihood" };
-    if (progress >= 50) return { level: "medium", text: "Medium likelihood" };
+    if (progress >= 80) {
+      return { level: "high", text: "High likelihood" };
+    }
+    if (progress >= 50) {
+      return { level: "medium", text: "Medium likelihood" };
+    }
     return { level: "low", text: "Low likelihood" };
   };
 

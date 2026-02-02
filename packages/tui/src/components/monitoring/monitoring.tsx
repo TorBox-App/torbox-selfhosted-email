@@ -4,10 +4,10 @@ import { useFocus } from "../../contexts/focus";
 import { useLogStream } from "../../hooks/use-log-stream";
 import type { LogEntry } from "../../lib/cloudwatch";
 
-interface MonitoringProps {
+type MonitoringProps = {
   region: string;
   onBack: () => void;
-}
+};
 
 type Panel = "logs" | "groups" | "filter";
 
@@ -38,31 +38,40 @@ const JSON_BOOL_COLOR = "#C678DD";
 const JSON_NULL_COLOR = "#666666";
 
 function detectLogLevel(message: string): string {
-  if (message.startsWith("START RequestId")) return "START";
-  if (message.startsWith("END RequestId")) return "END";
-  if (message.startsWith("REPORT RequestId")) return "REPORT";
+  if (message.startsWith("START RequestId")) {
+    return "START";
+  }
+  if (message.startsWith("END RequestId")) {
+    return "END";
+  }
+  if (message.startsWith("REPORT RequestId")) {
+    return "REPORT";
+  }
   const upper = message.toUpperCase();
   if (
     upper.includes("ERROR") ||
     upper.includes("[ERROR]") ||
     upper.includes('"level":"error"') ||
     upper.includes('"level":"ERROR"')
-  )
+  ) {
     return "ERROR";
+  }
   if (
     upper.includes("WARN") ||
     upper.includes("[WARN]") ||
     upper.includes('"level":"warn"') ||
     upper.includes('"level":"WARN"')
-  )
+  ) {
     return "WARN";
+  }
   if (
     upper.includes("DEBUG") ||
     upper.includes("[DEBUG]") ||
     upper.includes('"level":"debug"') ||
     upper.includes('"level":"DEBUG"')
-  )
+  ) {
     return "DEBUG";
+  }
   return "INFO";
 }
 
@@ -90,10 +99,10 @@ function tryParseJson(message: string): Record<string, unknown> | null {
   // Lambda PowerTools / structured format: "2024-01-01T00:00:00.000Z\tREQUEST_ID\tINFO\t{...}"
   const tabParts = trimmed.split("\t");
   if (tabParts.length >= 3) {
-    const lastPart = tabParts[tabParts.length - 1]!.trim();
-    if (lastPart.startsWith("{")) {
+    const lastPart = tabParts.at(-1)?.trim();
+    if (lastPart?.startsWith("{")) {
       try {
-        return JSON.parse(lastPart);
+        return JSON.parse(lastPart) as Record<string, unknown>;
       } catch {
         // not JSON
       }
@@ -103,39 +112,81 @@ function tryParseJson(message: string): Record<string, unknown> | null {
   return null;
 }
 
-interface FormattedLine {
+type FormattedLine = {
   content: ReactNode;
   level: string;
-}
+};
 
 function formatJsonValue(value: unknown): ReactNode[] {
   if (value === null || value === undefined) {
-    return [<text fg={JSON_NULL_COLOR}>null</text>];
+    return [
+      <text fg={JSON_NULL_COLOR} key="null">
+        null
+      </text>,
+    ];
   }
   if (typeof value === "string") {
     // Truncate long strings
-    const display = value.length > 80 ? value.slice(0, 80) + "…" : value;
-    return [<text fg={JSON_STRING_COLOR}>{`"${display}"`}</text>];
+    const display = value.length > 80 ? `${value.slice(0, 80)}…` : value;
+    return [<text fg={JSON_STRING_COLOR} key="str">{`"${display}"`}</text>];
   }
   if (typeof value === "number") {
-    return [<text fg={JSON_NUMBER_COLOR}>{String(value)}</text>];
+    return [
+      <text fg={JSON_NUMBER_COLOR} key="num">
+        {String(value)}
+      </text>,
+    ];
   }
   if (typeof value === "boolean") {
-    return [<text fg={JSON_BOOL_COLOR}>{String(value)}</text>];
+    return [
+      <text fg={JSON_BOOL_COLOR} key="bool">
+        {String(value)}
+      </text>,
+    ];
   }
   // Don't recursively expand nested objects/arrays inline — just stringify compactly
   if (Array.isArray(value)) {
-    if (value.length === 0) return [<text fg="#666666">{"[]"}</text>];
+    if (value.length === 0) {
+      return [
+        <text fg="#666666" key="arr-empty">
+          {"[]"}
+        </text>,
+      ];
+    }
     const compact = JSON.stringify(value);
-    if (compact.length < 60) return [<text fg="#AAAAAA">{compact}</text>];
-    return [<text fg="#AAAAAA">{compact.slice(0, 60)}…</text>];
+    if (compact.length < 60) {
+      return [
+        <text fg="#AAAAAA" key="arr-compact">
+          {compact}
+        </text>,
+      ];
+    }
+    return [
+      <text fg="#AAAAAA" key="arr-trunc">
+        {compact.slice(0, 60)}…
+      </text>,
+    ];
   }
   if (typeof value === "object") {
     const compact = JSON.stringify(value);
-    if (compact.length < 60) return [<text fg="#AAAAAA">{compact}</text>];
-    return [<text fg="#AAAAAA">{compact.slice(0, 60)}…</text>];
+    if (compact.length < 60) {
+      return [
+        <text fg="#AAAAAA" key="obj-compact">
+          {compact}
+        </text>,
+      ];
+    }
+    return [
+      <text fg="#AAAAAA" key="obj-trunc">
+        {compact.slice(0, 60)}…
+      </text>,
+    ];
   }
-  return [<text fg="#AAAAAA">{String(value)}</text>];
+  return [
+    <text fg="#AAAAAA" key="other">
+      {String(value)}
+    </text>,
+  ];
 }
 
 /** Known fields to display first, in order */
@@ -261,7 +312,7 @@ function formatLogEntry(entry: LogEntry, termWidth: number): FormattedLine[] {
   // Truncate to terminal width
   const maxMsg = Math.max(40, termWidth - 18);
   if (displayMsg.length > maxMsg) {
-    displayMsg = displayMsg.slice(0, maxMsg) + "…";
+    displayMsg = `${displayMsg.slice(0, maxMsg)}…`;
   }
 
   return [
@@ -338,7 +389,7 @@ export function Monitoring({ region, onBack }: MonitoringProps) {
       const maxOffset = Math.max(0, allLines.length - visibleLines);
       setScrollOffset(maxOffset);
     }
-  }, [allLines.length, visibleLines, paused]);
+  }, [visibleLines, paused]);
 
   useEffect(() => {
     setInputActive(panel === "filter");
@@ -360,7 +411,9 @@ export function Monitoring({ region, onBack }: MonitoringProps) {
       return;
     }
 
-    if (inputActive) return;
+    if (inputActive) {
+      return;
+    }
 
     if (key.name === "escape") {
       if (panel === "groups") {
@@ -372,17 +425,26 @@ export function Monitoring({ region, onBack }: MonitoringProps) {
     }
 
     if (panel === "logs") {
-      if (key.name === "space") setPaused((p) => !p);
+      if (key.name === "space") {
+        setPaused((p) => !p);
+      }
       if (key.name === "s") {
-        if (streaming) stopStream();
-        else startStream();
+        if (streaming) {
+          stopStream();
+        } else {
+          startStream();
+        }
       }
       if (key.name === "c") {
         clearLogs();
         setScrollOffset(0);
       }
-      if (key.name === "g") setPanel("groups");
-      if (key.name === "f") setPanel("filter");
+      if (key.name === "g") {
+        setPanel("groups");
+      }
+      if (key.name === "f") {
+        setPanel("filter");
+      }
 
       if (paused) {
         const maxOff = Math.max(0, allLines.length - visibleLines);
@@ -410,9 +472,13 @@ export function Monitoring({ region, onBack }: MonitoringProps) {
       }
       if (key.name === "space" || key.name === "enter") {
         const group = logGroups[groupCursor];
-        if (group) toggleGroup(group.name);
+        if (group) {
+          toggleGroup(group.name);
+        }
       }
-      if (key.name === "a") selectAllGroups();
+      if (key.name === "a") {
+        selectAllGroups();
+      }
     }
   });
 
@@ -532,7 +598,7 @@ export function Monitoring({ region, onBack }: MonitoringProps) {
         )}
         {error && <text fg="#FF4444">{error}</text>}
       </box>
-      <text fg="#333333">{" " + "─".repeat(Math.max(0, width - 2))}</text>
+      <text fg="#333333">{` ${"─".repeat(Math.max(0, width - 2))}`}</text>
 
       {/* Log lines */}
       <box flexDirection="column" flexGrow={1}>

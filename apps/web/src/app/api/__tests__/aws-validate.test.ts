@@ -189,7 +189,7 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
 
   it("should update existing AWS account connection", async () => {
     // Create an existing account first (same AWS account ID as the one we'll reconnect)
-    const existingAccount = await db
+    const _existingAccount = await db
       .insert(awsAccount)
       .values({
         organizationId: testOrganization.id,

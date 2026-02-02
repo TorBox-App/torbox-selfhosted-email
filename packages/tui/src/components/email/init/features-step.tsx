@@ -18,12 +18,12 @@ import type {
 } from "../../../types";
 import { StepIndicator } from "../../shared/step-indicator";
 
-interface FeaturesStepProps {
+type FeaturesStepProps = {
   config: Partial<InitConfig>;
   onNext: (config: Partial<InitConfig>) => void;
   onBack: () => void;
   stepIndex: number;
-}
+};
 
 const TEMPLATES: { value: ConfigPreset; label: string }[] = [
   { value: "starter", label: "Starter" },
@@ -32,7 +32,7 @@ const TEMPLATES: { value: ConfigPreset; label: string }[] = [
 ];
 
 const VOLUMES = [
-  { value: 1_000, label: "< 1k/mo" },
+  { value: 1000, label: "< 1k/mo" },
   { value: 10_000, label: "10k/mo" },
   { value: 50_000, label: "50k/mo" },
   { value: 100_000, label: "100k/mo" },
@@ -123,7 +123,7 @@ export function FeaturesStep({
   const currentRow = rows[clampedFocus]!;
 
   // Cost calculations
-  const currentVolume = VOLUMES[volumeIndex]!.value;
+  const currentVolume = VOLUMES[volumeIndex]?.value ?? 0;
   const emailConfig = featuresToEmailConfig(features);
   const costs = calculateCosts(emailConfig, currentVolume);
   const provider = (config.provider ?? "aws") as Provider;
@@ -157,7 +157,8 @@ export function FeaturesStep({
 
   function applyTemplate(index: number) {
     setTemplateIndex(index);
-    setFeatures(presetToFeatures(TEMPLATES[index]!.value));
+    const preset = TEMPLATES[index]?.value;
+    if (preset) setFeatures(presetToFeatures(preset));
   }
 
   function cycleRetention(
@@ -172,7 +173,7 @@ export function FeaturesStep({
         0,
         Math.min(RETENTION_OPTIONS.length - 1, idx + direction)
       );
-      return { ...prev, [configKey]: RETENTION_OPTIONS[next]!.value };
+      return { ...prev, [configKey]: RETENTION_OPTIONS[next]?.value };
     });
   }
 
@@ -232,7 +233,9 @@ export function FeaturesStep({
     if (currentRow.type === "feature" && key.name === "space") {
       const fKey = currentRow.key;
       // Can't enable emailHistory without eventTracking
-      if (fKey === "emailHistory" && !features.eventTracking) return;
+      if (fKey === "emailHistory" && !features.eventTracking) {
+        return;
+      }
       toggleFeature(fKey);
     }
 
@@ -250,7 +253,9 @@ export function FeaturesStep({
   const rightWidth = Math.max(30, width - leftWidth - 6);
 
   function getFeatureCostLabel(key: FeatureKey): string {
-    if (!features[key]) return "";
+    if (!features[key]) {
+      return "";
+    }
     const map: Record<string, { monthly: number } | undefined> = {
       tracking: costs.tracking,
       reputationMetrics: costs.reputationMetrics,
@@ -287,7 +292,7 @@ export function FeaturesStep({
             </text>
             <text fg="#FFFFFF">
               {"◄ "}
-              {TEMPLATES[templateIndex]!.label}
+              {TEMPLATES[templateIndex]?.label}
               {" ►"}
             </text>
           </box>
@@ -299,7 +304,7 @@ export function FeaturesStep({
             </text>
             <text fg="#FFFFFF">
               {"◄ "}
-              {VOLUMES[volumeIndex]!.label}
+              {VOLUMES[volumeIndex]?.label}
               {" ►"}
             </text>
           </box>
@@ -338,9 +343,7 @@ export function FeaturesStep({
                   </box>
                   {/* Dependency hint: only show when focused */}
                   {focused && isDisabled && (
-                    <text fg="#FFFF00">
-                      {"       Requires Event Tracking"}
-                    </text>
+                    <text fg="#FFFF00">{"       Requires Event Tracking"}</text>
                   )}
                 </box>
               );
@@ -375,9 +378,7 @@ export function FeaturesStep({
 
         {/* Right: cost + resources panel */}
         <box flexDirection="column" width={rightWidth}>
-          <text fg="#444444">
-            {"┌" + "─".repeat(rightWidth - 2) + "┐"}
-          </text>
+          <text fg="#444444">{`┌${"─".repeat(rightWidth - 2)}┐`}</text>
           <text fg="#00AAFF">
             <b>
               {"│ "}
@@ -387,9 +388,7 @@ export function FeaturesStep({
               {"│"}
             </b>
           </text>
-          <text fg="#444444">
-            {"│" + " ".repeat(rightWidth - 2) + "│"}
-          </text>
+          <text fg="#444444">{`│${" ".repeat(rightWidth - 2)}│`}</text>
 
           {/* SES base cost */}
           <CostLine
@@ -434,9 +433,7 @@ export function FeaturesStep({
             />
           )}
 
-          <text fg="#444444">
-            {"│" + " ".repeat(rightWidth - 2) + "│"}
-          </text>
+          <text fg="#444444">{`│${" ".repeat(rightWidth - 2)}│`}</text>
           <text fg="#00AAFF">
             <b>
               {"│ "}
@@ -452,16 +449,12 @@ export function FeaturesStep({
             {"│"}
           </text>
 
-          <text fg="#444444">
-            {"│" + " ".repeat(rightWidth - 2) + "│"}
-          </text>
+          <text fg="#444444">{`│${" ".repeat(rightWidth - 2)}│`}</text>
           <text fg="#AAAAAA">
             {"│ ── AWS Resources ──".padEnd(rightWidth - 1)}
             {"│"}
           </text>
-          <text fg="#444444">
-            {"│" + " ".repeat(rightWidth - 2) + "│"}
-          </text>
+          <text fg="#444444">{`│${" ".repeat(rightWidth - 2)}│`}</text>
           {resources.map((resource, i) => (
             <text fg="#FFFFFF" key={i}>
               {"│ ✦ "}
@@ -470,17 +463,13 @@ export function FeaturesStep({
             </text>
           ))}
 
-          <text fg="#444444">
-            {"│" + " ".repeat(rightWidth - 2) + "│"}
-          </text>
+          <text fg="#444444">{`│${" ".repeat(rightWidth - 2)}│`}</text>
           <text fg="#888888">
             {"│ "}
             {`Deploys as: ${derivedPreset} preset`.padEnd(rightWidth - 4)}
             {"│"}
           </text>
-          <text fg="#444444">
-            {"└" + "─".repeat(rightWidth - 2) + "┘"}
-          </text>
+          <text fg="#444444">{`└${"─".repeat(rightWidth - 2)}┘`}</text>
         </box>
       </box>
     </box>
@@ -508,7 +497,11 @@ function CostLine({
 }
 
 function formatVolume(volume: number): string {
-  if (volume >= 1_000_000) return `${(volume / 1_000_000).toFixed(0)}M`;
-  if (volume >= 1_000) return `${(volume / 1_000).toFixed(0)}k`;
+  if (volume >= 1_000_000) {
+    return `${(volume / 1_000_000).toFixed(0)}M`;
+  }
+  if (volume >= 1000) {
+    return `${(volume / 1000).toFixed(0)}k`;
+  }
   return `${volume}`;
 }

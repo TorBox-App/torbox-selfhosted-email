@@ -8,6 +8,8 @@ export function isTab(key: {
   name: string;
   shift?: boolean;
 }): { forward: boolean } | null {
-  if (key.name !== "tab") return null;
+  if (key.name !== "tab") {
+    return null;
+  }
   return { forward: !key.shift };
 }

@@ -7,12 +7,12 @@ import { AWS_REGIONS } from "../../../lib/regions";
 import type { InitConfig, Provider } from "../../../types";
 import { StepIndicator } from "../../shared/step-indicator";
 
-interface ConfigStepProps {
+type ConfigStepProps = {
   config: Partial<InitConfig>;
   onNext: (config: Partial<InitConfig>) => void;
   onBack: () => void;
   stepIndex: number;
-}
+};
 
 const PROVIDERS: { value: Provider; label: string }[] = [
   { value: "vercel", label: "Vercel" },
@@ -141,12 +141,14 @@ export function ConfigStep({
         if (key.name === "j" || key.name === "down") {
           const next = Math.min(PROVIDERS.length - 1, providerIndex + 1);
           setProviderIndex(next);
-          setProvider(PROVIDERS[next]!.value);
+          const nextProvider = PROVIDERS[next]?.value;
+          if (nextProvider) setProvider(nextProvider);
         }
         if (key.name === "k" || key.name === "up") {
           const next = Math.max(0, providerIndex - 1);
           setProviderIndex(next);
-          setProvider(PROVIDERS[next]!.value);
+          const prevProvider = PROVIDERS[next]?.value;
+          if (prevProvider) setProvider(prevProvider);
         }
       }
 
@@ -184,7 +186,7 @@ export function ConfigStep({
       }
       onNext({
         provider,
-        region: AWS_REGIONS[regionIndex]!.value,
+        region: AWS_REGIONS[regionIndex]?.value,
         domain: trimmedDomain,
         vercelConfig: { teamSlug: team, projectName: project },
       });
@@ -193,7 +195,7 @@ export function ConfigStep({
 
     onNext({
       provider,
-      region: AWS_REGIONS[regionIndex]!.value,
+      region: AWS_REGIONS[regionIndex]?.value,
       domain: trimmedDomain,
     });
   }
@@ -228,7 +230,7 @@ export function ConfigStep({
             <text fg={focusField === "provider" ? "#00AAFF" : "#888888"}>
               {focusField === "provider" ? ">" : " "} Provider
             </text>
-            <text fg="#FFFFFF">{`[${PROVIDERS[providerIndex]!.label}]`}</text>
+            <text fg="#FFFFFF">{`[${PROVIDERS[providerIndex]?.label}]`}</text>
           </box>
 
           {/* Region */}
@@ -236,7 +238,7 @@ export function ConfigStep({
             <text fg={focusField === "region" ? "#00AAFF" : "#888888"}>
               {focusField === "region" ? ">" : " "} Region{"  "}
             </text>
-            <text fg="#FFFFFF">{`[${AWS_REGIONS[regionIndex]!.label}]`}</text>
+            <text fg="#FFFFFF">{`[${AWS_REGIONS[regionIndex]?.label}]`}</text>
           </box>
 
           {/* Domain */}
@@ -282,9 +284,7 @@ export function ConfigStep({
               <text fg="#444444">── Vercel Configuration ──</text>
 
               <box flexDirection="row" gap={1}>
-                <text
-                  fg={focusField === "vercelTeam" ? "#00AAFF" : "#888888"}
-                >
+                <text fg={focusField === "vercelTeam" ? "#00AAFF" : "#888888"}>
                   {focusField === "vercelTeam" ? ">" : " "} Team Slug
                 </text>
                 {focusField === "vercelTeam" ? (
@@ -344,9 +344,7 @@ export function ConfigStep({
           <text> </text>
 
           {/* Validation error */}
-          {validationError && (
-            <text fg="#FF4444">{validationError}</text>
-          )}
+          {validationError && <text fg="#FF4444">{validationError}</text>}
 
           {/* CTA */}
           {isComplete ? (
@@ -362,7 +360,7 @@ export function ConfigStep({
 
         {/* Right: help panel */}
         <box flexDirection="column" width={rightWidth}>
-          <text fg="#444444">{"┌" + "─".repeat(rightWidth - 2) + "┐"}</text>
+          <text fg="#444444">{`┌${"─".repeat(rightWidth - 2)}┐`}</text>
           <text fg="#00AAFF">
             <b>
               {"│ "}
@@ -370,7 +368,7 @@ export function ConfigStep({
               {"│"}
             </b>
           </text>
-          <text fg="#444444">{"│" + " ".repeat(rightWidth - 2) + "│"}</text>
+          <text fg="#444444">{`│${" ".repeat(rightWidth - 2)}│`}</text>
           {helpText.lines.map((line, i) => (
             <text fg="#AAAAAA" key={i}>
               {"│ "}
@@ -378,7 +376,7 @@ export function ConfigStep({
               {"│"}
             </text>
           ))}
-          <text fg="#444444">{"└" + "─".repeat(rightWidth - 2) + "┘"}</text>
+          <text fg="#444444">{`└${"─".repeat(rightWidth - 2)}┘`}</text>
         </box>
       </box>
     </box>

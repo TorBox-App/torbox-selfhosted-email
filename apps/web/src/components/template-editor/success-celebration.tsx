@@ -45,7 +45,9 @@ export function SuccessCelebration({
     }
   }, [show, onComplete]);
 
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
 
   return (
     <div

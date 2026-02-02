@@ -1,8 +1,8 @@
 import type { AccountData } from "../../types";
 
-interface ServicesPanelProps {
+type ServicesPanelProps = {
   data: AccountData;
-}
+};
 
 const TIER_COLORS: Record<string, string> = {
   starter: "#FFFF00",
@@ -48,17 +48,15 @@ export function ServicesPanel({ data }: ServicesPanelProps) {
         )}
         {email && sms && <text> </text>}
         {sms && (
-          <>
-            <box flexDirection="row" gap={2}>
-              <text fg="#00AAFF">
-                <b>SMS</b>
-              </text>
-              <text fg={TIER_COLORS[sms.preset ?? "custom"] ?? "#AAAAAA"}>
-                {capitalize(sms.preset ?? "Custom")}
-              </text>
-              <text fg="#888888">{data.region}</text>
-            </box>
-          </>
+          <box flexDirection="row" gap={2}>
+            <text fg="#00AAFF">
+              <b>SMS</b>
+            </text>
+            <text fg={TIER_COLORS[sms.preset ?? "custom"] ?? "#AAAAAA"}>
+              {capitalize(sms.preset ?? "Custom")}
+            </text>
+            <text fg="#888888">{data.region}</text>
+          </box>
         )}
       </box>
     </box>

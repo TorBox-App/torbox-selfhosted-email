@@ -63,7 +63,9 @@ export function spawnDeploy(args: string[]): {
   errRl.on("line", push);
 
   const finish = () => {
-    if (done) return;
+    if (done) {
+      return;
+    }
     done = true;
     if (resolve) {
       const r = resolve;

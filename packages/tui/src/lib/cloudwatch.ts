@@ -5,19 +5,19 @@ import {
   StartLiveTailCommand,
 } from "@aws-sdk/client-cloudwatch-logs";
 
-export interface LogGroup {
+export type LogGroup = {
   name: string;
   arn: string;
   storedBytes: number;
   retentionDays: number | null;
-}
+};
 
-export interface LogEntry {
+export type LogEntry = {
   timestamp: number;
   message: string;
   logStream: string;
   logGroup: string;
-}
+};
 
 const WRAPS_LOG_PREFIX = "/aws/lambda/wraps-";
 
@@ -51,10 +51,10 @@ export async function discoverLogGroups(region: string): Promise<LogGroup[]> {
   return groups;
 }
 
-export interface LiveTailSession {
+export type LiveTailSession = {
   stream: AsyncIterable<LogEntry[]>;
   abort: () => void;
-}
+};
 
 export function startLiveTail(
   region: string,
@@ -73,7 +73,9 @@ export function startLiveTail(
       { abortSignal: abortController.signal }
     );
 
-    if (!response.responseStream) return;
+    if (!response.responseStream) {
+      return;
+    }
 
     for await (const event of response.responseStream) {
       if (event.sessionUpdate?.sessionResults) {

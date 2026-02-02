@@ -165,10 +165,18 @@ const RETENTION_PERIODS = [
 
 /** Returns a human-friendly step size based on the current value. */
 function getStepSize(value: number): number {
-  if (value < 1000) return 100;
-  if (value < 10_000) return 1000;
-  if (value < 100_000) return 5000;
-  if (value < 1_000_000) return 50_000;
+  if (value < 1000) {
+    return 100;
+  }
+  if (value < 10_000) {
+    return 1000;
+  }
+  if (value < 100_000) {
+    return 5000;
+  }
+  if (value < 1_000_000) {
+    return 50_000;
+  }
   return 100_000;
 }
 
@@ -220,13 +228,14 @@ export default function CostCalculatorPageContent() {
     const limits = TIER_LIMITS[selectedTier];
     const overage = OVERAGE_RATES[selectedTier];
 
-    if (!tier)
+    if (!tier) {
       return {
         platformCost: 0,
         overageCost: 0,
         totalWrapsCost: 0,
         annualSavings: 0,
       };
+    }
 
     const platformCost = getDisplayPrice(tier, billingInterval);
     const annualSavings =
@@ -388,7 +397,7 @@ export default function CostCalculatorPageContent() {
   };
 
   const { total, breakdown } = calculateCosts();
-  const perThousandEmails =
+  const _perThousandEmails =
     emailsPerMonth > 0 ? (total / emailsPerMonth) * 1000 : 0;
 
   // Calculate storage growth for display

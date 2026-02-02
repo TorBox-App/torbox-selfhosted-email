@@ -1533,7 +1533,7 @@ export async function bulkCreateContactsFromEmails(
           createdBy: access.userId,
         });
         created++;
-      } catch (err) {
+      } catch (_err) {
         errors.push(`Failed to create contact for ${email}`);
       }
     }

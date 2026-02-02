@@ -94,7 +94,9 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     let mounted = true;
 
     params.then((p) => {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       const slug = p.orgSlug;
       const initialStep = getInitialStep(searchParams, slug);
@@ -125,7 +127,9 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   // EFFECT 2: Handle Stripe checkout return and step persistence
   // Consolidates: subscribed toast, step localStorage save
   useEffect(() => {
-    if (!(isInitialized && orgSlug)) return;
+    if (!(isInitialized && orgSlug)) {
+      return;
+    }
 
     // Handle Stripe checkout return
     if (!hasShownSubscribedToast.current) {
@@ -195,7 +199,9 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
 
   // EFFECT 4: Analytics tracking (onboarding started + step views)
   useEffect(() => {
-    if (!(isInitialized && currentOrg)) return;
+    if (!(isInitialized && currentOrg)) {
+      return;
+    }
 
     // Track onboarding started once per session
     if (!hasTrackedStart.current) {
@@ -219,7 +225,9 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
 
   // EFFECT 5: Handle all redirects in a single effect
   useEffect(() => {
-    if (hasRedirected.current) return;
+    if (hasRedirected.current) {
+      return;
+    }
 
     // Redirect if onboarding is completed
     if (onboardingStatus?.completed && orgSlug) {

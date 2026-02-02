@@ -30,7 +30,9 @@ async function checkDkim(
   domain: string,
   tokens: string[]
 ): Promise<DnsStatus> {
-  if (tokens.length === 0) return "pending";
+  if (tokens.length === 0) {
+    return "pending";
+  }
 
   let allOk = true;
   for (const token of tokens) {
@@ -39,7 +41,9 @@ async function checkDkim(
       const cnames = await resolver.resolveCname(record);
       const expected = `${token}.dkim.amazonses.com`;
       const found = cnames.some((r) => r === expected || r === `${expected}.`);
-      if (!found) allOk = false;
+      if (!found) {
+        allOk = false;
+      }
     } catch {
       allOk = false;
     }
@@ -54,7 +58,9 @@ async function checkSpf(
   try {
     const records = await resolver.resolveTxt(domain);
     const spf = records.flat().find((r) => r.startsWith("v=spf1"));
-    if (!spf) return "pending";
+    if (!spf) {
+      return "pending";
+    }
     return spf.includes("include:amazonses.com") ? "ok" : "error";
   } catch {
     return "pending";

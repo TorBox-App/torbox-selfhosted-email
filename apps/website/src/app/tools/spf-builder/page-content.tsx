@@ -33,7 +33,9 @@ async function fetchSpfRecord(domain: string): Promise<string | null> {
       { headers: { Accept: "application/dns-json" } }
     );
     const data = await res.json();
-    if (!data.Answer) return null;
+    if (!data.Answer) {
+      return null;
+    }
 
     // Find the SPF record among TXT records
     for (const answer of data.Answer) {
@@ -54,11 +56,15 @@ async function countSpfLookups(
   visited: Set<string> = new Set()
 ): Promise<number> {
   // Prevent infinite loops
-  if (visited.has(domain)) return 0;
+  if (visited.has(domain)) {
+    return 0;
+  }
   visited.add(domain);
 
   const record = await fetchSpfRecord(domain);
-  if (!record) return 1; // Count the failed lookup attempt
+  if (!record) {
+    return 1; // Count the failed lookup attempt
+  }
 
   let count = 0;
   const parts = record.split(/\s+/);
@@ -352,14 +358,22 @@ export default function SPFBuilderPageContent() {
   };
 
   const getStatusColor = () => {
-    if (lookupCount > 10) return "text-red-500";
-    if (lookupCount > 7) return "text-yellow-500";
+    if (lookupCount > 10) {
+      return "text-red-500";
+    }
+    if (lookupCount > 7) {
+      return "text-yellow-500";
+    }
     return "text-green-500";
   };
 
   const getProgressColor = () => {
-    if (lookupCount > 10) return "bg-red-500";
-    if (lookupCount > 7) return "bg-yellow-500";
+    if (lookupCount > 10) {
+      return "bg-red-500";
+    }
+    if (lookupCount > 7) {
+      return "bg-yellow-500";
+    }
     return "bg-green-500";
   };
 

@@ -1,14 +1,14 @@
-interface BarChartEntry {
+type BarChartEntry = {
   label: string;
   value: number;
   max: number;
   color: string;
-}
+};
 
-interface BarChartProps {
+type BarChartProps = {
   entries: BarChartEntry[];
   barWidth?: number;
-}
+};
 
 export function BarChart({ entries, barWidth = 22 }: BarChartProps) {
   const maxLabel = Math.max(...entries.map((e) => e.label.length));

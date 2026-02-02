@@ -6,10 +6,10 @@ import {
   useState,
 } from "react";
 
-interface FocusContextValue {
+type FocusContextValue = {
   inputActive: boolean;
   setInputActive: (active: boolean) => void;
-}
+};
 
 const FocusContext = createContext<FocusContextValue>({
   inputActive: false,

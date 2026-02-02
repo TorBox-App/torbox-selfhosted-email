@@ -277,7 +277,9 @@ function TemplateEditorContent({
 
   // Track if editor is empty and show empty state
   useEffect(() => {
-    if (!editor) return;
+    if (!editor) {
+      return;
+    }
 
     const checkEmpty = () => {
       setShowEmptyState(isEditorEmpty(editor));

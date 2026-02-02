@@ -66,7 +66,7 @@ export function EmailFields({ to, from, organizationId }: EmailFieldsProps) {
   const hasMultipleRecipients = to.length > 1;
 
   // Check if the primary recipient is already a contact
-  const primaryRecipientIsContact = toEmail
+  const _primaryRecipientIsContact = toEmail
     ? existingContacts[toEmail.toLowerCase()]
     : false;
 

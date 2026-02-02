@@ -29,10 +29,14 @@ type ColumnActions = {
  * Truncate and format JSON data for preview
  */
 function formatEventDataPreview(data: Record<string, unknown> | null): string {
-  if (!data) return "-";
+  if (!data) {
+    return "-";
+  }
 
   const entries = Object.entries(data);
-  if (entries.length === 0) return "-";
+  if (entries.length === 0) {
+    return "-";
+  }
 
   // Show first 3 key-value pairs
   const preview = entries

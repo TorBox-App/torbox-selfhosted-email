@@ -86,7 +86,9 @@ export function MembersTable({
   };
 
   const handleRemoveMember = async () => {
-    if (!memberToRemove) return;
+    if (!memberToRemove) {
+      return;
+    }
 
     setRemovingMemberId(memberToRemove.id);
     const result = await removeMember(memberToRemove.id, organizationId);

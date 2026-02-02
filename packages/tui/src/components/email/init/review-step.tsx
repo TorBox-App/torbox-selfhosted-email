@@ -9,13 +9,13 @@ import { getPlannedResources } from "../../../lib/resources";
 import type { InitConfig } from "../../../types";
 import { StepIndicator } from "../../shared/step-indicator";
 
-interface ReviewStepProps {
+type ReviewStepProps = {
   config: InitConfig;
   accountId: string;
   onConfirm: () => void;
   onBack: () => void;
   stepIndex: number;
-}
+};
 
 export function ReviewStep({
   config,
@@ -69,9 +69,7 @@ export function ReviewStep({
         {/* Left: config summary */}
         <box flexDirection="column" width={colWidth}>
           <text fg="#444444">
-            {"┌─ Configuration " +
-              "─".repeat(Math.max(0, colWidth - 18)) +
-              "┐"}
+            {`┌─ Configuration ${"─".repeat(Math.max(0, colWidth - 18))}┐`}
           </text>
           <ConfigLine
             label="Provider"
@@ -100,7 +98,7 @@ export function ReviewStep({
             </>
           )}
 
-          <text fg="#444444">{"│" + " ".repeat(colWidth - 2) + "│"}</text>
+          <text fg="#444444">{`│${" ".repeat(colWidth - 2)}│`}</text>
           <ConfigLine
             label="Preset"
             value={capitalize(config.preset)}
@@ -113,7 +111,7 @@ export function ReviewStep({
           />
 
           {/* Feature summary */}
-          <text fg="#444444">{"│" + " ".repeat(colWidth - 2) + "│"}</text>
+          <text fg="#444444">{`│${" ".repeat(colWidth - 2)}│`}</text>
           <text fg="#AAAAAA">
             {"│ ── Features ──".padEnd(colWidth - 1)}
             {"│"}
@@ -147,7 +145,7 @@ export function ReviewStep({
           )}
 
           {/* Cost summary */}
-          <text fg="#444444">{"│" + " ".repeat(colWidth - 2) + "│"}</text>
+          <text fg="#444444">{`│${" ".repeat(colWidth - 2)}│`}</text>
           <text fg="#AAAAAA">
             {"│ ── Cost Estimate ──".padEnd(colWidth - 1)}
             {"│"}
@@ -195,7 +193,7 @@ export function ReviewStep({
             />
           )}
 
-          <text fg="#444444">{"│" + " ".repeat(colWidth - 2) + "│"}</text>
+          <text fg="#444444">{`│${" ".repeat(colWidth - 2)}│`}</text>
           <text fg="#00AAFF">
             <b>
               {"│ "}
@@ -211,7 +209,7 @@ export function ReviewStep({
             {"│"}
           </text>
 
-          <text fg="#444444">{"└" + "─".repeat(colWidth - 2) + "┘"}</text>
+          <text fg="#444444">{`└${"─".repeat(colWidth - 2)}┘`}</text>
         </box>
 
         {/* Right: planned resources */}
@@ -225,7 +223,7 @@ export function ReviewStep({
             {"│ Resources to create:".padEnd(colWidth - 1)}
             {"│"}
           </text>
-          <text fg="#444444">{"│" + " ".repeat(colWidth - 2) + "│"}</text>
+          <text fg="#444444">{`│${" ".repeat(colWidth - 2)}│`}</text>
           {resources.map((resource, i) => (
             <text fg="#FFFFFF" key={i}>
               {"│ ✦ "}
@@ -233,7 +231,7 @@ export function ReviewStep({
               {"│"}
             </text>
           ))}
-          <text fg="#444444">{"└" + "─".repeat(colWidth - 2) + "┘"}</text>
+          <text fg="#444444">{`└${"─".repeat(colWidth - 2)}┘`}</text>
         </box>
       </box>
 
@@ -302,7 +300,11 @@ function capitalize(s: string): string {
 }
 
 function formatVolume(volume: number): string {
-  if (volume >= 1_000_000) return `${(volume / 1_000_000).toFixed(0)}M`;
-  if (volume >= 1_000) return `${(volume / 1_000).toFixed(0)}k`;
+  if (volume >= 1_000_000) {
+    return `${(volume / 1_000_000).toFixed(0)}M`;
+  }
+  if (volume >= 1000) {
+    return `${(volume / 1000).toFixed(0)}k`;
+  }
   return `${volume}`;
 }

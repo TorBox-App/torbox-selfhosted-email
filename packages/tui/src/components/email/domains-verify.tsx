@@ -6,11 +6,11 @@ import { checkDomainDns } from "../../lib/dns";
 import type { DomainStatus } from "../../types";
 import { StatusBadge } from "../shared/status-badge";
 
-interface DomainsVerifyProps {
+type DomainsVerifyProps = {
   domain: string;
   region: string;
   onBack: () => void;
-}
+};
 
 export function DomainsVerify({ domain, region, onBack }: DomainsVerifyProps) {
   const [status, setStatus] = useState<DomainStatus | null>(null);
@@ -38,7 +38,9 @@ export function DomainsVerify({ domain, region, onBack }: DomainsVerifyProps) {
   }, [checkDns]);
 
   useKeyboard((key) => {
-    if (inputActive) return;
+    if (inputActive) {
+      return;
+    }
 
     if (key.name === "escape") {
       onBack();

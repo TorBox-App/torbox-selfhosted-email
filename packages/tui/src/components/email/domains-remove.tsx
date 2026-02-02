@@ -3,12 +3,12 @@ import { useCallback, useState } from "react";
 import { useFocus } from "../../contexts/focus";
 import { removeDomain } from "../../lib/aws";
 
-interface DomainsRemoveProps {
+type DomainsRemoveProps = {
   domain: string;
   region: string;
   onBack: () => void;
   onComplete: () => void;
-}
+};
 
 type Phase = "confirm" | "removing" | "success" | "error";
 
@@ -34,7 +34,9 @@ export function DomainsRemove({
   }, [domain, region]);
 
   useKeyboard((key) => {
-    if (inputActive) return;
+    if (inputActive) {
+      return;
+    }
 
     if (phase === "confirm") {
       if (key.name === "y") {

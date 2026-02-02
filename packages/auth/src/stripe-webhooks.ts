@@ -30,7 +30,9 @@ function capturePostHog(
 ) {
   try {
     const posthog = getPostHogClient();
-    if (!posthog) return;
+    if (!posthog) {
+      return;
+    }
     posthog.capture({ distinctId, event, properties });
   } catch {
     // intentionally swallowed
@@ -195,7 +197,9 @@ export async function handlePaymentFailed(
   let notifiedCount = 0;
 
   for (const admin of admins) {
-    if (!admin.user?.email) continue;
+    if (!admin.user?.email) {
+      continue;
+    }
 
     try {
       await wraps.sendTemplate({
@@ -315,7 +319,9 @@ export async function handleCheckoutCompleted(
   // Emit subscription.activated event for each admin
   let eventsEmitted = 0;
   for (const admin of admins) {
-    if (!admin.user?.email) continue;
+    if (!admin.user?.email) {
+      continue;
+    }
 
     const emitted = await emitSubscriptionEvent(
       "subscription.activated",
@@ -329,12 +335,16 @@ export async function handleCheckoutCompleted(
         activatedAt: new Date().toISOString(),
       }
     );
-    if (emitted) eventsEmitted++;
+    if (emitted) {
+      eventsEmitted++;
+    }
   }
 
   // Track in PostHog for activation analytics
   for (const admin of admins) {
-    if (!admin.user?.email) continue;
+    if (!admin.user?.email) {
+      continue;
+    }
     capturePostHog(admin.user.email, "subscription_activated", {
       organization_id: org.id,
       plan: sub.plan,
@@ -383,7 +393,9 @@ export async function handleSubscriptionDeleted(
   // Emit subscription.canceled event for each admin
   let eventsEmitted = 0;
   for (const admin of admins) {
-    if (!admin.user?.email) continue;
+    if (!admin.user?.email) {
+      continue;
+    }
 
     const emitted = await emitSubscriptionEvent(
       "subscription.canceled",
@@ -396,12 +408,16 @@ export async function handleSubscriptionDeleted(
         canceledAt: new Date().toISOString(),
       }
     );
-    if (emitted) eventsEmitted++;
+    if (emitted) {
+      eventsEmitted++;
+    }
   }
 
   // Track in PostHog for activation analytics
   for (const admin of admins) {
-    if (!admin.user?.email) continue;
+    if (!admin.user?.email) {
+      continue;
+    }
     capturePostHog(admin.user.email, "subscription_canceled", {
       organization_id: org.id,
       plan: sub.plan,
@@ -476,7 +492,9 @@ export async function handleSubscriptionUpdated(
   // Emit event for each admin
   let eventsEmitted = 0;
   for (const admin of admins) {
-    if (!admin.user?.email) continue;
+    if (!admin.user?.email) {
+      continue;
+    }
 
     const emitted = await emitSubscriptionEvent(eventName, admin.user.email, {
       organizationId: org.id,
@@ -486,7 +504,9 @@ export async function handleSubscriptionUpdated(
       changeType,
       changedAt: new Date().toISOString(),
     });
-    if (emitted) eventsEmitted++;
+    if (emitted) {
+      eventsEmitted++;
+    }
   }
 
   // Track in PostHog for activation analytics
@@ -494,7 +514,9 @@ export async function handleSubscriptionUpdated(
     ? "subscription_upgraded"
     : "subscription_downgraded";
   for (const admin of admins) {
-    if (!admin.user?.email) continue;
+    if (!admin.user?.email) {
+      continue;
+    }
     capturePostHog(admin.user.email, posthogEvent, {
       organization_id: org.id,
       from_plan: previousPlan,

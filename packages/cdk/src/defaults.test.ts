@@ -134,9 +134,9 @@ describe("applyDefaults", () => {
       const result = applyDefaults(props);
 
       expect(result.events).toBeDefined();
-      expect(result.events!.storeHistory).toBe(true);
-      expect(result.events!.retention).toBe("90days");
-      expect(result.events!.types).toEqual([
+      expect(result.events?.storeHistory).toBe(true);
+      expect(result.events?.retention).toBe("90days");
+      expect(result.events?.types).toEqual([
         "SEND",
         "DELIVERY",
         "BOUNCE",
@@ -156,14 +156,14 @@ describe("applyDefaults", () => {
       };
       const result = applyDefaults(props);
 
-      expect(result.events!.types).toEqual([
+      expect(result.events?.types).toEqual([
         "SEND",
         "DELIVERY",
         "OPEN",
         "CLICK",
       ]);
-      expect(result.events!.storeHistory).toBe(false);
-      expect(result.events!.retention).toBe("1year");
+      expect(result.events?.storeHistory).toBe(false);
+      expect(result.events?.retention).toBe("1year");
     });
   });
 

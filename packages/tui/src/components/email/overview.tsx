@@ -4,10 +4,10 @@ import { useFocus } from "../../contexts/focus";
 import type { AccountData, Route } from "../../types";
 import { StatusBadge } from "../shared/status-badge";
 
-interface EmailOverviewProps {
+type EmailOverviewProps = {
   data: AccountData;
   onNavigate: (route: Route) => void;
-}
+};
 
 export function EmailOverview({ data, onNavigate }: EmailOverviewProps) {
   const { domains } = data;
@@ -17,7 +17,9 @@ export function EmailOverview({ data, onNavigate }: EmailOverviewProps) {
   const selectedDomain = domains[selectedIndex];
 
   useKeyboard((key) => {
-    if (inputActive) return;
+    if (inputActive) {
+      return;
+    }
 
     if (key.name === "j" || key.name === "down") {
       setSelectedIndex((i) => Math.min(domains.length - 1, i + 1));
