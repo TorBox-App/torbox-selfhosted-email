@@ -5,6 +5,70 @@ import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+// --- Marketing attribution cookie ---
+
+const UTM_PARAMS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
+
+const ATTRIBUTION_COOKIE = "wraps_attribution";
+const ATTRIBUTION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+
+/**
+ * Set a first-touch attribution cookie if UTM or ref params are present
+ * and no attribution cookie exists yet.
+ */
+function setAttributionCookie(
+  request: NextRequest,
+  response: NextResponse
+): void {
+  const { searchParams } = request.nextUrl;
+
+  const hasUtm = UTM_PARAMS.some((p) => searchParams.has(p));
+  const hasRef = searchParams.has("ref");
+
+  if (!(hasUtm || hasRef)) {
+    return;
+  }
+  if (request.cookies.has(ATTRIBUTION_COOKIE)) {
+    return;
+  }
+
+  const attribution: Record<string, string> = {};
+
+  for (const param of UTM_PARAMS) {
+    const value = searchParams.get(param);
+    if (value) {
+      attribution[param] = value;
+    }
+  }
+
+  const ref = searchParams.get("ref");
+  if (ref) {
+    attribution.ref = ref;
+  }
+
+  const referrer = request.headers.get("referer");
+  if (referrer) {
+    attribution.referrer = referrer;
+  }
+
+  attribution.landing_page = request.nextUrl.pathname;
+  attribution.timestamp = new Date().toISOString();
+
+  response.cookies.set(ATTRIBUTION_COOKIE, JSON.stringify(attribution), {
+    maxAge: ATTRIBUTION_MAX_AGE,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    // NOT httpOnly — needs client-side read for PostHog
+  });
+}
+
 // Define public routes that don't require authentication
 // All other routes are protected by default
 const publicRoutes = [
@@ -35,11 +99,16 @@ function addRequestId(request: NextRequest, response: NextResponse): void {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // API routes: only add request ID, skip auth checks
-  if (pathname.startsWith("/api")) {
-    const response = NextResponse.next();
+  // Attach attribution cookie + request ID to every response
+  function finalize(response: NextResponse): NextResponse {
+    setAttributionCookie(request, response);
     addRequestId(request, response);
     return response;
+  }
+
+  // API routes: only add request ID, skip auth checks
+  if (pathname.startsWith("/api")) {
+    return finalize(NextResponse.next());
   }
 
   // Check if the current path is public (unprotected)
@@ -69,8 +138,10 @@ export async function proxy(request: NextRequest) {
       });
 
       if (activeOrg?.slug) {
-        return NextResponse.redirect(
-          new URL(`/${activeOrg.slug}/emails`, request.url)
+        return finalize(
+          NextResponse.redirect(
+            new URL(`/${activeOrg.slug}/emails`, request.url)
+          )
         );
       }
     }
@@ -82,7 +153,9 @@ export async function proxy(request: NextRequest) {
 
     if (userMemberships.length === 0) {
       // No orgs → redirect to onboarding
-      return NextResponse.redirect(new URL("/onboarding", request.url));
+      return finalize(
+        NextResponse.redirect(new URL("/onboarding", request.url))
+      );
     }
 
     if (userMemberships.length === 1) {
@@ -92,14 +165,14 @@ export async function proxy(request: NextRequest) {
       });
 
       if (userOrg?.slug) {
-        return NextResponse.redirect(
-          new URL(`/${userOrg.slug}/emails`, request.url)
+        return finalize(
+          NextResponse.redirect(new URL(`/${userOrg.slug}/emails`, request.url))
         );
       }
     }
 
     // Multiple orgs or couldn't find org → redirect to dashboard (org selector)
-    return NextResponse.redirect(new URL("/", request.url));
+    return finalize(NextResponse.redirect(new URL("/", request.url)));
   }
 
   // Redirect unauthenticated users trying to access protected routes to auth
@@ -108,13 +181,11 @@ export async function proxy(request: NextRequest) {
     const redirectUrl = new URL("/auth", request.url);
     // Add the original URL as a redirect parameter for post-login redirect
     redirectUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(redirectUrl);
+    return finalize(NextResponse.redirect(redirectUrl));
   }
 
   // Allow the request to continue
-  const response = NextResponse.next();
-  addRequestId(request, response);
-  return response;
+  return finalize(NextResponse.next());
 }
 
 export const config = {

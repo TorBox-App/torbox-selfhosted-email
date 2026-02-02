@@ -41,10 +41,16 @@ export default function SignUpForm({
 
   // Compute callback URL for OAuth - use invite redirect or onboarding
   const callbackUrl = useMemo(() => {
-    if (isInviteRedirect && redirectTo) return redirectTo;
+    if (isInviteRedirect && redirectTo) {
+      return redirectTo;
+    }
     const params = new URLSearchParams();
-    if (plan) params.set("plan", plan);
-    if (interval) params.set("interval", interval);
+    if (plan) {
+      params.set("plan", plan);
+    }
+    if (interval) {
+      params.set("interval", interval);
+    }
     return params.toString() !== ""
       ? `/onboarding?${params.toString()}`
       : "/onboarding";
@@ -119,8 +125,12 @@ export default function SignUpForm({
         router.push(redirectTo);
       } else {
         const onboardingParams = new URLSearchParams();
-        if (plan) onboardingParams.set("plan", plan);
-        if (interval) onboardingParams.set("interval", interval);
+        if (plan) {
+          onboardingParams.set("plan", plan);
+        }
+        if (interval) {
+          onboardingParams.set("interval", interval);
+        }
         const onboardingUrl =
           onboardingParams.toString() !== ""
             ? `/onboarding?${onboardingParams.toString()}`

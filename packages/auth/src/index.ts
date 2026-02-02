@@ -21,7 +21,7 @@ import { handleStripeWebhook } from "./stripe-webhooks";
 
 // --- Attribution tracking ---
 
-interface Attribution {
+type Attribution = {
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -31,7 +31,7 @@ interface Attribution {
   referrer?: string;
   landing_page?: string;
   timestamp?: string;
-}
+};
 
 const ATTRIBUTION_COOKIE = "wraps_attribution";
 
@@ -39,12 +39,16 @@ const ATTRIBUTION_COOKIE = "wraps_attribution";
  * Parse the wraps_attribution cookie from a raw Cookie header string.
  * Returns null if the cookie is missing or malformed.
  */
-function getAttributionFromContext(context?: {
-  headers?: Headers;
-} | null): Attribution | null {
+function getAttributionFromContext(
+  context?: {
+    headers?: Headers;
+  } | null
+): Attribution | null {
   try {
     const cookieHeader = context?.headers?.get?.("cookie");
-    if (!cookieHeader) return null;
+    if (!cookieHeader) {
+      return null;
+    }
 
     // Parse cookie string to find our attribution cookie
     const match = cookieHeader
@@ -52,9 +56,13 @@ function getAttributionFromContext(context?: {
       .map((c) => c.trim())
       .find((c) => c.startsWith(`${ATTRIBUTION_COOKIE}=`));
 
-    if (!match) return null;
+    if (!match) {
+      return null;
+    }
 
-    const value = decodeURIComponent(match.slice(ATTRIBUTION_COOKIE.length + 1));
+    const value = decodeURIComponent(
+      match.slice(ATTRIBUTION_COOKIE.length + 1)
+    );
     return JSON.parse(value) as Attribution;
   } catch {
     return null;
@@ -130,7 +138,9 @@ async function trackPostHogSignup(
 ) {
   try {
     const posthog = getPostHogClient();
-    if (!posthog) return;
+    if (!posthog) {
+      return;
+    }
 
     posthog.identify({
       distinctId: user.email,
@@ -251,18 +261,38 @@ async function sendLoginAlertSms(
  * Parse user agent string into a friendly device description.
  */
 function parseUserAgent(userAgent?: string): string {
-  if (!userAgent) return "unknown device";
+  if (!userAgent) {
+    return "unknown device";
+  }
 
   // Simple parsing - could use a library like ua-parser-js for more detail
-  if (userAgent.includes("iPhone")) return "iPhone";
-  if (userAgent.includes("iPad")) return "iPad";
-  if (userAgent.includes("Android")) return "Android device";
-  if (userAgent.includes("Mac")) return "Mac";
-  if (userAgent.includes("Windows")) return "Windows PC";
-  if (userAgent.includes("Linux")) return "Linux";
-  if (userAgent.includes("Chrome")) return "Chrome browser";
-  if (userAgent.includes("Firefox")) return "Firefox browser";
-  if (userAgent.includes("Safari")) return "Safari browser";
+  if (userAgent.includes("iPhone")) {
+    return "iPhone";
+  }
+  if (userAgent.includes("iPad")) {
+    return "iPad";
+  }
+  if (userAgent.includes("Android")) {
+    return "Android device";
+  }
+  if (userAgent.includes("Mac")) {
+    return "Mac";
+  }
+  if (userAgent.includes("Windows")) {
+    return "Windows PC";
+  }
+  if (userAgent.includes("Linux")) {
+    return "Linux";
+  }
+  if (userAgent.includes("Chrome")) {
+    return "Chrome browser";
+  }
+  if (userAgent.includes("Firefox")) {
+    return "Firefox browser";
+  }
+  if (userAgent.includes("Safari")) {
+    return "Safari browser";
+  }
 
   return "new device";
 }
@@ -471,7 +501,7 @@ export const auth = betterAuth<BetterAuthOptions>({
               enabled: true,
               getCheckoutSessionParams: (
                 { user, session, plan, subscription },
-                ctx
+                _ctx
               ) => ({
                 params: {
                   automatic_tax: {
