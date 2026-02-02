@@ -129,6 +129,6 @@ export async function generatePreferencesUrl(
   organizationId: string
 ): Promise<string> {
   const token = await generateUnsubscribeToken(contactId, organizationId);
-  const baseUrl = process.env.APP_BASE_URL || "https://wraps.dev";
+  const baseUrl = "https://app.wraps.dev";
   return `${baseUrl}/preferences/${token}`;
 }

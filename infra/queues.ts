@@ -57,8 +57,8 @@ batchQueue.subscribe(
           : (process.env.API_BASE_URL ?? "https://api.wraps.dev"),
       APP_BASE_URL:
         $app.stage === "production"
-          ? "https://wraps.dev"
-          : (process.env.APP_BASE_URL ?? "https://wraps.dev"),
+          ? "https://app.wraps.dev"
+          : (process.env.APP_BASE_URL ?? "https://app.wraps.dev"),
       // Secret for signing unsubscribe tokens (must match API and web)
       UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
     },
@@ -142,8 +142,8 @@ workflowQueue.subscribe(
           : (process.env.API_BASE_URL ?? "https://api.wraps.dev"),
       APP_BASE_URL:
         $app.stage === "production"
-          ? "https://wraps.dev"
-          : (process.env.APP_BASE_URL ?? "https://wraps.dev"),
+          ? "https://app.wraps.dev"
+          : (process.env.APP_BASE_URL ?? "https://app.wraps.dev"),
       // Secret for signing unsubscribe tokens (must match API and web)
       UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
     },
