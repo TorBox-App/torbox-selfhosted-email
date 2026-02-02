@@ -2,6 +2,7 @@
 
 import {
   Blocks,
+  Cloud,
   Gift,
   HardDrive,
   Layers,
@@ -35,7 +36,25 @@ const Code = ({ children }: { children: ReactNode }) => (
 
 const releases: Release[] = [
   {
-    version: "0.13.0",
+    version: "CLI v2.6.1",
+    date: "February 2026",
+    icon: Cloud,
+    iconColor:
+      "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    title: "S3 Remote State",
+    items: [
+      "Pulumi state automatically stored in S3 for multi-machine deploys",
+      "Auto-creates encrypted, versioned state bucket on first deploy",
+      "Seamless migration of existing local state to S3",
+      "Connection metadata synced across machines with timestamp-based merging",
+      <>
+        Set <Code>WRAPS_LOCAL_ONLY=1</Code> to opt out and keep local-only state
+      </>,
+      "Graceful fallback to local state if S3 is unreachable",
+    ],
+  },
+  {
+    version: "Platform v0.13.0",
     date: "January 2026",
     icon: Gift,
     iconColor:
@@ -53,7 +72,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.12.0",
+    version: "CLI v2.4.0",
     date: "January 2026",
     icon: Layers,
     iconColor: "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
@@ -74,7 +93,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.11.0",
+    version: "CLI v2.1.0",
     date: "January 2026",
     icon: HardDrive,
     iconColor:
@@ -93,7 +112,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.10.0",
+    version: "Platform v0.10.0",
     date: "January 2026",
     icon: Workflow,
     iconColor:
@@ -114,7 +133,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.9.0",
+    version: "Platform v0.9.0",
     date: "January 2026",
     icon: Send,
     iconColor:
@@ -127,7 +146,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.8.0",
+    version: "Platform v0.8.0",
     date: "January 2026",
     icon: Tags,
     iconColor:
@@ -143,7 +162,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.7.0",
+    version: "CLI v1.5.0",
     date: "December 2025",
     icon: MessageSquare,
     iconColor:
@@ -163,7 +182,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.6.0",
+    version: "CLI v1.4.0",
     date: "December 2025",
     icon: Blocks,
     iconColor:
@@ -180,7 +199,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.5.0",
+    version: "SDK v0.1.0",
     date: "December 2025",
     icon: Blocks,
     iconColor:
@@ -196,7 +215,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.4.0",
+    version: "Platform v0.4.0",
     date: "December 2025",
     icon: Users,
     iconColor:
@@ -214,7 +233,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.3.0",
+    version: "Platform v0.3.0",
     date: "December 2025",
     icon: LayoutTemplate,
     iconColor:
@@ -227,7 +246,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.2.0",
+    version: "CLI v1.0.0",
     date: "November 2025",
     icon: Terminal,
     iconColor:
@@ -252,7 +271,7 @@ const releases: Release[] = [
     ],
   },
   {
-    version: "0.1.0",
+    version: "CLI v0.1.0",
     date: "November 2025",
     icon: Rocket,
     iconColor:
@@ -305,7 +324,9 @@ export function ChangelogReleasesSection() {
                       <div className="border-b bg-muted/30 px-6 py-4">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="rounded-full bg-foreground px-3 py-1 font-mono font-semibold text-background text-sm">
-                            v{release.version}
+                            {release.version.includes("v")
+                              ? release.version
+                              : `v${release.version}`}
                           </span>
                           <span className="text-muted-foreground text-sm">
                             {release.date}
