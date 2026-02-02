@@ -1,10 +1,11 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock node:fs modules
 vi.mock("node:fs", () => ({
   existsSync: vi.fn(),
+  statSync: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", () => ({
@@ -302,6 +303,11 @@ describe("s3-state utilities", () => {
         return false;
       });
 
+      // First readdir returns project directories
+      vi.mocked(readdir).mockResolvedValueOnce(["wraps-email"] as any);
+      // statSync says it's a directory
+      vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as any);
+      // Second readdir returns stack files within the project dir
       vi.mocked(readdir).mockResolvedValueOnce([
         "wraps-123456789012-us-east-1.json",
         "other-stack.json",
@@ -324,6 +330,11 @@ describe("s3-state utilities", () => {
         return true;
       });
 
+      // First readdir returns project directories
+      vi.mocked(readdir).mockResolvedValueOnce(["wraps-email"] as any);
+      // statSync says it's a directory
+      vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as any);
+      // Second readdir returns stack files that don't match
       vi.mocked(readdir).mockResolvedValueOnce([
         "wraps-other-account-us-east-1.json",
       ] as any);
@@ -340,7 +351,11 @@ describe("s3-state utilities", () => {
 
   describe("migrateLocalPulumiState", () => {
     it("should write marker file after migration", async () => {
-      // Mock readdir to return matching stack files
+      // First readdir returns project directories
+      vi.mocked(readdir).mockResolvedValueOnce(["wraps-email"] as any);
+      // statSync says it's a directory
+      vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as any);
+      // Second readdir returns matching stack files within project dir
       vi.mocked(readdir).mockResolvedValueOnce([
         "wraps-123456789012-us-east-1.json",
       ] as any);

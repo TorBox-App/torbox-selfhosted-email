@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ConnectionMetadata } from "./metadata.js";
@@ -217,17 +217,26 @@ export async function needsMigration(
   }
 
   // Check if local stacks exist for this account/region
+  // Pulumi stores stacks under .pulumi/stacks/{projectName}/{stackName}.json
   const stacksDir = join(localPulumiDir, ".pulumi", "stacks");
   if (!existsSync(stacksDir)) {
     return false;
   }
 
   try {
-    const files = await readdir(stacksDir);
-    const matchingStacks = files.filter(
-      (f) => f.includes(accountId) && f.includes(region) && f.endsWith(".json")
-    );
-    return matchingStacks.length > 0;
+    const entries = await readdir(stacksDir);
+    for (const entry of entries) {
+      const entryPath = join(stacksDir, entry);
+      if (statSync(entryPath).isDirectory()) {
+        const files = await readdir(entryPath);
+        const matching = files.filter(
+          (f) =>
+            f.includes(accountId) && f.includes(region) && f.endsWith(".json")
+        );
+        if (matching.length > 0) return true;
+      }
+    }
+    return false;
   } catch {
     return false;
   }
@@ -247,52 +256,53 @@ export async function migrateLocalPulumiState(
   const pulumi = await import("@pulumi/pulumi/automation/index.js");
 
   // Find local stacks for this account/region
+  // Pulumi stores stacks under .pulumi/stacks/{projectName}/{stackName}.json
   const stacksDir = join(localPulumiDir, ".pulumi", "stacks");
-  const files = await readdir(stacksDir);
-  const stackFiles = files.filter(
-    (f) => f.includes(accountId) && f.includes(region) && f.endsWith(".json")
-  );
+  const entries = await readdir(stacksDir);
 
-  for (const stackFile of stackFiles) {
-    const stackName = stackFile.replace(".json", "");
+  for (const entry of entries) {
+    const entryPath = join(stacksDir, entry);
+    if (!statSync(entryPath).isDirectory()) continue;
 
-    // Determine project name from stack name
-    let projectName = "wraps-email";
-    if (stackName.startsWith("wraps-sms-")) {
-      projectName = "wraps-sms";
-    } else if (stackName.startsWith("wraps-cdn-")) {
-      projectName = "wraps-cdn";
-    }
+    const projectName = entry;
+    const files = await readdir(entryPath);
+    const stackFiles = files.filter(
+      (f) => f.includes(accountId) && f.includes(region) && f.endsWith(".json")
+    );
 
-    try {
-      // Export state from local backend
-      const localStack = await pulumi.LocalWorkspace.selectStack({
-        stackName,
-        workDir: localPulumiDir,
-      });
-      const state = await localStack.exportStack();
+    for (const stackFile of stackFiles) {
+      const stackName = stackFile.replace(".json", "");
 
-      // Import state to S3 backend
-      const s3Stack = await pulumi.LocalWorkspace.createOrSelectStack(
-        {
+      try {
+        // Export state from local backend
+        const localStack = await pulumi.LocalWorkspace.selectStack({
           stackName,
-          projectName,
-          program: async () => ({}),
-        },
-        {
           workDir: localPulumiDir,
-          envVars: {
-            PULUMI_BACKEND_URL: `s3://${bucketName}`,
-            PULUMI_CONFIG_PASSPHRASE: "",
+        });
+        const state = await localStack.exportStack();
+
+        // Import state to S3 backend
+        const s3Stack = await pulumi.LocalWorkspace.createOrSelectStack(
+          {
+            stackName,
+            projectName,
+            program: async () => ({}),
           },
-        }
-      );
-      await s3Stack.importStack(state);
-    } catch (error: any) {
-      // Log but don't fail on individual stack migration errors
-      console.error(
-        `Warning: Failed to migrate stack ${stackName}: ${error.message}`
-      );
+          {
+            workDir: localPulumiDir,
+            envVars: {
+              PULUMI_BACKEND_URL: `s3://${bucketName}`,
+              PULUMI_CONFIG_PASSPHRASE: "",
+            },
+          }
+        );
+        await s3Stack.importStack(state);
+      } catch (error: any) {
+        // Log but don't fail on individual stack migration errors
+        console.error(
+          `Warning: Failed to migrate stack ${stackName}: ${error.message}`
+        );
+      }
     }
   }
 
