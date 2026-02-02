@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/cli",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "CLI for deploying Wraps email infrastructure to your AWS account",
   "type": "module",
   "main": "./dist/cli.js",
@@ -34,7 +34,6 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
@@ -93,7 +92,6 @@
     "@wraps/email-check": "workspace:*",
     "aws-sdk-client-mock": "4.1.0",
     "aws-sdk-client-mock-vitest": "7.0.1",
-    "eslint": "^8.56.0",
     "tsup": "^8.0.1",
     "tsx": "4.20.6",
     "typescript": "catalog:",
