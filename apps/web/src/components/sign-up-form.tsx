@@ -84,15 +84,33 @@ export default function SignUpForm({
       }
 
       // Step 3: Identify user and capture signup event in PostHog
+      // Read marketing attribution cookie for tracking
+      let attribution: Record<string, string> = {};
+      try {
+        const match = document.cookie
+          .split(";")
+          .map((c) => c.trim())
+          .find((c) => c.startsWith("wraps_attribution="));
+        if (match) {
+          attribution = JSON.parse(
+            decodeURIComponent(match.split("=").slice(1).join("="))
+          );
+        }
+      } catch {
+        // Ignore malformed cookie
+      }
+
       posthog.identify(value.email, {
         email: value.email,
         name: value.name,
+        ...attribution,
       });
       posthog.capture("user_signed_up", {
         email: value.email,
         name: value.name,
         selected_plan: plan || null,
         billing_interval: interval,
+        ...attribution,
       });
 
       // Step 4: Redirect to invite page or onboarding

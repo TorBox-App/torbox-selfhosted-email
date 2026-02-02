@@ -19,6 +19,48 @@ import { PostHog } from "posthog-node";
 import Stripe from "stripe";
 import { handleStripeWebhook } from "./stripe-webhooks";
 
+// --- Attribution tracking ---
+
+interface Attribution {
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  ref?: string;
+  referrer?: string;
+  landing_page?: string;
+  timestamp?: string;
+}
+
+const ATTRIBUTION_COOKIE = "wraps_attribution";
+
+/**
+ * Parse the wraps_attribution cookie from a raw Cookie header string.
+ * Returns null if the cookie is missing or malformed.
+ */
+function getAttributionFromContext(context?: {
+  headers?: Headers;
+} | null): Attribution | null {
+  try {
+    const cookieHeader = context?.headers?.get?.("cookie");
+    if (!cookieHeader) return null;
+
+    // Parse cookie string to find our attribution cookie
+    const match = cookieHeader
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith(`${ATTRIBUTION_COOKIE}=`));
+
+    if (!match) return null;
+
+    const value = decodeURIComponent(match.slice(ATTRIBUTION_COOKIE.length + 1));
+    return JSON.parse(value) as Attribution;
+  } catch {
+    return null;
+  }
+}
+
 // Initialize PostHog server client (lazy)
 let posthogClient: PostHog | null = null;
 function getPostHogClient(): PostHog | null {
@@ -78,11 +120,14 @@ async function trackUserDeleted(user: { email: string; name: string | null }) {
  * Track user signup event in PostHog.
  * Non-blocking - failures are logged but don't affect auth flow.
  */
-async function trackPostHogSignup(user: {
-  email: string;
-  name: string | null;
-  method: "email" | "google" | "github" | "passkey";
-}) {
+async function trackPostHogSignup(
+  user: {
+    email: string;
+    name: string | null;
+    method: "email" | "google" | "github" | "passkey";
+  },
+  attribution?: Attribution | null
+) {
   try {
     const posthog = getPostHogClient();
     if (!posthog) return;
@@ -92,6 +137,7 @@ async function trackPostHogSignup(user: {
       properties: {
         email: user.email,
         name: user.name,
+        ...attribution,
       },
     });
 
@@ -102,6 +148,7 @@ async function trackPostHogSignup(user: {
         email: user.email,
         name: user.name,
         method: user.method,
+        ...attribution,
       },
     });
 
@@ -116,7 +163,10 @@ async function trackPostHogSignup(user: {
  * Creates the contact if needed, then emits the user.signup event.
  * Non-blocking - failures are logged but don't affect auth flow.
  */
-async function trackUserSignup(user: { email: string; name: string | null }) {
+async function trackUserSignup(
+  user: { email: string; name: string | null },
+  attribution?: Attribution | null
+) {
   try {
     const apiKey = process.env.WRAPS_API_KEY;
     if (!apiKey) {
@@ -137,6 +187,7 @@ async function trackUserSignup(user: { email: string; name: string | null }) {
           name: user.name || undefined,
           signupAt: new Date().toISOString(),
           source: "web",
+          ...attribution,
         },
         topicSlugs: ["wraps-product-updates"],
       },
@@ -156,6 +207,7 @@ async function trackUserSignup(user: { email: string; name: string | null }) {
           name: user.name || undefined,
           signupAt: new Date().toISOString(),
           source: "web",
+          ...attribution,
         },
       },
     });
@@ -478,16 +530,18 @@ export const auth = betterAuth<BetterAuthOptions>({
               method = "github";
             }
 
+            // Parse marketing attribution from cookie
+            const attribution = getAttributionFromContext(context);
+
             await Promise.allSettled([
-              trackUserSignup({
-                email: user.email,
-                name: user.name,
-              }),
-              trackPostHogSignup({
-                email: user.email,
-                name: user.name,
-                method,
-              }),
+              trackUserSignup(
+                { email: user.email, name: user.name },
+                attribution
+              ),
+              trackPostHogSignup(
+                { email: user.email, name: user.name, method },
+                attribution
+              ),
             ]);
           } catch (error) {
             console.error("Error in user create tracking hook:", error);
