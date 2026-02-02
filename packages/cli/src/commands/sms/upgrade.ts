@@ -917,7 +917,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
     outputs = await progress.execute(
       "Updating SMS infrastructure (this may take 2-3 minutes)",
       async () => {
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         const stack =
           await pulumi.automation.LocalWorkspace.createOrSelectStack(

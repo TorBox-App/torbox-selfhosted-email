@@ -86,7 +86,7 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
       const previewResult = await progress.execute(
         "Generating destruction preview",
         async () => {
-          await ensurePulumiWorkDir();
+          await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
           // Use stored stack name from metadata, fallback to generated name
           const stackName =
@@ -166,7 +166,7 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
     await progress.execute(
       "Destroying SMS infrastructure (this may take 2-3 minutes)",
       async () => {
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         // Use stored stack name from metadata, fallback to generated name
         const stackName =

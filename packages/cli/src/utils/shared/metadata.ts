@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type {
   CdnConfigPreset,
   EmailConfigPreset,
+  EmailStackConfig,
   Provider,
   ServiceType,
   SMSConfigPreset,
@@ -52,6 +53,13 @@ export type ConnectionMetadata = {
   vercel?: {
     teamSlug: string;
     projectName: string;
+  };
+
+  // State backend information (optional, informational)
+  stateBackend?: {
+    type: "s3" | "local";
+    bucket?: string;
+    migratedAt?: string;
   };
 
   // Service-specific configurations
@@ -142,8 +150,9 @@ function isLegacyMetadata(data: any): data is LegacyConnectionMetadata {
 }
 
 /**
- * Load connection metadata from disk
- * Automatically migrates legacy format to new multi-service format
+ * Load connection metadata from disk (with S3 fallback)
+ * Automatically migrates legacy format to new multi-service format.
+ * When S3 state is available, compares timestamps and uses the newer version.
  */
 export async function loadConnectionMetadata(
   accountId: string,
@@ -151,37 +160,100 @@ export async function loadConnectionMetadata(
 ): Promise<ConnectionMetadata | null> {
   const metadataPath = getMetadataPath(accountId, region);
 
-  if (!existsSync(metadataPath)) {
-    return null;
+  let localData: ConnectionMetadata | null = null;
+
+  if (existsSync(metadataPath)) {
+    try {
+      const content = await readFile(metadataPath, "utf-8");
+      const data = JSON.parse(content);
+
+      // Migrate legacy format if needed
+      if (isLegacyMetadata(data)) {
+        const migrated = migrateLegacyMetadata(data);
+        // Save migrated version locally
+        await saveConnectionMetadataLocal(migrated);
+        localData = migrated;
+      } else {
+        // Add version if missing
+        if (!data.version) {
+          data.version = "1.0.0";
+          await saveConnectionMetadataLocal(data);
+        }
+        localData = data as ConnectionMetadata;
+      }
+    } catch (error: any) {
+      console.error("Error loading connection metadata:", error.message);
+    }
   }
 
-  try {
-    const content = await readFile(metadataPath, "utf-8");
-    const data = JSON.parse(content);
+  // Try S3 sync if not in local-only mode
+  if (process.env.WRAPS_LOCAL_ONLY !== "1") {
+    try {
+      const {
+        stateBucketExists,
+        downloadMetadata,
+        uploadMetadata,
+        getStateBucketName,
+      } = await import("./s3-state.js");
 
-    // Migrate legacy format if needed
-    if (isLegacyMetadata(data)) {
-      const migrated = migrateLegacyMetadata(data);
-      // Save migrated version
-      await saveConnectionMetadata(migrated);
-      return migrated;
+      const bucketExists = await stateBucketExists(accountId, region);
+      if (bucketExists) {
+        const bucketName = getStateBucketName(accountId, region);
+        const remoteData = await downloadMetadata(
+          bucketName,
+          accountId,
+          region
+        );
+
+        if (remoteData && localData) {
+          // Compare timestamps, use the newer one
+          if (remoteData.timestamp > localData.timestamp) {
+            // Remote is newer — update local cache
+            await saveConnectionMetadataLocal(remoteData);
+            return remoteData;
+          }
+          if (localData.timestamp > remoteData.timestamp) {
+            // Local is newer — sync to S3
+            await uploadMetadata(bucketName, localData).catch(() => {});
+            return localData;
+          }
+          return localData;
+        }
+
+        if (remoteData && !localData) {
+          // Remote exists but local doesn't — write local cache
+          await saveConnectionMetadataLocal(remoteData);
+          return remoteData;
+        }
+
+        if (localData && !remoteData) {
+          // Local exists but remote doesn't — sync to S3
+          await uploadMetadata(bucketName, localData).catch(() => {});
+        }
+      }
+    } catch {
+      // S3 errors are silent — local data is the fallback
     }
-
-    // Add version if missing (for backwards compatibility with early multi-service format)
-    if (!data.version) {
-      data.version = "1.0.0";
-      await saveConnectionMetadata(data);
-    }
-
-    return data as ConnectionMetadata;
-  } catch (error: any) {
-    console.error("Error loading connection metadata:", error.message);
-    return null;
   }
+
+  return localData;
 }
 
 /**
- * Save connection metadata to disk
+ * Save connection metadata to local disk only (no S3 sync)
+ */
+async function saveConnectionMetadataLocal(
+  metadata: ConnectionMetadata
+): Promise<void> {
+  await ensureConnectionsDir();
+  const metadataPath = getMetadataPath(metadata.accountId, metadata.region);
+
+  const content = JSON.stringify(metadata, null, 2);
+  await writeFile(metadataPath, content, "utf-8");
+}
+
+/**
+ * Save connection metadata to disk (with S3 write-through)
  */
 export async function saveConnectionMetadata(
   metadata: ConnectionMetadata
@@ -195,6 +267,28 @@ export async function saveConnectionMetadata(
   } catch (error: any) {
     console.error("Error saving connection metadata:", error.message);
     throw error;
+  }
+
+  // S3 write-through (best-effort, never blocks)
+  if (process.env.WRAPS_LOCAL_ONLY !== "1") {
+    try {
+      const { stateBucketExists, uploadMetadata, getStateBucketName } =
+        await import("./s3-state.js");
+
+      const bucketExists = await stateBucketExists(
+        metadata.accountId,
+        metadata.region
+      );
+      if (bucketExists) {
+        const bucketName = getStateBucketName(
+          metadata.accountId,
+          metadata.region
+        );
+        await uploadMetadata(bucketName, metadata);
+      }
+    } catch {
+      // S3 write failure is silent — local write already succeeded
+    }
   }
 }
 
@@ -561,6 +655,48 @@ export async function findConnectionsWithService(
 ): Promise<ConnectionMetadata[]> {
   const accountConnections = await findConnectionsForAccount(accountId);
   return accountConnections.filter((conn) => hasService(conn, service));
+}
+
+/**
+ * Build a complete EmailStackConfig from metadata.
+ *
+ * All commands that redeploy existing infrastructure MUST use this helper
+ * to prevent Pulumi from silently destroying late-configured resources
+ * (e.g. webhook/EventBridge API Destination) when a property is missing
+ * from the stack config.
+ *
+ * For fresh deployments (init, connect), use manual construction instead
+ * since there is no existing metadata to preserve.
+ */
+export function buildEmailStackConfig(
+  metadata: ConnectionMetadata,
+  region: string,
+  overrides?: {
+    emailConfig?: WrapsEmailConfig;
+    webhook?: EmailStackConfig["webhook"] | undefined;
+  }
+): EmailStackConfig {
+  const emailService = metadata.services.email;
+  let webhook: EmailStackConfig["webhook"] | undefined;
+
+  if (overrides && "webhook" in overrides) {
+    // Explicit override (including deliberate removal via undefined)
+    webhook = overrides.webhook;
+  } else if (emailService?.webhookSecret) {
+    // Default: reconstruct from metadata
+    webhook = {
+      awsAccountNumber: metadata.accountId,
+      webhookSecret: emailService.webhookSecret,
+    };
+  }
+
+  return {
+    provider: metadata.provider,
+    region,
+    vercel: metadata.vercel,
+    emailConfig: overrides?.emailConfig ?? emailService!.config,
+    webhook,
+  };
 }
 
 /**

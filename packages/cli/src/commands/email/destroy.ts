@@ -180,7 +180,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       const previewResult = await progress.execute(
         "Generating destruction preview",
         async () => {
-          await ensurePulumiWorkDir();
+          await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
           // Use stored stack name from metadata, fallback to generated name
           // Note: init.ts creates stacks as `wraps-${accountId}-${region}` (without -email- prefix)
@@ -273,7 +273,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       "Destroying email infrastructure (this may take 2-3 minutes)",
       async () => {
         // Ensure Pulumi workspace directory exists
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         // Use stored stack name from metadata, fallback to generated name
         // Note: init.ts creates stacks as `wraps-${accountId}-${region}` (without -email- prefix)

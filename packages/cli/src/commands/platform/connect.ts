@@ -19,11 +19,7 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import { trackCommand, trackError } from "../../telemetry/events.js";
-import type {
-  EmailStackConfig,
-  PlatformConnectOptions,
-  WrapsEmailConfig,
-} from "../../types/index.js";
+import type { PlatformConnectOptions } from "../../types/index.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -33,6 +29,7 @@ import {
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
 import {
+  buildEmailStackConfig,
   generateWebhookSecret,
   loadConnectionMetadata,
   saveConnectionMetadata,
@@ -434,29 +431,21 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
     // 7. Deploy stack if needed (for webhook configuration)
     if (needsDeployment && hasEmail) {
       // Get Vercel config if needed
-      let vercelConfig;
       if (metadata.provider === "vercel" && !metadata.vercel) {
         progress.stop();
-        vercelConfig = await promptVercelConfig();
-      } else if (metadata.provider === "vercel") {
-        vercelConfig = metadata.vercel;
+        metadata.vercel = await promptVercelConfig();
       }
 
-      const stackConfig: EmailStackConfig = {
-        provider: metadata.provider,
-        region,
-        vercel: vercelConfig,
-        emailConfig: metadata.services.email?.config as WrapsEmailConfig,
+      // Explicit webhook override needed because the freshly generated
+      // webhookSecret may not yet be saved to metadata at this point
+      const stackConfig = buildEmailStackConfig(metadata, region, {
         webhook: webhookSecret
-          ? {
-              awsAccountNumber: metadata.accountId,
-              webhookSecret,
-            }
+          ? { awsAccountNumber: metadata.accountId, webhookSecret }
           : undefined,
-      };
+      });
 
       await progress.execute("Configuring event streaming", async () => {
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         const stack =
           await pulumi.automation.LocalWorkspace.createOrSelectStack(

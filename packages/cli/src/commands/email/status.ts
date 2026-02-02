@@ -76,7 +76,7 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
   let stackOutputs: any = {};
   try {
     // Ensure Pulumi workspace is configured (sets backend URL)
-    await ensurePulumiWorkDir();
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
     const stack = await pulumi.automation.LocalWorkspace.selectStack({
       stackName: `wraps-${identity.accountId}-${region}`,

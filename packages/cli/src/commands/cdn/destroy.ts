@@ -150,7 +150,7 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
       const previewResult = await progress.execute(
         "Generating destruction preview",
         async () => {
-          await ensurePulumiWorkDir();
+          await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
           // Use stored stack name from metadata, fallback to generated name
           const stackName =
@@ -251,7 +251,7 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
     await progress.execute(
       "Destroying CDN infrastructure (this may take 2-3 minutes)",
       async () => {
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         // Use stored stack name from metadata, fallback to generated name
         const stackName =

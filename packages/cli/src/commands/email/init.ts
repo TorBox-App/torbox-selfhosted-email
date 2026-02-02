@@ -231,6 +231,9 @@ export async function init(options: InitOptions): Promise<void> {
   }
 
   // 8. Build stack configuration
+  // Fresh deployment — no existing metadata to preserve.
+  // For redeployments of existing infrastructure, always use
+  // buildEmailStackConfig() to prevent silent resource destruction.
   const stackConfig: EmailStackConfig = {
     provider,
     region,
@@ -245,7 +248,7 @@ export async function init(options: InitOptions): Promise<void> {
       const previewResult = await progress.execute(
         "Generating infrastructure preview",
         async () => {
-          await ensurePulumiWorkDir();
+          await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
           const stack =
             await pulumi.automation.LocalWorkspace.createOrSelectStack(
@@ -327,7 +330,7 @@ export async function init(options: InitOptions): Promise<void> {
       "Deploying infrastructure (this may take 2-3 minutes)",
       async () => {
         // Ensure Pulumi workspace directory exists
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         // Run Pulumi inline program with local backend (no cloud required)
         const stack =

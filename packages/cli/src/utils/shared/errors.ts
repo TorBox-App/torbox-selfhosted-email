@@ -399,7 +399,7 @@ export const errors = {
     new WrapsError(
       "The Pulumi stack is locked from a previous run",
       "STACK_LOCKED",
-      "This happens when a previous deployment was interrupted.\n\nTo unlock, run:\n  rm -rf ~/.wraps/pulumi/.pulumi/locks\n\nThen try your command again.",
+      "This happens when a previous deployment was interrupted.\n\nFor local state, run:\n  rm -rf ~/.wraps/pulumi/.pulumi/locks\n\nFor S3 state, delete the lock object in your wraps-state-* bucket under .pulumi/locks/\n\nThen try your command again.",
       "https://wraps.dev/docs/guides/aws-setup/permissions/troubleshooting"
     ),
 
@@ -568,6 +568,30 @@ export const errors = {
       "Route53 permission denied",
       "ROUTE53_PERMISSION_DENIED",
       "Your IAM user/role needs Route53 permissions for automatic DNS management.\nRequired actions: ChangeResourceRecordSets, ListHostedZones\n\nThis is optional - you can add DNS records manually instead.",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  s3StateBucketCreationFailed: (bucketName: string) =>
+    new WrapsError(
+      `Failed to create S3 state bucket: ${bucketName}`,
+      "S3_STATE_BUCKET_CREATION_FAILED",
+      "Ensure your IAM user/role has s3:CreateBucket, s3:PutBucketEncryption, s3:PutBucketVersioning permissions.\n\nTo use local-only state instead:\n  export WRAPS_LOCAL_ONLY=1",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  s3StateAccessDenied: () =>
+    new WrapsError(
+      "Access denied to S3 state bucket",
+      "S3_STATE_ACCESS_DENIED",
+      "Ensure your IAM user/role has s3:GetObject, s3:PutObject, s3:ListBucket permissions on wraps-state-* buckets.\n\nTo use local-only state instead:\n  export WRAPS_LOCAL_ONLY=1",
+      "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  stateMigrationFailed: () =>
+    new WrapsError(
+      "Failed to migrate Pulumi state to S3",
+      "STATE_MIGRATION_FAILED",
+      "The migration from local to S3 state storage failed.\nYour local state is still intact.\n\nTo skip migration and use local-only state:\n  export WRAPS_LOCAL_ONLY=1",
       "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
 };

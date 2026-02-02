@@ -115,7 +115,7 @@ export async function smsSync(options: SMSSyncOptions): Promise<void> {
 
   try {
     outputs = await progress.execute("Syncing SMS infrastructure", async () => {
-      await ensurePulumiWorkDir();
+      await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
       const stackName =
         storedStackName || `wraps-sms-${identity.accountId}-${region}`;

@@ -98,7 +98,7 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
   // 4. Load current Pulumi stack to check state
   let stackOutputs: any = {};
   try {
-    await ensurePulumiWorkDir();
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
     const stack = await pulumi.automation.LocalWorkspace.selectStack({
       stackName: `wraps-cdn-${identity.accountId}-${region}`,
@@ -277,7 +277,7 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
     await progress.execute(
       "Updating CloudFront distribution (this may take 2-3 minutes)",
       async () => {
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         const stack =
           await pulumi.automation.LocalWorkspace.createOrSelectStack(

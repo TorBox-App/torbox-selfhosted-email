@@ -156,7 +156,7 @@ export async function cdnVerify(options: CdnVerifyOptions): Promise<void> {
   // 3. Load Pulumi stack
   let stackOutputs: any = {};
   try {
-    await ensurePulumiWorkDir();
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
     const stack = await pulumi.automation.LocalWorkspace.selectStack({
       stackName: `wraps-cdn-${identity.accountId}-${region}`,

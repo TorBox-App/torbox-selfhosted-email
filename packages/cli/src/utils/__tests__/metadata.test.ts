@@ -5,6 +5,7 @@ import { getPreset } from "../email/presets.js";
 import {
   addServiceToConnection,
   applyConfigUpdates,
+  buildEmailStackConfig,
   connectionExists,
   createConnectionMetadata,
   deleteConnectionMetadata,
@@ -1181,5 +1182,133 @@ describe("applyConfigUpdates", () => {
       expect(result.dedicatedIp).toBe(true);
       expect(result.eventTracking?.archiveRetention).toBe("1year");
     });
+  });
+});
+
+describe("buildEmailStackConfig", () => {
+  const baseMetadata = {
+    version: "1.0.0",
+    accountId: "123456789012",
+    region: "us-east-1",
+    provider: "vercel" as const,
+    timestamp: "2024-01-01T00:00:00.000Z",
+    vercel: {
+      teamSlug: "my-team",
+      projectName: "my-project",
+    },
+    services: {
+      email: {
+        preset: "production" as const,
+        config: {
+          tracking: { enabled: true, opens: true, clicks: true },
+          sendingEnabled: true,
+          eventTracking: {
+            enabled: true,
+            eventBridge: true,
+            events: ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT"],
+            dynamoDBHistory: true,
+            archiveRetention: "90days",
+          },
+        },
+        deployedAt: "2024-01-01T00:00:00.000Z",
+        webhookSecret: "abc123webhooksecret",
+      },
+    },
+  };
+
+  it("should include webhook when webhookSecret exists in metadata", () => {
+    const result = buildEmailStackConfig(baseMetadata, "us-east-1");
+
+    expect(result.webhook).toEqual({
+      awsAccountNumber: "123456789012",
+      webhookSecret: "abc123webhooksecret",
+    });
+  });
+
+  it("should omit webhook when webhookSecret is absent", () => {
+    const metadataWithoutWebhook = {
+      ...baseMetadata,
+      services: {
+        email: {
+          ...baseMetadata.services.email,
+          webhookSecret: undefined,
+        },
+      },
+    };
+
+    const result = buildEmailStackConfig(metadataWithoutWebhook, "us-east-1");
+
+    expect(result.webhook).toBeUndefined();
+  });
+
+  it("should use emailConfig from metadata by default", () => {
+    const result = buildEmailStackConfig(baseMetadata, "us-east-1");
+
+    expect(result.emailConfig).toEqual(baseMetadata.services.email.config);
+  });
+
+  it("should use emailConfig override when provided", () => {
+    const overrideConfig = {
+      tracking: { enabled: false },
+      sendingEnabled: false,
+    };
+
+    const result = buildEmailStackConfig(baseMetadata, "us-east-1", {
+      emailConfig: overrideConfig,
+    });
+
+    expect(result.emailConfig).toEqual(overrideConfig);
+  });
+
+  it("should honor explicit webhook override (new secret)", () => {
+    const result = buildEmailStackConfig(baseMetadata, "us-east-1", {
+      webhook: {
+        awsAccountNumber: "123456789012",
+        webhookSecret: "new-secret-value",
+      },
+    });
+
+    expect(result.webhook).toEqual({
+      awsAccountNumber: "123456789012",
+      webhookSecret: "new-secret-value",
+    });
+  });
+
+  it("should honor explicit webhook removal (undefined in overrides)", () => {
+    const result = buildEmailStackConfig(baseMetadata, "us-east-1", {
+      webhook: undefined,
+    });
+
+    // Even though metadata has webhookSecret, explicit override to undefined wins
+    expect(result.webhook).toBeUndefined();
+  });
+
+  it("should include vercel config from metadata for vercel provider", () => {
+    const result = buildEmailStackConfig(baseMetadata, "us-east-1");
+
+    expect(result.vercel).toEqual({
+      teamSlug: "my-team",
+      projectName: "my-project",
+    });
+    expect(result.provider).toBe("vercel");
+  });
+
+  it("should omit vercel config for non-vercel providers", () => {
+    const awsMetadata = {
+      ...baseMetadata,
+      provider: "aws" as const,
+      vercel: undefined,
+    };
+
+    const result = buildEmailStackConfig(awsMetadata, "us-west-2");
+
+    expect(result.vercel).toBeUndefined();
+    expect(result.provider).toBe("aws");
+  });
+
+  it("should pass region correctly", () => {
+    const result = buildEmailStackConfig(baseMetadata, "eu-west-1");
+
+    expect(result.region).toBe("eu-west-1");
   });
 });

@@ -111,7 +111,7 @@ export async function smsStatus(_options: SMSStatusOptions): Promise<void> {
   // 4. Try to load Pulumi stack
   let stackOutputs: Record<string, pulumi.automation.OutputValue> = {};
   try {
-    await ensurePulumiWorkDir();
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
     const stackName =
       metadata.services.sms.pulumiStackName ||

@@ -102,7 +102,7 @@ export async function cdnSync(options: CdnSyncOptions): Promise<void> {
   if (cdnConfig.cdn.customDomain) {
     try {
       // Load Pulumi stack to get cert ARN
-      await ensurePulumiWorkDir();
+      await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
       const checkStack = await pulumi.automation.LocalWorkspace.selectStack({
         stackName: `wraps-cdn-${identity.accountId}-${region}`,
@@ -152,7 +152,7 @@ export async function cdnSync(options: CdnSyncOptions): Promise<void> {
   // 5. Run Pulumi refresh + up
   try {
     await progress.execute("Syncing CDN infrastructure", async () => {
-      await ensurePulumiWorkDir();
+      await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
       const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
         {

@@ -16,6 +16,10 @@ const CORE_IAM_ACTIONS = [
   "ses:DeleteEmailIdentity",
   "ses:GetEmailIdentity",
   "ses:PutEmailIdentityDkimAttributes",
+  "s3:HeadBucket",
+  "s3:CreateBucket",
+  "s3:GetObject",
+  "s3:PutObject",
 ];
 
 /**

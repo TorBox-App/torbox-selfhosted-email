@@ -78,7 +78,7 @@ export async function cdnStatus(options: CdnStatusOptions): Promise<void> {
   let stackOutputs: any = {};
   try {
     // Ensure Pulumi workspace is configured (sets backend URL)
-    await ensurePulumiWorkDir();
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
     const stack = await pulumi.automation.LocalWorkspace.selectStack({
       stackName: `wraps-cdn-${identity.accountId}-${region}`,

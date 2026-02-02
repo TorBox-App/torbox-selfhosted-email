@@ -3,11 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import { trackError, trackServiceUpgrade } from "../../telemetry/events.js";
-import type {
-  EmailStackConfig,
-  UpgradeOptions,
-  WrapsEmailConfig,
-} from "../../types/index.js";
+import type { UpgradeOptions, WrapsEmailConfig } from "../../types/index.js";
 import {
   buildEmailDNSRecords,
   createDNSRecordsForProvider,
@@ -32,6 +28,7 @@ import {
 } from "../../utils/shared/fs.js";
 import {
   applyConfigUpdates,
+  buildEmailStackConfig,
   generateWebhookSecret,
   loadConnectionMetadata,
   saveConnectionMetadata,
@@ -1380,27 +1377,14 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   }
 
   // 10. Get Vercel config if needed and not already stored
-  let vercelConfig;
   if (metadata.provider === "vercel" && !metadata.vercel) {
-    vercelConfig = await promptVercelConfig();
-  } else if (metadata.provider === "vercel") {
-    vercelConfig = metadata.vercel;
+    metadata.vercel = await promptVercelConfig();
   }
 
-  // 11. Build stack configuration
-  const stackConfig: EmailStackConfig = {
-    provider: metadata.provider,
-    region,
-    vercel: vercelConfig,
+  // 11. Build stack configuration (webhook automatically included from metadata)
+  const stackConfig = buildEmailStackConfig(metadata, region, {
     emailConfig: updatedConfig,
-    // Include webhook config if Wraps Dashboard is connected
-    webhook: metadata.services.email?.webhookSecret
-      ? {
-          awsAccountNumber: metadata.accountId, // User's 12-digit AWS account ID
-          webhookSecret: metadata.services.email.webhookSecret,
-        }
-      : undefined,
-  };
+  });
 
   // 12. Preview or Update Pulumi stack
   if (options.preview) {
@@ -1409,7 +1393,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       const previewResult = await progress.execute(
         "Generating upgrade preview",
         async () => {
-          await ensurePulumiWorkDir();
+          await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
           const stack =
             await pulumi.automation.LocalWorkspace.createOrSelectStack(
@@ -1509,7 +1493,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     outputs = await progress.execute(
       "Updating Wraps infrastructure (this may take 2-3 minutes)",
       async () => {
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         const stack =
           await pulumi.automation.LocalWorkspace.createOrSelectStack(

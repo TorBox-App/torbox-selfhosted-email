@@ -43,7 +43,7 @@ export async function status(_options: StatusOptions): Promise<void> {
 
   // Check Email infrastructure
   try {
-    await ensurePulumiWorkDir();
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
     const emailStack = await pulumi.automation.LocalWorkspace.selectStack({
       stackName: `wraps-${identity.accountId}-${region}`,
       workDir: getPulumiWorkDir(),

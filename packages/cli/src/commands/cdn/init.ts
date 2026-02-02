@@ -492,7 +492,7 @@ export async function init(options: CdnInitOptions): Promise<void> {
       const previewResult = await progress.execute(
         "Generating infrastructure preview",
         async () => {
-          await ensurePulumiWorkDir();
+          await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
           const stack =
             await pulumi.automation.LocalWorkspace.createOrSelectStack(
@@ -569,7 +569,7 @@ export async function init(options: CdnInitOptions): Promise<void> {
       "Deploying CDN infrastructure (this may take 2-3 minutes)",
       async () => {
         // Ensure Pulumi workspace directory exists
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         // Run Pulumi inline program with local backend (no cloud required)
         const stack =

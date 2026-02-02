@@ -17,6 +17,27 @@ vi.mock("node:os", () => ({
   homedir: vi.fn(),
 }));
 
+// Mock s3-state module
+const mockEnsureStateBucket = vi.fn();
+const mockGetS3BackendUrl = vi.fn();
+const mockNeedsMigration = vi.fn();
+const mockMigrateLocalPulumiState = vi.fn();
+
+vi.mock("../shared/s3-state.js", () => ({
+  ensureStateBucket: (...args: any[]) => mockEnsureStateBucket(...args),
+  getS3BackendUrl: (...args: any[]) => mockGetS3BackendUrl(...args),
+  needsMigration: (...args: any[]) => mockNeedsMigration(...args),
+  migrateLocalPulumiState: (...args: any[]) =>
+    mockMigrateLocalPulumiState(...args),
+}));
+
+// Mock @clack/prompts
+vi.mock("@clack/prompts", () => ({
+  log: {
+    warn: vi.fn(),
+  },
+}));
+
 // Import after mocks
 import {
   ensurePulumiWorkDir,
@@ -35,6 +56,7 @@ describe("fs utilities", () => {
     vi.mocked(homedir).mockReturnValue(mockHomeDir);
     process.env.PULUMI_BACKEND_URL = undefined;
     process.env.PULUMI_CONFIG_PASSPHRASE = undefined;
+    process.env.WRAPS_LOCAL_ONLY = undefined;
   });
 
   describe("getWrapsDir", () => {
@@ -217,6 +239,88 @@ describe("fs utilities", () => {
       vi.mocked(mkdir).mockRejectedValue(new Error("Disk full"));
 
       await expect(ensurePulumiWorkDir()).rejects.toThrow("Disk full");
+    });
+
+    it("should use S3 backend when accountId and region are provided", async () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      mockEnsureStateBucket.mockResolvedValue(
+        "wraps-state-123456789012-us-east-1"
+      );
+      mockGetS3BackendUrl.mockReturnValue(
+        "s3://wraps-state-123456789012-us-east-1"
+      );
+      mockNeedsMigration.mockResolvedValue(false);
+
+      await ensurePulumiWorkDir({
+        accountId: "123456789012",
+        region: "us-east-1",
+      });
+
+      expect(process.env.PULUMI_BACKEND_URL).toBe(
+        "s3://wraps-state-123456789012-us-east-1"
+      );
+      expect(process.env.PULUMI_CONFIG_PASSPHRASE).toBe("");
+    });
+
+    it("should stay local when WRAPS_LOCAL_ONLY=1 even with params", async () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      process.env.WRAPS_LOCAL_ONLY = "1";
+
+      await ensurePulumiWorkDir({
+        accountId: "123456789012",
+        region: "us-east-1",
+      });
+
+      expect(process.env.PULUMI_BACKEND_URL).toBe(
+        `file://${expectedPulumiDir}`
+      );
+      expect(mockEnsureStateBucket).not.toHaveBeenCalled();
+    });
+
+    it("should fall back to local on S3 error with warning", async () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      mockEnsureStateBucket.mockRejectedValue(new Error("Access Denied"));
+
+      await ensurePulumiWorkDir({
+        accountId: "123456789012",
+        region: "us-east-1",
+      });
+
+      expect(process.env.PULUMI_BACKEND_URL).toBe(
+        `file://${expectedPulumiDir}`
+      );
+
+      const clack = await import("@clack/prompts");
+      expect(clack.log.warn).toHaveBeenCalledWith(
+        expect.stringContaining("S3 state backend unavailable")
+      );
+    });
+
+    it("should trigger migration when local state exists", async () => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      mockEnsureStateBucket.mockResolvedValue(
+        "wraps-state-123456789012-us-east-1"
+      );
+      mockGetS3BackendUrl.mockReturnValue(
+        "s3://wraps-state-123456789012-us-east-1"
+      );
+      mockNeedsMigration.mockResolvedValue(true);
+      mockMigrateLocalPulumiState.mockResolvedValue(undefined);
+
+      await ensurePulumiWorkDir({
+        accountId: "123456789012",
+        region: "us-east-1",
+      });
+
+      expect(mockMigrateLocalPulumiState).toHaveBeenCalledWith(
+        expectedPulumiDir,
+        "wraps-state-123456789012-us-east-1",
+        "123456789012",
+        "us-east-1"
+      );
+      expect(process.env.PULUMI_BACKEND_URL).toBe(
+        "s3://wraps-state-123456789012-us-east-1"
+      );
     });
   });
 });

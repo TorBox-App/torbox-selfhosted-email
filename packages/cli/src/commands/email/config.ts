@@ -3,10 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import { trackCommand, trackError } from "../../telemetry/events.js";
-import type {
-  EmailConfigOptions,
-  EmailStackConfig,
-} from "../../types/index.js";
+import type { EmailConfigOptions } from "../../types/index.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -17,6 +14,7 @@ import {
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
 import {
+  buildEmailStackConfig,
   loadConnectionMetadata,
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
@@ -160,19 +158,8 @@ export async function config(options: EmailConfigOptions): Promise<void> {
     }
   }
 
-  // 8. Get Vercel config if needed
-  let vercelConfig;
-  if (metadata.provider === "vercel" && metadata.vercel) {
-    vercelConfig = metadata.vercel;
-  }
-
-  // 9. Build stack configuration (reuse existing config)
-  const stackConfig: EmailStackConfig = {
-    provider: metadata.provider,
-    region,
-    vercel: vercelConfig,
-    emailConfig: config,
-  };
+  // 8. Build stack configuration from metadata (preserves all existing config including webhook)
+  const stackConfig = buildEmailStackConfig(metadata, region);
 
   // 10. Preview or Update Pulumi stack
   if (options.preview) {
@@ -181,7 +168,7 @@ export async function config(options: EmailConfigOptions): Promise<void> {
       const previewResult = await progress.execute(
         "Generating update preview",
         async () => {
-          await ensurePulumiWorkDir();
+          await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
           const stack =
             await pulumi.automation.LocalWorkspace.createOrSelectStack(
@@ -260,7 +247,7 @@ export async function config(options: EmailConfigOptions): Promise<void> {
     outputs = await progress.execute(
       "Updating Wraps infrastructure (this may take 2-3 minutes)",
       async () => {
-        await ensurePulumiWorkDir();
+        await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
         const stack =
           await pulumi.automation.LocalWorkspace.createOrSelectStack(

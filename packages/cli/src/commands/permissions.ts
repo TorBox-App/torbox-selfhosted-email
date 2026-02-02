@@ -333,6 +333,30 @@ function getS3Statements(): IAMStatement[] {
 }
 
 /**
+ * Get S3 statements for state management (Pulumi state + metadata)
+ */
+function getS3StateStatements(): IAMStatement[] {
+  return [
+    {
+      Sid: "S3StateManagement",
+      Effect: "Allow",
+      Action: [
+        "s3:CreateBucket",
+        "s3:HeadBucket",
+        "s3:PutBucketEncryption",
+        "s3:PutBucketVersioning",
+        "s3:PutPublicAccessBlock",
+        "s3:PutBucketTagging",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket",
+      ],
+      Resource: ["arn:aws:s3:::wraps-state-*", "arn:aws:s3:::wraps-state-*/*"],
+    },
+  ];
+}
+
+/**
  * Get CloudFront statements for CDN
  */
 function getCloudFrontStatements(): IAMStatement[] {
@@ -424,7 +448,10 @@ function buildPolicy(
   service?: "email" | "sms" | "cdn",
   preset?: "starter" | "production" | "enterprise"
 ): IAMPolicy {
-  const statements: IAMStatement[] = [...getBaseStatements()];
+  const statements: IAMStatement[] = [
+    ...getBaseStatements(),
+    ...getS3StateStatements(),
+  ];
 
   // Add service-specific statements
   if (!service || service === "email") {
@@ -500,6 +527,9 @@ function displaySummary(
   console.log(`  ${pc.green("+")} ${pc.bold("IAM")} - Role management`);
   console.log(`  ${pc.green("+")} ${pc.bold("STS")} - Credential validation`);
   console.log(`  ${pc.green("+")} ${pc.bold("CloudWatch")} - Metrics access`);
+  console.log(
+    `  ${pc.green("+")} ${pc.bold("S3")} - State management ${pc.dim("(wraps-state-* buckets)")}`
+  );
 
   // Service-specific
   if (!service || service === "email") {

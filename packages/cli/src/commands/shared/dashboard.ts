@@ -42,7 +42,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
 
   try {
     // Ensure Pulumi workspace is configured (sets backend URL)
-    await ensurePulumiWorkDir();
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
 
     // Try to load email stack
     try {
