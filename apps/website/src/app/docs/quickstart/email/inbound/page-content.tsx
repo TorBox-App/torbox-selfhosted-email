@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle2, Inbox, Mail } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Inbox,
+  Mail,
+  Zap,
+} from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,6 +90,42 @@ const result = await email.inbox.forward('email-abc123', {
 });
 
 console.log('Forwarded:', result.messageId);`;
+
+const eventBridgeEventCode = `// EventBridge event payload (email.received)
+{
+  "source": "wraps.inbound",
+  "detail-type": "email.received",
+  "detail": {
+    "emailId": "abc123...",
+    "messageId": "<message-id@mail.example.com>",
+    "from": { "name": "John Doe", "address": "john@example.com" },
+    "to": [{ "name": "", "address": "support@yourdomain.com" }],
+    "subject": "Help with my order",
+    "html": "<p>Email body...</p>",
+    "text": "Email body...",
+    "receivedAt": 1706745600000,
+    "spamVerdict": "PASS",
+    "virusVerdict": "PASS",
+    "attachments": [
+      { "id": "att-1", "filename": "screenshot.png", "size": 12345 }
+    ]
+  }
+}`;
+
+const eventBridgeRuleCode = `// Example: Lambda handler for email.received events
+export async function handler(event: EventBridgeEvent) {
+  const email = event.detail;
+
+  console.log('New email from:', email.from.address);
+  console.log('Subject:', email.subject);
+
+  // Route to appropriate handler based on recipient
+  if (email.to.some(r => r.address.includes('support@'))) {
+    await createSupportTicket(email);
+  } else if (email.to.some(r => r.address.includes('orders@'))) {
+    await processOrderEmail(email);
+  }
+}`;
 
 export default function InboundEmailQuickstartPageContent() {
   return (
@@ -518,6 +561,137 @@ TTL: 300`,
           Navigate to the <strong>Receiving</strong> tab to see all inbound
           emails with sender, subject, attachments, and spam/virus verdicts.
         </p>
+      </section>
+
+      {/* Step 7: EventBridge Events */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            7
+          </div>
+          Listen to EventBridge Events
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Every inbound email triggers an EventBridge event that you can use to
+          build automated workflows, notifications, or integrations.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" />
+              Event Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid gap-2 text-sm">
+              <div className="flex gap-2">
+                <span className="font-medium">Source:</span>
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  wraps.inbound
+                </code>
+              </div>
+              <div className="flex gap-2">
+                <span className="font-medium">Detail Type:</span>
+                <code className="rounded bg-muted px-1.5 py-0.5">
+                  email.received
+                </code>
+              </div>
+              <div className="flex gap-2">
+                <span className="font-medium">Detail:</span>
+                <span className="text-muted-foreground">
+                  Full parsed email with headers, body, attachments, and
+                  spam/virus verdicts
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="mb-2 font-medium text-sm">Event Payload Example</p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "json",
+              filename: "event.json",
+              code: eventBridgeEventCode,
+            },
+          ]}
+          defaultValue="json"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+
+        <p className="mb-2 font-medium text-sm">Example Lambda Handler</p>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "handler.ts",
+              code: eventBridgeRuleCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+
+        <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
+          <p className="font-medium text-sm">Common Use Cases</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
+            <li>Create support tickets from customer emails</li>
+            <li>Send Slack/Teams notifications for new emails</li>
+            <li>Auto-respond to specific email patterns</li>
+            <li>Route emails to different teams based on recipient</li>
+            <li>Trigger workflows for order confirmations or invoices</li>
+          </ul>
+        </div>
       </section>
 
       {/* Next Steps */}
