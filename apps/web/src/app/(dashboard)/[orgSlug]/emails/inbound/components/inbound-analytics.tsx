@@ -4,9 +4,11 @@ import * as React from "react";
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
+  Cell,
+  Label,
+  Pie,
+  PieChart,
   XAxis,
   YAxis,
 } from "recharts";
@@ -45,15 +47,13 @@ const areaChartConfig = {
   },
 } satisfies ChartConfig;
 
-const barChartConfig = {
-  count: {
-    label: "Count",
-    theme: {
-      light: "oklch(0.50 0.12 280)",
-      dark: "oklch(0.70 0.12 280)",
-    },
-  },
-} satisfies ChartConfig;
+const pieColors = [
+  "oklch(0.55 0.15 200)", // Teal
+  "oklch(0.55 0.15 130)", // Green
+  "oklch(0.55 0.15 60)", // Yellow
+  "oklch(0.55 0.12 300)", // Purple
+  "oklch(0.55 0.15 20)", // Red-orange
+];
 
 function createYAxisFormatter(data: Array<{ count: number }>) {
   const maxValue = Math.max(...data.map((d) => d.count || 0));
@@ -174,6 +174,22 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
     };
   }, [emails, days]);
 
+  const pieChartConfig = React.useMemo((): ChartConfig => {
+    const config: ChartConfig = {};
+    for (const [i, r] of analytics.topRecipients.entries()) {
+      config[r.address] = {
+        label: r.address,
+        color: pieColors[i % pieColors.length],
+      };
+    }
+    return config;
+  }, [analytics.topRecipients]);
+
+  const recipientsTotal = analytics.topRecipients.reduce(
+    (sum, r) => sum + r.count,
+    0
+  );
+
   return (
     <Card className="@container/card">
       <CardHeader>
@@ -214,158 +230,193 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
           </Select>
         </CardAction>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <div className="space-y-4">
-          {/* Received Over Time + Stats */}
-          <div className="grid grid-cols-1 gap-6 @[540px]/card:grid-cols-[1fr_120px]">
-            <div className="min-w-0">
-              <div className="mb-2 font-medium text-muted-foreground text-sm">
-                Received Over Time
-              </div>
-              {analytics.dailyData.every((d) => d.count === 0) ? (
-                <div className="flex h-[160px] items-center justify-center text-muted-foreground text-sm">
-                  No emails received in this period
-                </div>
-              ) : (
-                <ChartContainer
-                  className="aspect-auto h-[160px] w-full"
-                  config={areaChartConfig}
-                >
-                  <AreaChart data={analytics.dailyData}>
-                    <defs>
-                      <linearGradient
-                        id="fillInbound"
-                        x1="0"
-                        x2="0"
-                        y1="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="var(--color-count)"
-                          stopOpacity={0.4}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="var(--color-count)"
-                          stopOpacity={0.05}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      axisLine={false}
-                      dataKey="date"
-                      minTickGap={32}
-                      tickFormatter={(value) => {
-                        const date = new Date(`${value}T00:00:00`);
-                        return date.toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        });
-                      }}
-                      tickLine={false}
-                      tickMargin={8}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickFormatter={createYAxisFormatter(analytics.dailyData)}
-                      tickLine={false}
-                      tickMargin={8}
-                      width={40}
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          indicator="line"
-                          labelFormatter={(value) => {
-                            const date = new Date(`${value}T00:00:00`);
-                            return date.toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            });
-                          }}
-                        />
-                      }
-                    />
-                    <Area
-                      dataKey="count"
-                      fill="url(#fillInbound)"
-                      stroke="var(--color-count)"
-                      strokeWidth={2}
-                      type="monotone"
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              )}
+      <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">
+        <div className="grid grid-cols-1 gap-6 @[540px]/card:grid-cols-[1fr_auto] @[800px]/card:grid-cols-[1fr_auto_120px]">
+          {/* Received Over Time */}
+          <div className="min-w-0">
+            <div className="mb-2 font-medium text-muted-foreground text-sm">
+              Received Over Time
             </div>
-
-            {/* Side Stats */}
-            <div className="flex flex-col gap-2">
-              <div className="rounded-lg border bg-card p-2.5 text-center">
-                <div className="font-semibold text-xl tabular-nums">
-                  {analytics.totalReceived.toLocaleString()}
-                </div>
-                <div className="text-muted-foreground text-xs">Received</div>
+            {analytics.dailyData.every((d) => d.count === 0) ? (
+              <div className="flex h-[200px] items-center justify-center text-muted-foreground text-sm">
+                No emails received in this period
               </div>
-              <div className="rounded-lg border bg-card p-2.5 text-center">
-                <div className="font-semibold text-xl tabular-nums">
-                  {analytics.cleanCount.toLocaleString()}
-                </div>
-                <div className="text-muted-foreground text-xs">Clean</div>
-              </div>
-              <div className="rounded-lg border bg-card p-2.5 text-center">
-                <div className="font-semibold text-xl tabular-nums">
-                  {analytics.spamCount}
-                </div>
-                <div className="text-muted-foreground text-xs">Spam</div>
-              </div>
-            </div>
+            ) : (
+              <ChartContainer
+                className="aspect-auto h-[200px] w-full"
+                config={areaChartConfig}
+              >
+                <AreaChart data={analytics.dailyData}>
+                  <defs>
+                    <linearGradient
+                      id="fillInbound"
+                      x1="0"
+                      x2="0"
+                      y1="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="var(--color-count)"
+                        stopOpacity={0.4}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="var(--color-count)"
+                        stopOpacity={0.05}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    axisLine={false}
+                    dataKey="date"
+                    minTickGap={32}
+                    tickFormatter={(value) => {
+                      const date = new Date(`${value}T00:00:00`);
+                      return date.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      });
+                    }}
+                    tickLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickFormatter={createYAxisFormatter(analytics.dailyData)}
+                    tickLine={false}
+                    tickMargin={8}
+                    width={40}
+                  />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        indicator="line"
+                        labelFormatter={(value) => {
+                          const date = new Date(`${value}T00:00:00`);
+                          return date.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          });
+                        }}
+                      />
+                    }
+                  />
+                  <Area
+                    dataKey="count"
+                    fill="url(#fillInbound)"
+                    stroke="var(--color-count)"
+                    strokeWidth={2}
+                    type="monotone"
+                  />
+                </AreaChart>
+              </ChartContainer>
+            )}
           </div>
 
-          {/* Top Recipients Bar Chart */}
-          {analytics.topRecipients.length > 0 && (
+          {/* Top Recipients Donut */}
+          {analytics.topRecipients.length > 0 ? (
             <div className="min-w-0">
               <div className="mb-2 font-medium text-muted-foreground text-sm">
                 Top Recipients
               </div>
-              <ChartContainer
-                className="aspect-auto h-[180px] w-full"
-                config={barChartConfig}
-              >
-                <BarChart data={analytics.topRecipients} layout="vertical">
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                  <XAxis
-                    axisLine={false}
-                    tickFormatter={createYAxisFormatter(
-                      analytics.topRecipients
-                    )}
-                    tickLine={false}
-                    tickMargin={8}
-                    type="number"
-                  />
-                  <YAxis
-                    axisLine={false}
-                    dataKey="address"
-                    interval={0}
-                    tickLine={false}
-                    tickMargin={8}
-                    type="category"
-                    width={180}
-                  />
-                  <ChartTooltip
-                    content={<ChartTooltipContent indicator="dot" />}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill="var(--color-count)"
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
-              </ChartContainer>
+              <div className="flex items-center gap-3">
+                <ChartContainer
+                  className="aspect-square h-[160px] shrink-0"
+                  config={pieChartConfig}
+                >
+                  <PieChart>
+                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                    <Pie
+                      data={analytics.topRecipients}
+                      dataKey="count"
+                      innerRadius={40}
+                      nameKey="address"
+                      outerRadius={65}
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
+                      {analytics.topRecipients.map((_entry, index) => (
+                        <Cell
+                          fill={pieColors[index % pieColors.length]}
+                          key={`cell-${index}`}
+                        />
+                      ))}
+                      <Label
+                        content={({ viewBox }) => {
+                          if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                            return (
+                              <text
+                                dominantBaseline="middle"
+                                textAnchor="middle"
+                                x={viewBox.cx}
+                                y={viewBox.cy}
+                              >
+                                <tspan
+                                  className="fill-foreground font-semibold text-base"
+                                  x={viewBox.cx}
+                                  y={viewBox.cy}
+                                >
+                                  {recipientsTotal.toLocaleString()}
+                                </tspan>
+                              </text>
+                            );
+                          }
+                        }}
+                      />
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+                <div className="flex flex-col gap-1">
+                  {analytics.topRecipients.map((recipient, index) => (
+                    <div
+                      className="flex items-center gap-2 text-xs"
+                      key={recipient.address}
+                    >
+                      <div
+                        className="size-2 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: pieColors[index % pieColors.length],
+                        }}
+                      />
+                      <span className="truncate text-muted-foreground">
+                        {recipient.address}
+                      </span>
+                      <span className="ml-auto shrink-0 font-medium tabular-nums">
+                        {recipient.count.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
+          ) : (
+            <div />
           )}
+
+          {/* Stats */}
+          <div className="flex flex-col gap-2">
+            <div className="rounded-lg border bg-card p-2.5 text-center">
+              <div className="font-semibold text-xl tabular-nums">
+                {analytics.totalReceived.toLocaleString()}
+              </div>
+              <div className="text-muted-foreground text-xs">Received</div>
+            </div>
+            <div className="rounded-lg border bg-card p-2.5 text-center">
+              <div className="font-semibold text-xl tabular-nums">
+                {analytics.cleanCount.toLocaleString()}
+              </div>
+              <div className="text-muted-foreground text-xs">Clean</div>
+            </div>
+            <div className="rounded-lg border bg-card p-2.5 text-center">
+              <div className="font-semibold text-xl tabular-nums">
+                {analytics.spamCount}
+              </div>
+              <div className="text-muted-foreground text-xs">Spam</div>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

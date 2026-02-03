@@ -177,7 +177,7 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
           </Select>
         </CardAction>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+      <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">
         {isLoading ? (
           <div className="grid grid-cols-1 gap-6 @[540px]/card:grid-cols-[1fr_200px]">
             <Skeleton className="h-[280px] w-full" />

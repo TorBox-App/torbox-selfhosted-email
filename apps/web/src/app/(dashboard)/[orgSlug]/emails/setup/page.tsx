@@ -1,8 +1,8 @@
 import { auth } from "@wraps/auth";
 import { ArrowRight, Mail, RefreshCw, Terminal } from "lucide-react";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { CliCommand } from "@/components/cli-command";
+import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyContent,

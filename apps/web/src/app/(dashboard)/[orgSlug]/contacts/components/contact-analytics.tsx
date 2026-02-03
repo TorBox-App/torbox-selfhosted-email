@@ -139,10 +139,10 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
           </Select>
         </CardAction>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+      <CardContent className="px-2 pt-2 sm:px-6 sm:pt-3">
         {isLoading ? (
           <div className="grid grid-cols-1 gap-6 @[540px]/card:grid-cols-[1fr_200px]">
-            <Skeleton className="h-[200px] w-full" />
+            <Skeleton className="h-[250px] w-full" />
             <div className="flex flex-col gap-3">
               <Skeleton className="h-16 w-full" />
               <Skeleton className="h-16 w-full" />
@@ -150,7 +150,7 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
             </div>
           </div>
         ) : error ? (
-          <div className="flex h-[200px] items-center justify-center text-muted-foreground text-sm">
+          <div className="flex h-[250px] items-center justify-center text-muted-foreground text-sm">
             Failed to load analytics
           </div>
         ) : (
@@ -159,12 +159,12 @@ export function ContactAnalytics({ organizationId }: ContactAnalyticsProps) {
             <div className="min-w-0">
               {chartData.length === 0 ||
               chartData.every((d) => d.count === 0) ? (
-                <div className="flex h-[200px] items-center justify-center text-muted-foreground text-sm">
+                <div className="flex h-[250px] items-center justify-center text-muted-foreground text-sm">
                   No new contacts in this period
                 </div>
               ) : (
                 <ChartContainer
-                  className="aspect-auto h-[200px] w-full"
+                  className="aspect-auto h-[250px] w-full"
                   config={chartConfig}
                 >
                   <AreaChart data={chartData}>

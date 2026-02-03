@@ -4,8 +4,8 @@ import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { ArrowRight, Inbox, RefreshCw, Terminal } from "lucide-react";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { CliCommand } from "@/components/cli-command";
+import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyContent,
