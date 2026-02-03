@@ -173,6 +173,11 @@ export function sanitizeErrorMessage(error: unknown): string {
     "arn:aws:[SERVICE]:[REGION]:[ACCOUNT_ID]:"
   );
 
+  // Truncate very long messages
+  if (message.length > 500) {
+    message = `${message.slice(0, 500)}...`;
+  }
+
   return message;
 }
 
