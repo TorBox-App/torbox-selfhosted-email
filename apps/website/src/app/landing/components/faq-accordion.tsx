@@ -81,7 +81,7 @@ export function FaqAccordion() {
     <Accordion className="space-y-2" collapsible type="single">
       {faqItems.map((item) => (
         <AccordionItem
-          className="rounded-lg border px-4 transition-colors data-[state=open]:border-orange-500/30 data-[state=open]:bg-orange-500/5"
+          className="rounded-lg border px-4 transition-colors data-[state=open]:border-orange-500/30 data-[state=open]:bg-orange-500/5 last:border-b"
           key={item.value}
           value={item.value}
         >
