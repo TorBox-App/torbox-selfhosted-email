@@ -2,8 +2,6 @@
 
 import { Inbox, Mail, Paperclip, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import { DotPattern } from "@/components/dot-pattern";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const sampleEmails = [
@@ -45,12 +43,11 @@ const sampleEmails = [
   },
 ];
 
-function AnimatedInbox() {
+export function AnimatedInbox() {
   const [visibleEmails, setVisibleEmails] = useState<number[]>([]);
   const [animatingEmail, setAnimatingEmail] = useState<number | null>(null);
 
   useEffect(() => {
-    // Initial display with stagger
     const showEmails = () => {
       sampleEmails.forEach((_, index) => {
         setTimeout(() => {
@@ -65,7 +62,6 @@ function AnimatedInbox() {
 
     showEmails();
 
-    // Loop animation
     const interval = setInterval(() => {
       setVisibleEmails([]);
       setAnimatingEmail(null);
@@ -147,78 +143,10 @@ function AnimatedInbox() {
         {/* Incoming email indicator */}
         {animatingEmail !== null && (
           <div className="pointer-events-none absolute inset-y-0 right-0 flex w-8 items-center justify-center">
-            <div className="size-2 animate-pulse rounded-full bg-cyan-500" />
+            <div className="size-2 animate-ping rounded-full bg-cyan-500" />
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-export function HeroSection() {
-  return (
-    <section className="relative overflow-hidden bg-linear-to-b from-background to-background/80 pt-20 pb-16 sm:pt-28">
-      {/* Background Pattern */}
-      <div className="absolute inset-0">
-        <DotPattern className="opacity-100" fadeStyle="ellipse" size="md" />
-      </div>
-
-      <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          {/* Left column - Text content */}
-          <div>
-            {/* Badge */}
-            <div className="mb-6">
-              <Badge
-                className="border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-cyan-600 dark:text-cyan-400"
-                variant="outline"
-              >
-                <Inbox className="mr-2 size-4" />
-                Inbound Email
-              </Badge>
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-5xl">
-              <span className="text-cyan-500">Every inbox.</span>
-              <br />
-              Your infrastructure.
-            </h1>
-
-            {/* Subheading */}
-            <p className="mb-8 max-w-lg text-pretty text-lg text-muted-foreground">
-              Receive, parse, and process emails in your AWS account. Build
-              support inboxes, automate order processing, or create
-              email-to-ticket workflows.
-            </p>
-
-            {/* Key features */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                "SES + S3 + Lambda + EventBridge",
-                "Parse headers & attachments",
-                "Spam & virus detection",
-                "Reply with threading",
-              ].map((feature) => (
-                <div className="flex items-center gap-2" key={feature}>
-                  <div className="size-1.5 rounded-full bg-cyan-500" />
-                  <span className="text-muted-foreground text-sm">
-                    {feature}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right column - Animated Inbox */}
-          <div className="group relative">
-            {/* Background glow effect */}
-            <div className="absolute -inset-4 rounded-3xl bg-cyan-500/10 opacity-50 blur-2xl transition-opacity group-hover:opacity-70" />
-
-            <AnimatedInbox />
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }

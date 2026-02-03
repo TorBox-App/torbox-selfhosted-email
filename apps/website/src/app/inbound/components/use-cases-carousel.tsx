@@ -10,112 +10,26 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { IconName, UseCase } from "../data";
 
-const useCases = [
-  {
-    id: "support",
-    icon: Headphones,
-    title: "Support Inbox",
-    description:
-      "Auto-create tickets from customer emails. Route by subject, extract order IDs, and assign to teams.",
-    code: `// EventBridge handler
-const ticket = await linear.createIssue({
-  title: email.subject,
-  description: email.text,
-  teamId: routeToTeam(email.from),
-});`,
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-    borderColor: "border-blue-500/30",
-  },
-  {
-    id: "orders",
-    icon: Package,
-    title: "Order Processing",
-    description:
-      "Parse order confirmations, extract tracking numbers, and update your database automatically.",
-    code: `// Parse order email
-const tracking = extractTracking(email.html);
-await db.orders.update({
-  where: { email: email.from },
-  data: { trackingNumber: tracking },
-});`,
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
-    borderColor: "border-orange-500/30",
-  },
-  {
-    id: "tickets",
-    icon: FileText,
-    title: "Email-to-Ticket",
-    description:
-      "Integrate with Jira, Linear, GitHub Issues, or any ticketing system via webhooks.",
-    code: `// Create GitHub issue
-await octokit.issues.create({
-  owner: 'your-org',
-  repo: 'support',
-  title: email.subject,
-  body: email.html,
-});`,
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-    borderColor: "border-purple-500/30",
-  },
-  {
-    id: "autorespond",
-    icon: Mail,
-    title: "Auto-Responders",
-    description:
-      "Send acknowledgments, out-of-office replies, or follow-up sequences automatically.",
-    code: `// Auto-acknowledge
-await email.inbox.reply(emailId, {
-  from: 'support@yourapp.com',
-  html: \`Thanks for reaching out!
-We'll respond within 24h.\`,
-});`,
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-    borderColor: "border-green-500/30",
-  },
-  {
-    id: "leads",
-    icon: Users,
-    title: "Lead Capture",
-    description:
-      "Extract contact information from inquiries and sync to your CRM or marketing automation.",
-    code: `// Sync to CRM
-await hubspot.contacts.create({
-  email: email.from.address,
-  firstname: email.from.name,
-  source: 'inbound_email',
-});`,
-    color: "text-pink-500",
-    bgColor: "bg-pink-500/10",
-    borderColor: "border-pink-500/30",
-  },
-  {
-    id: "documents",
-    icon: MessageSquare,
-    title: "Document Processing",
-    description:
-      "Extract attachments, process PDFs, and trigger document workflows with S3 events.",
-    code: `// Process attachments
-for (const att of email.attachments) {
-  const file = await email.inbox
-    .getAttachment(emailId, att.id);
-  await processDocument(file);
-}`,
-    color: "text-cyan-500",
-    bgColor: "bg-cyan-500/10",
-    borderColor: "border-cyan-500/30",
-  },
-];
+const iconMap: Record<IconName, typeof Mail> = {
+  Mail,
+  Headphones,
+  Package,
+  FileText,
+  Users,
+  MessageSquare,
+  Cloud: Mail, // fallback
+  HardDrive: Mail, // fallback
+  Code2: Mail, // fallback
+  Zap: Mail, // fallback
+  Database: Mail, // fallback
+};
 
-export function UseCasesSection() {
+export function UseCasesCarousel({ useCases }: { useCases: UseCase[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Update active index based on scroll position
   useEffect(() => {
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) {
@@ -124,14 +38,14 @@ export function UseCasesSection() {
 
     const handleScroll = () => {
       const scrollLeft = scrollContainer.scrollLeft;
-      const cardWidth = scrollContainer.offsetWidth * 0.7; // Approximate card width
+      const cardWidth = scrollContainer.offsetWidth * 0.7;
       const index = Math.round(scrollLeft / cardWidth);
       setActiveIndex(Math.min(index, useCases.length - 1));
     };
 
     scrollContainer.addEventListener("scroll", handleScroll);
     return () => scrollContainer.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [useCases.length]);
 
   const scrollToIndex = (index: number) => {
     const scrollContainer = scrollRef.current;
@@ -147,26 +61,14 @@ export function UseCasesSection() {
   };
 
   return (
-    <section className="py-16 sm:py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        {/* Section header */}
-        <div className="mb-8 text-center">
-          <p className="text-lg text-muted-foreground">
-            Endless possibilities.{" "}
-            <span className="text-foreground">
-              Build any email-driven workflow.
-            </span>
-          </p>
-        </div>
-      </div>
-
+    <>
       {/* Horizontal scroll container */}
       <div
         className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 sm:-mx-6 sm:gap-6 sm:px-6 lg:px-[max(1.5rem,calc((100vw-72rem)/2+1.5rem))]"
         ref={scrollRef}
       >
         {useCases.map((useCase, index) => {
-          const Icon = useCase.icon;
+          const Icon = iconMap[useCase.iconName];
           return (
             <div
               className={cn(
@@ -225,6 +127,6 @@ export function UseCasesSection() {
           />
         ))}
       </div>
-    </section>
+    </>
   );
 }

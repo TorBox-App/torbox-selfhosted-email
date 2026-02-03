@@ -236,46 +236,34 @@ function JsonPreview({
   );
 }
 
-export function AnatomySection() {
+export function AnatomyInteractive() {
   const [highlighted, setHighlighted] = useState<HighlightKey>(null);
 
   return (
-    <section className="bg-muted/30 py-16 sm:py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        {/* Section header */}
-        <div className="mb-12 text-center">
-          <p className="text-lg text-muted-foreground">
-            Every field parsed.{" "}
-            <span className="text-foreground">
-              Hover to explore the structure.
-            </span>
+    <>
+      {/* Split view */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Email preview */}
+        <div>
+          <p className="mb-3 font-medium text-muted-foreground text-sm uppercase tracking-wider">
+            Email Preview
           </p>
+          <EmailPreview highlighted={highlighted} onHover={setHighlighted} />
         </div>
 
-        {/* Split view */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Email preview */}
-          <div>
-            <p className="mb-3 font-medium text-muted-foreground text-sm uppercase tracking-wider">
-              Email Preview
-            </p>
-            <EmailPreview highlighted={highlighted} onHover={setHighlighted} />
-          </div>
-
-          {/* JSON structure */}
-          <div>
-            <p className="mb-3 font-medium text-muted-foreground text-sm uppercase tracking-wider">
-              Parsed Data
-            </p>
-            <JsonPreview highlighted={highlighted} onHover={setHighlighted} />
-          </div>
+        {/* JSON structure */}
+        <div>
+          <p className="mb-3 font-medium text-muted-foreground text-sm uppercase tracking-wider">
+            Parsed Data
+          </p>
+          <JsonPreview highlighted={highlighted} onHover={setHighlighted} />
         </div>
-
-        {/* Mobile hint */}
-        <p className="mt-6 text-center text-muted-foreground text-sm lg:hidden">
-          Tap elements to see the connection
-        </p>
       </div>
-    </section>
+
+      {/* Mobile hint */}
+      <p className="mt-6 text-center text-muted-foreground text-sm lg:hidden">
+        Tap elements to see the connection
+      </p>
+    </>
   );
 }
