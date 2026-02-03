@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { InboundEmailList } from "@/components/InboundEmailList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -113,7 +114,10 @@ export function EmailLogs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState("15");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("sending");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") === "receiving" ? "receiving" : "sending"
+  );
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -241,7 +245,13 @@ export function EmailLogs() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs onValueChange={setActiveTab} value={activeTab}>
+        <Tabs
+          onValueChange={(tab) => {
+            setActiveTab(tab);
+            setSearchParams(tab === "sending" ? {} : { tab });
+          }}
+          value={activeTab}
+        >
           <TabsList>
             <TabsTrigger value="sending">Sending</TabsTrigger>
             <TabsTrigger value="receiving">Receiving</TabsTrigger>
@@ -413,10 +423,8 @@ export function EmailLogs() {
             )}
           </TabsContent>
 
-          <TabsContent value="receiving">
-            <div className="flex h-[400px] items-center justify-center text-muted-foreground">
-              Receiving emails coming soon
-            </div>
+          <TabsContent className="space-y-4" value="receiving">
+            <InboundEmailList />
           </TabsContent>
         </Tabs>
       </CardContent>

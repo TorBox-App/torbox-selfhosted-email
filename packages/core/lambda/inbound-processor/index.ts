@@ -105,6 +105,8 @@ export async function handler(event: S3Event, context: Context) {
         contentType: string;
         size: number;
         s3Key: string;
+        contentDisposition: string;
+        cid: string | null;
       }> = [];
 
       if (parsed.attachments && parsed.attachments.length > 0) {
@@ -132,6 +134,8 @@ export async function handler(event: S3Event, context: Context) {
             contentType: att.contentType || "application/octet-stream",
             size: att.size,
             s3Key: attKey,
+            contentDisposition: att.contentDisposition || "attachment",
+            cid: att.cid || null,
           });
         }
       }

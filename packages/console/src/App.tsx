@@ -14,6 +14,7 @@ import { EmailDetail } from "@/components/EmailDetail";
 import { EmailLogs } from "@/components/EmailLogs";
 import { EmailMetrics } from "@/components/EmailMetrics";
 import { EmailSettings } from "@/components/EmailSettings";
+import { InboundEmailDetail } from "@/components/InboundEmailDetail";
 import { SMSDetail } from "@/components/SMSDetail";
 import { SMSLogs } from "@/components/SMSLogs";
 import { SMSMetrics } from "@/components/SMSMetrics";
@@ -58,6 +59,11 @@ function AppContent() {
   }, []);
 
   const getBreadcrumb = () => {
+    // Handle inbound email detail route
+    if (location.pathname.startsWith("/email/inbound/")) {
+      return "Inbound Email Details";
+    }
+
     // Handle dynamic email detail route
     if (
       location.pathname.startsWith("/email/") &&
@@ -133,6 +139,10 @@ function AppContent() {
             <Routes>
               <Route element={<Navigate replace to="/email" />} path="/" />
               <Route element={<EmailLogs />} path="/email" />
+              <Route
+                element={<InboundEmailDetail />}
+                path="/email/inbound/:emailId"
+              />
               <Route element={<EmailDetail />} path="/email/:id" />
               <Route element={<EmailMetrics />} path="/email/metrics" />
               <Route element={<EmailSettings />} path="/email/settings" />

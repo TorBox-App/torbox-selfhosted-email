@@ -90,6 +90,7 @@ export const awsAccount = pgTable(
         trackedEvents?: string[];
         customTrackingDomain?: string;
         dedicatedIpCount?: number;
+        inboundBucketName?: string;
         identities?: Array<{
           identity: string;
           type: "DOMAIN" | "EMAIL_ADDRESS";

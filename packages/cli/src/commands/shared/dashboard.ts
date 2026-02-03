@@ -98,6 +98,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
   const tableName = emailStackOutputs.tableName?.value;
   const archiveArn = emailStackOutputs.archiveArn?.value;
   const archivingEnabled = emailStackOutputs.archivingEnabled?.value ?? false;
+  const inboundBucketName = emailStackOutputs.inboundBucketName?.value;
 
   // Extract SMS outputs
   const smsTableName = smsStackOutputs.tableName?.value;
@@ -159,6 +160,8 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
     noOpen: options.noOpen ?? false,
     archiveArn,
     archivingEnabled,
+    // Inbound email config
+    inboundBucketName,
     // SMS config
     smsTableName,
     smsPhoneNumber,

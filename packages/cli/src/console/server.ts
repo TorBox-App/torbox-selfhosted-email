@@ -8,6 +8,7 @@ import { errorHandler } from "./middleware/error.js";
 import { createCdnRouter } from "./routes/cdn.js";
 import { createDomainsRouter } from "./routes/domains.js";
 import { createEmailsRouter } from "./routes/emails.js";
+import { createInboundRouter } from "./routes/inbound.js";
 import { createMetricsRouter } from "./routes/metrics.js";
 import { createSettingsRouter } from "./routes/settings.js";
 import { createSMSRouter } from "./routes/sms.js";
@@ -34,6 +35,8 @@ export type ServerConfig = {
   smsAllowedCountries?: string[];
   smsAitFiltering?: boolean;
   smsArchiveRetention?: string;
+  // Inbound email config
+  inboundBucketName?: string;
   // Storage config
   cdnBucketName?: string;
   cdnRoleArn?: string;
@@ -140,6 +143,11 @@ export async function startConsoleServer(
   );
   app.use("/api/user", authenticateToken(authToken), createUserRouter(config));
   app.use("/api/sms", authenticateToken(authToken), createSMSRouter(config));
+  app.use(
+    "/api/inbound",
+    authenticateToken(authToken),
+    createInboundRouter(config)
+  );
   app.use("/api/cdn", authenticateToken(authToken), createCdnRouter(config));
 
   // Serve static files from console-ui build
