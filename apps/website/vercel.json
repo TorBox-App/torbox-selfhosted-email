@@ -1,4 +1,0 @@
-{
-  "buildCommand": "cd ../.. && pnpm build --filter=wraps-website",
-  "installCommand": "cd ../.. && pnpm install"
-}
