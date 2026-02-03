@@ -1676,3 +1676,167 @@ export async function bulkDeleteContacts(
     return { success: false, error: "Failed to delete contacts" };
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type ContactAnalytics = {
+  totalContacts: number;
+  newContactsThisPeriod: number;
+  growthPercent: number;
+  avgOpenRate: number;
+  avgClickRate: number;
+  dailyGrowth: Array<{ date: string; count: number }>;
+};
+
+export type GetContactAnalyticsResult =
+  | { success: true; analytics: ContactAnalytics }
+  | { success: false; error: string };
+
+/**
+ * Get contact analytics for an organization
+ */
+export async function getContactAnalytics(
+  organizationId: string,
+  days: 7 | 30 = 30
+): Promise<GetContactAnalyticsResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // For growth comparison, get the period before this one
+    const previousPeriodStart = new Date(startDate);
+    previousPeriodStart.setDate(previousPeriodStart.getDate() - days);
+
+    // Get total contacts
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(contact)
+      .where(eq(contact.organizationId, organizationId));
+
+    const totalContacts = totalResult?.count ?? 0;
+
+    // Get new contacts in this period
+    const [newContactsResult] = await db
+      .select({ count: count() })
+      .from(contact)
+      .where(
+        and(
+          eq(contact.organizationId, organizationId),
+          sql`${contact.createdAt} >= ${startDate}`
+        )
+      );
+
+    const newContactsThisPeriod = newContactsResult?.count ?? 0;
+
+    // Get new contacts in previous period for growth calculation
+    const [previousPeriodResult] = await db
+      .select({ count: count() })
+      .from(contact)
+      .where(
+        and(
+          eq(contact.organizationId, organizationId),
+          sql`${contact.createdAt} >= ${previousPeriodStart}`,
+          sql`${contact.createdAt} < ${startDate}`
+        )
+      );
+
+    const previousPeriodContacts = previousPeriodResult?.count ?? 0;
+
+    // Calculate growth percent
+    const growthPercent =
+      previousPeriodContacts > 0
+        ? ((newContactsThisPeriod - previousPeriodContacts) /
+            previousPeriodContacts) *
+          100
+        : newContactsThisPeriod > 0
+          ? 100
+          : 0;
+
+    // Get average open and click rates
+    const [engagementResult] = await db
+      .select({
+        totalSent: sql<number>`COALESCE(SUM(${contact.emailsSent}), 0)`,
+        totalOpened: sql<number>`COALESCE(SUM(${contact.emailsOpened}), 0)`,
+        totalClicked: sql<number>`COALESCE(SUM(${contact.emailsClicked}), 0)`,
+      })
+      .from(contact)
+      .where(
+        and(
+          eq(contact.organizationId, organizationId),
+          sql`${contact.emailsSent} > 0`
+        )
+      );
+
+    const totalSent = Number(engagementResult?.totalSent ?? 0);
+    const totalOpened = Number(engagementResult?.totalOpened ?? 0);
+    const totalClicked = Number(engagementResult?.totalClicked ?? 0);
+
+    const avgOpenRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0;
+    const avgClickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
+
+    // Get daily growth data for chart
+    const dailyGrowthData = await db
+      .select({
+        date: sql<string>`DATE(${contact.createdAt})`,
+        count: count(),
+      })
+      .from(contact)
+      .where(
+        and(
+          eq(contact.organizationId, organizationId),
+          sql`${contact.createdAt} >= ${startDate}`
+        )
+      )
+      .groupBy(sql`DATE(${contact.createdAt})`)
+      .orderBy(sql`DATE(${contact.createdAt})`);
+
+    // Fill in missing dates with 0 counts
+    const dailyGrowth: Array<{ date: string; count: number }> = [];
+    const dateMap = new Map(
+      dailyGrowthData.map((d) => [d.date, Number(d.count)])
+    );
+
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split("T")[0];
+      dailyGrowth.push({
+        date: dateStr,
+        count: dateMap.get(dateStr) ?? 0,
+      });
+    }
+
+    return {
+      success: true,
+      analytics: {
+        totalContacts,
+        newContactsThisPeriod,
+        growthPercent: Math.round(growthPercent * 10) / 10,
+        avgOpenRate: Math.round(avgOpenRate * 10) / 10,
+        avgClickRate: Math.round(avgClickRate * 10) / 10,
+        dailyGrowth,
+      },
+    };
+  } catch (error) {
+    const log = createActionLogger("getContactAnalytics", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), days },
+      "Failed to get contact analytics"
+    );
+    return { success: false, error: "Failed to fetch contact analytics" };
+  }
+}

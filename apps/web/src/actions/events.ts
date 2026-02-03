@@ -2,7 +2,7 @@
 
 import { auth } from "@wraps/auth";
 import { contact, contactEvent, db } from "@wraps/db";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import type {
   EventWithContact,
@@ -226,5 +226,162 @@ export async function getEventNames(
     });
     log.error({ err: serializeError(error) }, "Failed to get event names");
     return { success: false, error: "Failed to fetch event names" };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type EventAnalytics = {
+  totalEvents: number;
+  eventsThisPeriod: number;
+  activeContacts: number;
+  avgEventsPerContact: number;
+  dailyEvents: Array<{ date: string; count: number }>;
+  topEventNames: Array<{ name: string; count: number }>;
+};
+
+export type GetEventAnalyticsResult =
+  | { success: true; analytics: EventAnalytics }
+  | { success: false; error: string };
+
+/**
+ * Get event analytics for an organization
+ */
+export async function getEventAnalytics(
+  organizationId: string,
+  days: 7 | 30 = 30
+): Promise<GetEventAnalyticsResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Get total events (all time)
+    const [totalResult] = await db
+      .select({ count: count() })
+      .from(contactEvent)
+      .where(eq(contactEvent.organizationId, organizationId));
+
+    const totalEvents = totalResult?.count ?? 0;
+
+    // Get events in this period
+    const [periodEventsResult] = await db
+      .select({ count: count() })
+      .from(contactEvent)
+      .where(
+        and(
+          eq(contactEvent.organizationId, organizationId),
+          sql`${contactEvent.createdAt} >= ${startDate}`
+        )
+      );
+
+    const eventsThisPeriod = periodEventsResult?.count ?? 0;
+
+    // Get distinct contacts with events in this period
+    const [activeContactsResult] = await db
+      .select({
+        count: sql<number>`COUNT(DISTINCT ${contactEvent.contactId})`,
+      })
+      .from(contactEvent)
+      .where(
+        and(
+          eq(contactEvent.organizationId, organizationId),
+          sql`${contactEvent.createdAt} >= ${startDate}`
+        )
+      );
+
+    const activeContacts = Number(activeContactsResult?.count ?? 0);
+
+    // Calculate average events per contact
+    const avgEventsPerContact =
+      activeContacts > 0
+        ? Math.round((eventsThisPeriod / activeContacts) * 10) / 10
+        : 0;
+
+    // Get daily events data for chart
+    const dailyEventsData = await db
+      .select({
+        date: sql<string>`DATE(${contactEvent.createdAt})`,
+        count: count(),
+      })
+      .from(contactEvent)
+      .where(
+        and(
+          eq(contactEvent.organizationId, organizationId),
+          sql`${contactEvent.createdAt} >= ${startDate}`
+        )
+      )
+      .groupBy(sql`DATE(${contactEvent.createdAt})`)
+      .orderBy(sql`DATE(${contactEvent.createdAt})`);
+
+    // Fill in missing dates with 0 counts
+    const dailyEvents: Array<{ date: string; count: number }> = [];
+    const dateMap = new Map(
+      dailyEventsData.map((d) => [d.date, Number(d.count)])
+    );
+
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split("T")[0];
+      dailyEvents.push({
+        date: dateStr,
+        count: dateMap.get(dateStr) ?? 0,
+      });
+    }
+
+    // Get top 5 event names by count in this period
+    const topEventNamesData = await db
+      .select({
+        name: contactEvent.eventName,
+        count: count(),
+      })
+      .from(contactEvent)
+      .where(
+        and(
+          eq(contactEvent.organizationId, organizationId),
+          sql`${contactEvent.createdAt} >= ${startDate}`
+        )
+      )
+      .groupBy(contactEvent.eventName)
+      .orderBy(desc(count()))
+      .limit(5);
+
+    const topEventNames = topEventNamesData.map((e) => ({
+      name: e.name,
+      count: Number(e.count),
+    }));
+
+    return {
+      success: true,
+      analytics: {
+        totalEvents,
+        eventsThisPeriod,
+        activeContacts,
+        avgEventsPerContact,
+        dailyEvents,
+        topEventNames,
+      },
+    };
+  } catch (error) {
+    const log = createActionLogger("getEventAnalytics", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), days },
+      "Failed to get event analytics"
+    );
+    return { success: false, error: "Failed to fetch event analytics" };
   }
 }

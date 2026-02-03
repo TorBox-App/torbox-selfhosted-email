@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { EmailAnalytics } from "./components/email-analytics";
 import { EmailsTable } from "./components/emails-table";
 import type { EmailListItem } from "./types";
 
@@ -212,14 +213,9 @@ export default async function EmailsPage({
 
   return (
     <>
-      {/* Page Title and Description */}
+      {/* Email Analytics */}
       <div className="px-4 lg:px-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-bold text-2xl tracking-tight">Emails</h1>
-          <p className="text-muted-foreground">
-            View and manage your email sending history
-          </p>
-        </div>
+        <EmailAnalytics orgSlug={orgSlug} />
       </div>
 
       {/* Emails Table */}

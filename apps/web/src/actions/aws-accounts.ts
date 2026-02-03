@@ -5,6 +5,7 @@ import {
   DescribePhoneNumbersCommand,
   PinpointSMSVoiceV2Client,
 } from "@aws-sdk/client-pinpoint-sms-voice-v2";
+import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import {
   GetAccountCommand,
   GetConfigurationSetCommand,
@@ -331,6 +332,7 @@ export type ScanFeaturesResult =
           eventHistoryEnabled?: boolean;
           eventTrackingEnabled?: boolean;
           customTrackingDomain?: string;
+          inboundBucketName?: string;
           identities?: Array<{
             identity: string;
             type: "DOMAIN" | "EMAIL_ADDRESS";
@@ -703,7 +705,44 @@ export async function scanAWSAccountFeatures(
       }
     }
 
-    // 14. Build features JSON object
+    // 14. Scan for inbound email bucket
+    let inboundBucketName: string | undefined;
+
+    try {
+      const s3Client = new S3Client({
+        region: account.region,
+        credentials: awsCredentials,
+      });
+
+      // Inbound bucket naming convention: wraps-inbound-{accountId}-{region}
+      const expectedBucketName = `wraps-inbound-${account.accountId}-${account.region}`;
+
+      await s3Client.send(
+        new HeadBucketCommand({
+          Bucket: expectedBucketName,
+        })
+      );
+
+      // If HeadBucket succeeds, the bucket exists
+      inboundBucketName = expectedBucketName;
+      log.info({ bucket: inboundBucketName }, "Found inbound email bucket");
+    } catch (error: any) {
+      // NotFound or AccessDenied means bucket doesn't exist or no permissions
+      // Either way, assume inbound is not enabled
+      if (
+        error.name !== "NotFound" &&
+        error.name !== "AccessDenied" &&
+        error.$metadata?.httpStatusCode !== 404 &&
+        error.$metadata?.httpStatusCode !== 403
+      ) {
+        log.warn(
+          { err: serializeError(error) },
+          "Error scanning for inbound bucket"
+        );
+      }
+    }
+
+    // 15. Build features JSON object
     const featuresJson = {
       email: {
         configSetName,
@@ -715,6 +754,7 @@ export async function scanAWSAccountFeatures(
         trackedEvents,
         customTrackingDomain,
         dedicatedIpCount,
+        inboundBucketName,
         identities,
       },
       sms: {
@@ -724,7 +764,7 @@ export async function scanAWSAccountFeatures(
       },
     };
 
-    // 15. Update database with discovered features
+    // 16. Update database with discovered features
     // Email is enabled if we found a config set
     const emailEnabled = !!configSetName;
 
@@ -738,11 +778,12 @@ export async function scanAWSAccountFeatures(
       })
       .where(eq(awsAccount.id, awsAccountId));
 
-    // 16. Revalidate pages (layout will re-fetch products status)
+    // 17. Revalidate pages (layout will re-fetch products status)
     const orgSlug = membership.organization.slug;
     revalidatePath(`/${orgSlug}/settings/aws-accounts/${awsAccountId}`);
     revalidatePath(`/${orgSlug}/settings`);
     revalidatePath(`/${orgSlug}`);
+    revalidatePath(`/${orgSlug}/emails/inbound`);
 
     return {
       success: true,

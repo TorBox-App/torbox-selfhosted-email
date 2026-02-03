@@ -2,6 +2,7 @@ import { auth } from "@wraps/auth";
 import { redirect } from "next/navigation";
 import { getEventNames, listEvents } from "@/actions/events";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { EventAnalytics } from "./components/event-analytics";
 import { EventsTable } from "./components/events-table";
 
 type EventsPageProps = {
@@ -79,14 +80,9 @@ export default async function EventsPage({
 
   return (
     <>
-      {/* Page Title and Description */}
+      {/* Event Analytics */}
       <div className="px-4 lg:px-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-bold text-2xl tracking-tight">Events</h1>
-          <p className="text-muted-foreground">
-            Track custom events from your application
-          </p>
-        </div>
+        <EventAnalytics organizationId={orgWithMembership.id} />
       </div>
 
       {/* Events Table */}

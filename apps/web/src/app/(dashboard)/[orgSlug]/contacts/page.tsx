@@ -4,6 +4,7 @@ import { listContacts } from "@/actions/contacts";
 import { listTopics } from "@/actions/topics";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkFeatureAccess } from "@/lib/plan-limits";
+import { ContactAnalytics } from "./components/contact-analytics";
 import { ContactsTable } from "./components/contacts-table";
 
 type ContactsPageProps = {
@@ -75,14 +76,9 @@ export default async function ContactsPage({
 
   return (
     <>
-      {/* Page Title and Description */}
+      {/* Contact Analytics */}
       <div className="px-4 lg:px-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-bold text-2xl tracking-tight">Contacts</h1>
-          <p className="text-muted-foreground">
-            Manage your email contacts and their subscriptions
-          </p>
-        </div>
+        <ContactAnalytics organizationId={orgWithMembership.id} />
       </div>
 
       {/* Contacts Table */}

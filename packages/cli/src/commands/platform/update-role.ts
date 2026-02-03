@@ -145,6 +145,7 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     `  ${pc.green("✓")} SES metrics and identity verification (always enabled)`
   );
   console.log(`  ${pc.green("✓")} SES template management (always enabled)`);
+  console.log(`  ${pc.green("✓")} Inbound bucket detection (always enabled)`);
 
   if (sendingEnabled) {
     console.log(`  ${pc.green("✓")} Email sending via SES`);
@@ -162,6 +163,11 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
 
   if (emailArchiving?.enabled) {
     console.log(`  ${pc.green("✓")} Mail Manager Archive access`);
+  }
+
+  const inbound = emailConfig?.inbound as Record<string, unknown> | undefined;
+  if (inbound?.enabled) {
+    console.log(`  ${pc.green("✓")} S3 access for inbound email`);
   }
 
   // SMS permissions
@@ -230,8 +236,18 @@ function buildConsolePolicyDocument(
       "ses:GetConfigurationSetEventDestinations",
       "cloudwatch:GetMetricData",
       "cloudwatch:GetMetricStatistics",
+      // SES dedicated IP scanning
+      "ses:GetDedicatedIps",
     ],
     Resource: "*",
+  });
+
+  // Always allow S3 HeadBucket for feature detection (inbound bucket scanning)
+  // This allows the dashboard to discover if inbound email is deployed
+  statements.push({
+    Effect: "Allow",
+    Action: ["s3:HeadBucket"],
+    Resource: "arn:aws:s3:::wraps-inbound-*",
   });
 
   // Always allow SES template management (for publishing email templates)
@@ -327,6 +343,24 @@ function buildConsolePolicyDocument(
         "ses:GetArchiveExport",
       ],
       Resource: "arn:aws:ses:*:*:mailmanager-archive/*",
+    });
+  }
+
+  // Allow S3 access for inbound email (bucket scanning and email retrieval)
+  const inbound = emailConfig?.inbound as Record<string, unknown> | undefined;
+  if (inbound?.enabled) {
+    statements.push({
+      Effect: "Allow",
+      Action: [
+        "s3:HeadBucket",
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:GetObjectTagging",
+      ],
+      Resource: [
+        "arn:aws:s3:::wraps-inbound-*",
+        "arn:aws:s3:::wraps-inbound-*/*",
+      ],
     });
   }
 

@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Database,
   Globe,
+  Inbox,
   Loader2,
   Lock,
   Mail,
@@ -156,6 +157,7 @@ export function AccountFeatures({
     archiving: !!emailFeatures?.archivingEnabled,
     customTrackingDomain: !!emailFeatures?.customTrackingDomain,
     dedicatedIp: dedicatedIpCount > 0,
+    inbound: !!emailFeatures?.inboundBucketName,
   };
 
   // Count enabled email features (total enabled / total features)
@@ -402,6 +404,16 @@ export function AccountFeatures({
               icon={<Server className="h-4 w-4 text-rose-600" />}
               iconBgClass="bg-rose-100 dark:bg-rose-900"
               name="Dedicated IP"
+            />
+
+            {/* Inbound Email */}
+            <FeatureItem
+              description="Receive emails via SES Receipt Rules"
+              detail={emailFeatures?.inboundBucketName}
+              enabled={emailFeatureStatus.inbound}
+              icon={<Inbox className="h-4 w-4 text-emerald-600" />}
+              iconBgClass="bg-emerald-100 dark:bg-emerald-900"
+              name="Inbound Email"
             />
           </CollapsibleContent>
         </Collapsible>

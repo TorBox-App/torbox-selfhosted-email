@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/empty";
 import { listInboundEmails } from "@/lib/aws/s3-inbound";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { InboundAnalytics } from "./components/inbound-analytics";
 import { InboundEmailsTable } from "./components/inbound-emails-table";
 import type { InboundEmailListItem } from "./types";
 
@@ -183,13 +184,9 @@ export default async function InboundEmailsPage({ params }: InboundPageProps) {
 
   return (
     <>
+      {/* Inbound Analytics */}
       <div className="px-4 lg:px-6">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-bold text-2xl tracking-tight">Inbound Emails</h1>
-          <p className="text-muted-foreground">
-            View emails received through your inbound email infrastructure
-          </p>
-        </div>
+        <InboundAnalytics emails={emails} />
       </div>
 
       <div className="@container/main px-4 lg:px-6">
