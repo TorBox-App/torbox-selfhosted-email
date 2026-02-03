@@ -181,9 +181,9 @@ function getStepSize(value: number): number {
 }
 
 const calculatorParsers = {
-  emails: parseAsInteger.withDefault(50_000),
-  events: parseAsInteger.withDefault(25_000),
-  tier: parseAsStringLiteral(TIER_IDS).withDefault("starter"),
+  emails: parseAsInteger.withDefault(25_000),
+  events: parseAsInteger.withDefault(5_000),
+  tier: parseAsStringLiteral(TIER_IDS).withDefault("free"),
   billing: parseAsStringLiteral(BILLING_INTERVALS).withDefault("monthly"),
   tracking: parseAsBoolean.withDefault(true),
   eventbridge: parseAsBoolean.withDefault(true),
@@ -989,11 +989,11 @@ export default function CostCalculatorPageContent() {
                         {wrapsCosts.includedEvents?.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
+                    <div className="flex justify-between text-lg">
+                      <span className="font-semibold">
                         Emails Sent:
                       </span>
-                      <span className="tabular-nums font-medium">
+                      <span className="tabular-nums font-bold">
                         {emailsPerMonth.toLocaleString()}/mo
                       </span>
                     </div>

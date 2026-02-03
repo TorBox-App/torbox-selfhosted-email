@@ -3,6 +3,7 @@ import {
   Calendar,
   Clock,
   FileCheck,
+  Inbox,
   Network,
   Server,
   Shield,
@@ -32,6 +33,18 @@ type BlogPost = {
 };
 
 const posts: BlogPost[] = [
+  {
+    slug: "inbound-email-guide",
+    title: "Receive Emails in Your AWS Account with Wraps",
+    description:
+      "Build support inboxes, automate order processing, and create email-to-ticket workflows. All in your AWS account with EventBridge webhooks.",
+    category: "Engineering",
+    date: "February 2026",
+    readTime: "8 min read",
+    featured: true,
+    icon: <Inbox className="h-6 w-6" />,
+    image: "/blog/wraps-inbound.png",
+  },
   {
     slug: "your-dmarc-policy-is-useless",
     title: "Your DMARC policy is useless",
