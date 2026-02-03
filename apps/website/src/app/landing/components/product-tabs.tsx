@@ -22,7 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { assetUrl, cn } from "@/lib/utils";
@@ -385,31 +385,42 @@ function EventsContent() {
   );
 }
 
+const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
+  { key: "automations", label: "Automations", icon: Workflow },
+  { key: "events", label: "Tracked Events", icon: Activity },
+  { key: "broadcasts", label: "Broadcasts", icon: Send },
+  { key: "templates", label: "Templates", icon: LayoutGrid },
+];
+
 type GlowingTabProps = {
-  tabs: { key: TabKey; label: string; icon: LucideIcon }[];
-  activeTab: TabKey;
-  onTabChange: (key: TabKey) => void;
+  activeIndex: number;
+  scrollProgress: number;
+  onTabClick: (index: number) => void;
 };
 
-function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
+function GlowingTabBar({
+  activeIndex,
+  scrollProgress,
+  onTabClick,
+}: GlowingTabProps) {
   return (
-    <div className="mb-8 flex justify-center">
+    <div className="mb-8 flex flex-col items-center gap-4">
       <div className="relative">
         <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-xl dark:bg-orange-500/10" />
         <div className="relative inline-flex gap-1 rounded-full border border-orange-500/20 bg-background/80 p-1.5 shadow-lg backdrop-blur-sm dark:border-orange-500/30 dark:bg-background/50">
           {tabs.map((tab, index) => {
-            const isActive = activeTab === tab.key;
+            const isActive = activeIndex === index;
             const Icon = tab.icon;
             return (
               <button
                 className={cn(
                   "group relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 font-medium text-sm transition-all duration-300",
                   isActive
-                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-105"
                     : "text-muted-foreground hover:bg-orange-500/10 hover:text-foreground dark:hover:bg-orange-500/20"
                 )}
                 key={tab.key}
-                onClick={() => onTabChange(tab.key)}
+                onClick={() => onTabClick(index)}
                 type="button"
               >
                 {isActive && (
@@ -435,54 +446,140 @@ function GlowingTabBar({ tabs, activeTab, onTabChange }: GlowingTabProps) {
           })}
         </div>
       </div>
+      {/* Progress bar */}
+      <div className="w-full max-w-xs h-1 bg-muted rounded-full overflow-hidden">
+        <div
+          className="h-full bg-orange-500 transition-all duration-150 ease-out rounded-full"
+          style={{ width: `${scrollProgress * 100}%` }}
+        />
+      </div>
     </div>
   );
 }
 
 export function ProductTabs() {
-  const [activeTab, setActiveTab] = useState<TabKey>("automations");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const sectionRef = useRef<HTMLDivElement>(null);
 
-  const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
-    { key: "automations", label: "Automations", icon: Workflow },
-    { key: "events", label: "Tracked Events", icon: Activity },
-    { key: "broadcasts", label: "Broadcasts", icon: Send },
-    { key: "templates", label: "Templates", icon: LayoutGrid },
-  ];
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const handleScroll = () => {
+      const rect = section.getBoundingClientRect();
+      const sectionHeight = section.offsetHeight;
+      const viewportHeight = window.innerHeight;
+
+      // Calculate progress through the section
+      const scrollStart = viewportHeight;
+      const scrollEnd = -sectionHeight;
+      const scrollRange = scrollStart - scrollEnd;
+
+      const currentPosition = rect.top;
+      const progress = Math.max(
+        0,
+        Math.min(1, (scrollStart - currentPosition) / scrollRange)
+      );
+
+      setScrollProgress(progress);
+
+      // Map progress to active tab with generous buffer at start/end
+      // First 25% = first tab (dwell time)
+      // Middle 50% = all 4 tabs transition
+      // Last 25% = last tab (dwell time before leaving)
+      const adjustedProgress = Math.max(0, Math.min(1, (progress - 0.25) / 0.5));
+      const newIndex = Math.min(
+        tabs.length - 1,
+        Math.floor(adjustedProgress * tabs.length)
+      );
+      setActiveIndex(newIndex);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleTabClick = (index: number) => {
+    const section = sectionRef.current;
+    if (!section) return;
+    const sectionTop = section.offsetTop;
+    const sectionHeight = section.offsetHeight;
+    // Calculate target scroll position for this tab
+    // Account for 25% start buffer, 50% content zone
+    const contentStart = sectionHeight * 0.25;
+    const contentZone = sectionHeight * 0.5;
+    const targetScroll =
+      sectionTop + contentStart + (index / tabs.length) * contentZone + 50;
+    window.scrollTo({ top: targetScroll, behavior: "smooth" });
+  };
+
+  const activeTab = tabs[activeIndex].key;
 
   return (
-    <>
-      <GlowingTabBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        tabs={tabs}
-      />
+    <div
+      ref={sectionRef}
+      className="relative"
+      style={{ minHeight: "300vh" }}
+    >
+      <div className="sticky top-0 min-h-screen flex flex-col justify-center py-8">
+        <GlowingTabBar
+          activeIndex={activeIndex}
+          onTabClick={handleTabClick}
+          scrollProgress={scrollProgress}
+        />
 
-      <div className="min-h-[450px]">
-        {activeTab === "templates" && <TemplatesContent />}
-        {activeTab === "broadcasts" && <BroadcastsContent />}
-        {activeTab === "automations" && <AutomationsContent />}
-        {activeTab === "events" && <EventsContent />}
-      </div>
+        <div className="min-h-[450px]">
+          {activeTab === "templates" && <TemplatesContent />}
+          {activeTab === "broadcasts" && <BroadcastsContent />}
+          {activeTab === "automations" && <AutomationsContent />}
+          {activeTab === "events" && <EventsContent />}
+        </div>
 
-      <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
-          <a
-            href="https://app.wraps.dev/auth?mode=signup"
-            onClick={() =>
-              trackEvent("cta_click", {
-                location: "product_section",
-                cta_text: "Start for free",
-              })
-            }
-          >
-            Start for free
-            <ArrowRight className="ml-2 size-4" />
-          </a>
-        </Button>
-        <Button asChild size="lg" variant="outline">
-          <a href="/platform">Learn More</a>
-        </Button>
+        <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
+            <a
+              href="https://app.wraps.dev/auth?mode=signup"
+              onClick={() =>
+                trackEvent("cta_click", {
+                  location: "product_section",
+                  cta_text: "Start for free",
+                })
+              }
+            >
+              Start for free
+              <ArrowRight className="ml-2 size-4" />
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <a href="/platform">Learn More</a>
+          </Button>
+        </div>
+
+        {/* Scroll hint */}
+        {scrollProgress < 0.05 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 animate-bounce">
+            <p className="text-muted-foreground/50 text-xs flex flex-col items-center gap-1">
+              <span>Scroll to explore</span>
+              <svg
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                />
+              </svg>
+            </p>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }

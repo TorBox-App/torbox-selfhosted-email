@@ -1,208 +1,231 @@
-import { ArrowRight, Check, Mail, Send, Workflow } from "lucide-react";
-import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+"use client";
 
-type ComparisonScenario = {
+import { ArrowRight, Mail, Send, Workflow } from "lucide-react";
+import { useState } from "react";
+import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+type UseCase = {
   id: string;
   icon: typeof Mail;
-  useCase: string;
-  description: string;
+  label: string;
+  tagline: string;
   competitor: {
     name: string;
+    logo?: string;
     metric: string;
-    price: string;
+    price: number;
   };
   wraps: {
     plan: string;
-    trackedEvents: string;
-    emailVolume: string;
-    price: string;
+    price: number;
     breakdown: string;
   };
-  savings: string;
-  insight: string;
+  savings: number;
 };
 
-const scenarios: ComparisonScenario[] = [
-  {
-    id: "transactional",
-    icon: Send,
-    useCase: "Transactional Emails",
-    description: "Password resets, receipts, notifications",
-    competitor: {
-      name: "Resend",
-      metric: "50K emails",
-      price: "$20/mo",
-    },
-    wraps: {
-      plan: "Free",
-      trackedEvents: "0",
-      emailVolume: "50K emails",
-      price: "$5/mo",
-      breakdown: "$0 platform + ~$5 AWS",
-    },
-    savings: "75% less",
-    insight: "SDK sends don't consume tracked events",
-  },
+const useCases: UseCase[] = [
   {
     id: "marketing",
     icon: Mail,
-    useCase: "Marketing Emails",
-    description: "Newsletters, broadcasts, campaigns",
+    label: "Marketing",
+    tagline: "Newsletters & campaigns",
     competitor: {
       name: "Mailchimp",
       metric: "10K contacts",
-      price: "$100/mo",
+      price: 100,
     },
     wraps: {
       plan: "Starter",
-      trackedEvents: "0",
-      emailVolume: "50K emails",
-      price: "$24/mo",
+      price: 24,
       breakdown: "$19 platform + ~$5 AWS",
     },
-    savings: "76% less",
-    insight: "Broadcasts don't consume tracked events",
+    savings: 76,
+  },
+  {
+    id: "transactional",
+    icon: Send,
+    label: "Transactional",
+    tagline: "Receipts & notifications",
+    competitor: {
+      name: "Resend",
+      metric: "50K emails",
+      price: 20,
+    },
+    wraps: {
+      plan: "Free",
+      price: 5,
+      breakdown: "$0 platform + ~$5 AWS",
+    },
+    savings: 75,
   },
   {
     id: "automations",
     icon: Workflow,
-    useCase: "Behavioral Automations",
-    description: "Trigger workflows on user actions",
+    label: "Automations",
+    tagline: "Behavioral triggers",
     competitor: {
       name: "Knock",
       metric: "50K messages",
-      price: "$250/mo",
+      price: 250,
     },
     wraps: {
       plan: "Growth",
-      trackedEvents: "250K",
-      emailVolume: "50K emails",
-      price: "$84/mo",
+      price: 84,
       breakdown: "$79 platform + ~$5 AWS",
     },
-    savings: "66% less",
-    insight: "250K tracked events included in Growth",
+    savings: 66,
   },
 ];
 
-function ComparisonCard({ scenario }: { scenario: ComparisonScenario }) {
-  const Icon = scenario.icon;
-
-  return (
-    <div className="overflow-hidden rounded-2xl border bg-background">
-      {/* Header */}
-      <div className="border-b bg-muted/30 px-5 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-orange-500/10">
-            <Icon className="size-5 text-orange-500" />
-          </div>
-          <div>
-            <h3 className="font-semibold">{scenario.useCase}</h3>
-            <p className="text-muted-foreground text-sm">
-              {scenario.description}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Comparison */}
-      <div className="grid grid-cols-2 divide-x">
-        {/* Competitor */}
-        <div className="p-5">
-          <p className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-            {scenario.competitor.name}
-          </p>
-          <p className="mb-1 text-muted-foreground text-sm">
-            {scenario.competitor.metric}
-          </p>
-          <p className="font-bold text-2xl">{scenario.competitor.price}</p>
-        </div>
-
-        {/* Wraps */}
-        <div className="bg-orange-500/5 p-5">
-          <p className="mb-3 font-medium text-orange-600 text-xs uppercase tracking-wide dark:text-orange-400">
-            Wraps {scenario.wraps.plan}
-          </p>
-          <div className="mb-1 space-y-0.5 text-sm">
-            <p className="text-muted-foreground">
-              <span className="font-medium text-foreground">
-                {scenario.wraps.trackedEvents}
-              </span>{" "}
-              <TrackedEventTooltip />
-            </p>
-            <p className="text-muted-foreground">
-              <span className="font-medium text-foreground">
-                {scenario.wraps.emailVolume}
-              </span>{" "}
-              sent
-            </p>
-          </div>
-          <p className="font-bold text-2xl text-orange-600 dark:text-orange-400">
-            {scenario.wraps.price}
-          </p>
-          <p className="mt-1 text-muted-foreground text-xs">
-            {scenario.wraps.breakdown}
-          </p>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between border-t bg-muted/20 px-5 py-3">
-        <div className="flex items-center gap-2">
-          <Check className="size-4 text-green-500" />
-          <p className="text-muted-foreground text-sm">{scenario.insight}</p>
-        </div>
-        <Badge className="bg-green-500/10 text-green-600 dark:text-green-400">
-          {scenario.savings}
-        </Badge>
-      </div>
-    </div>
-  );
-}
-
 export function PricingComparisonSection() {
+  const [activeCase, setActiveCase] = useState<UseCase>(useCases[0]);
+
   return (
-    <section className="py-20" id="comparison">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        {/* Header - server rendered */}
-        <div className="mx-auto mb-12 max-w-3xl text-center animate-fade-in-up">
-          <Badge className="mb-4 bg-orange-500/10 text-orange-600 dark:text-orange-400">
-            Pricing Comparison
-          </Badge>
-          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-            Same Capabilities.{" "}
-            <span className="text-orange-500">Fraction of the Cost.</span>
+    <section className="py-20 overflow-hidden" id="comparison">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <p className="text-orange-500 font-medium text-sm mb-3 tracking-wide uppercase">
+            The real cost comparison
+          </p>
+          <h2 className="font-bold text-3xl md:text-4xl tracking-tight mb-4">
+            Stop overpaying for email
           </h2>
-          <p className="text-lg text-muted-foreground">
-            You pay Wraps for the platform. You pay AWS directly for sending.{" "}
-            <TrackedEventTooltip>Tracked events</TrackedEventTooltip> are only
-            needed for behavioral automations.
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Same features. Same reliability. A fraction of the price.
           </p>
         </div>
 
-        {/* Comparison Cards - server rendered */}
-        <div className="animate-fade-in-up animation-delay-100">
-          <div className="grid gap-6 lg:grid-cols-3">
-            {scenarios.map((scenario) => (
-              <ComparisonCard key={scenario.id} scenario={scenario} />
-            ))}
+        {/* Use Case Selector - Horizontal Pills */}
+        <div className="flex justify-center gap-2 mb-10">
+          {useCases.map((useCase) => {
+            const Icon = useCase.icon;
+            const isActive = activeCase.id === useCase.id;
+            return (
+              <button
+                className={cn(
+                  "group flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all duration-200",
+                  isActive
+                    ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/25"
+                    : "bg-background border-border hover:border-orange-500/50 text-muted-foreground hover:text-foreground"
+                )}
+                key={useCase.id}
+                onClick={() => setActiveCase(useCase)}
+                type="button"
+              >
+                <Icon
+                  className={cn(
+                    "size-4 transition-colors",
+                    isActive
+                      ? "text-white"
+                      : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                />
+                <span className="font-medium text-sm">{useCase.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Main Comparison Card */}
+        <div className="relative">
+          {/* Background decoration */}
+          <div className="absolute inset-0 bg-linear-to-br from-orange-500/5 via-transparent to-orange-500/5 rounded-3xl" />
+
+          <div className="relative rounded-3xl border bg-background/80 backdrop-blur-sm overflow-hidden">
+            {/* Top section - The dramatic comparison */}
+            <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
+              {/* Competitor Side */}
+              <div className="p-8 md:p-10 relative">
+                <div className="absolute top-6 right-6 text-muted-foreground/50 text-xs font-medium uppercase tracking-wider">
+                  They charge
+                </div>
+
+                <div className="mt-4 mb-6">
+                  <p className="text-muted-foreground text-sm mb-1">
+                    {activeCase.competitor.name}
+                  </p>
+                  <p className="text-muted-foreground/70 text-xs">
+                    for {activeCase.competitor.metric}
+                  </p>
+                </div>
+
+                <div className="relative inline-block">
+                  {/* Strikethrough line */}
+                  <div className="absolute top-1/2 -left-2 -right-2 h-0.5 bg-red-500/60 -rotate-6" />
+                  <span className="font-bold text-5xl md:text-6xl text-muted-foreground/40">
+                    ${activeCase.competitor.price}
+                  </span>
+                  <span className="text-muted-foreground/40 text-xl ml-1">
+                    /mo
+                  </span>
+                </div>
+              </div>
+
+              {/* Wraps Side */}
+              <div className="p-8 md:p-10 bg-linear-to-br from-orange-500/8 to-transparent relative">
+                <div className="absolute top-6 right-6 text-orange-500 text-xs font-medium uppercase tracking-wider">
+                  You pay
+                </div>
+
+                <div className="mt-4 mb-6">
+                  <p className="text-foreground font-medium text-sm mb-1">
+                    Wraps {activeCase.wraps.plan}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {activeCase.wraps.breakdown}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="font-bold text-5xl md:text-6xl text-foreground">
+                    ${activeCase.wraps.price}
+                  </span>
+                  <span className="text-muted-foreground text-xl ml-1">/mo</span>
+                </div>
+
+                {/* Savings badge */}
+                <div className="mt-6 inline-flex items-center gap-2 bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-1.5 rounded-full">
+                  <span className="font-bold text-lg">
+                    {activeCase.savings}% less
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom section - Quick context */}
+            <div className="border-t border-border bg-muted/30 px-8 md:px-10 py-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p className="text-muted-foreground text-sm">
+                  <span className="text-foreground font-medium">
+                    {activeCase.tagline}
+                  </span>
+                  {" · "}
+                  SDK sends don't consume{" "}
+                  <TrackedEventTooltip>tracked events</TrackedEventTooltip>
+                </p>
+                <Button
+                  asChild
+                  className="shrink-0"
+                  size="sm"
+                  variant="outline"
+                >
+                  <a className="flex items-center gap-2" href="/calculator">
+                    Calculate exact costs
+                    <ArrowRight className="size-3.5" />
+                  </a>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* CTA - server rendered */}
-        <div className="mt-12 text-center animate-fade-in-up animation-delay-200">
-          <Button asChild size="lg" variant="outline">
-            <a href="/calculator">
-              Calculate Your Exact Costs
-              <ArrowRight className="ml-2 size-4" />
-            </a>
-          </Button>
-          <p className="mt-3 text-muted-foreground text-sm">
-            Enter your volume and see a detailed breakdown
-          </p>
-        </div>
+        {/* Trust line */}
+        <p className="text-center text-muted-foreground text-sm mt-8">
+          You pay Wraps for the platform. You pay AWS directly for sending.
+        </p>
       </div>
     </section>
   );
