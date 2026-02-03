@@ -70,3 +70,4 @@ sst-env.d.ts
 .vercel
 # next-agents-md
 .next-docs/
+next-env.d.ts
