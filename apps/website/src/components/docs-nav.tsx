@@ -49,6 +49,7 @@ const navItems: NavSection[] = [
         icon: Rocket,
         children: [
           { title: "Email", href: "/docs/quickstart/email" },
+          { title: "Inbound Email", href: "/docs/quickstart/email/inbound" },
           { title: "CDN", href: "/docs/quickstart/cdn" },
           { title: "SMS", href: "/docs/quickstart/sms" },
           { title: "Platform", href: "/docs/quickstart/platform" },

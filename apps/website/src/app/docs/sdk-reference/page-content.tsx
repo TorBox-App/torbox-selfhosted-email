@@ -221,6 +221,62 @@ result.status.forEach((item, i) => {
   }
 });`;
 
+// Inbox code examples
+const inboxInitCode = `const email = new WrapsEmail({
+  inboundBucket: 'your-inbound-bucket-name',
+});`;
+
+const inboxListCode = `const { emails, nextToken } = await email.inbox.list({
+  maxResults: 20,
+  continuationToken: undefined, // for pagination
+});
+
+for (const summary of emails) {
+  console.log(summary.emailId, summary.key, summary.lastModified);
+}`;
+
+const inboxGetCode = `const inboundEmail = await email.inbox.get('email-abc123');
+
+console.log('From:', inboundEmail.from.address);
+console.log('Subject:', inboundEmail.subject);
+console.log('HTML:', inboundEmail.html);
+console.log('Attachments:', inboundEmail.attachments.length);
+console.log('Spam:', inboundEmail.spamVerdict);
+console.log('Virus:', inboundEmail.virusVerdict);`;
+
+const inboxReplyCode = `// Reply with proper threading headers (In-Reply-To, References)
+const result = await email.inbox.reply('email-abc123', {
+  from: 'support@yourdomain.com',
+  text: 'Thanks for reaching out!',
+  html: '<p>Thanks for reaching out!</p>',
+  attachments: [], // optional
+});
+
+console.log('Reply sent:', result.messageId);`;
+
+const inboxForwardCode = `// Passthrough mode (default): rewrites headers, keeps original body
+const result = await email.inbox.forward('email-abc123', {
+  from: 'noreply@yourdomain.com',
+  to: 'team@yourdomain.com',
+  addPrefix: '[Customer]', // optional subject prefix
+});
+
+// Wrapped mode: builds new message with forwarded content
+const result2 = await email.inbox.forward('email-abc123', {
+  from: 'noreply@yourdomain.com',
+  to: 'team@yourdomain.com',
+  passthrough: false,
+  text: 'FYI - see below', // optional intro text
+});`;
+
+const inboxAttachmentCode = `// Get presigned URL for an attachment (valid for 1 hour by default)
+const url = await email.inbox.getAttachment('email-abc123', 'attachment-id', {
+  expiresIn: 3600, // seconds
+});`;
+
+const inboxDeleteCode = `// Delete email and all associated files (parsed JSON, raw MIME, attachments)
+await email.inbox.delete('email-abc123');`;
+
 const errorHandlingCode = `import { WrapsEmail, SESError, ValidationError } from '@wraps.dev/email';
 
 try {
@@ -491,6 +547,97 @@ interface SendBulkTemplateResult {
 ${sendBulkTemplateCode}
 \`\`\``,
 
+  inbox: `## Inbox (Inbound Emails)
+
+Read, reply to, and forward inbound emails. Requires inbound email infrastructure to be deployed with \`wraps email inbound init\`.
+
+### Initialize with Inbox
+\`\`\`typescript
+const email = new WrapsEmail({
+  inboundBucket: 'your-inbound-bucket-name',
+});
+\`\`\`
+
+### List Inbound Emails
+\`\`\`typescript
+const { emails, nextToken } = await email.inbox.list({
+  maxResults: 20,
+  continuationToken: undefined, // for pagination
+});
+
+for (const summary of emails) {
+  console.log(summary.emailId, summary.key, summary.lastModified);
+}
+\`\`\`
+
+### Get Email Details
+\`\`\`typescript
+const inboundEmail = await email.inbox.get('email-abc123');
+
+console.log('From:', inboundEmail.from.address);
+console.log('Subject:', inboundEmail.subject);
+console.log('HTML:', inboundEmail.html);
+console.log('Attachments:', inboundEmail.attachments.length);
+console.log('Spam:', inboundEmail.spamVerdict);
+console.log('Virus:', inboundEmail.virusVerdict);
+\`\`\`
+
+### Reply to Email
+\`\`\`typescript
+// Reply with proper threading headers (In-Reply-To, References)
+const result = await email.inbox.reply('email-abc123', {
+  from: 'support@yourdomain.com',
+  text: 'Thanks for reaching out!',
+  html: '<p>Thanks for reaching out!</p>',
+  attachments: [], // optional
+});
+
+console.log('Reply sent:', result.messageId);
+\`\`\`
+
+### Forward Email
+\`\`\`typescript
+// Passthrough mode (default): rewrites headers, keeps original body
+const result = await email.inbox.forward('email-abc123', {
+  from: 'noreply@yourdomain.com',
+  to: 'team@yourdomain.com',
+  addPrefix: '[Customer]', // optional subject prefix
+});
+
+// Wrapped mode: builds new message with forwarded content
+const result = await email.inbox.forward('email-abc123', {
+  from: 'noreply@yourdomain.com',
+  to: 'team@yourdomain.com',
+  passthrough: false,
+  text: 'FYI - see below', // optional intro text
+});
+\`\`\`
+
+### Get Attachment URL
+\`\`\`typescript
+// Get presigned URL for an attachment (valid for 1 hour by default)
+const url = await email.inbox.getAttachment('email-abc123', 'attachment-id', {
+  expiresIn: 3600, // seconds
+});
+\`\`\`
+
+### Delete Email
+\`\`\`typescript
+// Delete email and all associated files (parsed JSON, raw MIME, attachments)
+await email.inbox.delete('email-abc123');
+\`\`\`
+
+### Available Methods
+| Method | Description |
+|--------|-------------|
+| \`inbox.list(options?)\` | List inbound emails with pagination |
+| \`inbox.get(emailId)\` | Get full email details by ID |
+| \`inbox.reply(emailId, options)\` | Reply with threading headers |
+| \`inbox.forward(emailId, options)\` | Forward to new recipients |
+| \`inbox.getAttachment(emailId, attachmentId, options?)\` | Get presigned URL for attachment |
+| \`inbox.getRaw(emailId)\` | Get presigned URL for raw MIME email |
+| \`inbox.delete(emailId)\` | Delete email and all associated files |`,
+
   errorHandling: `## Error Handling
 
 The SDK throws typed errors for different failure scenarios.
@@ -536,6 +683,8 @@ ${SECTION_MD.templates}
 ${SECTION_MD.sendTemplate}
 
 ${SECTION_MD.sendBulkTemplate}
+
+${SECTION_MD.inbox}
 
 ${SECTION_MD.errorHandling}
 
@@ -1540,6 +1689,394 @@ export default function SDKReferencePageContent() {
             )}
           </CodeBlockBody>
         </CodeBlock>
+      </section>
+
+      {/* Inbox (Inbound Emails) */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="inbox"
+          markdown={SECTION_MD.inbox}
+          title="Inbox (Inbound Emails)"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Read, reply to, and forward inbound emails. Requires inbound email
+          infrastructure to be deployed with{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            wraps email inbound init
+          </code>
+          .
+        </p>
+
+        <div className="space-y-6">
+          <div>
+            <p className="mb-2 font-medium text-sm">Initialize with Inbox</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "inbox-init.ts",
+                  code: inboxInitCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">List Inbound Emails</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "inbox-list.ts",
+                  code: inboxListCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">Get Email Details</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "inbox-get.ts",
+                  code: inboxGetCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">Reply to Email</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "inbox-reply.ts",
+                  code: inboxReplyCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">Forward Email</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "inbox-forward.ts",
+                  code: inboxForwardCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">Get Attachment URL</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "inbox-attachment.ts",
+                  code: inboxAttachmentCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">Delete Email</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "inbox-delete.ts",
+                  code: inboxDeleteCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+        </div>
+
+        <Card className="mt-6">
+          <CardContent className="p-6">
+            <h4 className="mb-3 font-medium">Available Methods</h4>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Method</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      inbox.list(options?)
+                    </code>
+                  </td>
+                  <td className="py-2">List inbound emails with pagination</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      inbox.get(emailId)
+                    </code>
+                  </td>
+                  <td className="py-2">Get full email details by ID</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      inbox.reply(emailId, options)
+                    </code>
+                  </td>
+                  <td className="py-2">Reply with threading headers</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      inbox.forward(emailId, options)
+                    </code>
+                  </td>
+                  <td className="py-2">Forward to new recipients</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      inbox.getAttachment(emailId, attachmentId, options?)
+                    </code>
+                  </td>
+                  <td className="py-2">Get presigned URL for attachment</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      inbox.getRaw(emailId)
+                    </code>
+                  </td>
+                  <td className="py-2">Get presigned URL for raw MIME email</td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      inbox.delete(emailId)
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Delete email and all associated files
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       </section>
 
       {/* Error Handling */}

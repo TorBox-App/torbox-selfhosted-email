@@ -410,6 +410,168 @@ export default function CLIReferenceEmailPageContent() {
         </div>
       </section>
 
+      {/* wraps email inbound */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email inbound
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Deploy and manage inbound email receiving infrastructure. Receive
+          emails at your domain, parse them automatically, and process with your
+          application.
+        </p>
+
+        {/* inbound init */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email inbound init
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Deploy inbound email receiving infrastructure to your AWS account.
+          </p>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email inbound init [options]" />
+            </CardContent>
+          </Card>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Options</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -d, --domain &lt;domain&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Domain to receive emails at
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -r, --region &lt;region&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    AWS region (must support SES inbound)
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">What It Deploys</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+                <li>S3 bucket for storing incoming emails</li>
+                <li>SES receipt rule set with active rule</li>
+                <li>Lambda function to parse and process emails</li>
+                <li>EventBridge rule for email.received events</li>
+                <li>IAM roles and policies for cross-service access</li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* inbound status */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email inbound status
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Display the status of inbound email infrastructure, including MX
+            records and receipt rules.
+          </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email inbound status" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* inbound test */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email inbound test
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Send a test email to verify your inbound configuration is working
+            correctly.
+          </p>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email inbound test [options]" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Options</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -t, --to &lt;address&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Email address to send test to (must be on your inbound
+                    domain)
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* inbound destroy */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email inbound destroy
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Remove inbound email infrastructure. Stored emails in S3 will remain
+            unless you delete the bucket manually.
+          </p>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email inbound destroy [options]" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Options</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    -f, --force
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Skip confirmation prompt
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* wraps email connect */}
       <section className="mb-12">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
