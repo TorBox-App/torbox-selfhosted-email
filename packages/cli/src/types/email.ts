@@ -5,6 +5,17 @@
 import type { ArchiveRetention, FeatureCost, Provider } from "./shared.js";
 
 /**
+ * AWS regions that support SES email receiving (Receipt Rules)
+ */
+export const SES_RECEIVING_REGIONS = [
+  "us-east-1",
+  "us-west-2",
+  "eu-west-1",
+] as const;
+
+export type SESReceivingRegion = (typeof SES_RECEIVING_REGIONS)[number];
+
+/**
  * SES event types that can be tracked
  */
 export type SESEventType =
@@ -76,6 +87,17 @@ export type WrapsEmailConfig = {
 
   // Alerting configuration
   alerts?: AlertConfig;
+
+  // Inbound email receiving
+  inbound?: {
+    enabled: boolean;
+    subdomain: string; // e.g., "inbound" → inbound.domain.com
+    receivingDomain?: string; // computed: subdomain.domain
+    bucketName?: string; // wraps-inbound-{accountId}-{region}
+    retention?: ArchiveRetention;
+    webhookUrl?: string; // user's webhook endpoint for email.received
+    webhookSecret?: string; // generated API key for webhook auth
+  };
 
   // Advanced options
   ipPool?: string;
@@ -162,6 +184,11 @@ export type EmailStackOutputs = {
   // Alerting outputs
   alertsEnabled?: boolean;
   alertTopicArn?: string;
+  // Inbound email outputs
+  inboundBucketName?: string;
+  inboundBucketArn?: string;
+  inboundLambdaArn?: string;
+  inboundReceivingDomain?: string;
 };
 
 /**
@@ -300,4 +327,44 @@ export type EmailRestoreOptions = {
   region?: string;
   force?: boolean; // Destructive operation - restores previous configuration
   preview?: boolean;
+};
+
+/**
+ * Command options for email inbound init
+ */
+export type EmailInboundInitOptions = {
+  region?: string;
+  subdomain?: string;
+  webhookUrl?: string;
+  yes?: boolean;
+  preview?: boolean;
+};
+
+/**
+ * Command options for email inbound destroy
+ */
+export type EmailInboundDestroyOptions = {
+  region?: string;
+  force?: boolean;
+};
+
+/**
+ * Command options for email inbound status
+ */
+export type EmailInboundStatusOptions = {
+  region?: string;
+};
+
+/**
+ * Command options for email inbound verify
+ */
+export type EmailInboundVerifyOptions = {
+  region?: string;
+};
+
+/**
+ * Command options for email inbound test
+ */
+export type EmailInboundTestOptions = {
+  region?: string;
 };

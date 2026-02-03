@@ -3,6 +3,10 @@
  */
 
 import {
+  ChangeResourceRecordSetsCommand,
+  Route53Client,
+} from "@aws-sdk/client-route-53";
+import {
   createSelectedDNSRecords,
   type ProposedDNSRecord,
 } from "../route53.js";
@@ -25,7 +29,9 @@ export type DNSRecordInfo = {
     | "dmarc"
     | "tracking"
     | "mailfrom_mx"
-    | "mailfrom_spf";
+    | "mailfrom_spf"
+    | "inbound_mx"
+    | "inbound_spf";
 };
 
 /**
@@ -88,6 +94,35 @@ export function buildEmailDNSRecords(
 }
 
 /**
+ * Build the list of DNS records needed for inbound email receiving
+ */
+export function buildInboundDNSRecords(
+  receivingDomain: string,
+  region: string
+): DNSRecordInfo[] {
+  const records: DNSRecordInfo[] = [];
+
+  // MX record to route inbound email to SES
+  records.push({
+    name: receivingDomain,
+    type: "MX",
+    value: `inbound-smtp.${region}.amazonaws.com`,
+    priority: 10,
+    category: "inbound_mx",
+  });
+
+  // SPF record for the receiving domain
+  records.push({
+    name: receivingDomain,
+    type: "TXT",
+    value: "v=spf1 include:amazonses.com ~all",
+    category: "inbound_spf",
+  });
+
+  return records;
+}
+
+/**
  * Format DNS records for display (manual setup)
  */
 export function formatDNSRecordsForDisplay(
@@ -119,6 +154,8 @@ export async function createDNSRecordsForProvider(
           "dmarc",
           "mailfrom_mx",
           "mailfrom_spf",
+          "inbound_mx",
+          "inbound_spf",
         ] as ProposedDNSRecord["category"][]);
 
       try {
@@ -190,6 +227,79 @@ export async function createDNSRecordsForProvider(
         recordsCreated: 0,
       };
     }
+  }
+}
+
+/**
+ * Create inbound DNS records (MX + SPF) using the appropriate provider
+ * @param parentDomain - The root domain (e.g., "wraps.dev") needed for Vercel DNS zone
+ */
+export async function createInboundDNSRecordsForProvider(
+  credentials: DNSCredentials,
+  receivingDomain: string,
+  region: string,
+  parentDomain: string
+): Promise<DNSCreationResult> {
+  const records = buildInboundDNSRecords(receivingDomain, region);
+
+  switch (credentials.provider) {
+    case "route53": {
+      try {
+        const client = new Route53Client({ region });
+        await client.send(
+          new ChangeResourceRecordSetsCommand({
+            HostedZoneId: credentials.hostedZoneId,
+            ChangeBatch: {
+              Changes: records.map((r) => ({
+                Action: "UPSERT" as const,
+                ResourceRecordSet: {
+                  Name: r.name,
+                  Type: r.type,
+                  TTL: 1800,
+                  ResourceRecords: [
+                    {
+                      Value:
+                        r.type === "MX"
+                          ? `${r.priority} ${r.value}`
+                          : r.type === "TXT"
+                            ? `"${r.value}"`
+                            : r.value,
+                    },
+                  ],
+                },
+              })),
+            },
+          })
+        );
+        return { success: true, recordsCreated: records.length };
+      } catch (error) {
+        return {
+          success: false,
+          recordsCreated: 0,
+          errors: [error instanceof Error ? error.message : "Unknown error"],
+        };
+      }
+    }
+
+    case "cloudflare": {
+      const client = new CloudflareDNSClient(
+        credentials.zoneId,
+        credentials.token
+      );
+      return client.createRecords(records);
+    }
+
+    case "vercel": {
+      const client = new VercelDNSClient(
+        parentDomain,
+        credentials.token,
+        credentials.teamId
+      );
+      return client.createRecords(records);
+    }
+
+    case "manual":
+      return { success: true, recordsCreated: 0 };
   }
 }
 

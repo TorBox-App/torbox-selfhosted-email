@@ -132,6 +132,41 @@ export class VercelDNSClient implements DNSProviderClient {
     return !result.error;
   }
 
+  /**
+   * Create arbitrary DNS records from a list
+   */
+  async createRecords(
+    records: Array<{
+      name: string;
+      type: string;
+      value: string;
+      priority?: number;
+    }>
+  ): Promise<DNSCreationResult> {
+    const errors: string[] = [];
+    let recordsCreated = 0;
+
+    for (const record of records) {
+      const success = await this.createRecord(
+        record.name,
+        record.type,
+        record.value,
+        record.priority
+      );
+      if (success) {
+        recordsCreated++;
+      } else {
+        errors.push(`Failed to create ${record.type} record: ${record.name}`);
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      recordsCreated,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
   async createEmailRecords(
     data: EmailDNSRecordData
   ): Promise<DNSCreationResult> {

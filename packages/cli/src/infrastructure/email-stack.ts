@@ -201,6 +201,79 @@ export async function deployEmailStack(
     });
   }
 
+  // 12. Inbound email resources (if enabled)
+  let inboundResources:
+    | {
+        bucketName: string;
+        bucketArn: import("@pulumi/pulumi").Output<string>;
+        lambdaArn: import("@pulumi/pulumi").Output<string>;
+      }
+    | undefined;
+
+  if (emailConfig.inbound?.enabled) {
+    // S3 bucket for inbound email storage
+    const { createS3InboundResources } = await import(
+      "./resources/s3-inbound.js"
+    );
+    const s3Inbound = await createS3InboundResources({
+      accountId,
+      region: config.region,
+      retention: emailConfig.inbound.retention,
+    });
+
+    // SQS queues for DLQ
+    const { createSQSInboundResources } = await import(
+      "./resources/sqs-inbound.js"
+    );
+    const sqsInbound = await createSQSInboundResources();
+
+    // Lambda function for MIME parsing
+    const { deployInboundLambda } = await import(
+      "./resources/lambda-inbound.js"
+    );
+    const lambdaInbound = await deployInboundLambda({
+      bucketName: s3Inbound.bucketName,
+      bucketArn: s3Inbound.bucket.arn,
+      accountId,
+      region: config.region,
+      dlqArn: sqsInbound.dlq.arn,
+    });
+
+    // S3 bucket notification to trigger Lambda on raw/ uploads
+    // Must depend on the Lambda permission so S3 can validate the destination
+    new aws.s3.BucketNotification(
+      "wraps-inbound-s3-notification",
+      {
+        bucket: s3Inbound.bucket.id,
+        lambdaFunctions: [
+          {
+            lambdaFunctionArn: lambdaInbound.lambdaFunction.arn,
+            events: ["s3:ObjectCreated:*"],
+            filterPrefix: "raw/",
+          },
+        ],
+      },
+      { dependsOn: [lambdaInbound.s3InvokePermission] }
+    );
+
+    // EventBridge rule + optional webhook
+    if (emailConfig.inbound.webhookUrl) {
+      const { createEventBridgeInboundResources } = await import(
+        "./resources/eventbridge-inbound.js"
+      );
+      await createEventBridgeInboundResources({
+        webhookUrl: emailConfig.inbound.webhookUrl,
+        webhookSecret: emailConfig.inbound.webhookSecret,
+      });
+    }
+
+    inboundResources = {
+      bucketName: s3Inbound.bucketName,
+      bucketArn: s3Inbound.bucket.arn,
+      lambdaArn: lambdaInbound.lambdaFunction.arn,
+    };
+  }
+
   // Return outputs
   return {
     roleArn: role.arn as any as string,
@@ -242,5 +315,10 @@ export async function deployEmailStack(
     // Alerting outputs
     alertsEnabled: emailConfig.alerts?.enabled,
     alertTopicArn: alertingResources?.topic.arn as any as string | undefined,
+    // Inbound email outputs
+    inboundBucketName: inboundResources?.bucketName,
+    inboundBucketArn: inboundResources?.bucketArn as any as string | undefined,
+    inboundLambdaArn: inboundResources?.lambdaArn as any as string | undefined,
+    inboundReceivingDomain: emailConfig.inbound?.receivingDomain,
   };
 }

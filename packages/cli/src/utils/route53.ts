@@ -22,7 +22,9 @@ export type ProposedDNSRecord = {
     | "dmarc"
     | "tracking"
     | "mailfrom_mx"
-    | "mailfrom_spf";
+    | "mailfrom_spf"
+    | "inbound_mx"
+    | "inbound_spf";
   conflictReason?: string;
 };
 

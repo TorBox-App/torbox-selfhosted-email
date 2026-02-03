@@ -30,6 +30,11 @@ export type {
   EmailConfigPreset,
   EmailConnectOptions,
   EmailFeatureCostBreakdown,
+  EmailInboundDestroyOptions,
+  EmailInboundInitOptions,
+  EmailInboundStatusOptions,
+  EmailInboundTestOptions,
+  EmailInboundVerifyOptions,
   EmailInitOptions,
   EmailRestoreOptions,
   EmailStackConfig,
@@ -38,12 +43,13 @@ export type {
   EmailUpgradeOptions,
   EmailVerifyOptions,
   SESEventType,
+  SESReceivingRegion,
   SuppressionReason,
   WrapsEmailConfig,
   WrapsEmailFeature,
   WrapsEmailFeatureMetadata,
 } from "./email.js";
-export { DEFAULT_ALERT_THRESHOLDS } from "./email.js";
+export { DEFAULT_ALERT_THRESHOLDS, SES_RECEIVING_REGIONS } from "./email.js";
 // Re-export shared types
 export type {
   ArchiveRetention,

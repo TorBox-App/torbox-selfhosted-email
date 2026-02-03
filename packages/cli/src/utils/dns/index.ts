@@ -12,7 +12,9 @@ export { CloudflareDNSClient } from "./cloudflare.js";
 // Unified record creation
 export {
   buildEmailDNSRecords,
+  buildInboundDNSRecords,
   createDNSRecordsForProvider,
+  createInboundDNSRecordsForProvider,
   type DNSRecordInfo,
   formatDNSRecordsForDisplay,
   getDNSProviderDisplayName,

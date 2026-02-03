@@ -1,0 +1,207 @@
+/**
+ * SES Receipt Rules for inbound email
+ *
+ * Uses SES v1 API (classic receipt rules) because SES v2 does not support receipt rules.
+ * These must be managed via the AWS SDK rather than Pulumi (limited Pulumi support).
+ */
+
+import {
+  CreateReceiptRuleCommand,
+  CreateReceiptRuleSetCommand,
+  DeleteReceiptRuleCommand,
+  DeleteReceiptRuleSetCommand,
+  DescribeActiveReceiptRuleSetCommand,
+  DescribeReceiptRuleCommand,
+  SESClient,
+  SetActiveReceiptRuleSetCommand,
+} from "@aws-sdk/client-ses";
+
+const RULE_SET_NAME = "wraps-inbound-rules";
+const RULE_NAME = "wraps-inbound-catch-all";
+
+/**
+ * Create SES client for a specific region
+ */
+function createSESClient(region: string): SESClient {
+  return new SESClient({ region });
+}
+
+/**
+ * Create the wraps-inbound-rules receipt rule set
+ */
+export async function createReceiptRuleSet(region: string): Promise<void> {
+  const ses = createSESClient(region);
+
+  try {
+    await ses.send(
+      new CreateReceiptRuleSetCommand({
+        RuleSetName: RULE_SET_NAME,
+      })
+    );
+  } catch (error: unknown) {
+    // Ignore if already exists
+    if (error instanceof Error && error.name === "AlreadyExistsException") {
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Create a catch-all receipt rule that stores emails in S3
+ */
+export async function createReceiptRule(
+  region: string,
+  receivingDomain: string,
+  s3BucketName: string
+): Promise<void> {
+  const ses = createSESClient(region);
+
+  // Check if rule already exists
+  try {
+    await ses.send(
+      new DescribeReceiptRuleCommand({
+        RuleSetName: RULE_SET_NAME,
+        RuleName: RULE_NAME,
+      })
+    );
+    // Rule exists - delete it so we can recreate with updated config
+    await ses.send(
+      new DeleteReceiptRuleCommand({
+        RuleSetName: RULE_SET_NAME,
+        RuleName: RULE_NAME,
+      })
+    );
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      error.name !== "RuleDoesNotExistException" &&
+      error.name !== "RuleSetDoesNotExistException"
+    ) {
+      throw error;
+    }
+  }
+
+  await ses.send(
+    new CreateReceiptRuleCommand({
+      RuleSetName: RULE_SET_NAME,
+      Rule: {
+        Name: RULE_NAME,
+        Enabled: true,
+        ScanEnabled: true, // Enable spam and virus scanning
+        Recipients: [receivingDomain], // Match all emails to this domain
+        Actions: [
+          {
+            S3Action: {
+              BucketName: s3BucketName,
+              ObjectKeyPrefix: "raw/",
+            },
+          },
+        ],
+      },
+    })
+  );
+}
+
+/**
+ * Get the currently active receipt rule set
+ */
+export async function getActiveReceiptRuleSet(
+  region: string
+): Promise<string | null> {
+  const ses = createSESClient(region);
+
+  try {
+    const response = await ses.send(
+      new DescribeActiveReceiptRuleSetCommand({})
+    );
+    return response.Metadata?.Name || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Set the active receipt rule set
+ * Returns the name of any previously active rule set (for warning purposes)
+ */
+export async function setActiveReceiptRuleSet(
+  region: string,
+  ruleSetName: string
+): Promise<string | null> {
+  const ses = createSESClient(region);
+
+  // Check what's currently active
+  const currentActive = await getActiveReceiptRuleSet(region);
+
+  if (currentActive === ruleSetName) {
+    // Already active
+    return null;
+  }
+
+  await ses.send(
+    new SetActiveReceiptRuleSetCommand({
+      RuleSetName: ruleSetName,
+    })
+  );
+
+  return currentActive;
+}
+
+/**
+ * Delete the receipt rule (cleanup)
+ */
+export async function deleteReceiptRule(region: string): Promise<void> {
+  const ses = createSESClient(region);
+
+  try {
+    await ses.send(
+      new DeleteReceiptRuleCommand({
+        RuleSetName: RULE_SET_NAME,
+        RuleName: RULE_NAME,
+      })
+    );
+  } catch (error: unknown) {
+    // Ignore if rule or rule set doesn't exist
+    if (
+      error instanceof Error &&
+      (error.name === "RuleDoesNotExistException" ||
+        error.name === "RuleSetDoesNotExistException")
+    ) {
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Deactivate and delete the receipt rule set (cleanup)
+ */
+export async function deleteReceiptRuleSet(region: string): Promise<void> {
+  const ses = createSESClient(region);
+
+  // Deactivate if this is the active rule set
+  const activeRuleSet = await getActiveReceiptRuleSet(region);
+  if (activeRuleSet === RULE_SET_NAME) {
+    await ses.send(new SetActiveReceiptRuleSetCommand({}));
+  }
+
+  try {
+    await ses.send(
+      new DeleteReceiptRuleSetCommand({
+        RuleSetName: RULE_SET_NAME,
+      })
+    );
+  } catch (error: unknown) {
+    // Ignore if doesn't exist
+    if (
+      error instanceof Error &&
+      error.name === "RuleSetDoesNotExistException"
+    ) {
+      return;
+    }
+    throw error;
+  }
+}
+
+export { RULE_NAME, RULE_SET_NAME };

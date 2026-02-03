@@ -27,6 +27,13 @@ import {
   removeDomain,
   verifyDomain,
 } from "./commands/email/domains.js";
+import {
+  inboundDestroy,
+  inboundInit,
+  inboundStatus,
+  inboundTest,
+  inboundVerify,
+} from "./commands/email/inbound.js";
 import { init } from "./commands/email/init.js";
 import { restore } from "./commands/email/restore.js";
 import { emailStatus } from "./commands/email/status.js";
@@ -138,7 +145,20 @@ function showHelp() {
   );
   console.log(`  ${pc.cyan("email domains add")}    Add a domain to SES`);
   console.log(`  ${pc.cyan("email domains list")}   List all domains`);
-  console.log(`  ${pc.cyan("email domains remove")} Remove a domain\n`);
+  console.log(`  ${pc.cyan("email domains remove")} Remove a domain`);
+  console.log(
+    `  ${pc.cyan("email inbound init")}   Enable inbound email receiving`
+  );
+  console.log(`  ${pc.cyan("email inbound status")} Show inbound email status`);
+  console.log(
+    `  ${pc.cyan("email inbound verify")} Verify inbound DNS records`
+  );
+  console.log(
+    `  ${pc.cyan("email inbound test")}   Send test email and verify receipt`
+  );
+  console.log(
+    `  ${pc.cyan("email inbound destroy")} Remove inbound email infrastructure\n`
+  );
   console.log("SMS Commands:");
   console.log(`  ${pc.cyan("sms init")}             Deploy SMS infrastructure`);
   console.log(
@@ -603,6 +623,57 @@ async function run() {
             process.exit(1);
           }
           await verifyDomain({ domain: flags.domain });
+          break;
+        }
+
+        case "inbound": {
+          // Handle inbound subcommands
+          const inboundSubCommand = args.sub[2];
+
+          switch (inboundSubCommand) {
+            case "init":
+              await inboundInit({
+                region: flags.region,
+                subdomain: flags.domain, // reuse --domain flag for subdomain
+                yes: flags.yes,
+                preview: flags.preview,
+              });
+              break;
+
+            case "destroy":
+              await inboundDestroy({
+                region: flags.region,
+                force: flags.force,
+              });
+              break;
+
+            case "status":
+              await inboundStatus({
+                region: flags.region,
+              });
+              break;
+
+            case "verify":
+              await inboundVerify({
+                region: flags.region,
+              });
+              break;
+
+            case "test":
+              await inboundTest({
+                region: flags.region,
+              });
+              break;
+
+            default:
+              clack.log.error(
+                `Unknown inbound command: ${inboundSubCommand || "(none)"}`
+              );
+              console.log(
+                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("destroy")}, ${pc.cyan("status")}, ${pc.cyan("verify")}, ${pc.cyan("test")}\n`
+              );
+              process.exit(1);
+          }
           break;
         }
 

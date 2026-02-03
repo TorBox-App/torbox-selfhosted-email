@@ -1,11 +1,15 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
+import { builtinModules } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import { build } from "esbuild";
+
+// Node.js built-in modules must be external when bundling ESM for Lambda
+const nodeBuiltins = builtinModules.flatMap((m) => [m, `node:${m}`]);
 
 /**
  * Get the package root directory (where package.json lives)
@@ -147,6 +151,7 @@ export async function getLambdaCode(functionName: string): Promise<string> {
   }
 
   // Bundle with esbuild
+  // Banner injects createRequire so CJS deps (like mailparser) can require() Node.js builtins in ESM
   await build({
     entryPoints: [sourcePath],
     bundle: true,
@@ -154,7 +159,10 @@ export async function getLambdaCode(functionName: string): Promise<string> {
     target: "node24",
     format: "esm",
     outfile: join(outdir, "index.mjs"),
-    external: ["@aws-sdk/*"], // AWS SDK v3 is included in Lambda runtime
+    external: ["@aws-sdk/*", ...nodeBuiltins],
+    banner: {
+      js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+    },
     minify: true,
     sourcemap: false,
   });

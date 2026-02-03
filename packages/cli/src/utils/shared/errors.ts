@@ -173,11 +173,6 @@ export function sanitizeErrorMessage(error: unknown): string {
     "arn:aws:[SERVICE]:[REGION]:[ACCOUNT_ID]:"
   );
 
-  // Truncate if too long
-  if (message.length > 500) {
-    message = `${message.substring(0, 500)}...`;
-  }
-
   return message;
 }
 
@@ -577,6 +572,30 @@ export const errors = {
       "S3_STATE_BUCKET_CREATION_FAILED",
       "Ensure your IAM user/role has s3:CreateBucket, s3:PutBucketEncryption, s3:PutBucketVersioning permissions.\n\nTo use local-only state instead:\n  export WRAPS_LOCAL_ONLY=1",
       "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  inboundRegionNotSupported: (region: string) =>
+    new WrapsError(
+      `SES email receiving is not supported in ${region}`,
+      "INBOUND_REGION_NOT_SUPPORTED",
+      "SES receipt rules are only available in:\n  us-east-1 (N. Virginia)\n  us-west-2 (Oregon)\n  eu-west-1 (Ireland)\n\nDeploy email infrastructure in one of these regions to enable inbound email.",
+      "https://docs.aws.amazon.com/ses/latest/dg/regions.html#region-receive-email"
+    ),
+
+  inboundRequiresOutbound: () =>
+    new WrapsError(
+      "Inbound email requires outbound email infrastructure",
+      "INBOUND_REQUIRES_OUTBOUND",
+      "Deploy email infrastructure first:\n  wraps email init\n\nThen enable inbound email:\n  wraps email inbound init",
+      "https://wraps.dev/docs/quickstart/email"
+    ),
+
+  receiptRuleSetConflict: (activeRuleSet: string) =>
+    new WrapsError(
+      `Another receipt rule set is active: ${activeRuleSet}`,
+      "RECEIPT_RULE_SET_CONFLICT",
+      `SES only allows one active receipt rule set at a time.\nCurrently active: "${activeRuleSet}"\n\nWraps will activate "wraps-inbound-rules" which will deactivate the current set.\nYou may need to merge your existing rules into the wraps rule set.`,
+      "https://docs.aws.amazon.com/ses/latest/dg/receiving-email-concepts.html"
     ),
 
   s3StateAccessDenied: () =>

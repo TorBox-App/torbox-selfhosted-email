@@ -9,9 +9,14 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { builtinModules } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+
+// Node.js built-in modules must be external when bundling ESM for Lambda
+// (mailparser and other deps use dynamic require() for stream, crypto, etc.)
+const nodeBuiltins = builtinModules.flatMap((m) => [m, `node:${m}`]);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageRoot = join(__dirname, "..");
@@ -38,6 +43,7 @@ async function buildLambda(name: string): Promise<void> {
   console.log(`  Output: ${outFile}`);
 
   // Bundle with esbuild
+  // Banner injects createRequire so CJS deps (like mailparser) can require() Node.js builtins in ESM
   await build({
     entryPoints: [sourcePath],
     bundle: true,
@@ -45,7 +51,10 @@ async function buildLambda(name: string): Promise<void> {
     target: "node20",
     format: "esm",
     outfile: outFile,
-    external: ["@aws-sdk/*"], // AWS SDK v3 is included in Lambda runtime
+    external: ["@aws-sdk/*", ...nodeBuiltins],
+    banner: {
+      js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+    },
     minify: true,
     sourcemap: false,
   });
@@ -64,6 +73,9 @@ async function main() {
 
   // Build SMS event processor
   await buildLambda("sms-event-processor");
+
+  // Build inbound email processor
+  await buildLambda("inbound-processor");
 
   console.log("\nAll Lambda functions built successfully!");
 }

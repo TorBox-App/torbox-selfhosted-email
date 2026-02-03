@@ -193,6 +193,23 @@ export async function createIAMRole(
     });
   }
 
+  // Allow S3 inbound bucket access if inbound enabled (for SDK inbox operations)
+  if (config.emailConfig.inbound?.enabled) {
+    statements.push({
+      Effect: "Allow",
+      Action: [
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:HeadObject",
+        "s3:DeleteObject",
+      ],
+      Resource: [
+        "arn:aws:s3:::wraps-inbound-*",
+        "arn:aws:s3:::wraps-inbound-*/*",
+      ],
+    });
+  }
+
   // Allow Mail Manager Archive access if email archiving enabled
   if (config.emailConfig.emailArchiving?.enabled) {
     statements.push({

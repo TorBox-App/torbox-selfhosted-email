@@ -1078,6 +1078,79 @@ export async function promptDNSProvider(
 }
 
 /**
+ * Prompt for inbound email subdomain
+ */
+export async function promptInboundSubdomain(domain: string): Promise<string> {
+  const subdomain = await clack.text({
+    message: `Subdomain for receiving emails (e.g., inbound → inbound.${domain}):`,
+    placeholder: "inbound",
+    defaultValue: "inbound",
+    validate: (value) => {
+      const v = value || "inbound";
+      if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(v)) {
+        return "Subdomain must contain only lowercase letters, numbers, and hyphens";
+      }
+      if (v.length > 63) {
+        return "Subdomain must be 63 characters or less";
+      }
+      return;
+    },
+  });
+
+  if (clack.isCancel(subdomain)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  return (subdomain as string) || "inbound";
+}
+
+/**
+ * Prompt for webhook URL for inbound email events
+ */
+export async function promptWebhookUrl(): Promise<string | undefined> {
+  const wantsWebhook = await clack.confirm({
+    message: "Send inbound email events to a webhook URL?",
+    initialValue: false,
+  });
+
+  if (clack.isCancel(wantsWebhook)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  if (!wantsWebhook) {
+    return;
+  }
+
+  const url = await clack.text({
+    message: "Webhook URL (must be HTTPS):",
+    placeholder: "https://your-app.com/api/inbound-email",
+    validate: (value) => {
+      if (!value) {
+        return "URL is required";
+      }
+      try {
+        const parsed = new URL(value);
+        if (parsed.protocol !== "https:") {
+          return "Webhook URL must use HTTPS";
+        }
+      } catch {
+        return "Invalid URL";
+      }
+      return;
+    },
+  });
+
+  if (clack.isCancel(url)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  return url as string;
+}
+
+/**
  * Prompt to continue with manual DNS setup when credentials are missing
  */
 export async function promptContinueManualDNS(): Promise<boolean> {
