@@ -76,6 +76,14 @@ function createYAxisFormatter(data: Array<{ count: number }>) {
   return (value: number) => `${Math.round(value)}`;
 }
 
+// Format a Date as YYYY-MM-DD in local time (avoids UTC offset issues)
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 // Extract just the email address from "Name <email>" format
 function extractEmail(toField: string): string {
   const match = toField.match(/<([^>]+)>/);
@@ -122,19 +130,19 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
       (e) => e.spamVerdict === "PASS" && e.virusVerdict === "PASS"
     ).length;
 
-    // Group by date for chart
+    // Group by local date for chart
     const dateMap = new Map<string, number>();
     for (const email of filteredEmails) {
-      const dateStr = new Date(email.receivedAt).toISOString().split("T")[0];
+      const dateStr = toLocalDateStr(new Date(email.receivedAt));
       dateMap.set(dateStr, (dateMap.get(dateStr) || 0) + 1);
     }
 
-    // Fill in missing dates
+    // Fill in missing dates using local time
     const dailyData: Array<{ date: string; count: number }> = [];
     for (let i = 0; i < days; i++) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split("T")[0];
+      const dateStr = toLocalDateStr(date);
       dailyData.push({
         date: dateStr,
         count: dateMap.get(dateStr) ?? 0,
@@ -208,9 +216,8 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         <div className="space-y-4">
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 gap-6 @[640px]/card:grid-cols-2">
-            {/* Received Over Time Chart */}
+          {/* Received Over Time + Stats */}
+          <div className="grid grid-cols-1 gap-6 @[540px]/card:grid-cols-[1fr_120px]">
             <div className="min-w-0">
               <div className="mb-2 font-medium text-muted-foreground text-sm">
                 Received Over Time
@@ -251,7 +258,7 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
                       dataKey="date"
                       minTickGap={32}
                       tickFormatter={(value) => {
-                        const date = new Date(value);
+                        const date = new Date(`${value}T00:00:00`);
                         return date.toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
@@ -271,13 +278,14 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
                       content={
                         <ChartTooltipContent
                           indicator="line"
-                          labelFormatter={(value) =>
-                            new Date(value).toLocaleDateString("en-US", {
+                          labelFormatter={(value) => {
+                            const date = new Date(`${value}T00:00:00`);
+                            return date.toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
                               year: "numeric",
-                            })
-                          }
+                            });
+                          }}
                         />
                       }
                     />
@@ -293,77 +301,71 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
               )}
             </div>
 
-            {/* Top Recipients Bar Chart */}
+            {/* Side Stats */}
+            <div className="flex flex-col gap-2">
+              <div className="rounded-lg border bg-card p-2.5 text-center">
+                <div className="font-semibold text-xl tabular-nums">
+                  {analytics.totalReceived.toLocaleString()}
+                </div>
+                <div className="text-muted-foreground text-xs">Received</div>
+              </div>
+              <div className="rounded-lg border bg-card p-2.5 text-center">
+                <div className="font-semibold text-xl tabular-nums">
+                  {analytics.cleanCount.toLocaleString()}
+                </div>
+                <div className="text-muted-foreground text-xs">Clean</div>
+              </div>
+              <div className="rounded-lg border bg-card p-2.5 text-center">
+                <div className="font-semibold text-xl tabular-nums">
+                  {analytics.spamCount}
+                </div>
+                <div className="text-muted-foreground text-xs">Spam</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Recipients Bar Chart */}
+          {analytics.topRecipients.length > 0 && (
             <div className="min-w-0">
               <div className="mb-2 font-medium text-muted-foreground text-sm">
                 Top Recipients
               </div>
-              {analytics.topRecipients.length === 0 ? (
-                <div className="flex h-[160px] items-center justify-center text-muted-foreground text-sm">
-                  No emails in this period
-                </div>
-              ) : (
-                <ChartContainer
-                  className="aspect-auto h-[160px] w-full"
-                  config={barChartConfig}
-                >
-                  <BarChart data={analytics.topRecipients} layout="vertical">
-                    <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                    <XAxis
-                      axisLine={false}
-                      tickFormatter={createYAxisFormatter(
-                        analytics.topRecipients
-                      )}
-                      tickLine={false}
-                      tickMargin={8}
-                      type="number"
-                    />
-                    <YAxis
-                      axisLine={false}
-                      dataKey="address"
-                      interval={0}
-                      tickLine={false}
-                      tickMargin={8}
-                      type="category"
-                      width={140}
-                    />
-                    <ChartTooltip
-                      content={<ChartTooltipContent indicator="dot" />}
-                    />
-                    <Bar
-                      dataKey="count"
-                      fill="var(--color-count)"
-                      radius={[0, 4, 4, 0]}
-                    />
-                  </BarChart>
-                </ChartContainer>
-              )}
+              <ChartContainer
+                className="aspect-auto h-[180px] w-full"
+                config={barChartConfig}
+              >
+                <BarChart data={analytics.topRecipients} layout="vertical">
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                  <XAxis
+                    axisLine={false}
+                    tickFormatter={createYAxisFormatter(
+                      analytics.topRecipients
+                    )}
+                    tickLine={false}
+                    tickMargin={8}
+                    type="number"
+                  />
+                  <YAxis
+                    axisLine={false}
+                    dataKey="address"
+                    interval={0}
+                    tickLine={false}
+                    tickMargin={8}
+                    type="category"
+                    width={180}
+                  />
+                  <ChartTooltip
+                    content={<ChartTooltipContent indicator="dot" />}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="var(--color-count)"
+                    radius={[0, 4, 4, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
             </div>
-          </div>
-
-          {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-4 rounded-lg border bg-muted/30 p-3">
-            <div className="text-center">
-              <div className="font-semibold text-lg tabular-nums">
-                {analytics.totalReceived.toLocaleString()}
-              </div>
-              <div className="text-muted-foreground text-xs">
-                Received ({timeRange === "30d" ? "30d" : "7d"})
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-lg tabular-nums">
-                {analytics.cleanCount.toLocaleString()}
-              </div>
-              <div className="text-muted-foreground text-xs">Clean</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-lg tabular-nums">
-                {analytics.spamCount}
-              </div>
-              <div className="text-muted-foreground text-xs">Spam</div>
-            </div>
-          </div>
+          )}
         </div>
       </CardContent>
     </Card>
