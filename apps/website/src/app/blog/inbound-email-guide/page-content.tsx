@@ -43,7 +43,11 @@ function detectLanguage(code: string, title: string): string {
   if (lowerTitle.includes("dns") || lowerTitle.includes("record")) {
     return "text";
   }
-  if (code.includes("//") || code.includes("const ") || code.includes("export ")) {
+  if (
+    code.includes("//") ||
+    code.includes("const ") ||
+    code.includes("export ")
+  ) {
     return "typescript";
   }
   return "bash";
@@ -52,7 +56,9 @@ function detectLanguage(code: string, title: string): string {
 export function CodeBlock({ code, title = "code", lang }: CodeBlockProps) {
   const detectedLang = lang ?? detectLanguage(code, title);
   const codes = { [title]: code };
-  return <CodeTabs className="my-4" codes={codes} copyButton lang={detectedLang} />;
+  return (
+    <CodeTabs className="my-4" codes={codes} copyButton lang={detectedLang} />
+  );
 }
 
 // Architecture diagram with animation

@@ -3,7 +3,7 @@ import { config } from "dotenv";
 import { defineConfig } from "vitest/config";
 
 // Load env from web app's .env.local
-config({ path: path.resolve(__dirname, "../web/.env.local") });
+config({ path: path.resolve(import.meta.dirname, "../web/.env.local") });
 
 export default defineConfig({
   test: {
@@ -26,8 +26,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@wraps/db": path.resolve(__dirname, "../../packages/db/src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
+      "@wraps/db": path.resolve(import.meta.dirname, "../../packages/db/src"),
     },
   },
 });

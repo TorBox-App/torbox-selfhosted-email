@@ -30,9 +30,12 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
-        "@wraps/db": path.resolve(__dirname, "../../packages/db/src"),
-        "@wraps/auth": path.resolve(__dirname, "../../packages/auth/src"),
+        "@": path.resolve(import.meta.dirname, "./src"),
+        "@wraps/db": path.resolve(import.meta.dirname, "../../packages/db/src"),
+        "@wraps/auth": path.resolve(
+          import.meta.dirname,
+          "../../packages/auth/src"
+        ),
       },
     },
   };

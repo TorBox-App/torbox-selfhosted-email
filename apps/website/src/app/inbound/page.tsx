@@ -26,9 +26,9 @@ import { UseCasesCarousel } from "./components/use-cases-carousel";
 import {
   architectureNodesData,
   codeExamples,
+  type IconName,
   pipelineSteps,
   useCases,
-  type IconName,
 } from "./data";
 
 // Icon map for server-side rendering of architecture section
@@ -326,7 +326,9 @@ export default function InboundPage() {
                 <div className="flex items-center justify-between border-b bg-cyan-500/5 px-6 py-4">
                   <div className="flex items-center gap-2">
                     <Lock className="size-4 text-cyan-500" />
-                    <span className="font-medium text-sm">Your AWS Account</span>
+                    <span className="font-medium text-sm">
+                      Your AWS Account
+                    </span>
                   </div>
                   <span className="rounded bg-cyan-500/10 px-2 py-1 text-cyan-600 text-xs dark:text-cyan-400">
                     Full Ownership

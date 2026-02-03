@@ -488,7 +488,10 @@ export function ProductTabs() {
       // First 25% = first tab (dwell time)
       // Middle 50% = all 4 tabs transition
       // Last 25% = last tab (dwell time before leaving)
-      const adjustedProgress = Math.max(0, Math.min(1, (progress - 0.25) / 0.5));
+      const adjustedProgress = Math.max(
+        0,
+        Math.min(1, (progress - 0.25) / 0.5)
+      );
       const newIndex = Math.min(
         tabs.length - 1,
         Math.floor(adjustedProgress * tabs.length)
@@ -519,11 +522,7 @@ export function ProductTabs() {
   const activeTab = tabs[activeIndex].key;
 
   return (
-    <div
-      ref={sectionRef}
-      className="relative"
-      style={{ minHeight: "300vh" }}
-    >
+    <div className="relative" ref={sectionRef} style={{ minHeight: "300vh" }}>
       <div className="sticky top-0 min-h-screen flex flex-col justify-center py-8">
         <GlowingTabBar
           activeIndex={activeIndex}
@@ -539,7 +538,11 @@ export function ProductTabs() {
         </div>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
+          <Button
+            asChild
+            className="bg-orange-500 hover:bg-orange-600"
+            size="lg"
+          >
             <a
               href="https://app.wraps.dev/auth?mode=signup"
               onClick={() =>

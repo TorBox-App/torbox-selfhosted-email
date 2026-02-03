@@ -4,7 +4,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig(({ mode }) => {
   // Load .env.test file from apps/web (shared test environment)
-  const env = loadEnv("test", path.resolve(__dirname, "../../apps/web"), "");
+  const env = loadEnv(
+    "test",
+    path.resolve(import.meta.dirname, "../../apps/web"),
+    ""
+  );
 
   return {
     test: {
@@ -15,8 +19,8 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        "@wraps/db": path.resolve(__dirname, "../db/src"),
-        "@wraps/email": path.resolve(__dirname, "../email/src"),
+        "@wraps/db": path.resolve(import.meta.dirname, "../db/src"),
+        "@wraps/email": path.resolve(import.meta.dirname, "../email/src"),
       },
     },
   };

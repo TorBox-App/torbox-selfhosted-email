@@ -183,7 +183,9 @@ export function PricingComparisonSection() {
                   <span className="font-bold text-5xl md:text-6xl text-foreground">
                     ${activeCase.wraps.price}
                   </span>
-                  <span className="text-muted-foreground text-xl ml-1">/mo</span>
+                  <span className="text-muted-foreground text-xl ml-1">
+                    /mo
+                  </span>
                 </div>
 
                 {/* Savings badge */}

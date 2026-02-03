@@ -52,8 +52,8 @@ const releases: Release[] = [
         <Code>test</Code>, and <Code>destroy</Code> commands
       </>,
       <>
-        SDK: <Code>inbox.list()</Code>, <Code>get()</Code>,{" "}
-        <Code>reply()</Code>, <Code>forward()</Code> methods
+        SDK: <Code>inbox.list()</Code>, <Code>get()</Code>, <Code>reply()</Code>
+        , <Code>forward()</Code> methods
       </>,
       <>
         EventBridge <Code>email.received</Code> events for real-time webhooks
