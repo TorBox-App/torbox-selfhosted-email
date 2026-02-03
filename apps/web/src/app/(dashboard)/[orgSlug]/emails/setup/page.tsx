@@ -2,6 +2,7 @@ import { auth } from "@wraps/auth";
 import { ArrowRight, Mail, RefreshCw, Terminal } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { CliCommand } from "@/components/cli-command";
 import {
   Empty,
   EmptyContent,
@@ -59,10 +60,7 @@ export default async function EmailSetupPage({ params }: EmailSetupPageProps) {
                 <Terminal className="size-4" />
                 Deploy Email with CLI
               </h4>
-              <div className="rounded-md bg-background p-3 font-mono text-sm">
-                <code className="text-muted-foreground">$ </code>
-                <code>wraps email init</code>
-              </div>
+              <CliCommand command="wraps email init" />
               <p className="mt-2 text-muted-foreground text-xs">
                 This will deploy email infrastructure (SES, DynamoDB,
                 EventBridge) to your AWS account.
@@ -76,10 +74,7 @@ export default async function EmailSetupPage({ params }: EmailSetupPageProps) {
                 <RefreshCw className="size-4" />
                 Already deployed? Update your console role
               </h4>
-              <div className="rounded-md bg-background p-3 font-mono text-sm">
-                <code className="text-muted-foreground">$ </code>
-                <code>wraps dashboard update-role</code>
-              </div>
+              <CliCommand command="wraps platform update-role" />
               <p className="mt-2 text-muted-foreground text-xs">
                 If you&apos;ve already deployed email infrastructure, run this
                 command to grant the dashboard access to your email resources.

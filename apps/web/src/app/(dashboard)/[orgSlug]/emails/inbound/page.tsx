@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { ArrowRight, Inbox, RefreshCw, Terminal } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { CliCommand } from "@/components/cli-command";
 import {
   Empty,
   EmptyContent,
@@ -137,10 +138,7 @@ export default async function InboundEmailsPage({ params }: InboundPageProps) {
                   <Terminal className="size-4" />
                   Deploy Inbound Email with CLI
                 </h4>
-                <div className="rounded-md bg-background p-3 font-mono text-sm">
-                  <code className="text-muted-foreground">$ </code>
-                  <code>wraps email inbound init</code>
-                </div>
+                <CliCommand command="wraps email inbound init" />
                 <p className="mt-2 text-muted-foreground text-xs">
                   This will deploy inbound email infrastructure (SES Receipt
                   Rules, S3, Lambda) to your AWS account.
@@ -156,10 +154,7 @@ export default async function InboundEmailsPage({ params }: InboundPageProps) {
                   <RefreshCw className="size-4" />
                   Already deployed? Scan your features
                 </h4>
-                <div className="rounded-md bg-background p-3 font-mono text-sm">
-                  <code className="text-muted-foreground">$ </code>
-                  <code>wraps dashboard update-role</code>
-                </div>
+                <CliCommand command="wraps platform update-role" />
                 <p className="mt-2 text-muted-foreground text-xs">
                   If you&apos;ve already deployed inbound email, run this
                   command to grant the dashboard access, then scan features from

@@ -807,8 +807,8 @@ wraps init
 - [x] `wraps destroy` - Remove all infrastructure (all services)
 - [x] `wraps completion` - Shell completion
 
-### Dashboard Commands ✅
-- [x] `wraps dashboard update-role` - Update platform IAM permissions
+### Platform Commands ✅
+- [x] `wraps platform update-role` - Update platform IAM permissions
 
 ### Email Commands ✅
 - [x] `wraps email init` - Deploy new infrastructure
