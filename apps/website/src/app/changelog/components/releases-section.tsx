@@ -5,6 +5,7 @@ import {
   Cloud,
   Gift,
   HardDrive,
+  Inbox,
   Layers,
   LayoutTemplate,
   Lightbulb,
@@ -35,6 +36,31 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "CLI v2.7.0 + SDK v0.6.0",
+    date: "February 2026",
+    icon: Inbox,
+    iconColor:
+      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    title: "Inbound Email",
+    items: [
+      "Receive emails in your AWS account with SES receipt rules",
+      "Parse incoming emails with headers, body, and attachments",
+      "Spam and virus scanning via SES verdicts",
+      <>
+        CLI: <Code>wraps email inbound init</Code>, <Code>status</Code>,{" "}
+        <Code>test</Code>, and <Code>destroy</Code> commands
+      </>,
+      <>
+        SDK: <Code>inbox.list()</Code>, <Code>get()</Code>,{" "}
+        <Code>reply()</Code>, <Code>forward()</Code> methods
+      </>,
+      <>
+        EventBridge <Code>email.received</Code> events for real-time webhooks
+      </>,
+      "Dashboard: Receiving tab with inbound email viewer",
+    ],
+  },
   {
     version: "CLI v2.6.1",
     date: "February 2026",
