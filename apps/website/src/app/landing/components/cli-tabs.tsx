@@ -7,6 +7,7 @@ import {
   Code2,
   Globe,
   History,
+  Inbox,
   Key,
   LayoutDashboard,
   ListFilter,
@@ -38,7 +39,7 @@ import { assetUrl, cn } from "@/lib/utils";
 import { InteractiveArchitectureDiagram } from "./architecture-section";
 import { IconBox } from "./section-card";
 
-type TabKey = "console" | "deploy" | "send";
+type TabKey = "console" | "deploy" | "receive" | "send";
 
 const consoleFeatures = [
   {
@@ -97,6 +98,31 @@ const result = await wraps.emails.send({
   to: 'user@example.com',
   subject: 'Welcome to our app!',
   html: '<h1>Welcome!</h1>',
+});`;
+
+const inboundCliExample = `# Deploy inbound infrastructure
+npx @wraps.dev/cli email inbound init
+
+# Check status and MX records
+npx @wraps.dev/cli email inbound status`;
+
+const inboundSdkExample = `import { WrapsEmail } from '@wraps.dev/email';
+
+const email = new WrapsEmail({
+  inboundBucket: 'your-bucket-name',
+});
+
+// List inbound emails
+const { emails } = await email.inbox.list();
+
+// Get full email with attachments
+const inbound = await email.inbox.get('email-abc123');
+console.log(inbound.from, inbound.subject);
+
+// Reply with threading headers
+await email.inbox.reply('email-abc123', {
+  from: 'support@yourdomain.com',
+  html: '<p>Thanks for reaching out!</p>',
 });`;
 
 function DeployContent() {
@@ -255,6 +281,106 @@ function SendContent() {
   );
 }
 
+function ReceiveContent() {
+  return (
+    <div className="space-y-8">
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="flex items-center gap-3">
+          <IconBox highlighted icon={Inbox} />
+          <div>
+            <h3 className="font-semibold text-cyan-500">Receive Emails</h3>
+            <p className="text-muted-foreground text-sm">
+              Deploy inbound infrastructure to your AWS
+            </p>
+          </div>
+        </div>
+
+        <CodeBlock
+          className="h-auto"
+          data={[
+            { language: "bash", filename: "terminal", code: inboundCliExample },
+          ]}
+          defaultValue="bash"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "receive-email.ts",
+              code: inboundSdkExample,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+
+        <div className="grid gap-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-4 sm:grid-cols-2">
+          {[
+            "SES → S3 → Lambda → EventBridge",
+            "Parse headers & attachments",
+            "Spam & virus detection",
+            "Reply with threading",
+          ].map((item) => (
+            <div className="flex items-center gap-2" key={item}>
+              <Check className="size-4 text-cyan-500" />
+              <span className="text-sm">{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ConsoleContent() {
   return (
     <div className="space-y-8">
@@ -386,6 +512,7 @@ export function CliTabs() {
   const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
     { key: "deploy", label: "Deploy", icon: Terminal },
     { key: "send", label: "Send", icon: Send },
+    { key: "receive", label: "Receive", icon: Inbox },
     { key: "console", label: "Console", icon: LayoutDashboard },
   ];
 
@@ -401,6 +528,7 @@ export function CliTabs() {
         {activeTab === "console" && <ConsoleContent />}
         {activeTab === "deploy" && <DeployContent />}
         {activeTab === "send" && <SendContent />}
+        {activeTab === "receive" && <ReceiveContent />}
       </div>
     </>
   );

@@ -68,6 +68,12 @@ const faqItems: FaqItem[] = [
     answer:
       "Yes! Use 'npx @wraps.dev/cli email connect' to scan your existing SES resources and add Wraps features non-destructively. We never modify existing resources—all our infrastructure uses the 'wraps-email-' prefix. You can also use 'npx @wraps.dev/cli email init' for a completely fresh deployment.",
   },
+  {
+    value: "item-7",
+    question: "Can I receive emails too?",
+    answer:
+      "Yes! Wraps supports inbound email receiving. Run 'npx @wraps.dev/cli email inbound init' to deploy the infrastructure, then use the SDK to list, read, reply, and forward emails. EventBridge triggers let you build webhooks for real-time processing.",
+  },
 ];
 
 export function FaqAccordion() {

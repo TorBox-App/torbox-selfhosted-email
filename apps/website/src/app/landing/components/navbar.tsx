@@ -48,6 +48,11 @@ const featuresItems = [
     description: "Free tools to deploy and send emails",
   },
   {
+    name: "Inbound Email",
+    href: "/inbound",
+    description: "Receive and process emails in your AWS",
+  },
+  {
     name: "Platform",
     href: "/platform",
     description: "Wraps Platform for templates & broadcasts",

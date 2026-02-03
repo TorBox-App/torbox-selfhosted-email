@@ -88,6 +88,14 @@ const faqSchema = {
         text: "Yes! Use 'npx @wraps.dev/cli email connect' to scan your existing SES resources and add Wraps features non-destructively. We never modify existing resources—all our infrastructure uses the 'wraps-email-' prefix.",
       },
     },
+    {
+      "@type": "Question",
+      name: "Can I receive emails too?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes! Wraps supports inbound email receiving. Run 'npx @wraps.dev/cli email inbound init' to deploy the infrastructure, then use the SDK to list, read, reply, and forward emails. EventBridge triggers let you build webhooks for real-time processing.",
+      },
+    },
   ],
 };
 

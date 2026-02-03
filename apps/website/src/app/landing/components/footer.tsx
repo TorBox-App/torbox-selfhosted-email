@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 const footerLinks = {
   product: [
     { name: "CLI & SDK", href: "/cli" },
+    { name: "Inbound Email", href: "/inbound" },
     { name: "Platform", href: "/platform" },
     { name: "Pricing", href: "/#pricing" },
   ],

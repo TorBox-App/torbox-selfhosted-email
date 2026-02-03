@@ -26,6 +26,8 @@ const services = [
       "DynamoDB for email history",
       "Lambda for event processing",
       "Bounce & complaint handling",
+      "Inbound email receiving",
+      "Reply & forward with threading",
     ],
     status: "available",
   },
