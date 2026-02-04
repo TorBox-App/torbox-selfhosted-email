@@ -16,7 +16,7 @@ import {
   Terminal,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -461,13 +461,11 @@ const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [
 
 type GlowingTabProps = {
   activeIndex: number;
-  scrollProgress: number;
   onTabClick: (index: number) => void;
 };
 
 function GlowingTabBar({
   activeIndex,
-  scrollProgress,
   onTabClick,
 }: GlowingTabProps) {
   return (
@@ -513,118 +511,27 @@ function GlowingTabBar({
           })}
         </div>
       </div>
-      {/* Progress bar */}
-      <div className="w-full max-w-xs h-1 bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full bg-orange-500 transition-all duration-150 ease-out rounded-full"
-          style={{ width: `${scrollProgress * 100}%` }}
-        />
-      </div>
     </div>
   );
 }
 
 export function CliTabs() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const sectionRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    const handleScroll = () => {
-      const rect = section.getBoundingClientRect();
-      const sectionHeight = section.offsetHeight;
-      const viewportHeight = window.innerHeight;
-
-      // Calculate progress through the section
-      const scrollStart = viewportHeight;
-      const scrollEnd = -sectionHeight;
-      const scrollRange = scrollStart - scrollEnd;
-
-      const currentPosition = rect.top;
-      const progress = Math.max(
-        0,
-        Math.min(1, (scrollStart - currentPosition) / scrollRange)
-      );
-
-      setScrollProgress(progress);
-
-      // Map progress to active tab with generous buffer at start/end
-      // First 25% = first tab (dwell time)
-      // Middle 50% = all 4 tabs transition
-      // Last 25% = last tab (dwell time before leaving)
-      const adjustedProgress = Math.max(
-        0,
-        Math.min(1, (progress - 0.25) / 0.5)
-      );
-      const newIndex = Math.min(
-        tabs.length - 1,
-        Math.floor(adjustedProgress * tabs.length)
-      );
-      setActiveIndex(newIndex);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const handleTabClick = (index: number) => {
-    const section = sectionRef.current;
-    if (!section) return;
-    const sectionTop = section.offsetTop;
-    const sectionHeight = section.offsetHeight;
-    // Calculate target scroll position for this tab
-    // Account for 25% start buffer, 50% content zone
-    const contentStart = sectionHeight * 0.25;
-    const contentZone = sectionHeight * 0.5;
-    const targetScroll =
-      sectionTop + contentStart + (index / tabs.length) * contentZone + 50;
-    window.scrollTo({ top: targetScroll, behavior: "smooth" });
-  };
 
   const activeTab = tabs[activeIndex].key;
 
   return (
-    <div className="relative" ref={sectionRef} style={{ minHeight: "300vh" }}>
-      <div className="sticky top-0 min-h-screen flex flex-col justify-center py-8">
-        <GlowingTabBar
-          activeIndex={activeIndex}
-          onTabClick={handleTabClick}
-          scrollProgress={scrollProgress}
-        />
+    <div>
+      <GlowingTabBar
+        activeIndex={activeIndex}
+        onTabClick={setActiveIndex}
+      />
 
-        <div className="min-h-[500px]">
-          {activeTab === "console" && <ConsoleContent />}
-          {activeTab === "deploy" && <DeployContent />}
-          {activeTab === "send" && <SendContent />}
-          {activeTab === "receive" && <ReceiveContent />}
-        </div>
-
-        {/* Scroll hint */}
-        {scrollProgress < 0.05 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 animate-bounce">
-            <p className="text-muted-foreground/50 text-xs flex flex-col items-center gap-1">
-              <span>Scroll to explore</span>
-              <svg
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                />
-              </svg>
-            </p>
-          </div>
-        )}
+      <div className="min-h-[500px]">
+        {activeTab === "console" && <ConsoleContent />}
+        {activeTab === "deploy" && <DeployContent />}
+        {activeTab === "send" && <SendContent />}
+        {activeTab === "receive" && <ReceiveContent />}
       </div>
     </div>
   );
