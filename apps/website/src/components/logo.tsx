@@ -18,12 +18,12 @@ export function Logo({ size = 40, className, ...props }: LogoProps) {
       <img
         alt="Wraps Logo"
         className="h-full w-full object-contain dark:hidden"
-        src="/wraps-light.png"
+        src="/wraps-light-logo.png"
       />
       <img
         alt="Wraps Logo"
         className="hidden h-full w-full object-contain dark:block"
-        src="/wraps-dark.png"
+        src="/wraps-dark-logo.png"
       />
     </div>
   );

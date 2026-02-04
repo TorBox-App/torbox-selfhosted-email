@@ -135,7 +135,7 @@ export function LandingNavbar() {
         {/* Logo */}
         <div className="flex items-center">
           <a className="flex cursor-pointer items-center" href="/">
-            <Logo size={32} />
+            <Logo size={42} />
           </a>
         </div>
 
