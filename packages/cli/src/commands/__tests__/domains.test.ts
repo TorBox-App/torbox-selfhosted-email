@@ -3,6 +3,7 @@ import {
   DeleteEmailIdentityCommand,
   GetEmailIdentityCommand,
   ListEmailIdentitiesCommand,
+  PutEmailIdentityMailFromAttributesCommand,
   SESv2Client,
 } from "@aws-sdk/client-sesv2";
 import { mockClient } from "aws-sdk-client-mock";
@@ -28,6 +29,68 @@ vi.mock("@clack/prompts");
 // Mock utils
 vi.mock("../../utils/shared/aws", () => ({
   getAWSRegion: vi.fn().mockResolvedValue("us-east-1"),
+  validateAWSCredentials: vi.fn().mockResolvedValue({
+    accountId: "123456789012",
+    arn: "arn:aws:iam::123456789012:user/test",
+    userId: "AIDATEST",
+  }),
+}));
+
+vi.mock("../../utils/shared/metadata", () => ({
+  findConnectionsWithService: vi.fn().mockResolvedValue([
+    {
+      accountId: "123456789012",
+      region: "us-east-1",
+      services: {
+        email: {
+          config: { domain: "primary.com" },
+          dnsProvider: undefined,
+        },
+      },
+    },
+  ]),
+  loadConnectionMetadata: vi.fn().mockResolvedValue({
+    version: "1.0.0",
+    accountId: "123456789012",
+    region: "us-east-1",
+    provider: "vercel",
+    timestamp: new Date().toISOString(),
+    services: {
+      email: {
+        config: { domain: "primary.com" },
+        deployedAt: new Date().toISOString(),
+      },
+    },
+  }),
+  saveConnectionMetadata: vi.fn().mockResolvedValue(undefined),
+  addDomainToMetadata: vi.fn(),
+  removeDomainFromMetadata: vi.fn(),
+  getDomainFromMetadata: vi.fn().mockReturnValue(null),
+  getAllTrackedDomains: vi.fn().mockReturnValue([]),
+}));
+
+vi.mock("../../utils/dns/index", () => ({
+  detectAvailableDNSProviders: vi
+    .fn()
+    .mockResolvedValue([{ provider: "manual", detected: true }]),
+  getDNSCredentials: vi.fn().mockResolvedValue({
+    valid: true,
+    credentials: { provider: "manual" },
+  }),
+  createDNSRecordsForProvider: vi.fn().mockResolvedValue({
+    success: true,
+    recordsCreated: 0,
+  }),
+  buildEmailDNSRecords: vi.fn().mockReturnValue([]),
+  formatDNSRecordsForDisplay: vi.fn().mockReturnValue([]),
+  getDNSProviderDisplayName: vi.fn().mockReturnValue("Manual"),
+}));
+
+vi.mock("../../utils/shared/prompts", () => ({
+  promptSubdomainSuggestions: vi.fn().mockResolvedValue("sub.primary.com"),
+  promptDomainPurpose: vi.fn().mockResolvedValue("transactional"),
+  promptMailFromSubdomain: vi.fn().mockResolvedValue("mail.test.com"),
+  promptDNSProvider: vi.fn().mockResolvedValue("manual"),
 }));
 
 describe("Domain Management Commands", () => {
@@ -63,13 +126,12 @@ describe("Domain Management Commands", () => {
 
   describe("addDomain", () => {
     it("should add a new domain successfully", async () => {
-      // Mock domain doesn't exist (first call)
+      // Mock domain doesn't exist (first call), then return DKIM tokens (second call)
       const notFoundError = new Error("Not found");
       notFoundError.name = "NotFoundException";
       sesClientMock
         .on(GetEmailIdentityCommand)
         .rejectsOnce(notFoundError)
-        // Mock getting DKIM tokens after creation (second call)
         .resolvesOnce({
           DkimAttributes: {
             Tokens: ["token1", "token2", "token3"],
@@ -80,15 +142,19 @@ describe("Domain Management Commands", () => {
       // Mock successful creation
       sesClientMock.on(CreateEmailIdentityCommand).resolves({});
 
-      await addDomain({ domain: "test.com" });
+      const clack = await import("@clack/prompts");
+      vi.mocked(clack.confirm).mockResolvedValue(false as never);
 
-      // Verify CreateEmailIdentityCommand was called
+      await addDomain({ domain: "test.com", yes: true });
+
+      // Verify CreateEmailIdentityCommand was called with config set
       const createCalls = sesClientMock.commandCalls(
         CreateEmailIdentityCommand
       );
       expect(createCalls.length).toBe(1);
       expect(createCalls[0].args[0].input).toMatchObject({
         EmailIdentity: "test.com",
+        ConfigurationSetName: "wraps-email-tracking",
         DkimSigningAttributes: {
           NextSigningKeyLength: "RSA_2048_BIT",
         },
@@ -105,7 +171,7 @@ describe("Domain Management Commands", () => {
 
       const clack = await import("@clack/prompts");
 
-      await addDomain({ domain: "existing.com" });
+      await addDomain({ domain: "existing.com", yes: true });
 
       expect(clack.log.warn).toHaveBeenCalledWith(
         "Domain existing.com already exists in SES"
@@ -113,13 +179,17 @@ describe("Domain Management Commands", () => {
     });
 
     it("should handle AWS errors", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock.on(GetEmailIdentityCommand).rejectsOnce(notFoundError);
+
       sesClientMock
-        .on(GetEmailIdentityCommand)
+        .on(CreateEmailIdentityCommand)
         .rejects(new Error("AWS Service Error"));
 
-      await expect(addDomain({ domain: "test.com" })).rejects.toThrow(
-        "AWS Service Error"
-      );
+      await expect(
+        addDomain({ domain: "test.com", yes: true })
+      ).rejects.toThrow("AWS Service Error");
     });
   });
 
@@ -293,6 +363,7 @@ describe("Domain Management Commands", () => {
       vi.mocked(clack.confirm).mockResolvedValue(true as never);
       vi.mocked(clack.isCancel).mockReturnValue(false);
 
+      // getDomainFromMetadata returns null (not primary), so no guard
       await removeDomain({ domain: "test.com" });
 
       const deleteCalls = sesClientMock.commandCalls(
@@ -302,7 +373,7 @@ describe("Domain Management Commands", () => {
       expect(deleteCalls[0].args[0].input.EmailIdentity).toBe("test.com");
     });
 
-    it("should skip confirmation with --yes flag", async () => {
+    it("should skip confirmation with --force flag", async () => {
       sesClientMock.on(GetEmailIdentityCommand).resolves({
         VerifiedForSendingStatus: true,
       });
@@ -313,7 +384,7 @@ describe("Domain Management Commands", () => {
 
       await removeDomain({ domain: "test.com", force: true });
 
-      // confirm should not be called when yes=true
+      // confirm should not be called when force=true
       expect(clack.confirm).not.toHaveBeenCalled();
 
       const deleteCalls = sesClientMock.commandCalls(
@@ -361,6 +432,150 @@ describe("Domain Management Commands", () => {
       await removeDomain({ domain: "nonexistent.com", force: true });
 
       expect(mockExit).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("addDomain - metadata and MAIL FROM", () => {
+    it("should save domain to metadata after creation", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock
+        .on(GetEmailIdentityCommand)
+        .rejectsOnce(notFoundError)
+        .resolvesOnce({
+          DkimAttributes: {
+            Tokens: ["token1", "token2", "token3"],
+            Status: "PENDING",
+          },
+        });
+
+      sesClientMock.on(CreateEmailIdentityCommand).resolves({});
+      sesClientMock.on(PutEmailIdentityMailFromAttributesCommand).resolves({});
+
+      const clack = await import("@clack/prompts");
+      vi.mocked(clack.confirm).mockResolvedValue(false as never);
+
+      const metadata = await import("../../utils/shared/metadata");
+
+      await addDomain({ domain: "test.com", yes: true });
+
+      // Verify addDomainToMetadata was called with correct entry
+      expect(metadata.addDomainToMetadata).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          domain: "test.com",
+          mailFromDomain: "mail.test.com",
+          addedAt: expect.any(String),
+        })
+      );
+
+      // Verify saveConnectionMetadata was called
+      expect(metadata.saveConnectionMetadata).toHaveBeenCalled();
+    });
+
+    it("should set up MAIL FROM in non-interactive mode", async () => {
+      const notFoundError = new Error("Not found");
+      notFoundError.name = "NotFoundException";
+      sesClientMock
+        .on(GetEmailIdentityCommand)
+        .rejectsOnce(notFoundError)
+        .resolvesOnce({
+          DkimAttributes: {
+            Tokens: ["token1"],
+            Status: "PENDING",
+          },
+        });
+
+      sesClientMock.on(CreateEmailIdentityCommand).resolves({});
+      sesClientMock.on(PutEmailIdentityMailFromAttributesCommand).resolves({});
+
+      const clack = await import("@clack/prompts");
+      vi.mocked(clack.confirm).mockResolvedValue(false as never);
+
+      await addDomain({ domain: "test.com", yes: true });
+
+      // Verify PutEmailIdentityMailFromAttributesCommand was called
+      const mailFromCalls = sesClientMock.commandCalls(
+        PutEmailIdentityMailFromAttributesCommand
+      );
+      expect(mailFromCalls.length).toBe(1);
+      expect(mailFromCalls[0].args[0].input).toMatchObject({
+        EmailIdentity: "test.com",
+        MailFromDomain: "mail.test.com",
+        BehaviorOnMxFailure: "USE_DEFAULT_VALUE",
+      });
+    });
+
+    it("should exit when no email infrastructure exists", async () => {
+      const metadata = await import("../../utils/shared/metadata");
+      vi.mocked(metadata.findConnectionsWithService).mockResolvedValueOnce([]);
+
+      await addDomain({ domain: "test.com", yes: true });
+
+      expect(mockExit).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe("removeDomain - primary domain guard", () => {
+    it("should block removing primary domain without --force", async () => {
+      sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
+      });
+
+      const metadata = await import("../../utils/shared/metadata");
+      vi.mocked(metadata.getDomainFromMetadata).mockReturnValueOnce({
+        isPrimary: true,
+      });
+
+      await removeDomain({ domain: "primary.com" });
+
+      expect(mockExit).toHaveBeenCalledWith(1);
+
+      // Should NOT have called DeleteEmailIdentityCommand
+      const deleteCalls = sesClientMock.commandCalls(
+        DeleteEmailIdentityCommand
+      );
+      expect(deleteCalls.length).toBe(0);
+    });
+
+    it("should allow removing primary domain with --force", async () => {
+      sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
+      });
+      sesClientMock.on(DeleteEmailIdentityCommand).resolves({});
+
+      const metadata = await import("../../utils/shared/metadata");
+      vi.mocked(metadata.getDomainFromMetadata).mockReturnValueOnce({
+        isPrimary: true,
+      });
+
+      await removeDomain({ domain: "primary.com", force: true });
+
+      const deleteCalls = sesClientMock.commandCalls(
+        DeleteEmailIdentityCommand
+      );
+      expect(deleteCalls.length).toBe(1);
+    });
+
+    it("should call removeDomainFromMetadata and save after removal", async () => {
+      sesClientMock.on(GetEmailIdentityCommand).resolves({
+        VerifiedForSendingStatus: true,
+      });
+      sesClientMock.on(DeleteEmailIdentityCommand).resolves({});
+
+      const clack = await import("@clack/prompts");
+      vi.mocked(clack.confirm).mockResolvedValue(true as never);
+      vi.mocked(clack.isCancel).mockReturnValue(false);
+
+      const metadata = await import("../../utils/shared/metadata");
+
+      await removeDomain({ domain: "sub.primary.com" });
+
+      expect(metadata.removeDomainFromMetadata).toHaveBeenCalledWith(
+        expect.any(Object),
+        "sub.primary.com"
+      );
+      expect(metadata.saveConnectionMetadata).toHaveBeenCalled();
     });
   });
 

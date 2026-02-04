@@ -13,7 +13,11 @@ import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
-import { findConnectionsWithService } from "../../utils/shared/metadata.js";
+import {
+  findConnectionsWithService,
+  getAllTrackedDomains,
+  loadConnectionMetadata,
+} from "../../utils/shared/metadata.js";
 import {
   DeploymentProgress,
   displayStatus,
@@ -102,18 +106,27 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
   );
   const sesv2Client = new SESv2Client({ region });
 
+  // 4b. Load metadata for managed/purpose labels
+  const metadata = await loadConnectionMetadata(identity.accountId, region);
+  const trackedDomains = metadata ? getAllTrackedDomains(metadata) : [];
+  const trackedMap = new Map(trackedDomains.map((d) => [d.domain, d]));
+
   const domainsWithTokens = await Promise.all(
     domains.map(async (d) => {
+      const tracked = trackedMap.get(d.domain);
       try {
-        const identity = await sesv2Client.send(
+        const sesIdentity = await sesv2Client.send(
           new GetEmailIdentityCommand({ EmailIdentity: d.domain })
         );
         return {
           domain: d.domain,
           status: d.verified ? ("verified" as const) : ("pending" as const),
-          dkimTokens: identity.DkimAttributes?.Tokens || [],
-          mailFromDomain: identity.MailFromAttributes?.MailFromDomain,
-          mailFromStatus: identity.MailFromAttributes?.MailFromDomainStatus,
+          dkimTokens: sesIdentity.DkimAttributes?.Tokens || [],
+          mailFromDomain: sesIdentity.MailFromAttributes?.MailFromDomain,
+          mailFromStatus: sesIdentity.MailFromAttributes?.MailFromDomainStatus,
+          managed: tracked?.managed,
+          isPrimary: tracked?.isPrimary,
+          purpose: tracked?.purpose,
         };
       } catch (_error) {
         return {
@@ -122,6 +135,9 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
           dkimTokens: undefined,
           mailFromDomain: undefined,
           mailFromStatus: undefined,
+          managed: tracked?.managed,
+          isPrimary: tracked?.isPrimary,
+          purpose: tracked?.purpose,
         };
       }
     })

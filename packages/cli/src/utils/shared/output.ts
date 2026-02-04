@@ -282,6 +282,12 @@ export type StatusOutputs = {
     dkimTokens?: string[];
     mailFromDomain?: string;
     mailFromStatus?: string;
+    /** Whether this domain is tracked in wraps metadata */
+    managed?: boolean;
+    /** Whether this is the primary Pulumi-managed domain */
+    isPrimary?: boolean;
+    /** Purpose label from metadata (transactional, marketing, etc.) */
+    purpose?: string;
   }>;
   resources: {
     roleArn?: string;
@@ -312,6 +318,13 @@ export function displayStatus(status: StatusOutputs) {
   ];
 
   if (status.domains.length > 0) {
+    const PURPOSE_DISPLAY: Record<string, string> = {
+      transactional: "Transactional",
+      marketing: "Marketing",
+      notifications: "Notifications",
+      other: "General",
+    };
+
     const domainStrings = status.domains.map((d) => {
       const statusIcon =
         d.status === "verified" ? "✓" : d.status === "pending" ? "⏱" : "✗";
@@ -322,7 +335,15 @@ export function displayStatus(status: StatusOutputs) {
             ? pc.yellow
             : pc.red;
 
-      let domainLine = `    ${d.domain} ${statusColor(`${statusIcon} ${d.status}`)}`;
+      // Build label: "Primary" for primary, purpose for additional, empty for unmanaged
+      let label = "";
+      if (d.isPrimary) {
+        label = pc.dim(" (Primary)");
+      } else if (d.managed && d.purpose) {
+        label = pc.dim(` (${PURPOSE_DISPLAY[d.purpose] || d.purpose})`);
+      }
+
+      let domainLine = `    ${d.domain}${label} ${statusColor(`${statusIcon} ${d.status}`)}`;
 
       // Add MAIL FROM domain info if configured
       if (d.mailFromDomain) {

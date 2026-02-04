@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
+  AdditionalDomain,
   CdnConfigPreset,
   EmailConfigPreset,
   EmailStackConfig,
@@ -706,4 +707,136 @@ export function buildEmailStackConfig(
  */
 export function generateWebhookSecret(): string {
   return randomBytes(32).toString("hex");
+}
+
+// ---------------------------------------------------------------------------
+// Additional domain helpers (for `wraps email domains add/remove/list`)
+// ---------------------------------------------------------------------------
+
+/**
+ * Tracked domain entry returned by getAllTrackedDomains
+ */
+export type TrackedDomain = {
+  domain: string;
+  isPrimary: boolean;
+  managed: boolean;
+  purpose?: AdditionalDomain["purpose"];
+  mailFromDomain?: string;
+  addedAt?: string;
+};
+
+/**
+ * Upsert a domain into additionalDomains.
+ * If the domain already exists it is replaced; otherwise it is appended.
+ * Mutates metadata in place (caller should save afterwards).
+ */
+export function addDomainToMetadata(
+  metadata: ConnectionMetadata,
+  entry: AdditionalDomain
+): void {
+  if (!metadata.services.email) {
+    throw new Error("Email service not configured in metadata");
+  }
+
+  const config = metadata.services.email.config;
+  const existing = config.additionalDomains ?? [];
+
+  const idx = existing.findIndex((d) => d.domain === entry.domain);
+  if (idx >= 0) {
+    existing[idx] = entry;
+  } else {
+    existing.push(entry);
+  }
+
+  config.additionalDomains = existing;
+  metadata.timestamp = new Date().toISOString();
+}
+
+/**
+ * Remove a domain from additionalDomains by domain name.
+ * No-op if the domain is not tracked.
+ */
+export function removeDomainFromMetadata(
+  metadata: ConnectionMetadata,
+  domain: string
+): void {
+  if (!metadata.services.email) {
+    return;
+  }
+
+  const config = metadata.services.email.config;
+  if (!config.additionalDomains) {
+    return;
+  }
+
+  config.additionalDomains = config.additionalDomains.filter(
+    (d) => d.domain !== domain
+  );
+  metadata.timestamp = new Date().toISOString();
+}
+
+/**
+ * Look up a domain in the primary domain or additionalDomains list.
+ * Returns null if not tracked at all.
+ */
+export function getDomainFromMetadata(
+  metadata: ConnectionMetadata,
+  domain: string
+): { isPrimary: boolean; entry?: AdditionalDomain } | null {
+  if (!metadata.services.email) {
+    return null;
+  }
+
+  const config = metadata.services.email.config;
+
+  // Check primary domain
+  if (config.domain === domain) {
+    return { isPrimary: true };
+  }
+
+  // Check additional domains
+  const entry = config.additionalDomains?.find((d) => d.domain === domain);
+  if (entry) {
+    return { isPrimary: false, entry };
+  }
+
+  return null;
+}
+
+/**
+ * Return the primary domain plus all additional domains as a flat list.
+ */
+export function getAllTrackedDomains(
+  metadata: ConnectionMetadata
+): TrackedDomain[] {
+  if (!metadata.services.email) {
+    return [];
+  }
+
+  const config = metadata.services.email.config;
+  const result: TrackedDomain[] = [];
+
+  // Primary domain (managed by Pulumi)
+  if (config.domain) {
+    result.push({
+      domain: config.domain,
+      isPrimary: true,
+      managed: true,
+      mailFromDomain: config.mailFromDomain,
+    });
+  }
+
+  // Additional domains (managed by SES API)
+  for (const d of config.additionalDomains ?? []) {
+    result.push({
+      domain: d.domain,
+      isPrimary: false,
+      managed: true,
+      purpose: d.purpose,
+      mailFromDomain: d.mailFromDomain,
+      addedAt: d.addedAt,
+    });
+  }
+
+  return result;
 }

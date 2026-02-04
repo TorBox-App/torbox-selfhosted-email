@@ -1,6 +1,6 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
-import type { ArchiveRetention } from "../../types/index.js";
+import type { ArchiveRetention, DomainPurpose } from "../../types/index.js";
 
 /**
  * Hosting provider type
@@ -1165,4 +1165,135 @@ export async function promptContinueManualDNS(): Promise<boolean> {
   }
 
   return continueManual;
+}
+
+/**
+ * Suggest subdomains for reputation isolation when a primary domain exists.
+ * Returns the chosen domain (subdomain.primary or custom entry).
+ */
+export async function promptSubdomainSuggestions(
+  primaryDomain: string
+): Promise<string> {
+  clack.log.info(
+    pc.dim(
+      "Using subdomains isolates sender reputation — a bounce spike on marketing won't affect transactional mail."
+    )
+  );
+
+  const choice = await clack.select({
+    message: `Add a subdomain of ${pc.cyan(primaryDomain)}?`,
+    options: [
+      {
+        value: `mail.${primaryDomain}`,
+        label: `mail.${primaryDomain}`,
+        hint: "Transactional emails",
+      },
+      {
+        value: `news.${primaryDomain}`,
+        label: `news.${primaryDomain}`,
+        hint: "Newsletters & marketing",
+      },
+      {
+        value: `notify.${primaryDomain}`,
+        label: `notify.${primaryDomain}`,
+        hint: "Notifications & alerts",
+      },
+      {
+        value: "__custom__",
+        label: "Enter a custom domain",
+        hint: "Any domain or subdomain",
+      },
+    ],
+  });
+
+  if (clack.isCancel(choice)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  if (choice === "__custom__") {
+    const custom = await clack.text({
+      message: "Domain to add:",
+      placeholder: `billing.${primaryDomain}`,
+      validate: (value) => {
+        if (!value?.includes(".")) {
+          return "Please enter a valid domain (e.g., billing.myapp.com)";
+        }
+        return;
+      },
+    });
+
+    if (clack.isCancel(custom)) {
+      clack.cancel("Operation cancelled.");
+      process.exit(0);
+    }
+
+    return custom as string;
+  }
+
+  return choice as string;
+}
+
+/**
+ * Prompt for the purpose of a domain (informational label).
+ */
+export async function promptDomainPurpose(): Promise<DomainPurpose> {
+  const purpose = await clack.select({
+    message: "What will this domain be used for?",
+    options: [
+      {
+        value: "transactional",
+        label: "Transactional",
+        hint: "Password resets, receipts, confirmations",
+      },
+      {
+        value: "marketing",
+        label: "Marketing",
+        hint: "Newsletters, promotions, campaigns",
+      },
+      {
+        value: "notifications",
+        label: "Notifications",
+        hint: "Alerts, digests, system updates",
+      },
+      {
+        value: "other",
+        label: "Other",
+        hint: "General purpose",
+      },
+    ],
+  });
+
+  if (clack.isCancel(purpose)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  return purpose as DomainPurpose;
+}
+
+/**
+ * Prompt for the MAIL FROM subdomain (defaults to `mail.{domain}`).
+ */
+export async function promptMailFromSubdomain(domain: string): Promise<string> {
+  const subdomain = await clack.text({
+    message: `MAIL FROM subdomain for ${pc.cyan(domain)}:`,
+    placeholder: "mail",
+    defaultValue: "mail",
+    validate: (value) => {
+      const v = value || "mail";
+      if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(v)) {
+        return "Invalid subdomain format";
+      }
+      return;
+    },
+  });
+
+  if (clack.isCancel(subdomain)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  const sub = (subdomain as string) || "mail";
+  return `${sub}.${domain}`;
 }

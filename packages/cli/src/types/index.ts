@@ -23,9 +23,11 @@ export type {
 } from "./cdn.js";
 // Re-export email types
 export type {
+  AdditionalDomain,
   AlertConfig,
   AlertSeverity,
   AlertThresholds,
+  DomainPurpose,
   EmailConfigOptions,
   EmailConfigPreset,
   EmailConnectOptions,

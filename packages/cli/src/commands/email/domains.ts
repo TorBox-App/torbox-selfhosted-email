@@ -4,9 +4,39 @@ import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand, trackFeature } from "../../telemetry/events.js";
-import type { EmailVerifyOptions } from "../../types/index.js";
-import { getAWSRegion } from "../../utils/shared/aws.js";
+import type {
+  AdditionalDomain,
+  DomainPurpose,
+  EmailVerifyOptions,
+} from "../../types/index.js";
+import {
+  buildEmailDNSRecords,
+  createDNSRecordsForProvider,
+  detectAvailableDNSProviders,
+  formatDNSRecordsForDisplay,
+  getDNSCredentials,
+  getDNSProviderDisplayName,
+} from "../../utils/dns/index.js";
+import {
+  getAWSRegion,
+  validateAWSCredentials,
+} from "../../utils/shared/aws.js";
+import {
+  addDomainToMetadata,
+  findConnectionsWithService,
+  getAllTrackedDomains,
+  getDomainFromMetadata,
+  loadConnectionMetadata,
+  removeDomainFromMetadata,
+  saveConnectionMetadata,
+} from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import {
+  promptDNSProvider,
+  promptDomainPurpose,
+  promptMailFromSubdomain,
+  promptSubdomainSuggestions,
+} from "../../utils/shared/prompts.js";
 
 /**
  * Verify domain DNS records and verification status
@@ -261,42 +291,131 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
 }
 
 /**
- * Add a domain to SES for email sending
+ * Add a domain to SES for email sending.
+ *
+ * Enhanced flow:
+ * 1. Validate AWS creds, load metadata (require email service)
+ * 2. Subdomain suggestions when primary domain exists
+ * 3. Prompt for purpose
+ * 4. Create SES identity with ConfigurationSetName
+ * 5. Set up MAIL FROM
+ * 6. DNS automation (reuse cached provider or detect fresh)
+ * 7. Save to metadata
+ * 8. Display success
  */
-export async function addDomain(options: { domain: string }): Promise<void> {
-  clack.intro(pc.bold(`Adding domain ${options.domain} to SES`));
+export async function addDomain(options: {
+  domain?: string;
+  region?: string;
+  yes?: boolean;
+}): Promise<void> {
+  clack.intro(pc.bold("Add Email Domain"));
 
   const progress = new DeploymentProgress();
-  const region = await getAWSRegion();
-  const sesClient = new SESv2Client({ region });
 
   try {
-    // Check if domain already exists
+    // 1. Validate AWS credentials and load metadata
+    const identity = await progress.execute(
+      "Validating AWS credentials",
+      async () => validateAWSCredentials()
+    );
+
+    let region = options.region || (await getAWSRegion());
+
+    // Find existing email deployment
+    const emailConnections = await findConnectionsWithService(
+      identity.accountId,
+      "email"
+    );
+
+    if (emailConnections.length === 0) {
+      progress.stop();
+      clack.log.error("No email infrastructure found");
+      console.log(
+        `\nRun ${pc.cyan("wraps email init")} first to deploy email infrastructure.\n`
+      );
+      process.exit(1);
+      return;
+    }
+
+    // Auto-select region if only one deployment
+    if (emailConnections.length === 1) {
+      region = emailConnections[0].region;
+    }
+
+    const metadata = await loadConnectionMetadata(identity.accountId, region);
+    if (!metadata?.services.email) {
+      progress.stop();
+      clack.log.error(`No email service found in ${region}`);
+      process.exit(1);
+      return;
+    }
+
+    const primaryDomain = metadata.services.email.config.domain;
+
+    // 2. Determine domain to add
+    let domain = options.domain;
+
+    if (!domain) {
+      progress.stop();
+      if (primaryDomain) {
+        domain = await promptSubdomainSuggestions(primaryDomain);
+      } else {
+        const entered = await clack.text({
+          message: "Domain to add:",
+          placeholder: "myapp.com",
+          validate: (value) => {
+            if (!value?.includes(".")) {
+              return "Please enter a valid domain (e.g., myapp.com)";
+            }
+            return;
+          },
+        });
+
+        if (clack.isCancel(entered)) {
+          clack.cancel("Operation cancelled.");
+          process.exit(0);
+        }
+
+        domain = entered as string;
+      }
+    }
+
+    clack.log.step(`Adding ${pc.cyan(domain)}`);
+
+    const sesClient = new SESv2Client({ region });
+
+    // Check if domain already exists in SES
     try {
       await sesClient.send(
-        new GetEmailIdentityCommand({ EmailIdentity: options.domain })
+        new GetEmailIdentityCommand({ EmailIdentity: domain })
       );
       progress.stop();
-      clack.log.warn(`Domain ${options.domain} already exists in SES`);
+      clack.log.warn(`Domain ${domain} already exists in SES`);
       console.log(
-        `\nRun ${pc.cyan(`wraps email domains verify --domain ${options.domain}`)} to check verification status.\n`
+        `\nRun ${pc.cyan(`wraps email domains verify --domain ${domain}`)} to check verification status.\n`
       );
       return;
     } catch (error: any) {
-      // Domain doesn't exist, continue with creation
       if (error.name !== "NotFoundException") {
         throw error;
       }
     }
 
-    // Create the email identity
+    // 3. Prompt for purpose (skip in non-interactive mode)
+    let purpose: DomainPurpose = "other";
+    if (!options.yes) {
+      purpose = await promptDomainPurpose();
+    }
+
+    // 4. Create SES identity WITH config set
     const { CreateEmailIdentityCommand } = await import(
       "@aws-sdk/client-sesv2"
     );
-    await progress.execute("Adding domain to SES", async () => {
+    await progress.execute("Creating SES identity", async () => {
       await sesClient.send(
         new CreateEmailIdentityCommand({
-          EmailIdentity: options.domain,
+          EmailIdentity: domain,
+          ConfigurationSetName: "wraps-email-tracking",
           DkimSigningAttributes: {
             NextSigningKeyLength: "RSA_2048_BIT",
           },
@@ -304,48 +423,192 @@ export async function addDomain(options: { domain: string }): Promise<void> {
       );
     });
 
-    // Get the DKIM tokens
-    const identity = await sesClient.send(
-      new GetEmailIdentityCommand({ EmailIdentity: options.domain })
+    // Get DKIM tokens
+    const sesIdentity = await sesClient.send(
+      new GetEmailIdentityCommand({ EmailIdentity: domain })
     );
-    const dkimTokens = identity.DkimAttributes?.Tokens || [];
+    const dkimTokens = sesIdentity.DkimAttributes?.Tokens || [];
 
+    // 5. Set up MAIL FROM
+    let mailFromDomain: string | undefined;
+    if (options.yes) {
+      // Non-interactive: default to mail.{domain}
+      mailFromDomain = `mail.${domain}`;
+    } else {
+      const wantsMailFrom = await clack.confirm({
+        message: `Configure MAIL FROM for ${pc.cyan(domain)}? ${pc.dim("(improves DMARC alignment)")}`,
+        initialValue: true,
+      });
+
+      if (clack.isCancel(wantsMailFrom)) {
+        clack.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+
+      if (wantsMailFrom) {
+        mailFromDomain = await promptMailFromSubdomain(domain);
+      }
+    }
+
+    if (mailFromDomain) {
+      const { PutEmailIdentityMailFromAttributesCommand } = await import(
+        "@aws-sdk/client-sesv2"
+      );
+      await progress.execute("Setting up MAIL FROM", async () => {
+        await sesClient.send(
+          new PutEmailIdentityMailFromAttributesCommand({
+            EmailIdentity: domain,
+            MailFromDomain: mailFromDomain,
+            BehaviorOnMxFailure: "USE_DEFAULT_VALUE",
+          })
+        );
+      });
+    }
+
+    // 6. DNS automation
+    const cachedDnsProvider = metadata.services.email.dnsProvider;
+    let dnsAutoCreated = false;
+
+    // Determine the root domain for DNS zone lookups
+    // e.g., "mail.myapp.com" → "myapp.com"
+    const domainParts = domain.split(".");
+    const rootDomain =
+      domainParts.length > 2 ? domainParts.slice(-2).join(".") : domain;
+
+    if (!options.yes || cachedDnsProvider) {
+      // Try DNS automation
+      let dnsProvider = cachedDnsProvider;
+
+      if (!dnsProvider) {
+        progress.stop();
+        const availableProviders = await detectAvailableDNSProviders(
+          rootDomain,
+          region
+        );
+        dnsProvider = await promptDNSProvider(rootDomain, availableProviders);
+      }
+
+      if (dnsProvider && dnsProvider !== "manual") {
+        const credResult = await getDNSCredentials(
+          dnsProvider,
+          rootDomain,
+          region
+        );
+
+        if (credResult.valid && credResult.credentials) {
+          const dnsData = {
+            domain,
+            dkimTokens,
+            mailFromDomain,
+            region,
+          };
+
+          const result = await progress.execute(
+            `Creating DNS records via ${getDNSProviderDisplayName(dnsProvider)}`,
+            async () =>
+              createDNSRecordsForProvider(credResult.credentials!, dnsData)
+          );
+
+          if (result.success && result.recordsCreated > 0) {
+            dnsAutoCreated = true;
+            clack.log.success(
+              `${result.recordsCreated} DNS records created via ${getDNSProviderDisplayName(dnsProvider)}`
+            );
+          } else if (!result.success) {
+            clack.log.warn(
+              `DNS auto-creation failed: ${result.errors?.join(", ") || "unknown error"}`
+            );
+          }
+
+          // Cache the dns provider in metadata for future use
+          if (!metadata.services.email.dnsProvider) {
+            metadata.services.email.dnsProvider = dnsProvider;
+          }
+        } else {
+          clack.log.warn(`DNS credentials not available: ${credResult.error}`);
+        }
+      }
+    }
+
+    // Show manual DNS records if auto-creation was not done
+    if (!dnsAutoCreated) {
+      const dnsRecords = buildEmailDNSRecords({
+        domain,
+        dkimTokens,
+        mailFromDomain,
+        region,
+      });
+      const displayRecords = formatDNSRecordsForDisplay(dnsRecords);
+
+      progress.stop();
+      console.log();
+      clack.log.info(pc.bold("Add these DNS records:"));
+      console.log();
+      for (const record of displayRecords) {
+        console.log(`  ${pc.cyan(record.name)}`);
+        console.log(
+          `    ${pc.dim("Type:")} ${record.type}  ${pc.dim("Value:")} ${record.value}`
+        );
+        console.log();
+      }
+    }
+
+    // 7. Save to metadata
+    const entry: AdditionalDomain = {
+      domain,
+      mailFromDomain,
+      purpose,
+      addedAt: new Date().toISOString(),
+    };
+    addDomainToMetadata(metadata, entry);
+    await saveConnectionMetadata(metadata);
+
+    // 8. Display success
     progress.stop();
+    clack.outro(pc.green(`✓ Domain ${domain} added successfully!`));
 
-    clack.outro(pc.green(`✓ Domain ${options.domain} added successfully!`));
-
-    // Show next steps
-    console.log(`\n${pc.bold("Next steps:")}\n`);
-    console.log("1. Add the following DKIM records to your DNS:\n");
-
-    for (const token of dkimTokens) {
-      console.log(`   ${pc.cyan(`${token}._domainkey.${options.domain}`)}`);
+    if (dnsAutoCreated) {
       console.log(
-        `   ${pc.dim("Type:")} CNAME  ${pc.dim("Value:")} ${token}.dkim.amazonses.com\n`
+        `\n${pc.dim("DNS records were created automatically. Verification should complete within a few minutes.")}`
       );
     }
 
+    console.log(`\n${pc.bold("Next steps:")}`);
     console.log(
-      `2. Verify DNS propagation: ${pc.cyan(`wraps email domains verify --domain ${options.domain}`)}`
+      `  Verify: ${pc.cyan(`wraps email domains verify --domain ${domain}`)}`
     );
-    console.log(`3. Check status: ${pc.cyan("wraps email status")}\n`);
+    console.log(`  Status: ${pc.cyan("wraps email status")}\n`);
 
-    // Track add domain success
+    // Track success
     trackCommand("email:domains:add", {
       success: true,
+      dns_auto_created: dnsAutoCreated,
+      has_mail_from: !!mailFromDomain,
+      purpose,
     });
-    trackFeature("domain_added", {});
+    trackFeature("domain_added", {
+      purpose,
+      subdomain: domain !== primaryDomain,
+    });
   } catch (error: any) {
     progress.stop();
-    trackCommand("email:domains:add", {
-      success: false,
-    });
+    trackCommand("email:domains:add", { success: false });
     throw error;
   }
 }
 
 /**
- * List all domains configured in SES
+ * Purpose label map for display
+ */
+const PURPOSE_LABELS: Record<string, string> = {
+  transactional: "Transactional",
+  marketing: "Marketing",
+  notifications: "Notifications",
+  other: "General",
+};
+
+/**
+ * List all domains configured in SES, cross-referenced with metadata.
  */
 export async function listDomains(): Promise<void> {
   clack.intro(pc.bold("SES Email Domains"));
@@ -355,6 +618,7 @@ export async function listDomains(): Promise<void> {
   const sesClient = new SESv2Client({ region });
 
   try {
+    // Load SES domains
     const { ListEmailIdentitiesCommand } = await import(
       "@aws-sdk/client-sesv2"
     );
@@ -370,25 +634,42 @@ export async function listDomains(): Promise<void> {
     );
 
     // Filter to only domains (not email addresses)
-    const domains = identities.filter(
+    const sesDomains = identities.filter(
       (identity) =>
         identity.IdentityType === "DOMAIN" ||
         (identity.IdentityName && !identity.IdentityName.includes("@"))
     );
 
+    // Load metadata to cross-reference managed vs unmanaged
+    let trackedDomains: ReturnType<typeof getAllTrackedDomains> = [];
+    try {
+      const awsIdentity = await validateAWSCredentials();
+      const metadata = await loadConnectionMetadata(
+        awsIdentity.accountId,
+        region
+      );
+      if (metadata) {
+        trackedDomains = getAllTrackedDomains(metadata);
+      }
+    } catch {
+      // Metadata unavailable — all domains will show as unmanaged
+    }
+
+    const trackedSet = new Map(trackedDomains.map((d) => [d.domain, d]));
+
     progress.stop();
 
-    if (domains.length === 0) {
+    if (sesDomains.length === 0) {
       clack.outro("No domains found in SES");
       console.log(
-        `\nRun ${pc.cyan("wraps email domains add <domain>")} to add a domain.\n`
+        `\nRun ${pc.cyan("wraps email domains add")} to add a domain.\n`
       );
       return;
     }
 
     // Get detailed info for each domain
     const domainDetails = await Promise.all(
-      domains.map(async (domain) => {
+      sesDomains.map(async (domain) => {
         try {
           const details = await sesClient.send(
             new GetEmailIdentityCommand({
@@ -410,18 +691,42 @@ export async function listDomains(): Promise<void> {
       })
     );
 
-    // Display domains in a formatted table
-    const domainLines = domainDetails.map((domain) => {
-      const statusIcon = domain.verified ? pc.green("✓") : pc.yellow("⏱");
-      const dkimIcon =
-        domain.dkimStatus === "SUCCESS" ? pc.green("✓") : pc.yellow("⏱");
-      return `  ${statusIcon} ${pc.bold(domain.name)}  DKIM: ${dkimIcon} ${domain.dkimStatus}`;
-    });
+    // Split into managed and unmanaged
+    const managed = domainDetails.filter((d) => trackedSet.has(d.name));
+    const unmanaged = domainDetails.filter((d) => !trackedSet.has(d.name));
 
-    clack.note(
-      domainLines.join("\n"),
-      `${domains.length} domain(s) in ${region}`
-    );
+    // Format managed domains
+    if (managed.length > 0) {
+      const managedLines = managed.map((d) => {
+        const tracked = trackedSet.get(d.name)!;
+        const statusIcon = d.verified ? pc.green("✓") : pc.yellow("⏱");
+        const dkimIcon =
+          d.dkimStatus === "SUCCESS"
+            ? pc.green("✓ SUCCESS")
+            : pc.yellow(`⏱ ${d.dkimStatus}`);
+        const label = tracked.isPrimary
+          ? pc.dim("Primary")
+          : pc.dim(PURPOSE_LABELS[tracked.purpose || "other"] || "General");
+        return `  ${statusIcon} ${pc.bold(d.name.padEnd(30))} ${label.padEnd(24)} DKIM: ${dkimIcon}`;
+      });
+
+      clack.note(managedLines.join("\n"), "Managed by Wraps");
+    }
+
+    // Format unmanaged domains
+    if (unmanaged.length > 0) {
+      const unmanagedLines = unmanaged.map((d) => {
+        const statusIcon = d.verified ? pc.green("✓") : pc.yellow("⏱");
+        const dkimIcon =
+          d.dkimStatus === "SUCCESS"
+            ? pc.green("✓ SUCCESS")
+            : pc.yellow(`⏱ ${d.dkimStatus}`);
+        return `  ${statusIcon} ${pc.bold(d.name.padEnd(30))} ${pc.dim("".padEnd(16))} DKIM: ${dkimIcon}`;
+      });
+
+      clack.note(unmanagedLines.join("\n"), "Other SES domains");
+    }
+
     clack.outro(
       pc.dim(
         `Run ${pc.cyan("wraps email domains verify --domain <domain>")} for details`
@@ -431,7 +736,8 @@ export async function listDomains(): Promise<void> {
     // Track list domains success
     trackCommand("email:domains:list", {
       success: true,
-      domain_count: domains.length,
+      domain_count: sesDomains.length,
+      managed_count: managed.length,
     });
 
     // Show promotional footer (once per session)
@@ -517,11 +823,12 @@ export async function getDkim(options: { domain: string }): Promise<void> {
 }
 
 /**
- * Remove a domain from SES
+ * Remove a domain from SES and metadata.
+ * Guards against removing the primary (Pulumi-managed) domain without --force.
  */
 export async function removeDomain(options: {
   domain: string;
-  force?: boolean; // Destructive operation
+  force?: boolean;
 }): Promise<void> {
   clack.intro(pc.bold(`Remove domain ${options.domain} from SES`));
 
@@ -530,12 +837,40 @@ export async function removeDomain(options: {
   const sesClient = new SESv2Client({ region });
 
   try {
-    // Check if domain exists
+    // Check if domain exists in SES
     await progress.execute("Checking if domain exists", async () => {
       await sesClient.send(
         new GetEmailIdentityCommand({ EmailIdentity: options.domain })
       );
     });
+
+    // Check metadata to see if this is the primary domain
+    let metadata: Awaited<ReturnType<typeof loadConnectionMetadata>> = null;
+    try {
+      const awsIdentity = await validateAWSCredentials();
+      metadata = await loadConnectionMetadata(awsIdentity.accountId, region);
+    } catch {
+      // Metadata unavailable — proceed without guard
+    }
+
+    if (metadata) {
+      const domainInfo = getDomainFromMetadata(metadata, options.domain);
+
+      if (domainInfo?.isPrimary && !options.force) {
+        progress.stop();
+        clack.log.error(
+          `${options.domain} is the primary domain (managed by Pulumi).`
+        );
+        console.log(
+          `\nUse ${pc.cyan(`wraps email domains remove --domain ${options.domain} --force`)} to remove it,`
+        );
+        console.log(
+          `or ${pc.cyan("wraps email destroy")} to remove all email infrastructure.\n`
+        );
+        process.exit(1);
+        return;
+      }
+    }
 
     progress.stop();
 
@@ -564,6 +899,12 @@ export async function removeDomain(options: {
       );
     });
 
+    // Remove from metadata
+    if (metadata) {
+      removeDomainFromMetadata(metadata, options.domain);
+      await saveConnectionMetadata(metadata);
+    }
+
     progress.stop();
     clack.outro(pc.green(`✓ Domain ${options.domain} removed successfully`));
 
@@ -578,7 +919,7 @@ export async function removeDomain(options: {
     if (error.name === "NotFoundException") {
       clack.log.error(`Domain ${options.domain} not found in SES`);
       process.exit(1);
-      return; // Return after process.exit for testing
+      return;
     }
     throw error;
   }

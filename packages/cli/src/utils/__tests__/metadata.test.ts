@@ -3,16 +3,20 @@ import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPreset } from "../email/presets.js";
 import {
+  addDomainToMetadata,
   addServiceToConnection,
   applyConfigUpdates,
   buildEmailStackConfig,
   connectionExists,
   createConnectionMetadata,
   deleteConnectionMetadata,
+  getAllTrackedDomains,
   getConfiguredServices,
+  getDomainFromMetadata,
   hasService,
   listConnections,
   loadConnectionMetadata,
+  removeDomainFromMetadata,
   removeServiceFromConnection,
   saveConnectionMetadata,
   updateEmailConfig,
@@ -1181,6 +1185,334 @@ describe("applyConfigUpdates", () => {
       // Enterprise features applied
       expect(result.dedicatedIp).toBe(true);
       expect(result.eventTracking?.archiveRetention).toBe("1year");
+    });
+  });
+});
+
+describe("domain metadata helpers", () => {
+  const makeMetadata = (
+    primaryDomain = "primary.com",
+    additionalDomains?: any[]
+  ) => ({
+    version: "1.0.0",
+    accountId: "123456789012",
+    region: "us-east-1",
+    provider: "vercel" as const,
+    timestamp: "2024-01-01T00:00:00.000Z",
+    services: {
+      email: {
+        config: {
+          domain: primaryDomain,
+          tracking: { enabled: true },
+          sendingEnabled: true,
+          additionalDomains,
+        },
+        deployedAt: "2024-01-01T00:00:00.000Z",
+      },
+    },
+  });
+
+  describe("addDomainToMetadata", () => {
+    it("should add a new domain to empty additionalDomains", () => {
+      const metadata = makeMetadata();
+      const entry = {
+        domain: "mail.primary.com",
+        mailFromDomain: "mail.mail.primary.com",
+        purpose: "transactional" as const,
+        addedAt: "2024-06-01T00:00:00.000Z",
+      };
+
+      addDomainToMetadata(metadata, entry);
+
+      expect(metadata.services.email.config.additionalDomains).toHaveLength(1);
+      expect(metadata.services.email.config.additionalDomains![0]).toEqual(
+        entry
+      );
+    });
+
+    it("should append to existing additionalDomains", () => {
+      const existing = [
+        {
+          domain: "existing.com",
+          purpose: "marketing" as const,
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ];
+      const metadata = makeMetadata("primary.com", existing);
+
+      addDomainToMetadata(metadata, {
+        domain: "new.com",
+        purpose: "notifications" as const,
+        addedAt: "2024-06-01T00:00:00.000Z",
+      });
+
+      expect(metadata.services.email.config.additionalDomains).toHaveLength(2);
+      expect(metadata.services.email.config.additionalDomains![1].domain).toBe(
+        "new.com"
+      );
+    });
+
+    it("should upsert (replace) if domain already exists", () => {
+      const existing = [
+        {
+          domain: "mail.primary.com",
+          purpose: "transactional" as const,
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ];
+      const metadata = makeMetadata("primary.com", existing);
+
+      addDomainToMetadata(metadata, {
+        domain: "mail.primary.com",
+        purpose: "marketing" as const,
+        mailFromDomain: "mail.mail.primary.com",
+        addedAt: "2024-06-01T00:00:00.000Z",
+      });
+
+      expect(metadata.services.email.config.additionalDomains).toHaveLength(1);
+      expect(
+        metadata.services.email.config.additionalDomains![0].purpose
+      ).toBe("marketing");
+      expect(
+        metadata.services.email.config.additionalDomains![0].mailFromDomain
+      ).toBe("mail.mail.primary.com");
+    });
+
+    it("should update timestamp on metadata", () => {
+      const metadata = makeMetadata();
+      const oldTimestamp = metadata.timestamp;
+
+      vi.useFakeTimers();
+      vi.advanceTimersByTime(100);
+
+      addDomainToMetadata(metadata, {
+        domain: "new.com",
+        addedAt: new Date().toISOString(),
+      });
+
+      vi.useRealTimers();
+
+      expect(metadata.timestamp).not.toBe(oldTimestamp);
+    });
+
+    it("should throw when email service is not configured", () => {
+      const metadata = {
+        version: "1.0.0",
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "aws" as const,
+        timestamp: "2024-01-01T00:00:00.000Z",
+        services: {},
+      };
+
+      expect(() =>
+        addDomainToMetadata(metadata, {
+          domain: "test.com",
+          addedAt: "2024-01-01T00:00:00.000Z",
+        })
+      ).toThrow("Email service not configured in metadata");
+    });
+  });
+
+  describe("removeDomainFromMetadata", () => {
+    it("should remove a domain from additionalDomains", () => {
+      const existing = [
+        {
+          domain: "mail.primary.com",
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+        {
+          domain: "news.primary.com",
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ];
+      const metadata = makeMetadata("primary.com", existing);
+
+      removeDomainFromMetadata(metadata, "mail.primary.com");
+
+      expect(metadata.services.email.config.additionalDomains).toHaveLength(1);
+      expect(metadata.services.email.config.additionalDomains![0].domain).toBe(
+        "news.primary.com"
+      );
+    });
+
+    it("should be a no-op when domain is not tracked", () => {
+      const existing = [
+        {
+          domain: "mail.primary.com",
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ];
+      const metadata = makeMetadata("primary.com", existing);
+
+      removeDomainFromMetadata(metadata, "nonexistent.com");
+
+      expect(metadata.services.email.config.additionalDomains).toHaveLength(1);
+    });
+
+    it("should be a no-op when additionalDomains is undefined", () => {
+      const metadata = makeMetadata();
+
+      // Should not throw
+      removeDomainFromMetadata(metadata, "anything.com");
+    });
+
+    it("should be a no-op when email service is missing", () => {
+      const metadata = {
+        version: "1.0.0",
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "aws" as const,
+        timestamp: "2024-01-01T00:00:00.000Z",
+        services: {},
+      };
+
+      // Should not throw
+      removeDomainFromMetadata(metadata, "anything.com");
+    });
+
+    it("should update timestamp on metadata", () => {
+      const existing = [
+        {
+          domain: "mail.primary.com",
+          addedAt: "2024-01-01T00:00:00.000Z",
+        },
+      ];
+      const metadata = makeMetadata("primary.com", existing);
+      const oldTimestamp = metadata.timestamp;
+
+      vi.useFakeTimers();
+      vi.advanceTimersByTime(100);
+
+      removeDomainFromMetadata(metadata, "mail.primary.com");
+
+      vi.useRealTimers();
+
+      expect(metadata.timestamp).not.toBe(oldTimestamp);
+    });
+  });
+
+  describe("getDomainFromMetadata", () => {
+    it("should return isPrimary: true for the primary domain", () => {
+      const metadata = makeMetadata("primary.com");
+
+      const result = getDomainFromMetadata(metadata, "primary.com");
+
+      expect(result).toEqual({ isPrimary: true });
+    });
+
+    it("should return isPrimary: false with entry for additional domains", () => {
+      const entry = {
+        domain: "mail.primary.com",
+        purpose: "transactional" as const,
+        addedAt: "2024-01-01T00:00:00.000Z",
+      };
+      const metadata = makeMetadata("primary.com", [entry]);
+
+      const result = getDomainFromMetadata(metadata, "mail.primary.com");
+
+      expect(result).toEqual({ isPrimary: false, entry });
+    });
+
+    it("should return null for untracked domains", () => {
+      const metadata = makeMetadata("primary.com");
+
+      const result = getDomainFromMetadata(metadata, "unknown.com");
+
+      expect(result).toBeNull();
+    });
+
+    it("should return null when email service is missing", () => {
+      const metadata = {
+        version: "1.0.0",
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "aws" as const,
+        timestamp: "2024-01-01T00:00:00.000Z",
+        services: {},
+      };
+
+      const result = getDomainFromMetadata(metadata, "primary.com");
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getAllTrackedDomains", () => {
+    it("should return primary domain with isPrimary and managed flags", () => {
+      const metadata = makeMetadata("primary.com");
+
+      const result = getAllTrackedDomains(metadata);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        domain: "primary.com",
+        isPrimary: true,
+        managed: true,
+      });
+    });
+
+    it("should return primary + additional domains", () => {
+      const additional = [
+        {
+          domain: "mail.primary.com",
+          purpose: "transactional" as const,
+          mailFromDomain: "mail.mail.primary.com",
+          addedAt: "2024-06-01T00:00:00.000Z",
+        },
+        {
+          domain: "news.primary.com",
+          purpose: "marketing" as const,
+          addedAt: "2024-06-02T00:00:00.000Z",
+        },
+      ];
+      const metadata = makeMetadata("primary.com", additional);
+
+      const result = getAllTrackedDomains(metadata);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toMatchObject({
+        domain: "primary.com",
+        isPrimary: true,
+        managed: true,
+      });
+      expect(result[1]).toMatchObject({
+        domain: "mail.primary.com",
+        isPrimary: false,
+        managed: true,
+        purpose: "transactional",
+        mailFromDomain: "mail.mail.primary.com",
+      });
+      expect(result[2]).toMatchObject({
+        domain: "news.primary.com",
+        isPrimary: false,
+        managed: true,
+        purpose: "marketing",
+      });
+    });
+
+    it("should return empty array when email service is missing", () => {
+      const metadata = {
+        version: "1.0.0",
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "aws" as const,
+        timestamp: "2024-01-01T00:00:00.000Z",
+        services: {},
+      };
+
+      const result = getAllTrackedDomains(metadata);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should return only primary when no additional domains", () => {
+      const metadata = makeMetadata("primary.com");
+
+      const result = getAllTrackedDomains(metadata);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].domain).toBe("primary.com");
     });
   });
 });

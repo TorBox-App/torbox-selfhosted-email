@@ -683,14 +683,11 @@ async function run() {
 
           switch (domainsSubCommand) {
             case "add": {
-              if (!flags.domain) {
-                clack.log.error("--domain flag is required");
-                console.log(
-                  `\nUsage: ${pc.cyan("wraps email domains add --domain yourapp.com")}\n`
-                );
-                process.exit(1);
-              }
-              await addDomain({ domain: flags.domain });
+              await addDomain({
+                domain: flags.domain,
+                region: flags.region,
+                yes: flags.yes,
+              });
               break;
             }
 

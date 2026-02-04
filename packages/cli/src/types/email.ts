@@ -5,6 +5,26 @@
 import type { ArchiveRetention, FeatureCost, Provider } from "./shared.js";
 
 /**
+ * Purpose label for an additional domain (informational only)
+ */
+export type DomainPurpose =
+  | "transactional"
+  | "marketing"
+  | "notifications"
+  | "other";
+
+/**
+ * An additional domain managed via `wraps email domains add`
+ * (as opposed to the primary domain managed by Pulumi)
+ */
+export type AdditionalDomain = {
+  domain: string;
+  mailFromDomain?: string;
+  purpose?: DomainPurpose;
+  addedAt: string;
+};
+
+/**
  * AWS regions that support SES email receiving (Receipt Rules)
  */
 export const SES_RECEIVING_REGIONS = [
@@ -98,6 +118,9 @@ export type WrapsEmailConfig = {
     webhookUrl?: string; // user's webhook endpoint for email.received
     webhookSecret?: string; // generated API key for webhook auth
   };
+
+  // Additional domains managed via `wraps email domains add`
+  additionalDomains?: AdditionalDomain[];
 
   // Advanced options
   ipPool?: string;
