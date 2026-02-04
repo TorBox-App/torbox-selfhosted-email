@@ -1,0 +1,472 @@
+# Wraps
+
+> Deploy email, SMS, and CDN infrastructure to your AWS account with one command.
+> Modern DX. AWS economics. Full ownership.
+
+Wraps is a CLI and TypeScript SDK that deploys production-ready AWS
+infrastructure (SES, Lambda, DynamoDB, EventBridge, CloudFront) to your
+account. Zero credentials stored. OIDC authentication. You own everything.
+
+## What Wraps Does
+
+### CLI (`@wraps.dev/cli`)
+One command deploys complete infrastructure to your AWS account:
+
+```bash
+npx @wraps.dev/cli email init    # Email (SES + event processing)
+npx @wraps.dev/cli sms init     # SMS (End User Messaging)
+npx @wraps.dev/cli cdn init     # CDN (S3 + CloudFront)
+```
+
+**Email deploys:** AWS SES with DKIM, Lambda event processing, DynamoDB history, EventBridge + SQS event capture, IAM roles with OIDC.
+
+**SMS deploys:** AWS End User Messaging with phone number provisioning, opt-out list, event tracking, IAM roles.
+
+**CDN deploys:** S3 bucket with CloudFront distribution, optional custom domain with ACM certificate.
+
+### TypeScript SDKs
+
+```typescript
+// @wraps.dev/email
+import { WrapsEmail } from '@wraps.dev/email';
+const email = new WrapsEmail();
+
+await email.send({
+  from: 'hello@yourapp.com',
+  to: 'user@example.com',
+  subject: 'Welcome!',
+  html: '<h1>Hello from Wraps!</h1>',
+});
+```
+
+```typescript
+// @wraps.dev/sms
+import { WrapsSMS } from '@wraps.dev/sms';
+const sms = new WrapsSMS();
+
+await sms.send({
+  to: '+14155551234',
+  message: 'Your code is 123456',
+});
+```
+
+### Platform (app.wraps.dev)
+Visual dashboard with progressive feature unlocks:
+
+**Starter ($10/mo):** Templates with AI generation, batch sending, analytics, 30-day history, 5 workflows
+**Growth ($49/mo):** Topics (subscription management), Segments, Campaigns, 25 workflows
+**Scale ($149/mo):** Unlimited workflows, event tracking, advanced segments, multi-tenant orchestration
+
+## Key Differentiators
+
+- **Your AWS Account**: Infrastructure deploys to your account, not ours
+- **No Vendor Lock-in**: Your infrastructure keeps working if you stop paying
+- **AWS Prices**: Pay AWS directly ($0.10/1K emails, ~$0.008/SMS segment), no markup
+- **Under 2 Minutes**: `npx @wraps.dev/cli email init` and done
+- **Unlimited Contacts**: Gate on events (what costs money), not vanity metrics
+- **Zero Credentials Stored**: OIDC authentication, no AWS secrets
+
+## Installation
+
+```bash
+# Deploy infrastructure (no install needed)
+npx @wraps.dev/cli email init
+
+# Install SDKs
+npm install @wraps.dev/email
+npm install @wraps.dev/sms
+```
+
+## CLI Command Reference
+
+### Email Service
+
+```
+wraps email init              Deploy email infrastructure
+wraps email connect           Connect to existing SES
+wraps email status            Show infrastructure details
+wraps email check [domain]    Deliverability audit (DKIM, SPF, DMARC, blacklists, TLS)
+wraps email verify            Verify domain DNS records
+wraps email config            Apply CLI updates to infrastructure
+wraps email upgrade           Add features (tracking, history, dedicated IP)
+wraps email restore           Restore from saved metadata
+wraps email destroy           Remove all email infrastructure
+```
+
+### Email Domains
+
+```
+wraps email domains add       Add domain to SES (configures DKIM)
+wraps email domains list      List all domains with status
+wraps email domains get-dkim  Get DKIM tokens for DNS
+wraps email domains verify    Verify DKIM, SPF, DMARC
+wraps email domains remove    Remove domain from SES
+```
+
+### Email Inbound
+
+```
+wraps email inbound init      Enable inbound email receiving
+wraps email inbound status    Show inbound status
+wraps email inbound verify    Verify inbound DNS records
+wraps email inbound test      Send test and verify receipt
+wraps email inbound destroy   Remove inbound infrastructure
+```
+
+### SMS Service
+
+```
+wraps sms init                Deploy SMS infrastructure
+wraps sms status              Show infrastructure details
+wraps sms test                Send a test SMS
+wraps sms verify-number       Verify destination phone number (sandbox)
+wraps sms upgrade             Upgrade SMS features
+wraps sms register            Register toll-free number
+wraps sms sync                Sync infrastructure
+wraps sms destroy             Remove SMS infrastructure
+```
+
+### CDN Service
+
+```
+wraps cdn init                Deploy CDN (S3 + CloudFront)
+wraps cdn status              Show infrastructure details
+wraps cdn verify              Check DNS and certificate status
+wraps cdn upgrade             Add custom domain
+wraps cdn sync                Sync infrastructure
+wraps cdn destroy             Remove CDN infrastructure
+```
+
+### AWS & Global
+
+```
+wraps aws setup               Interactive AWS credential wizard
+wraps aws doctor              Diagnose AWS configuration
+wraps status                  Overview of all services
+wraps destroy                 Remove all infrastructure
+wraps console                 Start local web dashboard
+wraps permissions             Show required IAM permissions
+wraps platform connect        Connect to Wraps Platform
+```
+
+### Common Flags
+
+```
+-p, --provider    Hosting provider (vercel, aws, railway, other)
+-r, --region      AWS region
+-d, --domain      Domain name
+-y, --yes         Skip confirmation (non-destructive ops)
+-f, --force       Force without confirmation (destructive ops)
+--preset          Config preset (starter, production, enterprise, custom)
+--preview         Preview changes without deploying
+--json            JSON output (where supported)
+```
+
+## Email SDK Reference (@wraps.dev/email)
+
+### Constructor
+
+```typescript
+import { WrapsEmail } from '@wraps.dev/email';
+
+const email = new WrapsEmail({
+  region?: string,              // AWS region (default: us-east-1)
+  credentials?: {
+    accessKeyId: string,
+    secretAccessKey: string,
+    sessionToken?: string,
+  },
+  roleArn?: string,             // IAM role for OIDC
+  endpoint?: string,            // Custom endpoint (LocalStack)
+});
+```
+
+### email.send(params)
+
+```typescript
+await email.send({
+  from: 'you@company.com',           // Required
+  to: 'user@example.com',            // Required (string or string[])
+  subject: 'Subject',                // Required
+  html: '<h1>Hello</h1>',            // html, text, or react required
+  text: 'Hello',                     // Plain text fallback
+  react: <Component />,              // React.email component
+  cc: ['cc@example.com'],            // Optional
+  bcc: ['bcc@example.com'],          // Optional
+  replyTo: ['reply@example.com'],    // Optional
+  tags: { campaign: 'welcome' },     // Optional (SES tags)
+  attachments: [{                    // Optional
+    filename: 'file.pdf',
+    content: Buffer | string,        // Buffer or base64
+    contentType: 'application/pdf',  // Optional, auto-detected
+  }],
+});
+
+// Returns: { messageId: string }
+```
+
+### email.sendTemplate(params)
+
+```typescript
+await email.sendTemplate({
+  from: 'you@company.com',
+  to: 'user@example.com',
+  template: 'welcome',
+  templateData: { name: 'Alice', url: 'https://...' },
+});
+```
+
+### email.sendBulkTemplate(params)
+
+```typescript
+await email.sendBulkTemplate({
+  from: 'you@company.com',
+  template: 'weekly-digest',
+  destinations: [                     // Up to 50
+    { to: 'alice@example.com', templateData: { name: 'Alice' } },
+    { to: 'bob@example.com', templateData: { name: 'Bob' } },
+  ],
+});
+```
+
+### email.templates
+
+```typescript
+await email.templates.create({ name, subject, html, text? });
+await email.templates.createFromReact({ name, subject, react });
+await email.templates.update({ name, subject?, html?, text? });
+await email.templates.get(name);       // Returns template details
+await email.templates.list();          // Returns template metadata[]
+await email.templates.delete(name);
+```
+
+### Error Types
+
+```typescript
+import { ValidationError, SESError } from '@wraps.dev/email';
+
+// ValidationError: invalid input (bad email, missing fields)
+//   .field: string - which field failed
+//   .message: string
+
+// SESError: AWS SES error (rate limit, unverified sender)
+//   .code: string - 'MessageRejected', 'Throttling', etc.
+//   .requestId: string
+//   .retryable: boolean
+```
+
+## SMS SDK Reference (@wraps.dev/sms)
+
+### Constructor
+
+```typescript
+import { WrapsSMS } from '@wraps.dev/sms';
+
+const sms = new WrapsSMS({
+  region?: string,
+  credentials?: { accessKeyId, secretAccessKey },
+  roleArn?: string,
+});
+```
+
+### sms.send(params)
+
+```typescript
+const result = await sms.send({
+  to: '+14155551234',                  // Required (E.164)
+  message: 'Hello!',                  // Required
+  messageType?: 'TRANSACTIONAL',      // TRANSACTIONAL or PROMOTIONAL
+  from?: '+18005551234',              // Override sender
+  context?: { userId: '123' },        // Custom metadata
+  dryRun?: true,                      // Validate without sending
+});
+
+// Returns: { messageId, status, to, from, segments }
+```
+
+### sms.sendBatch(params)
+
+```typescript
+const result = await sms.sendBatch({
+  messages: [
+    { to: '+14155551234', message: 'Hello Alice!' },
+    { to: '+14155555678', message: 'Hello Bob!' },
+  ],
+  messageType: 'TRANSACTIONAL',
+});
+
+// Returns: { batchId, total, queued, failed, results[] }
+```
+
+### sms.numbers.list()
+
+```typescript
+const numbers = await sms.numbers.list();
+// Returns: [{ phoneNumberId, phoneNumber, numberType, messageType, twoWayEnabled }]
+```
+
+### sms.optOuts
+
+```typescript
+await sms.optOuts.check('+14155551234');   // Returns boolean
+await sms.optOuts.add('+14155551234');
+await sms.optOuts.remove('+14155551234');
+```
+
+### Utilities
+
+```typescript
+import { calculateSegments, validatePhoneNumber } from '@wraps.dev/sms';
+
+calculateSegments('Hello!');             // 1
+calculateSegments('a'.repeat(200));      // 2
+validatePhoneNumber('+14155551234', 'to'); // Throws if invalid
+```
+
+### Error Types
+
+```typescript
+import { SMSError, ValidationError, OptedOutError } from '@wraps.dev/sms';
+
+// ValidationError: invalid input (.field, .message)
+// OptedOutError: user opted out (.phoneNumber)
+// SMSError: AWS error (.code, .retryable)
+```
+
+## Authentication
+
+All SDKs support the same authentication methods:
+
+### 1. Default credential chain (recommended)
+```typescript
+const email = new WrapsEmail();
+// Resolves: env vars -> ~/.aws/credentials -> IAM role (EC2/ECS/Lambda)
+```
+
+### 2. OIDC (Vercel, EKS, GitHub Actions)
+```typescript
+const email = new WrapsEmail({
+  roleArn: process.env.AWS_ROLE_ARN,
+});
+```
+
+### 3. Explicit credentials
+```typescript
+const email = new WrapsEmail({
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+  region: 'us-east-1',
+});
+```
+
+## Common Workflows
+
+### 1. Deploy email and send first message
+
+```bash
+npx @wraps.dev/cli email init
+npx @wraps.dev/cli email domains add -d yourapp.com
+npx @wraps.dev/cli email domains get-dkim -d yourapp.com
+# Add CNAME records to DNS provider
+npx @wraps.dev/cli email domains verify -d yourapp.com
+npm install @wraps.dev/email
+```
+
+### 2. Deploy SMS and send first message
+
+```bash
+npx @wraps.dev/cli sms init
+npx @wraps.dev/cli sms verify-number --phoneNumber +14155551234
+npx @wraps.dev/cli sms test --to +14155551234 --message "Hello!"
+npm install @wraps.dev/sms
+```
+
+### 3. Run deliverability audit
+
+```bash
+npx @wraps.dev/cli email check yourapp.com
+# Checks DKIM, SPF, DMARC, MX TLS, blacklists
+```
+
+### 4. Connect existing SES and upgrade
+
+```bash
+npx @wraps.dev/cli email connect
+npx @wraps.dev/cli email upgrade
+```
+
+## Configuration Presets
+
+### Email
+
+| Preset | Monthly Cost | Features |
+|--------|-------------|----------|
+| starter | ~$0.05 | Open/click tracking, bounce/complaint suppression |
+| production | ~$2-5 | + Real-time event tracking, 90-day history, reputation metrics |
+| enterprise | ~$50-100 | + Dedicated IP, 1-year history, all 10 SES event types |
+
+### SMS
+
+| Preset | Monthly Cost | Features |
+|--------|-------------|----------|
+| starter | ~$1 | Simulator phone number |
+| production | ~$2-10 | Toll-free number, event tracking |
+| enterprise | ~$10-50 | Full features, link tracking |
+
+## Pricing
+
+| | Free | Starter | Growth | Scale |
+|--|------|---------|--------|-------|
+| **Price** | $0 | $10/mo | $49/mo | $149/mo |
+| **Dashboard** | Self-host | Hosted | Hosted | Hosted |
+| **Contacts** | Unlimited | Unlimited | Unlimited | Unlimited |
+| **Workflows** | -- | 5 | 25 | Unlimited |
+| **Features** | CLI/SDK | + Templates, Analytics | + Topics, Segments, Campaigns | + Events, Advanced Segments |
+
+You pay Wraps for tooling. You pay AWS for infrastructure. No surprises.
+
+**Example**: 100K emails/month = $10-49 (Wraps) + ~$10 (AWS) = $20-59 total.
+Managed services charge $80-150+ for the same volume.
+
+## Available Packages
+
+- `@wraps.dev/email` - Email sending via AWS SES
+- `@wraps.dev/sms` - SMS via AWS End User Messaging
+- `@wraps.dev/cdn` - Asset delivery via AWS CloudFront
+- `@wraps.dev/cli` - Infrastructure deployment CLI
+
+## Technical Stack
+
+- Infrastructure: Pulumi deploying to AWS (SES, DynamoDB, Lambda, EventBridge, SQS, CloudFront, S3)
+- SDK: TypeScript, works with any Node.js framework
+- Platform: Next.js 15, React 19, shadcn/ui, Elysia API
+- Database: PostgreSQL (Neon) + Drizzle ORM
+- Auth: Better Auth with OIDC (Vercel, AWS native)
+
+## Use Cases
+
+- Transactional emails (welcome, password reset, receipts)
+- Marketing broadcasts with segmentation
+- Automated email workflows (drip campaigns, onboarding)
+- SMS verification codes and notifications
+- CDN for email assets and hosted images
+- Developer applications needing full AWS control
+
+## Links
+
+- Website: https://wraps.dev
+- Quickstart: https://wraps.dev/docs/quickstart/email
+- SDK Reference: https://wraps.dev/docs/sdk-reference
+- SMS SDK Reference: https://wraps.dev/docs/sms-sdk-reference
+- CLI Reference: https://wraps.dev/cli
+- GitHub (SDK): https://github.com/wraps-team/wraps-js
+- npm (email): https://npmjs.com/package/@wraps.dev/email
+- npm (sms): https://npmjs.com/package/@wraps.dev/sms
+- npm (cli): https://npmjs.com/package/@wraps.dev/cli
+
+## Contact
+
+- Support: support@wraps.dev
+- Twitter: @useWraps
