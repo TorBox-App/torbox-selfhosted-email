@@ -19,7 +19,6 @@ import { cdnStatus } from "./commands/cdn/status.js";
 import { cdnSync } from "./commands/cdn/sync.js";
 import { cdnUpgrade } from "./commands/cdn/upgrade.js";
 import { cdnVerify } from "./commands/cdn/verify.js";
-// Email commands
 import { check } from "./commands/email/check.js";
 import { config } from "./commands/email/config.js";
 import { connect } from "./commands/email/connect.js";
@@ -41,6 +40,9 @@ import {
 import { init } from "./commands/email/init.js";
 import { restore } from "./commands/email/restore.js";
 import { emailStatus } from "./commands/email/status.js";
+// Email commands
+import { templatesInit } from "./commands/email/templates/init.js";
+import { templatesPush } from "./commands/email/templates/push.js";
 import { upgrade } from "./commands/email/upgrade.js";
 // Info commands
 import { news } from "./commands/news.js";
@@ -162,6 +164,16 @@ function showHelp() {
   );
   console.log(
     `  ${pc.cyan("email inbound destroy")} Remove inbound email infrastructure\n`
+  );
+  console.log("Template Commands:");
+  console.log(
+    `  ${pc.cyan("email templates init")}  Initialize templates-as-code`
+  );
+  console.log(
+    `  ${pc.cyan("email templates push")}  Push templates to SES + dashboard`
+  );
+  console.log(
+    `  ${pc.cyan("push")}                  ${pc.dim("(alias for email templates push)")}\n`
   );
   console.log("SMS Commands:");
   console.log(`  ${pc.cyan("sms init")}             Deploy SMS infrastructure`);
@@ -407,6 +419,27 @@ args.options([
   {
     name: "service",
     description: "Service type for permissions (email, sms, cdn)",
+    defaultValue: undefined,
+  },
+  // Template-specific options
+  {
+    name: "template",
+    description: "Specific template to push (by name)",
+    defaultValue: undefined,
+  },
+  {
+    name: "dryRun",
+    description: "Preview changes without pushing",
+    defaultValue: false,
+  },
+  {
+    name: "noExample",
+    description: "Skip creating example template",
+    defaultValue: false,
+  },
+  {
+    name: "org",
+    description: "Organization slug",
     defaultValue: undefined,
   },
 ]);
@@ -820,6 +853,45 @@ async function run() {
           break;
         }
 
+        case "templates": {
+          const templatesSubCommand = args.sub[2];
+
+          switch (templatesSubCommand) {
+            case "init":
+              await templatesInit({
+                org: flags.org,
+                noExample: flags.noExample,
+                yes: flags.yes,
+                force: flags.force,
+                json: flags.json,
+              });
+              break;
+
+            case "push":
+              await templatesPush({
+                template: flags.template,
+                dryRun: flags.dryRun,
+                force: flags.force,
+                yes: flags.yes,
+                json: flags.json,
+                token: flags.token,
+              });
+              break;
+
+            default:
+              clack.log.error(
+                `Unknown templates command: ${templatesSubCommand || "(none)"}`
+              );
+              console.log(
+                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("push")}\n`
+              );
+              throw new Error(
+                `Unknown templates command: ${templatesSubCommand || "(none)"}`
+              );
+          }
+          break;
+        }
+
         case "destroy":
           await emailDestroy({
             force: flags.force,
@@ -1107,6 +1179,18 @@ async function run() {
 
     // Handle global commands
     switch (primaryCommand) {
+      // Convenience alias: wraps push → wraps email templates push
+      case "push":
+        await templatesPush({
+          template: flags.template,
+          dryRun: flags.dryRun,
+          force: flags.force,
+          yes: flags.yes,
+          json: flags.json,
+          token: flags.token,
+        });
+        break;
+
       // Global commands (work across all services)
       case "status":
         await status({

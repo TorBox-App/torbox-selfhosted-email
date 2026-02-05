@@ -86,12 +86,22 @@ export const template = pgTable(
     lastEditedBy: text("last_edited_by").references(() => user.id, {
       onDelete: "set null",
     }),
+
+    // Templates-as-code (CLI push)
+    slug: text("slug"),
+    source: text("source"), // React Email TSX source
+    sourceFormat: text("source_format").default("tiptap").notNull(), // "react-email" | "tiptap"
+    sourceHash: text("source_hash"), // SHA256 for change detection
+    pushedFromCli: boolean("pushed_from_cli").default(false).notNull(),
+    lastPushedAt: timestamp("last_pushed_at"),
+    cliProjectPath: text("cli_project_path"), // e.g. "templates/welcome.tsx"
   },
   (table) => [
     index("template_org_idx").on(table.organizationId),
     index("template_status_updated_at_idx").on(table.status, table.updatedAt),
     index("template_created_by_idx").on(table.createdBy),
     uniqueIndex("template_room_id_idx").on(table.roomId),
+    uniqueIndex("template_org_slug_idx").on(table.organizationId, table.slug),
   ]
 );
 

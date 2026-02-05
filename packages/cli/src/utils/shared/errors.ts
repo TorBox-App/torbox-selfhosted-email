@@ -618,4 +618,37 @@ export const errors = {
       "The migration from local to S3 state storage failed.\nYour local state is still intact.\n\nTo skip migration and use local-only state:\n  export WRAPS_LOCAL_ONLY=1",
       "https://wraps.dev/docs/guides/aws-setup/permissions"
     ),
+
+  // Templates-as-code errors
+  wrapsConfigNotFound: () =>
+    new WrapsError(
+      "wraps/wraps.config.ts not found",
+      "WRAPS_CONFIG_NOT_FOUND",
+      "Initialize templates first:\n  wraps email templates init",
+      "https://wraps.dev/docs/templates-as-code"
+    ),
+
+  templateCompilationFailed: (name: string, error: string) =>
+    new WrapsError(
+      `Failed to compile template "${name}": ${error}`,
+      "TEMPLATE_COMPILATION_FAILED",
+      "Check your template for syntax errors and ensure all imports are valid.",
+      "https://wraps.dev/docs/templates-as-code"
+    ),
+
+  notAuthenticated: () =>
+    new WrapsError(
+      "Not authenticated to Wraps Platform",
+      "NOT_AUTHENTICATED",
+      "Sign in first:\n  wraps auth login\n\nOr provide an API key:\n  wraps push --token wraps_...\n  WRAPS_API_KEY=wraps_... wraps push",
+      "https://wraps.dev/docs/auth"
+    ),
+
+  templatePushFailed: (name: string, error: string) =>
+    new WrapsError(
+      `Failed to push template "${name}": ${error}`,
+      "TEMPLATE_PUSH_FAILED",
+      "Check your API key and network connection.",
+      "https://wraps.dev/docs/templates-as-code"
+    ),
 };

@@ -1,6 +1,7 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  - 'wraps'
 
 catalog:
   better-auth: 1.4.17

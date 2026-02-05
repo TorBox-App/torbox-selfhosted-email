@@ -1,0 +1,710 @@
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import * as clack from "@clack/prompts";
+import pc from "picocolors";
+import { resolveTokenAsync } from "../../../utils/shared/config.js";
+import { errors } from "../../../utils/shared/errors.js";
+import { DeploymentProgress } from "../../../utils/shared/output.js";
+
+interface TemplatesPushOptions {
+  template?: string;
+  dryRun?: boolean;
+  force?: boolean;
+  yes?: boolean;
+  json?: boolean;
+  token?: string;
+}
+
+interface LockfileEntry {
+  id?: string;
+  localHash: string;
+  remoteHash?: string;
+  sesTemplateName: string;
+  lastPushed: string;
+}
+
+interface Lockfile {
+  version: string;
+  org?: string;
+  lastSync: string;
+  templates: Record<string, LockfileEntry>;
+}
+
+interface CompiledTemplate {
+  slug: string;
+  source: string;
+  sourceHash: string;
+  subject: string;
+  emailType: "marketing" | "transactional";
+  previewText?: string;
+  compiledHtml: string;
+  compiledText: string;
+  variables: Array<{ name: string; fallback?: string }>;
+  sesTemplateName: string;
+  cliProjectPath: string;
+}
+
+export async function templatesPush(options: TemplatesPushOptions) {
+  const cwd = process.cwd();
+  const wrapsDir = join(cwd, "wraps");
+  const configPath = join(wrapsDir, "wraps.config.ts");
+
+  if (!existsSync(configPath)) {
+    throw errors.wrapsConfigNotFound();
+  }
+
+  if (!options.json) {
+    clack.intro(pc.bold("Push Templates"));
+  }
+
+  const progress = new DeploymentProgress();
+
+  // Load wraps.config.ts
+  progress.start("Loading configuration");
+  const config = await loadWrapsConfig(wrapsDir);
+  progress.succeed("Configuration loaded");
+
+  // Discover template files
+  const templatesDir = join(wrapsDir, config.templatesDir || "./templates");
+
+  if (!existsSync(templatesDir)) {
+    throw errors.wrapsConfigNotFound();
+  }
+
+  const templateFiles = await discoverTemplates(templatesDir, options.template);
+
+  if (templateFiles.length === 0) {
+    if (!options.json) {
+      clack.log.info("No templates found to push.");
+    }
+    return;
+  }
+
+  // Load lockfile
+  const lockfilePath = join(wrapsDir, ".wraps", "lockfile.json");
+  const lockfile = await loadLockfile(lockfilePath);
+
+  // Compile templates
+  const compiled: CompiledTemplate[] = [];
+  const unchanged: string[] = [];
+  const compileErrors: Array<{ slug: string; error: string }> = [];
+
+  for (const file of templateFiles) {
+    const slug = file.replace(/\.tsx?$/, "");
+    const filePath = join(templatesDir, file);
+    const source = await readFile(filePath, "utf-8");
+    const sourceHash = sha256(source);
+
+    // Check lockfile for change detection
+    if (!options.force && lockfile.templates[slug]?.localHash === sourceHash) {
+      unchanged.push(slug);
+      continue;
+    }
+
+    progress.start(`Compiling ${pc.cyan(slug)}`);
+    try {
+      const result = await compileTemplate(
+        filePath,
+        slug,
+        source,
+        sourceHash,
+        wrapsDir
+      );
+      compiled.push(result);
+      progress.succeed(`Compiled ${pc.cyan(slug)}`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      compileErrors.push({ slug, error: errMsg });
+      progress.fail(`Failed to compile ${pc.cyan(slug)}: ${errMsg}`);
+    }
+  }
+
+  if (compiled.length === 0 && compileErrors.length === 0) {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          success: true,
+          command: "email.templates.push",
+          data: { pushed: [], unchanged, errors: [] },
+        })
+      );
+    } else {
+      clack.log.info(
+        `${unchanged.length} template${unchanged.length === 1 ? "" : "s"} unchanged. Use --force to re-push.`
+      );
+    }
+    return;
+  }
+
+  // Dry run: show what would be pushed
+  if (options.dryRun) {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          success: true,
+          command: "email.templates.push",
+          dryRun: true,
+          data: {
+            wouldPush: compiled.map((t) => ({
+              slug: t.slug,
+              subject: t.subject,
+              emailType: t.emailType,
+              variables: t.variables.length,
+            })),
+            unchanged,
+            errors: compileErrors,
+          },
+        })
+      );
+    } else {
+      console.log();
+      clack.log.info(pc.bold("Dry run — no changes made"));
+      console.log();
+      for (const t of compiled) {
+        console.log(
+          `  ${pc.green("●")} ${pc.cyan(t.slug)} — ${t.subject} (${t.variables.length} variables)`
+        );
+      }
+      for (const slug of unchanged) {
+        console.log(`  ${pc.dim("○")} ${pc.dim(slug)} — unchanged`);
+      }
+      for (const e of compileErrors) {
+        console.log(`  ${pc.red("✕")} ${pc.red(e.slug)} — ${e.error}`);
+      }
+      console.log();
+    }
+    return;
+  }
+
+  // Push to SES
+  await pushToSES(compiled, progress);
+
+  // Push to API
+  const token = await resolveTokenAsync({ token: options.token });
+  const apiResults = await pushToAPI(compiled, token, config.org, progress);
+
+  // Update lockfile
+  for (const t of compiled) {
+    const apiResult = apiResults.find((r) => r.slug === t.slug);
+    lockfile.templates[t.slug] = {
+      id: apiResult?.id,
+      localHash: t.sourceHash,
+      remoteHash: t.sourceHash,
+      sesTemplateName: t.sesTemplateName,
+      lastPushed: new Date().toISOString(),
+    };
+  }
+  lockfile.lastSync = new Date().toISOString();
+  lockfile.org = config.org;
+  await saveLockfile(lockfilePath, lockfile);
+
+  // Output results
+  if (options.json) {
+    console.log(
+      JSON.stringify({
+        success: true,
+        command: "email.templates.push",
+        data: {
+          pushed: compiled.map((t) => ({
+            slug: t.slug,
+            id: apiResults.find((r) => r.slug === t.slug)?.id,
+            sesTemplateName: t.sesTemplateName,
+          })),
+          unchanged,
+          errors: compileErrors,
+        },
+      })
+    );
+  } else {
+    console.log();
+    clack.log.success(
+      pc.green(
+        `${compiled.length} template${compiled.length === 1 ? "" : "s"} pushed`
+      )
+    );
+    if (unchanged.length > 0) {
+      clack.log.info(`${unchanged.length} unchanged (use --force to re-push)`);
+    }
+    if (compileErrors.length > 0) {
+      clack.log.error(`${compileErrors.length} failed to compile`);
+    }
+    console.log();
+  }
+}
+
+// ── Config Loading ──
+
+interface WrapsConfig {
+  org: string;
+  from?: { email: string; name?: string };
+  region?: string;
+  templatesDir?: string;
+}
+
+async function loadWrapsConfig(wrapsDir: string): Promise<WrapsConfig> {
+  const configPath = join(wrapsDir, "wraps.config.ts");
+  const { build } = await import("esbuild");
+
+  // Create a shim for @wraps.dev/email so esbuild can resolve it
+  // defineConfig and defineBrand are identity functions — no need for the real package
+  const shimDir = join(wrapsDir, ".wraps", "_shims");
+  await mkdir(shimDir, { recursive: true });
+  await writeFile(
+    join(shimDir, "wraps-email-shim.mjs"),
+    "export const defineConfig = (c) => c;\nexport const defineBrand = (b) => b;\n",
+    "utf-8"
+  );
+
+  const result = await build({
+    entryPoints: [configPath],
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "node",
+    target: "node20",
+    alias: {
+      "@wraps.dev/email": join(shimDir, "wraps-email-shim.mjs"),
+    },
+  });
+
+  const code = result.outputFiles[0].text;
+  // Write to temp file for dynamic import
+  const tmpPath = join(wrapsDir, ".wraps", "_config.mjs");
+  await writeFile(tmpPath, code, "utf-8");
+
+  const mod = await import(tmpPath);
+  const config = mod.default;
+
+  if (!config?.org) {
+    throw errors.wrapsConfigNotFound();
+  }
+
+  return config as WrapsConfig;
+}
+
+// ── Template Discovery ──
+
+async function discoverTemplates(
+  dir: string,
+  filter?: string
+): Promise<string[]> {
+  const entries = await readdir(dir);
+  const templates = entries.filter(
+    (f) =>
+      (f.endsWith(".tsx") || f.endsWith(".ts")) &&
+      !f.startsWith("_") &&
+      !f.endsWith(".d.ts")
+  );
+
+  if (filter) {
+    const slug = filter.replace(/\.tsx?$/, "");
+    return templates.filter((f) => f.replace(/\.tsx?$/, "") === slug);
+  }
+
+  return templates;
+}
+
+// ── Template Compilation ──
+
+async function compileTemplate(
+  filePath: string,
+  slug: string,
+  source: string,
+  sourceHash: string,
+  wrapsDir: string
+): Promise<CompiledTemplate> {
+  const { build } = await import("esbuild");
+
+  // Bundle the template with ALL its imports (react, @react-email/components, brand.ts, _components/)
+  // The bundled output is self-contained — only @react-email/render is needed at runtime for HTML generation
+  // Use nodePaths to help esbuild find react/jsx-runtime in pnpm's strict node_modules layout
+  const cliNodeModules = await findCliNodeModules();
+
+  const result = await build({
+    entryPoints: [filePath],
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "node",
+    target: "node20",
+    jsx: "automatic",
+    nodePaths: cliNodeModules,
+    // Provide require() for CJS dependencies bundled into ESM output
+    banner: {
+      js: 'import { createRequire as __createRequire } from "node:module";\nconst require = __createRequire(import.meta.url);\n',
+    },
+  });
+
+  const bundledCode = result.outputFiles[0].text;
+
+  // Write to temp file for dynamic import
+  // Place it in the project root (parent of wraps/) so Node can resolve
+  // react and other externals from the project's node_modules
+  const projectRoot = join(wrapsDir, "..");
+  const tmpDir = join(projectRoot, "node_modules", ".wraps-compiled");
+  await mkdir(tmpDir, { recursive: true });
+  const tmpPath = join(tmpDir, `${slug}.mjs`);
+  await writeFile(tmpPath, bundledCode, "utf-8");
+
+  // Dynamic import to get exports
+  const mod = await import(tmpPath);
+  const Component = mod.default;
+  const subject: string = mod.subject || slug;
+  const emailType: "marketing" | "transactional" = mod.emailType || "marketing";
+  const previewText: string | undefined = mod.previewText;
+
+  if (typeof Component !== "function") {
+    throw new Error(
+      "Template must have a default export (React component function)"
+    );
+  }
+
+  // Create proxy props that produce {{handlebars}} placeholders
+  const props = new Proxy(
+    {},
+    {
+      get: (_target, prop) => {
+        if (typeof prop === "symbol") return;
+        return `{{${prop}}}`;
+      },
+    }
+  );
+
+  // Render with @react-email/render
+  // The template bundle includes its own React copy via jsx-automatic transform
+  // Call the component function to get a React element, then render to HTML
+  const { render } = await import("@react-email/render");
+
+  // The bundled component uses its own React — calling it produces React elements
+  const element = Component(props);
+  const html = await render(element);
+  const text = await render(element, { plainText: true });
+
+  // Extract variables from rendered output
+  const variables = extractVariables(html);
+  const sesSubject = transformVariablesForSes(subject);
+  const sesHtml = transformVariablesForSes(html);
+  const sesText = transformVariablesForSes(text);
+  const sesTemplateName = slug
+    .replace(/[^a-zA-Z0-9-_]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .substring(0, 64);
+
+  return {
+    slug,
+    source,
+    sourceHash,
+    subject: sesSubject,
+    emailType,
+    previewText,
+    compiledHtml: sesHtml,
+    compiledText: sesText,
+    variables,
+    sesTemplateName,
+    cliProjectPath: `templates/${slug}.tsx`,
+  };
+}
+
+// ── Variable Extraction & Transformation ──
+
+function extractVariables(
+  html: string
+): Array<{ name: string; fallback?: string }> {
+  const vars: Array<{ name: string; fallback?: string }> = [];
+  const seen = new Set<string>();
+  const regex = /\{\{([a-zA-Z0-9_.]+)(?:\|([^}]*))?\}\}/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(html)) !== null) {
+    const name = match[1];
+    if (!seen.has(name)) {
+      seen.add(name);
+      vars.push({ name, fallback: match[2]?.trim() });
+    }
+  }
+
+  return vars;
+}
+
+function transformVariablesForSes(content: string): string {
+  return content.replace(
+    /\{\{\s*([a-zA-Z0-9_.]+)(?:\s*\|\s*([^}]*))?\s*\}\}/g,
+    (_match, varName, fallback) => {
+      // Flatten dot notation: contact.email → contactEmail
+      const sesName = varName.includes(".")
+        ? varName
+            .split(".")
+            .map((part: string, i: number) =>
+              i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
+            )
+            .join("")
+        : varName;
+
+      if (fallback !== undefined) {
+        const trimmed = fallback.trim();
+        return `{{#if ${sesName}}}{{${sesName}}}{{else}}${trimmed}{{/if}}`;
+      }
+
+      return `{{${sesName}}}`;
+    }
+  );
+}
+
+// ── SES Push ──
+
+async function pushToSES(
+  templates: CompiledTemplate[],
+  progress: DeploymentProgress
+): Promise<Array<{ slug: string; success: boolean }>> {
+  const results: Array<{ slug: string; success: boolean }> = [];
+
+  // Try to validate AWS credentials
+  let hasAWSCredentials = false;
+  let region = "us-east-1";
+
+  try {
+    const { validateAWSCredentialsWithDetails, getAWSRegion } = await import(
+      "../../../utils/shared/aws.js"
+    );
+    await validateAWSCredentialsWithDetails();
+    hasAWSCredentials = true;
+    region = await getAWSRegion();
+  } catch {
+    progress.info("No AWS credentials — skipping SES push");
+    return templates.map((t) => ({ slug: t.slug, success: false }));
+  }
+
+  if (!hasAWSCredentials) {
+    return templates.map((t) => ({ slug: t.slug, success: false }));
+  }
+
+  // Use SES client directly — it picks up credentials from the environment
+  const {
+    SESClient,
+    GetTemplateCommand,
+    CreateTemplateCommand,
+    UpdateTemplateCommand,
+  } = await import("@aws-sdk/client-ses");
+
+  const ses = new SESClient({ region });
+
+  for (const t of templates) {
+    progress.start(`Pushing ${pc.cyan(t.slug)} to SES`);
+    try {
+      const templateData = {
+        TemplateName: t.sesTemplateName,
+        SubjectPart: t.subject,
+        HtmlPart: t.compiledHtml,
+        TextPart: t.compiledText,
+      };
+
+      // Check if template exists
+      let exists = false;
+      try {
+        await ses.send(
+          new GetTemplateCommand({ TemplateName: t.sesTemplateName })
+        );
+        exists = true;
+      } catch (err) {
+        const e = err as { name?: string };
+        if (e.name !== "TemplateDoesNotExist") throw err;
+      }
+
+      if (exists) {
+        await ses.send(new UpdateTemplateCommand({ Template: templateData }));
+      } else {
+        await ses.send(new CreateTemplateCommand({ Template: templateData }));
+      }
+
+      results.push({ slug: t.slug, success: true });
+      progress.succeed(`Pushed ${pc.cyan(t.slug)} to SES`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push({ slug: t.slug, success: false });
+      progress.fail(`SES push failed for ${t.slug}: ${msg}`);
+    }
+  }
+
+  return results;
+}
+
+// ── API Push ──
+
+interface APIPushResult {
+  slug: string;
+  id?: string;
+  success: boolean;
+}
+
+async function pushToAPI(
+  templates: CompiledTemplate[],
+  token: string | null,
+  _org: string,
+  progress: DeploymentProgress
+): Promise<APIPushResult[]> {
+  if (!token) {
+    progress.info(
+      "No API token — skipping dashboard sync. Run: wraps auth login"
+    );
+    return templates.map((t) => ({ slug: t.slug, success: false }));
+  }
+
+  const apiBase = process.env.WRAPS_API_URL || "https://api.wraps.dev";
+
+  const results: APIPushResult[] = [];
+
+  // Use batch endpoint if multiple templates
+  if (templates.length > 1) {
+    progress.start(`Syncing ${templates.length} templates to dashboard`);
+    try {
+      const resp = await fetch(`${apiBase}/v1/templates/push/batch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          templates: templates.map((t) => ({
+            slug: t.slug,
+            source: t.source,
+            compiledHtml: t.compiledHtml,
+            compiledText: t.compiledText,
+            subject: t.subject,
+            previewText: t.previewText,
+            emailType: t.emailType,
+            variables: t.variables,
+            sourceHash: t.sourceHash,
+            sesTemplateName: t.sesTemplateName,
+            cliProjectPath: t.cliProjectPath,
+          })),
+        }),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text();
+        throw new Error(`API returned ${resp.status}: ${body}`);
+      }
+
+      const data = (await resp.json()) as {
+        results: Array<{ slug: string; id: string; status: string }>;
+      };
+      for (const r of data.results) {
+        results.push({ slug: r.slug, id: r.id, success: true });
+      }
+      progress.succeed(`Synced ${templates.length} templates to dashboard`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      progress.fail(`Dashboard sync failed: ${msg}`);
+      for (const t of templates) {
+        results.push({ slug: t.slug, success: false });
+      }
+    }
+  } else if (templates.length === 1) {
+    const t = templates[0];
+    progress.start(`Syncing ${pc.cyan(t.slug)} to dashboard`);
+    try {
+      const resp = await fetch(`${apiBase}/v1/templates/push`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          slug: t.slug,
+          source: t.source,
+          compiledHtml: t.compiledHtml,
+          compiledText: t.compiledText,
+          subject: t.subject,
+          previewText: t.previewText,
+          emailType: t.emailType,
+          variables: t.variables,
+          sourceHash: t.sourceHash,
+          sesTemplateName: t.sesTemplateName,
+          cliProjectPath: t.cliProjectPath,
+        }),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text();
+        throw new Error(`API returned ${resp.status}: ${body}`);
+      }
+
+      const data = (await resp.json()) as { id: string; slug: string };
+      results.push({ slug: data.slug, id: data.id, success: true });
+      progress.succeed(`Synced ${pc.cyan(t.slug)} to dashboard`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push({ slug: t.slug, success: false });
+      progress.fail(`Dashboard sync failed for ${t.slug}: ${msg}`);
+    }
+  }
+
+  return results;
+}
+
+// ── Lockfile ──
+
+async function loadLockfile(path: string): Promise<Lockfile> {
+  if (!existsSync(path)) {
+    return { version: "1.0.0", lastSync: "", templates: {} };
+  }
+  try {
+    const content = await readFile(path, "utf-8");
+    return JSON.parse(content) as Lockfile;
+  } catch {
+    return { version: "1.0.0", lastSync: "", templates: {} };
+  }
+}
+
+async function saveLockfile(path: string, lockfile: Lockfile): Promise<void> {
+  const dir = join(path, "..");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path, JSON.stringify(lockfile, null, 2), "utf-8");
+}
+
+// ── Utilities ──
+
+function sha256(content: string): string {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+/**
+ * Find node_modules directories that contain react and @react-email packages.
+ * Needed because pnpm's strict node_modules layout doesn't hoist packages.
+ */
+async function findCliNodeModules(): Promise<string[]> {
+  const paths: string[] = [];
+
+  // Try to find react via require.resolve from the CLI's package context
+  try {
+    const { createRequire } = await import("node:module");
+    // Use the CLI's dist directory as resolve base
+    const { fileURLToPath } = await import("node:url");
+    const { dirname } = await import("node:path");
+
+    // Try multiple resolution strategies
+    for (const base of [
+      // The current file's location (works when running from source)
+      import.meta.url,
+      // Process entry point (works when running bundled CLI)
+      `file://${process.argv[1]}`,
+    ]) {
+      try {
+        const req = createRequire(base);
+        const reactPkg = req.resolve("react/package.json");
+        const reactNodeModules = join(dirname(reactPkg), "..");
+        if (existsSync(join(reactNodeModules, "react"))) {
+          paths.push(reactNodeModules);
+          break;
+        }
+      } catch {}
+    }
+  } catch {
+    // Fallback: search up from cwd
+  }
+
+  return paths;
+}
