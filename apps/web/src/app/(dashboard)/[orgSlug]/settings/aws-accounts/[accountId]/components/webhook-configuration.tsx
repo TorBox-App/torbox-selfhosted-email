@@ -5,8 +5,10 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
   Link2,
   Loader2,
+  Terminal,
   Unlink,
 } from "lucide-react";
 import { useState } from "react";
@@ -23,6 +25,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +43,7 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const isConnected = !!account.webhookSecret;
 
@@ -82,11 +90,11 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Link2 className="h-5 w-5" />
-          Event Webhook
+          Platform Connection
         </CardTitle>
         <CardDescription>
-          Connect your AWS account to receive real-time email events (delivered,
-          opened, clicked, bounced) in the Wraps dashboard.
+          Connect your AWS account to the Wraps platform to stream real-time
+          email events to your dashboard.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -99,7 +107,7 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
                 Connected
               </span>
               <span className="text-muted-foreground text-sm">
-                Events are being sent to Wraps
+                Real-time events streaming to Wraps dashboard
               </span>
             </>
           ) : (
@@ -128,11 +136,11 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
           </Alert>
         )}
 
-        {/* Configuration Form */}
+        {/* Connected State */}
         {isConnected ? (
           <div className="space-y-4">
             <p className="text-muted-foreground text-sm">
-              Your webhook is configured and events are being sent to the Wraps
+              Your account is connected and events are streaming to the Wraps
               dashboard. You can disconnect if you want to stop receiving
               events.
             </p>
@@ -147,38 +155,72 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
               ) : (
                 <Unlink className="mr-2 h-4 w-4" />
               )}
-              Disconnect Webhook
+              Disconnect
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="webhookSecret">Webhook Secret</Label>
-              <Input
-                className="font-mono text-sm"
-                id="webhookSecret"
-                onChange={(e) => setWebhookSecret(e.target.value)}
-                placeholder="Paste your webhook secret from the CLI here"
-                type="text"
-                value={webhookSecret}
-              />
-              <p className="text-muted-foreground text-xs">
-                Run{" "}
-                <code className="rounded bg-muted px-1 py-0.5">
-                  wraps email upgrade
-                </code>{" "}
-                and select "Connect to Wraps Dashboard" to generate a webhook
-                secret.
+            {/* CLI Command - Primary CTA */}
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Terminal className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-sm">
+                  Connect via the Wraps CLI
+                </span>
+              </div>
+              <code className="block rounded-md border bg-background px-3 py-2 font-mono text-sm">
+                wraps platform connect
+              </code>
+              <p className="mt-2 text-muted-foreground text-xs">
+                This command automatically configures the webhook secret and
+                connects your account to the Wraps platform.
               </p>
             </div>
-            <Button disabled={isLoading || !webhookSecret} onClick={handleSave}>
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Link2 className="mr-2 h-4 w-4" />
-              )}
-              Connect Webhook
-            </Button>
+
+            {/* Advanced: Manual Webhook Input */}
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-muted-foreground"
+                >
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+                  />
+                  Advanced
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="webhookSecret">Webhook Secret</Label>
+                  <Input
+                    className="font-mono text-sm"
+                    id="webhookSecret"
+                    onChange={(e) => setWebhookSecret(e.target.value)}
+                    placeholder="Paste a webhook secret manually"
+                    type="text"
+                    value={webhookSecret}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Only use this if you need to manually configure the webhook
+                    secret instead of using the CLI.
+                  </p>
+                </div>
+                <Button
+                  disabled={isLoading || !webhookSecret}
+                  onClick={handleSave}
+                  size="sm"
+                >
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Link2 className="mr-2 h-4 w-4" />
+                  )}
+                  Connect Manually
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         )}
       </CardContent>

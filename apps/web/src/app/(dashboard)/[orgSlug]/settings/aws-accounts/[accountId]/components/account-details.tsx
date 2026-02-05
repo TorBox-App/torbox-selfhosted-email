@@ -27,6 +27,8 @@ export function AccountDetails({ account }: AccountDetailsProps) {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const isConnected = !!account.webhookSecret;
+
   return (
     <Card>
       <CardHeader>
@@ -100,28 +102,56 @@ export function AccountDetails({ account }: AccountDetailsProps) {
 
         <Separator />
 
-        {/* Status */}
+        {/* External ID */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h4 className="font-medium text-sm">External ID</h4>
+            <p className="break-all font-mono text-muted-foreground text-sm">
+              {account.externalId}
+            </p>
+          </div>
+          <Button
+            onClick={() => copyToClipboard(account.externalId, "externalId")}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <Copy className="h-4 w-4" />
+            {copiedField === "externalId" ? "Copied!" : "Copy"}
+          </Button>
+        </div>
+
+        <Separator />
+
+        {/* Platform Connection Status */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h4 className="font-medium text-sm">Verification Status</h4>
+            <h4 className="font-medium text-sm">Platform Connection</h4>
             <div className="mt-1">
-              {account.isVerified ? (
+              {isConnected ? (
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 font-medium text-green-800 text-xs">
                     <CheckCircle2 className="h-3 w-3" />
-                    Verified
+                    Connected
                   </span>
-                  {account.lastVerifiedAt && (
-                    <span className="text-muted-foreground text-xs">
-                      Last verified{" "}
-                      {new Date(account.lastVerifiedAt).toLocaleDateString()}
-                    </span>
-                  )}
+                  <span className="text-muted-foreground text-xs">
+                    Connected{" "}
+                    {new Date(account.updatedAt).toLocaleDateString()}
+                  </span>
                 </div>
               ) : (
-                <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 font-medium text-xs text-yellow-800">
-                  Pending Verification
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800 text-xs">
+                    Not Connected
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    Run{" "}
+                    <code className="rounded bg-muted px-1 py-0.5">
+                      wraps platform connect
+                    </code>{" "}
+                    to connect
+                  </span>
+                </div>
               )}
             </div>
           </div>

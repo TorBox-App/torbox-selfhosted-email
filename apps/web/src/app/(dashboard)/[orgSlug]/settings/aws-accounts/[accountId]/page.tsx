@@ -6,7 +6,6 @@ import { getOrganizationBySlug } from "@/lib/organization";
 import { checkAWSAccountAccess } from "@/lib/permissions/check-access";
 import { AccountDetails } from "./components/account-details";
 import { AccountFeatures } from "./components/account-features";
-import { IAMConfiguration } from "./components/iam-configuration";
 import { WebhookConfiguration } from "./components/webhook-configuration";
 
 type AWSAccountPageProps = {
@@ -99,11 +98,8 @@ export default async function AWSAccountPage({ params }: AWSAccountPageProps) {
       {/* Account Details */}
       <AccountDetails account={account} />
 
-      {/* Webhook Configuration - only show to managers */}
+      {/* Platform Connection - only show to managers */}
       {permissions.canManage && <WebhookConfiguration account={account} />}
-
-      {/* IAM Configuration - only show to managers */}
-      {permissions.canManage && <IAMConfiguration account={account} />}
     </div>
   );
 }
