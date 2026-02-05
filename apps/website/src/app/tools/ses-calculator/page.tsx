@@ -101,10 +101,12 @@ export default function SESCalculatorPage() {
     <>
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
+        suppressHydrationWarning
         type="application/ld+json"
       />
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        suppressHydrationWarning
         type="application/ld+json"
       />
       <SESCalculatorPageContent />

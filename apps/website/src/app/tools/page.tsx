@@ -53,6 +53,7 @@ export default function ToolsPage() {
     <>
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
+        suppressHydrationWarning
         type="application/ld+json"
       />
       <ToolsPageContent />

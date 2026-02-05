@@ -53,6 +53,7 @@ export default function SPFBuilderPage() {
     <>
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
+        suppressHydrationWarning
         type="application/ld+json"
       />
       <SPFBuilderPageContent />
