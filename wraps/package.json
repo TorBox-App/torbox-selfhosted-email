@@ -3,7 +3,7 @@
   "devDependencies": {
     "@react-email/components": "0.0.41",
     "@types/react": "19.2.4",
-    "@wraps.dev/email": "0.6.0",
+    "@wraps.dev/email": "0.7.0",
     "react": "19.2.4"
   }
 }
