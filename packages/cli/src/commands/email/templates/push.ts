@@ -183,7 +183,7 @@ export async function templatesPush(options: TemplatesPushOptions) {
 
   // Push to API
   const token = await resolveTokenAsync({ token: options.token });
-  const apiResults = await pushToAPI(compiled, token, config.org, progress);
+  const apiResults = await pushToAPI(compiled, token, config.org, progress, options.force);
 
   // Update lockfile
   for (const t of compiled) {
@@ -543,7 +543,8 @@ async function pushToAPI(
   templates: CompiledTemplate[],
   token: string | null,
   _org: string,
-  progress: DeploymentProgress
+  progress: DeploymentProgress,
+  force?: boolean
 ): Promise<APIPushResult[]> {
   if (!token) {
     progress.info(
@@ -579,22 +580,37 @@ async function pushToAPI(
             sourceHash: t.sourceHash,
             sesTemplateName: t.sesTemplateName,
             cliProjectPath: t.cliProjectPath,
+            force: force ?? false,
           })),
         }),
       });
 
-      if (!resp.ok) {
+      if (resp.status === 409) {
+        const data = (await resp.json()) as {
+          conflicts: Array<{ slug: string; message: string }>;
+          results: Array<{ slug: string; id: string; status: string }>;
+        };
+        for (const c of data.conflicts ?? []) {
+          results.push({ slug: c.slug, success: false });
+          progress.fail(
+            `${pc.cyan(c.slug)} was edited on the dashboard. Use ${pc.bold("--force")} to overwrite.`
+          );
+        }
+        for (const r of data.results ?? []) {
+          results.push({ slug: r.slug, id: r.id, success: true });
+        }
+      } else if (!resp.ok) {
         const body = await resp.text();
         throw new Error(`API returned ${resp.status}: ${body}`);
+      } else {
+        const data = (await resp.json()) as {
+          results: Array<{ slug: string; id: string; status: string }>;
+        };
+        for (const r of data.results) {
+          results.push({ slug: r.slug, id: r.id, success: true });
+        }
+        progress.succeed(`Synced ${templates.length} templates to dashboard`);
       }
-
-      const data = (await resp.json()) as {
-        results: Array<{ slug: string; id: string; status: string }>;
-      };
-      for (const r of data.results) {
-        results.push({ slug: r.slug, id: r.id, success: true });
-      }
-      progress.succeed(`Synced ${templates.length} templates to dashboard`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       progress.fail(`Dashboard sync failed: ${msg}`);
@@ -624,17 +640,23 @@ async function pushToAPI(
           sourceHash: t.sourceHash,
           sesTemplateName: t.sesTemplateName,
           cliProjectPath: t.cliProjectPath,
+          force: force ?? false,
         }),
       });
 
-      if (!resp.ok) {
+      if (resp.status === 409) {
+        results.push({ slug: t.slug, success: false });
+        progress.fail(
+          `${pc.cyan(t.slug)} was edited on the dashboard since your last push. Use ${pc.bold("--force")} to overwrite.`
+        );
+      } else if (!resp.ok) {
         const body = await resp.text();
         throw new Error(`API returned ${resp.status}: ${body}`);
+      } else {
+        const data = (await resp.json()) as { id: string; slug: string };
+        results.push({ slug: data.slug, id: data.id, success: true });
+        progress.succeed(`Synced ${pc.cyan(t.slug)} to dashboard`);
       }
-
-      const data = (await resp.json()) as { id: string; slug: string };
-      results.push({ slug: data.slug, id: data.id, success: true });
-      progress.succeed(`Synced ${pc.cyan(t.slug)} to dashboard`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       results.push({ slug: t.slug, success: false });
@@ -682,7 +704,6 @@ async function findCliNodeModules(): Promise<string[]> {
   try {
     const { createRequire } = await import("node:module");
     // Use the CLI's dist directory as resolve base
-    const { fileURLToPath } = await import("node:url");
     const { dirname } = await import("node:path");
 
     // Try multiple resolution strategies

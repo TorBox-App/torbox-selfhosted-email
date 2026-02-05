@@ -253,6 +253,13 @@
       "when": 1770308300026,
       "tag": "0035_normal_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1770321608399,
+      "tag": "0036_marvelous_ezekiel",
+      "breakpoints": true
     }
   ]
 }

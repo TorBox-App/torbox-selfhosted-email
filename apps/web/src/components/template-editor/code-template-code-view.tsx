@@ -7,8 +7,11 @@ import {
   Check,
   Copy,
   Download,
-  Lock,
+  Loader2,
   Monitor,
+  Pencil,
+  RotateCcw,
+  Save,
   Smartphone,
   Tablet,
 } from "lucide-react";
@@ -29,6 +32,9 @@ import { Button } from "@/components/ui/button";
 
 type CodeTemplateCodeViewProps = {
   template: Template;
+  orgSlug: string;
+  templateId: string;
+  onSourceSaved?: (updatedTemplate: Template) => void;
 };
 
 type DeviceType = "desktop" | "tablet" | "mobile";
@@ -39,15 +45,33 @@ const deviceWidths: Record<DeviceType, number> = {
   mobile: 375,
 };
 
-export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
+export function CodeTemplateCodeView({
+  template,
+  orgSlug,
+  templateId,
+  onSourceSaved,
+}: CodeTemplateCodeViewProps) {
   const [device, setDevice] = useState<DeviceType>("desktop");
   const [copied, setCopied] = useState(false);
   const [iframeHeight, setIframeHeight] = useState(600);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const source = template.source ?? "";
-  const compiledHtml = template.compiledHtml ?? "";
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editedSource, setEditedSource] = useState("");
+  const [compileError, setCompileError] = useState<string | null>(null);
+
+  const originalSource = template.source ?? "";
+  const [previewHtml, setPreviewHtml] = useState(template.compiledHtml ?? "");
   const filePath = template.cliProjectPath ?? "template.tsx";
+
+  // Reset preview when template changes externally
+  useEffect(() => {
+    setPreviewHtml(template.compiledHtml ?? "");
+  }, [template.compiledHtml]);
+
+  const hasChanges = isEditing && editedSource !== originalSource;
 
   // Auto-adjust iframe height based on content
   const adjustIframeHeight = useCallback(() => {
@@ -63,7 +87,7 @@ export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
   // Use ResizeObserver to adjust iframe height when content changes
   useEffect(() => {
     const iframe = iframeRef.current;
-    if (!(iframe && compiledHtml)) {
+    if (!(iframe && previewHtml)) {
       return;
     }
 
@@ -89,12 +113,13 @@ export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
       iframe.removeEventListener("load", handleLoad);
       resizeObserver?.disconnect();
     };
-  }, [compiledHtml, adjustIframeHeight]);
+  }, [previewHtml, adjustIframeHeight]);
 
   // Copy source to clipboard
   const handleCopy = async () => {
+    const textToCopy = isEditing ? editedSource : originalSource;
     try {
-      await navigator.clipboard.writeText(source);
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       toast.success("Code copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
@@ -106,7 +131,8 @@ export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
   // Download source file
   const handleDownload = () => {
     const filename = filePath.split("/").pop() ?? "template.tsx";
-    const blob = new Blob([source], { type: "text/plain" });
+    const textToDownload = isEditing ? editedSource : originalSource;
+    const blob = new Blob([textToDownload], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -118,8 +144,113 @@ export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
     toast.success(`Downloaded ${filename}`);
   };
 
+  // Enter edit mode
+  const handleStartEdit = () => {
+    setEditedSource(originalSource);
+    setIsEditing(true);
+    setCompileError(null);
+  };
+
+  // Discard changes
+  const handleDiscard = () => {
+    setIsEditing(false);
+    setEditedSource("");
+    setCompileError(null);
+    setPreviewHtml(template.compiledHtml ?? "");
+  };
+
+  // Save: compile then save
+  const handleSave = useCallback(async () => {
+    if (!hasChanges || isSaving) return;
+
+    setIsSaving(true);
+    setCompileError(null);
+
+    try {
+      // Step 1: Compile
+      const compileResp = await fetch(
+        `/api/${orgSlug}/emails/templates/${templateId}/compile`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ source: editedSource }),
+        }
+      );
+
+      if (!compileResp.ok) {
+        const data = await compileResp.json();
+        throw new Error(data.message || data.error || "Compilation failed");
+      }
+
+      const compiled = await compileResp.json();
+
+      // Step 2: Save
+      const saveResp = await fetch(
+        `/api/${orgSlug}/emails/templates/${templateId}/save-source`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source: editedSource,
+            compiledHtml: compiled.compiledHtml,
+            compiledText: compiled.compiledText,
+            variables: compiled.variables,
+          }),
+        }
+      );
+
+      if (!saveResp.ok) {
+        const data = await saveResp.json();
+        throw new Error(data.error || "Save failed");
+      }
+
+      const { template: updatedTemplate } = await saveResp.json();
+
+      // Update preview
+      setPreviewHtml(compiled.compiledHtml);
+
+      // Exit edit mode
+      setIsEditing(false);
+      setEditedSource("");
+
+      toast.success("Template saved");
+
+      // Notify parent
+      onSourceSaved?.(updatedTemplate);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to save";
+      setCompileError(message);
+      toast.error("Failed to save", { description: message });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    hasChanges,
+    isSaving,
+    editedSource,
+    orgSlug,
+    templateId,
+    onSourceSaved,
+  ]);
+
+  // Cmd+S keyboard shortcut
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isEditing, handleSave]);
+
   // Error state: missing source or compiled HTML
-  if (!source || !compiledHtml) {
+  if (!originalSource || !previewHtml) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="max-w-md text-center">
@@ -149,10 +280,69 @@ export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
           {/* Editor Header */}
           <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-2">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <Lock className="h-3.5 w-3.5" />
               <span className="font-mono text-xs">{filePath}</span>
+              {hasChanges && (
+                <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-amber-600 text-xs">
+                  Modified
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1">
+              {isEditing ? (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        className="h-8"
+                        disabled={!hasChanges || isSaving}
+                        onClick={handleSave}
+                        size="sm"
+                        variant="default"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Save className="mr-1 h-3.5 w-3.5" />
+                        )}
+                        Save
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Save changes (Cmd+S)</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        className="h-8"
+                        disabled={isSaving}
+                        onClick={handleDiscard}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                        Discard
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Discard changes</TooltipContent>
+                  </Tooltip>
+                </>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      className="h-8"
+                      onClick={handleStartEdit}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Pencil className="mr-1 h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Edit source code</TooltipContent>
+                </Tooltip>
+              )}
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -189,12 +379,25 @@ export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
             </div>
           </div>
 
+          {/* Compile Error Banner */}
+          {compileError && (
+            <div className="flex items-start gap-2 border-b bg-destructive/10 px-3 py-2">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
+              <p className="text-destructive text-xs">{compileError}</p>
+            </div>
+          )}
+
           {/* Monaco Editor */}
           <div className="flex-1 overflow-hidden">
             <MonacoEditor
               defaultLanguage="typescript"
               height="100%"
               language="typescript"
+              onChange={(value) => {
+                if (isEditing && value !== undefined) {
+                  setEditedSource(value);
+                }
+              }}
               options={{
                 automaticLayout: true,
                 fontSize: 13,
@@ -202,26 +405,37 @@ export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
                 lineNumbers: "on",
                 minimap: { enabled: false },
                 padding: { top: 16, bottom: 16 },
-                readOnly: true,
+                readOnly: !isEditing,
                 scrollBeyondLastLine: false,
                 wordWrap: "on",
                 tabSize: 2,
-                renderLineHighlight: "none",
-                cursorStyle: "line-thin",
-                cursorBlinking: "solid",
+                renderLineHighlight: isEditing ? "line" : "none",
+                cursorStyle: isEditing ? "line" : "line-thin",
+                cursorBlinking: isEditing ? "blink" : "solid",
               }}
               theme="vs-dark"
-              value={source}
+              value={isEditing ? editedSource : originalSource}
             />
           </div>
 
           {/* Footer */}
           <div className="border-t bg-muted/30 px-3 py-2">
             <p className="text-muted-foreground text-xs">
-              Read-only — edit this file in your project and run{" "}
-              <code className="rounded bg-muted px-1 font-mono">
-                wraps email templates push
-              </code>
+              {isEditing ? (
+                <>
+                  Editing — press{" "}
+                  <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">
+                    Cmd+S
+                  </kbd>{" "}
+                  to save
+                </>
+              ) : (
+                <>
+                  Click{" "}
+                  <span className="font-medium text-foreground">Edit</span> to
+                  modify this template
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -285,7 +499,7 @@ export function CodeTemplateCodeView({ template }: CodeTemplateCodeViewProps) {
                   onLoad={adjustIframeHeight}
                   ref={iframeRef}
                   sandbox="allow-same-origin"
-                  srcDoc={compiledHtml}
+                  srcDoc={previewHtml}
                   style={{
                     height: iframeHeight,
                     minHeight: "400px",

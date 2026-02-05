@@ -8,6 +8,7 @@ import {
   Code2,
   Copy,
   FileSignature,
+  Globe,
   Loader2,
   MoreHorizontal,
   Send,
@@ -142,21 +143,37 @@ export function CodeTemplateToolbar({
             </div>
           </div>
 
-          {/* Managed via code indicator */}
+          {/* Source indicator */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge
-                className="shrink-0 gap-1.5 bg-violet-500/10 text-violet-600 border-violet-500/20"
+                className={cn(
+                  "shrink-0 gap-1.5",
+                  template.lastEditedFrom === "dashboard"
+                    ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                    : "bg-violet-500/10 text-violet-600 border-violet-500/20"
+                )}
                 variant="outline"
               >
-                <Terminal className="h-3 w-3" />
-                Managed via code
+                {template.lastEditedFrom === "dashboard" ? (
+                  <>
+                    <Globe className="h-3 w-3" />
+                    Last edited on dashboard
+                  </>
+                ) : (
+                  <>
+                    <Terminal className="h-3 w-3" />
+                    Last pushed from CLI
+                  </>
+                )}
               </Badge>
             </TooltipTrigger>
             <TooltipContent>
-              {template.cliProjectPath
-                ? `Source: ${template.cliProjectPath}`
-                : "Pushed from CLI"}
+              {template.lastEditedFrom === "dashboard"
+                ? "Template was last modified on the dashboard"
+                : template.cliProjectPath
+                  ? `Source: ${template.cliProjectPath}`
+                  : "Pushed from CLI"}
             </TooltipContent>
           </Tooltip>
 

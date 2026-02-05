@@ -1,0 +1,1 @@
+ALTER TABLE "template" ADD COLUMN "last_edited_from" text;

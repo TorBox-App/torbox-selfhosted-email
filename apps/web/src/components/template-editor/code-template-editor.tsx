@@ -1,6 +1,7 @@
 "use client";
 
 import type { EmailType, Template } from "@wraps/db";
+import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -47,6 +48,7 @@ export function CodeTemplateEditor({
   className,
 }: CodeTemplateEditorProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [view, setView] = useState<CodeTemplateView>("code");
   const [showSendTestModal, setShowSendTestModal] = useState(false);
   const [subject, setSubject] = useState(template.subject ?? "");
@@ -194,6 +196,50 @@ export function CodeTemplateEditor({
     [updateMutation]
   );
 
+  // Handle source save from code editor or AI
+  const handleSourceSaved = useCallback(() => {
+    // Invalidate template query cache to refresh data
+    queryClient.invalidateQueries({
+      queryKey: ["template", orgSlug, templateId],
+    });
+  }, [queryClient, orgSlug, templateId]);
+
+  // Handle AI "Apply" — save source + switch to code view
+  const handleAIApply = useCallback(
+    async (source: string, compiledHtml: string) => {
+      try {
+        const resp = await fetch(
+          `/api/${orgSlug}/emails/templates/${templateId}/save-source`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              source,
+              compiledHtml,
+              compiledText: "",
+              variables: [],
+            }),
+          }
+        );
+
+        if (!resp.ok) {
+          const data = await resp.json();
+          throw new Error(data.error || "Save failed");
+        }
+
+        // Invalidate cache and switch to code view
+        handleSourceSaved();
+        setView("code");
+        toast.success("AI-generated template applied");
+      } catch (error) {
+        toast.error("Failed to apply template", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    },
+    [orgSlug, templateId, handleSourceSaved]
+  );
+
   return (
     <EditorErrorBoundary>
       <div
@@ -228,14 +274,22 @@ export function CodeTemplateEditor({
           {view === "design" && (
             <div className="flex-1">
               <CodeTemplateDesignView
-                onSwitchToCode={() => setView("code")}
+                currentSource={template.source ?? ""}
+                onApply={handleAIApply}
+                orgSlug={orgSlug}
+                templateId={templateId}
               />
             </div>
           )}
 
           {view === "code" && (
             <div className="flex-1">
-              <CodeTemplateCodeView template={template} />
+              <CodeTemplateCodeView
+                onSourceSaved={handleSourceSaved}
+                orgSlug={orgSlug}
+                template={template}
+                templateId={templateId}
+              />
             </div>
           )}
         </div>

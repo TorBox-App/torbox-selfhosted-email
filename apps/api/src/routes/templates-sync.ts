@@ -23,6 +23,17 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
 
       const result = await upsertTemplateFromCli(authContext, body);
 
+      if (result.conflict) {
+        ctx.set.status = 409;
+        return {
+          error: "conflict",
+          message:
+            "Template was edited on the dashboard since last push",
+          lastEditedFrom: "dashboard",
+          updatedAt: result.updatedAt,
+        };
+      }
+
       ctx.set.status = result.created ? 201 : 200;
       return {
         id: result.id,
@@ -58,6 +69,9 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
             description: "Path in project (e.g. templates/welcome.tsx)",
           })
         ),
+        force: t.Optional(
+          t.Boolean({ description: "Force overwrite even if edited on dashboard" })
+        ),
       }),
       detail: {
         tags: ["templates"],
@@ -78,6 +92,27 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
       const results = await Promise.all(
         body.templates.map((tmpl) => upsertTemplateFromCli(authContext, tmpl))
       );
+
+      // Check if any had conflicts
+      const conflicts = results.filter((r) => r.conflict);
+      if (conflicts.length > 0) {
+        ctx.set.status = 409;
+        return {
+          error: "conflict",
+          conflicts: conflicts.map((c) => ({
+            slug: c.slug,
+            message: "Template was edited on the dashboard since last push",
+            updatedAt: c.updatedAt,
+          })),
+          results: results
+            .filter((r) => !r.conflict)
+            .map((r) => ({
+              slug: r.slug,
+              id: r.id,
+              status: "PUBLISHED" as const,
+            })),
+        };
+      }
 
       return {
         results: results.map((r) => ({
@@ -105,6 +140,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
             sourceHash: t.String(),
             sesTemplateName: t.String(),
             cliProjectPath: t.Optional(t.String()),
+            force: t.Optional(t.Boolean()),
           })
         ),
       }),
@@ -133,6 +169,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
           sourceHash: template.sourceHash,
           status: template.status,
           updatedAt: template.updatedAt,
+          lastEditedFrom: template.lastEditedFrom,
         })
         .from(template)
         .where(
@@ -163,7 +200,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
 
 // ── Helpers ──
 
-interface PushBody {
+export interface PushBody {
   slug: string;
   source: string;
   compiledHtml: string;
@@ -175,17 +212,30 @@ interface PushBody {
   sourceHash: string;
   sesTemplateName: string;
   cliProjectPath?: string;
+  force?: boolean;
 }
 
-async function upsertTemplateFromCli(
+interface UpsertResult {
+  id: string;
+  slug: string;
+  updatedAt: string;
+  created: boolean;
+  conflict?: boolean;
+}
+
+export async function upsertTemplateFromCli(
   authContext: AuthContext,
   body: PushBody
-): Promise<{ id: string; slug: string; updatedAt: string; created: boolean }> {
+): Promise<UpsertResult> {
   const now = new Date();
 
   // Check for existing template by (organizationId, slug)
   const [existing] = await db
-    .select({ id: template.id })
+    .select({
+      id: template.id,
+      lastEditedFrom: template.lastEditedFrom,
+      updatedAt: template.updatedAt,
+    })
     .from(template)
     .where(
       and(
@@ -196,6 +246,17 @@ async function upsertTemplateFromCli(
     .limit(1);
 
   if (existing) {
+    // Conflict check: if last edited from dashboard and not forcing, reject
+    if (existing.lastEditedFrom === "dashboard" && !body.force) {
+      return {
+        id: existing.id,
+        slug: body.slug,
+        updatedAt: existing.updatedAt.toISOString(),
+        created: false,
+        conflict: true,
+      };
+    }
+
     // Update existing template
     await db
       .update(template)
@@ -214,6 +275,7 @@ async function upsertTemplateFromCli(
         lastPushedAt: now,
         cliProjectPath: body.cliProjectPath,
         lastEditedBy: authContext.userId,
+        lastEditedFrom: "cli",
         updatedAt: now,
       })
       .where(eq(template.id, existing.id));
@@ -227,8 +289,6 @@ async function upsertTemplateFromCli(
   }
 
   // Insert new template
-  // createdBy requires non-null; for API key auth userId may be null,
-  // fall back to "cli" as a sentinel value
   const id = crypto.randomUUID();
   await db.insert(template).values({
     id,
@@ -249,6 +309,7 @@ async function upsertTemplateFromCli(
     pushedFromCli: true,
     lastPushedAt: now,
     cliProjectPath: body.cliProjectPath,
+    lastEditedFrom: "cli",
     createdBy: authContext.userId ?? "cli",
   });
 
