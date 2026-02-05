@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     "@wraps.dev/email",
     "@wraps/email",
+    "esbuild",
     "pino",
     "pino-pretty",
   ],
