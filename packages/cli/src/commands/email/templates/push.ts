@@ -98,7 +98,9 @@ export async function templatesPush(options: TemplatesPushOptions) {
     const sourceHash = sha256(source);
 
     // Check lockfile for change detection
-    if (!options.force && lockfile.templates[slug]?.localHash === sourceHash) {
+    // Note: --force overrides conflict detection (dashboard edits), but not local change detection
+    // Use a separate --all flag if you want to push all templates regardless of local changes
+    if (lockfile.templates[slug]?.localHash === sourceHash) {
       unchanged.push(slug);
       continue;
     }
