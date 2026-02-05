@@ -6,6 +6,7 @@
 import { createRequire } from "node:module";
 import pc from "picocolors";
 import { isCI } from "../utils/shared/ci-detection.js";
+import { readAuthConfig } from "../utils/shared/config.js";
 import { TelemetryConfigManager } from "./config.js";
 import type {
   TelemetryClientOptions,
@@ -49,6 +50,8 @@ export class TelemetryClient {
   private eventQueue: TelemetryEvent[] = [];
   private flushTimer?: NodeJS.Timeout;
   private hasShownFooter = false;
+  private userId: string | undefined;
+  private userIdResolved = false;
 
   constructor(options: TelemetryClientOptions = {}) {
     this.config = new TelemetryConfigManager();
@@ -58,6 +61,27 @@ export class TelemetryClient {
 
     // Check if telemetry should be enabled
     this.enabled = this.shouldBeEnabled();
+
+    // Kick off async auth resolution (non-blocking)
+    this.resolveUserId();
+  }
+
+  /**
+   * Resolve authenticated user identity from CLI auth config.
+   * Uses the first organization ID as the user identifier,
+   * linking CLI telemetry to the same org tracked on the web dashboard.
+   */
+  private async resolveUserId(): Promise<void> {
+    try {
+      const config = await readAuthConfig();
+      if (config?.auth?.token && config.auth.organizations?.length) {
+        this.userId = config.auth.organizations[0].id;
+      }
+    } catch {
+      // Silent — don't break telemetry if auth config is unreadable
+    } finally {
+      this.userIdResolved = true;
+    }
   }
 
   /**
@@ -104,6 +128,7 @@ export class TelemetryClient {
         ci: isCI(),
       },
       anonymousId: this.config.getAnonymousId(),
+      ...(this.userId ? { userId: this.userId } : {}),
       timestamp: new Date().toISOString(),
     };
 
@@ -177,6 +202,29 @@ export class TelemetryClient {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
     }
+
+    // Wait briefly for auth resolution if still pending, so queued events get userId
+    if (!this.userIdResolved) {
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (this.userIdResolved) return resolve();
+          setTimeout(check, 10);
+        };
+        check();
+        // Don't block more than 100ms
+        setTimeout(resolve, 100);
+      });
+    }
+
+    // Backfill userId on any queued events that were tracked before resolution
+    if (this.userId) {
+      for (const evt of this.eventQueue) {
+        if (!evt.userId) {
+          evt.userId = this.userId;
+        }
+      }
+    }
+
     await this.flush();
   }
 

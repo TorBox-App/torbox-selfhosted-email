@@ -19,6 +19,7 @@ export type TelemetryEvent = {
   event: string;
   properties?: Record<string, unknown>;
   anonymousId: string;
+  userId?: string;
   timestamp?: string;
 };
 
