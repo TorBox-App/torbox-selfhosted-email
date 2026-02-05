@@ -585,19 +585,35 @@ async function pushToAPI(
         }),
       });
 
-      if (resp.status === 409) {
+      if (Number(resp.status) === 409) {
         const data = (await resp.json()) as {
           conflicts: Array<{ slug: string; message: string }>;
           results: Array<{ slug: string; id: string; status: string }>;
         };
+        // Handle conflicts
         for (const c of data.conflicts ?? []) {
           results.push({ slug: c.slug, success: false });
-          progress.fail(
-            `${pc.cyan(c.slug)} was edited on the dashboard. Use ${pc.bold("--force")} to overwrite.`
-          );
         }
+        // Handle successes
         for (const r of data.results ?? []) {
           results.push({ slug: r.slug, id: r.id, success: true });
+        }
+        // Show summary
+        const successCount = data.results?.length ?? 0;
+        const conflictCount = data.conflicts?.length ?? 0;
+        if (successCount > 0 && conflictCount > 0) {
+          progress.succeed(`Synced ${successCount} templates to dashboard`);
+          for (const c of data.conflicts ?? []) {
+            progress.fail(
+              `${pc.cyan(c.slug)} was edited on the dashboard. Use ${pc.bold("--force")} to overwrite.`
+            );
+          }
+        } else if (conflictCount > 0) {
+          for (const c of data.conflicts ?? []) {
+            progress.fail(
+              `${pc.cyan(c.slug)} was edited on the dashboard. Use ${pc.bold("--force")} to overwrite.`
+            );
+          }
         }
       } else if (!resp.ok) {
         const body = await resp.text();
@@ -644,7 +660,7 @@ async function pushToAPI(
         }),
       });
 
-      if (resp.status === 409) {
+      if (Number(resp.status) === 409) {
         results.push({ slug: t.slug, success: false });
         progress.fail(
           `${pc.cyan(t.slug)} was edited on the dashboard since your last push. Use ${pc.bold("--force")} to overwrite.`
