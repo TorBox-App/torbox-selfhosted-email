@@ -180,7 +180,7 @@ function StatusBadge({
   status,
   label,
 }: {
-  status: "pass" | "warn" | "fail" | "none";
+  status: "pass" | "warn" | "fail" | "none" | "info";
   label: string;
 }) {
   const config = {
@@ -195,6 +195,10 @@ function StatusBadge({
     fail: {
       icon: X,
       className: "bg-red-500/10 text-red-600 border-red-500/20",
+    },
+    info: {
+      icon: Info,
+      className: "bg-blue-500/10 text-blue-600 border-blue-500/20",
     },
     none: {
       icon: X,
@@ -218,10 +222,14 @@ function RecordDisplay({
   label,
   record,
   status,
+  warnings,
+  extra,
 }: {
   label: string;
   record: string | null;
-  status: "pass" | "warn" | "fail" | "none";
+  status: "pass" | "warn" | "fail" | "none" | "info";
+  warnings?: string[];
+  extra?: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -231,6 +239,7 @@ function RecordDisplay({
         <CollapsibleTrigger className="flex w-full items-center justify-between p-4 hover:bg-muted/50">
           <div className="flex items-center gap-3">
             <StatusBadge label={label} status={status} />
+            {extra}
           </div>
           <ChevronDown
             className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -246,6 +255,19 @@ function RecordDisplay({
               <p className="text-muted-foreground text-sm italic">
                 No record found
               </p>
+            )}
+            {warnings && warnings.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {warnings.map((warning, i) => (
+                  <div
+                    className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-2.5 text-xs text-yellow-600 dark:text-yellow-400"
+                    key={`warning-${i}`}
+                  >
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                    {warning}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </CollapsibleContent>
@@ -329,29 +351,46 @@ function ToolsPageInner() {
     }
   };
 
+  // Score-driven status: green = full points, yellow = partial, red = critical issue, none = missing
+  const getScoreStatus = (
+    score: number,
+    max: number,
+  ): "pass" | "warn" | "fail" => {
+    if (score >= max) return "pass";
+    if (score >= max * 0.7) return "warn";
+    return "fail";
+  };
+
   const getSpfStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.spf.exists) {
-      return "none";
+    if (!result?.spf.exists) return "none";
+    if (result.score?.breakdown) {
+      return getScoreStatus(
+        result.score.breakdown.spf.score,
+        result.score.breakdown.spf.max,
+      );
     }
-    if (!result.spf.valid) {
-      return "fail";
-    }
-    if (result.spf.allMechanism === "+all") {
-      return "fail";
-    }
-    if (result.spf.allMechanism === "~all") {
+    // Fallback if no breakdown
+    if (!result.spf.valid || result.spf.allMechanism === "+all") return "fail";
+    if (
+      result.spf.allMechanism === "~all" ||
+      result.spf.allMechanism === "?all" ||
+      result.spf.lookupCount > result.spf.lookupLimit ||
+      result.spf.hasPtr ||
+      (result.spf.warnings?.length ?? 0) > 0
+    )
       return "warn";
-    }
     return "pass";
   };
 
   const getDkimStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.dkim?.found) {
-      return "none";
+    if (!result?.dkim?.found) return "none";
+    if (result.score?.breakdown) {
+      return getScoreStatus(
+        result.score.breakdown.dkim.score,
+        result.score.breakdown.dkim.max,
+      );
     }
-    if ((result.dkim?.warnings?.length ?? 0) > 0) {
-      return "warn";
-    }
+    if ((result.dkim?.warnings?.length ?? 0) > 0) return "warn";
     return "pass";
   };
 
@@ -362,26 +401,38 @@ function ToolsPageInner() {
     result.dkim?.warnings?.some((w) => w.toLowerCase().includes("aws ses"));
 
   const getDmarcStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.dmarc.exists) {
-      return "none";
+    if (!result?.dmarc.exists) return "none";
+    if (result.score?.breakdown) {
+      return getScoreStatus(
+        result.score.breakdown.dmarc.score,
+        result.score.breakdown.dmarc.max,
+      );
     }
-    if (!result.dmarc.valid) {
-      return "fail";
-    }
-    if (result.dmarc.policy === "none") {
-      return "warn";
-    }
+    if (!result.dmarc.valid) return "fail";
+    if (result.dmarc.policy === "none") return "warn";
     return "pass";
   };
 
   const getMxStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.mx.exists) {
-      return "none";
+    if (!result?.mx.exists) return "none";
+    if (result.score?.breakdown) {
+      return getScoreStatus(
+        result.score.breakdown.mx.score,
+        result.score.breakdown.mx.max,
+      );
     }
-    if (result.mx.records.some((r) => !r.resolves)) {
-      return "warn";
-    }
+    if (result.mx.records.some((r) => !r.resolves)) return "warn";
     return "pass";
+  };
+
+  const getStatusLabel = (
+    exists: boolean,
+    status: "pass" | "warn" | "fail" | "none",
+  ): string => {
+    if (!exists) return "Missing";
+    if (status === "pass") return "Strong";
+    if (status === "warn") return "Weak";
+    return "Failing";
   };
 
   return (
@@ -545,36 +596,66 @@ function ToolsPageInner() {
                   <CardContent className="pt-4 pb-4">
                     <div className="mb-2 font-semibold text-sm">SPF</div>
                     <StatusBadge
-                      label={result.spf.exists ? "Found" : "Missing"}
+                      label={getStatusLabel(result.spf.exists, getSpfStatus())}
                       status={getSpfStatus()}
                     />
+                    {result.score?.breakdown && (
+                      <div className="mt-1.5 text-muted-foreground text-xs">
+                        {result.score.breakdown.spf.score}/{result.score.breakdown.spf.max} pts
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 <Card className="text-center">
                   <CardContent className="pt-4 pb-4">
                     <div className="mb-2 font-semibold text-sm">DKIM</div>
                     <StatusBadge
-                      label={result.dkim?.found ? "Found" : "Missing"}
-                      status={getDkimStatus()}
+                      label={
+                        isAwsSesWithoutDkim
+                          ? "Not Verified"
+                          : getStatusLabel(!!result.dkim?.found, getDkimStatus())
+                      }
+                      status={
+                        isAwsSesWithoutDkim
+                          ? "info"
+                          : result.dkim?.found
+                            ? getDkimStatus()
+                            : "none"
+                      }
                     />
+                    {result.score?.breakdown && (
+                      <div className="mt-1.5 text-muted-foreground text-xs">
+                        {result.score.breakdown.dkim.score}/{result.score.breakdown.dkim.max} pts
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 <Card className="text-center">
                   <CardContent className="pt-4 pb-4">
                     <div className="mb-2 font-semibold text-sm">DMARC</div>
                     <StatusBadge
-                      label={result.dmarc.exists ? "Found" : "Missing"}
+                      label={getStatusLabel(result.dmarc.exists, getDmarcStatus())}
                       status={getDmarcStatus()}
                     />
+                    {result.score?.breakdown && (
+                      <div className="mt-1.5 text-muted-foreground text-xs">
+                        {result.score.breakdown.dmarc.score}/{result.score.breakdown.dmarc.max} pts
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 <Card className="text-center">
                   <CardContent className="pt-4 pb-4">
                     <div className="mb-2 font-semibold text-sm">MX</div>
                     <StatusBadge
-                      label={result.mx.exists ? "Found" : "Missing"}
+                      label={getStatusLabel(result.mx.exists, getMxStatus())}
                       status={getMxStatus()}
                     />
+                    {result.score?.breakdown && (
+                      <div className="mt-1.5 text-muted-foreground text-xs">
+                        {result.score.breakdown.mx.score}/{result.score.breakdown.mx.max} pts
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -587,12 +668,14 @@ function ToolsPageInner() {
                       <div className="flex items-start gap-3">
                         <Key className="mt-0.5 h-5 w-5 text-blue-500" />
                         <div>
-                          <h3 className="font-semibold">AWS SES Detected</h3>
+                          <h3 className="font-semibold">
+                            AWS SES Detected — DKIM Likely Configured
+                          </h3>
                           <p className="text-muted-foreground text-sm">
-                            AWS SES uses random DKIM selectors that we can't
-                            auto-discover. Expand "Advanced Options" above and
-                            enter your 3 DKIM selectors to verify your DKIM
-                            setup.
+                            AWS SES automatically configures DKIM with unique
+                            selectors that we can't auto-discover. Your DKIM is
+                            most likely set up correctly. To verify, enter your 3
+                            DKIM selectors from the SES console.
                           </p>
                         </div>
                       </div>
@@ -602,7 +685,7 @@ function ToolsPageInner() {
                         variant="outline"
                       >
                         <Settings2 className="mr-2 h-4 w-4" />
-                        Show Advanced Options
+                        Enter Selectors
                       </Button>
                     </div>
                   </CardContent>
@@ -670,6 +753,15 @@ function ToolsPageInner() {
                               }}
                             />
                           </div>
+                          {key === "dkim" &&
+                            isAwsSesWithoutDkim &&
+                            data.score === 0 && (
+                              <p className="flex items-center gap-1 text-blue-500 text-xs">
+                                <Info className="h-3 w-3" />
+                                DKIM score may be inaccurate — AWS SES uses
+                                undiscoverable selectors
+                              </p>
+                            )}
                         </div>
                       ))}
                       {result.score.breakdown.bonus.earned > 0 && (
@@ -853,11 +945,28 @@ function ToolsPageInner() {
                     label="SPF"
                     record={result.spf.record}
                     status={getSpfStatus()}
+                    warnings={result.spf.warnings}
+                    extra={
+                      result.spf.exists ? (
+                        <span
+                          className={`font-mono text-xs ${
+                            result.spf.lookupCount > result.spf.lookupLimit
+                              ? "text-red-500"
+                              : result.spf.lookupCount > 7
+                                ? "text-yellow-500"
+                                : "text-green-500"
+                          }`}
+                        >
+                          {result.spf.lookupCount}/{result.spf.lookupLimit} lookups
+                        </span>
+                      ) : undefined
+                    }
                   />
                   <RecordDisplay
                     label="DMARC"
                     record={result.dmarc.record}
                     status={getDmarcStatus()}
+                    warnings={result.dmarc.warnings}
                   />
                   {(result.dkim?.selectorsFound?.length ?? 0) > 0 && (
                     <div className="rounded-lg border bg-card">
@@ -882,6 +991,19 @@ function ToolsPageInner() {
                             </div>
                           ))}
                         </div>
+                        {(result.dkim?.warnings?.length ?? 0) > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {result.dkim.warnings.map((warning, i) => (
+                              <div
+                                className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-2.5 text-xs text-yellow-600 dark:text-yellow-400"
+                                key={`dkim-warning-${i}`}
+                              >
+                                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                                {warning}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -908,6 +1030,99 @@ function ToolsPageInner() {
                           ))}
                         </div>
                       </div>
+                    </div>
+                  )}
+                  {/* Blacklist Status */}
+                  {result.blacklist?.checked && (
+                    <div className="rounded-lg border bg-card">
+                      <div className="flex items-center justify-between p-4">
+                        <StatusBadge
+                          label="Blacklists"
+                          status={result.blacklist.overallClean ? "pass" : "fail"}
+                        />
+                        {result.blacklist.overallClean ? (
+                          <Badge variant="outline">Clean</Badge>
+                        ) : (
+                          <span className="text-red-500 text-sm">
+                            {result.blacklist.domainListings.length +
+                              result.blacklist.ipListings.length}{" "}
+                            listing(s)
+                          </span>
+                        )}
+                      </div>
+                      {!result.blacklist.overallClean && (
+                        <div className="border-t bg-muted/30 p-4">
+                          <div className="space-y-2">
+                            {result.blacklist.domainListings.map((listing, i) => (
+                              <div
+                                className="flex items-center justify-between rounded bg-background p-2 text-sm"
+                                key={`domain-bl-${i}`}
+                              >
+                                <div>
+                                  <span className="font-medium">
+                                    {listing.blacklist}
+                                  </span>
+                                  <Badge
+                                    className="ml-2"
+                                    variant={
+                                      listing.priority === "high"
+                                        ? "destructive"
+                                        : "secondary"
+                                    }
+                                  >
+                                    {listing.priority}
+                                  </Badge>
+                                </div>
+                                {listing.delistUrl && (
+                                  <a
+                                    className="text-primary text-xs hover:underline"
+                                    href={listing.delistUrl}
+                                    rel="noopener noreferrer"
+                                    target="_blank"
+                                  >
+                                    Delist
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                            {result.blacklist.ipListings.map((listing, i) => (
+                              <div
+                                className="flex items-center justify-between rounded bg-background p-2 text-sm"
+                                key={`ip-bl-${i}`}
+                              >
+                                <div>
+                                  <code className="font-mono text-xs">
+                                    {listing.target}
+                                  </code>
+                                  <span className="ml-2 text-muted-foreground">
+                                    {listing.blacklist}
+                                  </span>
+                                  <Badge
+                                    className="ml-2"
+                                    variant={
+                                      listing.priority === "high"
+                                        ? "destructive"
+                                        : "secondary"
+                                    }
+                                  >
+                                    {listing.priority}
+                                  </Badge>
+                                </div>
+                                {listing.delistUrl && (
+                                  <a
+                                    className="text-primary text-xs hover:underline"
+                                    href={listing.delistUrl}
+                                    rel="noopener noreferrer"
+                                    target="_blank"
+                                  >
+                                    Delist
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -956,6 +1171,22 @@ function ToolsPageInner() {
                           {result.dmarc.reportingEnabled
                             ? "Enabled"
                             : "Disabled"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-1 text-muted-foreground text-sm">
+                          SPF Alignment
+                        </div>
+                        <div className="font-mono text-lg">
+                          {result.dmarc.alignmentSpf || "relaxed"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-1 text-muted-foreground text-sm">
+                          DKIM Alignment
+                        </div>
+                        <div className="font-mono text-lg">
+                          {result.dmarc.alignmentDkim || "relaxed"}
                         </div>
                       </div>
                     </div>

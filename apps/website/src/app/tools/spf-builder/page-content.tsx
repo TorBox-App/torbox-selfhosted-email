@@ -304,6 +304,174 @@ function SPFBuilderInner() {
         );
       }
 
+      // Auto-populate the builder from the record
+      const parts = record.split(/\s+/);
+
+      // Additional warnings based on parsed record
+      if (record.includes("?all")) {
+        warnings.push(
+          'Uses "?all" (neutral) which provides no protection — switch to "-all"',
+        );
+      }
+      if (record.includes("~all") && !record.includes("+all")) {
+        warnings.push(
+          'Uses "~all" (soft fail) — consider upgrading to "-all" (hard fail) for stronger protection',
+        );
+      }
+      if (record.length > 255) {
+        warnings.push(
+          `Record is ${record.length} characters — TXT records over 255 characters require splitting and may cause issues with some DNS providers`,
+        );
+      }
+      // Check for duplicate includes
+      const includes = parts
+        .filter((p) => p.replace(/^[+\-~?]/, "").startsWith("include:"))
+        .map((p) => p.replace(/^[+\-~?]/, ""));
+      const seen = new Set<string>();
+      for (const inc of includes) {
+        if (seen.has(inc)) {
+          warnings.push(
+            `Duplicate include found: ${inc.replace("include:", "")} — wastes a DNS lookup`,
+          );
+        }
+        seen.add(inc);
+      }
+      // Check for a/mx mechanisms that cost lookups
+      for (const part of parts) {
+        const clean = part.replace(/^[+\-~?]/, "");
+        if (clean === "a" || clean.startsWith("a:") || clean.startsWith("a/")) {
+          warnings.push(
+            'Uses "a" mechanism which costs a DNS lookup — consider replacing with explicit IP addresses',
+          );
+        }
+        if (clean === "mx" || clean.startsWith("mx:") || clean.startsWith("mx/")) {
+          warnings.push(
+            'Uses "mx" mechanism which costs a DNS lookup — consider replacing with explicit IP addresses',
+          );
+        }
+      }
+      // Check for redirect= with all mechanism
+      const hasRedirect = parts.some((p) =>
+        p.replace(/^[+\-~?]/, "").startsWith("redirect="),
+      );
+      const hasAll = parts.some(
+        (p) =>
+          p === "-all" ||
+          p === "~all" ||
+          p === "?all" ||
+          p === "+all" ||
+          p.replace(/^[+\-~?]/, "") === "all",
+      );
+      if (hasRedirect && hasAll) {
+        warnings.push(
+          'Record has both "redirect=" and an "all" mechanism — the redirect will be ignored',
+        );
+      }
+      // Check for no mechanisms (only v=spf1 and all)
+      const mechanisms = parts.filter((p) => {
+        const clean = p.replace(/^[+\-~?]/, "");
+        return (
+          clean !== "v=spf1" &&
+          clean !== "all" &&
+          !clean.startsWith("redirect=")
+        );
+      });
+      if (mechanisms.length === 0) {
+        const allPart = parts.find(
+          (p) =>
+            p === "-all" || p === "~all" || p === "?all" || p === "+all",
+        );
+        warnings.push(
+          `Record has no include or IP mechanisms — only the catch-all "${allPart || "all"}" will apply`,
+        );
+      }
+      // Check for very high complexity
+      if (includes.length >= 8) {
+        warnings.push(
+          `Record has ${includes.length} includes — consider consolidating providers to reduce complexity`,
+        );
+      }
+      const matchedProviders: string[] = [];
+      const unmatchedIncludes: string[] = [];
+      const detectedIPs: string[] = [];
+      let detectedQualifier: string | null = null;
+
+      // Build a reverse map: include domain -> provider key
+      const mechanismToProvider = new Map<string, string>();
+      for (const [key, provider] of Object.entries(PROVIDERS)) {
+        mechanismToProvider.set(provider.mechanism, key);
+      }
+
+      for (const part of parts) {
+        const clean = part.replace(/^[+\-~?]/, "");
+
+        if (mechanismToProvider.has(clean)) {
+          matchedProviders.push(mechanismToProvider.get(clean)!);
+        } else if (clean.startsWith("include:")) {
+          unmatchedIncludes.push(clean.replace("include:", ""));
+        } else if (clean.startsWith("ip4:") || clean.startsWith("ip6:")) {
+          detectedIPs.push(clean.replace(/^ip[46]:/, ""));
+        } else if (
+          clean === "all" ||
+          part === "-all" ||
+          part === "~all" ||
+          part === "?all" ||
+          part === "+all"
+        ) {
+          detectedQualifier = part.startsWith("+")
+            ? "+all"
+            : part.startsWith("~")
+              ? "~all"
+              : part.startsWith("?")
+                ? "?all"
+                : "-all";
+        }
+      }
+
+      if (matchedProviders.length > 0) {
+        setSelectedProviders(matchedProviders);
+      }
+      if (detectedIPs.length > 0) {
+        setCustomIPs(detectedIPs);
+      }
+      if (detectedQualifier && detectedQualifier in QUALIFIERS) {
+        setQualifier(detectedQualifier);
+      }
+      // Add unmatched includes with lookup resolution
+      if (unmatchedIncludes.length > 0) {
+        const newIncludes: CustomInclude[] = unmatchedIncludes.map((d) => ({
+          domain: d,
+          lookups: null,
+          loading: true,
+        }));
+        setCustomIncludes(newIncludes);
+
+        // Resolve lookups for each unmatched include
+        for (const inc of unmatchedIncludes) {
+          countSpfLookups(inc)
+            .then((resolved) => {
+              setCustomIncludes((prev) =>
+                prev.map((i) =>
+                  i.domain === inc
+                    ? { ...i, lookups: resolved, loading: false }
+                    : i,
+                ),
+              );
+            })
+            .catch(() => {
+              setCustomIncludes((prev) =>
+                prev.map((i) =>
+                  i.domain === inc
+                    ? { ...i, lookups: 2, loading: false, error: "Failed to resolve" }
+                    : i,
+                ),
+              );
+            });
+        }
+      } else {
+        setCustomIncludes([]);
+      }
+
       setLookupResult({ record, lookups, warnings });
     } catch {
       setLookupError("Failed to look up SPF record");
