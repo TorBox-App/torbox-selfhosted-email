@@ -274,6 +274,7 @@ export function CodeTemplateEditor({
           {view === "design" && (
             <div className="flex-1">
               <CodeTemplateDesignView
+                compiledHtml={template.compiledHtml ?? ""}
                 currentSource={template.source ?? ""}
                 onApply={handleAIApply}
                 orgSlug={orgSlug}
