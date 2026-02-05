@@ -35,7 +35,7 @@ const footerLinks = {
       href: "https://github.com/wraps-team/wraps/issues",
       external: true,
     },
-    { name: "Cost Calculator", href: "/calculator" },
+    { name: "SES Cost Calculator", href: "/tools/ses-calculator" },
   ],
   legal: [
     { name: "Privacy Policy", href: "/privacy" },

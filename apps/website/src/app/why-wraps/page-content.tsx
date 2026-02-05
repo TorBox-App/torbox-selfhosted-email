@@ -307,7 +307,7 @@ export default function WhyWrapsPageContent() {
                 </a>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <a href="/calculator">Calculate Your Costs</a>
+                <a href="/tools/ses-calculator">Calculate Your Costs</a>
               </Button>
             </div>
           </section>

@@ -57,7 +57,13 @@ const nextConfig: NextConfig = {
 
   // Redirects for better SEO
   redirects() {
-    return [];
+    return [
+      {
+        source: "/calculator",
+        destination: "/tools/ses-calculator",
+        permanent: true,
+      },
+    ];
   },
 
   // PostHog reverse proxy rewrites

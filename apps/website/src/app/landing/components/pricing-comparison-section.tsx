@@ -214,7 +214,7 @@ export function PricingComparisonSection() {
                   size="sm"
                   variant="outline"
                 >
-                  <a className="flex items-center gap-2" href="/calculator">
+                  <a className="flex items-center gap-2" href="/tools/ses-calculator">
                     Calculate exact costs
                     <ArrowRight className="size-3.5" />
                   </a>

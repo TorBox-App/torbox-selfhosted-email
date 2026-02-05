@@ -1206,6 +1206,30 @@ export default function ToolsPageContent() {
             </Card>
           </div>
 
+          {/* Cost Calculator CTA */}
+          <Card className="mt-8 border-primary/20 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
+                <div className="flex-1">
+                  <h3 className="mb-2 font-bold text-xl">
+                    Calculate your AWS SES costs
+                  </h3>
+                  <p className="text-muted-foreground">
+                    See exactly what you&apos;ll pay for email sending plus the
+                    full infrastructure — EventBridge, Lambda, SQS, and
+                    DynamoDB.
+                  </p>
+                </div>
+                <Button asChild size="lg">
+                  <a href="/tools/ses-calculator">
+                    Open Calculator
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Learn More */}
           <div className="mt-8 text-center">
             <p className="mb-4 text-muted-foreground">

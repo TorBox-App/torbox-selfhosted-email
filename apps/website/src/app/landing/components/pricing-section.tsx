@@ -46,7 +46,7 @@ export function PricingSection() {
             keep everything.
           </p>
           <Button asChild className="cursor-pointer" variant="outline">
-            <a href="/calculator">Calculate Your Costs</a>
+            <a href="/tools/ses-calculator">Calculate Your Costs</a>
           </Button>
         </div>
       </div>

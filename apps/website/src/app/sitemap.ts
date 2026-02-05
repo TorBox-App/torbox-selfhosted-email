@@ -6,7 +6,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Static pages
   const staticPages = [
     "",
-    "/calculator",
+    "/tools/ses-calculator",
     "/tools",
     "/tools/spf-builder",
     "/why-wraps",
@@ -51,6 +51,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: route === "" ? "daily" : "weekly",
-    priority: route === "" ? 1 : route.startsWith("/docs") ? 0.8 : 0.7,
+    priority:
+      route === ""
+        ? 1
+        : route === "/tools/ses-calculator"
+          ? 0.9
+          : route.startsWith("/docs")
+            ? 0.8
+            : 0.7,
   }));
 }

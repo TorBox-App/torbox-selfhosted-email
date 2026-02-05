@@ -63,9 +63,9 @@ const featuresItems = [
     description: "Check your email deliverability setup",
   },
   {
-    name: "Calculator",
-    href: "/calculator",
-    description: "Estimate your AWS email costs",
+    name: "SES Calculator",
+    href: "/tools/ses-calculator",
+    description: "Estimate your AWS SES email costs",
   },
 ];
 
