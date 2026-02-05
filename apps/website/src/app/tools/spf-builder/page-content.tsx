@@ -7,11 +7,14 @@ import {
   Copy,
   Info,
   Loader2,
+  Mail,
   Plus,
+  Search,
   Shield,
   Trash2,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { parseAsString, useQueryState } from "nuqs";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -231,7 +234,13 @@ const QUALIFIERS: Record<
   },
 };
 
-export default function SPFBuilderPageContent() {
+type SpfLookupResult = {
+  record: string;
+  lookups: number;
+  warnings: string[];
+};
+
+function SPFBuilderInner() {
   const [selectedProviders, setSelectedProviders] = useState<string[]>(["ses"]);
   const [customIPs, setCustomIPs] = useState<string[]>([]);
   const [customIncludes, setCustomIncludes] = useState<CustomInclude[]>([]);
@@ -240,6 +249,77 @@ export default function SPFBuilderPageContent() {
   const [newIncludeLoading, setNewIncludeLoading] = useState(false);
   const [qualifier, setQualifier] = useState("-all");
   const [copied, setCopied] = useState(false);
+
+  // SPF lookup state — domain synced to URL
+  const [lookupDomain, setLookupDomain] = useQueryState(
+    "domain",
+    parseAsString.withDefault(""),
+  );
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupResult, setLookupResult] = useState<SpfLookupResult | null>(
+    null,
+  );
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
+  const lookUpSpf = async () => {
+    const trimmed = lookupDomain.trim();
+    if (!trimmed) return;
+
+    setLookupLoading(true);
+    setLookupError(null);
+    setLookupResult(null);
+
+    try {
+      const record = await fetchSpfRecord(trimmed);
+      if (!record) {
+        setLookupError(`No SPF record found for ${trimmed}`);
+        return;
+      }
+
+      const lookups = await countSpfLookups(trimmed);
+
+      const warnings: string[] = [];
+      if (lookups > 10) {
+        warnings.push(
+          `Exceeds 10-lookup limit (${lookups} lookups) — SPF will return PermError`,
+        );
+      } else if (lookups > 7) {
+        warnings.push(
+          `Approaching 10-lookup limit (${lookups}/10 lookups used)`,
+        );
+      }
+      if (record.includes("+all")) {
+        warnings.push(
+          'Uses "+all" — this allows anyone to send as your domain',
+        );
+      }
+      if (record.includes("ptr") || record.includes("ptr:")) {
+        warnings.push(
+          "Uses deprecated ptr mechanism — should be replaced with ip4/ip6",
+        );
+      }
+      if (!record.includes("-all") && !record.includes("~all")) {
+        warnings.push(
+          "Missing -all or ~all — unauthorized senders won't be rejected",
+        );
+      }
+
+      setLookupResult({ record, lookups, warnings });
+    } catch {
+      setLookupError("Failed to look up SPF record");
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  // Auto-lookup on mount if domain is present from URL
+  const hasAutoLookedUp = useRef(false);
+  useEffect(() => {
+    if (lookupDomain && !hasAutoLookedUp.current) {
+      hasAutoLookedUp.current = true;
+      lookUpSpf();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculate total lookups using real counts from custom includes
   const lookupCount = useMemo(() => {
@@ -413,6 +493,105 @@ export default function SPFBuilderPageContent() {
               your email providers and we'll generate the correct syntax.
             </p>
           </div>
+
+          {/* Current SPF Lookup */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Check Your Current SPF
+              </CardTitle>
+              <p className="text-muted-foreground text-sm">
+                Look up your domain's existing SPF record before building a new
+                one
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    aria-label="Domain to look up"
+                    className="h-12 pl-10 text-lg"
+                    disabled={lookupLoading}
+                    onChange={(e) => setLookupDomain(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && lookUpSpf()}
+                    placeholder="Enter your domain (e.g., example.com)"
+                    value={lookupDomain}
+                  />
+                </div>
+                <Button
+                  className="h-12 px-6"
+                  disabled={lookupLoading || !lookupDomain.trim()}
+                  onClick={lookUpSpf}
+                >
+                  {lookupLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Looking up...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-4 w-4" />
+                      Look Up
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {lookupError && (
+                <div
+                  className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-red-600 text-sm dark:text-red-400"
+                  role="alert"
+                >
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  {lookupError}
+                </div>
+              )}
+
+              {lookupResult && (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <div className="mb-1.5 font-medium text-sm">
+                      Current SPF Record
+                    </div>
+                    <code className="block overflow-x-auto whitespace-pre-wrap break-all rounded-lg border bg-muted/50 p-3 font-mono text-sm">
+                      {lookupResult.record}
+                    </code>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-muted-foreground">
+                      DNS Lookups:{" "}
+                      <span
+                        className={`font-semibold ${
+                          lookupResult.lookups > 10
+                            ? "text-red-500"
+                            : lookupResult.lookups > 7
+                              ? "text-yellow-500"
+                              : "text-green-500"
+                        }`}
+                      >
+                        {lookupResult.lookups}/10
+                      </span>
+                    </span>
+                  </div>
+                  {lookupResult.warnings.length > 0 && (
+                    <div className="space-y-2">
+                      {lookupResult.warnings.map((warning) => (
+                        <div
+                          className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3 text-sm text-yellow-600 dark:text-yellow-400"
+                          key={warning}
+                        >
+                          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                          {warning}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="space-y-6">
             {/* Lookup Counter */}
@@ -858,5 +1037,13 @@ export default function SPFBuilderPageContent() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SPFBuilderPageContent() {
+  return (
+    <Suspense>
+      <SPFBuilderInner />
+    </Suspense>
   );
 }

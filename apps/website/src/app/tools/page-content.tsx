@@ -20,7 +20,8 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { parseAsString, useQueryStates } from "nuqs";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -253,16 +254,26 @@ function RecordDisplay({
   );
 }
 
-export default function ToolsPageContent() {
-  const [domain, setDomain] = useState("");
-  const [dkimSelector, setDkimSelector] = useState("");
+const checkerParsers = {
+  domain: parseAsString.withDefault(""),
+  dkim: parseAsString.withDefault(""),
+};
+
+function ToolsPageInner() {
+  const [{ domain, dkim }, setParams] = useQueryStates(checkerParsers, {
+    shallow: false,
+  });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<EmailCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasAutoChecked = useRef(false);
 
-  const checkDomain = async () => {
-    if (!domain.trim()) {
+  const runCheck = async (
+    checkDomain: string,
+    checkDkim: string = dkim,
+  ) => {
+    if (!checkDomain.trim()) {
       return;
     }
 
@@ -277,10 +288,10 @@ export default function ToolsPageContent() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          domain: domain.trim(),
+          domain: checkDomain.trim(),
           quick: true,
-          ...(dkimSelector.trim() && {
-            dkimSelectors: dkimSelector
+          ...(checkDkim.trim() && {
+            dkimSelectors: checkDkim
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean),
@@ -301,6 +312,16 @@ export default function ToolsPageContent() {
       setIsLoading(false);
     }
   };
+
+  // Auto-check on mount if domain is present from URL
+  useEffect(() => {
+    if (domain && !hasAutoChecked.current) {
+      hasAutoChecked.current = true;
+      runCheck(domain, dkim);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const checkDomain = () => runCheck(domain, dkim);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -410,7 +431,9 @@ export default function ToolsPageContent() {
                     aria-label="Domain to check"
                     className="h-12 pl-10 text-lg"
                     disabled={isLoading}
-                    onChange={(e) => setDomain(e.target.value)}
+                    onChange={(e) =>
+                      setParams({ domain: e.target.value })
+                    }
                     onKeyDown={handleKeyDown}
                     placeholder="Enter your domain (e.g., example.com)"
                     value={domain}
@@ -458,9 +481,11 @@ export default function ToolsPageContent() {
                         <Input
                           disabled={isLoading}
                           id="dkim-selectors"
-                          onChange={(e) => setDkimSelector(e.target.value)}
+                          onChange={(e) =>
+                            setParams({ dkim: e.target.value })
+                          }
                           placeholder="e.g., selector1, selector2, selector3"
-                          value={dkimSelector}
+                          value={dkim}
                         />
                         <p className="mt-1.5 text-muted-foreground text-xs">
                           Enter selector names separated by commas (the part
@@ -1132,29 +1157,8 @@ export default function ToolsPageContent() {
                       <Button
                         key={d}
                         onClick={() => {
-                          setDomain(d);
-                          setIsLoading(true);
-                          fetch(`${API_URL}/tools/email-check`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ domain: d, quick: true }),
-                          })
-                            .then((r) => r.json())
-                            .then((data) => {
-                              if (data.error) {
-                                setError(data.error);
-                              } else {
-                                setResult(data);
-                              }
-                            })
-                            .catch((err) =>
-                              setError(
-                                err instanceof Error
-                                  ? err.message
-                                  : "Failed to check domain"
-                              )
-                            )
-                            .finally(() => setIsLoading(false));
+                          setParams({ domain: d });
+                          runCheck(d, "");
                         }}
                         size="sm"
                         variant="outline"
@@ -1245,5 +1249,13 @@ export default function ToolsPageContent() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ToolsPageContent() {
+  return (
+    <Suspense>
+      <ToolsPageInner />
+    </Suspense>
   );
 }
