@@ -46,6 +46,13 @@ import { TestDataPanel } from "./test-data-panel";
 import { UsagePanel } from "./usage-panel";
 import { VersionHistoryPanel } from "./version-history-panel";
 
+// Dynamic import for code template editor (React Email TSX templates)
+const CodeTemplateEditor = dynamic(
+  () =>
+    import("./code-template-editor").then((m) => m.CodeTemplateEditor),
+  { ssr: false }
+);
+
 // Dynamic imports for modals - only loaded when opened
 const SendTestModal = dynamic(
   () => import("./send-test-modal").then((m) => m.SendTestModal),
@@ -131,7 +138,20 @@ export function TemplateEditor({
     return null;
   }
 
-  // Template loaded - render the editor
+  // Code templates (pushed via CLI) get a dedicated editor experience
+  if (template.sourceFormat === "react-email") {
+    return (
+      <CodeTemplateEditor
+        className={className}
+        key={template.id}
+        orgSlug={orgSlug}
+        template={template}
+        templateId={templateId}
+      />
+    );
+  }
+
+  // TipTap templates get the full visual editor
   // Key forces complete remount when navigating between templates
   return (
     <TemplateEditorContent

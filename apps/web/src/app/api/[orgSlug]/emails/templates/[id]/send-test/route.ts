@@ -133,32 +133,47 @@ export async function POST(request: Request, context: RouteContext) {
       });
     }
 
-    // Convert TipTap content to React Email component with brand kit
-    const emailComponent = tiptapToReactEmail(
-      templateData.content as JSONContent,
-      mergedTestData,
-      {
-        previewText,
-        brandKit: selectedBrandKit
-          ? {
-              primaryColor: selectedBrandKit.primaryColor,
-              secondaryColor: selectedBrandKit.secondaryColor,
-              backgroundColor: selectedBrandKit.backgroundColor,
-              textColor: selectedBrandKit.textColor,
-              fontFamily: selectedBrandKit.fontFamily,
-              headingFontFamily:
-                selectedBrandKit.headingFontFamily ?? undefined,
-              buttonRadius: selectedBrandKit.buttonRadius,
-            }
-          : undefined,
+    let html: string;
+    let text: string;
+
+    if (
+      templateData.sourceFormat === "react-email" &&
+      templateData.compiledHtml
+    ) {
+      // Code-pushed template — use pre-compiled HTML directly
+      html = templateData.compiledHtml;
+      // Replace {{variables}} with test data values
+      for (const [key, value] of Object.entries(mergedTestData)) {
+        html = html.replace(
+          new RegExp(`\\{\\{${key}\\}\\}`, "g"),
+          String(value)
+        );
       }
-    );
-
-    // Render to HTML
-    const html = await render(emailComponent);
-
-    // Generate plain text version using react-email's robust converter
-    const text = toPlainText(html);
+      text = toPlainText(html);
+    } else {
+      // TipTap template — existing conversion path
+      const emailComponent = tiptapToReactEmail(
+        templateData.content as JSONContent,
+        mergedTestData,
+        {
+          previewText,
+          brandKit: selectedBrandKit
+            ? {
+                primaryColor: selectedBrandKit.primaryColor,
+                secondaryColor: selectedBrandKit.secondaryColor,
+                backgroundColor: selectedBrandKit.backgroundColor,
+                textColor: selectedBrandKit.textColor,
+                fontFamily: selectedBrandKit.fontFamily,
+                headingFontFamily:
+                  selectedBrandKit.headingFontFamily ?? undefined,
+                buttonRadius: selectedBrandKit.buttonRadius,
+              }
+            : undefined,
+        }
+      );
+      html = await render(emailComponent);
+      text = toPlainText(html);
+    }
 
     // Get the organization's AWS account
     const customerAwsAccount = await db.query.awsAccount.findFirst({
