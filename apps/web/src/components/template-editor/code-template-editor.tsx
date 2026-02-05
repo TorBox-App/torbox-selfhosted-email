@@ -205,7 +205,7 @@ export function CodeTemplateEditor({
     });
   }, [queryClient, orgSlug, templateId]);
 
-  // Handle AI "Apply" — save source + switch to code view
+  // Handle AI "Apply" — save source and update preview
   const handleAIApply = useCallback(
     async (source: string, compiledHtml: string) => {
       try {
@@ -228,17 +228,29 @@ export function CodeTemplateEditor({
           throw new Error(data.error || "Save failed");
         }
 
-        // Invalidate cache and switch to code view
-        handleSourceSaved();
-        setView("code");
-        toast.success("AI-generated template applied");
+        // Optimistically update the cache so preview refreshes immediately
+        queryClient.setQueryData(
+          templateKeys.detail(orgSlug, templateId),
+          (old: Template | undefined) =>
+            old
+              ? {
+                  ...old,
+                  source,
+                  compiledHtml,
+                  lastEditedFrom: "dashboard",
+                  updatedAt: new Date().toISOString(),
+                }
+              : old
+        );
+
+        toast.success("Template applied");
       } catch (error) {
         toast.error("Failed to apply template", {
           description: error instanceof Error ? error.message : "Unknown error",
         });
       }
     },
-    [orgSlug, templateId, handleSourceSaved]
+    [orgSlug, templateId, queryClient]
   );
 
   return (
