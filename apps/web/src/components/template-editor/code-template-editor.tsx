@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
 import {
+  templateKeys,
   useDeleteTemplate,
   useDuplicateTemplate,
   usePublishTemplate,
@@ -200,7 +201,7 @@ export function CodeTemplateEditor({
   const handleSourceSaved = useCallback(() => {
     // Invalidate template query cache to refresh data
     queryClient.invalidateQueries({
-      queryKey: ["template", orgSlug, templateId],
+      queryKey: templateKeys.detail(orgSlug, templateId),
     });
   }, [queryClient, orgSlug, templateId]);
 
