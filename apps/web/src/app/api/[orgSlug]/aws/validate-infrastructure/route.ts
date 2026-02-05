@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
@@ -5,15 +6,6 @@ import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { assumeRole } from "@/lib/aws/assume-role";
-
-/**
- * Generate a deterministic webhook secret from organization ID
- * Must match the client-side generation in deploy-infrastructure-step.tsx
- */
-function generateWebhookSecret(organizationId: string): string {
-  return `whsec_${organizationId.replace(/-/g, "")}`;
-}
-
 import {
   detectFeaturesFromOutputs,
   findInfrastructureStack,
@@ -58,7 +50,12 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Parse request body
     const body = await request.json();
-    const { roleArn, externalId, region = "us-east-1" } = body;
+    const {
+      roleArn,
+      externalId,
+      region = "us-east-1",
+      webhookSecret: clientWebhookSecret,
+    } = body;
 
     if (!roleArn) {
       return NextResponse.json(
@@ -133,10 +130,11 @@ export async function POST(request: Request, context: RouteContext) {
           ),
       });
 
-      if (existingAccount) {
-        // Generate webhook secret for this organization
-        const webhookSecret = generateWebhookSecret(orgWithMembership.id);
+      // Use the client-provided webhook secret (from CloudFormation URL) or generate a secure random one
+      const webhookSecret =
+        clientWebhookSecret || randomBytes(32).toString("hex");
 
+      if (existingAccount) {
         // Update existing account with detected features
         await db
           .update(awsAccount)
@@ -193,9 +191,6 @@ export async function POST(request: Request, context: RouteContext) {
             { status: 403 }
           );
         }
-
-        // Generate webhook secret for this organization
-        const webhookSecret = generateWebhookSecret(orgWithMembership.id);
 
         // Create new account with detected features
         await db.insert(awsAccount).values({

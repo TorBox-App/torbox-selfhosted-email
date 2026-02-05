@@ -83,9 +83,7 @@ export function WelcomeStep({
           <h3 className="font-semibold">What's next?</h3>
           <ol className="list-inside list-decimal space-y-2 text-muted-foreground text-sm">
             <li>Choose your plan</li>
-            <li>Install the Wraps CLI</li>
-            <li>Connect your AWS account</li>
-            <li>Deploy your email infrastructure</li>
+            <li>Deploy infrastructure &amp; connect to the platform</li>
             <li>Start sending emails</li>
           </ol>
         </div>

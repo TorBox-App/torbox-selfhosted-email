@@ -79,6 +79,10 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const { data: organizations, isPending: isOrgsLoading } =
     authClient.useListOrganizations();
 
+  // Track whether infrastructure was connected (vs skipped)
+  const [isInfrastructureConnected, setIsInfrastructureConnected] =
+    useState(false);
+
   // Refs to prevent duplicate actions
   const hasShownSubscribedToast = useRef(false);
   const hasAdjustedBillingStep = useRef(false);
@@ -301,6 +305,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
 
   // Called when AWS account is connected (CLI polling or CloudFormation validation)
   const handleConnected = () => {
+    setIsInfrastructureConnected(true);
     // Advance to Success step (step 4)
     setCurrentStep(4);
   };
@@ -342,6 +347,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
 
       {/* Current Step Content */}
       <CurrentStepComponent
+        isConnected={isInfrastructureConnected}
         onBack={handleBack}
         onComplete={handleComplete}
         onConnected={handleConnected}

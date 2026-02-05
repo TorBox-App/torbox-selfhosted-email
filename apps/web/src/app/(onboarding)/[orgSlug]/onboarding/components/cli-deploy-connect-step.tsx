@@ -47,17 +47,21 @@ const CLI_COMMANDS = [
 ];
 
 /**
- * Generate a deterministic webhook secret from organization ID
+ * Generate a cryptographically secure webhook secret
  */
-function generateWebhookSecret(organizationId: string): string {
-  return `whsec_${organizationId.replace(/-/g, "")}`;
+function generateSecureWebhookSecret(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /**
  * Generate CloudFormation Quick Create URL
  */
-function generateQuickCreateUrl(organizationId: string): string {
-  const webhookSecret = generateWebhookSecret(organizationId);
+function generateQuickCreateUrl(
+  organizationId: string,
+  webhookSecret: string
+): string {
   const templateUrl =
     "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-email-infrastructure.yaml";
 
@@ -86,9 +90,12 @@ export function CliDeployConnectStep({
   const [view, setView] = useState<ViewState>("CLI_FIRST");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
+  // Generate a cryptographically secure webhook secret once on mount
+  const [webhookSecret] = useState(() => generateSecureWebhookSecret());
+
   const quickCreateUrl = useMemo(
-    () => generateQuickCreateUrl(organizationId),
-    [organizationId]
+    () => generateQuickCreateUrl(organizationId, webhookSecret),
+    [organizationId, webhookSecret]
   );
 
   // Manual connection check
@@ -146,7 +153,7 @@ export function CliDeployConnectStep({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
+          body: JSON.stringify({ ...data, webhookSecret }),
         }
       );
       if (!response.ok) {
@@ -379,9 +386,8 @@ export function CliDeployConnectStep({
               </h3>
               <p className="text-muted-foreground text-sm">
                 Once CloudFormation finishes, copy the{" "}
-                <strong>ConsoleRoleArn</strong> and{" "}
-                <strong>ExternalId</strong> from the Outputs tab and paste
-                them below.
+                <strong>ConsoleRoleArn</strong> and <strong>ExternalId</strong>{" "}
+                from the Outputs tab and paste them below.
               </p>
             </div>
 
@@ -445,9 +451,7 @@ export function CliDeployConnectStep({
                 {(state) => (
                   <Button
                     className="w-full"
-                    disabled={
-                      !state.canSubmit || validateAwsMutation.isPending
-                    }
+                    disabled={!state.canSubmit || validateAwsMutation.isPending}
                     loading={
                       state.isSubmitting || validateAwsMutation.isPending
                     }
