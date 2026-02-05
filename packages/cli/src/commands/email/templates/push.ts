@@ -510,7 +510,7 @@ async function pushToSES(
         exists = true;
       } catch (err) {
         const e = err as { name?: string };
-        if (e.name !== "TemplateDoesNotExist") throw err;
+        if (e.name !== "TemplateDoesNotExistException") throw err;
       }
 
       if (exists) {
