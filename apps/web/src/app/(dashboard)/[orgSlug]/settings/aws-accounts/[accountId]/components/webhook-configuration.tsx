@@ -178,12 +178,12 @@ export function WebhookConfiguration({ account }: WebhookConfigurationProps) {
             </div>
 
             {/* Advanced: Manual Webhook Input */}
-            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <Collapsible onOpenChange={setAdvancedOpen} open={advancedOpen}>
               <CollapsibleTrigger asChild>
                 <Button
-                  variant="ghost"
-                  size="sm"
                   className="gap-1 text-muted-foreground"
+                  size="sm"
+                  variant="ghost"
                 >
                   <ChevronDown
                     className={`h-4 w-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`}

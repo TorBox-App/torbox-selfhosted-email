@@ -742,7 +742,9 @@ async function run() {
               console.log(
                 `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("destroy")}, ${pc.cyan("status")}, ${pc.cyan("verify")}, ${pc.cyan("test")}\n`
               );
-              throw new Error(`Unknown inbound command: ${inboundSubCommand || "(none)"}`);
+              throw new Error(
+                `Unknown inbound command: ${inboundSubCommand || "(none)"}`
+              );
           }
           break;
         }
@@ -811,7 +813,9 @@ async function run() {
               console.log(
                 `\nAvailable commands: ${pc.cyan("add")}, ${pc.cyan("list")}, ${pc.cyan("verify")}, ${pc.cyan("get-dkim")}, ${pc.cyan("remove")}\n`
               );
-              throw new Error(`Unknown domains command: ${domainsSubCommand || "(none)"}`);
+              throw new Error(
+                `Unknown domains command: ${domainsSubCommand || "(none)"}`
+              );
           }
           break;
         }

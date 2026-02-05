@@ -135,8 +135,7 @@ export function AccountDetails({ account }: AccountDetailsProps) {
                     Connected
                   </span>
                   <span className="text-muted-foreground text-xs">
-                    Connected{" "}
-                    {new Date(account.updatedAt).toLocaleDateString()}
+                    Connected {new Date(account.updatedAt).toLocaleDateString()}
                   </span>
                 </div>
               ) : (

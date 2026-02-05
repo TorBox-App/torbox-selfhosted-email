@@ -1220,7 +1220,9 @@ function SESCalculatorInner() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Hidden Infrastructure</CardTitle>
+                  <CardTitle className="text-lg">
+                    Hidden Infrastructure
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground text-sm">
                   <p>

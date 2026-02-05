@@ -62,10 +62,7 @@ export async function GET(_request: Request, context: RouteContext) {
       method: "GET",
       orgSlug,
     });
-    log.error(
-      { err: serializeError(error) },
-      "Error fetching connections"
-    );
+    log.error({ err: serializeError(error) }, "Error fetching connections");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
