@@ -17,6 +17,7 @@ import {
   parseAsStringLiteral,
   useQueryStates,
 } from "nuqs";
+import { Suspense } from "react";
 import { BillingToggle } from "@/app/landing/components/billing-toggle";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Badge } from "@/components/ui/badge";
@@ -196,7 +197,7 @@ const calculatorParsers = {
   waf: parseAsBoolean.withDefault(false),
 };
 
-export default function SESCalculatorPageContent() {
+function SESCalculatorInner() {
   const [state, setState] = useQueryStates(calculatorParsers, {
     history: "replace",
   });
@@ -1468,5 +1469,13 @@ export default function SESCalculatorPageContent() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SESCalculatorPageContent() {
+  return (
+    <Suspense>
+      <SESCalculatorInner />
+    </Suspense>
   );
 }

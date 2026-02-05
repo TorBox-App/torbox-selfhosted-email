@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import SESCalculatorPageContent from "./page-content";
 
 export const metadata: Metadata = {
@@ -108,9 +107,7 @@ export default function SESCalculatorPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         type="application/ld+json"
       />
-      <Suspense>
-        <SESCalculatorPageContent />
-      </Suspense>
+      <SESCalculatorPageContent />
     </>
   );
 }
