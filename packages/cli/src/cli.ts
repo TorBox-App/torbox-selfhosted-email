@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 import * as clack from "@clack/prompts";
 import args from "args";
 import pc from "picocolors";
+// Auth commands
+import { login as authLogin } from "./commands/auth/login.js";
+import { logout as authLogout } from "./commands/auth/logout.js";
+import { authStatus as authStatusCmd } from "./commands/auth/status.js";
 // AWS commands
 import { doctor as awsDoctor } from "./commands/aws/doctor.js";
 import { setup as awsSetup } from "./commands/aws/setup.js";
@@ -209,6 +213,14 @@ function showHelp() {
   console.log(
     `  ${pc.cyan("platform update-role")} Update platform IAM permissions\n`
   );
+  console.log("Auth:");
+  console.log(
+    `  ${pc.cyan("auth login")}           Sign in to wraps.dev (device flow)`
+  );
+  console.log(`  ${pc.cyan("auth status")}          Show current auth state`);
+  console.log(
+    `  ${pc.cyan("auth logout")}          Sign out and remove stored token\n`
+  );
   console.log("AWS Setup:");
   console.log(
     `  ${pc.cyan("aws setup")}            Interactive AWS setup wizard`
@@ -236,6 +248,7 @@ function showHelp() {
   console.log(`  ${pc.dim("-d, --domain")}    Domain name`);
   console.log(`  ${pc.dim("--account")}        AWS account ID or alias`);
   console.log(`  ${pc.dim("--preset")}         Configuration preset`);
+  console.log(`  ${pc.dim("--token")}          API key or token for auth`);
   console.log(`  ${pc.dim("-y, --yes")}        Skip confirmation prompts`);
   console.log(`  ${pc.dim("-f, --force")}      Force destructive operations`);
   console.log(
@@ -245,7 +258,6 @@ function showHelp() {
   console.log(
     `Run ${pc.cyan("wraps <service> <command> --help")} for more information.\n`
   );
-  process.exit(0);
 }
 
 // Check for version before args parses
@@ -256,6 +268,7 @@ if (process.argv.includes("--version") || process.argv.includes("-v")) {
 // Check for help before args parses (to override args' built-in help)
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
   showHelp();
+  process.exit(0);
 }
 
 // Configure args
@@ -361,6 +374,11 @@ args.options([
     defaultValue: false,
   },
   {
+    name: "token",
+    description: "API key or token for authentication",
+    defaultValue: undefined,
+  },
+  {
     name: "verbose",
     description: "Show all checks including passing",
     defaultValue: false,
@@ -400,6 +418,33 @@ const [primaryCommand, subCommand] = args.sub;
 // If no command provided, show interactive menu
 if (!primaryCommand) {
   async function interactiveMenu() {
+    const startTime = Date.now();
+    const telemetry = getTelemetryClient();
+
+    // Show first-run telemetry notification
+    if (telemetry.shouldShowNotification()) {
+      console.log();
+      clack.log.info(pc.bold("Anonymous Telemetry"));
+      console.log(
+        `  Wraps collects ${pc.cyan("anonymous usage data")} to improve the CLI.`
+      );
+      console.log(
+        `  We ${pc.bold("never")} collect: domains, AWS credentials, email content, or PII.`
+      );
+      console.log(
+        `  We ${pc.bold("only")} collect: command names, success/failure, CLI version, OS.`
+      );
+      console.log();
+      console.log(`  Opt-out anytime: ${pc.cyan("wraps telemetry disable")}`);
+      console.log(`  Or set: ${pc.cyan("WRAPS_TELEMETRY_DISABLED=1")}`);
+      console.log(`  Learn more: ${pc.cyan("https://wraps.dev/docs")}`);
+      console.log();
+
+      telemetry.markNotificationShown();
+    }
+
+    trackCommand("interactive:menu", { success: true, duration_ms: 0 });
+
     clack.intro(pc.bold(`WRAPS CLI v${VERSION}`));
     console.log("  Deploy AWS infrastructure to your account.\n");
 
@@ -455,56 +500,81 @@ if (!primaryCommand) {
     });
 
     if (clack.isCancel(action)) {
+      trackCommand("interactive:cancel", {
+        success: true,
+        duration_ms: Date.now() - startTime,
+      });
+      await telemetry.shutdown();
       clack.cancel("Operation cancelled.");
       process.exit(0);
     }
 
-    switch (action) {
-      case "email-init":
-        await init({
-          provider: flags.provider,
-          region: flags.region,
-          domain: flags.domain,
-          preset: flags.preset,
-          yes: flags.yes,
-          preview: flags.preview,
-        });
-        break;
-      case "sms-init":
-        await smsInit({
-          provider: flags.provider,
-          region: flags.region,
-          preset: flags.preset,
-          yes: flags.yes,
-        });
-        break;
-      case "cdn-init":
-        await cdnInit({
-          provider: flags.provider,
-          region: flags.region,
-          preset: flags.preset,
-          yes: flags.yes,
-          preview: flags.preview,
-        });
-        break;
-      case "status":
-        await status({ account: flags.account });
-        break;
-      case "console":
-        await dashboard({ port: flags.port, noOpen: flags.noOpen });
-        break;
-      case "platform":
-        await platformInfo();
-        break;
-      case "news":
-        await news();
-        break;
-      case "support":
-        await support();
-        break;
-      case "help":
-        showHelp();
-        break;
+    trackCommand(`interactive:${action}`, {
+      success: true,
+      duration_ms: Date.now() - startTime,
+    });
+
+    try {
+      switch (action) {
+        case "email-init":
+          await init({
+            provider: flags.provider,
+            region: flags.region,
+            domain: flags.domain,
+            preset: flags.preset,
+            yes: flags.yes,
+            preview: flags.preview,
+          });
+          break;
+        case "sms-init":
+          await smsInit({
+            provider: flags.provider,
+            region: flags.region,
+            preset: flags.preset,
+            yes: flags.yes,
+          });
+          break;
+        case "cdn-init":
+          await cdnInit({
+            provider: flags.provider,
+            region: flags.region,
+            preset: flags.preset,
+            yes: flags.yes,
+            preview: flags.preview,
+          });
+          break;
+        case "status":
+          await status({ account: flags.account });
+          break;
+        case "console":
+          await dashboard({ port: flags.port, noOpen: flags.noOpen });
+          break;
+        case "platform":
+          await platformInfo();
+          break;
+        case "news":
+          await news();
+          break;
+        case "support":
+          await support();
+          break;
+        case "help":
+          showHelp();
+          break;
+      }
+
+      trackCommand(`interactive:${action}:completed`, {
+        success: true,
+        duration_ms: Date.now() - startTime,
+      });
+    } catch (error) {
+      trackCommand(`interactive:${action}:completed`, {
+        success: false,
+        duration_ms: Date.now() - startTime,
+      });
+      throw error;
+    } finally {
+      await telemetry.shutdown();
     }
   }
 
@@ -620,7 +690,7 @@ async function run() {
             console.log(
               `\nUsage: ${pc.cyan("wraps email verify --domain yourapp.com")}\n`
             );
-            process.exit(1);
+            throw new Error("Missing required flag: --domain");
           }
           await verifyDomain({ domain: flags.domain });
           break;
@@ -672,7 +742,7 @@ async function run() {
               console.log(
                 `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("destroy")}, ${pc.cyan("status")}, ${pc.cyan("verify")}, ${pc.cyan("test")}\n`
               );
-              process.exit(1);
+              throw new Error(`Unknown inbound command: ${inboundSubCommand || "(none)"}`);
           }
           break;
         }
@@ -701,7 +771,7 @@ async function run() {
                 console.log(
                   `\nUsage: ${pc.cyan("wraps email domains verify --domain yourapp.com")}\n`
                 );
-                process.exit(1);
+                throw new Error("Missing required flag: --domain");
               }
               await verifyDomain({ domain: flags.domain });
               break;
@@ -713,7 +783,7 @@ async function run() {
                 console.log(
                   `\nUsage: ${pc.cyan("wraps email domains get-dkim --domain yourapp.com")}\n`
                 );
-                process.exit(1);
+                throw new Error("Missing required flag: --domain");
               }
               await getDkim({ domain: flags.domain });
               break;
@@ -725,7 +795,7 @@ async function run() {
                 console.log(
                   `\nUsage: ${pc.cyan("wraps email domains remove --domain yourapp.com --force")}\n`
                 );
-                process.exit(1);
+                throw new Error("Missing required flag: --domain");
               }
               await removeDomain({
                 domain: flags.domain,
@@ -741,7 +811,7 @@ async function run() {
               console.log(
                 `\nAvailable commands: ${pc.cyan("add")}, ${pc.cyan("list")}, ${pc.cyan("verify")}, ${pc.cyan("get-dkim")}, ${pc.cyan("remove")}\n`
               );
-              process.exit(1);
+              throw new Error(`Unknown domains command: ${domainsSubCommand || "(none)"}`);
           }
           break;
         }
@@ -759,7 +829,7 @@ async function run() {
           console.log(
             `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
           );
-          process.exit(1);
+          throw new Error(`Unknown email command: ${subCommand}`);
       }
       // Track email commands (they return early, so track here)
       const emailDuration = Date.now() - startTime;
@@ -839,7 +909,7 @@ async function run() {
           console.log(
             `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
           );
-          process.exit(1);
+          throw new Error(`Unknown sms command: ${subCommand}`);
       }
       // Track SMS commands
       const smsDuration = Date.now() - startTime;
@@ -905,7 +975,7 @@ async function run() {
           console.log(
             `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
           );
-          process.exit(1);
+          throw new Error(`Unknown cdn command: ${subCommand}`);
       }
       // Track CDN commands
       const cdnDuration = Date.now() - startTime;
@@ -937,6 +1007,7 @@ async function run() {
             region: flags.region,
             force: flags.force,
             yes: flags.yes,
+            json: flags.json,
           });
           break;
 
@@ -955,7 +1026,7 @@ async function run() {
           console.log(
             `Run ${pc.cyan("wraps platform")} for more information.\n`
           );
-          process.exit(1);
+          throw new Error(`Unknown platform command: ${subCommand}`);
       }
       // Track platform commands (they return early, so track here)
       const platformDuration = Date.now() - startTime;
@@ -963,6 +1034,38 @@ async function run() {
       trackCommand(platformCommandName, {
         success: true,
         duration_ms: platformDuration,
+      });
+      return;
+    }
+
+    // Handle Auth subcommands (e.g., wraps auth login)
+    if (primaryCommand === "auth") {
+      switch (subCommand) {
+        case "login":
+          await authLogin({ token: flags.token, json: flags.json });
+          break;
+
+        case "status":
+          await authStatusCmd({ json: flags.json });
+          break;
+
+        case "logout":
+          await authLogout();
+          break;
+
+        default:
+          clack.log.error(`Unknown auth command: ${subCommand || "(none)"}`);
+          console.log(
+            `\nAvailable commands: ${pc.cyan("login")}, ${pc.cyan("status")}, ${pc.cyan("logout")}\n`
+          );
+          throw new Error(`Unknown auth command: ${subCommand || "(none)"}`);
+      }
+      // Track auth commands
+      const authDuration = Date.now() - startTime;
+      const authCommandName = `auth:${subCommand}`;
+      trackCommand(authCommandName, {
+        success: true,
+        duration_ms: authDuration,
       });
       return;
     }
@@ -986,7 +1089,7 @@ async function run() {
             `\nAvailable commands: ${pc.cyan("setup")}, ${pc.cyan("doctor")}\n`
           );
           console.log(`Run ${pc.cyan("wraps --help")} for more information.\n`);
-          process.exit(1);
+          throw new Error(`Unknown aws command: ${subCommand}`);
       }
       // Track aws commands
       const awsDuration = Date.now() - startTime;
@@ -1066,10 +1169,14 @@ async function run() {
             console.log(
               `\nAvailable commands: ${pc.cyan("enable")}, ${pc.cyan("disable")}, ${pc.cyan("status")}\n`
             );
-            process.exit(1);
+            throw new Error(`Unknown telemetry command: ${subCommand}`);
         }
         break;
       }
+
+      case "help":
+        showHelp();
+        break;
 
       // Show help for service without subcommand
       case "email":
@@ -1087,7 +1194,7 @@ async function run() {
         console.log(
           `\nRun ${pc.cyan("wraps --help")} for available commands.\n`
         );
-        process.exit(1);
+        throw new Error(`Unknown command: ${primaryCommand}`);
     }
     // Track successful command execution
     const duration = Date.now() - startTime;

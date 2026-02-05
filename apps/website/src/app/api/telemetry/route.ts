@@ -20,7 +20,7 @@ function getPostHogClient(): PostHog | null {
 
   if (!posthogClient) {
     const apiKey = process.env.POSTHOG_API_KEY;
-    const host = process.env.POSTHOG_HOST || "https://app.posthog.com";
+    const host = process.env.POSTHOG_HOST || "https://us.i.posthog.com";
 
     if (!apiKey) {
       posthogInitError = "POSTHOG_API_KEY environment variable is not set";
@@ -43,8 +43,8 @@ function getPostHogClient(): PostHog | null {
     try {
       posthogClient = new PostHog(apiKey, {
         host,
-        flushAt: 20,
-        flushInterval: 10_000,
+        flushAt: 1,
+        flushInterval: 0,
       });
       console.log("✅ PostHog client initialized successfully for telemetry");
     } catch (error) {
