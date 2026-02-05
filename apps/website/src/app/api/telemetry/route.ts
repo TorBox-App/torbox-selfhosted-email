@@ -93,8 +93,8 @@ function isValidEvent(event: TelemetryEvent): boolean {
     return false;
   }
 
-  // Event name should follow pattern: category:action
-  if (!/^[a-z]+:[a-z_:]+$/.test(event.event)) {
+  // Event name should follow pattern: category:action (allow hyphens in action names)
+  if (!/^[a-z]+:[a-z_:\-]+$/.test(event.event)) {
     return false;
   }
 

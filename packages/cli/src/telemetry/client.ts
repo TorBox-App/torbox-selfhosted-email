@@ -3,7 +3,9 @@
  * @module telemetry/client
  */
 
-import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import pc from "picocolors";
 import { isCI } from "../utils/shared/ci-detection.js";
 import { readAuthConfig } from "../utils/shared/config.js";
@@ -13,8 +15,6 @@ import type {
   TelemetryEvent,
   TelemetryRequest,
 } from "./types.js";
-
-const require = createRequire(import.meta.url);
 
 const DEFAULT_ENDPOINT = "https://wraps.dev/api/telemetry";
 const DEFAULT_TIMEOUT = 2000; // 2 seconds
@@ -322,8 +322,12 @@ export class TelemetryClient {
    */
   private getCLIVersion(): string {
     try {
-      const packageJson = require("../../package.json");
-      return packageJson.version;
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
+      const pkg = JSON.parse(
+        readFileSync(join(__dirname, "../package.json"), "utf-8")
+      );
+      return pkg.version;
     } catch {
       return "unknown";
     }
