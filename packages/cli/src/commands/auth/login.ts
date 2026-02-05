@@ -63,7 +63,7 @@ export async function login(options: LoginOptions): Promise<void> {
   // Device flow
   clack.intro(pc.bold("Wraps \u203A Sign In"));
 
-  const baseURL = process.env.WRAPS_API_URL || "https://wraps.dev";
+  const baseURL = process.env.WRAPS_API_URL || "https://app.wraps.dev";
   const authClient = createCliAuthClient(baseURL);
 
   const spinner = clack.spinner();

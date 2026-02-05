@@ -3,7 +3,7 @@ import { deviceAuthorizationClient } from "better-auth/client/plugins";
 
 export function createWrapsAuthClient(baseURL?: string) {
   return createAuthClient({
-    baseURL: baseURL || process.env.NEXT_PUBLIC_APP_URL || "https://wraps.dev",
+    baseURL: baseURL || process.env.NEXT_PUBLIC_APP_URL || "https://app.wraps.dev",
     plugins: [deviceAuthorizationClient()],
   });
 }
