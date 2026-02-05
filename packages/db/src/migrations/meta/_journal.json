@@ -239,6 +239,13 @@
       "when": 1769971870786,
       "tag": "0033_slow_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1770233652180,
+      "tag": "0034_lush_rafael_vega",
+      "breakpoints": true
     }
   ]
 }

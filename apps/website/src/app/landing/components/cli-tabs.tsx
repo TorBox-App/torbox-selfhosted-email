@@ -464,10 +464,7 @@ type GlowingTabProps = {
   onTabClick: (index: number) => void;
 };
 
-function GlowingTabBar({
-  activeIndex,
-  onTabClick,
-}: GlowingTabProps) {
+function GlowingTabBar({ activeIndex, onTabClick }: GlowingTabProps) {
   return (
     <div className="mb-8 flex flex-col items-center gap-4">
       <div className="relative">
@@ -522,10 +519,7 @@ export function CliTabs() {
 
   return (
     <div>
-      <GlowingTabBar
-        activeIndex={activeIndex}
-        onTabClick={setActiveIndex}
-      />
+      <GlowingTabBar activeIndex={activeIndex} onTabClick={setActiveIndex} />
 
       <div className="min-h-[500px]">
         {activeTab === "console" && <ConsoleContent />}

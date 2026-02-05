@@ -1270,9 +1270,9 @@ describe("domain metadata helpers", () => {
       });
 
       expect(metadata.services.email.config.additionalDomains).toHaveLength(1);
-      expect(
-        metadata.services.email.config.additionalDomains![0].purpose
-      ).toBe("marketing");
+      expect(metadata.services.email.config.additionalDomains![0].purpose).toBe(
+        "marketing"
+      );
       expect(
         metadata.services.email.config.additionalDomains![0].mailFromDomain
       ).toBe("mail.mail.primary.com");

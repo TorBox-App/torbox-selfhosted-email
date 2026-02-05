@@ -76,3 +76,32 @@ export async function getCredentials(
 
   return credentials;
 }
+
+/**
+ * Assume a role using raw ARN + external ID (for validating new connections).
+ * Unlike getCredentials(), this doesn't look up from DB — it's for pre-registration validation.
+ */
+export async function assumeRoleForValidation(params: {
+  roleArn: string;
+  externalId: string;
+}): Promise<AwsCredentials> {
+  const result = await stsClient.send(
+    new AssumeRoleCommand({
+      RoleArn: params.roleArn,
+      RoleSessionName: `wraps-connection-validation-${Date.now()}`,
+      ExternalId: params.externalId,
+      DurationSeconds: 900,
+    })
+  );
+
+  if (!result.Credentials) {
+    throw new Error("Failed to assume role: no credentials returned");
+  }
+
+  return {
+    accessKeyId: result.Credentials.AccessKeyId!,
+    secretAccessKey: result.Credentials.SecretAccessKey!,
+    sessionToken: result.Credentials.SessionToken!,
+    expiration: result.Credentials.Expiration!,
+  };
+}

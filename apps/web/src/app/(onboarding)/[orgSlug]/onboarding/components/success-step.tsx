@@ -25,7 +25,7 @@ type SuccessStepProps = {
 export function SuccessStep({ onComplete, organizationId }: SuccessStepProps) {
   const handleComplete = () => {
     posthog.capture("onboarding_completed", {
-      step: 5,
+      step: 4,
       step_name: "Success",
       organization_id: organizationId,
     });
@@ -34,7 +34,7 @@ export function SuccessStep({ onComplete, organizationId }: SuccessStepProps) {
 
   const handleNextStepClick = (action: string) => {
     posthog.capture("onboarding_next_step_clicked", {
-      step: 5,
+      step: 4,
       step_name: "Success",
       organization_id: organizationId,
       action,

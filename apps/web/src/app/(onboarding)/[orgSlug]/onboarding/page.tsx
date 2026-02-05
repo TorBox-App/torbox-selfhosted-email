@@ -8,17 +8,16 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
-import { AwsConnectStep } from "./components/aws-connect-step";
 import { BillingStep } from "./components/billing-step";
 import { StepProgress } from "./components/step-progress";
 import { SuccessStep } from "./components/success-step";
 import { WelcomeStep } from "./components/welcome-step";
 
-// Dynamic import for heavy component (1,159 lines) - loaded when user reaches step 3
-const DeployInfrastructureStep = dynamic(
+// Dynamic import for heavy component - loaded when user reaches step 3
+const CliDeployConnectStep = dynamic(
   () =>
-    import("./components/deploy-infrastructure-step").then(
-      (m) => m.DeployInfrastructureStep
+    import("./components/cli-deploy-connect-step").then(
+      (m) => m.CliDeployConnectStep
     ),
   { loading: () => <Loader fullScreen /> }
 );
@@ -26,9 +25,8 @@ const DeployInfrastructureStep = dynamic(
 const STEPS = [
   { id: 1, title: "Welcome", component: WelcomeStep },
   { id: 2, title: "Choose Plan", component: BillingStep },
-  { id: 3, title: "Deploy", component: DeployInfrastructureStep },
-  { id: 4, title: "Connect AWS", component: AwsConnectStep },
-  { id: 5, title: "Success", component: SuccessStep },
+  { id: 3, title: "Deploy & Connect", component: CliDeployConnectStep },
+  { id: 4, title: "Success", component: SuccessStep },
 ];
 
 /**
@@ -301,11 +299,10 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     }
   };
 
-  // Called when AWS account is already connected (CloudFormation deployment)
-  // This skips the AwsConnectStep and goes directly to Success
+  // Called when AWS account is connected (CLI polling or CloudFormation validation)
   const handleConnected = () => {
-    // Skip to Success step (step 5)
-    setCurrentStep(5);
+    // Advance to Success step (step 4)
+    setCurrentStep(4);
   };
 
   const handleComplete = async () => {

@@ -25,9 +25,15 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import {
+  type OrgInfo,
+  readAuthConfig,
+  resolveTokenAsync,
+} from "../../utils/shared/config.js";
+import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import type { ConnectionMetadata } from "../../utils/shared/metadata.js";
 import {
   buildEmailStackConfig,
   generateWebhookSecret,
@@ -246,9 +252,459 @@ function buildConsolePolicyDocument(
 }
 
 /**
+ * Shared: Validate AWS, load metadata, and resolve region
+ */
+async function validateAndLoadMetadata(
+  options: PlatformConnectOptions,
+  progress: DeploymentProgress
+): Promise<{
+  identity: { accountId: string };
+  region: string;
+  metadata: ConnectionMetadata;
+}> {
+  // Check Pulumi CLI
+  const wasAutoInstalled = await progress.execute(
+    "Checking Pulumi CLI installation",
+    async () => await ensurePulumiInstalled()
+  );
+  if (wasAutoInstalled) {
+    progress.info("Pulumi CLI was automatically installed");
+  }
+
+  // Validate AWS credentials
+  const identity = await progress.execute(
+    "Validating AWS credentials",
+    async () => validateAWSCredentials()
+  );
+  progress.info(`Connected to AWS account: ${pc.cyan(identity.accountId)}`);
+
+  // Get region
+  let region = options.region;
+  if (!region) {
+    region = await getAWSRegion();
+  }
+
+  // Load metadata
+  const metadata = await loadConnectionMetadata(identity.accountId, region);
+  if (!metadata) {
+    progress.stop();
+    log.error(
+      `No Wraps deployment found for account ${pc.cyan(identity.accountId)} in region ${pc.cyan(region)}`
+    );
+    console.log(
+      `\nRun ${pc.cyan("wraps email init")} to deploy infrastructure first.\n`
+    );
+    process.exit(1);
+  }
+
+  const hasEmail = !!metadata.services.email?.config;
+  const hasSms = !!metadata.services.sms?.config;
+  if (!(hasEmail || hasSms)) {
+    progress.stop();
+    log.error("No services deployed in this region.");
+    console.log(
+      `\nRun ${pc.cyan("wraps email init")} or ${pc.cyan("wraps sms init")} first.\n`
+    );
+    process.exit(1);
+  }
+
+  progress.info(
+    `Found services: ${[hasEmail && "email", hasSms && "sms"].filter(Boolean).join(", ")}`
+  );
+
+  return { identity, region, metadata };
+}
+
+/**
+ * Shared: Deploy EventBridge with webhook secret
+ */
+async function deployEventBridge(
+  metadata: ConnectionMetadata,
+  region: string,
+  identity: { accountId: string },
+  webhookSecret: string,
+  progress: DeploymentProgress
+): Promise<void> {
+  // Get Vercel config if needed
+  if (metadata.provider === "vercel" && !metadata.vercel) {
+    progress.stop();
+    metadata.vercel = await promptVercelConfig();
+  }
+
+  const stackConfig = buildEmailStackConfig(metadata, region, {
+    webhook: { awsAccountNumber: metadata.accountId, webhookSecret },
+  });
+
+  await progress.execute("Configuring event streaming", async () => {
+    await ensurePulumiWorkDir({ accountId: identity.accountId, region });
+
+    const stack = await pulumi.automation.LocalWorkspace.createOrSelectStack(
+      {
+        stackName:
+          metadata.services.email?.pulumiStackName ||
+          `wraps-${identity.accountId}-${region}`,
+        projectName: "wraps-email",
+        program: async () => {
+          const result = await deployEmailStack(stackConfig);
+          return {
+            roleArn: result.roleArn,
+            configSetName: result.configSetName,
+            tableName: result.tableName,
+            region: result.region,
+          };
+        },
+      },
+      {
+        workDir: getPulumiWorkDir(),
+        envVars: {
+          PULUMI_CONFIG_PASSPHRASE: "",
+          AWS_REGION: region,
+        },
+        secretsProvider: "passphrase",
+      }
+    );
+
+    await stack.setConfig("aws:region", { value: region });
+    await stack.refresh({ onOutput: () => {} });
+    await stack.up({ onOutput: () => {} });
+  });
+
+  progress.succeed("Event streaming configured");
+}
+
+/**
+ * Shared: Update platform access IAM role
+ */
+async function updatePlatformRole(
+  metadata: ConnectionMetadata,
+  progress: DeploymentProgress
+): Promise<void> {
+  const roleName = "wraps-console-access-role";
+  const iam = new IAMClient({ region: "us-east-1" });
+
+  let roleExists = false;
+  try {
+    await iam.send(new GetRoleCommand({ RoleName: roleName }));
+    roleExists = true;
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "name" in error &&
+      error.name !== "NoSuchEntity"
+    ) {
+      throw error;
+    }
+  }
+
+  if (roleExists) {
+    const emailConfig = metadata.services.email?.config;
+    const smsConfig = metadata.services.sms?.config;
+    const policy = buildConsolePolicyDocument(emailConfig, smsConfig);
+
+    await progress.execute("Updating platform access role", async () => {
+      await iam.send(
+        new PutRolePolicyCommand({
+          RoleName: roleName,
+          PolicyName: "wraps-console-access-policy",
+          PolicyDocument: JSON.stringify(policy, null, 2),
+        })
+      );
+    });
+
+    progress.succeed("Platform access role updated");
+  } else {
+    progress.info(
+      `IAM role ${pc.cyan(roleName)} will be created when you add your AWS account in the dashboard`
+    );
+  }
+}
+
+/**
+ * Select organization from stored config or prompt user
+ */
+async function resolveOrganization(): Promise<OrgInfo | null> {
+  const config = await readAuthConfig();
+  const orgs = config?.auth?.organizations;
+
+  if (!orgs || orgs.length === 0) {
+    return null;
+  }
+
+  if (orgs.length === 1) {
+    return orgs[0];
+  }
+
+  // Multiple orgs — prompt
+  const selected = await select({
+    message: "Which organization should this AWS account connect to?",
+    options: orgs.map((org) => ({
+      value: org.id,
+      label: org.name,
+      hint: org.slug,
+    })),
+  });
+
+  if (isCancel(selected)) {
+    outro("Operation cancelled");
+    process.exit(0);
+  }
+
+  return orgs.find((o) => o.id === selected) || null;
+}
+
+/**
+ * Register connection via Wraps Platform API
+ */
+async function registerConnection(params: {
+  token: string;
+  orgId: string;
+  accountId: string;
+  region: string;
+  features?: Record<string, unknown>;
+}): Promise<{
+  success: boolean;
+  connectionId?: string;
+  externalId?: string;
+  roleArn?: string;
+  webhookSecret?: string;
+  webhookEndpoint?: string;
+  error?: string;
+}> {
+  const baseURL = process.env.WRAPS_API_URL || "https://api.wraps.dev";
+
+  const response = await fetch(`${baseURL}/v1/connections`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${params.token}`,
+      "X-Organization-Id": params.orgId,
+    },
+    body: JSON.stringify({
+      accountId: params.accountId,
+      region: params.region,
+      features: params.features,
+    }),
+  });
+
+  const data = (await response.json()) as Record<string, unknown>;
+
+  if (!response.ok) {
+    return {
+      success: false,
+      error: (data.error as string) || `HTTP ${response.status}`,
+    };
+  }
+
+  return data as {
+    success: boolean;
+    connectionId: string;
+    externalId: string;
+    roleArn: string;
+    webhookSecret: string;
+    webhookEndpoint: string;
+  };
+}
+
+/**
+ * Authenticated platform connect — registers via API, no manual paste needed
+ */
+async function authenticatedConnect(
+  token: string,
+  options: PlatformConnectOptions
+): Promise<void> {
+  const startTime = Date.now();
+
+  if (!options.json) {
+    intro(pc.bold("Connect to Wraps Platform"));
+  }
+
+  const progress = new DeploymentProgress();
+
+  try {
+    // 1. Validate AWS + load metadata
+    const { identity, region, metadata } = await validateAndLoadMetadata(
+      options,
+      progress
+    );
+
+    const hasEmail = !!metadata.services.email?.config;
+
+    // 2. Resolve organization
+    const org = await resolveOrganization();
+    if (!org) {
+      progress.stop();
+      log.error(
+        "No organizations found. Sign in at https://app.wraps.dev to create one."
+      );
+      process.exit(1);
+    }
+
+    if (!options.json) {
+      progress.info(`Organization: ${pc.cyan(org.name)}`);
+    }
+
+    // 3. Ensure event tracking is enabled for email
+    if (hasEmail) {
+      const emailConfig = metadata.services.email?.config;
+      if (!emailConfig?.eventTracking?.enabled) {
+        if (!options.json) {
+          progress.stop();
+          log.warn(
+            "Event tracking must be enabled to connect to the Wraps Platform."
+          );
+        }
+
+        const enableTracking =
+          options.yes ||
+          (await confirm({
+            message: "Enable event tracking now?",
+            initialValue: true,
+          }));
+
+        if (isCancel(enableTracking) || !enableTracking) {
+          outro("Platform connection cancelled.");
+          process.exit(0);
+        }
+
+        metadata.services.email!.config = {
+          ...emailConfig,
+          eventTracking: {
+            enabled: true,
+            eventBridge: true,
+            events: [
+              "SEND",
+              "DELIVERY",
+              "OPEN",
+              "CLICK",
+              "BOUNCE",
+              "COMPLAINT",
+            ],
+            dynamoDBHistory:
+              emailConfig?.eventTracking?.dynamoDBHistory ?? false,
+            archiveRetention:
+              emailConfig?.eventTracking?.archiveRetention ?? "90days",
+          },
+        };
+      }
+    }
+
+    // 4. Register connection via API
+    const features: Record<string, unknown> = {};
+    if (metadata.services.email?.config) {
+      features.email = metadata.services.email.config;
+    }
+    if (metadata.services.sms?.config) {
+      features.sms = metadata.services.sms.config;
+    }
+
+    const result = await progress.execute(
+      "Registering connection with Wraps Platform",
+      async () =>
+        registerConnection({
+          token,
+          orgId: org.id,
+          accountId: identity.accountId,
+          region,
+          features,
+        })
+    );
+
+    if (!(result.success && result.webhookSecret)) {
+      progress.stop();
+      log.error(
+        `Failed to register connection: ${result.error || "Unknown error"}`
+      );
+      console.log(
+        `\nYou can try the manual flow: ${pc.cyan("wraps auth logout")} then ${pc.cyan("wraps platform connect")}\n`
+      );
+      process.exit(1);
+    }
+
+    progress.succeed("Connection registered");
+
+    // 5. Deploy EventBridge with server-provided webhook secret
+    if (hasEmail) {
+      metadata.services.email!.webhookSecret = result.webhookSecret;
+
+      await deployEventBridge(
+        metadata,
+        region,
+        identity,
+        result.webhookSecret,
+        progress
+      );
+    }
+
+    // 6. Update IAM role with server-provided externalId
+    await updatePlatformRole(metadata, progress);
+
+    // 7. Save metadata (without webhook secret — it lives on server + EventBridge)
+    await saveConnectionMetadata(metadata);
+
+    progress.stop();
+
+    // 8. Output
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          success: true,
+          accountId: identity.accountId,
+          region,
+          organizationId: org.id,
+          connectionId: result.connectionId,
+          webhookConnected: true,
+        })
+      );
+    } else {
+      outro(pc.green("Platform connection complete!"));
+
+      console.log();
+      console.log(
+        pc.dim(
+          "Events from your AWS infrastructure will stream to the dashboard."
+        )
+      );
+      console.log(`  Dashboard: ${pc.cyan("https://app.wraps.dev")}`);
+      console.log();
+    }
+
+    const duration = Date.now() - startTime;
+    trackCommand("platform:connect", {
+      success: true,
+      duration_ms: duration,
+      authenticated: true,
+    });
+  } catch (error) {
+    progress.stop();
+
+    const duration = Date.now() - startTime;
+    const errorCode = error instanceof Error ? error.name : "UNKNOWN_ERROR";
+    trackError(errorCode, "platform:connect", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    trackCommand("platform:connect", {
+      success: false,
+      duration_ms: duration,
+      authenticated: true,
+    });
+
+    throw error;
+  }
+}
+
+/**
  * Connect AWS infrastructure to Wraps Platform
  */
 export async function connect(options: PlatformConnectOptions): Promise<void> {
+  // Check for authentication — if logged in, use the streamlined authenticated flow
+  const token = await resolveTokenAsync();
+  if (token) {
+    await authenticatedConnect(token, options);
+    return;
+  }
+
+  // Unauthenticated fallback — manual copy/paste flow
   const startTime = Date.now();
 
   intro(pc.bold("Connect to Wraps Platform"));

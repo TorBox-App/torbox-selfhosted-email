@@ -98,4 +98,5 @@ export type PlatformConnectOptions = {
   region?: string;
   force?: boolean; // Skip confirmation prompts
   yes?: boolean; // Auto-confirm non-destructive operations
+  json?: boolean; // Output as JSON (suppress interactive output)
 };

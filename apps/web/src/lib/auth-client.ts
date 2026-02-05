@@ -1,6 +1,7 @@
 import { passkeyClient } from "@better-auth/passkey/client";
 import { stripeClient } from "@better-auth/stripe/client";
 import {
+  deviceAuthorizationClient,
   lastLoginMethodClient,
   organizationClient,
   twoFactorClient,
@@ -10,6 +11,7 @@ import { createAuthClient } from "better-auth/react";
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   plugins: [
+    deviceAuthorizationClient(),
     lastLoginMethodClient(),
     passkeyClient(),
     twoFactorClient(),

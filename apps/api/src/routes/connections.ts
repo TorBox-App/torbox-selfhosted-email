@@ -1,0 +1,255 @@
+/**
+ * Connections Routes
+ *
+ * AWS account connection management for authenticated CLI users.
+ *
+ * POST /v1/connections - Register or update a connection
+ * GET /v1/connections - List connections for the organization
+ * DELETE /v1/connections/:id - Disconnect (clear webhook secret)
+ */
+
+import { randomBytes } from "node:crypto";
+import { and, awsAccount, db, eq } from "@wraps/db";
+import { count } from "drizzle-orm";
+import { t } from "elysia";
+import type { AuthContext } from "../middleware/auth";
+import { createAuthenticatedRoutes } from "../middleware/auth";
+
+// Plan limits for AWS accounts (matches apps/web/src/lib/plans.ts)
+const PLAN_AWS_ACCOUNT_LIMITS: Record<string, number> = {
+  free: 1,
+  starter: 2,
+  growth: 5,
+  scale: -1, // unlimited
+};
+
+function getMaxAwsAccounts(planId: string | null): number {
+  if (!planId) return PLAN_AWS_ACCOUNT_LIMITS.free;
+  return PLAN_AWS_ACCOUNT_LIMITS[planId] ?? PLAN_AWS_ACCOUNT_LIMITS.free;
+}
+
+function generateExternalId(): string {
+  return `wraps-${randomBytes(16).toString("hex")}`;
+}
+
+export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
+  // POST / — Register or update a connection
+  .post(
+    "/",
+    async (ctx) => {
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const { body } = ctx;
+
+      // Check plan limits
+      const [accountCount] = await db
+        .select({ count: count() })
+        .from(awsAccount)
+        .where(eq(awsAccount.organizationId, authContext.organizationId));
+
+      const maxAccounts = getMaxAwsAccounts(authContext.planId);
+
+      // Upsert: find existing by (organizationId, accountId)
+      const [existing] = await db
+        .select({ id: awsAccount.id, externalId: awsAccount.externalId })
+        .from(awsAccount)
+        .where(
+          and(
+            eq(awsAccount.organizationId, authContext.organizationId),
+            eq(awsAccount.accountId, body.accountId)
+          )
+        )
+        .limit(1);
+
+      if (
+        maxAccounts !== -1 &&
+        (accountCount?.count ?? 0) >= maxAccounts &&
+        !existing
+      ) {
+        ctx.set.status = 403;
+        return {
+          error: `AWS account limit reached (${maxAccounts}). Upgrade your plan to add more accounts.`,
+        };
+      }
+
+      // Generate secrets
+      const webhookSecret = randomBytes(32).toString("hex");
+      const externalId = existing?.externalId || generateExternalId();
+      const roleArn = `arn:aws:iam::${body.accountId}:role/wraps-console-access-role`;
+
+      // Cast features to a known shape for property access
+      const features = body.features as Record<string, unknown> | undefined;
+      const hasEmailFeature = features?.email !== undefined;
+      const hasSmsFeature = features?.sms !== undefined;
+
+      let connectionId: string;
+
+      if (existing) {
+        // Update existing
+        await db
+          .update(awsAccount)
+          .set({
+            region: body.region,
+            roleArn,
+            webhookSecret,
+            isVerified: false, // Will be verified when dashboard first calls AssumeRole
+            emailEnabled: hasEmailFeature,
+            smsEnabled: hasSmsFeature,
+            features: (features ?? null) as any,
+            updatedAt: new Date(),
+          })
+          .where(eq(awsAccount.id, existing.id));
+        connectionId = existing.id;
+      } else {
+        // Insert new
+        const id = crypto.randomUUID();
+        await db.insert(awsAccount).values({
+          id,
+          organizationId: authContext.organizationId,
+          name: body.name || `AWS ${body.accountId}`,
+          accountId: body.accountId,
+          region: body.region,
+          roleArn,
+          externalId,
+          webhookSecret,
+          isVerified: false,
+          emailEnabled: hasEmailFeature,
+          smsEnabled: hasSmsFeature,
+          features: features ?? null,
+          createdBy: authContext.userId,
+        });
+        connectionId = id;
+
+        console.log(
+          JSON.stringify({
+            event: "connection.created",
+            connectionId: id,
+            organizationId: authContext.organizationId,
+            accountId: body.accountId,
+            region: body.region,
+            timestamp: new Date().toISOString(),
+          })
+        );
+      }
+
+      ctx.set.status = existing ? 200 : 201;
+      return {
+        success: true,
+        connectionId,
+        externalId,
+        roleArn,
+        webhookSecret,
+        webhookEndpoint: `https://api.wraps.dev/webhooks/ses/${body.accountId}`,
+      };
+    },
+    {
+      body: t.Object({
+        accountId: t.String({ description: "AWS account ID (12 digits)" }),
+        region: t.String({ description: "AWS region (e.g. us-east-1)" }),
+        name: t.Optional(
+          t.String({ description: "Display name for the account" })
+        ),
+        features: t.Optional(
+          t.Object(
+            {},
+            {
+              additionalProperties: true,
+              description: "Service features config",
+            }
+          )
+        ),
+      }),
+      detail: {
+        tags: ["connections"],
+        summary: "Register or update an AWS connection",
+        description:
+          "Registers or updates the AWS account connection. Returns externalId for IAM role trust policy and webhookSecret for EventBridge configuration.",
+      },
+    }
+  )
+
+  // GET / — List connections for the organization
+  .get(
+    "/",
+    async (ctx) => {
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+
+      const connections = await db
+        .select({
+          id: awsAccount.id,
+          accountId: awsAccount.accountId,
+          name: awsAccount.name,
+          region: awsAccount.region,
+          isVerified: awsAccount.isVerified,
+          emailEnabled: awsAccount.emailEnabled,
+          smsEnabled: awsAccount.smsEnabled,
+          lastVerifiedAt: awsAccount.lastVerifiedAt,
+          createdAt: awsAccount.createdAt,
+        })
+        .from(awsAccount)
+        .where(eq(awsAccount.organizationId, authContext.organizationId));
+
+      return {
+        connections: connections.map((c) => ({
+          ...c,
+          webhookConnected: true,
+          lastVerifiedAt: c.lastVerifiedAt?.toISOString() ?? null,
+          createdAt: c.createdAt.toISOString(),
+        })),
+      };
+    },
+    {
+      detail: {
+        tags: ["connections"],
+        summary: "List AWS connections",
+        description:
+          "Returns all AWS account connections for the authenticated organization.",
+      },
+    }
+  )
+
+  // DELETE /:id — Disconnect (clear webhook secret)
+  .delete(
+    "/:id",
+    async (ctx) => {
+      const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+      const { id } = ctx.params;
+
+      const [existing] = await db
+        .select({ id: awsAccount.id })
+        .from(awsAccount)
+        .where(
+          and(
+            eq(awsAccount.id, id),
+            eq(awsAccount.organizationId, authContext.organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        ctx.set.status = 404;
+        return { error: "Connection not found" };
+      }
+
+      // Clear webhook secret (don't delete the record)
+      await db
+        .update(awsAccount)
+        .set({
+          webhookSecret: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(awsAccount.id, id));
+
+      return { success: true };
+    },
+    {
+      params: t.Object({
+        id: t.String({ description: "Connection ID" }),
+      }),
+      detail: {
+        tags: ["connections"],
+        summary: "Disconnect an AWS account",
+        description:
+          "Clears the webhook secret for the connection. The account record is preserved.",
+      },
+    }
+  );

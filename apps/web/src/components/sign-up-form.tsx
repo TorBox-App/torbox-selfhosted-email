@@ -37,11 +37,13 @@ export default function SignUpForm({
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
 
-  const isInviteRedirect = redirectTo?.startsWith("/invitations/");
+  const isSpecialRedirect =
+    redirectTo?.startsWith("/invitations/") ||
+    redirectTo?.startsWith("/device");
 
-  // Compute callback URL for OAuth - use invite redirect or onboarding
+  // Compute callback URL for OAuth - use special redirect or onboarding
   const callbackUrl = useMemo(() => {
-    if (isInviteRedirect && redirectTo) {
+    if (isSpecialRedirect && redirectTo) {
       return redirectTo;
     }
     const params = new URLSearchParams();
@@ -54,7 +56,7 @@ export default function SignUpForm({
     return params.toString() !== ""
       ? `/onboarding?${params.toString()}`
       : "/onboarding";
-  }, [plan, interval, isInviteRedirect, redirectTo]);
+  }, [plan, interval, isSpecialRedirect, redirectTo]);
 
   const form = useForm({
     defaultValues: {
@@ -119,9 +121,9 @@ export default function SignUpForm({
         ...attribution,
       });
 
-      // Step 4: Redirect to invite page or onboarding
+      // Step 4: Redirect to special page or onboarding
       toast.success("Account created successfully!");
-      if (isInviteRedirect && redirectTo) {
+      if (isSpecialRedirect && redirectTo) {
         router.push(redirectTo);
       } else {
         const onboardingParams = new URLSearchParams();

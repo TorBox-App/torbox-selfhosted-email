@@ -9,6 +9,8 @@ import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import {
+  bearer,
+  deviceAuthorization,
   haveIBeenPwned,
   lastLoginMethod,
   organization,
@@ -484,6 +486,14 @@ export const auth = betterAuth<BetterAuthOptions>({
       issuer: "Wraps",
     }),
     organization(),
+    bearer(),
+    deviceAuthorization({
+      verificationUri: "/device",
+      expiresIn: "15m",
+      interval: "3s",
+      userCodeLength: 8,
+      validateClient: async (clientId) => clientId === "wraps-cli",
+    }),
     // Only include Stripe plugin if the client is available (requires STRIPE_SECRET_KEY)
     ...(stripeClient
       ? [

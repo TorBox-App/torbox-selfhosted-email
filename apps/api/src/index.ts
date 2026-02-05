@@ -10,6 +10,7 @@ import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { workflowsRoutes } from "./(ee)/routes/workflows";
 import { batchRoutes } from "./routes/batch";
+import { connectionsRoutes } from "./routes/connections";
 import { contactsRoutes } from "./routes/contacts";
 import { eventsRoutes } from "./routes/events";
 import { healthRoutes } from "./routes/health";
@@ -66,6 +67,10 @@ const openApiDocumentation = {
       description: "API-triggered workflow execution endpoints",
     },
     {
+      name: "connections",
+      description: "AWS account connection management",
+    },
+    {
       name: "webhooks",
       description: "Webhook endpoints for receiving SES events",
     },
@@ -113,6 +118,7 @@ export const app = new Elysia()
     })
   )
   .use(healthRoutes)
+  .use(connectionsRoutes)
   .use(contactsRoutes)
   .use(batchRoutes)
   .use(eventsRoutes)

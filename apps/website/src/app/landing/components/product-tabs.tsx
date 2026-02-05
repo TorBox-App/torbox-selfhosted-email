@@ -397,10 +397,7 @@ type GlowingTabProps = {
   onTabClick: (index: number) => void;
 };
 
-function GlowingTabBar({
-  activeIndex,
-  onTabClick,
-}: GlowingTabProps) {
+function GlowingTabBar({ activeIndex, onTabClick }: GlowingTabProps) {
   return (
     <div className="mb-8 flex flex-col items-center gap-4">
       <div className="relative">
@@ -455,10 +452,7 @@ export function ProductTabs() {
 
   return (
     <div>
-      <GlowingTabBar
-        activeIndex={activeIndex}
-        onTabClick={setActiveIndex}
-      />
+      <GlowingTabBar activeIndex={activeIndex} onTabClick={setActiveIndex} />
 
       <div className="min-h-[450px]">
         {activeTab === "templates" && <TemplatesContent />}
@@ -468,11 +462,7 @@ export function ProductTabs() {
       </div>
 
       <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <Button
-          asChild
-          className="bg-orange-500 hover:bg-orange-600"
-          size="lg"
-        >
+        <Button asChild className="bg-orange-500 hover:bg-orange-600" size="lg">
           <a
             href="https://app.wraps.dev/auth?mode=signup"
             onClick={() =>
