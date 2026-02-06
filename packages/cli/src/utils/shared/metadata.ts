@@ -691,11 +691,16 @@ export function buildEmailStackConfig(
     };
   }
 
+  const emailConfig = overrides?.emailConfig ?? emailService?.config;
+  if (!emailConfig) {
+    throw new Error("Email service config not found in metadata");
+  }
+
   return {
     provider: metadata.provider,
     region,
     vercel: metadata.vercel,
-    emailConfig: overrides?.emailConfig ?? emailService!.config,
+    emailConfig,
     webhook,
   };
 }

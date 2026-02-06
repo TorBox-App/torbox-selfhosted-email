@@ -79,10 +79,14 @@ export function InboundEmailsTable({ data, orgSlug }: InboundEmailsTableProps) {
       const search = filterValue.toLowerCase();
 
       const from = row.original.from?.toLowerCase() ?? "";
-      if (from.includes(search)) return true;
+      if (from.includes(search)) {
+        return true;
+      }
 
       const subject = row.original.subject?.toLowerCase() ?? "";
-      if (subject.includes(search)) return true;
+      if (subject.includes(search)) {
+        return true;
+      }
 
       const recipients = row.original.to;
       if (recipients.some((email) => email.toLowerCase().includes(search))) {

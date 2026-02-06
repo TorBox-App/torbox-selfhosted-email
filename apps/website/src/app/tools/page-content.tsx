@@ -291,10 +291,7 @@ function ToolsPageInner() {
   const [error, setError] = useState<string | null>(null);
   const hasAutoChecked = useRef(false);
 
-  const runCheck = async (
-    checkDomain: string,
-    checkDkim: string = dkim,
-  ) => {
+  const runCheck = async (checkDomain: string, checkDkim: string = dkim) => {
     if (!checkDomain.trim()) {
       return;
     }
@@ -341,7 +338,7 @@ function ToolsPageInner() {
       hasAutoChecked.current = true;
       runCheck(domain, dkim);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dkim, domain, runCheck]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkDomain = () => runCheck(domain, dkim);
 
@@ -354,43 +351,56 @@ function ToolsPageInner() {
   // Score-driven status: green = full points, yellow = partial, red = critical issue, none = missing
   const getScoreStatus = (
     score: number,
-    max: number,
+    max: number
   ): "pass" | "warn" | "fail" => {
-    if (score >= max) return "pass";
-    if (score >= max * 0.7) return "warn";
+    if (score >= max) {
+      return "pass";
+    }
+    if (score >= max * 0.7) {
+      return "warn";
+    }
     return "fail";
   };
 
   const getSpfStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.spf.exists) return "none";
+    if (!result?.spf.exists) {
+      return "none";
+    }
     if (result.score?.breakdown) {
       return getScoreStatus(
         result.score.breakdown.spf.score,
-        result.score.breakdown.spf.max,
+        result.score.breakdown.spf.max
       );
     }
     // Fallback if no breakdown
-    if (!result.spf.valid || result.spf.allMechanism === "+all") return "fail";
+    if (!result.spf.valid || result.spf.allMechanism === "+all") {
+      return "fail";
+    }
     if (
       result.spf.allMechanism === "~all" ||
       result.spf.allMechanism === "?all" ||
       result.spf.lookupCount > result.spf.lookupLimit ||
       result.spf.hasPtr ||
       (result.spf.warnings?.length ?? 0) > 0
-    )
+    ) {
       return "warn";
+    }
     return "pass";
   };
 
   const getDkimStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.dkim?.found) return "none";
+    if (!result?.dkim?.found) {
+      return "none";
+    }
     if (result.score?.breakdown) {
       return getScoreStatus(
         result.score.breakdown.dkim.score,
-        result.score.breakdown.dkim.max,
+        result.score.breakdown.dkim.max
       );
     }
-    if ((result.dkim?.warnings?.length ?? 0) > 0) return "warn";
+    if ((result.dkim?.warnings?.length ?? 0) > 0) {
+      return "warn";
+    }
     return "pass";
   };
 
@@ -401,37 +411,53 @@ function ToolsPageInner() {
     result.dkim?.warnings?.some((w) => w.toLowerCase().includes("aws ses"));
 
   const getDmarcStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.dmarc.exists) return "none";
+    if (!result?.dmarc.exists) {
+      return "none";
+    }
     if (result.score?.breakdown) {
       return getScoreStatus(
         result.score.breakdown.dmarc.score,
-        result.score.breakdown.dmarc.max,
+        result.score.breakdown.dmarc.max
       );
     }
-    if (!result.dmarc.valid) return "fail";
-    if (result.dmarc.policy === "none") return "warn";
+    if (!result.dmarc.valid) {
+      return "fail";
+    }
+    if (result.dmarc.policy === "none") {
+      return "warn";
+    }
     return "pass";
   };
 
   const getMxStatus = (): "pass" | "warn" | "fail" | "none" => {
-    if (!result?.mx.exists) return "none";
+    if (!result?.mx.exists) {
+      return "none";
+    }
     if (result.score?.breakdown) {
       return getScoreStatus(
         result.score.breakdown.mx.score,
-        result.score.breakdown.mx.max,
+        result.score.breakdown.mx.max
       );
     }
-    if (result.mx.records.some((r) => !r.resolves)) return "warn";
+    if (result.mx.records.some((r) => !r.resolves)) {
+      return "warn";
+    }
     return "pass";
   };
 
   const getStatusLabel = (
     exists: boolean,
-    status: "pass" | "warn" | "fail" | "none",
+    status: "pass" | "warn" | "fail" | "none"
   ): string => {
-    if (!exists) return "Missing";
-    if (status === "pass") return "Strong";
-    if (status === "warn") return "Weak";
+    if (!exists) {
+      return "Missing";
+    }
+    if (status === "pass") {
+      return "Strong";
+    }
+    if (status === "warn") {
+      return "Weak";
+    }
     return "Failing";
   };
 
@@ -482,9 +508,7 @@ function ToolsPageInner() {
                     aria-label="Domain to check"
                     className="h-12 pl-10 text-lg"
                     disabled={isLoading}
-                    onChange={(e) =>
-                      setParams({ domain: e.target.value })
-                    }
+                    onChange={(e) => setParams({ domain: e.target.value })}
                     onKeyDown={handleKeyDown}
                     placeholder="Enter your domain (e.g., example.com)"
                     value={domain}
@@ -532,9 +556,7 @@ function ToolsPageInner() {
                         <Input
                           disabled={isLoading}
                           id="dkim-selectors"
-                          onChange={(e) =>
-                            setParams({ dkim: e.target.value })
-                          }
+                          onChange={(e) => setParams({ dkim: e.target.value })}
                           placeholder="e.g., selector1, selector2, selector3"
                           value={dkim}
                         />
@@ -601,7 +623,8 @@ function ToolsPageInner() {
                     />
                     {result.score?.breakdown && (
                       <div className="mt-1.5 text-muted-foreground text-xs">
-                        {result.score.breakdown.spf.score}/{result.score.breakdown.spf.max} pts
+                        {result.score.breakdown.spf.score}/
+                        {result.score.breakdown.spf.max} pts
                       </div>
                     )}
                   </CardContent>
@@ -613,7 +636,10 @@ function ToolsPageInner() {
                       label={
                         isAwsSesWithoutDkim
                           ? "Not Verified"
-                          : getStatusLabel(!!result.dkim?.found, getDkimStatus())
+                          : getStatusLabel(
+                              !!result.dkim?.found,
+                              getDkimStatus()
+                            )
                       }
                       status={
                         isAwsSesWithoutDkim
@@ -625,7 +651,8 @@ function ToolsPageInner() {
                     />
                     {result.score?.breakdown && (
                       <div className="mt-1.5 text-muted-foreground text-xs">
-                        {result.score.breakdown.dkim.score}/{result.score.breakdown.dkim.max} pts
+                        {result.score.breakdown.dkim.score}/
+                        {result.score.breakdown.dkim.max} pts
                       </div>
                     )}
                   </CardContent>
@@ -634,12 +661,16 @@ function ToolsPageInner() {
                   <CardContent className="pt-4 pb-4">
                     <div className="mb-2 font-semibold text-sm">DMARC</div>
                     <StatusBadge
-                      label={getStatusLabel(result.dmarc.exists, getDmarcStatus())}
+                      label={getStatusLabel(
+                        result.dmarc.exists,
+                        getDmarcStatus()
+                      )}
                       status={getDmarcStatus()}
                     />
                     {result.score?.breakdown && (
                       <div className="mt-1.5 text-muted-foreground text-xs">
-                        {result.score.breakdown.dmarc.score}/{result.score.breakdown.dmarc.max} pts
+                        {result.score.breakdown.dmarc.score}/
+                        {result.score.breakdown.dmarc.max} pts
                       </div>
                     )}
                   </CardContent>
@@ -653,7 +684,8 @@ function ToolsPageInner() {
                     />
                     {result.score?.breakdown && (
                       <div className="mt-1.5 text-muted-foreground text-xs">
-                        {result.score.breakdown.mx.score}/{result.score.breakdown.mx.max} pts
+                        {result.score.breakdown.mx.score}/
+                        {result.score.breakdown.mx.max} pts
                       </div>
                     )}
                   </CardContent>
@@ -674,8 +706,8 @@ function ToolsPageInner() {
                           <p className="text-muted-foreground text-sm">
                             AWS SES automatically configures DKIM with unique
                             selectors that we can't auto-discover. Your DKIM is
-                            most likely set up correctly. To verify, enter your 3
-                            DKIM selectors from the SES console.
+                            most likely set up correctly. To verify, enter your
+                            3 DKIM selectors from the SES console.
                           </p>
                         </div>
                       </div>
@@ -942,10 +974,6 @@ function ToolsPageInner() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <RecordDisplay
-                    label="SPF"
-                    record={result.spf.record}
-                    status={getSpfStatus()}
-                    warnings={result.spf.warnings}
                     extra={
                       result.spf.exists ? (
                         <span
@@ -957,10 +985,15 @@ function ToolsPageInner() {
                                 : "text-green-500"
                           }`}
                         >
-                          {result.spf.lookupCount}/{result.spf.lookupLimit} lookups
+                          {result.spf.lookupCount}/{result.spf.lookupLimit}{" "}
+                          lookups
                         </span>
                       ) : undefined
                     }
+                    label="SPF"
+                    record={result.spf.record}
+                    status={getSpfStatus()}
+                    warnings={result.spf.warnings}
                   />
                   <RecordDisplay
                     label="DMARC"
@@ -1038,7 +1071,9 @@ function ToolsPageInner() {
                       <div className="flex items-center justify-between p-4">
                         <StatusBadge
                           label="Blacklists"
-                          status={result.blacklist.overallClean ? "pass" : "fail"}
+                          status={
+                            result.blacklist.overallClean ? "pass" : "fail"
+                          }
                         />
                         {result.blacklist.overallClean ? (
                           <Badge variant="outline">Clean</Badge>
@@ -1053,38 +1088,40 @@ function ToolsPageInner() {
                       {!result.blacklist.overallClean && (
                         <div className="border-t bg-muted/30 p-4">
                           <div className="space-y-2">
-                            {result.blacklist.domainListings.map((listing, i) => (
-                              <div
-                                className="flex items-center justify-between rounded bg-background p-2 text-sm"
-                                key={`domain-bl-${i}`}
-                              >
-                                <div>
-                                  <span className="font-medium">
-                                    {listing.blacklist}
-                                  </span>
-                                  <Badge
-                                    className="ml-2"
-                                    variant={
-                                      listing.priority === "high"
-                                        ? "destructive"
-                                        : "secondary"
-                                    }
-                                  >
-                                    {listing.priority}
-                                  </Badge>
+                            {result.blacklist.domainListings.map(
+                              (listing, i) => (
+                                <div
+                                  className="flex items-center justify-between rounded bg-background p-2 text-sm"
+                                  key={`domain-bl-${i}`}
+                                >
+                                  <div>
+                                    <span className="font-medium">
+                                      {listing.blacklist}
+                                    </span>
+                                    <Badge
+                                      className="ml-2"
+                                      variant={
+                                        listing.priority === "high"
+                                          ? "destructive"
+                                          : "secondary"
+                                      }
+                                    >
+                                      {listing.priority}
+                                    </Badge>
+                                  </div>
+                                  {listing.delistUrl && (
+                                    <a
+                                      className="text-primary text-xs hover:underline"
+                                      href={listing.delistUrl}
+                                      rel="noopener noreferrer"
+                                      target="_blank"
+                                    >
+                                      Delist
+                                    </a>
+                                  )}
                                 </div>
-                                {listing.delistUrl && (
-                                  <a
-                                    className="text-primary text-xs hover:underline"
-                                    href={listing.delistUrl}
-                                    rel="noopener noreferrer"
-                                    target="_blank"
-                                  >
-                                    Delist
-                                  </a>
-                                )}
-                              </div>
-                            ))}
+                              )
+                            )}
                             {result.blacklist.ipListings.map((listing, i) => (
                               <div
                                 className="flex items-center justify-between rounded bg-background p-2 text-sm"

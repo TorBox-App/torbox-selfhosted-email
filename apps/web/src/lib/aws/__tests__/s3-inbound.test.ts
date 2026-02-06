@@ -277,10 +277,10 @@ describe("s3-inbound", () => {
       });
 
       expect(result).not.toBeNull();
-      expect(result!.emailId).toBe("email-001");
-      expect(result!.subject).toBe("Test Subject");
-      expect(result!.from.address).toBe("sender@example.com");
-      expect(result!.attachments).toHaveLength(1);
+      expect(result?.emailId).toBe("email-001");
+      expect(result?.subject).toBe("Test Subject");
+      expect(result?.from.address).toBe("sender@example.com");
+      expect(result?.attachments).toHaveLength(1);
 
       // Verify it fetched the correct key
       const getCommand = mockS3Send.mock.calls[0][0];

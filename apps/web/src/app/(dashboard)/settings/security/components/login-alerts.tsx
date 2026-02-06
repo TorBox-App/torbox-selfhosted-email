@@ -63,7 +63,7 @@ export function LoginAlerts() {
       setIsLoading(false);
     }
     loadSettings();
-  }, [securityForm.setFieldValue]);
+  }, [securityForm.setFieldValue, securityForm]);
 
   const securityFormErrors = useStore(
     securityForm.store,

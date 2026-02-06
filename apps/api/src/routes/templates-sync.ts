@@ -27,8 +27,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
         ctx.set.status = 409;
         return {
           error: "conflict",
-          message:
-            "Template was edited on the dashboard since last push",
+          message: "Template was edited on the dashboard since last push",
           lastEditedFrom: "dashboard",
           updatedAt: result.updatedAt,
         };
@@ -70,7 +69,9 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
           })
         ),
         force: t.Optional(
-          t.Boolean({ description: "Force overwrite even if edited on dashboard" })
+          t.Boolean({
+            description: "Force overwrite even if edited on dashboard",
+          })
         ),
       }),
       detail: {
@@ -200,7 +201,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
 
 // ── Helpers ──
 
-export interface PushBody {
+export type PushBody = {
   slug: string;
   source: string;
   compiledHtml: string;
@@ -213,15 +214,15 @@ export interface PushBody {
   sesTemplateName: string;
   cliProjectPath?: string;
   force?: boolean;
-}
+};
 
-interface UpsertResult {
+type UpsertResult = {
   id: string;
   slug: string;
   updatedAt: string;
   created: boolean;
   conflict?: boolean;
-}
+};
 
 export async function upsertTemplateFromCli(
   authContext: AuthContext,

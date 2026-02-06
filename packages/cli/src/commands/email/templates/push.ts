@@ -13,31 +13,31 @@ import { resolveTokenAsync } from "../../../utils/shared/config.js";
 import { errors } from "../../../utils/shared/errors.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
 
-interface TemplatesPushOptions {
+type TemplatesPushOptions = {
   template?: string;
   dryRun?: boolean;
   force?: boolean;
   yes?: boolean;
   json?: boolean;
   token?: string;
-}
+};
 
-interface LockfileEntry {
+type LockfileEntry = {
   id?: string;
   localHash: string;
   remoteHash?: string;
   sesTemplateName: string;
   lastPushed: string;
-}
+};
 
-interface Lockfile {
+type Lockfile = {
   version: string;
   org?: string;
   lastSync: string;
   templates: Record<string, LockfileEntry>;
-}
+};
 
-interface CompiledTemplate {
+type CompiledTemplate = {
   slug: string;
   source: string;
   sourceHash: string;
@@ -49,7 +49,7 @@ interface CompiledTemplate {
   variables: Array<{ name: string; fallback?: string }>;
   sesTemplateName: string;
   cliProjectPath: string;
-}
+};
 
 export async function templatesPush(options: TemplatesPushOptions) {
   const cwd = process.cwd();
@@ -110,7 +110,8 @@ export async function templatesPush(options: TemplatesPushOptions) {
     // --force bypasses both local change detection AND dashboard conflict detection
     // Also check if template exists remotely - if deleted from dashboard, re-push it
     const localHashMatches = lockfile.templates[slug]?.localHash === sourceHash;
-    const existsRemotely = remoteTemplateSlugs === null || remoteTemplateSlugs.has(slug);
+    const existsRemotely =
+      remoteTemplateSlugs === null || remoteTemplateSlugs.has(slug);
 
     if (!options.force && localHashMatches && existsRemotely) {
       unchanged.push(slug);
@@ -196,7 +197,13 @@ export async function templatesPush(options: TemplatesPushOptions) {
   await pushToSES(compiled, progress);
 
   // Push to API (token already resolved above)
-  const apiResults = await pushToAPI(compiled, token, config.org, progress, options.force);
+  const apiResults = await pushToAPI(
+    compiled,
+    token,
+    config.org,
+    progress,
+    options.force
+  );
 
   // Update lockfile
   for (const t of compiled) {
@@ -310,7 +317,9 @@ async function compileTemplate(
     {},
     {
       get: (_target, prop) => {
-        if (typeof prop === "symbol") return;
+        if (typeof prop === "symbol") {
+          return;
+        }
         return `{{${prop}}}`;
       },
     }
@@ -360,14 +369,15 @@ function extractVariables(
   const vars: Array<{ name: string; fallback?: string }> = [];
   const seen = new Set<string>();
   const regex = /\{\{([a-zA-Z0-9_.]+)(?:\|([^}]*))?\}\}/g;
-  let match: RegExpExecArray | null;
+  let match = regex.exec(html);
 
-  while ((match = regex.exec(html)) !== null) {
+  while (match !== null) {
     const name = match[1];
     if (!seen.has(name)) {
       seen.add(name);
       vars.push({ name, fallback: match[2]?.trim() });
     }
+    match = regex.exec(html);
   }
 
   return vars;
@@ -454,7 +464,9 @@ async function pushToSES(
         exists = true;
       } catch (err) {
         const e = err as { name?: string };
-        if (e.name !== "TemplateDoesNotExistException") throw err;
+        if (e.name !== "TemplateDoesNotExistException") {
+          throw err;
+        }
       }
 
       if (exists) {
@@ -499,7 +511,9 @@ async function fetchRemoteTemplateSlugs(
 
     if (!resp.ok) {
       // API error = can't check remote, fall back to local-only detection
-      progress.info("Could not check remote templates — using local change detection only");
+      progress.info(
+        "Could not check remote templates — using local change detection only"
+      );
       return null;
     }
 
@@ -507,18 +521,20 @@ async function fetchRemoteTemplateSlugs(
     return new Set(data.templates.map((t) => t.slug));
   } catch {
     // Network error = can't check remote, fall back to local-only detection
-    progress.info("Could not check remote templates — using local change detection only");
+    progress.info(
+      "Could not check remote templates — using local change detection only"
+    );
     return null;
   }
 }
 
 // ── API Push ──
 
-interface APIPushResult {
+type APIPushResult = {
   slug: string;
   id?: string;
   success: boolean;
-}
+};
 
 async function pushToAPI(
   templates: CompiledTemplate[],
@@ -596,10 +612,7 @@ async function pushToAPI(
             );
           }
         }
-      } else if (!resp.ok) {
-        const body = await resp.text();
-        throw new Error(`API returned ${resp.status}: ${body}`);
-      } else {
+      } else if (resp.ok) {
         const data = (await resp.json()) as {
           results: Array<{ slug: string; id: string; status: string }>;
         };
@@ -607,6 +620,9 @@ async function pushToAPI(
           results.push({ slug: r.slug, id: r.id, success: true });
         }
         progress.succeed(`Synced ${templates.length} templates to dashboard`);
+      } else {
+        const body = await resp.text();
+        throw new Error(`API returned ${resp.status}: ${body}`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -646,13 +662,13 @@ async function pushToAPI(
         progress.fail(
           `${pc.cyan(t.slug)} was edited on the dashboard since your last push. Use ${pc.bold("--force")} to overwrite.`
         );
-      } else if (!resp.ok) {
-        const body = await resp.text();
-        throw new Error(`API returned ${resp.status}: ${body}`);
-      } else {
+      } else if (resp.ok) {
         const data = (await resp.json()) as { id: string; slug: string };
         results.push({ slug: data.slug, id: data.id, success: true });
         progress.succeed(`Synced ${pc.cyan(t.slug)} to dashboard`);
+      } else {
+        const body = await resp.text();
+        throw new Error(`API returned ${resp.status}: ${body}`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

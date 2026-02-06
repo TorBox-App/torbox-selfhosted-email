@@ -169,6 +169,7 @@ export function InlineEditor({
     isCreatingTemplate,
     templateId,
     templateName,
+    createMutation,
   ]);
 
   // Sync subject/preview from loaded template

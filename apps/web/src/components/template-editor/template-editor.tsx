@@ -48,8 +48,7 @@ import { VersionHistoryPanel } from "./version-history-panel";
 
 // Dynamic import for code template editor (React Email TSX templates)
 const CodeTemplateEditor = dynamic(
-  () =>
-    import("./code-template-editor").then((m) => m.CodeTemplateEditor),
+  () => import("./code-template-editor").then((m) => m.CodeTemplateEditor),
   { ssr: false }
 );
 

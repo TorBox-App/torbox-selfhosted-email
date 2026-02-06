@@ -8,7 +8,6 @@ import {
   Hr,
   Html,
   Img,
-  Link,
   Preview,
   Row,
   Section,
@@ -58,9 +57,9 @@ export default function FirstContactEmail({
             <Section className="px-10 pt-5">
               <Img
                 alt="Wraps"
+                className="rounded-lg"
                 height="40"
                 src="https://wraps.dev/logo.png"
-                className="rounded-lg"
                 width="40"
               />
             </Section>
@@ -99,9 +98,9 @@ export default function FirstContactEmail({
               </Heading>
               <Text className="m-0 mb-5 text-base leading-relaxed text-gray-600">
                 You just added <strong>{contactName}</strong> as your first
-                contact. That&apos;s the foundation of everything
-                &mdash; broadcasts, automations, and targeted campaigns all
-                start with your contact list.
+                contact. That&apos;s the foundation of everything &mdash;
+                broadcasts, automations, and targeted campaigns all start with
+                your contact list.
               </Text>
               <Hr className="my-6 border-gray-200" />
               <Text className="m-0 mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
@@ -184,8 +183,8 @@ export default function FirstContactEmail({
               </Row>
               <Section className="my-7 text-center">
                 <Button
-                  href={dashboardUrl}
                   className="rounded-md bg-[#16a34a] px-6 py-3 text-base font-semibold text-white no-underline"
+                  href={dashboardUrl}
                 >
                   View Contacts
                 </Button>

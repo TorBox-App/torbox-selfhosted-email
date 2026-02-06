@@ -137,7 +137,9 @@ export function CodeTemplateAIPanel({
   const { data: brandKits } = useBrandKits(orgSlug);
 
   const selectedBrandKit = useMemo(() => {
-    if (!brandKits?.length) return null;
+    if (!brandKits?.length) {
+      return null;
+    }
     if (selectedBrandKitId) {
       return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
     }
@@ -224,7 +226,9 @@ export function CodeTemplateAIPanel({
 
   // Apply: compile first, then call onApply
   const handleApply = useCallback(async () => {
-    if (!pendingSource) return;
+    if (!pendingSource) {
+      return;
+    }
 
     setIsCompiling(true);
     try {
@@ -262,7 +266,9 @@ export function CodeTemplateAIPanel({
 
   const handleSendMessage = useCallback(
     (text: string) => {
-      if (!text.trim() || isLoading) return;
+      if (!text.trim() || isLoading) {
+        return;
+      }
       sendMessageThrottler.maybeExecute(text.trim());
       setInput("");
       adjustHeight(true);

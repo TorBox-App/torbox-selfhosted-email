@@ -80,7 +80,7 @@ export function ChangePassword() {
       passwordForm.reset();
       setShowPasswordDialog(false);
     }
-  }, [isPasswordSuccess, passwordForm.reset]);
+  }, [isPasswordSuccess, passwordForm.reset, passwordForm]);
 
   const isEmailVerified = session?.user?.emailVerified;
 

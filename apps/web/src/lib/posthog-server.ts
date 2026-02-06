@@ -7,19 +7,29 @@ let posthogClient: PostHog | null = null;
  */
 function shouldDisableTracking(): boolean {
   // Vitest sets this
-  if (process.env.VITEST === "true") return true;
+  if (process.env.VITEST === "true") {
+    return true;
+  }
 
   // Jest sets this
-  if (process.env.JEST_WORKER_ID !== undefined) return true;
+  if (process.env.JEST_WORKER_ID !== undefined) {
+    return true;
+  }
 
   // General test environment
-  if (process.env.NODE_ENV === "test") return true;
+  if (process.env.NODE_ENV === "test") {
+    return true;
+  }
 
   // CI environments (GitHub Actions, etc.)
-  if (process.env.CI === "true") return true;
+  if (process.env.CI === "true") {
+    return true;
+  }
 
   // Explicit opt-out
-  if (process.env.POSTHOG_DISABLED === "true") return true;
+  if (process.env.POSTHOG_DISABLED === "true") {
+    return true;
+  }
 
   return false;
 }

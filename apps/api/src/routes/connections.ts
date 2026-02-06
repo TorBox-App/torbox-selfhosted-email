@@ -24,7 +24,9 @@ const PLAN_AWS_ACCOUNT_LIMITS: Record<string, number> = {
 };
 
 function getMaxAwsAccounts(planId: string | null): number {
-  if (!planId) return PLAN_AWS_ACCOUNT_LIMITS.free;
+  if (!planId) {
+    return PLAN_AWS_ACCOUNT_LIMITS.free;
+  }
   return PLAN_AWS_ACCOUNT_LIMITS[planId] ?? PLAN_AWS_ACCOUNT_LIMITS.free;
 }
 

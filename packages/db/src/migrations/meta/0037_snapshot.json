@@ -1,6 +1,6 @@
 {
-  "id": "e594ac0a-8f58-41f5-a171-c5048bafdc26",
-  "prevId": "d39c5085-28ee-4c32-979b-5bb27d2228f1",
+  "id": "6372ebd2-39bb-4368-a844-822474101846",
+  "prevId": "e594ac0a-8f58-41f5-a171-c5048bafdc26",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5476,6 +5476,49 @@
           "primaryKey": false,
           "notNull": false
         },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_ts": {
+          "name": "source_ts",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_hash": {
+          "name": "source_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pushed_from_cli": {
+          "name": "pushed_from_cli",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "last_pushed_at": {
+          "name": "last_pushed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cli_project_path": {
+          "name": "cli_project_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_edited_from": {
+          "name": "last_edited_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "default_from": {
           "name": "default_from",
           "type": "text",
@@ -5596,6 +5639,27 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_org_slug_idx": {
+          "name": "workflow_org_slug_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}

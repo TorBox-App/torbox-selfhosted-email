@@ -31,7 +31,9 @@ async function fetchOrganizations(
         headers: { Authorization: `Bearer ${token}` },
       },
     });
-    if (!data) return [];
+    if (!data) {
+      return [];
+    }
     return data.map((org: any) => ({
       id: org.id,
       name: org.name,
@@ -160,7 +162,9 @@ export async function login(options: LoginOptions): Promise<void> {
     if (tokenError) {
       const errorCode = (tokenError as any).error || (tokenError as any).code;
 
-      if (errorCode === "authorization_pending") continue;
+      if (errorCode === "authorization_pending") {
+        continue;
+      }
 
       if (errorCode === "slow_down") {
         await new Promise((r) => setTimeout(r, pollInterval));
@@ -173,7 +177,9 @@ export async function login(options: LoginOptions): Promise<void> {
         process.exit(1);
       }
 
-      if (errorCode === "expired_token") break;
+      if (errorCode === "expired_token") {
+        break;
+      }
     }
   }
 

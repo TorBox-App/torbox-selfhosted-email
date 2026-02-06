@@ -7,13 +7,13 @@ import { readAuthConfig } from "../../../utils/shared/config.js";
 import { WrapsError } from "../../../utils/shared/errors.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
 
-interface TemplatesInitOptions {
+type TemplatesInitOptions = {
   org?: string;
   noExample?: boolean;
   yes?: boolean;
   force?: boolean;
   json?: boolean;
-}
+};
 
 export async function templatesInit(options: TemplatesInitOptions) {
   const cwd = process.cwd();

@@ -12,11 +12,11 @@ import {
 } from "../../../utils/email/template-compiler.js";
 import { errors } from "../../../utils/shared/errors.js";
 
-interface TemplatesPreviewOptions {
+type TemplatesPreviewOptions = {
   port?: number;
   template?: string;
   noOpen?: boolean;
-}
+};
 
 export async function templatesPreview(options: TemplatesPreviewOptions) {
   const cwd = process.cwd();
@@ -50,10 +50,14 @@ export async function templatesPreview(options: TemplatesPreviewOptions) {
 
   async function getCompiled(slug: string): Promise<PreviewResult> {
     const cached = cache.get(slug);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
 
     const file = templateFiles.find((f) => f.replace(/\.tsx?$/, "") === slug);
-    if (!file) throw new Error(`Template not found: ${slug}`);
+    if (!file) {
+      throw new Error(`Template not found: ${slug}`);
+    }
 
     const result = await compileForPreview(
       join(templatesDir, file),
@@ -77,11 +81,17 @@ export async function templatesPreview(options: TemplatesPreviewOptions) {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   watch(templatesDir, { recursive: true }, (_event, filename) => {
-    if (!filename) return;
+    if (!filename) {
+      return;
+    }
     // Ignore non-template files
-    if (!filename.endsWith(".tsx") && !filename.endsWith(".ts")) return;
+    if (!(filename.endsWith(".tsx") || filename.endsWith(".ts"))) {
+      return;
+    }
 
-    if (debounceTimer) clearTimeout(debounceTimer);
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
     debounceTimer = setTimeout(() => {
       const slug = filename.replace(/\.tsx?$/, "");
       cache.delete(slug);
@@ -154,7 +164,12 @@ export async function templatesPreview(options: TemplatesPreviewOptions) {
       res.type("html").send(compiled.html);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      res.status(500).type("html").send(`<pre style="color:red;padding:20px;font-family:monospace">${escapeHtml(msg)}</pre>`);
+      res
+        .status(500)
+        .type("html")
+        .send(
+          `<pre style="color:red;padding:20px;font-family:monospace">${escapeHtml(msg)}</pre>`
+        );
     }
   });
 
@@ -170,8 +185,7 @@ export async function templatesPreview(options: TemplatesPreviewOptions) {
   });
 
   const port =
-    options.port ||
-    (await getPort({ port: [3333, 3334, 3335, 3336, 3337] }));
+    options.port || (await getPort({ port: [3333, 3334, 3335, 3336, 3337] }));
 
   const server = app.listen(port, () => {
     const url = `http://localhost:${port}`;
@@ -286,10 +300,7 @@ function renderListPage(
 </html>`;
 }
 
-function renderViewerPage(
-  compiled: PreviewResult,
-  allSlugs: string[]
-): string {
+function renderViewerPage(compiled: PreviewResult, allSlugs: string[]): string {
   const navOptions = allSlugs
     .map(
       (s) =>

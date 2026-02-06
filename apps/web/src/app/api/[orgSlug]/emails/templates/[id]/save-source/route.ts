@@ -78,7 +78,7 @@ export async function POST(request: Request, context: RouteContext) {
       variables: Array<{ name: string; fallback?: string }>;
     } = await request.json();
 
-    if (!source || !compiledHtml) {
+    if (!(source && compiledHtml)) {
       return NextResponse.json(
         { error: "source and compiledHtml are required" },
         { status: 400 }

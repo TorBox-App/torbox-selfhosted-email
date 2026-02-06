@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -28,7 +29,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
 
 type CodeTemplateCodeViewProps = {
   template: Template;
@@ -161,7 +161,9 @@ export function CodeTemplateCodeView({
 
   // Save: compile then save
   const handleSave = useCallback(async () => {
-    if (!hasChanges || isSaving) return;
+    if (!hasChanges || isSaving) {
+      return;
+    }
 
     setIsSaving(true);
     setCompileError(null);
@@ -218,25 +220,19 @@ export function CodeTemplateCodeView({
       // Notify parent
       onSourceSaved?.(updatedTemplate);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to save";
+      const message = error instanceof Error ? error.message : "Failed to save";
       setCompileError(message);
       toast.error("Failed to save", { description: message });
     } finally {
       setIsSaving(false);
     }
-  }, [
-    hasChanges,
-    isSaving,
-    editedSource,
-    orgSlug,
-    templateId,
-    onSourceSaved,
-  ]);
+  }, [hasChanges, isSaving, editedSource, orgSlug, templateId, onSourceSaved]);
 
   // Cmd+S keyboard shortcut
   useEffect(() => {
-    if (!isEditing) return;
+    if (!isEditing) {
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -250,7 +246,7 @@ export function CodeTemplateCodeView({
   }, [isEditing, handleSave]);
 
   // Error state: missing source or compiled HTML
-  if (!originalSource || !previewHtml) {
+  if (!(originalSource && previewHtml)) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="max-w-md text-center">

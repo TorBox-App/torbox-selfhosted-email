@@ -4,35 +4,34 @@ import { join } from "node:path";
 
 // ── Types ──
 
-export interface WrapsConfig {
+export type WrapsConfig = {
   org: string;
   from?: { email: string; name?: string };
   region?: string;
   templatesDir?: string;
-}
+  workflowsDir?: string;
+};
 
-export interface PreviewResult {
+export type PreviewResult = {
   slug: string;
   html: string;
   subject: string;
   emailType: "marketing" | "transactional";
   previewText?: string;
-}
+};
 
 // ── Config Loading ──
 
-export async function loadWrapsConfig(
-  wrapsDir: string
-): Promise<WrapsConfig> {
+export async function loadWrapsConfig(wrapsDir: string): Promise<WrapsConfig> {
   const configPath = join(wrapsDir, "wraps.config.ts");
   const { build } = await import("esbuild");
 
-  // Create a shim for @wraps.dev/email so esbuild can resolve it
+  // Create a shim for @wraps.dev/client so esbuild can resolve it
   // defineConfig and defineBrand are identity functions — no need for the real package
   const shimDir = join(wrapsDir, ".wraps", "_shims");
   await mkdir(shimDir, { recursive: true });
   await writeFile(
-    join(shimDir, "wraps-email-shim.mjs"),
+    join(shimDir, "wraps-client-shim.mjs"),
     "export const defineConfig = (c) => c;\nexport const defineBrand = (b) => b;\n",
     "utf-8"
   );
@@ -45,7 +44,7 @@ export async function loadWrapsConfig(
     platform: "node",
     target: "node20",
     alias: {
-      "@wraps.dev/email": join(shimDir, "wraps-email-shim.mjs"),
+      "@wraps.dev/client": join(shimDir, "wraps-client-shim.mjs"),
     },
   });
 

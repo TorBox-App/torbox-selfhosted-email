@@ -26,7 +26,9 @@ function DeviceCodeForm() {
 
   // If not logged in, redirect to auth page with callback
   useEffect(() => {
-    if (sessionPending) return;
+    if (sessionPending) {
+      return;
+    }
     if (!session?.user) {
       const callbackUrl = code ? `/device?user_code=${code}` : "/device";
       router.replace(

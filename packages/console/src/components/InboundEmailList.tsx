@@ -108,7 +108,9 @@ export function InboundEmailList() {
   }, []);
 
   const filteredEmails = emails.filter((email) => {
-    if (!searchQuery) return true;
+    if (!searchQuery) {
+      return true;
+    }
     const query = searchQuery.toLowerCase();
     const matchesFrom =
       email.from.address.toLowerCase().includes(query) ||

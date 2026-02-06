@@ -8,7 +8,6 @@ import {
   Hr,
   Html,
   Img,
-  Link,
   Preview,
   Row,
   Section,
@@ -61,9 +60,9 @@ export default function FirstBroadcastEmail({
             <Section className="px-10 pt-5">
               <Img
                 alt="Wraps"
+                className="rounded-lg"
                 height="40"
                 src="https://wraps.dev/logo.png"
-                className="rounded-lg"
                 width="40"
               />
             </Section>
@@ -221,8 +220,8 @@ export default function FirstBroadcastEmail({
                 </Text>
                 <Section className="my-7 text-center">
                   <Button
-                    href={dashboardUrl}
                     className="rounded-md bg-[#ea580c] px-6 py-3 text-base font-semibold text-white no-underline"
+                    href={dashboardUrl}
                   >
                     View Broadcast Results
                   </Button>

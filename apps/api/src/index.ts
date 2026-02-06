@@ -19,6 +19,7 @@ import { toolsRoutes } from "./routes/tools";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
 import { workflowScheduleRoutes } from "./routes/workflow-schedules";
+import { workflowsSyncRoutes } from "./routes/workflows-sync";
 
 /**
  * OpenAPI documentation configuration
@@ -127,6 +128,7 @@ export const app = new Elysia()
   .use(webhooksRoutes)
   .use(unsubscribeRoutes)
   .use(templatesSyncRoutes)
+  .use(workflowsSyncRoutes)
   .use(toolsRoutes)
   .use(workflowScheduleRoutes);
 

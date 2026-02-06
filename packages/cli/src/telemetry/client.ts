@@ -207,7 +207,9 @@ export class TelemetryClient {
     if (!this.userIdResolved) {
       await new Promise<void>((resolve) => {
         const check = () => {
-          if (this.userIdResolved) return resolve();
+          if (this.userIdResolved) {
+            return resolve();
+          }
           setTimeout(check, 10);
         };
         check();

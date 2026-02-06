@@ -158,7 +158,9 @@ export function FeaturesStep({
   function applyTemplate(index: number) {
     setTemplateIndex(index);
     const preset = TEMPLATES[index]?.value;
-    if (preset) setFeatures(presetToFeatures(preset));
+    if (preset) {
+      setFeatures(presetToFeatures(preset));
+    }
   }
 
   function cycleRetention(

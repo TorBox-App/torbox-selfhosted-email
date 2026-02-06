@@ -233,7 +233,9 @@ export async function needsMigration(
           (f) =>
             f.includes(accountId) && f.includes(region) && f.endsWith(".json")
         );
-        if (matching.length > 0) return true;
+        if (matching.length > 0) {
+          return true;
+        }
       }
     }
     return false;
@@ -262,7 +264,9 @@ export async function migrateLocalPulumiState(
 
   for (const entry of entries) {
     const entryPath = join(stacksDir, entry);
-    if (!statSync(entryPath).isDirectory()) continue;
+    if (!statSync(entryPath).isDirectory()) {
+      continue;
+    }
 
     const projectName = entry;
     const files = await readdir(entryPath);

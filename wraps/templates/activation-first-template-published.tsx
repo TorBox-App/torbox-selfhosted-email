@@ -1,16 +1,13 @@
 import {
   Body,
   Button,
-  Column,
   Container,
   Head,
   Heading,
   Hr,
   Html,
   Img,
-  Link,
   Preview,
-  Row,
   Section,
   Tailwind,
   Text,
@@ -58,16 +55,17 @@ export default function FirstTemplatePublishedEmail({
             <Section className="px-10 pt-5">
               <Img
                 alt="Wraps"
+                className="rounded-lg"
                 height="40"
                 src="https://wraps.dev/logo.png"
-                className="rounded-lg"
                 width="40"
               />
             </Section>
             <Section className="overflow-hidden rounded-lg bg-white">
               <div
                 style={{
-                  background: "linear-gradient(135deg, #0d9488 0%, #0891b2 100%)",
+                  background:
+                    "linear-gradient(135deg, #0d9488 0%, #0891b2 100%)",
                   padding: "32px",
                   textAlign: "center",
                 }}
@@ -153,8 +151,8 @@ export default function FirstTemplatePublishedEmail({
                 </div>
                 <Section className="my-7 text-center">
                   <Button
-                    href={dashboardUrl}
                     className="rounded-md bg-[#0d9488] px-6 py-3 text-base font-semibold text-white no-underline"
+                    href={dashboardUrl}
                   >
                     Send a Test Email
                   </Button>

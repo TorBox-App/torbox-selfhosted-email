@@ -113,7 +113,9 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
 
   // Merge volume and engagement data, estimate opens/clicks from rates
   const chartData = React.useMemo(() => {
-    if (!volumeData) return [];
+    if (!volumeData) {
+      return [];
+    }
 
     return volumeData.map((v, i) => {
       const engagement = engagementData?.[i];

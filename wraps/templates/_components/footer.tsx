@@ -11,7 +11,7 @@ export function Footer({ unsubscribeUrl }: FooterProps) {
       <Text className="m-0 mb-2 text-xs text-gray-400">
         Wraps &bull; San Francisco, CA
       </Text>
-      <Link href={unsubscribeUrl} className="text-xs text-gray-400 underline">
+      <Link className="text-xs text-gray-400 underline" href={unsubscribeUrl}>
         Unsubscribe
       </Link>
     </Section>

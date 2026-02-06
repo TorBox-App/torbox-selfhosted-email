@@ -4,7 +4,6 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, Mail, MoreHorizontal, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 import {
   type ContactWithMeta,
   EMAIL_STATUS_COLORS,

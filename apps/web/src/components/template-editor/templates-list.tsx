@@ -1,7 +1,7 @@
 "use client";
 
-import type { EmailType, Template } from "@wraps/db";
 import { useQueryClient } from "@tanstack/react-query";
+import type { EmailType, Template } from "@wraps/db";
 import { formatDistanceToNow } from "date-fns";
 import {
   ArrowDown,
@@ -135,10 +135,7 @@ type SortState = {
   direction: SortDirection;
 };
 
-export function TemplatesList({
-  organizationId,
-  orgSlug,
-}: TemplatesListProps) {
+export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
   const { data: templates, isLoading } = useTemplates(orgSlug);
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -230,7 +227,9 @@ export function TemplatesList({
       if (result.success) {
         // Build descriptive toast messages
         const parts: string[] = [];
-        parts.push(`${result.updated} template${result.updated === 1 ? "" : "s"} updated`);
+        parts.push(
+          `${result.updated} template${result.updated === 1 ? "" : "s"} updated`
+        );
         if (result.published > 0) {
           parts.push(`${result.published} published to SES`);
         }
@@ -638,7 +637,9 @@ export function TemplatesList({
                 <TableHead className="w-12">
                   <Checkbox
                     aria-label="Select all"
-                    checked={allRowsSelected || (someRowsSelected && "indeterminate")}
+                    checked={
+                      allRowsSelected || (someRowsSelected && "indeterminate")
+                    }
                     onCheckedChange={toggleAllRows}
                   />
                 </TableHead>
@@ -945,8 +946,8 @@ function TemplateRow({
         <Checkbox
           aria-label="Select row"
           checked={isSelected}
-          onClick={(e) => e.stopPropagation()}
           onCheckedChange={onToggleSelect}
+          onClick={(e) => e.stopPropagation()}
         />
       </TableCell>
       {/* Name */}

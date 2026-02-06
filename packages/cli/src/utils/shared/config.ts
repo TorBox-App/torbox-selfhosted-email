@@ -26,7 +26,9 @@ function getConfigPath(): string {
 
 export async function readAuthConfig(): Promise<AuthConfig | null> {
   const path = getConfigPath();
-  if (!existsSync(path)) return null;
+  if (!existsSync(path)) {
+    return null;
+  }
   try {
     const content = await readFile(path, "utf-8");
     return JSON.parse(content) as AuthConfig;
@@ -58,7 +60,9 @@ export async function resolveTokenAsync(flags?: {
   token?: string;
 }): Promise<string | null> {
   const sync = resolveToken(flags);
-  if (sync) return sync;
+  if (sync) {
+    return sync;
+  }
   const config = await readAuthConfig();
   return config?.auth?.token || null;
 }

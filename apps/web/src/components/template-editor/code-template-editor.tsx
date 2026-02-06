@@ -1,7 +1,7 @@
 "use client";
 
-import type { EmailType, Template } from "@wraps/db";
 import { useQueryClient } from "@tanstack/react-query";
+import type { EmailType, Template } from "@wraps/db";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -25,8 +25,7 @@ import {
 import { EditorErrorBoundary } from "./editor-error-boundary";
 
 const CodeTemplateCodeView = dynamic(
-  () =>
-    import("./code-template-code-view").then((m) => m.CodeTemplateCodeView),
+  () => import("./code-template-code-view").then((m) => m.CodeTemplateCodeView),
   { ssr: false }
 );
 
@@ -79,11 +78,7 @@ export function CodeTemplateEditor({
 
   // Handle subject/preview/emailType changes
   const handleSubjectChange = useCallback(
-    (
-      newSubject: string,
-      newPreviewText: string,
-      newEmailType: EmailType
-    ) => {
+    (newSubject: string, newPreviewText: string, newEmailType: EmailType) => {
       setSubject(newSubject);
       setPreviewText(newPreviewText);
       setEmailType(newEmailType);
@@ -130,7 +125,13 @@ export function CodeTemplateEditor({
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
-  }, [updateMutation, subject, publishMutation, template.status, template.subject]);
+  }, [
+    updateMutation,
+    subject,
+    publishMutation,
+    template.status,
+    template.subject,
+  ]);
 
   // Handle unpublish
   const handleUnpublish = useCallback(async () => {

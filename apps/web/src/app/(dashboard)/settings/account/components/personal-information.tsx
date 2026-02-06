@@ -56,7 +56,7 @@ export function PersonalInformation() {
       accountForm.setFieldValue("lastName", lastName);
       accountForm.setFieldValue("email", session.user.email || "");
     }
-  }, [session, accountForm.setFieldValue]);
+  }, [session, accountForm.setFieldValue, accountForm]);
 
   const accountFormErrors = useStore(
     accountForm.store,

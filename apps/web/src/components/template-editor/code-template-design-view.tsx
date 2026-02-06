@@ -45,14 +45,18 @@ export function CodeTemplateDesignView({
 
   const adjustIframeHeight = useCallback(() => {
     const iframe = iframeRef.current;
-    if (!iframe?.contentWindow?.document?.body) return;
+    if (!iframe?.contentWindow?.document?.body) {
+      return;
+    }
     const contentHeight = iframe.contentWindow.document.body.scrollHeight;
     setIframeHeight(Math.max(contentHeight + 32, 400));
   }, []);
 
   useEffect(() => {
     const iframe = iframeRef.current;
-    if (!(iframe && compiledHtml)) return;
+    if (!(iframe && compiledHtml)) {
+      return;
+    }
 
     let resizeObserver: ResizeObserver | undefined;
 
@@ -98,7 +102,9 @@ export function CodeTemplateDesignView({
             <TooltipProvider>
               <ToggleGroup
                 onValueChange={(value) => {
-                  if (value) setDevice(value as DeviceType);
+                  if (value) {
+                    setDevice(value as DeviceType);
+                  }
                 }}
                 size="sm"
                 type="single"
@@ -106,10 +112,7 @@ export function CodeTemplateDesignView({
               >
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <ToggleGroupItem
-                      className="h-6 w-6 p-0"
-                      value="desktop"
-                    >
+                    <ToggleGroupItem className="h-6 w-6 p-0" value="desktop">
                       <Monitor className="h-3 w-3" />
                     </ToggleGroupItem>
                   </TooltipTrigger>
@@ -117,10 +120,7 @@ export function CodeTemplateDesignView({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <ToggleGroupItem
-                      className="h-6 w-6 p-0"
-                      value="tablet"
-                    >
+                    <ToggleGroupItem className="h-6 w-6 p-0" value="tablet">
                       <Tablet className="h-3 w-3" />
                     </ToggleGroupItem>
                   </TooltipTrigger>
@@ -128,10 +128,7 @@ export function CodeTemplateDesignView({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <ToggleGroupItem
-                      className="h-6 w-6 p-0"
-                      value="mobile"
-                    >
+                    <ToggleGroupItem className="h-6 w-6 p-0" value="mobile">
                       <Smartphone className="h-3 w-3" />
                     </ToggleGroupItem>
                   </TooltipTrigger>

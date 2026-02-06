@@ -70,7 +70,7 @@ export async function handler(event: S3Event, context: Context) {
       const rawResponse = await s3.send(
         new GetObjectCommand({ Bucket: bucket, Key: s3Key })
       );
-      const rawBody = await rawResponse.Body!.transformToString();
+      const rawBody = await rawResponse.Body?.transformToString();
 
       // 2. Parse MIME
       const parsed = await simpleParser(rawBody);

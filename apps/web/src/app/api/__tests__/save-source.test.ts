@@ -1,10 +1,4 @@
-import {
-  db,
-  member,
-  organization,
-  template,
-  user,
-} from "@wraps/db";
+import { db, member, organization, template, user } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import {
   afterAll,
@@ -151,7 +145,8 @@ describe("Save Source API - POST /api/[orgSlug]/emails/templates/[id]/save-sourc
       "../[orgSlug]/emails/templates/[id]/save-source/route"
     );
 
-    const newSource = 'import { Html } from "@react-email/components";\nexport default () => <Html />;';
+    const newSource =
+      'import { Html } from "@react-email/components";\nexport default () => <Html />;';
 
     const request = new Request("http://localhost/api/save-source", {
       method: "POST",

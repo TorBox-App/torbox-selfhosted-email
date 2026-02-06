@@ -142,13 +142,17 @@ export function ConfigStep({
           const next = Math.min(PROVIDERS.length - 1, providerIndex + 1);
           setProviderIndex(next);
           const nextProvider = PROVIDERS[next]?.value;
-          if (nextProvider) setProvider(nextProvider);
+          if (nextProvider) {
+            setProvider(nextProvider);
+          }
         }
         if (key.name === "k" || key.name === "up") {
           const next = Math.max(0, providerIndex - 1);
           setProviderIndex(next);
           const prevProvider = PROVIDERS[next]?.value;
-          if (prevProvider) setProvider(prevProvider);
+          if (prevProvider) {
+            setProvider(prevProvider);
+          }
         }
       }
 

@@ -3,6 +3,7 @@
 import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
+import type { EmailType } from "@wraps/db";
 import { awsAccount, brandKit, db, template } from "@wraps/db";
 import {
   deleteSESTemplate,
@@ -14,7 +15,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { trackTemplatePublished } from "@/lib/activation-tracking";
-import type { EmailType } from "@wraps/db";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
@@ -61,7 +61,10 @@ async function verifyOrgAccess(organizationId: string): Promise<{
 
   const membership = await db.query.member.findFirst({
     where: (m, { and: andOp, eq: eqOp }) =>
-      andOp(eqOp(m.organizationId, organizationId), eqOp(m.userId, session.user.id)),
+      andOp(
+        eqOp(m.organizationId, organizationId),
+        eqOp(m.userId, session.user.id)
+      ),
     with: {
       organization: {
         columns: { slug: true },
@@ -335,9 +338,15 @@ export async function bulkDeleteTemplates(
                 customerAwsAccount.region,
                 t.sesTemplateName!
               );
-              log.info({ templateId: t.id, sesTemplateName: t.sesTemplateName }, "Deleted template from SES");
+              log.info(
+                { templateId: t.id, sesTemplateName: t.sesTemplateName },
+                "Deleted template from SES"
+              );
             } catch (err) {
-              log.warn({ err: serializeError(err), templateId: t.id }, "Failed to delete template from SES");
+              log.warn(
+                { err: serializeError(err), templateId: t.id },
+                "Failed to delete template from SES"
+              );
             }
           })
         );
@@ -518,7 +527,9 @@ export async function bulkUpdateTemplateStatus(
 
     // Publish templates with subjects to SES
     const publishResults = await Promise.allSettled(
-      templatesWithSubject.map((t) => publishTemplateToSES(t.id, organizationId))
+      templatesWithSubject.map((t) =>
+        publishTemplateToSES(t.id, organizationId)
+      )
     );
 
     // Collect results
@@ -531,10 +542,10 @@ export async function bulkUpdateTemplateStatus(
 
       if (result.status === "rejected") {
         errors.push(templateName);
-      } else if (!result.value.success) {
-        errors.push(templateName);
-      } else {
+      } else if (result.value.success) {
         publishedCount++;
+      } else {
+        errors.push(templateName);
       }
     }
 

@@ -45,6 +45,8 @@ import { templatesInit } from "./commands/email/templates/init.js";
 import { templatesPreview } from "./commands/email/templates/preview.js";
 import { templatesPush } from "./commands/email/templates/push.js";
 import { upgrade } from "./commands/email/upgrade.js";
+import { workflowsPush } from "./commands/email/workflows/push.js";
+import { workflowsValidate } from "./commands/email/workflows/validate.js";
 // Info commands
 import { news } from "./commands/news.js";
 import { permissions } from "./commands/permissions.js";
@@ -178,6 +180,13 @@ function showHelp() {
   );
   console.log(
     `  ${pc.cyan("push")}                  ${pc.dim("(alias for email templates push)")}\n`
+  );
+  console.log("Workflow Commands:");
+  console.log(
+    `  ${pc.cyan("email workflows validate")} Validate workflow files`
+  );
+  console.log(
+    `  ${pc.cyan("email workflows push")}    Push workflows to dashboard\n`
   );
   console.log("SMS Commands:");
   console.log(`  ${pc.cyan("sms init")}             Deploy SMS infrastructure`);
@@ -429,6 +438,12 @@ args.options([
   {
     name: "template",
     description: "Specific template to push (by name)",
+    defaultValue: undefined,
+  },
+  // Workflow-specific options
+  {
+    name: "workflow",
+    description: "Specific workflow to push (by name)",
     defaultValue: undefined,
   },
   {
@@ -899,6 +914,42 @@ async function run() {
               );
               throw new Error(
                 `Unknown templates command: ${templatesSubCommand || "(none)"}`
+              );
+          }
+          break;
+        }
+
+        case "workflows": {
+          const workflowsSubCommand = args.sub[2];
+
+          switch (workflowsSubCommand) {
+            case "validate":
+              await workflowsValidate({
+                workflow: flags.workflow,
+                json: flags.json,
+              });
+              break;
+
+            case "push":
+              await workflowsPush({
+                workflow: flags.workflow,
+                dryRun: flags.dryRun,
+                force: flags.force,
+                yes: flags.yes,
+                json: flags.json,
+                token: flags.token,
+              });
+              break;
+
+            default:
+              clack.log.error(
+                `Unknown workflows command: ${workflowsSubCommand || "(none)"}`
+              );
+              console.log(
+                `\nAvailable commands: ${pc.cyan("validate")}, ${pc.cyan("push")}\n`
+              );
+              throw new Error(
+                `Unknown workflows command: ${workflowsSubCommand || "(none)"}`
               );
           }
           break;

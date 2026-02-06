@@ -1,0 +1,539 @@
+/**
+ * Workflows Push Command
+ *
+ * Parses workflow TypeScript files and pushes them to the Wraps platform.
+ *
+ * Usage:
+ *   wraps email workflows push [options]
+ *
+ * Options:
+ *   --workflow <name>  Push specific workflow
+ *   --dry-run          Preview changes without pushing
+ *   --force            Force push even if edited on dashboard
+ *   --yes              Skip confirmation prompts
+ *   --json             Output as JSON
+ *   --token            API token
+ */
+
+import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import * as clack from "@clack/prompts";
+import pc from "picocolors";
+import {
+  discoverTemplates,
+  loadWrapsConfig,
+} from "../../../utils/email/template-compiler.js";
+import { transformWorkflow } from "../../../utils/email/workflow-transform.js";
+import {
+  discoverWorkflows,
+  type ParsedWorkflow,
+  parseWorkflowTs,
+} from "../../../utils/email/workflow-ts.js";
+import { validateTransformedWorkflow } from "../../../utils/email/workflow-validator.js";
+import { resolveTokenAsync } from "../../../utils/shared/config.js";
+import { errors } from "../../../utils/shared/errors.js";
+import { DeploymentProgress } from "../../../utils/shared/output.js";
+
+type WorkflowsPushOptions = {
+  workflow?: string;
+  dryRun?: boolean;
+  force?: boolean;
+  yes?: boolean;
+  json?: boolean;
+  token?: string;
+};
+
+type LockfileWorkflowEntry = {
+  id?: string;
+  localHash: string;
+  remoteHash?: string;
+  lastPushed: string;
+};
+
+type Lockfile = {
+  version: string;
+  org?: string;
+  lastSync: string;
+  templates: Record<string, unknown>;
+  workflows: Record<string, LockfileWorkflowEntry>;
+};
+
+type TransformedWorkflowData = {
+  slug: string;
+  parsed: ParsedWorkflow;
+  transformed: ReturnType<typeof transformWorkflow>;
+};
+
+export async function workflowsPush(options: WorkflowsPushOptions) {
+  const cwd = process.cwd();
+  const wrapsDir = join(cwd, "wraps");
+  const configPath = join(wrapsDir, "wraps.config.ts");
+
+  if (!existsSync(configPath)) {
+    throw errors.wrapsConfigNotFound();
+  }
+
+  if (!options.json) {
+    clack.intro(pc.bold("Push Workflows"));
+  }
+
+  const progress = new DeploymentProgress();
+
+  // Load wraps.config.ts
+  progress.start("Loading configuration");
+  const config = await loadWrapsConfig(wrapsDir);
+  progress.succeed("Configuration loaded");
+
+  // Discover workflow files
+  const workflowsDir = join(wrapsDir, config.workflowsDir || "./workflows");
+
+  if (!existsSync(workflowsDir)) {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          success: true,
+          command: "email.workflows.push",
+          data: { pushed: [], unchanged: [], errors: [] },
+        })
+      );
+    } else {
+      clack.log.info("No workflows/ directory found.");
+    }
+    return;
+  }
+
+  const workflowFiles = await discoverWorkflows(workflowsDir, options.workflow);
+
+  if (workflowFiles.length === 0) {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          success: true,
+          command: "email.workflows.push",
+          data: { pushed: [], unchanged: [], errors: [] },
+        })
+      );
+    } else {
+      clack.log.info("No workflows found to push.");
+    }
+    return;
+  }
+
+  // Load lockfile
+  const lockfilePath = join(wrapsDir, ".wraps", "lockfile.json");
+  const lockfile = await loadLockfile(lockfilePath);
+
+  // Discover local templates for reference validation
+  const templatesDir = join(wrapsDir, config.templatesDir || "./templates");
+  let localTemplateSlugs: Set<string> | undefined;
+
+  if (existsSync(templatesDir)) {
+    const templateFiles = await discoverTemplates(templatesDir);
+    localTemplateSlugs = new Set(
+      templateFiles.map((f) => f.replace(/\.tsx?$/, ""))
+    );
+  }
+
+  // Parse, transform, and validate workflows
+  const toProcess: TransformedWorkflowData[] = [];
+  const unchanged: string[] = [];
+  const parseErrors: Array<{ slug: string; error: string }> = [];
+  const validationErrors: Array<{
+    slug: string;
+    errors: Array<{ nodeId?: string; message: string }>;
+  }> = [];
+
+  for (const file of workflowFiles) {
+    const slug = file.replace(/\.ts$/, "");
+    const filePath = join(workflowsDir, file);
+
+    progress.start(`Processing ${pc.cyan(slug)}`);
+
+    try {
+      // Parse the workflow
+      const parsed = await parseWorkflowTs(filePath, wrapsDir);
+
+      // Check lockfile for change detection
+      const localHashMatches =
+        lockfile.workflows?.[slug]?.localHash === parsed.sourceHash;
+
+      if (!options.force && localHashMatches) {
+        unchanged.push(slug);
+        progress.succeed(`${pc.cyan(slug)} unchanged`);
+        continue;
+      }
+
+      // Transform to flat format
+      const transformed = transformWorkflow(parsed.definition);
+
+      // Validate
+      const validation = validateTransformedWorkflow(
+        transformed,
+        localTemplateSlugs
+      );
+
+      const errs = validation.errors.filter((e) => e.severity === "error");
+      if (errs.length > 0) {
+        validationErrors.push({
+          slug,
+          errors: errs.map((e) => ({
+            nodeId: e.nodeId,
+            message: e.message,
+          })),
+        });
+        progress.fail(`${pc.cyan(slug)} has validation errors`);
+        continue;
+      }
+
+      toProcess.push({ slug, parsed, transformed });
+      progress.succeed(`${pc.cyan(slug)} validated`);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      parseErrors.push({ slug, error: errMsg });
+      progress.fail(`Failed to parse ${pc.cyan(slug)}: ${errMsg}`);
+    }
+  }
+
+  // Show validation errors and exit if any
+  if (validationErrors.length > 0 || parseErrors.length > 0) {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          success: false,
+          command: "email.workflows.push",
+          data: {
+            pushed: [],
+            unchanged,
+            errors: [
+              ...parseErrors.map((e) => ({
+                slug: e.slug,
+                type: "parse",
+                message: e.error,
+              })),
+              ...validationErrors.flatMap((v) =>
+                v.errors.map((e) => ({
+                  slug: v.slug,
+                  type: "validation",
+                  nodeId: e.nodeId,
+                  message: e.message,
+                }))
+              ),
+            ],
+          },
+        })
+      );
+    } else {
+      console.log();
+      clack.log.error(
+        pc.red("Cannot push due to validation errors. Fix errors and retry.")
+      );
+      console.log();
+    }
+    return;
+  }
+
+  if (toProcess.length === 0) {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          success: true,
+          command: "email.workflows.push",
+          data: { pushed: [], unchanged, errors: [] },
+        })
+      );
+    } else {
+      clack.log.info(
+        `${unchanged.length} workflow(s) unchanged. Use --force to re-push.`
+      );
+    }
+    return;
+  }
+
+  // Dry run: show what would be pushed
+  if (options.dryRun) {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          success: true,
+          command: "email.workflows.push",
+          dryRun: true,
+          data: {
+            wouldPush: toProcess.map((w) => ({
+              slug: w.slug,
+              name: w.parsed.definition.name,
+              triggerType: w.transformed.triggerType,
+              steps: w.transformed.steps.length,
+            })),
+            unchanged,
+            errors: [],
+          },
+        })
+      );
+    } else {
+      console.log();
+      clack.log.info(pc.bold("Dry run — no changes made"));
+      console.log();
+      for (const w of toProcess) {
+        console.log(
+          `  ${pc.green("●")} ${pc.cyan(w.slug)} — ${w.parsed.definition.name} (${w.transformed.steps.length} steps)`
+        );
+      }
+      for (const slug of unchanged) {
+        console.log(`  ${pc.dim("○")} ${pc.dim(slug)} — unchanged`);
+      }
+      console.log();
+    }
+    return;
+  }
+
+  // Push to API
+  const token = await resolveTokenAsync({ token: options.token });
+  const apiResults = await pushToAPI(
+    toProcess,
+    token,
+    config.org,
+    progress,
+    options.force
+  );
+
+  // Update lockfile
+  if (!lockfile.workflows) {
+    lockfile.workflows = {};
+  }
+
+  for (const w of toProcess) {
+    const apiResult = apiResults.find((r) => r.slug === w.slug);
+    lockfile.workflows[w.slug] = {
+      id: apiResult?.id,
+      localHash: w.parsed.sourceHash,
+      remoteHash: w.parsed.sourceHash,
+      lastPushed: new Date().toISOString(),
+    };
+  }
+  lockfile.lastSync = new Date().toISOString();
+  lockfile.org = config.org;
+  await saveLockfile(lockfilePath, lockfile);
+
+  // Output results
+  const pushed = apiResults.filter((r) => r.success);
+  const conflicts = apiResults.filter((r) => r.conflict);
+
+  if (options.json) {
+    console.log(
+      JSON.stringify({
+        success: conflicts.length === 0,
+        command: "email.workflows.push",
+        data: {
+          pushed: pushed.map((r) => ({
+            slug: r.slug,
+            id: r.id,
+          })),
+          unchanged,
+          conflicts: conflicts.map((r) => ({
+            slug: r.slug,
+            message: "Workflow was edited on dashboard since last push",
+          })),
+        },
+      })
+    );
+  } else {
+    console.log();
+    if (pushed.length > 0) {
+      clack.log.success(
+        pc.green(`${pushed.length} workflow(s) pushed successfully`)
+      );
+    }
+    if (unchanged.length > 0) {
+      clack.log.info(`${unchanged.length} unchanged (use --force to re-push)`);
+    }
+    if (conflicts.length > 0) {
+      clack.log.error(
+        `${conflicts.length} workflow(s) skipped due to dashboard edits. Use --force to overwrite.`
+      );
+      for (const c of conflicts) {
+        console.log(`  ${pc.yellow("!")} ${pc.cyan(c.slug)}`);
+      }
+    }
+    console.log();
+  }
+}
+
+// ── API Push ──
+
+type APIPushResult = {
+  slug: string;
+  id?: string;
+  success: boolean;
+  conflict?: boolean;
+};
+
+async function pushToAPI(
+  workflows: TransformedWorkflowData[],
+  token: string | null,
+  _org: string,
+  progress: DeploymentProgress,
+  force?: boolean
+): Promise<APIPushResult[]> {
+  if (!token) {
+    progress.info(
+      "No API token — skipping dashboard sync. Run: wraps auth login"
+    );
+    return workflows.map((w) => ({ slug: w.slug, success: false }));
+  }
+
+  const apiBase = process.env.WRAPS_API_URL || "https://api.wraps.dev";
+  const results: APIPushResult[] = [];
+
+  // Use batch endpoint if multiple workflows
+  if (workflows.length > 1) {
+    progress.start(`Syncing ${workflows.length} workflows to dashboard`);
+    try {
+      const resp = await fetch(`${apiBase}/v1/workflows/push/batch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          workflows: workflows.map((w) => ({
+            slug: w.slug,
+            name: w.parsed.definition.name,
+            description: w.parsed.definition.description,
+            sourceTs: w.parsed.source,
+            sourceHash: w.parsed.sourceHash,
+            steps: w.transformed.steps,
+            transitions: w.transformed.transitions,
+            triggerType: w.transformed.triggerType,
+            triggerConfig: w.transformed.triggerConfig,
+            settings: w.transformed.settings,
+            defaults: w.transformed.defaults,
+            cliProjectPath: w.parsed.cliProjectPath,
+            force: force ?? false,
+          })),
+        }),
+      });
+
+      if (Number(resp.status) === 409) {
+        const data = (await resp.json()) as {
+          conflicts: Array<{ slug: string; message: string }>;
+          results: Array<{ slug: string; id: string; status: string }>;
+        };
+        // Handle conflicts
+        for (const c of data.conflicts ?? []) {
+          results.push({ slug: c.slug, success: false, conflict: true });
+        }
+        // Handle successes
+        for (const r of data.results ?? []) {
+          results.push({ slug: r.slug, id: r.id, success: true });
+        }
+        // Show summary
+        const successCount = data.results?.length ?? 0;
+        const conflictCount = data.conflicts?.length ?? 0;
+        if (successCount > 0 && conflictCount > 0) {
+          progress.succeed(`Synced ${successCount} workflows to dashboard`);
+          for (const c of data.conflicts ?? []) {
+            progress.fail(
+              `${pc.cyan(c.slug)} was edited on the dashboard. Use ${pc.bold("--force")} to overwrite.`
+            );
+          }
+        } else if (conflictCount > 0) {
+          for (const c of data.conflicts ?? []) {
+            progress.fail(
+              `${pc.cyan(c.slug)} was edited on the dashboard. Use ${pc.bold("--force")} to overwrite.`
+            );
+          }
+        }
+      } else if (resp.ok) {
+        const data = (await resp.json()) as {
+          results: Array<{ slug: string; id: string; status: string }>;
+        };
+        for (const r of data.results) {
+          results.push({ slug: r.slug, id: r.id, success: true });
+        }
+        progress.succeed(`Synced ${workflows.length} workflows to dashboard`);
+      } else {
+        const body = await resp.text();
+        throw new Error(`API returned ${resp.status}: ${body}`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      progress.fail(`Dashboard sync failed: ${msg}`);
+      for (const w of workflows) {
+        results.push({ slug: w.slug, success: false });
+      }
+    }
+  } else if (workflows.length === 1) {
+    const w = workflows[0];
+    progress.start(`Syncing ${pc.cyan(w.slug)} to dashboard`);
+    try {
+      const resp = await fetch(`${apiBase}/v1/workflows/push`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          slug: w.slug,
+          name: w.parsed.definition.name,
+          description: w.parsed.definition.description,
+          sourceTs: w.parsed.source,
+          sourceHash: w.parsed.sourceHash,
+          steps: w.transformed.steps,
+          transitions: w.transformed.transitions,
+          triggerType: w.transformed.triggerType,
+          triggerConfig: w.transformed.triggerConfig,
+          settings: w.transformed.settings,
+          defaults: w.transformed.defaults,
+          cliProjectPath: w.parsed.cliProjectPath,
+          force: force ?? false,
+        }),
+      });
+
+      if (Number(resp.status) === 409) {
+        results.push({ slug: w.slug, success: false, conflict: true });
+        progress.fail(
+          `${pc.cyan(w.slug)} was edited on the dashboard since last push. Use ${pc.bold("--force")} to overwrite.`
+        );
+      } else if (resp.ok) {
+        const data = (await resp.json()) as { id: string; slug: string };
+        results.push({ slug: data.slug, id: data.id, success: true });
+        progress.succeed(`Synced ${pc.cyan(w.slug)} to dashboard`);
+      } else {
+        const body = await resp.text();
+        throw new Error(`API returned ${resp.status}: ${body}`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      results.push({ slug: w.slug, success: false });
+      progress.fail(`Dashboard sync failed for ${w.slug}: ${msg}`);
+    }
+  }
+
+  return results;
+}
+
+// ── Lockfile ──
+
+async function loadLockfile(path: string): Promise<Lockfile> {
+  if (!existsSync(path)) {
+    return { version: "1.0.0", lastSync: "", templates: {}, workflows: {} };
+  }
+  try {
+    const content = await readFile(path, "utf-8");
+    const parsed = JSON.parse(content) as Lockfile;
+    // Ensure workflows object exists
+    if (!parsed.workflows) {
+      parsed.workflows = {};
+    }
+    return parsed;
+  } catch {
+    return { version: "1.0.0", lastSync: "", templates: {}, workflows: {} };
+  }
+}
+
+async function saveLockfile(path: string, lockfile: Lockfile): Promise<void> {
+  const dir = join(path, "..");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path, JSON.stringify(lockfile, null, 2), "utf-8");
+}

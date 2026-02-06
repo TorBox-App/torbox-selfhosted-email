@@ -14,7 +14,14 @@ import {
   Trash2,
 } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -253,17 +260,19 @@ function SPFBuilderInner() {
   // SPF lookup state — domain synced to URL
   const [lookupDomain, setLookupDomain] = useQueryState(
     "domain",
-    parseAsString.withDefault(""),
+    parseAsString.withDefault("")
   );
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupResult, setLookupResult] = useState<SpfLookupResult | null>(
-    null,
+    null
   );
   const [lookupError, setLookupError] = useState<string | null>(null);
 
   const lookUpSpf = async () => {
     const trimmed = lookupDomain.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
 
     setLookupLoading(true);
     setLookupError(null);
@@ -281,26 +290,26 @@ function SPFBuilderInner() {
       const warnings: string[] = [];
       if (lookups > 10) {
         warnings.push(
-          `Exceeds 10-lookup limit (${lookups} lookups) — SPF will return PermError`,
+          `Exceeds 10-lookup limit (${lookups} lookups) — SPF will return PermError`
         );
       } else if (lookups > 7) {
         warnings.push(
-          `Approaching 10-lookup limit (${lookups}/10 lookups used)`,
+          `Approaching 10-lookup limit (${lookups}/10 lookups used)`
         );
       }
       if (record.includes("+all")) {
         warnings.push(
-          'Uses "+all" — this allows anyone to send as your domain',
+          'Uses "+all" — this allows anyone to send as your domain'
         );
       }
       if (record.includes("ptr") || record.includes("ptr:")) {
         warnings.push(
-          "Uses deprecated ptr mechanism — should be replaced with ip4/ip6",
+          "Uses deprecated ptr mechanism — should be replaced with ip4/ip6"
         );
       }
-      if (!record.includes("-all") && !record.includes("~all")) {
+      if (!(record.includes("-all") || record.includes("~all"))) {
         warnings.push(
-          "Missing -all or ~all — unauthorized senders won't be rejected",
+          "Missing -all or ~all — unauthorized senders won't be rejected"
         );
       }
 
@@ -310,17 +319,17 @@ function SPFBuilderInner() {
       // Additional warnings based on parsed record
       if (record.includes("?all")) {
         warnings.push(
-          'Uses "?all" (neutral) which provides no protection — switch to "-all"',
+          'Uses "?all" (neutral) which provides no protection — switch to "-all"'
         );
       }
       if (record.includes("~all") && !record.includes("+all")) {
         warnings.push(
-          'Uses "~all" (soft fail) — consider upgrading to "-all" (hard fail) for stronger protection',
+          'Uses "~all" (soft fail) — consider upgrading to "-all" (hard fail) for stronger protection'
         );
       }
       if (record.length > 255) {
         warnings.push(
-          `Record is ${record.length} characters — TXT records over 255 characters require splitting and may cause issues with some DNS providers`,
+          `Record is ${record.length} characters — TXT records over 255 characters require splitting and may cause issues with some DNS providers`
         );
       }
       // Check for duplicate includes
@@ -331,7 +340,7 @@ function SPFBuilderInner() {
       for (const inc of includes) {
         if (seen.has(inc)) {
           warnings.push(
-            `Duplicate include found: ${inc.replace("include:", "")} — wastes a DNS lookup`,
+            `Duplicate include found: ${inc.replace("include:", "")} — wastes a DNS lookup`
           );
         }
         seen.add(inc);
@@ -341,18 +350,22 @@ function SPFBuilderInner() {
         const clean = part.replace(/^[+\-~?]/, "");
         if (clean === "a" || clean.startsWith("a:") || clean.startsWith("a/")) {
           warnings.push(
-            'Uses "a" mechanism which costs a DNS lookup — consider replacing with explicit IP addresses',
+            'Uses "a" mechanism which costs a DNS lookup — consider replacing with explicit IP addresses'
           );
         }
-        if (clean === "mx" || clean.startsWith("mx:") || clean.startsWith("mx/")) {
+        if (
+          clean === "mx" ||
+          clean.startsWith("mx:") ||
+          clean.startsWith("mx/")
+        ) {
           warnings.push(
-            'Uses "mx" mechanism which costs a DNS lookup — consider replacing with explicit IP addresses',
+            'Uses "mx" mechanism which costs a DNS lookup — consider replacing with explicit IP addresses'
           );
         }
       }
       // Check for redirect= with all mechanism
       const hasRedirect = parts.some((p) =>
-        p.replace(/^[+\-~?]/, "").startsWith("redirect="),
+        p.replace(/^[+\-~?]/, "").startsWith("redirect=")
       );
       const hasAll = parts.some(
         (p) =>
@@ -360,11 +373,11 @@ function SPFBuilderInner() {
           p === "~all" ||
           p === "?all" ||
           p === "+all" ||
-          p.replace(/^[+\-~?]/, "") === "all",
+          p.replace(/^[+\-~?]/, "") === "all"
       );
       if (hasRedirect && hasAll) {
         warnings.push(
-          'Record has both "redirect=" and an "all" mechanism — the redirect will be ignored',
+          'Record has both "redirect=" and an "all" mechanism — the redirect will be ignored'
         );
       }
       // Check for no mechanisms (only v=spf1 and all)
@@ -378,17 +391,16 @@ function SPFBuilderInner() {
       });
       if (mechanisms.length === 0) {
         const allPart = parts.find(
-          (p) =>
-            p === "-all" || p === "~all" || p === "?all" || p === "+all",
+          (p) => p === "-all" || p === "~all" || p === "?all" || p === "+all"
         );
         warnings.push(
-          `Record has no include or IP mechanisms — only the catch-all "${allPart || "all"}" will apply`,
+          `Record has no include or IP mechanisms — only the catch-all "${allPart || "all"}" will apply`
         );
       }
       // Check for very high complexity
       if (includes.length >= 8) {
         warnings.push(
-          `Record has ${includes.length} includes — consider consolidating providers to reduce complexity`,
+          `Record has ${includes.length} includes — consider consolidating providers to reduce complexity`
         );
       }
       const matchedProviders: string[] = [];
@@ -454,17 +466,22 @@ function SPFBuilderInner() {
                 prev.map((i) =>
                   i.domain === inc
                     ? { ...i, lookups: resolved, loading: false }
-                    : i,
-                ),
+                    : i
+                )
               );
             })
             .catch(() => {
               setCustomIncludes((prev) =>
                 prev.map((i) =>
                   i.domain === inc
-                    ? { ...i, lookups: 2, loading: false, error: "Failed to resolve" }
-                    : i,
-                ),
+                    ? {
+                        ...i,
+                        lookups: 2,
+                        loading: false,
+                        error: "Failed to resolve",
+                      }
+                    : i
+                )
               );
             });
         }
@@ -487,7 +504,7 @@ function SPFBuilderInner() {
       hasAutoLookedUp.current = true;
       lookUpSpf();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lookUpSpf, lookupDomain]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calculate total lookups using real counts from custom includes
   const lookupCount = useMemo(() => {

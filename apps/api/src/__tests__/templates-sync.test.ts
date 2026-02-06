@@ -64,7 +64,8 @@ const authContext: AuthContext = {
 
 const basePushBody = {
   slug: "welcome",
-  source: '// React Email source\nimport { Html } from "@react-email/components";',
+  source:
+    '// React Email source\nimport { Html } from "@react-email/components";',
   compiledHtml: "<html><body>Hello</body></html>",
   compiledText: "Hello",
   subject: "Welcome!",
@@ -89,9 +90,7 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
       updatedAt: new Date("2024-06-15T12:00:00Z"),
     };
 
-    const { upsertTemplateFromCli } = await import(
-      "../routes/templates-sync"
-    );
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
     const result = await upsertTemplateFromCli(authContext, {
       ...basePushBody,
@@ -113,9 +112,7 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
       updatedAt: new Date("2024-06-15T12:00:00Z"),
     };
 
-    const { upsertTemplateFromCli } = await import(
-      "../routes/templates-sync"
-    );
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
     const result = await upsertTemplateFromCli(authContext, basePushBody);
 
@@ -130,9 +127,7 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
       updatedAt: new Date("2024-06-15T12:00:00Z"),
     };
 
-    const { upsertTemplateFromCli } = await import(
-      "../routes/templates-sync"
-    );
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
     const result = await upsertTemplateFromCli(authContext, {
       ...basePushBody,
@@ -154,9 +149,7 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
       updatedAt: new Date("2024-06-15T12:00:00Z"),
     };
 
-    const { upsertTemplateFromCli } = await import(
-      "../routes/templates-sync"
-    );
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
     const result = await upsertTemplateFromCli(authContext, basePushBody);
 
@@ -174,9 +167,7 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
       updatedAt: new Date("2024-06-15T12:00:00Z"),
     };
 
-    const { upsertTemplateFromCli } = await import(
-      "../routes/templates-sync"
-    );
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
     const result = await upsertTemplateFromCli(authContext, basePushBody);
 
@@ -187,9 +178,7 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
   it("should insert new template when slug does not exist", async () => {
     mockExistingTemplate = null;
 
-    const { upsertTemplateFromCli } = await import(
-      "../routes/templates-sync"
-    );
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
     const result = await upsertTemplateFromCli(authContext, basePushBody);
 
@@ -211,9 +200,7 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
       updatedAt: new Date(),
     };
 
-    const { upsertTemplateFromCli } = await import(
-      "../routes/templates-sync"
-    );
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
     await upsertTemplateFromCli(authContext, basePushBody);
 

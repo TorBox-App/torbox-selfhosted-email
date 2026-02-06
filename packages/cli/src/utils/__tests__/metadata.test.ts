@@ -1225,7 +1225,7 @@ describe("domain metadata helpers", () => {
       addDomainToMetadata(metadata, entry);
 
       expect(metadata.services.email.config.additionalDomains).toHaveLength(1);
-      expect(metadata.services.email.config.additionalDomains![0]).toEqual(
+      expect(metadata.services.email.config.additionalDomains?.[0]).toEqual(
         entry
       );
     });
@@ -1247,7 +1247,7 @@ describe("domain metadata helpers", () => {
       });
 
       expect(metadata.services.email.config.additionalDomains).toHaveLength(2);
-      expect(metadata.services.email.config.additionalDomains![1].domain).toBe(
+      expect(metadata.services.email.config.additionalDomains?.[1].domain).toBe(
         "new.com"
       );
     });
@@ -1270,11 +1270,11 @@ describe("domain metadata helpers", () => {
       });
 
       expect(metadata.services.email.config.additionalDomains).toHaveLength(1);
-      expect(metadata.services.email.config.additionalDomains![0].purpose).toBe(
-        "marketing"
-      );
       expect(
-        metadata.services.email.config.additionalDomains![0].mailFromDomain
+        metadata.services.email.config.additionalDomains?.[0].purpose
+      ).toBe("marketing");
+      expect(
+        metadata.services.email.config.additionalDomains?.[0].mailFromDomain
       ).toBe("mail.mail.primary.com");
     });
 
@@ -1331,7 +1331,7 @@ describe("domain metadata helpers", () => {
       removeDomainFromMetadata(metadata, "mail.primary.com");
 
       expect(metadata.services.email.config.additionalDomains).toHaveLength(1);
-      expect(metadata.services.email.config.additionalDomains![0].domain).toBe(
+      expect(metadata.services.email.config.additionalDomains?.[0].domain).toBe(
         "news.primary.com"
       );
     });

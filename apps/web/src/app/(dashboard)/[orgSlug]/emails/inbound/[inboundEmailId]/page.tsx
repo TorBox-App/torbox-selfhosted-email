@@ -53,7 +53,9 @@ export default async function InboundEmailDetailPage({
         awsAccountId: account.id,
         emailId: inboundEmailId,
       });
-      if (email) break;
+      if (email) {
+        break;
+      }
     } catch {
       // Try next account
     }

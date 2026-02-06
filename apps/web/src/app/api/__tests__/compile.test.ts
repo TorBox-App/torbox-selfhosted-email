@@ -1,10 +1,4 @@
-import {
-  db,
-  member,
-  organization,
-  template,
-  user,
-} from "@wraps/db";
+import { db, member, organization, template, user } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import {
   afterAll,
@@ -170,11 +164,14 @@ describe("Compile API - POST /api/[orgSlug]/emails/templates/[id]/compile", () =
       "../[orgSlug]/emails/templates/[id]/compile/route"
     );
 
-    const request = new Request("http://localhost/api/compile-test-org/emails/templates/test-compile-tmpl-1/compile", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source: VALID_TSX_SOURCE }),
-    });
+    const request = new Request(
+      "http://localhost/api/compile-test-org/emails/templates/test-compile-tmpl-1/compile",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: VALID_TSX_SOURCE }),
+      }
+    );
 
     const context = {
       params: Promise.resolve({
@@ -193,9 +190,7 @@ describe("Compile API - POST /api/[orgSlug]/emails/templates/[id]/compile", () =
     expect(data.subject).toBe("Welcome!");
     expect(data.emailType).toBe("transactional");
     expect(data.variables).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: "name" }),
-      ])
+      expect.arrayContaining([expect.objectContaining({ name: "name" })])
     );
   });
 
@@ -217,7 +212,9 @@ describe("Compile API - POST /api/[orgSlug]/emails/templates/[id]/compile", () =
     const request = new Request("http://localhost/api/compile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source: "export default function() { return <<<<invalid" }),
+      body: JSON.stringify({
+        source: "export default function() { return <<<<invalid",
+      }),
     });
 
     const context = {

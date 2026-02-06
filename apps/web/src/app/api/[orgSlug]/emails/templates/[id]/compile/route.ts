@@ -1,7 +1,7 @@
-import { transform } from "esbuild";
 import { auth } from "@wraps/auth";
 import { db, template } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
+import { transform } from "esbuild";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -89,8 +89,12 @@ export async function POST(request: Request, context: RouteContext) {
     };
 
     const requireShim = (id: string) => {
-      if (moduleShim[id]) return moduleShim[id];
-      throw new Error(`Cannot require "${id}" — only react and @react-email/components are available`);
+      if (moduleShim[id]) {
+        return moduleShim[id];
+      }
+      throw new Error(
+        `Cannot require "${id}" — only react and @react-email/components are available`
+      );
     };
 
     const mod: Record<string, unknown> = {};
@@ -102,29 +106,36 @@ export async function POST(request: Request, context: RouteContext) {
     fn(requireShim, mod, exports);
 
     // Extract exports (handle both module.exports and exports patterns)
-    const moduleExports = (mod.exports !== exports ? mod.exports : exports) as Record<string, unknown>;
-    const Component = moduleExports.default as (props: Record<string, unknown>) => unknown;
+    const moduleExports = (
+      mod.exports !== exports ? mod.exports : exports
+    ) as Record<string, unknown>;
+    const Component = moduleExports.default as (
+      props: Record<string, unknown>
+    ) => unknown;
     const exportedSubject = (moduleExports.subject as string) ?? "";
-    const exportedEmailType = (moduleExports.emailType as string) ?? "marketing";
+    const exportedEmailType =
+      (moduleExports.emailType as string) ?? "marketing";
     const exportedPreviewText = moduleExports.previewText as string | undefined;
 
     if (typeof Component !== "function") {
       return NextResponse.json(
-        { error: "Template must have a default export (React component function)" },
+        {
+          error:
+            "Template must have a default export (React component function)",
+        },
         { status: 422 }
       );
     }
 
     // Step 3: Render with proxy props that produce {{handlebars}} placeholders
-    const props = new Proxy(
-      {} as Record<string, string>,
-      {
-        get: (_target, prop) => {
-          if (typeof prop === "symbol") return undefined;
-          return `{{${prop}}}`;
-        },
-      }
-    );
+    const props = new Proxy({} as Record<string, string>, {
+      get: (_target, prop) => {
+        if (typeof prop === "symbol") {
+          return;
+        }
+        return `{{${prop}}}`;
+      },
+    });
 
     const { render } = await import("@react-email/render");
     const element = Component(props);
@@ -164,14 +175,15 @@ function extractVariables(
   const vars: Array<{ name: string; fallback?: string }> = [];
   const seen = new Set<string>();
   const regex = /\{\{([a-zA-Z0-9_.]+)(?:\|([^}]*))?\}\}/g;
-  let match: RegExpExecArray | null;
+  let match = regex.exec(html);
 
-  while ((match = regex.exec(html)) !== null) {
+  while (match !== null) {
     const name = match[1];
     if (!seen.has(name)) {
       seen.add(name);
       vars.push({ name, fallback: match[2]?.trim() });
     }
+    match = regex.exec(html);
   }
 
   return vars;

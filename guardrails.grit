@@ -1,0 +1,36 @@
+language js;
+
+// ============================================
+// GUARDRAIL: Ban react-hook-form
+// ============================================
+// Use @tanstack/react-form instead.
+// Migration backlog tracked in CLAUDE.md.
+`import $_ from 'react-hook-form'` where {
+  register_diagnostic(
+    span = $_,
+    message = "Use @tanstack/react-form instead of react-hook-form. See CLAUDE.md migration backlog.",
+    severity = "error"
+  )
+}
+
+`import $_ from '@hookform/resolvers/zod'` where {
+  register_diagnostic(
+    span = $_,
+    message = "Use @tanstack/react-form with built-in Zod validation instead of @hookform/resolvers.",
+    severity = "error"
+  )
+}
+
+// ============================================
+// GUARDRAIL: Ban .catch() fire-and-forget in API routes
+// ============================================
+// In Lambda, all async work must be awaited before the handler returns.
+// somePromise().catch(console.error) without await is a fire-and-forget.
+`$promise.catch($handler)` where {
+  $promise <: not `await $__`,
+  register_diagnostic(
+    span = $promise,
+    message = "Possible fire-and-forget: .catch() without await. In Lambda, all async work must complete before the handler returns.",
+    severity = "warn"
+  )
+}

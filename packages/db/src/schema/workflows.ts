@@ -271,6 +271,26 @@ export const workflow = pgTable(
     aiPrompt: text("ai_prompt"),
 
     // ═══════════════════════════════════════════════════════════════════════
+    // CLI SYNC (workflows-as-code)
+    // ═══════════════════════════════════════════════════════════════════════
+    /** Kebab-case identifier derived from filename (e.g., "onboarding" from onboarding.ts) */
+    slug: text("slug"),
+    /** Original TypeScript source code */
+    sourceTs: text("source_ts"),
+    /** SHA256 hash of source for change detection */
+    sourceHash: text("source_hash"),
+    /** Whether this workflow was pushed from CLI */
+    pushedFromCli: boolean("pushed_from_cli").default(false),
+    /** When the workflow was last pushed from CLI */
+    lastPushedAt: timestamp("last_pushed_at"),
+    /** Path to the workflow file in the project (e.g., "workflows/onboarding.ts") */
+    cliProjectPath: text("cli_project_path"),
+    /** Where the workflow was last edited: "cli" | "dashboard" | null */
+    lastEditedFrom: text("last_edited_from").$type<
+      "cli" | "dashboard" | null
+    >(),
+
+    // ═══════════════════════════════════════════════════════════════════════
     // SENDER DEFAULTS (step config can override these)
     // ═══════════════════════════════════════════════════════════════════════
     defaultFrom: text("default_from"), // e.g., "hello@example.com"
@@ -296,6 +316,8 @@ export const workflow = pgTable(
       table.triggerType
     ),
     index("workflow_aws_account_idx").on(table.awsAccountId),
+    // Unique slug per organization (for CLI sync)
+    uniqueIndex("workflow_org_slug_idx").on(table.organizationId, table.slug),
   ]
 );
 

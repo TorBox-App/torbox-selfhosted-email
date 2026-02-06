@@ -1,16 +1,13 @@
 import {
   Body,
   Button,
-  Column,
   Container,
   Head,
   Heading,
   Hr,
   Html,
   Img,
-  Link,
   Preview,
-  Row,
   Section,
   Tailwind,
   Text,
@@ -58,9 +55,9 @@ export default function FirstWorkflowEmail({
             <Section className="px-10 pt-5">
               <Img
                 alt="Wraps"
+                className="rounded-lg"
                 height="40"
                 src="https://wraps.dev/logo.png"
-                className="rounded-lg"
                 width="40"
               />
             </Section>
@@ -70,8 +67,8 @@ export default function FirstWorkflowEmail({
               </Heading>
               <Text className="m-0 mb-6 text-base leading-relaxed text-gray-600">
                 {firstName}, you just created your first workflow:{" "}
-                <strong>{workflowName}</strong>. Once you enable it, emails
-                will send themselves.
+                <strong>{workflowName}</strong>. Once you enable it, emails will
+                send themselves.
               </Text>
               {/* Visual workflow representation */}
               <div
@@ -219,8 +216,8 @@ export default function FirstWorkflowEmail({
               </div>
               <Section className="my-7 text-center">
                 <Button
-                  href={dashboardUrl}
                   className="rounded-md bg-[#7c3aed] px-6 py-3 text-base font-semibold text-white no-underline"
+                  href={dashboardUrl}
                 >
                   Open Workflow Editor
                 </Button>

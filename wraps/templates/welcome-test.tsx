@@ -51,9 +51,9 @@ export default function WelcomeEmail({
             <Section className="px-10 pt-5">
               <Img
                 alt="Wraps"
+                className="rounded-lg"
                 height="40"
                 src="https://wraps.dev/logo.png"
-                className="rounded-lg"
                 width="40"
               />
             </Section>
@@ -66,10 +66,12 @@ export default function WelcomeEmail({
                 AWS account. Here&apos;s what you can do next:
               </Text>
               <Text className="m-0 mb-2 pl-1 text-[15px] leading-relaxed text-gray-600">
-                <strong>1.</strong> Send your first email with the TypeScript SDK
+                <strong>1.</strong> Send your first email with the TypeScript
+                SDK
               </Text>
               <Text className="m-0 mb-2 pl-1 text-[15px] leading-relaxed text-gray-600">
-                <strong>2.</strong> Set up domain verification for deliverability
+                <strong>2.</strong> Set up domain verification for
+                deliverability
               </Text>
               <Text className="m-0 mb-2 pl-1 text-[15px] leading-relaxed text-gray-600">
                 <strong>3.</strong> Explore templates and broadcasts in the
@@ -77,8 +79,8 @@ export default function WelcomeEmail({
               </Text>
               <Section className="my-7 text-center">
                 <Button
-                  href={dashboardUrl}
                   className="rounded-md bg-[#5046e5] px-6 py-3 text-base font-semibold text-white no-underline"
+                  href={dashboardUrl}
                 >
                   Open Dashboard
                 </Button>

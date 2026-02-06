@@ -22,6 +22,10 @@ import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import {
+  trackAwsConnected,
+  trackDomainVerified,
+} from "@/lib/activation-tracking";
 import { getCredentials } from "@/lib/aws/assume-role";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { findWrapsArchive } from "@/lib/aws/mailmanager";
@@ -29,10 +33,6 @@ import {
   connectAWSAccountFormOpts,
   connectAWSAccountSchema,
 } from "@/lib/forms/connect-aws-account";
-import {
-  trackAwsConnected,
-  trackDomainVerified,
-} from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";

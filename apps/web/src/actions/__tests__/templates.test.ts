@@ -1,4 +1,11 @@
-import { awsAccount, db, member, organization, template, user } from "@wraps/db";
+import {
+  awsAccount,
+  db,
+  member,
+  organization,
+  template,
+  user,
+} from "@wraps/db";
 import { eq } from "drizzle-orm";
 import {
   afterAll,
@@ -131,7 +138,7 @@ const { mockDeleteSESTemplate } = vi.hoisted(() => ({
 
 vi.mock("@wraps/email", () => ({
   deleteSESTemplate: mockDeleteSESTemplate,
-  generateSESTemplateName: vi.fn((id: string, name: string) => `wraps-${id}`),
+  generateSESTemplateName: vi.fn((id: string, _name: string) => `wraps-${id}`),
   transformVariablesForSes: vi.fn((text: string) => text),
   upsertSESTemplate: vi.fn(async () => {}),
 }));
@@ -152,7 +159,9 @@ vi.mock("@/lib/serializers/tiptap-to-react-email", () => ({
 }));
 
 // Helper to create test templates
-async function createTestTemplate(overrides: Partial<typeof template.$inferInsert> = {}) {
+async function createTestTemplate(
+  overrides: Partial<typeof template.$inferInsert> = {}
+) {
   const id = `test-template-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const now = new Date();
   await db.insert(template).values({
@@ -293,7 +302,9 @@ describe("Template Bulk Actions", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBe("Only owners and admins can delete templates");
+        expect(result.error).toBe(
+          "Only owners and admins can delete templates"
+        );
       }
 
       // Verify template still exists

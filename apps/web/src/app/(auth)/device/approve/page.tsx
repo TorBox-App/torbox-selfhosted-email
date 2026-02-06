@@ -36,7 +36,9 @@ function DeviceApproveForm() {
 
   // If not logged in, redirect
   useEffect(() => {
-    if (sessionPending) return;
+    if (sessionPending) {
+      return;
+    }
     if (!session?.user) {
       router.replace(
         `/auth?mode=signup&redirect=${encodeURIComponent(`/device?user_code=${userCode}`)}`
