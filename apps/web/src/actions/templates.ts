@@ -5,6 +5,7 @@ import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import { awsAccount, brandKit, db, template } from "@wraps/db";
 import {
+  deleteSESTemplate,
   generateSESTemplateName,
   transformVariablesForSes,
   upsertSESTemplate,
@@ -266,12 +267,16 @@ export async function publishTemplateToSES(
 
 /**
  * Bulk delete templates
+ *
+ * Also deletes from AWS SES for any templates that were published.
  */
 export async function bulkDeleteTemplates(
   organizationId: string,
   templateIds: string[]
 ): Promise<BulkDeleteResult> {
   let orgSlug: string | undefined;
+  const log = createActionLogger("bulkDeleteTemplates", { orgSlug });
+
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -294,7 +299,52 @@ export async function bulkDeleteTemplates(
       return { success: false, error: "No templates selected" };
     }
 
-    // Delete templates
+    // Fetch templates to get their SES template names
+    const templates = await db.query.template.findMany({
+      where: and(
+        eq(template.organizationId, organizationId),
+        inArray(template.id, templateIds)
+      ),
+      columns: {
+        id: true,
+        sesTemplateName: true,
+      },
+    });
+
+    // Delete from SES for templates that were published
+    const templatesWithSES = templates.filter((t) => t.sesTemplateName);
+    if (templatesWithSES.length > 0) {
+      // Get the organization's AWS account
+      const customerAwsAccount = await db.query.awsAccount.findFirst({
+        where: eq(awsAccount.organizationId, organizationId),
+      });
+
+      if (customerAwsAccount) {
+        const credentials = await getOrAssumeRole({
+          roleArn: customerAwsAccount.roleArn,
+          externalId: customerAwsAccount.externalId,
+          region: customerAwsAccount.region,
+        });
+
+        // Delete from SES (fire and settle - don't fail the whole operation if SES fails)
+        await Promise.allSettled(
+          templatesWithSES.map(async (t) => {
+            try {
+              await deleteSESTemplate(
+                credentials,
+                customerAwsAccount.region,
+                t.sesTemplateName!
+              );
+              log.info({ templateId: t.id, sesTemplateName: t.sesTemplateName }, "Deleted template from SES");
+            } catch (err) {
+              log.warn({ err: serializeError(err), templateId: t.id }, "Failed to delete template from SES");
+            }
+          })
+        );
+      }
+    }
+
+    // Delete templates from database
     await db
       .delete(template)
       .where(
@@ -309,7 +359,6 @@ export async function bulkDeleteTemplates(
 
     return { success: true, count: templateIds.length };
   } catch (error) {
-    const log = createActionLogger("bulkDeleteTemplates", { orgSlug });
     log.error(
       { err: serializeError(error), count: templateIds.length },
       "Failed to bulk delete templates"

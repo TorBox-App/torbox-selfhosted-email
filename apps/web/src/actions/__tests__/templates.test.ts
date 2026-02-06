@@ -125,7 +125,12 @@ vi.mock("@/lib/aws/credential-cache", () => ({
   })),
 }));
 
+const { mockDeleteSESTemplate } = vi.hoisted(() => ({
+  mockDeleteSESTemplate: vi.fn(async () => {}),
+}));
+
 vi.mock("@wraps/email", () => ({
+  deleteSESTemplate: mockDeleteSESTemplate,
   generateSESTemplateName: vi.fn((id: string, name: string) => `wraps-${id}`),
   transformVariablesForSes: vi.fn((text: string) => text),
   upsertSESTemplate: vi.fn(async () => {}),
@@ -314,6 +319,47 @@ describe("Template Bulk Actions", () => {
         where: eq(template.id, id1),
       });
       expect(remaining).not.toBeNull();
+    });
+
+    it("should delete published templates from SES", async () => {
+      // Reset the mock
+      mockDeleteSESTemplate.mockClear();
+
+      // Create a template with sesTemplateName (simulating a published template)
+      const id1 = await createTestTemplate({
+        name: "Published Template",
+        status: "PUBLISHED",
+        sesTemplateName: "wraps-published-template-123",
+      });
+      const id2 = await createTestTemplate({
+        name: "Draft Template",
+        status: "DRAFT",
+        sesTemplateName: null,
+      });
+
+      const result = await bulkDeleteTemplates(testOrganization.id, [id1, id2]);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.count).toBe(2);
+      }
+
+      // Verify deleteSESTemplate was called once for the published template
+      expect(mockDeleteSESTemplate).toHaveBeenCalledTimes(1);
+      expect(mockDeleteSESTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accessKeyId: "test-key",
+          secretAccessKey: "test-secret",
+        }),
+        "us-east-1",
+        "wraps-published-template-123"
+      );
+
+      // Verify both templates are deleted from DB
+      const remaining = await db.query.template.findMany({
+        where: eq(template.organizationId, testOrganization.id),
+      });
+      expect(remaining).toHaveLength(0);
     });
   });
 
