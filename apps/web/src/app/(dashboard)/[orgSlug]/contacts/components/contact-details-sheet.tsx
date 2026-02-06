@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -539,8 +540,14 @@ export function ContactDetailsSheet({
             ) : (
               <div className="space-y-3">
                 {contact.email && (
-                  <div className="flex items-center gap-3">
+                  <div className="group flex items-center gap-2">
                     <span className="font-medium">{contact.email}</span>
+                    <CopyButton
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      content={contact.email}
+                      size="sm"
+                      variant="ghost"
+                    />
                     {contact.emailStatus && (
                       <Badge
                         className={EMAIL_STATUS_COLORS[contact.emailStatus]}

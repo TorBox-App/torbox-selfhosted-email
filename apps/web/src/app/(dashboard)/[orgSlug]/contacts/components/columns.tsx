@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, Mail, MoreHorizontal, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,9 +51,16 @@ export function createColumns(
         return (
           <div className="space-y-1">
             {email && (
-              <div className="flex items-center gap-2">
+              <div className="group flex items-center gap-2">
                 <Mail className="h-3 w-3 text-muted-foreground" />
                 <span className="font-medium">{email}</span>
+                <CopyButton
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  content={email}
+                  onClick={(e) => e.stopPropagation()}
+                  size="sm"
+                  variant="ghost"
+                />
                 {emailStatus && (
                   <Badge
                     className={`${EMAIL_STATUS_COLORS[emailStatus]} px-1.5 py-0 text-[10px]`}
