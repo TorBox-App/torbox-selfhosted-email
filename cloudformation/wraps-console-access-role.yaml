@@ -46,11 +46,20 @@ Parameters:
       - "true"
       - "false"
 
+  EnableInboundEmail:
+    Type: String
+    Description: "Enable access to inbound email data in S3 (requires Wraps inbound email feature)"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
 Conditions:
   EnableSending: !Equals [!Ref AllowEmailSending, "true"]
   EnableArchiving: !Equals [!Ref EnableEmailArchiving, "true"]
   EnableSMS: !Equals [!Ref EnableSMSAccess, "true"]
   EnableSMSSend: !Equals [!Ref AllowSMSSending, "true"]
+  EnableInbound: !Equals [!Ref EnableInboundEmail, "true"]
 
 Resources:
   # IAM Role that Wraps will assume
@@ -94,8 +103,19 @@ Resources:
                   - "ses:ListIdentities"
                   - "ses:GetIdentityVerificationAttributes"
                   - "ses:GetIdentityDkimAttributes"
+                  - "ses:ListEmailIdentities"
+                  - "ses:GetEmailIdentity"
                   - "ses:GetConfigurationSet"
+                  - "ses:GetConfigurationSetEventDestinations"
+                  - "ses:GetDedicatedIps"
                 Resource: "*"
+
+              # S3 - Inbound Bucket Feature Detection
+              - Sid: "S3InboundBucketDetection"
+                Effect: Allow
+                Action:
+                  - "s3:HeadBucket"
+                Resource: !Sub "arn:aws:s3:::wraps-inbound-*"
 
               # SES - Template Management (for publishing email templates)
               - Sid: "SESTemplateManagement"
@@ -136,13 +156,26 @@ Resources:
                   - !Sub "arn:aws:dynamodb:*:${AWS::AccountId}:table/wraps-email-*"
                   - !Sub "arn:aws:dynamodb:*:${AWS::AccountId}:table/wraps-email-*/index/*"
 
-              # EventBridge - Read Email Event Rules (for feature detection)
-              - Sid: "EventBridgeReadEmailRules"
+              # EventBridge - Access for event tracking
+              - Sid: "EventBridgeAccess"
                 Effect: Allow
                 Action:
+                  - "events:PutEvents"
+                  - "events:DescribeEventBus"
                   - "events:DescribeRule"
                 Resource:
+                  - !Sub "arn:aws:events:*:${AWS::AccountId}:event-bus/wraps-email-*"
                   - !Sub "arn:aws:events:*:${AWS::AccountId}:rule/wraps-email-events-to-sqs"
+
+              # SQS - Access for event tracking
+              - Sid: "SQSAccess"
+                Effect: Allow
+                Action:
+                  - "sqs:SendMessage"
+                  - "sqs:ReceiveMessage"
+                  - "sqs:DeleteMessage"
+                  - "sqs:GetQueueAttributes"
+                Resource: !Sub "arn:aws:sqs:*:${AWS::AccountId}:wraps-email-*"
 
               # SMS Voice V2 - Read Access (conditional)
               - !If
@@ -204,6 +237,21 @@ Resources:
                     - "sns:ListSubscriptionsByTopic"
                   Resource:
                     - !Sub "arn:aws:sns:*:${AWS::AccountId}:wraps-sms-*"
+                - !Ref "AWS::NoValue"
+
+              # S3 - Inbound Email Access (conditional, if using Wraps inbound email)
+              - !If
+                - EnableInbound
+                - Sid: "S3InboundEmailAccess"
+                  Effect: Allow
+                  Action:
+                    - "s3:HeadBucket"
+                    - "s3:ListBucket"
+                    - "s3:GetObject"
+                    - "s3:GetObjectTagging"
+                  Resource:
+                    - !Sub "arn:aws:s3:::wraps-inbound-*"
+                    - !Sub "arn:aws:s3:::wraps-inbound-*/*"
                 - !Ref "AWS::NoValue"
 
               # Mail Manager - Archive Access (conditional, if using Wraps email archiving)
