@@ -1,9 +1,6 @@
-language js;
+language js
 
 `import $imports from $source` where {
   $source <: `'@hookform/resolvers/zod'`,
-  register_diagnostic(
-    span = $source,
-    message = "Use @tanstack/react-form with built-in Zod validation instead of @hookform/resolvers."
-  )
+  register_diagnostic(span=$source, severity="warn", message="Use @tanstack/react-form with built-in Zod validation instead of @hookform/resolvers.")
 }

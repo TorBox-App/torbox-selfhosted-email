@@ -1,9 +1,6 @@
-language js;
+language js
 
 `import $imports from $source` where {
   $source <: `'next/router'`,
-  register_diagnostic(
-    span = $source,
-    message = "Use next/navigation instead of next/router. See Next.js App Router migration guide."
-  )
+  register_diagnostic(span=$source, message="Use next/navigation instead of next/router. See Next.js App Router migration guide.")
 }

@@ -1,5 +1,5 @@
 import { globSync, readFileSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const ROOT = resolve(import.meta.dirname, "..");
@@ -71,9 +71,11 @@ const QUERY_FILE_PATTERNS = [
 function getQueryFiles(): string[] {
   return QUERY_FILE_PATTERNS.flatMap(findFiles).filter(
     (f) =>
-      !f.includes("__tests__") &&
-      !f.includes(".test.") &&
-      !ORG_SCOPE_EXCLUDED_FILES.has(f)
+      !(
+        f.includes("__tests__") ||
+        f.includes(".test.") ||
+        ORG_SCOPE_EXCLUDED_FILES.has(f)
+      )
   );
 }
 
@@ -94,9 +96,7 @@ function findMissingScopeViolations(
   for (const file of files) {
     const content = readFile(file);
     const lines = content.split("\n");
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(content)) !== null) {
+    for (const match of content.matchAll(regex)) {
       const tableName = match[1];
       if (!ORG_SCOPED_TABLES.has(tableName)) continue;
 
@@ -158,7 +158,7 @@ describe("org-scoped queries", () => {
 describe("server actions handle ServerValidateError", () => {
   test("files using createServerValidate must catch formState errors", () => {
     const actionFiles = findFiles("apps/web/src/actions/**/*.ts").filter(
-      (f) => !f.includes("__tests__") && !f.includes(".test.")
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
     );
 
     const violations: string[] = [];
@@ -186,7 +186,7 @@ describe("server actions handle ServerValidateError", () => {
 describe("API routes await async operations", () => {
   test("no fire-and-forget .catch() without await", () => {
     const routeFiles = findFiles("apps/api/src/routes/**/*.ts").filter(
-      (f) => !f.includes("__tests__") && !f.includes(".test.")
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
     );
 
     const violations: string[] = [];
@@ -237,7 +237,7 @@ describe("API routes await async operations", () => {
 describe("client components do not access private env vars", () => {
   test("no process.env access to non-NEXT_PUBLIC_ vars in 'use client' files", () => {
     const clientFiles = findFiles("apps/web/src/**/*.{ts,tsx}").filter(
-      (f) => !f.includes("__tests__") && !f.includes(".test.")
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
     );
 
     const violations: string[] = [];
@@ -247,8 +247,10 @@ describe("client components do not access private env vars", () => {
 
       // Only check client components
       if (
-        !content.startsWith('"use client"') &&
-        !content.startsWith("'use client'")
+        !(
+          content.startsWith('"use client"') ||
+          content.startsWith("'use client'")
+        )
       ) {
         continue;
       }
@@ -268,10 +270,9 @@ describe("client components do not access private env vars", () => {
         const backticksBefore = (beforeLine.match(/`/g) || []).length;
         if (backticksBefore % 2 === 1) continue;
 
-        let match: RegExpExecArray | null;
         envRegex.lastIndex = 0;
 
-        while ((match = envRegex.exec(line)) !== null) {
+        for (const match of line.matchAll(envRegex)) {
           const varName = match[1];
           // NEXT_PUBLIC_ vars are inlined by Next.js at build time — safe
           if (varName.startsWith("NEXT_PUBLIC_")) continue;
@@ -302,17 +303,16 @@ const HARDCODED_WHITE_BLACK_REGEX =
   /(?<!\w)(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-(?:white|black)(?!\w)/g;
 
 // Directories excluded from color checks (design primitives, not app code)
-const COLOR_EXCLUDED_PATTERNS = [
-  "/components/ui/",
-  "/node_modules/",
-];
+const COLOR_EXCLUDED_PATTERNS = ["/components/ui/", "/node_modules/"];
 
 function getComponentFiles(appPattern: string): string[] {
   return findFiles(appPattern).filter(
     (f) =>
-      !f.includes("__tests__") &&
-      !f.includes(".test.") &&
-      !COLOR_EXCLUDED_PATTERNS.some((p) => f.includes(p))
+      !(
+        f.includes("__tests__") ||
+        f.includes(".test.") ||
+        COLOR_EXCLUDED_PATTERNS.some((p) => f.includes(p))
+      )
   );
 }
 
@@ -338,12 +338,9 @@ function findColorViolations(
       if (line.includes("guardrail:allow-color")) continue;
 
       regex.lastIndex = 0;
-      let match: RegExpExecArray | null;
 
-      while ((match = regex.exec(line)) !== null) {
-        violations.push(
-          `${file}:${i + 1} — ${label}: ${match[0]}`
-        );
+      for (const match of line.matchAll(regex)) {
+        violations.push(`${file}:${i + 1} — ${label}: ${match[0]}`);
       }
     }
   }
@@ -404,9 +401,11 @@ describe("no direct @radix-ui imports outside UI wrappers", () => {
       ...findFiles("apps/website/src/**/*.{ts,tsx}"),
     ].filter(
       (f) =>
-        !f.includes("__tests__") &&
-        !f.includes(".test.") &&
-        !f.includes("/components/ui/")
+        !(
+          f.includes("__tests__") ||
+          f.includes(".test.") ||
+          f.includes("/components/ui/")
+        )
     );
 
     const violations: string[] = [];
@@ -439,10 +438,11 @@ describe("no client-only imports in server components", () => {
   test("@tanstack/react-form must only be imported in 'use client' files", () => {
     const files = findFiles("apps/web/src/**/*.{ts,tsx}").filter(
       (f) =>
-        !f.includes("__tests__") &&
-        !f.includes(".test.") &&
-        // Shared form option files are imported by both client and server
-        !f.includes("/lib/forms/")
+        !(
+          f.includes("__tests__") ||
+          f.includes(".test.") ||
+          f.includes("/lib/forms/")
+        )
     );
 
     const violations: string[] = [];
@@ -486,7 +486,7 @@ describe("no client-only imports in server components", () => {
 describe("no redirect() inside try/catch", () => {
   test("Next.js redirect() must not be called inside try blocks", () => {
     const files = findFiles("apps/web/src/**/*.{ts,tsx}").filter(
-      (f) => !f.includes("__tests__") && !f.includes(".test.")
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
     );
 
     const violations: string[] = [];
@@ -495,8 +495,8 @@ describe("no redirect() inside try/catch", () => {
       const content = readFile(file);
 
       // Only check files that import redirect from next/navigation
-      if (!content.includes("from \"next/navigation\"")) continue;
-      if (!content.includes("redirect(") && !content.includes("redirect,"))
+      if (!content.includes('from "next/navigation"')) continue;
+      if (!(content.includes("redirect(") || content.includes("redirect,")))
         continue;
 
       // Simple brace-depth tracker: find try blocks and check for redirect inside
@@ -550,7 +550,7 @@ describe("no redirect() inside try/catch", () => {
 describe("no console.log in web app", () => {
   test("no console.log calls in web app", () => {
     const files = findFiles("apps/web/src/**/*.{ts,tsx}").filter(
-      (f) => !f.includes("__tests__") && !f.includes(".test.")
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
     );
 
     const violations: string[] = [];

@@ -1,9 +1,6 @@
-language js;
+language js
 
 `import $imports from $source` where {
   $source <: `'dayjs'`,
-  register_diagnostic(
-    span = $source,
-    message = "Use date-fns or native Intl API instead of dayjs."
-  )
+  register_diagnostic(span=$source, message="Use date-fns or native Intl API instead of dayjs.")
 }

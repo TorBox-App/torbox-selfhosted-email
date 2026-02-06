@@ -392,7 +392,6 @@ export async function createBatchSend(
             error: `Failed to publish template: ${publishResult.error}`,
           };
         }
-
       }
     }
 

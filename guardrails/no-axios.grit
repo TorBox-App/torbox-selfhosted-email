@@ -1,9 +1,6 @@
-language js;
+language js
 
 `import $imports from $source` where {
   $source <: `'axios'`,
-  register_diagnostic(
-    span = $source,
-    message = "Use the native fetch API instead of axios."
-  )
+  register_diagnostic(span=$source, message="Use the native fetch API instead of axios.")
 }

@@ -5,7 +5,7 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   experimental: {
     optimizePackageImports: [
       "lucide-react",
@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
   },
 
   // Headers for better security and performance
-  headers() {
+  async headers() {
     return [
       {
         source: "/(.*)",
@@ -56,7 +56,7 @@ const nextConfig: NextConfig = {
   },
 
   // Redirects for better SEO
-  redirects() {
+  async redirects() {
     return [
       {
         source: "/calculator",
@@ -82,6 +82,9 @@ const nextConfig: NextConfig = {
 
   // Required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
-};
+} satisfies NextConfig;
 
-export default withBundleAnalyzer(nextConfig);
+// Cast needed: @next/bundle-analyzer resolves NextConfig from next@15, website uses next@16
+export default withBundleAnalyzer(
+  nextConfig as Parameters<typeof withBundleAnalyzer>[0]
+);
