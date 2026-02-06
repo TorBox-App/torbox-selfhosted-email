@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Wraps Email Infrastructure - Fully configurable email infrastructure with event tracking, history storage, and advanced features"
+Description: "Wraps Email Infrastructure - Fully configurable email infrastructure with event tracking, history storage, alerting, and advanced features"
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -25,6 +25,16 @@ Metadata:
           - EnableHistoryStorage
           - HistoryRetentionDays
       - Label:
+          default: "Alerting"
+        Parameters:
+          - EnableAlerting
+          - AlertNotificationEmail
+      - Label:
+          default: "Email Archiving"
+        Parameters:
+          - EnableEmailArchiving
+          - ArchiveRetention
+      - Label:
           default: "Advanced Features"
         Parameters:
           - EnableSMTP
@@ -35,6 +45,17 @@ Metadata:
         Parameters:
           - WrapsOrganizationId
           - WrapsWebhookSecret
+
+  WrapsCliParity:
+    Version: "2.0.0"
+    Description: "This template matches the Wraps CLI Pulumi infrastructure"
+    CLIOnlyFeatures:
+      - Feature: "HTTPS Custom Tracking"
+        Reason: "ACM + CloudFront + WAF require us-east-1 cross-region resources"
+      - Feature: "Inbound Email"
+        Reason: "Lambda requires mailparser npm dependency (cannot inline in ZipFile)"
+      - Feature: "Archive to Config Set Linking"
+        Reason: "Requires SDK call (PutConfigurationSetArchivingOptions) not supported in CloudFormation"
 
 Parameters:
   # Optional - Vercel OIDC (leave empty if not using Vercel)
@@ -71,7 +92,7 @@ Parameters:
   EventTypes:
     Type: CommaDelimitedList
     Description: "SES event types to track (comma-separated)"
-    Default: "SEND,DELIVERY,BOUNCE,COMPLAINT,OPEN,CLICK"
+    Default: "SEND,DELIVERY,BOUNCE,COMPLAINT,OPEN,CLICK,REJECT,RENDERING_FAILURE,DELIVERY_DELAY,SUBSCRIPTION"
 
   # History Storage
   EnableHistoryStorage:
@@ -88,6 +109,51 @@ Parameters:
     Default: 90
     MinValue: 1
     MaxValue: 3650
+
+  # Alerting
+  EnableAlerting:
+    Type: String
+    Description: "Enable SNS alerts and CloudWatch alarms for email reputation monitoring"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  AlertNotificationEmail:
+    Type: String
+    Description: "Email address for alert notifications (leave empty to skip email subscription)"
+    Default: ""
+
+  # Email Archiving
+  EnableEmailArchiving:
+    Type: String
+    Description: "Enable Mail Manager Archive for email archiving"
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  ArchiveRetention:
+    Type: String
+    Description: "Retention period for email archive"
+    Default: "THREE_MONTHS"
+    AllowedValues:
+      - "THREE_MONTHS"
+      - "SIX_MONTHS"
+      - "NINE_MONTHS"
+      - "ONE_YEAR"
+      - "EIGHTEEN_MONTHS"
+      - "TWO_YEARS"
+      - "THIRTY_MONTHS"
+      - "THREE_YEARS"
+      - "FOUR_YEARS"
+      - "FIVE_YEARS"
+      - "SIX_YEARS"
+      - "SEVEN_YEARS"
+      - "EIGHT_YEARS"
+      - "NINE_YEARS"
+      - "TEN_YEARS"
+      - "PERMANENT"
 
   # Advanced Features
   EnableSMTP:
@@ -151,6 +217,14 @@ Conditions:
   HasRoute53: !And
     - !Condition HasDomain
     - !Not [!Equals [!Ref Route53HostedZoneId, ""]]
+  HasAlerting: !Equals [!Ref EnableAlerting, "true"]
+  HasAlertEmail: !And
+    - !Condition HasAlerting
+    - !Not [!Equals [!Ref AlertNotificationEmail, ""]]
+  HasAlertingAndEventTracking: !And
+    - !Condition HasAlerting
+    - !Condition HasEventTracking
+  HasEmailArchiving: !Equals [!Ref EnableEmailArchiving, "true"]
 
 Resources:
   # ===========================================
@@ -160,11 +234,12 @@ Resources:
     Type: AWS::IAM::OIDCProvider
     Condition: HasVercelOIDC
     Properties:
-      Url: "https://oidc.vercel.com"
+      Url: !Sub "https://oidc.vercel.com/${VercelTeamSlug}"
       ClientIdList:
         - !Sub "https://vercel.com/${VercelTeamSlug}"
       ThumbprintList:
-        - "a031c46782e6e6c662c2c87c76da9aa62ccabd8e"
+        - "20032e77eca0785eece16b56b42c9b330b906320"
+        - "696db3af0dffc17e65c6a20d925c5a7bd24dec7e"
       Tags:
         - Key: ManagedBy
           Value: wraps-cloudformation
@@ -179,17 +254,29 @@ Resources:
       RoleName: "wraps-email-role"
       Description: "IAM role for Wraps SDK to send emails via SES (Vercel OIDC)"
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Federated: !GetAtt VercelOIDCProvider.Arn
-            Action: "sts:AssumeRoleWithWebIdentity"
-            Condition:
-              StringEquals:
-                "oidc.vercel.com:aud": !Sub "https://vercel.com/${VercelTeamSlug}"
-              StringLike:
-                "oidc.vercel.com:sub": !Sub "owner:${VercelTeamSlug}:project:${VercelProjectName}:environment:*"
+        Fn::Sub:
+          - |
+            {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {
+                  "Federated": "${OIDCProviderArn}"
+                },
+                "Action": "sts:AssumeRoleWithWebIdentity",
+                "Condition": {
+                  "StringEquals": {
+                    "oidc.vercel.com/${TeamSlug}:aud": "https://vercel.com/${TeamSlug}"
+                  },
+                  "StringLike": {
+                    "oidc.vercel.com/${TeamSlug}:sub": "owner:${TeamSlug}:project:${ProjectName}:environment:*"
+                  }
+                }
+              }]
+            }
+          - OIDCProviderArn: !GetAtt VercelOIDCProvider.Arn
+            TeamSlug: !Ref VercelTeamSlug
+            ProjectName: !Ref VercelProjectName
       Policies:
         - PolicyName: "wraps-email-policy"
           PolicyDocument:
@@ -205,9 +292,6 @@ Resources:
                   - "ses:SendBulkTemplatedEmail"
                   - "ses:SendBulkEmail"
                 Resource: "*"
-                Condition:
-                  StringEquals:
-                    "ses:ConfigurationSetName": "wraps-email-tracking"
 
               # SES Read Permissions
               - Sid: "SESRead"
@@ -216,6 +300,12 @@ Resources:
                   - "ses:GetSendQuota"
                   - "ses:GetSendStatistics"
                   - "ses:GetAccount"
+                  - "ses:ListIdentities"
+                  - "ses:GetIdentityVerificationAttributes"
+                  - "ses:ListEmailIdentities"
+                  - "ses:GetEmailIdentity"
+                  - "ses:GetConfigurationSet"
+                  - "ses:GetConfigurationSetEventDestinations"
                 Resource: "*"
 
               # CloudWatch Metrics
@@ -233,12 +323,32 @@ Resources:
                 - Sid: "DynamoDBAccess"
                   Effect: Allow
                   Action:
-                    - "dynamodb:Query"
+                    - "dynamodb:PutItem"
                     - "dynamodb:GetItem"
+                    - "dynamodb:Query"
+                    - "dynamodb:Scan"
                     - "dynamodb:BatchGetItem"
+                    - "dynamodb:DescribeTable"
                   Resource:
                     - !GetAtt WrapsEmailHistoryTable.Arn
                     - !Sub "${WrapsEmailHistoryTable.Arn}/index/*"
+                - !Ref AWS::NoValue
+
+              # Email Archiving (conditional)
+              - !If
+                - HasEmailArchiving
+                - Sid: "EmailArchiving"
+                  Effect: Allow
+                  Action:
+                    - "ses:StartArchiveSearch"
+                    - "ses:GetArchiveSearchResults"
+                    - "ses:GetArchiveMessage"
+                    - "ses:GetArchiveMessageContent"
+                    - "ses:GetArchive"
+                    - "ses:ListArchives"
+                    - "ses:StartArchiveExport"
+                    - "ses:GetArchiveExport"
+                  Resource: !Sub "arn:aws:ses:*:${AWS::AccountId}:mailmanager-archive/*"
                 - !Ref AWS::NoValue
       Tags:
         - Key: ManagedBy
@@ -256,10 +366,12 @@ Resources:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
-          # Allow IAM users/roles from the same account to assume this role
           - Effect: Allow
             Principal:
-              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+              Service:
+                - "lambda.amazonaws.com"
+                - "ec2.amazonaws.com"
+                - "ecs-tasks.amazonaws.com"
             Action: "sts:AssumeRole"
       Policies:
         - PolicyName: "wraps-email-policy"
@@ -276,9 +388,6 @@ Resources:
                   - "ses:SendBulkTemplatedEmail"
                   - "ses:SendBulkEmail"
                 Resource: "*"
-                Condition:
-                  StringEquals:
-                    "ses:ConfigurationSetName": "wraps-email-tracking"
 
               # SES Read Permissions
               - Sid: "SESRead"
@@ -287,6 +396,12 @@ Resources:
                   - "ses:GetSendQuota"
                   - "ses:GetSendStatistics"
                   - "ses:GetAccount"
+                  - "ses:ListIdentities"
+                  - "ses:GetIdentityVerificationAttributes"
+                  - "ses:ListEmailIdentities"
+                  - "ses:GetEmailIdentity"
+                  - "ses:GetConfigurationSet"
+                  - "ses:GetConfigurationSetEventDestinations"
                 Resource: "*"
 
               # CloudWatch Metrics
@@ -304,12 +419,32 @@ Resources:
                 - Sid: "DynamoDBAccess"
                   Effect: Allow
                   Action:
-                    - "dynamodb:Query"
+                    - "dynamodb:PutItem"
                     - "dynamodb:GetItem"
+                    - "dynamodb:Query"
+                    - "dynamodb:Scan"
                     - "dynamodb:BatchGetItem"
+                    - "dynamodb:DescribeTable"
                   Resource:
                     - !GetAtt WrapsEmailHistoryTable.Arn
                     - !Sub "${WrapsEmailHistoryTable.Arn}/index/*"
+                - !Ref AWS::NoValue
+
+              # Email Archiving (conditional)
+              - !If
+                - HasEmailArchiving
+                - Sid: "EmailArchiving"
+                  Effect: Allow
+                  Action:
+                    - "ses:StartArchiveSearch"
+                    - "ses:GetArchiveSearchResults"
+                    - "ses:GetArchiveMessage"
+                    - "ses:GetArchiveMessageContent"
+                    - "ses:GetArchive"
+                    - "ses:ListArchives"
+                    - "ses:StartArchiveExport"
+                    - "ses:GetArchiveExport"
+                  Resource: !Sub "arn:aws:ses:*:${AWS::AccountId}:mailmanager-archive/*"
                 - !Ref AWS::NoValue
       Tags:
         - Key: ManagedBy
@@ -322,6 +457,20 @@ Resources:
     Type: AWS::SES::ConfigurationSet
     Properties:
       Name: "wraps-email-tracking"
+      SuppressionOptions:
+        SuppressedReasons:
+          - BOUNCE
+          - COMPLAINT
+      DeliveryOptions: !If
+        - HasTLS
+        - TlsPolicy: REQUIRE
+        - !Ref AWS::NoValue
+      ReputationOptions: !If
+        - HasReputationMetrics
+        - ReputationMetricsEnabled: true
+        - !Ref AWS::NoValue
+      SendingOptions:
+        SendingEnabled: true
 
   # ===========================================
   # SES Domain Identity (Conditional)
@@ -331,8 +480,13 @@ Resources:
     Condition: HasDomain
     Properties:
       EmailIdentity: !Ref Domain
+      ConfigurationSetAttributes:
+        ConfigurationSetName: !Ref WrapsEmailConfigSet
       DkimSigningAttributes:
         NextSigningKeyLength: RSA_2048_BIT
+      MailFromAttributes:
+        MailFromDomain: !Sub "${MailFromSubdomain}.${Domain}"
+        BehaviorOnMxFailure: USE_DEFAULT_VALUE
 
   # ===========================================
   # Route53 DKIM Records (Conditional - if Route53 Hosted Zone provided)
@@ -387,11 +541,11 @@ Resources:
           EventBusArn: !Sub "arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default"
 
   # ===========================================
-  # SQS Queues (Conditional - for history storage)
+  # SQS Queues (Conditional - for event tracking)
   # ===========================================
   WrapsEmailDLQ:
     Type: AWS::SQS::Queue
-    Condition: HasHistoryStorage
+    Condition: HasEventTracking
     Properties:
       QueueName: "wraps-email-events-dlq"
       MessageRetentionPeriod: 1209600
@@ -401,11 +555,12 @@ Resources:
 
   WrapsEmailQueue:
     Type: AWS::SQS::Queue
-    Condition: HasHistoryStorage
+    Condition: HasEventTracking
     Properties:
       QueueName: "wraps-email-events"
       VisibilityTimeout: 60
       MessageRetentionPeriod: 345600
+      ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt WrapsEmailDLQ.Arn
         maxReceiveCount: 3
@@ -415,7 +570,7 @@ Resources:
 
   WrapsEmailQueuePolicy:
     Type: AWS::SQS::QueuePolicy
-    Condition: HasHistoryStorage
+    Condition: HasEventTracking
     Properties:
       Queues:
         - !Ref WrapsEmailQueue
@@ -433,11 +588,11 @@ Resources:
                 "aws:SourceArn": !GetAtt WrapsEmailEventRule.Arn
 
   # ===========================================
-  # EventBridge Rule (Conditional - for history storage)
+  # EventBridge Rule (Conditional - for event tracking)
   # ===========================================
   WrapsEmailEventRule:
     Type: AWS::Events::Rule
-    Condition: HasHistoryStorage
+    Condition: HasEventTracking
     Properties:
       Name: "wraps-email-events-to-sqs"
       Description: "Route SES email events to SQS for processing"
@@ -463,26 +618,26 @@ Resources:
       AttributeDefinitions:
         - AttributeName: messageId
           AttributeType: S
-        - AttributeName: timestamp
-          AttributeType: S
-        - AttributeName: recipient
+        - AttributeName: sentAt
+          AttributeType: "N"
+        - AttributeName: accountId
           AttributeType: S
       KeySchema:
         - AttributeName: messageId
           KeyType: HASH
-        - AttributeName: timestamp
+        - AttributeName: sentAt
           KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: recipient-timestamp-index
+        - IndexName: accountId-sentAt-index
           KeySchema:
-            - AttributeName: recipient
+            - AttributeName: accountId
               KeyType: HASH
-            - AttributeName: timestamp
+            - AttributeName: sentAt
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
       TimeToLiveSpecification:
-        AttributeName: ttl
+        AttributeName: expiresAt
         Enabled: true
       Tags:
         - Key: ManagedBy
@@ -521,9 +676,13 @@ Resources:
                 Effect: Allow
                 Action:
                   - "dynamodb:PutItem"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:Query"
+                  - "dynamodb:Scan"
                   - "dynamodb:UpdateItem"
-                  - "dynamodb:BatchWriteItem"
-                Resource: !GetAtt WrapsEmailHistoryTable.Arn
+                Resource:
+                  - !GetAtt WrapsEmailHistoryTable.Arn
+                  - !Sub "${WrapsEmailHistoryTable.Arn}/index/*"
       Tags:
         - Key: ManagedBy
           Value: wraps-cloudformation
@@ -534,71 +693,148 @@ Resources:
     Properties:
       FunctionName: "wraps-email-event-processor"
       Description: "Processes SES email events and stores them in DynamoDB"
-      Runtime: nodejs20.x
+      Runtime: nodejs24.x
       Handler: index.handler
       Timeout: 30
-      MemorySize: 256
+      MemorySize: 512
       Role: !GetAtt WrapsEmailProcessorRole.Arn
       Environment:
         Variables:
           TABLE_NAME: !Ref WrapsEmailHistoryTable
           RETENTION_DAYS: !Ref HistoryRetentionDays
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
       Code:
         ZipFile: |
-          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-          const { DynamoDBDocumentClient, PutCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
-
-          const client = new DynamoDBClient({});
-          const docClient = DynamoDBDocumentClient.from(client);
+          const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+          const dynamodb = new DynamoDBClient({});
           const TABLE_NAME = process.env.TABLE_NAME;
           const RETENTION_DAYS = parseInt(process.env.RETENTION_DAYS || '90', 10);
+          const ACCOUNT_ID = process.env.AWS_ACCOUNT_ID || 'unknown';
 
           exports.handler = async (event) => {
-            const results = { processed: 0, errors: 0 };
-
             for (const record of event.Records) {
               try {
-                const body = JSON.parse(record.body);
-                const detail = body.detail || body;
+                const eventBridgeEvent = JSON.parse(record.body);
+                const message = eventBridgeEvent.detail;
+                let eventType = message.eventType || message.notificationType;
+                const mail = message.mail;
+                const messageId = mail.messageId;
+                const mailTimestamp = new Date(mail.timestamp).getTime();
+                const from = mail.source;
+                const to = mail.destination || [];
+                const subject = mail.commonHeaders && mail.commonHeaders.subject ? mail.commonHeaders.subject : '';
 
-                const eventType = detail.eventType || 'UNKNOWN';
-                const mail = detail.mail || {};
-                const messageId = mail.messageId || record.messageId || `unknown-${Date.now()}`;
-                const timestamp = new Date().toISOString();
+                let additionalData = {};
+                let eventTimestamp = mailTimestamp;
 
-                // Calculate TTL
-                const ttl = Math.floor(Date.now() / 1000) + (RETENTION_DAYS * 24 * 60 * 60);
+                if (eventType === 'Send' && message.send) {
+                  additionalData = { tags: mail.tags || {} };
+                } else if (eventType === 'Delivery' && message.delivery) {
+                  eventTimestamp = new Date(message.delivery.timestamp).getTime();
+                  additionalData = {
+                    timestamp: message.delivery.timestamp,
+                    processingTimeMillis: message.delivery.processingTimeMillis,
+                    recipients: message.delivery.recipients,
+                    smtpResponse: message.delivery.smtpResponse,
+                    remoteMtaIp: message.delivery.remoteMtaIp,
+                  };
+                } else if (eventType === 'Open' && message.open) {
+                  eventTimestamp = new Date(message.open.timestamp).getTime();
+                  additionalData = {
+                    timestamp: message.open.timestamp,
+                    userAgent: message.open.userAgent,
+                    ipAddress: message.open.ipAddress,
+                  };
+                } else if (eventType === 'Click' && message.click) {
+                  eventTimestamp = new Date(message.click.timestamp).getTime();
+                  additionalData = {
+                    timestamp: message.click.timestamp,
+                    link: message.click.link,
+                    linkTags: message.click.linkTags || {},
+                    userAgent: message.click.userAgent,
+                    ipAddress: message.click.ipAddress,
+                  };
+                } else if (eventType === 'Bounce' && message.bounce) {
+                  const bounceSubType = message.bounce.bounceSubType;
+                  if (bounceSubType === 'Suppressed' || bounceSubType === 'OnAccountSuppressionList') {
+                    eventType = 'Suppressed';
+                    eventTimestamp = new Date(message.bounce.timestamp).getTime();
+                    additionalData = {
+                      reason: bounceSubType,
+                      suppressedRecipients: message.bounce.bouncedRecipients,
+                      timestamp: message.bounce.timestamp,
+                      feedbackId: message.bounce.feedbackId,
+                    };
+                  } else {
+                    eventTimestamp = new Date(message.bounce.timestamp).getTime();
+                    additionalData = {
+                      bounceType: message.bounce.bounceType,
+                      bounceSubType: message.bounce.bounceSubType,
+                      bouncedRecipients: message.bounce.bouncedRecipients,
+                      timestamp: message.bounce.timestamp,
+                      feedbackId: message.bounce.feedbackId,
+                    };
+                  }
+                } else if (eventType === 'Complaint' && message.complaint) {
+                  eventTimestamp = new Date(message.complaint.timestamp).getTime();
+                  additionalData = {
+                    complainedRecipients: message.complaint.complainedRecipients,
+                    timestamp: message.complaint.timestamp,
+                    feedbackId: message.complaint.feedbackId,
+                    complaintFeedbackType: message.complaint.complaintFeedbackType,
+                    userAgent: message.complaint.userAgent,
+                  };
+                } else if (eventType === 'Reject' && message.reject) {
+                  additionalData = { reason: message.reject.reason };
+                } else if (eventType === 'Rendering Failure' && message.failure) {
+                  additionalData = {
+                    errorMessage: message.failure.errorMessage,
+                    templateName: message.failure.templateName,
+                  };
+                } else if (eventType === 'DeliveryDelay' && message.deliveryDelay) {
+                  eventTimestamp = new Date(message.deliveryDelay.timestamp).getTime();
+                  additionalData = {
+                    timestamp: message.deliveryDelay.timestamp,
+                    delayType: message.deliveryDelay.delayType,
+                    expirationTime: message.deliveryDelay.expirationTime,
+                    delayedRecipients: message.deliveryDelay.delayedRecipients,
+                  };
+                } else if (eventType === 'Subscription' && message.subscription) {
+                  eventTimestamp = new Date(message.subscription.timestamp).getTime();
+                  additionalData = {
+                    contactList: message.subscription.contactList,
+                    timestamp: message.subscription.timestamp,
+                    source: message.subscription.source,
+                    newTopicPreferences: message.subscription.newTopicPreferences,
+                    oldTopicPreferences: message.subscription.oldTopicPreferences,
+                  };
+                }
 
-                // Get recipients
-                const recipients = mail.destination || [];
-                const recipient = recipients[0] || 'unknown';
+                const expiresAt = RETENTION_DAYS > 0
+                  ? Date.now() + RETENTION_DAYS * 86400000
+                  : Date.now() + 365 * 86400000;
 
-                const item = {
-                  messageId,
-                  timestamp,
-                  eventType,
-                  recipient,
-                  recipients,
-                  subject: mail.commonHeaders?.subject || '',
-                  from: mail.commonHeaders?.from?.[0] || mail.source || '',
-                  ttl,
-                  raw: JSON.stringify(detail),
-                };
-
-                await docClient.send(new PutCommand({
+                await dynamodb.send(new PutItemCommand({
                   TableName: TABLE_NAME,
-                  Item: item,
+                  Item: {
+                    messageId: { S: messageId },
+                    sentAt: { N: eventTimestamp.toString() },
+                    accountId: { S: ACCOUNT_ID },
+                    from: { S: from },
+                    to: { L: to.map(function(e) { return { S: e }; }) },
+                    subject: { S: subject },
+                    eventType: { S: eventType },
+                    eventData: { S: JSON.stringify(message) },
+                    additionalData: { S: JSON.stringify(additionalData) },
+                    createdAt: { N: Date.now().toString() },
+                    expiresAt: { N: expiresAt.toString() },
+                  },
                 }));
-
-                results.processed++;
               } catch (error) {
                 console.error('Error processing record:', error);
-                results.errors++;
               }
             }
-
-            console.log(`Processed ${results.processed} records, ${results.errors} errors`);
-            return results;
+            return { statusCode: 200, body: JSON.stringify({ message: 'Events processed' }) };
           };
       Tags:
         - Key: ManagedBy
@@ -611,6 +847,9 @@ Resources:
       EventSourceArn: !GetAtt WrapsEmailQueue.Arn
       FunctionName: !Ref WrapsEmailProcessor
       BatchSize: 10
+      MaximumBatchingWindowInSeconds: 5
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
       Enabled: true
 
   # ===========================================
@@ -631,6 +870,9 @@ Resources:
                 Action:
                   - "ses:SendRawEmail"
                 Resource: "*"
+                Condition:
+                  StringEquals:
+                    "ses:ConfigurationSetName": "wraps-email-tracking"
       Tags:
         - Key: ManagedBy
           Value: wraps-cloudformation
@@ -641,6 +883,141 @@ Resources:
     Properties:
       UserName: !Ref WrapsEmailSMTPUser
       Status: Active
+
+  # ===========================================
+  # Alerting Resources (Conditional)
+  # ===========================================
+  WrapsEmailAlertsTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasAlerting
+    Properties:
+      TopicName: "wraps-email-alerts"
+      DisplayName: "Wraps Email Alerts"
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
+        - Key: Description
+          Value: "Alert notifications for email reputation and health"
+
+  WrapsEmailAlertsEmailSub:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref WrapsEmailAlertsTopic
+      Protocol: email
+      Endpoint: !Ref AlertNotificationEmail
+
+  WrapsBounceRateWarning:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlerting
+    Properties:
+      AlarmName: "wraps-email-bounce-rate-warning"
+      AlarmDescription: "Bounce rate exceeded 2% - investigate before AWS takes action (warns at 5%, suspends at 10%)"
+      Namespace: "AWS/SES"
+      MetricName: "Reputation.BounceRate"
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 0.02
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref WrapsEmailAlertsTopic
+      OKActions:
+        - !Ref WrapsEmailAlertsTopic
+
+  WrapsBounceRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlerting
+    Properties:
+      AlarmName: "wraps-email-bounce-rate-critical"
+      AlarmDescription: "CRITICAL: Bounce rate exceeded 4% - approaching AWS warning threshold (5%). Immediate action required!"
+      Namespace: "AWS/SES"
+      MetricName: "Reputation.BounceRate"
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0.04
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref WrapsEmailAlertsTopic
+      OKActions:
+        - !Ref WrapsEmailAlertsTopic
+
+  WrapsComplaintRateWarning:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlerting
+    Properties:
+      AlarmName: "wraps-email-complaint-rate-warning"
+      AlarmDescription: "Complaint rate exceeded 0.05% - investigate before AWS (0.1%) or Gmail (0.3%) take action"
+      Namespace: "AWS/SES"
+      MetricName: "Reputation.ComplaintRate"
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 0.0005
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref WrapsEmailAlertsTopic
+      OKActions:
+        - !Ref WrapsEmailAlertsTopic
+
+  WrapsComplaintRateCritical:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlerting
+    Properties:
+      AlarmName: "wraps-email-complaint-rate-critical"
+      AlarmDescription: "CRITICAL: Complaint rate exceeded 0.08% - approaching AWS warning (0.1%). Immediate action required!"
+      Namespace: "AWS/SES"
+      MetricName: "Reputation.ComplaintRate"
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0.0008
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref WrapsEmailAlertsTopic
+      OKActions:
+        - !Ref WrapsEmailAlertsTopic
+
+  WrapsDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlertingAndEventTracking
+    Properties:
+      AlarmName: "wraps-email-dlq-messages"
+      AlarmDescription: "Messages in dead letter queue - event processing is failing. Check Lambda logs for errors."
+      Namespace: "AWS/SQS"
+      MetricName: "ApproximateNumberOfMessagesVisible"
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: QueueName
+          Value: "wraps-email-events-dlq"
+      AlarmActions:
+        - !Ref WrapsEmailAlertsTopic
+      OKActions:
+        - !Ref WrapsEmailAlertsTopic
+
+  # ===========================================
+  # Email Archiving (Conditional)
+  # ===========================================
+  WrapsEmailArchive:
+    Type: AWS::SES::MailManagerArchive
+    Condition: HasEmailArchiving
+    Properties:
+      ArchiveName: "wraps-email-archive"
+      Retention:
+        RetentionPeriod: !Ref ArchiveRetention
+      Tags:
+        - Key: ManagedBy
+          Value: wraps-cloudformation
 
   # ===========================================
   # Wraps Platform Webhook Integration (Conditional)
@@ -761,7 +1138,10 @@ Resources:
                   - "ses:ListIdentities"
                   - "ses:GetIdentityVerificationAttributes"
                   - "ses:GetIdentityDkimAttributes"
+                  - "ses:ListEmailIdentities"
+                  - "ses:GetEmailIdentity"
                   - "ses:GetConfigurationSet"
+                  - "ses:GetConfigurationSetEventDestinations"
                 Resource: "*"
 
               # SES - Template Management
@@ -851,6 +1231,14 @@ Outputs:
     Description: "MAIL FROM domain for SPF alignment"
     Value: !Sub "${MailFromSubdomain}.${Domain}"
 
+  MailFromDNS:
+    Condition: HasDomain
+    Description: "DNS records needed for MAIL FROM domain"
+    Value: !Sub |
+      Configure these DNS records for your MAIL FROM domain (${MailFromSubdomain}.${Domain}):
+      1. TXT record: v=spf1 include:amazonses.com ~all
+      2. MX record: 10 feedback-smtp.${AWS::Region}.amazonses.com
+
   # Event Tracking Outputs (Conditional)
   TableName:
     Condition: HasHistoryStorage
@@ -860,14 +1248,14 @@ Outputs:
       Name: "WrapsEmailHistoryTableName"
 
   QueueUrl:
-    Condition: HasHistoryStorage
+    Condition: HasEventTracking
     Description: "SQS queue URL for events"
     Value: !Ref WrapsEmailQueue
     Export:
       Name: "WrapsEmailQueueUrl"
 
   DLQUrl:
-    Condition: HasHistoryStorage
+    Condition: HasEventTracking
     Description: "SQS dead letter queue URL"
     Value: !Ref WrapsEmailDLQ
     Export:
@@ -879,6 +1267,22 @@ Outputs:
     Value: !GetAtt WrapsEmailProcessor.Arn
     Export:
       Name: "WrapsEmailProcessorArn"
+
+  # Alerting Outputs (Conditional)
+  AlertTopicArn:
+    Condition: HasAlerting
+    Description: "SNS topic ARN for email alerts"
+    Value: !Ref WrapsEmailAlertsTopic
+    Export:
+      Name: "WrapsEmailAlertTopicArn"
+
+  # Archiving Outputs (Conditional)
+  ArchiveArn:
+    Condition: HasEmailArchiving
+    Description: "Mail Manager Archive ARN (link to config set requires SDK call: PutConfigurationSetArchivingOptions)"
+    Value: !GetAtt WrapsEmailArchive.ArchiveArn
+    Export:
+      Name: "WrapsEmailArchiveArn"
 
   # SMTP Outputs (Conditional)
   SMTPEndpoint:
@@ -906,7 +1310,9 @@ Outputs:
         "historyStorage": ${EnableHistoryStorage},
         "smtp": ${EnableSMTP},
         "tlsRequired": ${TLSRequired},
-        "reputationMetrics": ${ReputationMetrics}
+        "reputationMetrics": ${ReputationMetrics},
+        "alerting": ${EnableAlerting},
+        "emailArchiving": ${EnableEmailArchiving}
       }
 
   # Environment Variables (convenience output)
