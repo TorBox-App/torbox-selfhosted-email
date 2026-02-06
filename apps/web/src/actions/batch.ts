@@ -381,13 +381,6 @@ export async function createBatchSend(
           tmpl.updatedAt > tmpl.publishedAt);
 
       if (needsPublish) {
-        console.log(
-          "[batch] Template needs publishing:",
-          data.templateId,
-          tmpl.sesTemplateName
-            ? "(modified since publish)"
-            : "(never published)"
-        );
         const publishResult = await publishTemplateToSES(
           data.templateId,
           organizationId
@@ -400,10 +393,6 @@ export async function createBatchSend(
           };
         }
 
-        console.log(
-          "[batch] Template published:",
-          publishResult.sesTemplateName
-        );
       }
     }
 
@@ -433,24 +422,11 @@ export async function createBatchSend(
       return { success: false, error: "Session not found" };
     }
 
-    console.log(
-      "[batch] Session token:",
-      session.session.token
-        ? `${session.session.token.slice(0, 10)}...`
-        : "undefined"
-    );
-    console.log("[batch] Session keys:", Object.keys(session.session));
-
     // Call the API to create batch and enqueue
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
-      console.error("[batch] NEXT_PUBLIC_API_URL not configured");
       return { success: false, error: "API URL not configured" };
     }
-
-    console.log("[batch] Calling API:", `${apiUrl}/v1/batch`);
-    console.log("[batch] Organization:", organizationId);
-    console.log("[batch] Recipients:", recipientCount);
 
     const response = await fetch(`${apiUrl}/v1/batch`, {
       method: "POST",
@@ -482,17 +458,9 @@ export async function createBatchSend(
       }),
     });
 
-    console.log("[batch] API response status:", response.status);
-    console.log("[batch] API response ok:", response.ok);
-
     if (!response.ok) {
       // Read body as text first, then try to parse as JSON
       const errorText = await response.text();
-      console.error(
-        "[batch] Failed to create batch via API:",
-        response.status,
-        errorText
-      );
       try {
         const errorData = JSON.parse(errorText) as {
           error?: string;
@@ -508,7 +476,6 @@ export async function createBatchSend(
     }
 
     const result = (await response.json()) as { id: string };
-    console.log("[batch] Batch created successfully:", result.id);
 
     revalidatePath("/[orgSlug]/emails/broadcasts", "page");
 

@@ -59,7 +59,7 @@ export default function MyEmail({ firstName, actionUrl }: Props) {
       <Head />
       <Preview>{previewText}</Preview>
       <Tailwind>
-        <Body className="bg-[#f6f9fc] font-sans">
+        <Body className="bg-[#f6f9fc] font-sans">{/* guardrail:allow-color */}
           <Container className="mx-auto max-w-[580px] py-10">
             {/* Email content here */}
           </Container>
@@ -85,7 +85,7 @@ export default function MyEmail({ firstName, actionUrl }: Props) {
 - **Heading** - \`<Heading className="text-2xl font-semibold">Title</Heading>\`
 - **Text** - \`<Text className="text-base text-gray-600">Paragraph</Text>\`
 - **Link** - \`<Link href="url" className="text-blue-600 underline">text</Link>\`
-- **Button** - CTA button. \`<Button href="url" className="bg-[#5046e5] px-6 py-3 text-white rounded-md">Click</Button>\`
+- **Button** - CTA button. \`<Button href="url" className="bg-[#5046e5] px-6 py-3 text-white rounded-md">Click</Button>\` guardrail:allow-color
 - **Img** - \`<Img src="url" alt="desc" width="200" height="100" />\`
 - **Hr** - Horizontal rule. \`<Hr className="border-gray-200" />\`
 
@@ -94,7 +94,7 @@ export default function MyEmail({ firstName, actionUrl }: Props) {
 
 ## Tailwind CSS
 All styling uses Tailwind CSS classes via the \`<Tailwind>\` wrapper. Common patterns:
-- Background: \`bg-white\`, \`bg-[#f6f9fc]\`, \`bg-gray-50\`
+- Background: \`bg-white\`, \`bg-[#f6f9fc]\`, \`bg-gray-50\` guardrail:allow-color
 - Text: \`text-gray-600\`, \`text-sm\`, \`text-base\`, \`text-2xl\`, \`font-semibold\`
 - Spacing: \`p-10\`, \`px-6\`, \`py-3\`, \`m-0\`, \`mb-4\`, \`my-7\`
 - Layout: \`mx-auto\`, \`max-w-[580px]\`, \`text-center\`

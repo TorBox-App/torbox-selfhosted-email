@@ -395,7 +395,6 @@ export function BatchForm({
           scheduledFor.setHours(hours, minutes, 0, 0);
         }
 
-        console.log("[batch-form] Calling createBatchSend...");
         const result = await createBatchSend(organizationId, {
           name: campaignData.name || undefined,
           subject: campaignData.subject || undefined,
@@ -416,8 +415,6 @@ export function BatchForm({
           recipientFilter: getCurrentFilter(),
           scheduledFor,
         });
-        console.log("[batch-form] Result:", result);
-
         if (result.success) {
           const isScheduled = result.batch.status === "scheduled";
 

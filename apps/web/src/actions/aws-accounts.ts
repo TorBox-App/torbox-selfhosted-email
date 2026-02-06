@@ -779,7 +779,7 @@ export async function scanAWSAccountFeatures(
     const emailEnabled = !!configSetName;
 
     await db
-      .update(awsAccount)
+      .update(awsAccount) // guardrail:allow-unscoped — org validated at function entry (line ~369)
       .set({
         emailEnabled,
         smsEnabled,

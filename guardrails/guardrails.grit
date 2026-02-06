@@ -1,0 +1,9 @@
+language js;
+
+`import $imports from $source` where {
+  $source <: `'react-hook-form'`,
+  register_diagnostic(
+    span = $source,
+    message = "Use @tanstack/react-form instead of react-hook-form. See CLAUDE.md migration backlog."
+  )
+}

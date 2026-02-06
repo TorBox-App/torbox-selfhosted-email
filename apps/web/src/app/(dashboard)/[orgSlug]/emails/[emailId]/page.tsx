@@ -82,14 +82,10 @@ async function fetchEmail(
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - 90 * 24 * 60 * 60 * 1000);
 
-    console.log("[fetchEmail] Searching for email:", emailId);
-
     // Get all AWS accounts for this organization
     const accounts = await db.query.awsAccount.findMany({
       where: eq(awsAccount.organizationId, organizationId),
     });
-
-    console.log("[fetchEmail] Searching across accounts:", accounts.length);
 
     if (accounts.length === 0) {
       return null;
@@ -106,11 +102,7 @@ async function fetchEmail(
             limit: 1000,
           });
           return { account, events };
-        } catch (error) {
-          console.error(
-            `[fetchEmail] Failed to fetch emails for account ${account.id}:`,
-            error
-          );
+        } catch {
           return { account, events: [] };
         }
       })
@@ -128,8 +120,6 @@ async function fetchEmail(
         break;
       }
     }
-
-    console.log("[fetchEmail] Found events for email:", emailEvents.length);
 
     if (emailEvents.length === 0 || !emailAccount) {
       return null;

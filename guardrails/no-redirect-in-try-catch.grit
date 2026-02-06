@@ -1,0 +1,9 @@
+language js;
+
+`try { $body } catch ($err) { $handler }` where {
+  $body <: contains `redirect($args)`,
+  register_diagnostic(
+    span = $body,
+    message = "Do not call redirect() inside try/catch. Next.js redirect() throws internally and will be swallowed by the catch block."
+  )
+}

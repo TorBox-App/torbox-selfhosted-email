@@ -16,6 +16,7 @@
     "typecheck": "turbo run typecheck",
     "check": "npx ultracite@latest check",
     "check:errors": "npx ultracite@7.0.12 check --diagnostic-level=error",
+    "test:guardrails": "vitest run --config vitest.config.ts",
     "check:all": "pnpm check:errors && pnpm typecheck && pnpm build && pnpm test",
     "fix": "npx ultracite@latest fix",
     "clean": "turbo run clean && rm -rf node_modules",
@@ -36,7 +37,8 @@
     "react-email": "4.3.2",
     "sst": "3.17.25",
     "turbo": "^2.2.3",
-    "ultracite": "6.3.2"
+    "ultracite": "6.3.2",
+    "vitest": "4.0.18"
   },
   "engines": {
     "node": ">=20",

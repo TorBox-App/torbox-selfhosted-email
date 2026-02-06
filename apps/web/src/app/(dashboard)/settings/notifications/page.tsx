@@ -94,9 +94,8 @@ export default function NotificationSettings() {
     validators: {
       onChange: notificationsFormSchema,
     },
-    onSubmit: async ({ value }) => {
-      console.log("Notifications settings submitted:", value);
-      // Here you would typically save the settings
+    onSubmit: async ({ value: _value }) => {
+      // TODO: save notification settings
     },
   });
 
