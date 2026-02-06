@@ -9,9 +9,11 @@ import {
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { trackTemplatePublished } from "@/lib/activation-tracking";
+import type { EmailType } from "@wraps/db";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
@@ -19,6 +21,71 @@ import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
 export type PublishTemplateResult =
   | { success: true; sesTemplateName: string }
   | { success: false; error: string };
+
+// Bulk action result types
+export type BulkDeleteResult =
+  | { success: true; count: number }
+  | { success: false; error: string };
+
+export type BulkUpdateTypeResult =
+  | { success: true; count: number }
+  | { success: false; error: string };
+
+export type BulkUpdateStatusResult =
+  | {
+      success: true;
+      updated: number;
+      published: number;
+      skipped: string[];
+      errors: string[];
+    }
+  | { success: false; error: string };
+
+/**
+ * Verify user has access to organization
+ */
+async function verifyOrgAccess(organizationId: string): Promise<{
+  userId: string;
+  userEmail: string;
+  role: string;
+  orgSlug: string;
+} | null> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user) {
+    return null;
+  }
+
+  const membership = await db.query.member.findFirst({
+    where: (m, { and: andOp, eq: eqOp }) =>
+      andOp(eqOp(m.organizationId, organizationId), eqOp(m.userId, session.user.id)),
+    with: {
+      organization: {
+        columns: { slug: true },
+      },
+    },
+  });
+
+  if (!membership?.organization.slug) {
+    return null;
+  }
+
+  return {
+    userId: session.user.id,
+    userEmail: session.user.email,
+    role: membership.role,
+    orgSlug: membership.organization.slug,
+  };
+}
+
+/**
+ * Revalidate templates page using the org slug
+ */
+function revalidateTemplates(orgSlug: string): void {
+  revalidatePath(`/${orgSlug}/emails/templates`, "page");
+}
 
 /**
  * Publish a template to SES.
@@ -190,5 +257,253 @@ export async function publishTemplateToSES(
       error:
         error instanceof Error ? error.message : "Failed to publish template",
     };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BULK ACTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Bulk delete templates
+ */
+export async function bulkDeleteTemplates(
+  organizationId: string,
+  templateIds: string[]
+): Promise<BulkDeleteResult> {
+  let orgSlug: string | undefined;
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+    orgSlug = access.orgSlug;
+
+    // Only owners and admins can bulk delete
+    if (!["owner", "admin"].includes(access.role)) {
+      return {
+        success: false,
+        error: "Only owners and admins can delete templates",
+      };
+    }
+
+    if (templateIds.length === 0) {
+      return { success: false, error: "No templates selected" };
+    }
+
+    // Delete templates
+    await db
+      .delete(template)
+      .where(
+        and(
+          eq(template.organizationId, organizationId),
+          inArray(template.id, templateIds)
+        )
+      );
+
+    // Revalidate
+    revalidateTemplates(orgSlug);
+
+    return { success: true, count: templateIds.length };
+  } catch (error) {
+    const log = createActionLogger("bulkDeleteTemplates", { orgSlug });
+    log.error(
+      { err: serializeError(error), count: templateIds.length },
+      "Failed to bulk delete templates"
+    );
+    return { success: false, error: "Failed to delete templates" };
+  }
+}
+
+/**
+ * Bulk update template email type (marketing/transactional)
+ */
+export async function bulkUpdateTemplateType(
+  organizationId: string,
+  templateIds: string[],
+  emailType: EmailType
+): Promise<BulkUpdateTypeResult> {
+  let orgSlug: string | undefined;
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+    orgSlug = access.orgSlug;
+
+    if (templateIds.length === 0) {
+      return { success: false, error: "No templates selected" };
+    }
+
+    // Validate email type
+    if (!["marketing", "transactional"].includes(emailType)) {
+      return { success: false, error: "Invalid email type" };
+    }
+
+    // Update templates
+    await db
+      .update(template)
+      .set({
+        emailType,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(template.organizationId, organizationId),
+          inArray(template.id, templateIds)
+        )
+      );
+
+    // Revalidate
+    revalidateTemplates(orgSlug);
+
+    return { success: true, count: templateIds.length };
+  } catch (error) {
+    const log = createActionLogger("bulkUpdateTemplateType", { orgSlug });
+    log.error(
+      { err: serializeError(error), count: templateIds.length, emailType },
+      "Failed to bulk update template type"
+    );
+    return { success: false, error: "Failed to update templates" };
+  }
+}
+
+/**
+ * Bulk update template status (DRAFT/PUBLISHED/ARCHIVED)
+ *
+ * When status = "PUBLISHED", templates are also published to AWS SES.
+ * Templates without subjects are skipped for SES publishing.
+ */
+export async function bulkUpdateTemplateStatus(
+  organizationId: string,
+  templateIds: string[],
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
+): Promise<BulkUpdateStatusResult> {
+  let orgSlug: string | undefined;
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+    orgSlug = access.orgSlug;
+
+    if (templateIds.length === 0) {
+      return {
+        success: false,
+        error: "No templates selected",
+      };
+    }
+
+    // Validate status
+    if (!["DRAFT", "PUBLISHED", "ARCHIVED"].includes(status)) {
+      return { success: false, error: "Invalid status" };
+    }
+
+    // For DRAFT or ARCHIVED, just update the status
+    if (status !== "PUBLISHED") {
+      await db
+        .update(template)
+        .set({
+          status,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(template.organizationId, organizationId),
+            inArray(template.id, templateIds)
+          )
+        );
+
+      revalidateTemplates(orgSlug);
+
+      return {
+        success: true,
+        updated: templateIds.length,
+        published: 0,
+        skipped: [],
+        errors: [],
+      };
+    }
+
+    // For PUBLISHED, we need to publish each template to SES
+    // Fetch all templates to check for subjects
+    const templates = await db.query.template.findMany({
+      where: and(
+        eq(template.organizationId, organizationId),
+        inArray(template.id, templateIds)
+      ),
+    });
+
+    // Separate templates with and without subjects
+    const templatesWithSubject = templates.filter((t) => !!t.subject);
+    const templatesWithoutSubject = templates.filter((t) => !t.subject);
+    const skipped = templatesWithoutSubject.map((t) => t.name);
+
+    // Update status to PUBLISHED for templates without subjects (they still get the status)
+    if (templatesWithoutSubject.length > 0) {
+      await db
+        .update(template)
+        .set({
+          status: "PUBLISHED",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(template.organizationId, organizationId),
+            inArray(
+              template.id,
+              templatesWithoutSubject.map((t) => t.id)
+            )
+          )
+        );
+    }
+
+    // Publish templates with subjects to SES
+    const publishResults = await Promise.allSettled(
+      templatesWithSubject.map((t) => publishTemplateToSES(t.id, organizationId))
+    );
+
+    // Collect results
+    const errors: string[] = [];
+    let publishedCount = 0;
+
+    for (let i = 0; i < publishResults.length; i++) {
+      const result = publishResults[i];
+      const templateName = templatesWithSubject[i].name;
+
+      if (result.status === "rejected") {
+        errors.push(templateName);
+      } else if (!result.value.success) {
+        errors.push(templateName);
+      } else {
+        publishedCount++;
+      }
+    }
+
+    revalidateTemplates(orgSlug);
+
+    return {
+      success: true,
+      updated: templates.length,
+      published: publishedCount,
+      skipped,
+      errors,
+    };
+  } catch (error) {
+    const log = createActionLogger("bulkUpdateTemplateStatus", { orgSlug });
+    log.error(
+      { err: serializeError(error), count: templateIds.length, status },
+      "Failed to bulk update template status"
+    );
+    return { success: false, error: "Failed to update templates" };
   }
 }

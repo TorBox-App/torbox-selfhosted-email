@@ -1,11 +1,13 @@
 "use client";
 
-import type { Template } from "@wraps/db";
+import type { EmailType, Template } from "@wraps/db";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  CheckSquare,
   Cloud,
   CloudOff,
   Copy,
@@ -17,17 +19,32 @@ import {
   Plus,
   Search,
   Send,
+  Tags,
   Trash2,
   Workflow,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import {
+  bulkDeleteTemplates,
+  bulkUpdateTemplateStatus,
+  bulkUpdateTemplateType,
+} from "@/actions/templates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -38,6 +55,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -54,6 +78,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  templateKeys,
   useDeleteTemplate,
   useDuplicateTemplate,
   usePublishTemplate,
@@ -63,6 +88,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type TemplatesListProps = {
+  organizationId: string;
   orgSlug: string;
 };
 
@@ -109,8 +135,14 @@ type SortState = {
   direction: SortDirection;
 };
 
-export function TemplatesList({ orgSlug }: TemplatesListProps) {
+export function TemplatesList({
+  organizationId,
+  orgSlug,
+}: TemplatesListProps) {
   const { data: templates, isLoading } = useTemplates(orgSlug);
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   // Search, filter, and sort state
   const [searchQuery, setSearchQuery] = useState("");
@@ -119,6 +151,119 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
     column: "updated",
     direction: "desc",
   });
+
+  // Row selection state
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+
+  // Dialog state
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkTypeDialogOpen, setBulkTypeDialogOpen] = useState(false);
+  const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
+  const [selectedType, setSelectedType] = useState<EmailType>("marketing");
+  const [selectedStatus, setSelectedStatus] = useState<
+    "DRAFT" | "PUBLISHED" | "ARCHIVED"
+  >("DRAFT");
+
+  // Get selected template IDs
+  const selectedTemplateIds = useMemo(
+    () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
+    [rowSelection]
+  );
+
+  // Toggle selection for a single template
+  const toggleRowSelection = (templateId: string) => {
+    setRowSelection((prev) => ({
+      ...prev,
+      [templateId]: !prev[templateId],
+    }));
+  };
+
+  // Bulk action handlers
+  const handleBulkDelete = () => {
+    startTransition(async () => {
+      const result = await bulkDeleteTemplates(
+        organizationId,
+        selectedTemplateIds
+      );
+      if (result.success) {
+        toast.success("Templates deleted", {
+          description: `${result.count} template${result.count === 1 ? "" : "s"} deleted.`,
+        });
+        setBulkDeleteDialogOpen(false);
+        setRowSelection({});
+        queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
+        router.refresh();
+      } else {
+        toast.error("Error", { description: result.error });
+      }
+    });
+  };
+
+  const handleBulkTypeChange = () => {
+    startTransition(async () => {
+      const result = await bulkUpdateTemplateType(
+        organizationId,
+        selectedTemplateIds,
+        selectedType
+      );
+      if (result.success) {
+        toast.success("Templates updated", {
+          description: `${result.count} template${result.count === 1 ? "" : "s"} changed to ${selectedType}.`,
+        });
+        setBulkTypeDialogOpen(false);
+        setRowSelection({});
+        queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
+        router.refresh();
+      } else {
+        toast.error("Error", { description: result.error });
+      }
+    });
+  };
+
+  const handleBulkStatusChange = () => {
+    startTransition(async () => {
+      const result = await bulkUpdateTemplateStatus(
+        organizationId,
+        selectedTemplateIds,
+        selectedStatus
+      );
+      if (result.success) {
+        // Build descriptive toast messages
+        const parts: string[] = [];
+        parts.push(`${result.updated} template${result.updated === 1 ? "" : "s"} updated`);
+        if (result.published > 0) {
+          parts.push(`${result.published} published to SES`);
+        }
+
+        toast.success("Templates updated", {
+          description: parts.join(", "),
+        });
+
+        // Show skipped templates info
+        if (result.skipped.length > 0) {
+          toast.info("Some templates skipped", {
+            description: `${result.skipped.length} template${result.skipped.length === 1 ? "" : "s"} skipped (missing subject): ${result.skipped.slice(0, 3).join(", ")}${result.skipped.length > 3 ? "..." : ""}`,
+            duration: Number.POSITIVE_INFINITY,
+          });
+        }
+
+        // Show errors
+        if (result.errors.length > 0) {
+          toast.error("Failed to publish some templates", {
+            description: `Failed: ${result.errors.slice(0, 3).join(", ")}${result.errors.length > 3 ? "..." : ""}`,
+            duration: Number.POSITIVE_INFINITY,
+          });
+        }
+
+        setBulkStatusDialogOpen(false);
+        setRowSelection({});
+        queryClient.invalidateQueries({ queryKey: templateKeys.lists() });
+        router.refresh();
+      } else {
+        toast.error("Error", { description: result.error });
+      }
+    });
+  };
 
   const handleSort = (column: SortColumn) => {
     setSort((prev) => ({
@@ -241,6 +386,27 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
     return sorted;
   }, [templates, searchQuery, filters, sort]);
 
+  // Toggle all filtered templates
+  const toggleAllRows = () => {
+    const allSelected = filteredTemplates.every((t) => rowSelection[t.id]);
+    if (allSelected) {
+      setRowSelection({});
+    } else {
+      const newSelection: Record<string, boolean> = {};
+      for (const t of filteredTemplates) {
+        newSelection[t.id] = true;
+      }
+      setRowSelection(newSelection);
+    }
+  };
+
+  // Check if all filtered rows are selected
+  const allRowsSelected =
+    filteredTemplates.length > 0 &&
+    filteredTemplates.every((t) => rowSelection[t.id]);
+  const someRowsSelected =
+    filteredTemplates.some((t) => rowSelection[t.id]) && !allRowsSelected;
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -252,6 +418,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12" />
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
@@ -264,6 +431,9 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
               {[...new Array(5)].map((_, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton loading items
                 <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-4" />
+                  </TableCell>
                   <TableCell>
                     <Skeleton className="h-5 w-48" />
                   </TableCell>
@@ -417,6 +587,38 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
                 Clear
               </Button>
             )}
+
+            {/* Bulk Actions - shown when templates are selected */}
+            {selectedTemplateIds.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="h-9" size="sm" variant="outline">
+                    <Tags className="mr-2 h-4 w-4" />
+                    Actions ({selectedTemplateIds.length})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => setBulkTypeDialogOpen(true)}>
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    Change type
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setBulkStatusDialogOpen(true)}
+                  >
+                    <Cloud className="mr-2 h-4 w-4" />
+                    Change status
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => setBulkDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete templates
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {/* Create button */}
@@ -433,6 +635,13 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    aria-label="Select all"
+                    checked={allRowsSelected || (someRowsSelected && "indeterminate")}
+                    onCheckedChange={toggleAllRows}
+                  />
+                </TableHead>
                 <SortableHeader
                   column="name"
                   currentSort={sort}
@@ -476,7 +685,7 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
                 <TableRow>
                   <TableCell
                     className="h-32 text-center text-muted-foreground"
-                    colSpan={6}
+                    colSpan={7}
                   >
                     {hasActiveFilters
                       ? "No templates match your filters"
@@ -486,7 +695,9 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
               ) : (
                 filteredTemplates.map((template) => (
                   <TemplateRowWithPublish
+                    isSelected={!!rowSelection[template.id]}
                     key={template.id}
+                    onToggleSelect={() => toggleRowSelection(template.id)}
                     orgSlug={orgSlug}
                     template={template}
                   />
@@ -502,6 +713,126 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
             Showing {filteredTemplates.length} of {templates.length} templates
           </p>
         )}
+
+        {/* Bulk Delete Dialog */}
+        <Dialog
+          onOpenChange={setBulkDeleteDialogOpen}
+          open={bulkDeleteDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Templates</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete {selectedTemplateIds.length}{" "}
+                template{selectedTemplateIds.length === 1 ? "" : "s"}? This
+                action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                onClick={() => setBulkDeleteDialogOpen(false)}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={isPending}
+                onClick={handleBulkDelete}
+                variant="destructive"
+              >
+                {isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Type Change Dialog */}
+        <Dialog onOpenChange={setBulkTypeDialogOpen} open={bulkTypeDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Type</DialogTitle>
+              <DialogDescription>
+                Change the email type for {selectedTemplateIds.length} template
+                {selectedTemplateIds.length === 1 ? "" : "s"}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Select
+                onValueChange={(value) => setSelectedType(value as EmailType)}
+                value={selectedType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="marketing">Marketing</SelectItem>
+                  <SelectItem value="transactional">Transactional</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => setBulkTypeDialogOpen(false)}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button disabled={isPending} onClick={handleBulkTypeChange}>
+                {isPending ? "Updating..." : "Update"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Status Change Dialog */}
+        <Dialog
+          onOpenChange={setBulkStatusDialogOpen}
+          open={bulkStatusDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Status</DialogTitle>
+              <DialogDescription>
+                Change the status for {selectedTemplateIds.length} template
+                {selectedTemplateIds.length === 1 ? "" : "s"}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <Select
+                onValueChange={(value) =>
+                  setSelectedStatus(value as "DRAFT" | "PUBLISHED" | "ARCHIVED")
+                }
+                value={selectedStatus}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                  <SelectItem value="PUBLISHED">Published</SelectItem>
+                  <SelectItem value="ARCHIVED">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+              {selectedStatus === "PUBLISHED" && (
+                <p className="text-muted-foreground text-sm">
+                  Templates will also be published to AWS SES. Templates without
+                  subjects will be skipped.
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => setBulkStatusDialogOpen(false)}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button disabled={isPending} onClick={handleBulkStatusChange}>
+                {isPending ? "Updating..." : "Update"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
@@ -511,9 +842,13 @@ export function TemplatesList({ orgSlug }: TemplatesListProps) {
 function TemplateRowWithPublish({
   template,
   orgSlug,
+  isSelected,
+  onToggleSelect,
 }: {
   template: TemplateWithUsage;
   orgSlug: string;
+  isSelected: boolean;
+  onToggleSelect: () => void;
 }) {
   const router = useRouter();
   const publishMutation = usePublishTemplate(orgSlug, template.id);
@@ -561,9 +896,11 @@ function TemplateRowWithPublish({
   return (
     <TemplateRow
       isPublishing={publishMutation.isPending || unpublishMutation.isPending}
+      isSelected={isSelected}
       onDelete={handleDelete}
       onDuplicate={handleDuplicate}
       onPublish={handlePublish}
+      onToggleSelect={onToggleSelect}
       onUnpublish={handleUnpublish}
       orgSlug={orgSlug}
       template={template}
@@ -579,6 +916,8 @@ type TemplateRowProps = {
   onPublish: () => void;
   onUnpublish: () => void;
   isPublishing?: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
 };
 
 function TemplateRow({
@@ -589,6 +928,8 @@ function TemplateRow({
   onPublish,
   onUnpublish,
   isPublishing,
+  isSelected,
+  onToggleSelect,
 }: TemplateRowProps) {
   const hasSubject = !!template.subject;
   const isPublished = template.status === "PUBLISHED";
@@ -598,7 +939,16 @@ function TemplateRow({
   const hasUsage = template.broadcastCount > 0 || template.automationCount > 0;
 
   return (
-    <TableRow className="group">
+    <TableRow className="group" data-state={isSelected && "selected"}>
+      {/* Selection checkbox */}
+      <TableCell>
+        <Checkbox
+          aria-label="Select row"
+          checked={isSelected}
+          onClick={(e) => e.stopPropagation()}
+          onCheckedChange={onToggleSelect}
+        />
+      </TableCell>
       {/* Name */}
       <TableCell>
         <div className="flex flex-col">
