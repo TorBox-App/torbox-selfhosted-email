@@ -91,6 +91,10 @@ export async function templatesPush(options: TemplatesPushOptions) {
   const lockfilePath = join(wrapsDir, ".wraps", "lockfile.json");
   const lockfile = await loadLockfile(lockfilePath);
 
+  // Fetch remote template slugs to detect deletions
+  const token = await resolveTokenAsync({ token: options.token });
+  const remoteTemplateSlugs = await fetchRemoteTemplateSlugs(token, progress);
+
   // Compile templates
   const compiled: CompiledTemplate[] = [];
   const unchanged: string[] = [];
@@ -104,7 +108,11 @@ export async function templatesPush(options: TemplatesPushOptions) {
 
     // Check lockfile for change detection
     // --force bypasses both local change detection AND dashboard conflict detection
-    if (!options.force && lockfile.templates[slug]?.localHash === sourceHash) {
+    // Also check if template exists remotely - if deleted from dashboard, re-push it
+    const localHashMatches = lockfile.templates[slug]?.localHash === sourceHash;
+    const existsRemotely = remoteTemplateSlugs === null || remoteTemplateSlugs.has(slug);
+
+    if (!options.force && localHashMatches && existsRemotely) {
       unchanged.push(slug);
       continue;
     }
@@ -187,8 +195,7 @@ export async function templatesPush(options: TemplatesPushOptions) {
   // Push to SES
   await pushToSES(compiled, progress);
 
-  // Push to API
-  const token = await resolveTokenAsync({ token: options.token });
+  // Push to API (token already resolved above)
   const apiResults = await pushToAPI(compiled, token, config.org, progress, options.force);
 
   // Update lockfile
@@ -466,6 +473,43 @@ async function pushToSES(
   }
 
   return results;
+}
+
+// ── API Remote Check ──
+
+async function fetchRemoteTemplateSlugs(
+  token: string | null,
+  progress: DeploymentProgress
+): Promise<Set<string> | null> {
+  if (!token) {
+    // No token = can't check remote, assume all exist (fall back to local-only detection)
+    return null;
+  }
+
+  const apiBase = process.env.WRAPS_API_URL || "https://api.wraps.dev";
+
+  try {
+    // Use the existing /pull endpoint which returns CLI-pushed templates
+    const resp = await fetch(`${apiBase}/v1/templates/pull`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!resp.ok) {
+      // API error = can't check remote, fall back to local-only detection
+      progress.info("Could not check remote templates — using local change detection only");
+      return null;
+    }
+
+    const data = (await resp.json()) as { templates: Array<{ slug: string }> };
+    return new Set(data.templates.map((t) => t.slug));
+  } catch {
+    // Network error = can't check remote, fall back to local-only detection
+    progress.info("Could not check remote templates — using local change detection only");
+    return null;
+  }
 }
 
 // ── API Push ──
