@@ -30,7 +30,7 @@
     "@elysiajs/cors": "^1.4.1",
     "@elysiajs/openapi": "^1.4.1",
     "@elysiajs/swagger": "^1.3.1",
-    "@react-email/render": "2.0.0",
+    "@react-email/render": "2.0.4",
     "@wraps/auth": "workspace:*",
     "@wraps/db": "workspace:*",
     "@wraps/email": "workspace:*",

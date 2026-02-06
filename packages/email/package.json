@@ -24,7 +24,7 @@
     "@aws-sdk/client-ses": "^3.490.0",
     "@aws-sdk/client-sesv2": "^3.490.0",
     "@aws-sdk/client-sts": "^3.927.0",
-    "@react-email/render": "2.0.0",
+    "@react-email/render": "2.0.4",
     "@vercel/oidc-aws-credentials-provider": "3.0.4",
     "@wraps.dev/email": "^0.5.1",
     "@wraps/db": "workspace:*",

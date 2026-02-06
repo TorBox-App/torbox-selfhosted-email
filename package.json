@@ -27,12 +27,13 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.4",
-    "@react-email/preview-server": "5.2.7",
+    "@react-email/preview-server": "4.3.2",
     "@types/aws-lambda": "8.10.157",
     "@types/node": "24.10.0",
     "dotenv": "catalog:",
     "dotenv-cli": "11.0.0",
     "pnpm": "10.28.2",
+    "react-email": "4.3.2",
     "sst": "3.17.25",
     "turbo": "^2.2.3",
     "ultracite": "6.3.2"
