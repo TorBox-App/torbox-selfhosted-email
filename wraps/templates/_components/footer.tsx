@@ -6,34 +6,14 @@ type FooterProps = {
 
 export function Footer({ unsubscribeUrl }: FooterProps) {
   return (
-    <Section style={footer}>
-      <Hr style={divider} />
-      <Text style={footerText}>Wraps &bull; San Francisco, CA</Text>
-      <Link href={unsubscribeUrl} style={unsubscribeLink}>
+    <Section className="px-10 py-5 text-center">
+      <Hr className="mb-5 border-gray-200" />
+      <Text className="m-0 mb-2 text-xs text-gray-400">
+        Wraps &bull; San Francisco, CA
+      </Text>
+      <Link href={unsubscribeUrl} className="text-xs text-gray-400 underline">
         Unsubscribe
       </Link>
     </Section>
   );
 }
-
-const footer = {
-  padding: "20px 40px",
-  textAlign: "center" as const,
-};
-
-const divider = {
-  borderColor: "#e5e7eb",
-  margin: "0 0 20px",
-};
-
-const footerText = {
-  fontSize: "12px",
-  color: "#9ca3af",
-  margin: "0 0 8px",
-};
-
-const unsubscribeLink = {
-  fontSize: "12px",
-  color: "#9ca3af",
-  textDecoration: "underline",
-};
