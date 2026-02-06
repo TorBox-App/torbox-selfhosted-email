@@ -51,8 +51,8 @@ upload_template() {
   echo "✓ Uploaded ${S3_KEY}"
 }
 
-upload_template "apps/web/public/cloudformation/wraps-console-access-role.yaml" "cloudformation/wraps-console-access-role.yaml"
-upload_template "apps/web/public/cloudformation/wraps-email-infrastructure.yaml" "cloudformation/wraps-email-infrastructure.yaml"
+upload_template "cloudformation/wraps-console-access-role.yaml" "cloudformation/wraps-console-access-role.yaml"
+upload_template "cloudformation/wraps-email-infrastructure.yaml" "cloudformation/wraps-email-infrastructure.yaml"
 
 # Create bucket policy for public read access
 echo ""
