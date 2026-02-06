@@ -1,9 +1,14 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import {
+  discoverTemplates,
+  findCliNodeModules,
+  loadWrapsConfig,
+} from "../../../utils/email/template-compiler.js";
 import { resolveTokenAsync } from "../../../utils/shared/config.js";
 import { errors } from "../../../utils/shared/errors.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
@@ -236,77 +241,8 @@ export async function templatesPush(options: TemplatesPushOptions) {
   }
 }
 
-// ── Config Loading ──
-
-interface WrapsConfig {
-  org: string;
-  from?: { email: string; name?: string };
-  region?: string;
-  templatesDir?: string;
-}
-
-async function loadWrapsConfig(wrapsDir: string): Promise<WrapsConfig> {
-  const configPath = join(wrapsDir, "wraps.config.ts");
-  const { build } = await import("esbuild");
-
-  // Create a shim for @wraps.dev/email so esbuild can resolve it
-  // defineConfig and defineBrand are identity functions — no need for the real package
-  const shimDir = join(wrapsDir, ".wraps", "_shims");
-  await mkdir(shimDir, { recursive: true });
-  await writeFile(
-    join(shimDir, "wraps-email-shim.mjs"),
-    "export const defineConfig = (c) => c;\nexport const defineBrand = (b) => b;\n",
-    "utf-8"
-  );
-
-  const result = await build({
-    entryPoints: [configPath],
-    bundle: true,
-    write: false,
-    format: "esm",
-    platform: "node",
-    target: "node20",
-    alias: {
-      "@wraps.dev/email": join(shimDir, "wraps-email-shim.mjs"),
-    },
-  });
-
-  const code = result.outputFiles[0].text;
-  // Write to temp file for dynamic import
-  const tmpPath = join(wrapsDir, ".wraps", "_config.mjs");
-  await writeFile(tmpPath, code, "utf-8");
-
-  const mod = await import(tmpPath);
-  const config = mod.default;
-
-  if (!config?.org) {
-    throw errors.wrapsConfigNotFound();
-  }
-
-  return config as WrapsConfig;
-}
-
-// ── Template Discovery ──
-
-async function discoverTemplates(
-  dir: string,
-  filter?: string
-): Promise<string[]> {
-  const entries = await readdir(dir);
-  const templates = entries.filter(
-    (f) =>
-      (f.endsWith(".tsx") || f.endsWith(".ts")) &&
-      !f.startsWith("_") &&
-      !f.endsWith(".d.ts")
-  );
-
-  if (filter) {
-    const slug = filter.replace(/\.tsx?$/, "");
-    return templates.filter((f) => f.replace(/\.tsx?$/, "") === slug);
-  }
-
-  return templates;
-}
+// ── Config Loading & Template Discovery ──
+// Imported from ../../../utils/email/template-compiler.js
 
 // ── Template Compilation ──
 
@@ -711,39 +647,4 @@ function sha256(content: string): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
-/**
- * Find node_modules directories that contain react and @react-email packages.
- * Needed because pnpm's strict node_modules layout doesn't hoist packages.
- */
-async function findCliNodeModules(): Promise<string[]> {
-  const paths: string[] = [];
-
-  // Try to find react via require.resolve from the CLI's package context
-  try {
-    const { createRequire } = await import("node:module");
-    // Use the CLI's dist directory as resolve base
-    const { dirname } = await import("node:path");
-
-    // Try multiple resolution strategies
-    for (const base of [
-      // The current file's location (works when running from source)
-      import.meta.url,
-      // Process entry point (works when running bundled CLI)
-      `file://${process.argv[1]}`,
-    ]) {
-      try {
-        const req = createRequire(base);
-        const reactPkg = req.resolve("react/package.json");
-        const reactNodeModules = join(dirname(reactPkg), "..");
-        if (existsSync(join(reactNodeModules, "react"))) {
-          paths.push(reactNodeModules);
-          break;
-        }
-      } catch {}
-    }
-  } catch {
-    // Fallback: search up from cwd
-  }
-
-  return paths;
-}
+// findCliNodeModules imported from ../../../utils/email/template-compiler.js

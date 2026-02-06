@@ -42,6 +42,7 @@ import { restore } from "./commands/email/restore.js";
 import { emailStatus } from "./commands/email/status.js";
 // Email commands
 import { templatesInit } from "./commands/email/templates/init.js";
+import { templatesPreview } from "./commands/email/templates/preview.js";
 import { templatesPush } from "./commands/email/templates/push.js";
 import { upgrade } from "./commands/email/upgrade.js";
 // Info commands
@@ -171,6 +172,9 @@ function showHelp() {
   );
   console.log(
     `  ${pc.cyan("email templates push")}  Push templates to SES + dashboard`
+  );
+  console.log(
+    `  ${pc.cyan("email templates preview")} Preview templates in browser`
   );
   console.log(
     `  ${pc.cyan("push")}                  ${pc.dim("(alias for email templates push)")}\n`
@@ -878,12 +882,20 @@ async function run() {
               });
               break;
 
+            case "preview":
+              await templatesPreview({
+                port: flags.port,
+                template: flags.template,
+                noOpen: flags.noOpen,
+              });
+              break;
+
             default:
               clack.log.error(
                 `Unknown templates command: ${templatesSubCommand || "(none)"}`
               );
               console.log(
-                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("push")}\n`
+                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("push")}, ${pc.cyan("preview")}\n`
               );
               throw new Error(
                 `Unknown templates command: ${templatesSubCommand || "(none)"}`
