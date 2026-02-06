@@ -37,6 +37,7 @@ import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, sql } from "drizzle-orm";
 import Handlebars from "handlebars";
 
+import { trackFirstEmailSent } from "../../lib/activation-tracking";
 import { generateUnsubscribeToken } from "../../lib/unsubscribe-token";
 
 import { getCredentials } from "../../services/credentials";
@@ -928,6 +929,12 @@ async function handleSendEmail(
     messageId,
     status: "sent",
     sentAt: new Date(),
+  });
+
+  // Track first email sent (fire-and-forget)
+  trackFirstEmailSent(organizationId, {
+    channel: "email",
+    source: "workflow",
   });
 
   // Update contact email metrics

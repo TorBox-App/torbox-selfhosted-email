@@ -61,6 +61,8 @@ batchQueue.subscribe(
           : (process.env.APP_BASE_URL ?? "https://app.wraps.dev"),
       // Secret for signing unsubscribe tokens (must match API and web)
       UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+      // PostHog for activation tracking
+      POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
     },
     nodejs: {
       install: ["pg"], // PostgreSQL driver for Drizzle
@@ -146,6 +148,8 @@ workflowQueue.subscribe(
           : (process.env.APP_BASE_URL ?? "https://app.wraps.dev"),
       // Secret for signing unsubscribe tokens (must match API and web)
       UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
+      // PostHog for activation tracking
+      POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
     },
     nodejs: {
       install: ["pg"], // PostgreSQL driver for Drizzle

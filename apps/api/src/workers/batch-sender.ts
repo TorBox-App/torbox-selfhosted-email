@@ -28,6 +28,7 @@ import {
 import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, exists, isNotNull, sql } from "drizzle-orm";
 
+import { trackFirstEmailSent } from "../lib/activation-tracking";
 import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 import { getCredentials } from "../services/credentials";
 import type { BatchJob } from "../services/queue";
@@ -574,6 +575,14 @@ async function processJob(job: BatchJob): Promise<void> {
         await db.insert(messageSend).values(sendRecords);
       }
     }
+  }
+
+  // Track first email sent (fire-and-forget)
+  if (sent > 0) {
+    trackFirstEmailSent(organizationId, {
+      channel: "email",
+      source: "broadcast",
+    });
   }
 
   // Update batch progress

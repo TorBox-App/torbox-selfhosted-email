@@ -29,6 +29,10 @@ import {
   connectAWSAccountFormOpts,
   connectAWSAccountSchema,
 } from "@/lib/forms/connect-aws-account";
+import {
+  trackAwsConnected,
+  trackDomainVerified,
+} from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { grantAWSAccountAccess } from "@/lib/permissions/grant-access";
 import { canAddAwsAccount, getAwsAccountLimitMessage } from "@/lib/plans";
@@ -294,6 +298,12 @@ export async function connectAWSAccountAction(
       { accountId: account.id, awsAccountId: validatedData.accountId },
       "AWS account connected"
     );
+
+    // Fire-and-forget activation tracking
+    trackAwsConnected(session.user.id, validatedData.organizationId, {
+      region: validatedData.region,
+      accountId: validatedData.accountId,
+    });
 
     return {
       success: true,
@@ -778,7 +788,29 @@ export async function scanAWSAccountFeatures(
       })
       .where(eq(awsAccount.id, awsAccountId));
 
-    // 17. Revalidate pages (layout will re-fetch products status)
+    // 17. Track domain verification if new verified domains were discovered
+    const previousIdentities = account.features?.email?.identities ?? [];
+    const previousDomains = new Set(
+      previousIdentities
+        .filter((i) => i.type === "DOMAIN")
+        .map((i) => i.identity)
+    );
+    const newDomains = identities.filter(
+      (i) => i.type === "DOMAIN" && !previousDomains.has(i.identity)
+    );
+    if (newDomains.length > 0) {
+      const isFirstDomain = previousDomains.size === 0;
+      for (const domain of newDomains) {
+        trackDomainVerified(session.user.id, organizationId, {
+          domain: domain.identity,
+          isFirstDomain,
+        });
+        // Only the first new domain can be the org's first domain
+        break;
+      }
+    }
+
+    // 18. Revalidate pages (layout will re-fetch products status)
     const orgSlug = membership.organization.slug;
     revalidatePath(`/${orgSlug}/settings/aws-accounts/${awsAccountId}`);
     revalidatePath(`/${orgSlug}/settings`);

@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { trackAwsConnected } from "@/lib/activation-tracking";
 import { assumeRole } from "@/lib/aws/assume-role";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -104,6 +105,12 @@ export async function POST(request: Request, context: RouteContext) {
           createdBy: session.user.id,
         });
       }
+
+      // Fire-and-forget activation tracking
+      trackAwsConnected(session.user.id, orgWithMembership.id, {
+        region: "us-east-1",
+        accountId,
+      });
 
       return NextResponse.json({
         success: true,

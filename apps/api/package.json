@@ -40,7 +40,8 @@
     "elysia": "^1.4.19",
     "handlebars": "4.7.8",
     "jose": "6.1.3",
-    "pg": "^8.16.2"
+    "pg": "^8.16.2",
+    "posthog-node": "^5.24.1"
   },
   "devDependencies": {
     "@aws-sdk/credential-providers": "3.962.0",
