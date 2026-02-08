@@ -8,13 +8,26 @@ import { stripeClient } from "./index";
 
 // PostHog client for subscription tracking (lazy singleton)
 let posthogClient: PostHog | null = null;
+
+// Get PostHog host URL for server-side usage
+// The NEXT_PUBLIC_POSTHOG_HOST may be set to "/ingest" for client-side proxy,
+// but server-side needs the full URL
+function getPostHogHost(): string {
+  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+  // If host is a relative path (starts with /), use the full PostHog URL
+  if (!host || host.startsWith("/")) {
+    return "https://us.i.posthog.com";
+  }
+  return host;
+}
+
 function getPostHogClient(): PostHog | null {
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     return null;
   }
   if (!posthogClient) {
     posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-      host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+      host: getPostHogHost(),
       flushAt: 1,
       flushInterval: 0,
     });
