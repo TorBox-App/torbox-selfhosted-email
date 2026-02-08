@@ -42,11 +42,13 @@ function capturePostHog(
 /**
  * Emit a subscription lifecycle event to the Platform API.
  * This allows workflows to be triggered for subscription changes.
+ * Auto-creates the contact if it doesn't exist.
  */
 export async function emitSubscriptionEvent(
   eventName: string,
   adminEmail: string,
-  properties: Record<string, unknown>
+  properties: Record<string, unknown>,
+  adminName?: string | null
 ): Promise<boolean> {
   try {
     const apiKey = process.env.WRAPS_API_KEY;
@@ -58,11 +60,13 @@ export async function emitSubscriptionEvent(
     const client = createPlatformClient({ apiKey });
     const normalizedEmail = adminEmail.toLowerCase().trim();
 
-    // Emit the subscription event
-    const { error } = await client.POST("/v1/events/", {
+    // Emit the subscription event, auto-creating contact if missing
+    const { data, error } = await client.POST("/v1/events/", {
       body: {
         name: eventName,
         contactEmail: normalizedEmail,
+        contactName: adminName || undefined,
+        createIfMissing: true,
         properties,
       },
     });
@@ -72,6 +76,9 @@ export async function emitSubscriptionEvent(
       return false;
     }
 
+    if (data?.contactCreated) {
+      console.log(`Created contact for ${normalizedEmail}`);
+    }
     console.log(`Emitted ${eventName} event for ${normalizedEmail}`);
     return true;
   } catch (err) {
@@ -333,7 +340,8 @@ export async function handleCheckoutCompleted(
         amount: `${currency} ${amount}`,
         annual: isAnnual,
         activatedAt: new Date().toISOString(),
-      }
+      },
+      admin.user.name
     );
     if (emitted) {
       eventsEmitted++;
@@ -406,7 +414,8 @@ export async function handleSubscriptionDeleted(
         plan: sub.plan,
         cancelReason,
         canceledAt: new Date().toISOString(),
-      }
+      },
+      admin.user.name
     );
     if (emitted) {
       eventsEmitted++;
@@ -496,14 +505,19 @@ export async function handleSubscriptionUpdated(
       continue;
     }
 
-    const emitted = await emitSubscriptionEvent(eventName, admin.user.email, {
-      organizationId: org.id,
-      organizationName: org.name,
-      previousPlan,
-      newPlan: sub.plan,
-      changeType,
-      changedAt: new Date().toISOString(),
-    });
+    const emitted = await emitSubscriptionEvent(
+      eventName,
+      admin.user.email,
+      {
+        organizationId: org.id,
+        organizationName: org.name,
+        previousPlan,
+        newPlan: sub.plan,
+        changeType,
+        changedAt: new Date().toISOString(),
+      },
+      admin.user.name
+    );
     if (emitted) {
       eventsEmitted++;
     }

@@ -77,7 +77,12 @@ describe("emitSubscriptionEvent", () => {
   });
 
   it("should emit event successfully when API key is configured", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     const result = await emitSubscriptionEvent(
@@ -91,13 +96,20 @@ describe("emitSubscriptionEvent", () => {
       body: {
         name: "subscription.activated",
         contactEmail: "admin@example.com",
+        contactName: undefined,
+        createIfMissing: true,
         properties: { plan: "pro", organizationName: "Test Org" },
       },
     });
   });
 
   it("should normalize email to lowercase", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     await emitSubscriptionEvent(
@@ -110,6 +122,8 @@ describe("emitSubscriptionEvent", () => {
       body: {
         name: "subscription.activated",
         contactEmail: "admin@example.com",
+        contactName: undefined,
+        createIfMissing: true,
         properties: {},
       },
     });
@@ -353,7 +367,12 @@ describe("handleCheckoutCompleted", () => {
   };
 
   it("should emit subscription.activated event for each admin", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
@@ -382,6 +401,9 @@ describe("handleCheckoutCompleted", () => {
     expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
       body: expect.objectContaining({
         name: "subscription.activated",
+        contactEmail: "owner@example.com",
+        contactName: "Owner",
+        createIfMissing: true,
         properties: expect.objectContaining({
           plan: "pro",
           amount: "USD 29.00",
@@ -402,7 +424,12 @@ describe("handleCheckoutCompleted", () => {
   });
 
   it("should set annual=true when Stripe subscription has yearly interval", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     // Mock Stripe subscription with yearly interval
@@ -451,7 +478,12 @@ describe("handleCheckoutCompleted", () => {
   });
 
   it("should set annual=false when Stripe subscription has monthly interval", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     // Mock Stripe subscription with monthly interval (already default in beforeEach)
@@ -497,7 +529,12 @@ describe("handleCheckoutCompleted", () => {
   });
 
   it("should always update annual flag from Stripe subscription (handles timing issues)", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     // Mock Stripe subscription with yearly interval
@@ -622,7 +659,12 @@ describe("handleSubscriptionDeleted", () => {
   };
 
   it("should emit subscription.canceled event for each admin", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
@@ -661,7 +703,12 @@ describe("handleSubscriptionDeleted", () => {
   });
 
   it("should use 'unknown' as cancel reason when not provided", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
@@ -718,7 +765,12 @@ describe("handleSubscriptionUpdated", () => {
   });
 
   it("should emit subscription.upgraded event when price increases", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     vi.mocked(db.query.subscription.findFirst).mockResolvedValue({
@@ -770,7 +822,12 @@ describe("handleSubscriptionUpdated", () => {
   });
 
   it("should emit subscription.downgraded event when price decreases", async () => {
-    const mockPost = vi.fn(() => Promise.resolve({ error: null }));
+    const mockPost = vi.fn(() =>
+      Promise.resolve({
+        data: { success: true, contactCreated: false, workflowsTriggered: 0, executionsResumed: 0 },
+        error: null,
+      })
+    );
     vi.mocked(createPlatformClient).mockReturnValue({ POST: mockPost } as any);
 
     vi.mocked(db.query.subscription.findFirst).mockResolvedValue({

@@ -13,6 +13,7 @@
  * Soft cap with 25% grace period (blocks at 125% of limit).
  */
 
+import { createHash } from "node:crypto";
 import {
   contact,
   contactEvent,
@@ -23,6 +24,11 @@ import {
 } from "@wraps/db";
 import { and, inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
+
+// Hash email for deduplication
+function hashEmail(email: string): string {
+  return createHash("sha256").update(email.toLowerCase().trim()).digest("hex");
+}
 
 import {
   type AuthContext,
@@ -67,10 +73,18 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
     async (ctx) => {
       const { body } = ctx;
       const auth = (ctx as unknown as { auth: AuthContext }).auth;
-      const { name, contactId, contactEmail, properties } = body;
+      const {
+        name,
+        contactId,
+        contactEmail,
+        contactName,
+        createIfMissing,
+        properties,
+      } = body;
 
       // Find the contact
       let contactRecord: typeof contact.$inferSelect | undefined;
+      let contactCreated = false;
 
       if (contactId) {
         const [c] = await db
@@ -98,9 +112,28 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
         contactRecord = c;
       }
 
+      // Auto-create contact if missing and flag is set
+      if (!contactRecord && createIfMissing && contactEmail) {
+        const normalizedEmail = contactEmail.toLowerCase().trim();
+        const [newContact] = await db
+          .insert(contact)
+          .values({
+            organizationId: auth.organizationId,
+            email: normalizedEmail,
+            emailHash: hashEmail(normalizedEmail),
+            emailStatus: "active",
+            firstName: contactName || null,
+            properties: {},
+          })
+          .returning();
+        contactRecord = newContact;
+        contactCreated = true;
+      }
+
       if (!contactRecord) {
+        ctx.set.status = 400;
         return {
-          success: false,
+          success: false as const,
           error: "Contact not found",
         };
       }
@@ -183,6 +216,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
 
       return {
         success: true,
+        contactCreated,
         ...results,
       };
     },
@@ -201,11 +235,28 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
             maxLength: 255,
           })
         ),
+        contactName: t.Optional(
+          t.String({
+            description:
+              "Contact name (used when createIfMissing is true to set firstName)",
+            maxLength: 100,
+          })
+        ),
+        createIfMissing: t.Optional(
+          t.Boolean({
+            description:
+              "If true and contact doesn't exist, create a new contact with the provided email",
+            default: false,
+          })
+        ),
         properties: propertiesSchema,
       }),
       response: {
         200: t.Object({
           success: t.Boolean(),
+          contactCreated: t.Boolean({
+            description: "Whether a new contact was created",
+          }),
           workflowsTriggered: t.Number({
             description: "Number of workflows triggered",
           }),
