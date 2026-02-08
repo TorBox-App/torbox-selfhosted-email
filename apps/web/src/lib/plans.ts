@@ -88,10 +88,8 @@ export type PlanConfig = {
   cta: string;
 };
 
-// Early adopter pricing is active until we reach 50 customers
-// After that, prices return to normal (and SMS features will be added)
-// TODO: Move to database to auto-disable at 50 customers
-export const EARLY_ADOPTER_ACTIVE = true;
+// Early adopter pricing was a launch promotion - now disabled
+export const EARLY_ADOPTER_ACTIVE = false;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PLAN DEFINITIONS
