@@ -1,5 +1,6 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../telemetry/events.js";
 import type { DestroyOptions } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -12,6 +13,7 @@ import { emailDestroy } from "../email/destroy.js";
  * Global Destroy command - Show services and route to service-specific destroy
  */
 export async function destroy(options: DestroyOptions): Promise<void> {
+  trackCommand("destroy", { success: true });
   clack.intro(pc.bold("Wraps Infrastructure Teardown"));
 
   // 1. Validate AWS credentials

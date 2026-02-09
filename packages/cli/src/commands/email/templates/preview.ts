@@ -4,6 +4,7 @@ import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import type { Express } from "express";
 import pc from "picocolors";
+import { trackCommand } from "../../../telemetry/events.js";
 import {
   compileForPreview,
   discoverTemplates,
@@ -189,6 +190,12 @@ export async function templatesPreview(options: TemplatesPreviewOptions) {
 
   const server = app.listen(port, () => {
     const url = `http://localhost:${port}`;
+
+    trackCommand("email:templates:preview", {
+      success: true,
+      template_count: templateFiles.length,
+    });
+
     clack.log.success(`Preview server running at ${pc.cyan(url)}`);
 
     if (options.template) {

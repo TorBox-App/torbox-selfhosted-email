@@ -5,11 +5,13 @@
 
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../telemetry/events.js";
 
 /**
  * Display support contact information and helpful links
  */
 export async function support(): Promise<void> {
+  trackCommand("support", { success: true });
   clack.intro(pc.bold("Get Help with Wraps"));
 
   console.log();

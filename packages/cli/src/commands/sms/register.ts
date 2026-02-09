@@ -1,5 +1,6 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../telemetry/events.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -77,6 +78,7 @@ async function getRegistrationStatus(
  * SMS Register command - Help register toll-free numbers
  */
 export async function smsRegister(options: SMSRegisterOptions): Promise<void> {
+  const startTime = Date.now();
   clack.intro(pc.bold("Wraps SMS - Toll-Free Registration"));
 
   const progress = new DeploymentProgress();
@@ -231,6 +233,11 @@ export async function smsRegister(options: SMSRegisterOptions): Promise<void> {
     console.log("When you're ready, go to:");
     console.log(`  ${pc.cyan(consoleUrl)}`);
   }
+
+  trackCommand("sms:register", {
+    success: true,
+    duration_ms: Date.now() - startTime,
+  });
 
   clack.outro(pc.dim("Good luck with your registration!"));
 }

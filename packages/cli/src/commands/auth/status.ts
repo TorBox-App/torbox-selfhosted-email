@@ -1,5 +1,6 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../telemetry/events.js";
 import { readAuthConfig } from "../../utils/shared/config.js";
 
 type StatusOptions = { json?: boolean };
@@ -8,6 +9,7 @@ export async function authStatus(options: StatusOptions): Promise<void> {
   const config = await readAuthConfig();
 
   if (!config?.auth?.token) {
+    trackCommand("auth:status", { success: true, authenticated: false });
     if (options.json) {
       console.log(JSON.stringify({ authenticated: false }));
     } else {
@@ -39,4 +41,6 @@ export async function authStatus(options: StatusOptions): Promise<void> {
       clack.log.info(`Expires: ${new Date(expiresAt).toLocaleDateString()}`);
     }
   }
+
+  trackCommand("auth:status", { success: true, authenticated: true });
 }

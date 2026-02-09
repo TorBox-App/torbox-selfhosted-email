@@ -15,6 +15,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../../telemetry/events.js";
 import {
   discoverTemplates,
   loadWrapsConfig,
@@ -34,6 +35,7 @@ type WorkflowsValidateOptions = {
 };
 
 export async function workflowsValidate(options: WorkflowsValidateOptions) {
+  const startTime = Date.now();
   const cwd = process.cwd();
   const wrapsDir = join(cwd, "wraps");
   const configPath = join(wrapsDir, "wraps.config.ts");
@@ -224,4 +226,12 @@ export async function workflowsValidate(options: WorkflowsValidateOptions) {
 
     console.log();
   }
+
+  trackCommand("email:workflows:validate", {
+    success: parseErrors.length === 0 && validationResults.every((r) => r.valid),
+    duration_ms: Date.now() - startTime,
+    valid_count: validationResults.filter((r) => r.valid).length,
+    invalid_count: validationResults.filter((r) => !r.valid).length,
+    parse_error_count: parseErrors.length,
+  });
 }

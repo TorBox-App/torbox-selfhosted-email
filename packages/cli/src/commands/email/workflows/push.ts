@@ -20,6 +20,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../../telemetry/events.js";
 import {
   discoverTemplates,
   loadWrapsConfig,
@@ -66,6 +67,7 @@ type TransformedWorkflowData = {
 };
 
 export async function workflowsPush(options: WorkflowsPushOptions) {
+  const startTime = Date.now();
   const cwd = process.cwd();
   const wrapsDir = join(cwd, "wraps");
   const configPath = join(wrapsDir, "wraps.config.ts");
@@ -357,6 +359,14 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
     }
     console.log();
   }
+
+  trackCommand("email:workflows:push", {
+    success: conflicts.length === 0 && pushed.length > 0,
+    duration_ms: Date.now() - startTime,
+    pushed_count: pushed.length,
+    unchanged_count: unchanged.length,
+    conflict_count: conflicts.length,
+  });
 }
 
 // ── API Push ──

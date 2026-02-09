@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../../telemetry/events.js";
 import { readAuthConfig } from "../../../utils/shared/config.js";
 import { WrapsError } from "../../../utils/shared/errors.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
@@ -16,6 +17,7 @@ type TemplatesInitOptions = {
 };
 
 export async function templatesInit(options: TemplatesInitOptions) {
+  const startTime = Date.now();
   const cwd = process.cwd();
   const wrapsDir = join(cwd, "wraps");
 
@@ -181,6 +183,11 @@ export async function templatesInit(options: TemplatesInitOptions) {
     );
     return;
   }
+
+  trackCommand("email:templates:init", {
+    success: true,
+    duration_ms: Date.now() - startTime,
+  });
 
   // Display success
   console.log();

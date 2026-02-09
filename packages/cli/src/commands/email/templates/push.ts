@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../../telemetry/events.js";
 import {
   discoverTemplates,
   findCliNodeModules,
@@ -52,6 +53,7 @@ type CompiledTemplate = {
 };
 
 export async function templatesPush(options: TemplatesPushOptions) {
+  const startTime = Date.now();
   const cwd = process.cwd();
   const wrapsDir = join(cwd, "wraps");
   const configPath = join(wrapsDir, "wraps.config.ts");
@@ -252,6 +254,14 @@ export async function templatesPush(options: TemplatesPushOptions) {
     }
     console.log();
   }
+
+  trackCommand("email:templates:push", {
+    success: compileErrors.length === 0,
+    duration_ms: Date.now() - startTime,
+    pushed_count: compiled.length,
+    unchanged_count: unchanged.length,
+    error_count: compileErrors.length,
+  });
 }
 
 // ── Config Loading & Template Discovery ──

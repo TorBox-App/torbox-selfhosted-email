@@ -7,6 +7,7 @@
 
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../telemetry/events.js";
 import {
   type AWSSetupState,
   detectAWSState,
@@ -709,6 +710,7 @@ function showNextSteps(_state: AWSSetupState): void {
  * AWS Setup Wizard entry point
  */
 export async function setup(_options: SetupOptions = {}): Promise<void> {
+  const startTime = Date.now();
   clack.intro(pc.bold("AWS Setup Wizard"));
 
   // Detect current state
@@ -742,6 +744,11 @@ export async function setup(_options: SetupOptions = {}): Promise<void> {
       await runCredentialSetup();
     }
   }
+
+  trackCommand("aws:setup", {
+    success: true,
+    duration_ms: Date.now() - startTime,
+  });
 
   clack.outro(pc.dim("Run `wraps aws doctor` to verify your setup"));
 }

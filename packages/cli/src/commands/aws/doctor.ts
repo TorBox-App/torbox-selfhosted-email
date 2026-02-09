@@ -6,6 +6,7 @@
 
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../telemetry/events.js";
 import { isSESSandbox } from "../../utils/shared/aws.js";
 import {
   type AWSSetupState,
@@ -378,6 +379,7 @@ function generateSuggestions(
  * AWS Doctor command entry point
  */
 export async function doctor(): Promise<void> {
+  const startTime = Date.now();
   clack.intro(pc.bold("AWS Setup Diagnostics"));
 
   const spinner = clack.spinner();
@@ -414,6 +416,14 @@ export async function doctor(): Promise<void> {
       console.log(`  ${pc.dim("-")} ${suggestion}`);
     }
   }
+
+  trackCommand("aws:doctor", {
+    success: true,
+    duration_ms: Date.now() - startTime,
+    pass_count: passCount,
+    fail_count: failCount,
+    warn_count: warnCount,
+  });
 
   console.log();
   clack.outro(

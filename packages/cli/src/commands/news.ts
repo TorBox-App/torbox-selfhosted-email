@@ -5,11 +5,13 @@
 
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../telemetry/events.js";
 
 /**
  * Display recent Wraps updates and changelog information
  */
 export async function news(): Promise<void> {
+  trackCommand("news", { success: true });
   clack.intro(pc.bold("What's New in Wraps"));
 
   console.log();
