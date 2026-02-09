@@ -5,6 +5,7 @@ import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { fetchAndProcessImage } from "@/lib/ai/image-utils";
 import { buildReactEmailSystemPrompt } from "@/lib/ai/react-email-system-prompt";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -60,11 +61,13 @@ export async function POST(request: Request, context: RouteContext) {
       templateId,
       brandKitId,
       existingSource,
+      imageUrl,
     }: {
       messages: UIMessage[];
       templateId?: string;
       brandKitId?: string;
       existingSource?: string;
+      imageUrl?: string;
     } = await request.json();
 
     if (!(messages && Array.isArray(messages)) || messages.length === 0) {
@@ -76,6 +79,54 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Convert UI messages to model messages for the AI SDK
     const modelMessages = convertToModelMessages(messages);
+
+    // If an image URL is provided, fetch and inject it into the last user message
+    if (imageUrl) {
+      try {
+        const processedImage = await fetchAndProcessImage(imageUrl);
+        const lastUserIndex = modelMessages.findLastIndex(
+          (m) => m.role === "user"
+        );
+        if (lastUserIndex !== -1) {
+          const lastUserMsg = modelMessages[lastUserIndex];
+          const existingText =
+            typeof lastUserMsg.content === "string"
+              ? lastUserMsg.content
+              : lastUserMsg.content
+                  .filter(
+                    (p): p is { type: "text"; text: string } =>
+                      p.type === "text"
+                  )
+                  .map((p) => p.text)
+                  .join("");
+
+          modelMessages[lastUserIndex] = {
+            ...lastUserMsg,
+            content: [
+              {
+                type: "image" as const,
+                image: processedImage.base64,
+                mimeType: processedImage.mediaType,
+              },
+              {
+                type: "text" as const,
+                text: existingText,
+              },
+            ],
+          };
+        }
+      } catch (imageError) {
+        const log = createRequestLogger({
+          path: "/api/[orgSlug]/emails/templates/ai/generate-code",
+          method: "POST",
+          orgSlug,
+        });
+        log.warn(
+          { err: serializeError(imageError) },
+          "Failed to process image, continuing without it"
+        );
+      }
+    }
 
     // Load brand kit
     let kit = null;
@@ -109,6 +160,7 @@ export async function POST(request: Request, context: RouteContext) {
         type: v.type,
       })),
       existingSource,
+      hasImageReference: !!imageUrl,
     });
 
     // Use Claude Sonnet for code generation

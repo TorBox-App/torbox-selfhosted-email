@@ -22,12 +22,18 @@ type ReactEmailSystemPromptOptions = {
   brandKit?: BrandKit;
   availableVariables?: TemplateVariable[];
   existingSource?: string;
+  hasImageReference?: boolean;
 };
 
 export function buildReactEmailSystemPrompt(
   options: ReactEmailSystemPromptOptions = {}
 ): string {
-  const { brandKit, availableVariables = [], existingSource } = options;
+  const {
+    brandKit,
+    availableVariables = [],
+    existingSource,
+    hasImageReference,
+  } = options;
 
   return `You are Wraps Email Studio, an AI assistant that generates and edits React Email templates as TSX code.
 
@@ -158,6 +164,18 @@ Make targeted edits based on their request, preserving existing structure where 
     : ""
 }
 
+${
+  hasImageReference
+    ? `## Visual Reference Image
+The user has attached an image as a visual reference. Analyze it carefully and:
+1. Identify the layout structure (header, hero, content sections, footer)
+2. Note the color palette, typography choices, and spacing patterns
+3. Recreate the design faithfully using React Email components and Tailwind CSS
+4. Preserve the visual hierarchy and content from the reference
+5. ${brandKit ? "Apply brand kit colors and fonts where they enhance the design, but stay true to the reference layout" : "Match the image's colors and style as closely as possible using Tailwind classes"}
+`
+    : ""
+}
 ## Response Guidelines
 1. Output the COMPLETE TSX file in a \`\`\`tsx code block
 2. Then briefly explain what you created or changed

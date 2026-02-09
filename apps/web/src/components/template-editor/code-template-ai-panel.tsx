@@ -35,6 +35,11 @@ import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { extractTsxCode } from "@/lib/ai/extract-tsx-code";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
+import { AIAttachmentChips } from "./ai-attachment-chips";
+import {
+  AIImageUrlPopover,
+  type ImageAttachment,
+} from "./ai-image-url-popover";
 
 type CodeTemplateAIPanelProps = {
   orgSlug: string;
@@ -116,6 +121,8 @@ export function CodeTemplateAIPanel({
   onApply,
 }: CodeTemplateAIPanelProps) {
   const [input, setInput] = useState("");
+  const [imageAttachment, setImageAttachment] =
+    useState<ImageAttachment | null>(null);
   const [pendingSource, setPendingSource] = useState<string | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
@@ -134,6 +141,7 @@ export function CodeTemplateAIPanel({
   const { favorites, saveFavorite, removeFavorite } = useFavoritePrompts();
 
   const { selectedBrandKitId } = useTemplateStore((state) => state.localState);
+  const { setSelectedBrandKitId } = useTemplateStore((state) => state.actions);
   const { data: brandKits } = useBrandKits(orgSlug);
 
   const selectedBrandKit = useMemo(() => {
@@ -154,6 +162,7 @@ export function CodeTemplateAIPanel({
         templateId,
         brandKitId: selectedBrandKit?.id,
         existingSource: currentSource || undefined,
+        imageUrl: imageAttachment?.url,
       },
     }),
     onError: (error) => {
@@ -271,6 +280,7 @@ export function CodeTemplateAIPanel({
       }
       sendMessageThrottler.maybeExecute(text.trim());
       setInput("");
+      setImageAttachment(null);
       adjustHeight(true);
     },
     [isLoading, sendMessageThrottler, adjustHeight]
@@ -597,8 +607,29 @@ export function CodeTemplateAIPanel({
             />
           </div>
 
+          <AIAttachmentChips
+            imageAttachment={imageAttachment}
+            onRemoveBrandKit={() => setSelectedBrandKitId(null)}
+            onRemoveImage={() => setImageAttachment(null)}
+            selectedBrandKit={
+              selectedBrandKit
+                ? {
+                    name: selectedBrandKit.companyName || "Brand Kit",
+                    primaryColor: selectedBrandKit.primaryColor,
+                  }
+                : null
+            }
+          />
+
           <div className="h-10 rounded-b-xl bg-black/5 dark:bg-white/5">
             <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5">
+              <AIImageUrlPopover
+                disabled={
+                  !!imageAttachment || isLoading || aiUsage?.remaining === 0
+                }
+                onAttach={setImageAttachment}
+                orgSlug={orgSlug}
+              />
               {messages.length > 0 && !isLoading && (
                 <Button
                   className="h-7 w-7"
