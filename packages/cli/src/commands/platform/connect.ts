@@ -10,6 +10,7 @@
  * - `wraps platform update-role`
  */
 import {
+  CreateRoleCommand,
   GetRoleCommand,
   IAMClient,
   PutRolePolicyCommand,
@@ -372,12 +373,16 @@ async function deployEventBridge(
   progress.succeed("Event streaming configured");
 }
 
+/** AWS Account ID of the Wraps Platform (used in trust policy) */
+const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
+
 /**
- * Shared: Update platform access IAM role
+ * Shared: Update or create platform access IAM role
  */
 async function updatePlatformRole(
   metadata: ConnectionMetadata,
-  progress: DeploymentProgress
+  progress: DeploymentProgress,
+  externalId?: string
 ): Promise<void> {
   const roleName = "wraps-console-access-role";
   const iam = new IAMClient({ region: "us-east-1" });
@@ -387,21 +392,21 @@ async function updatePlatformRole(
     await iam.send(new GetRoleCommand({ RoleName: roleName }));
     roleExists = true;
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "name" in error &&
-      error.name !== "NoSuchEntity"
-    ) {
+    const isNotFound =
+      error instanceof Error &&
+      (error.name === "NoSuchEntityException" ||
+        error.name === "NoSuchEntity" ||
+        error.message.includes("NoSuchEntity"));
+    if (!isNotFound) {
       throw error;
     }
   }
 
-  if (roleExists) {
-    const emailConfig = metadata.services.email?.config;
-    const smsConfig = metadata.services.sms?.config;
-    const policy = buildConsolePolicyDocument(emailConfig, smsConfig);
+  const emailConfig = metadata.services.email?.config;
+  const smsConfig = metadata.services.sms?.config;
+  const policy = buildConsolePolicyDocument(emailConfig, smsConfig);
 
+  if (roleExists) {
     await progress.execute("Updating platform access role", async () => {
       await iam.send(
         new PutRolePolicyCommand({
@@ -413,6 +418,49 @@ async function updatePlatformRole(
     });
 
     progress.succeed("Platform access role updated");
+  } else if (externalId) {
+    await progress.execute("Creating platform access role", async () => {
+      const trustPolicy = {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: {
+              AWS: `arn:aws:iam::${WRAPS_PLATFORM_ACCOUNT_ID}:root`,
+            },
+            Action: "sts:AssumeRole",
+            Condition: {
+              StringEquals: {
+                "sts:ExternalId": externalId,
+              },
+            },
+          },
+        ],
+      };
+
+      await iam.send(
+        new CreateRoleCommand({
+          RoleName: roleName,
+          Description:
+            "Allows Wraps dashboard to access CloudWatch metrics and SES data",
+          AssumeRolePolicyDocument: JSON.stringify(trustPolicy),
+          Tags: [
+            { Key: "ManagedBy", Value: "wraps-cli" },
+            { Key: "Purpose", Value: "Console Access" },
+          ],
+        })
+      );
+
+      await iam.send(
+        new PutRolePolicyCommand({
+          RoleName: roleName,
+          PolicyName: "wraps-console-access-policy",
+          PolicyDocument: JSON.stringify(policy, null, 2),
+        })
+      );
+    });
+
+    progress.succeed("Platform access role created");
   } else {
     progress.info(
       `IAM role ${pc.cyan(roleName)} will be created when you add your AWS account in the dashboard`
@@ -623,10 +671,18 @@ async function authenticatedConnect(
 
     progress.succeed("Connection registered");
 
-    // 5. Deploy EventBridge with server-provided webhook secret
+    // 5. Save platform data immediately (so externalId survives if later steps fail)
+    metadata.platform = {
+      externalId: result.externalId,
+      connectionId: result.connectionId,
+    };
     if (hasEmail) {
       metadata.services.email!.webhookSecret = result.webhookSecret;
+    }
+    await saveConnectionMetadata(metadata);
 
+    // 6. Deploy EventBridge with server-provided webhook secret
+    if (hasEmail) {
       await deployEventBridge(
         metadata,
         region,
@@ -636,15 +692,28 @@ async function authenticatedConnect(
       );
     }
 
-    // 6. Update IAM role with server-provided externalId
-    await updatePlatformRole(metadata, progress);
+    // 7. Update IAM role with server-provided externalId
+    try {
+      await updatePlatformRole(metadata, progress, result.externalId);
+    } catch (error) {
+      const errName =
+        error && typeof error === "object" && "name" in error
+          ? (error as Error).name
+          : "Unknown";
+      const errMsg = error instanceof Error ? error.message : String(error);
+      log.warn(
+        `Could not create/update IAM role (${errName}): ${errMsg}\n` +
+          `  You may need ${pc.cyan("iam:GetRole")}, ${pc.cyan("iam:CreateRole")}, and ${pc.cyan("iam:PutRolePolicy")} permissions.\n` +
+          `  Run ${pc.cyan("wraps platform update-role")} to retry.`
+      );
+    }
 
-    // 7. Save metadata (without webhook secret — it lives on server + EventBridge)
+    // 8. Save metadata again (captures any changes from deployment/role steps)
     await saveConnectionMetadata(metadata);
 
     progress.stop();
 
-    // 8. Output
+    // 9. Output
     if (options.json) {
       console.log(
         JSON.stringify({
@@ -949,12 +1018,12 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
       await iam.send(new GetRoleCommand({ RoleName: roleName }));
       roleExists = true;
     } catch (error) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "name" in error &&
-        error.name !== "NoSuchEntity"
-      ) {
+      const isNotFound =
+        error instanceof Error &&
+        (error.name === "NoSuchEntityException" ||
+          error.name === "NoSuchEntity" ||
+          error.message.includes("NoSuchEntity"));
+      if (!isNotFound) {
         throw error;
       }
     }

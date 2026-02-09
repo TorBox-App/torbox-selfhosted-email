@@ -1,4 +1,8 @@
-import { GetRoleCommand, IAMClient } from "@aws-sdk/client-iam";
+import {
+  CreateRoleCommand,
+  GetRoleCommand,
+  IAMClient,
+} from "@aws-sdk/client-iam";
 import { confirm, intro, isCancel, log, outro } from "@clack/prompts";
 import pc from "picocolors";
 import type { UpdateRoleOptions } from "../../types/index.js";
@@ -59,40 +63,49 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     await iam.send(new GetRoleCommand({ RoleName: roleName }));
     roleExists = true;
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "name" in error &&
-      error.name !== "NoSuchEntity"
-    ) {
+    const isNotFound =
+      error instanceof Error &&
+      (error.name === "NoSuchEntityException" ||
+        error.name === "NoSuchEntity" ||
+        error.message.includes("NoSuchEntity"));
+    if (!isNotFound) {
       throw error;
     }
   }
 
-  if (!roleExists) {
+  const externalId = metadata.platform?.externalId;
+
+  if (!(roleExists || externalId)) {
     progress.stop();
     log.warn(`IAM role ${pc.cyan(roleName)} does not exist`);
     console.log(
       "\nThis role is created when you connect AWS accounts through the Wraps Platform."
     );
     console.log(
-      "If you haven't connected an AWS account to the platform yet, there's nothing to update.\n"
+      `Run ${pc.cyan("wraps platform connect")} while logged in to create the role automatically.\n`
     );
     process.exit(0);
   }
 
-  progress.info(`Found IAM role: ${pc.cyan(roleName)}`);
+  if (roleExists) {
+    progress.info(`Found IAM role: ${pc.cyan(roleName)}`);
+  } else {
+    progress.info(
+      `IAM role ${pc.cyan(roleName)} not found — will create it using stored externalId`
+    );
+  }
 
   // 5. Confirm update (unless --force)
   if (!options.force) {
     progress.stop();
+    const actionLabel = roleExists ? "Update" : "Create";
     const shouldContinue = await confirm({
-      message: `Update IAM role ${pc.cyan(roleName)} with latest permissions?`,
+      message: `${actionLabel} IAM role ${pc.cyan(roleName)} with latest permissions?`,
       initialValue: true,
     });
 
     if (isCancel(shouldContinue) || !shouldContinue) {
-      outro("Update cancelled");
+      outro(`${actionLabel} cancelled`);
       process.exit(0);
     }
   }
@@ -119,25 +132,73 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     | Record<string, unknown>
     | undefined;
 
-  // 7. Update role policy
-  await progress.execute("Updating IAM role permissions", async () => {
-    const { PutRolePolicyCommand } = await import("@aws-sdk/client-iam");
+  // 7. Create or update role
+  if (!roleExists && externalId) {
+    const WRAPS_PLATFORM_ACCOUNT_ID = "905130073023";
 
-    await iam.send(
-      new PutRolePolicyCommand({
-        RoleName: roleName,
-        PolicyName: "wraps-console-access-policy",
-        PolicyDocument: JSON.stringify(policy, null, 2),
-      })
-    );
-  });
+    await progress.execute("Creating IAM role", async () => {
+      const trustPolicy = {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: {
+              AWS: `arn:aws:iam::${WRAPS_PLATFORM_ACCOUNT_ID}:root`,
+            },
+            Action: "sts:AssumeRole",
+            Condition: {
+              StringEquals: {
+                "sts:ExternalId": externalId,
+              },
+            },
+          },
+        ],
+      };
+
+      await iam.send(
+        new CreateRoleCommand({
+          RoleName: roleName,
+          Description:
+            "Allows Wraps dashboard to access CloudWatch metrics and SES data",
+          AssumeRolePolicyDocument: JSON.stringify(trustPolicy),
+          Tags: [
+            { Key: "ManagedBy", Value: "wraps-cli" },
+            { Key: "Purpose", Value: "Console Access" },
+          ],
+        })
+      );
+
+      const { PutRolePolicyCommand } = await import("@aws-sdk/client-iam");
+
+      await iam.send(
+        new PutRolePolicyCommand({
+          RoleName: roleName,
+          PolicyName: "wraps-console-access-policy",
+          PolicyDocument: JSON.stringify(policy, null, 2),
+        })
+      );
+    });
+  } else {
+    await progress.execute("Updating IAM role permissions", async () => {
+      const { PutRolePolicyCommand } = await import("@aws-sdk/client-iam");
+
+      await iam.send(
+        new PutRolePolicyCommand({
+          RoleName: roleName,
+          PolicyName: "wraps-console-access-policy",
+          PolicyDocument: JSON.stringify(policy, null, 2),
+        })
+      );
+    });
+  }
 
   progress.stop();
 
   // Success
-  outro(pc.green("✓ Platform access role updated successfully"));
+  const actionVerb = roleExists ? "updated" : "created";
+  outro(pc.green(`✓ Platform access role ${actionVerb} successfully`));
 
-  console.log(`\n${pc.bold("Updated Permissions:")}`);
+  console.log(`\n${pc.bold("Permissions:")}`);
 
   // Email permissions
   console.log(`\n  ${pc.bold(pc.cyan("Email:"))}`);
@@ -191,7 +252,7 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
   }
 
   console.log(
-    `\n${pc.dim("The Wraps Platform will now have updated permissions for feature detection.")}\n`
+    `\n${pc.dim(`The Wraps Platform will now have ${actionVerb} permissions for feature detection.`)}\n`
   );
 }
 

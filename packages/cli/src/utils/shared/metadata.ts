@@ -63,6 +63,12 @@ export type ConnectionMetadata = {
     migratedAt?: string;
   };
 
+  // Platform-specific data (from authenticated `platform connect`)
+  platform?: {
+    externalId?: string;
+    connectionId?: string;
+  };
+
   // Service-specific configurations
   services: {
     email?: ServiceConfig<WrapsEmailConfig, EmailConfigPreset>;
