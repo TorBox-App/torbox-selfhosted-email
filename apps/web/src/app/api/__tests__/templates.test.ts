@@ -633,6 +633,58 @@ describe("Templates API - POST /api/[orgSlug]/emails/templates/[id]/duplicate", 
     expect(response.status).toBe(404);
     expect(data.error).toBe("Template not found");
   });
+
+  it("should preserve sourceFormat, source, compiledHtml, compiledText, and subject when duplicating a CLI-pushed react-email template", async () => {
+    // Create a template that simulates a CLI push with react-email source
+    await db.insert(template).values({
+      id: "test-template-react-email",
+      organizationId: testOrganization.id,
+      name: "CLI Pushed Template",
+      description: "A template pushed from the CLI",
+      subject: "Welcome {{firstName}}!",
+      content: { type: "doc", content: [] },
+      variables: [{ name: "firstName", defaultValue: "World" }],
+      testData: { firstName: "Test" },
+      createdBy: testUser.id,
+      status: "PUBLISHED",
+      // CLI-push specific fields
+      sourceFormat: "react-email",
+      source: 'import { Html } from "@react-email/components"; export default function Welcome() { return <Html><h1>Hello</h1></Html>; }',
+      compiledHtml: "<html><h1>Hello</h1></html>",
+      compiledText: "Hello",
+      sourceHash: "abc123def456",
+      pushedFromCli: true,
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/emails/templates/[id]/duplicate/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-react-email/duplicate`,
+      {
+        method: "POST",
+      }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-react-email",
+      }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.name).toBe("CLI Pushed Template (Copy)");
+
+    expect(data.sourceFormat).toBe("react-email");
+    expect(data.source).toBe('import { Html } from "@react-email/components"; export default function Welcome() { return <Html><h1>Hello</h1></Html>; }');
+    expect(data.compiledHtml).toBe("<html><h1>Hello</h1></html>");
+    expect(data.compiledText).toBe("Hello");
+    expect(data.subject).toBe("Welcome {{firstName}}!");
+  });
 });
 
 describe("Templates API - GET /api/[orgSlug]/emails/templates/[id]/versions", () => {
