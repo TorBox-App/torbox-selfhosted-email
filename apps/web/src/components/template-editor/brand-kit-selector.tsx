@@ -2,7 +2,7 @@
 
 import { ExternalLink, Palette, Plus } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -33,29 +33,15 @@ export function BrandKitSelector({ orgSlug }: BrandKitSelectorProps) {
 
   // Get the selected brand kit or default
   const selectedBrandKit = useMemo(() => {
-    if (!brandKits?.length) {
+    if (!brandKits?.length || selectedBrandKitId === "none") {
       return null;
     }
     if (selectedBrandKitId) {
       return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
     }
-    // Return default brand kit or first one
+    // Default: return default brand kit or first one
     return brandKits.find((kit) => kit.isDefault) ?? brandKits[0];
   }, [brandKits, selectedBrandKitId]);
-
-  // Auto-select default brand kit on initial load only
-  const hasAutoSelected = useRef(false);
-  useEffect(() => {
-    if (brandKits?.length && !selectedBrandKitId && !hasAutoSelected.current) {
-      hasAutoSelected.current = true;
-      const defaultKit = brandKits.find((kit) => kit.isDefault);
-      if (defaultKit) {
-        setSelectedBrandKitId(defaultKit.id);
-      } else if (brandKits[0]) {
-        setSelectedBrandKitId(brandKits[0].id);
-      }
-    }
-  }, [brandKits, selectedBrandKitId, setSelectedBrandKitId]);
 
   return (
     <DropdownMenu>
@@ -101,8 +87,8 @@ export function BrandKitSelector({ orgSlug }: BrandKitSelectorProps) {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          className={cn(!selectedBrandKitId && "bg-accent")}
-          onClick={() => setSelectedBrandKitId(null)}
+          className={cn(selectedBrandKitId === "none" && "bg-accent")}
+          onClick={() => setSelectedBrandKitId("none")}
         >
           <Palette className="mr-2 h-4 w-4 text-muted-foreground" />
           <span className="flex-1">None</span>

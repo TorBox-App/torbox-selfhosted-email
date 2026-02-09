@@ -152,10 +152,14 @@ export function CodeTemplateAIPanel({
   const { data: brandKits } = useBrandKits(orgSlug);
 
   const selectedBrandKit = useMemo(() => {
-    if (!(brandKits?.length && selectedBrandKitId)) {
+    if (!brandKits?.length || selectedBrandKitId === "none") {
       return null;
     }
-    return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
+    if (selectedBrandKitId) {
+      return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
+    }
+    // Default: return default brand kit or first one
+    return brandKits.find((kit) => kit.isDefault) ?? brandKits[0];
   }, [brandKits, selectedBrandKitId]);
 
   // Use the AI SDK's useChat hook
@@ -647,8 +651,8 @@ export function CodeTemplateAIPanel({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="top">
                 <DropdownMenuItem
-                  className={cn(!selectedBrandKitId && "bg-accent")}
-                  onClick={() => setSelectedBrandKitId(null)}
+                  className={cn(selectedBrandKitId === "none" && "bg-accent")}
+                  onClick={() => setSelectedBrandKitId("none")}
                 >
                   <Palette className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
                   None
@@ -672,7 +676,7 @@ export function CodeTemplateAIPanel({
             </DropdownMenu>
             <AIAttachmentChips
               imageAttachment={imageAttachment}
-              onRemoveBrandKit={() => setSelectedBrandKitId(null)}
+              onRemoveBrandKit={() => setSelectedBrandKitId("none")}
               onRemoveImage={() => setImageAttachment(null)}
               selectedBrandKit={
                 selectedBrandKit
