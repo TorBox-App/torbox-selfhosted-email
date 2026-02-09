@@ -67,12 +67,16 @@ export async function POST(request: Request, context: RouteContext) {
       brandKitId,
       existingSource,
       imageUrl,
+      imageBase64,
+      imageMediaType,
     }: {
       messages: UIMessage[];
       templateId?: string;
       brandKitId?: string;
       existingSource?: string;
       imageUrl?: string;
+      imageBase64?: string;
+      imageMediaType?: string;
     } = await request.json();
 
     if (!(messages && Array.isArray(messages)) || messages.length === 0) {
@@ -85,10 +89,22 @@ export async function POST(request: Request, context: RouteContext) {
     // Convert UI messages to model messages for the AI SDK
     const modelMessages = convertToModelMessages(messages);
 
-    // If an image URL is provided, fetch and inject it into the last user message
-    if (imageUrl) {
+    // Resolve image data from URL or direct base64
+    const hasImage = imageUrl || (imageBase64 && imageMediaType);
+    if (hasImage) {
       try {
-        const processedImage = await fetchAndProcessImage(imageUrl);
+        let base64: string;
+        let mediaType: string;
+
+        if (imageBase64 && imageMediaType) {
+          base64 = imageBase64;
+          mediaType = imageMediaType;
+        } else {
+          const processedImage = await fetchAndProcessImage(imageUrl!);
+          base64 = processedImage.base64;
+          mediaType = processedImage.mediaType;
+        }
+
         let lastUserIndex = -1;
         for (let i = modelMessages.length - 1; i >= 0; i--) {
           if (modelMessages[i].role === "user") {
@@ -114,8 +130,8 @@ export async function POST(request: Request, context: RouteContext) {
           const newContent: UserContent = [
             {
               type: "image",
-              image: processedImage.base64,
-              mediaType: processedImage.mediaType,
+              image: base64,
+              mediaType,
             },
             {
               type: "text",
@@ -173,7 +189,7 @@ export async function POST(request: Request, context: RouteContext) {
         type: v.type,
       })),
       existingSource,
-      hasImageReference: !!imageUrl,
+      hasImageReference: !!hasImage,
     });
 
     // Use Claude Sonnet for code generation

@@ -145,13 +145,10 @@ export function CodeTemplateAIPanel({
   const { data: brandKits } = useBrandKits(orgSlug);
 
   const selectedBrandKit = useMemo(() => {
-    if (!brandKits?.length) {
+    if (!(brandKits?.length && selectedBrandKitId)) {
       return null;
     }
-    if (selectedBrandKitId) {
-      return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
-    }
-    return brandKits.find((kit) => kit.isDefault) ?? brandKits[0];
+    return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
   }, [brandKits, selectedBrandKitId]);
 
   // Use the AI SDK's useChat hook
@@ -163,6 +160,10 @@ export function CodeTemplateAIPanel({
         brandKitId: selectedBrandKit?.id,
         existingSource: currentSource || undefined,
         imageUrl: imageAttachment?.url,
+        imageBase64: imageAttachment?.base64,
+        imageMediaType: imageAttachment?.base64
+          ? imageAttachment.contentType
+          : undefined,
       },
     }),
     onError: (error) => {
