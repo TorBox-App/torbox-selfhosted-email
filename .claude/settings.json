@@ -100,6 +100,11 @@
       "name": "investigate",
       "description": "Structured investigation with checkpoints that always produces written findings",
       "path": ".claude/skills/investigate/SKILL.md"
+    },
+    {
+      "name": "blueprint",
+      "description": "Research-first feature planning: parallel agents explore code, collect docs, mine patterns, then write a self-contained plan",
+      "path": ".claude/skills/blueprint/SKILL.md"
     }
   ]
 }
