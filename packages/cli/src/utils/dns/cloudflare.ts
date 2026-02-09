@@ -306,6 +306,119 @@ export class CloudflareDNSClient implements DNSProviderClient {
     }
   }
 
+  /**
+   * Get the zone name (domain) for this zone ID
+   */
+  private async getZoneName(): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `${CLOUDFLARE_API_BASE}/zones/${this.zoneId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = (await response.json()) as CloudflareResponse<{
+        name: string;
+      }>;
+      return data.success ? data.result.name : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get all CAA records for the zone
+   */
+  async getCAARecords(): Promise<
+    Array<{ flags: number; tag: string; value: string }>
+  > {
+    const zoneName = await this.getZoneName();
+    if (!zoneName) return [];
+
+    const result = await this.request<CloudflareRecord[]>(
+      "/dns_records?type=CAA"
+    );
+
+    if (!(result.success && result.result)) {
+      return [];
+    }
+
+    // Cloudflare CAA content format: "0 issue \"letsencrypt.org\""
+    return result.result
+      .filter((r) => r.type === "CAA")
+      .map((r) => {
+        const match = r.content.match(/^(\d+)\s+(\w+)\s+"?([^"]+)"?$/);
+        if (match) {
+          return {
+            flags: Number.parseInt(match[1], 10),
+            tag: match[2],
+            value: match[3],
+          };
+        }
+        return null;
+      })
+      .filter(
+        (r): r is { flags: number; tag: string; value: string } => r !== null
+      );
+  }
+
+  /**
+   * Check if Amazon is allowed to issue certificates based on CAA records
+   */
+  async isAmazonCAAAllowed(): Promise<{
+    allowed: boolean;
+    hasCAA: boolean;
+    existingCAs: string[];
+  }> {
+    const caaRecords = await this.getCAARecords();
+
+    const issueRecords = caaRecords.filter(
+      (r) => r.tag === "issue" || r.tag === "issuewild"
+    );
+
+    if (issueRecords.length === 0) {
+      return { allowed: true, hasCAA: false, existingCAs: [] };
+    }
+
+    const existingCAs = issueRecords.map((r) => r.value);
+    const amazonAllowed = existingCAs.some(
+      (ca) => ca.includes("amazon.com") || ca.includes("amazontrust.com")
+    );
+
+    return { allowed: amazonAllowed, hasCAA: true, existingCAs };
+  }
+
+  /**
+   * Add a CAA record to allow Amazon to issue certificates
+   */
+  async addAmazonCAARecord(): Promise<boolean> {
+    const zoneName = await this.getZoneName();
+    if (!zoneName) return false;
+
+    // Cloudflare CAA records use a data object format
+    const body = {
+      name: zoneName,
+      type: "CAA",
+      data: {
+        flags: 0,
+        tag: "issue",
+        value: "amazon.com",
+      },
+      ttl: 1800,
+    };
+
+    const result = await this.request<CloudflareRecord>(
+      "/dns_records",
+      "POST",
+      body
+    );
+
+    return result.success;
+  }
+
   async verifyRecords(data: EmailDNSRecordData): Promise<{
     verified: boolean;
     missing: string[];

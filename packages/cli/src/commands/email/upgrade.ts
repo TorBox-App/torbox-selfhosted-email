@@ -1386,6 +1386,81 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     emailConfig: updatedConfig,
   });
 
+  // 11.5. Ensure CAA records allow Amazon to issue certificates (for HTTPS tracking)
+  if (
+    updatedConfig.tracking?.httpsEnabled &&
+    updatedConfig.tracking.customRedirectDomain
+  ) {
+    // Get the parent domain for DNS operations
+    const trackingDomainParts =
+      updatedConfig.tracking.customRedirectDomain.split(".");
+    const parentDomain =
+      trackingDomainParts.length > 2
+        ? trackingDomainParts.slice(-2).join(".")
+        : updatedConfig.tracking.customRedirectDomain;
+
+    // Get stored DNS provider or detect one
+    let dnsProvider: DNSProviderType | undefined =
+      metadata.services.email?.dnsProvider;
+
+    // If no DNS provider stored, try to detect one
+    if (!dnsProvider) {
+      const availableProviders = await progress.execute(
+        "Detecting DNS provider for CAA check",
+        async () => await detectAvailableDNSProviders(parentDomain, region)
+      );
+
+      const detectedProvider = availableProviders.find(
+        (p) => p.detected && p.provider !== "manual"
+      );
+      if (detectedProvider) {
+        dnsProvider = detectedProvider.provider;
+        // Store for future use
+        if (metadata.services.email) {
+          metadata.services.email.dnsProvider = dnsProvider;
+        }
+      }
+    }
+
+    if (dnsProvider && dnsProvider !== "manual" && dnsProvider !== "route53") {
+      const credResult = await getDNSCredentials(
+        dnsProvider,
+        parentDomain,
+        region
+      );
+
+      if (credResult.valid && credResult.credentials) {
+        const { ensureAmazonCAAAllowed } = await import(
+          "../../utils/dns/caa.js"
+        );
+
+        const caaResult = await progress.execute(
+          "Checking CAA records for certificate issuance",
+          async () =>
+            await ensureAmazonCAAAllowed(credResult.credentials!, parentDomain)
+        );
+
+        if (caaResult.recordCreated) {
+          progress.info(
+            `Added CAA record to allow Amazon certificate issuance for ${pc.cyan(parentDomain)}`
+          );
+          // Small delay for DNS propagation
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        } else if (!caaResult.success) {
+          clack.log.warn(
+            `Could not verify CAA records: ${caaResult.error || "Unknown error"}`
+          );
+          clack.log.info(
+            pc.dim(
+              "If certificate issuance fails, you may need to add a CAA record manually:"
+            )
+          );
+          clack.log.info(pc.dim(`  ${parentDomain} CAA 0 issue "amazon.com"`));
+        }
+      }
+    }
+  }
+
   // 12. Preview or Update Pulumi stack
   if (options.preview) {
     // PREVIEW MODE - show what would be changed without deploying
@@ -1515,6 +1590,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
                   dkimTokens: result.dkimTokens,
                   customTrackingDomain: result.customTrackingDomain,
                   httpsTrackingEnabled: result.httpsTrackingEnabled,
+                  httpsTrackingPending: result.httpsTrackingPending,
                   cloudFrontDomain: result.cloudFrontDomain,
                   acmCertificateValidationRecords:
                     result.acmCertificateValidationRecords,
@@ -1569,6 +1645,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
             | string
             | undefined,
           httpsTrackingEnabled: pulumiOutputs.httpsTrackingEnabled?.value as
+            | boolean
+            | undefined,
+          httpsTrackingPending: pulumiOutputs.httpsTrackingPending?.value as
             | boolean
             | undefined,
           cloudFrontDomain: pulumiOutputs.cloudFrontDomain?.value as
@@ -1782,11 +1861,115 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     acmValidationRecords.push(...outputs.acmCertificateValidationRecords);
   }
 
-  // Check if HTTPS tracking was enabled but CloudFront wasn't created (manual DNS validation needed)
-  const needsCertificateValidation =
-    outputs.httpsTrackingEnabled &&
+  // Try to create ACM validation DNS records automatically via DNS provider
+  let acmDnsAutoCreated = false;
+  if (
+    outputs.httpsTrackingPending &&
     acmValidationRecords.length > 0 &&
-    !outputs.cloudFrontDomain;
+    outputs.customTrackingDomain
+  ) {
+    // Get DNS provider for the tracking domain
+    const trackingDnsProvider: DNSProviderType | undefined =
+      metadata.services.email?.dnsProvider;
+
+    if (trackingDnsProvider && trackingDnsProvider !== "manual") {
+      // Get the parent domain for Vercel DNS (e.g., lilikoi.io from link.lilikoi.io)
+      const trackingDomainParts = outputs.customTrackingDomain.split(".");
+      const parentDomain =
+        trackingDomainParts.length > 2
+          ? trackingDomainParts.slice(-2).join(".")
+          : outputs.customTrackingDomain;
+
+      const credResult = await progress.execute(
+        `Validating ${getDNSProviderDisplayName(trackingDnsProvider)} credentials for ACM validation`,
+        async () =>
+          await getDNSCredentials(trackingDnsProvider!, parentDomain, region)
+      );
+
+      if (credResult.valid && credResult.credentials) {
+        try {
+          progress.start(
+            `Creating ACM validation DNS record in ${getDNSProviderDisplayName(trackingDnsProvider)}`
+          );
+
+          // Create the ACM validation CNAME record
+          if (credResult.credentials.provider === "vercel") {
+            const { VercelDNSClient } = await import(
+              "../../utils/dns/vercel.js"
+            );
+            const client = new VercelDNSClient(
+              parentDomain,
+              credResult.credentials.token,
+              credResult.credentials.teamId
+            );
+
+            const result = await client.createRecords(
+              acmValidationRecords.map((r) => ({
+                name: r.name,
+                type: r.type,
+                value: r.value,
+              }))
+            );
+
+            if (result.success) {
+              progress.succeed(
+                `Created ACM validation DNS record in ${getDNSProviderDisplayName(trackingDnsProvider)}`
+              );
+              acmDnsAutoCreated = true;
+              progress.info(
+                "Certificate validation usually takes 5-30 minutes. Run this command again after validation completes."
+              );
+            } else {
+              progress.fail(
+                `Failed to create ACM validation record: ${result.errors?.join(", ")}`
+              );
+            }
+          } else if (credResult.credentials.provider === "cloudflare") {
+            const { CloudflareDNSClient } = await import(
+              "../../utils/dns/cloudflare.js"
+            );
+            const client = new CloudflareDNSClient(
+              credResult.credentials.zoneId,
+              credResult.credentials.token
+            );
+
+            const result = await client.createRecords(
+              acmValidationRecords.map((r) => ({
+                name: r.name,
+                type: r.type,
+                value: r.value,
+              }))
+            );
+
+            if (result.success) {
+              progress.succeed(
+                `Created ACM validation DNS record in ${getDNSProviderDisplayName(trackingDnsProvider)}`
+              );
+              acmDnsAutoCreated = true;
+              progress.info(
+                "Certificate validation usually takes 5-30 minutes. Run this command again after validation completes."
+              );
+            } else {
+              progress.fail(
+                `Failed to create ACM validation record: ${result.errors?.join(", ")}`
+              );
+            }
+          }
+        } catch (error: any) {
+          progress.fail(
+            `Failed to create ACM validation record: ${error.message}`
+          );
+        }
+      }
+    }
+  }
+
+  // Check if HTTPS tracking was enabled but CloudFront wasn't created (certificate not yet validated)
+  const needsCertificateValidation =
+    outputs.httpsTrackingPending ||
+    (outputs.httpsTrackingEnabled &&
+      acmValidationRecords.length > 0 &&
+      !outputs.cloudFrontDomain);
 
   // 15. Display success message
   displaySuccess({
@@ -1798,8 +1981,11 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       trackingDomainDnsRecords.length > 0
         ? trackingDomainDnsRecords
         : undefined,
+    // Only show ACM validation records if they weren't auto-created
     acmValidationRecords:
-      acmValidationRecords.length > 0 ? acmValidationRecords : undefined,
+      acmValidationRecords.length > 0 && !acmDnsAutoCreated
+        ? acmValidationRecords
+        : undefined,
     customTrackingDomain: outputs.customTrackingDomain,
     httpsTrackingEnabled: outputs.httpsTrackingEnabled,
   });
@@ -1820,15 +2006,27 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   // Show next steps for HTTPS tracking if certificate validation is pending
   if (needsCertificateValidation) {
     console.log(pc.bold("⚠️  HTTPS Tracking - Next Steps:\n"));
-    console.log(
-      "  1. Add the SSL certificate validation DNS record shown above to your DNS provider"
-    );
-    console.log(
-      "  2. Wait for DNS propagation and certificate validation (5-30 minutes)"
-    );
-    console.log(
-      `  3. Run ${pc.cyan("wraps email upgrade")} again to complete CloudFront setup\n`
-    );
+    if (acmDnsAutoCreated) {
+      // DNS record was auto-created, just wait for validation
+      console.log(
+        `  1. ${pc.green("✓")} ACM validation DNS record created automatically`
+      );
+      console.log("  2. Wait for certificate validation (5-30 minutes)");
+      console.log(
+        `  3. Run ${pc.cyan("wraps email upgrade")} again to complete CloudFront setup\n`
+      );
+    } else {
+      // User needs to manually add DNS record
+      console.log(
+        "  1. Add the SSL certificate validation DNS record shown above to your DNS provider"
+      );
+      console.log(
+        "  2. Wait for DNS propagation and certificate validation (5-30 minutes)"
+      );
+      console.log(
+        `  3. Run ${pc.cyan("wraps email upgrade")} again to complete CloudFront setup\n`
+      );
+    }
     console.log(
       pc.dim(
         "  Note: CloudFront distribution will be created once the certificate is validated.\n"

@@ -5,6 +5,7 @@ import {
 } from "@aws-sdk/client-iam";
 import { confirm, intro, isCancel, log, outro } from "@clack/prompts";
 import pc from "picocolors";
+import { trackCommand } from "../../telemetry/events.js";
 import type { UpdateRoleOptions } from "../../types/index.js";
 import {
   getAWSRegion,
@@ -28,6 +29,7 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
  * - Preserves the trust policy (AssumeRole configuration)
  */
 export async function updateRole(options: UpdateRoleOptions): Promise<void> {
+  const startTime = Date.now();
   intro(pc.bold("Update Platform Access Role"));
 
   const progress = new DeploymentProgress();
@@ -196,6 +198,13 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
 
   // Success
   const actionVerb = roleExists ? "updated" : "created";
+
+  trackCommand("platform:update-role", {
+    success: true,
+    duration_ms: Date.now() - startTime,
+    action: actionVerb,
+  });
+
   outro(pc.green(`✓ Platform access role ${actionVerb} successfully`));
 
   console.log(`\n${pc.bold("Permissions:")}`);

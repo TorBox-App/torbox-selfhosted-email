@@ -1,5 +1,47 @@
+import { ACMClient, DescribeCertificateCommand } from "@aws-sdk/client-acm";
 import * as aws from "@pulumi/aws";
 import type * as pulumi from "@pulumi/pulumi";
+
+/**
+ * Check if an ACM certificate for the domain is already validated
+ * This is used to determine if CloudFront can be created (requires validated cert)
+ */
+export async function checkCertificateValidation(
+  domain: string
+): Promise<boolean> {
+  try {
+    // ACM for CloudFront must be in us-east-1
+    const acm = new ACMClient({ region: "us-east-1" });
+
+    // List certificates to find one matching our domain
+    const { ListCertificatesCommand } = await import("@aws-sdk/client-acm");
+    const listResponse = await acm.send(
+      new ListCertificatesCommand({
+        CertificateStatuses: ["ISSUED"],
+      })
+    );
+
+    // Find a certificate for our domain that is ISSUED (validated)
+    const cert = listResponse.CertificateSummaryList?.find(
+      (c) => c.DomainName === domain
+    );
+
+    if (cert?.CertificateArn) {
+      // Double-check the status
+      const describeResponse = await acm.send(
+        new DescribeCertificateCommand({
+          CertificateArn: cert.CertificateArn,
+        })
+      );
+      return describeResponse.Certificate?.Status === "ISSUED";
+    }
+
+    return false;
+  } catch (error) {
+    // If we can't check, assume not validated to be safe
+    return false;
+  }
+}
 
 /**
  * ACM certificate configuration

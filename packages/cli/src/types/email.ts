@@ -189,6 +189,7 @@ export type EmailStackOutputs = {
   dlqUrl?: string;
   customTrackingDomain?: string;
   httpsTrackingEnabled?: boolean;
+  httpsTrackingPending?: boolean; // True if HTTPS requested but cert not yet validated
   cloudFrontDomain?: string;
   acmCertificateValidationRecords?: Array<{
     name: string;

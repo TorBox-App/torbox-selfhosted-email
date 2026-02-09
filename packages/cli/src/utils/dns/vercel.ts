@@ -332,6 +332,93 @@ export class VercelDNSClient implements DNSProviderClient {
     }
   }
 
+  /**
+   * Get all CAA records for the domain
+   */
+  async getCAARecords(): Promise<
+    Array<{ flags: number; tag: string; value: string }>
+  > {
+    const result = await this.request<VercelRecordsResponse>(
+      `/v4/domains/${this.domain}/records`
+    );
+
+    if (result.error || !result.records) {
+      return [];
+    }
+
+    // Filter CAA records and parse their values
+    // CAA value format in Vercel: "0 issue \"letsencrypt.org\""
+    return result.records
+      .filter((r) => r.type === "CAA")
+      .map((r) => {
+        // Parse the CAA value: "0 issue \"amazon.com\""
+        const match = r.value.match(/^(\d+)\s+(\w+)\s+"?([^"]+)"?$/);
+        if (match) {
+          return {
+            flags: Number.parseInt(match[1], 10),
+            tag: match[2],
+            value: match[3],
+          };
+        }
+        return null;
+      })
+      .filter(
+        (r): r is { flags: number; tag: string; value: string } => r !== null
+      );
+  }
+
+  /**
+   * Check if Amazon is allowed to issue certificates based on CAA records
+   * Returns true if:
+   * - No CAA records exist (any CA can issue)
+   * - CAA records exist and include amazon.com or amazontrust.com
+   */
+  async isAmazonCAAAllowed(): Promise<{
+    allowed: boolean;
+    hasCAA: boolean;
+    existingCAs: string[];
+  }> {
+    const caaRecords = await this.getCAARecords();
+
+    // Filter to only "issue" and "issuewild" tags (these control certificate issuance)
+    const issueRecords = caaRecords.filter(
+      (r) => r.tag === "issue" || r.tag === "issuewild"
+    );
+
+    if (issueRecords.length === 0) {
+      // No CAA records means any CA can issue
+      return { allowed: true, hasCAA: false, existingCAs: [] };
+    }
+
+    const existingCAs = issueRecords.map((r) => r.value);
+    const amazonAllowed = existingCAs.some(
+      (ca) => ca.includes("amazon.com") || ca.includes("amazontrust.com")
+    );
+
+    return { allowed: amazonAllowed, hasCAA: true, existingCAs };
+  }
+
+  /**
+   * Add a CAA record to allow Amazon to issue certificates
+   */
+  async addAmazonCAARecord(): Promise<boolean> {
+    // Create CAA record: 0 issue "amazon.com"
+    const body = {
+      name: "@", // Root domain
+      type: "CAA",
+      value: '0 issue "amazon.com"',
+      ttl: 1800,
+    };
+
+    const result = await this.request<VercelRecord>(
+      `/v2/domains/${this.domain}/records`,
+      "POST",
+      body
+    );
+
+    return !result.error;
+  }
+
   async verifyRecords(data: EmailDNSRecordData): Promise<{
     verified: boolean;
     missing: string[];

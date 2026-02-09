@@ -45,6 +45,7 @@ export async function deployEmailStack(
   // 3. CloudFront + ACM (if HTTPS tracking enabled)
   let cloudFrontResources;
   let acmResources;
+  let skipCloudFront = false;
 
   if (
     emailConfig.tracking?.enabled &&
@@ -65,26 +66,42 @@ export async function deployEmailStack(
       hostedZoneId: hostedZone?.id,
     });
 
-    // Create CloudFront distribution with SSL certificate
-    // Import CloudFront creation function
-    const { createCloudFrontTracking } = await import(
-      "./resources/cloudfront.js"
-    );
+    // For non-Route53 DNS providers, check if the certificate is already validated
+    // before attempting to create CloudFront (which requires a validated certificate)
+    if (!hostedZone) {
+      const { checkCertificateValidation } = await import("./resources/acm.js");
+      const isValidated = await checkCertificateValidation(
+        emailConfig.tracking.customRedirectDomain
+      );
+      if (!isValidated) {
+        // Certificate not validated yet - skip CloudFront creation
+        // User needs to add DNS validation records and run upgrade again
+        skipCloudFront = true;
+      }
+    }
 
-    // Determine which certificate ARN to use:
-    // - Route53: Use certificateValidation.certificateArn (waits for validation)
-    // - Manual DNS: Use certificate.arn directly (CloudFront will fail if not validated)
-    const certificateArn = acmResources.certificateValidation
-      ? acmResources.certificateValidation.certificateArn
-      : acmResources.certificate.arn;
+    if (!skipCloudFront) {
+      // Create CloudFront distribution with SSL certificate
+      // Import CloudFront creation function
+      const { createCloudFrontTracking } = await import(
+        "./resources/cloudfront.js"
+      );
 
-    cloudFrontResources = await createCloudFrontTracking({
-      customTrackingDomain: emailConfig.tracking.customRedirectDomain,
-      region: config.region,
-      certificateArn,
-      hostedZoneId: hostedZone?.id, // Pass hosted zone ID for automatic DNS record creation
-      wafEnabled: emailConfig.tracking.wafEnabled,
-    });
+      // Determine which certificate ARN to use:
+      // - Route53: Use certificateValidation.certificateArn (waits for validation)
+      // - Manual DNS: Use certificate.arn directly (only after we verified it's validated)
+      const certificateArn = acmResources.certificateValidation
+        ? acmResources.certificateValidation.certificateArn
+        : acmResources.certificate.arn;
+
+      cloudFrontResources = await createCloudFrontTracking({
+        customTrackingDomain: emailConfig.tracking.customRedirectDomain,
+        region: config.region,
+        certificateArn,
+        hostedZoneId: hostedZone?.id, // Pass hosted zone ID for automatic DNS record creation
+        wafEnabled: emailConfig.tracking.wafEnabled,
+      });
+    }
   }
 
   // 4. SES resources (if tracking or event tracking enabled)
@@ -110,11 +127,24 @@ export async function deployEmailStack(
       mailFromDomain = `${emailConfig.mailFromSubdomain}.${emailConfig.domain}`;
     }
 
+    // If we're skipping CloudFront creation (cert not validated), also skip HTTPS requirement
+    // This prevents SES from failing when the tracking domain doesn't have HTTPS set up yet
+    const effectiveTrackingConfig =
+      skipCloudFront && emailConfig.tracking
+        ? {
+            enabled: emailConfig.tracking.enabled,
+            opens: emailConfig.tracking.opens,
+            clicks: emailConfig.tracking.clicks,
+            customRedirectDomain: emailConfig.tracking.customRedirectDomain,
+            httpsEnabled: false, // Use OPTIONAL until CloudFront is ready
+          }
+        : emailConfig.tracking;
+
     sesResources = await createSESResources({
       domain: emailConfig.domain,
       mailFromDomain,
       region: config.region,
-      trackingConfig: emailConfig.tracking,
+      trackingConfig: effectiveTrackingConfig,
       eventTypes: emailConfig.eventTracking?.events,
       eventTrackingEnabled: emailConfig.eventTracking?.enabled, // Pass flag to create EventBridge destination
       tlsRequired: emailConfig.tlsRequired, // Require TLS encryption for all emails
@@ -293,6 +323,7 @@ export async function deployEmailStack(
     dlqUrl: sqsResources?.dlq.url as any as string | undefined,
     customTrackingDomain: sesResources?.customTrackingDomain,
     httpsTrackingEnabled: emailConfig.tracking?.httpsEnabled,
+    httpsTrackingPending: skipCloudFront, // True if HTTPS requested but cert not validated yet
     cloudFrontDomain: cloudFrontResources?.domainName as any as
       | string
       | undefined,
