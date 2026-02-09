@@ -85,7 +85,11 @@ export async function login(options: LoginOptions): Promise<void> {
   });
 
   if (codeError || !codeData) {
-    trackCommand("auth:login", { success: false, duration_ms: Date.now() - startTime, method: "device" });
+    trackCommand("auth:login", {
+      success: false,
+      duration_ms: Date.now() - startTime,
+      method: "device",
+    });
     trackError("DEVICE_AUTH_FAILED", "auth:login", { step: "request_code" });
     clack.log.error("Failed to start device authorization.");
     process.exit(1);
@@ -189,7 +193,11 @@ export async function login(options: LoginOptions): Promise<void> {
       }
 
       if (errorCode === "access_denied") {
-        trackCommand("auth:login", { success: false, duration_ms: Date.now() - startTime, method: "device" });
+        trackCommand("auth:login", {
+          success: false,
+          duration_ms: Date.now() - startTime,
+          method: "device",
+        });
         trackError("ACCESS_DENIED", "auth:login", { step: "poll_token" });
         spinner.stop("Denied.");
         clack.log.error("Authorization was denied.");
@@ -202,7 +210,11 @@ export async function login(options: LoginOptions): Promise<void> {
     }
   }
 
-  trackCommand("auth:login", { success: false, duration_ms: Date.now() - startTime, method: "device" });
+  trackCommand("auth:login", {
+    success: false,
+    duration_ms: Date.now() - startTime,
+    method: "device",
+  });
   trackError("DEVICE_CODE_EXPIRED", "auth:login", { step: "poll_token" });
   spinner.stop("Expired.");
   clack.log.error("Device code expired. Run `wraps auth login` to try again.");

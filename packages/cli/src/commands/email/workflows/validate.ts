@@ -228,7 +228,8 @@ export async function workflowsValidate(options: WorkflowsValidateOptions) {
   }
 
   trackCommand("email:workflows:validate", {
-    success: parseErrors.length === 0 && validationResults.every((r) => r.valid),
+    success:
+      parseErrors.length === 0 && validationResults.every((r) => r.valid),
     duration_ms: Date.now() - startTime,
     valid_count: validationResults.filter((r) => r.valid).length,
     invalid_count: validationResults.filter((r) => !r.valid).length,
