@@ -85,6 +85,21 @@
       "name": "dashboard",
       "description": "Build dashboard pages with server components and data tables",
       "path": ".claude/skills/dashboard-components.md"
+    },
+    {
+      "name": "tdd-debug",
+      "description": "Test-driven debugging: parallel agents reproduce, trace, and audit before fixing",
+      "path": ".claude/skills/tdd-debug/SKILL.md"
+    },
+    {
+      "name": "preflight",
+      "description": "Pre-flight validation pipeline: discovery, contracts, plan, then incremental implementation",
+      "path": ".claude/skills/preflight/SKILL.md"
+    },
+    {
+      "name": "investigate",
+      "description": "Structured investigation with checkpoints that always produces written findings",
+      "path": ".claude/skills/investigate/SKILL.md"
     }
   ]
 }
