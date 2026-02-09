@@ -75,7 +75,7 @@ async function findEventSourceMapping(
 
     // Return UUID of the first matching event source mapping
     return response.EventSourceMappings?.[0]?.UUID || null;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error finding event source mapping:", error);
     return null;
   }

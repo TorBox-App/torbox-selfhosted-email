@@ -68,10 +68,11 @@ async function userExists(userName: string): Promise<boolean> {
     });
     await iam.send(new GetUserCommand({ UserName: userName }));
     return true;
-  } catch (error: any) {
+  } catch (error) {
     if (
-      error.name === "NoSuchEntityException" ||
-      error.Code === "NoSuchEntity"
+      error instanceof Error &&
+      (error.name === "NoSuchEntityException" ||
+        (error as any).Code === "NoSuchEntity")
     ) {
       return false;
     }

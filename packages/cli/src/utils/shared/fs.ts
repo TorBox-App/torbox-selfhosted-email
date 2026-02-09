@@ -91,11 +91,11 @@ export async function ensurePulumiWorkDir(options?: {
         options.region!
       );
       return;
-    } catch (error: any) {
+    } catch (error) {
       // Graceful fallback to local
       const clack = await import("@clack/prompts");
       clack.log.warn(
-        `S3 state backend unavailable (${error.message}). Using local state.`
+        `S3 state backend unavailable (${error instanceof Error ? error.message : error}). Using local state.`
       );
     }
   }

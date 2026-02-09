@@ -245,9 +245,9 @@ export async function isSESSandbox(region: string): Promise<boolean> {
     // The actual sandbox check requires checking send quota
     // For now, we'll return false (not sandbox) if the API works
     return false;
-  } catch (error: any) {
+  } catch (error) {
     // If we get an error about SES not being enabled, return true
-    if (error.name === "InvalidParameterValue") {
+    if (error instanceof Error && error.name === "InvalidParameterValue") {
       return true;
     }
     throw error;

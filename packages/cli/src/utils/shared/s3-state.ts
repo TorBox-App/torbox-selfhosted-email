@@ -31,11 +31,12 @@ export async function stateBucketExists(
   try {
     await client.send(new HeadBucketCommand({ Bucket: bucketName }));
     return true;
-  } catch (error: any) {
+  } catch (error) {
     if (
-      error.name === "NotFound" ||
-      error.name === "NoSuchBucket" ||
-      error.$metadata?.httpStatusCode === 404
+      error instanceof Error &&
+      (error.name === "NotFound" ||
+        error.name === "NoSuchBucket" ||
+        (error as any).$metadata?.httpStatusCode === 404)
     ) {
       return false;
     }
@@ -70,12 +71,13 @@ export async function ensureStateBucket(
   try {
     await client.send(new HeadBucketCommand({ Bucket: bucketName }));
     return bucketName;
-  } catch (error: any) {
-    if (
-      error.name !== "NotFound" &&
-      error.name !== "NoSuchBucket" &&
-      error.$metadata?.httpStatusCode !== 404
-    ) {
+  } catch (error) {
+    const isNotFound =
+      error instanceof Error &&
+      (error.name === "NotFound" ||
+        error.name === "NoSuchBucket" ||
+        (error as any).$metadata?.httpStatusCode === 404);
+    if (!isNotFound) {
       throw error;
     }
     // Bucket doesn't exist, create it
@@ -194,8 +196,12 @@ export async function downloadMetadata(
     }
 
     return JSON.parse(body) as ConnectionMetadata;
-  } catch (error: any) {
-    if (error.name === "NoSuchKey" || error.$metadata?.httpStatusCode === 404) {
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.name === "NoSuchKey" ||
+        (error as any).$metadata?.httpStatusCode === 404)
+    ) {
       return null;
     }
     throw error;
@@ -301,10 +307,10 @@ export async function migrateLocalPulumiState(
           }
         );
         await s3Stack.importStack(state);
-      } catch (error: any) {
+      } catch (error) {
         // Log but don't fail on individual stack migration errors
         console.error(
-          `Warning: Failed to migrate stack ${stackName}: ${error.message}`
+          `Warning: Failed to migrate stack ${stackName}: ${error instanceof Error ? error.message : error}`
         );
       }
     }

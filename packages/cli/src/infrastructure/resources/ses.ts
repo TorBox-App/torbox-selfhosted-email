@@ -38,8 +38,8 @@ async function configurationSetExists(
       new GetConfigurationSetCommand({ ConfigurationSetName: configSetName })
     );
     return true;
-  } catch (error: any) {
-    if (error.name === "NotFoundException") {
+  } catch (error) {
+    if (error instanceof Error && error.name === "NotFoundException") {
       return false;
     }
     console.error("Error checking for existing configuration set:", error);
@@ -70,8 +70,8 @@ export async function eventDestinationExists(
       response.EventDestinations?.some((dest) => dest.Name === eventDestName) ??
       false
     );
-  } catch (error: any) {
-    if (error.name === "NotFoundException") {
+  } catch (error) {
+    if (error instanceof Error && error.name === "NotFoundException") {
       return false;
     }
     // Silently return false on other errors - we'll try to create and handle errors there
@@ -96,8 +96,8 @@ async function emailIdentityExists(
       new GetEmailIdentityCommand({ EmailIdentity: emailIdentity })
     );
     return true;
-  } catch (error: any) {
-    if (error.name === "NotFoundException") {
+  } catch (error) {
+    if (error instanceof Error && error.name === "NotFoundException") {
       return false;
     }
     console.error("Error checking for existing email identity:", error);

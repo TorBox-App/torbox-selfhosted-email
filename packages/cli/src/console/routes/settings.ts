@@ -107,11 +107,15 @@ export function createSettingsRouter(config: ServerConfig): Router {
           ? undefined
           : `CNAME not pointing to ${expectedTarget}. Found: ${records.join(", ")}`,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("[Verify] Error verifying tracking domain:", error);
 
       // If no CNAME record exists, DNS will throw ENODATA or ENOTFOUND
-      if (error.code === "ENODATA" || error.code === "ENOTFOUND") {
+      if (
+        error instanceof Error &&
+        ((error as any).code === "ENODATA" ||
+          (error as any).code === "ENOTFOUND")
+      ) {
         return res.json({
           verified: false,
           error: "No CNAME record found for this domain",
@@ -160,11 +164,15 @@ export function createSettingsRouter(config: ServerConfig): Router {
         verified: hasDmarc,
         error: hasDmarc ? undefined : "DMARC record not found",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("[Verify] Error verifying DMARC:", error);
 
       // If no TXT record exists, DNS will throw ENODATA or ENOTFOUND
-      if (error.code === "ENODATA" || error.code === "ENOTFOUND") {
+      if (
+        error instanceof Error &&
+        ((error as any).code === "ENODATA" ||
+          (error as any).code === "ENOTFOUND")
+      ) {
         return res.json({
           verified: false,
           error: "No DMARC record found for this domain",

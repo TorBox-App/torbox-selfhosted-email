@@ -636,12 +636,14 @@ describe("no swallowed errors in CLI commands", () => {
 });
 
 // ─────────────────────────────────────────────────────────
-// Test 11: No catch (error: any) in CLI commands
+// Test 11: No catch (error: any) in CLI source
 // ─────────────────────────────────────────────────────────
 
-describe("no catch (error: any) in CLI commands", () => {
+describe("no catch (error: any) in CLI source", () => {
   test("catch blocks must use unknown type, not any", () => {
-    const files = getCLICommandFiles();
+    const files = findFiles("packages/cli/src/**/*.ts").filter(
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
+    );
     const violations: string[] = [];
 
     const catchAnyRegex = /catch\s*\(\s*\w+\s*:\s*any\s*\)/;

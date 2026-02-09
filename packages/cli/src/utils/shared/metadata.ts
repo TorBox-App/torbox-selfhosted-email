@@ -188,8 +188,11 @@ export async function loadConnectionMetadata(
         }
         localData = data as ConnectionMetadata;
       }
-    } catch (error: any) {
-      console.error("Error loading connection metadata:", error.message);
+    } catch (error) {
+      console.error(
+        "Error loading connection metadata:",
+        error instanceof Error ? error.message : error
+      );
     }
   }
 
@@ -271,8 +274,11 @@ export async function saveConnectionMetadata(
   try {
     const content = JSON.stringify(metadata, null, 2);
     await writeFile(metadataPath, content, "utf-8");
-  } catch (error: any) {
-    console.error("Error saving connection metadata:", error.message);
+  } catch (error) {
+    console.error(
+      "Error saving connection metadata:",
+      error instanceof Error ? error.message : error
+    );
     throw error;
   }
 
@@ -342,8 +348,11 @@ export async function listConnections(): Promise<ConnectionMetadata[]> {
     }
 
     return connections;
-  } catch (error: any) {
-    console.error("Error listing connections:", error.message);
+  } catch (error) {
+    console.error(
+      "Error listing connections:",
+      error instanceof Error ? error.message : error
+    );
     return [];
   }
 }

@@ -131,8 +131,11 @@ export async function scanSESIdentities(
     }
 
     return identities;
-  } catch (error: any) {
-    console.error("Error scanning SES identities:", error.message);
+  } catch (error) {
+    console.error(
+      "Error scanning SES identities:",
+      error instanceof Error ? error.message : error
+    );
     return [];
   }
 }
@@ -173,14 +176,20 @@ export async function scanSESConfigurationSets(
           name,
           eventDestinations,
         });
-      } catch (error: any) {
-        console.error(`Error describing config set ${name}:`, error.message);
+      } catch (error) {
+        console.error(
+          `Error describing config set ${name}:`,
+          error instanceof Error ? error.message : error
+        );
       }
     }
 
     return configSets;
-  } catch (error: any) {
-    console.error("Error scanning SES configuration sets:", error.message);
+  } catch (error) {
+    console.error(
+      "Error scanning SES configuration sets:",
+      error instanceof Error ? error.message : error
+    );
     return [];
   }
 }
@@ -216,17 +225,20 @@ export async function scanSNSTopics(region: string): Promise<SNSTopic[]> {
           name,
           subscriptions,
         });
-      } catch (error: any) {
+      } catch (error) {
         console.error(
           `Error getting topic attributes for ${arn}:`,
-          error.message
+          error instanceof Error ? error.message : error
         );
       }
     }
 
     return topics;
-  } catch (error: any) {
-    console.error("Error scanning SNS topics:", error.message);
+  } catch (error) {
+    console.error(
+      "Error scanning SNS topics:",
+      error instanceof Error ? error.message : error
+    );
     return [];
   }
 }
@@ -259,14 +271,20 @@ export async function scanDynamoTables(region: string): Promise<DynamoTable[]> {
             sizeBytes: table.TableSizeBytes,
           });
         }
-      } catch (error: any) {
-        console.error(`Error describing table ${name}:`, error.message);
+      } catch (error) {
+        console.error(
+          `Error describing table ${name}:`,
+          error instanceof Error ? error.message : error
+        );
       }
     }
 
     return tables;
-  } catch (error: any) {
-    console.error("Error scanning DynamoDB tables:", error.message);
+  } catch (error) {
+    console.error(
+      "Error scanning DynamoDB tables:",
+      error instanceof Error ? error.message : error
+    );
     return [];
   }
 }
@@ -297,8 +315,11 @@ export async function scanLambdaFunctions(
     }
 
     return functions;
-  } catch (error: any) {
-    console.error("Error scanning Lambda functions:", error.message);
+  } catch (error) {
+    console.error(
+      "Error scanning Lambda functions:",
+      error instanceof Error ? error.message : error
+    );
     return [];
   }
 }
@@ -340,8 +361,11 @@ export async function scanIAMRoles(region: string): Promise<IAMRole[]> {
     }
 
     return roles;
-  } catch (error: any) {
-    console.error("Error scanning IAM roles:", error.message);
+  } catch (error) {
+    console.error(
+      "Error scanning IAM roles:",
+      error instanceof Error ? error.message : error
+    );
     return [];
   }
 }
