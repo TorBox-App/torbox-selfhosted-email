@@ -100,6 +100,7 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
               workDir: getPulumiWorkDir(),
             });
           } catch (_error) {
+            // guardrail:allow-swallowed-error — re-throws user-friendly message
             throw new Error("No SMS infrastructure found to preview");
           }
 
@@ -180,6 +181,7 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
             workDir: getPulumiWorkDir(),
           });
         } catch (_error) {
+          // guardrail:allow-swallowed-error — re-throws user-friendly message
           throw new Error("No SMS infrastructure found to destroy");
         }
 

@@ -41,6 +41,7 @@ async function fetchOrganizations(
       slug: org.slug,
     }));
   } catch {
+    // guardrail:allow-swallowed-error — org list is optional
     return [];
   }
 }
@@ -114,6 +115,7 @@ export async function login(options: LoginOptions): Promise<void> {
     await open(`${baseURL}/device?user_code=${user_code}`);
     clack.log.info("Opening browser...");
   } catch {
+    // guardrail:allow-swallowed-error — browser open is best-effort
     // Browser didn't open, user will navigate manually
   }
 

@@ -133,6 +133,7 @@ export async function cdnSync(options: CdnSyncOptions): Promise<void> {
         }
       }
     } catch (_error) {
+      // guardrail:allow-swallowed-error — stack may not exist yet
       // Stack might not exist yet, that's fine
     }
   }

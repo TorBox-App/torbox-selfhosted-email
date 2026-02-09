@@ -538,6 +538,7 @@ async function loadLockfile(path: string): Promise<Lockfile> {
     }
     return parsed;
   } catch {
+    // guardrail:allow-swallowed-error — corrupted lockfile returns fresh default
     return { version: "1.0.0", lastSync: "", templates: {}, workflows: {} };
   }
 }

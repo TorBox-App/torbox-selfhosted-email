@@ -61,6 +61,7 @@ export async function status(_options: StatusOptions): Promise<void> {
       services.push({ name: "Email", status: "not_deployed" });
     }
   } catch (_error) {
+    // guardrail:allow-swallowed-error — stack may not exist
     services.push({ name: "Email", status: "not_deployed" });
   }
 
@@ -83,6 +84,7 @@ export async function status(_options: StatusOptions): Promise<void> {
       services.push({ name: "SMS", status: "not_deployed" });
     }
   } catch (_error) {
+    // guardrail:allow-swallowed-error — stack may not exist
     services.push({ name: "SMS", status: "not_deployed" });
   }
 

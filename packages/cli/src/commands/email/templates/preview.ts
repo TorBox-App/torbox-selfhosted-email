@@ -144,6 +144,7 @@ export async function templatesPreview(options: TemplatesPreviewOptions) {
             previewText: compiled.previewText,
           });
         } catch {
+          // guardrail:allow-swallowed-error — compilation error shows placeholder
           meta.push({
             slug,
             subject: "(compilation error)",
@@ -379,7 +380,7 @@ function renderViewerPage(compiled: PreviewResult, allSlugs: string[]): string {
       try {
         const doc = iframe.contentDocument || iframe.contentWindow.document;
         iframe.style.height = doc.documentElement.scrollHeight + 'px';
-      } catch {}
+      } catch {} // guardrail:allow-swallowed-error — cross-origin iframe resize
     }
     iframe.addEventListener('load', resizeIframe);
 
@@ -390,7 +391,7 @@ function renderViewerPage(compiled: PreviewResult, allSlugs: string[]): string {
         const data = JSON.parse(e.data);
         // Reload iframe (and toolbar metadata by reloading the page)
         iframe.src = '/${compiled.slug}/render?t=' + Date.now();
-      } catch {
+      } catch { // guardrail:allow-swallowed-error — SSE parse error is expected
         // "connected" message or parse error — ignore
       }
     };

@@ -631,12 +631,7 @@ describe("no swallowed errors in CLI commands", () => {
       }
     }
 
-    // Ratchet: 38 remaining violations (mostly sms/, cdn/, shared/, templates/).
-    // Lower this number as violations are fixed.
-    expect(
-      violations.length,
-      `Expected ≤38 violations but found ${violations.length}. New swallowed errors added:\n${violations.join("\n")}`
-    ).toBeLessThanOrEqual(38);
+    expect(violations, violations.join("\n")).toEqual([]);
   });
 });
 

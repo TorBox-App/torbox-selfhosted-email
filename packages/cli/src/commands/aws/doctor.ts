@@ -234,6 +234,7 @@ async function runDiagnostics(state: AWSSetupState): Promise<DoctorResult[]> {
         });
       }
     } catch {
+      // guardrail:allow-swallowed-error — SES check is non-blocking diagnostic
       results.push({
         status: "info",
         message: "Could not check SES status",

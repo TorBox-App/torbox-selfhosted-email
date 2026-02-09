@@ -751,11 +751,12 @@ async function tryGetSesDkimTokens(domain: string): Promise<string[]> {
         if (tokens && tokens.length > 0) {
           return tokens;
         }
-      } catch {}
+      } catch {} // guardrail:allow-swallowed-error — SES identity may not exist in this region
     }
 
     return [];
   } catch {
+    // guardrail:allow-swallowed-error — best-effort DKIM lookup, falls back to common selectors
     // No credentials, no metadata, or other error - fall back to common selectors
     return [];
   }

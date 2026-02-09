@@ -39,6 +39,7 @@ async function checkDNSRecord(
 
     return { found, value: records[0] };
   } catch (_error) {
+    // guardrail:allow-swallowed-error — DNS failure means not found
     return { found: false };
   }
 }
@@ -68,6 +69,7 @@ async function checkCertificateStatus(
       validationStatus,
     };
   } catch (_error) {
+    // guardrail:allow-swallowed-error — ACM API error returns safe default
     return { status: "ERROR" };
   }
 }
@@ -98,6 +100,7 @@ async function checkDistributionStatus(
       aliases,
     };
   } catch (_error) {
+    // guardrail:allow-swallowed-error — CloudFront API error returns safe default
     return { status: "ERROR", enabled: false, aliases: [] };
   }
 }
@@ -165,6 +168,7 @@ export async function cdnVerify(options: CdnVerifyOptions): Promise<void> {
 
     stackOutputs = await stack.outputs();
   } catch (_error) {
+    // guardrail:allow-swallowed-error — stack may not exist
     progress.stop();
     clack.log.error("No CDN infrastructure found");
     console.log(

@@ -52,6 +52,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
       });
       emailStackOutputs = await emailStack.outputs();
     } catch (_emailError: unknown) {
+      // guardrail:allow-swallowed-error — stack may not exist
       // Email stack not found, continue
     }
 
@@ -63,6 +64,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
       });
       smsStackOutputs = await smsStack.outputs();
     } catch (_smsError: unknown) {
+      // guardrail:allow-swallowed-error — stack may not exist
       // SMS stack not found, continue
     }
 
@@ -74,6 +76,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
       });
       storageStackOutputs = await cdnStack.outputs();
     } catch (_cdnError: unknown) {
+      // guardrail:allow-swallowed-error — stack may not exist
       // CDN stack not found, continue
     }
 
@@ -86,6 +89,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
       throw new Error("No infrastructure found");
     }
   } catch (_error: unknown) {
+    // guardrail:allow-swallowed-error — shows user-friendly message
     progress.stop();
     clack.log.error("No Wraps infrastructure found");
     console.log(
@@ -137,6 +141,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
       cdnCustomDomain = metadata.services.cdn.config.cdn.customDomain;
     }
   } catch {
+    // guardrail:allow-swallowed-error — metadata is optional, continue with defaults
     // Metadata load failed, continue with defaults
   }
 

@@ -124,6 +124,7 @@ export async function smsStatus(_options: SMSStatusOptions): Promise<void> {
 
     stackOutputs = await stack.outputs();
   } catch (_error: unknown) {
+    // guardrail:allow-swallowed-error — stack may not exist
     // Stack might not exist, continue with metadata only
     progress.info("Unable to load Pulumi stack, showing metadata only");
   }
