@@ -10,6 +10,7 @@ import {
   Check,
   Heart,
   Loader2,
+  Palette,
   RefreshCw,
   Send,
   Sparkles,
@@ -22,6 +23,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Reasoning,
   ReasoningContent,
@@ -616,6 +623,53 @@ export function CodeTemplateAIPanel({
               onAttach={setImageAttachment}
               orgSlug={orgSlug}
             />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  className="h-7 w-7"
+                  size="icon"
+                  title="Brand kit"
+                  type="button"
+                  variant="ghost"
+                >
+                  {selectedBrandKit ? (
+                    <div
+                      className="h-3.5 w-3.5 rounded-full border"
+                      style={{
+                        backgroundColor:
+                          selectedBrandKit.primaryColor ?? undefined,
+                      }}
+                    />
+                  ) : (
+                    <Palette className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="top">
+                <DropdownMenuItem
+                  className={cn(!selectedBrandKitId && "bg-accent")}
+                  onClick={() => setSelectedBrandKitId(null)}
+                >
+                  <Palette className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                  None
+                </DropdownMenuItem>
+                {brandKits?.map((kit) => (
+                  <DropdownMenuItem
+                    className={cn(selectedBrandKitId === kit.id && "bg-accent")}
+                    key={kit.id}
+                    onClick={() => setSelectedBrandKitId(kit.id)}
+                  >
+                    <div
+                      className="mr-2 h-3.5 w-3.5 rounded-full border"
+                      style={{
+                        backgroundColor: kit.primaryColor ?? "#5046e5",
+                      }}
+                    />
+                    <span className="truncate">{kit.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <AIAttachmentChips
               imageAttachment={imageAttachment}
               onRemoveBrandKit={() => setSelectedBrandKitId(null)}
