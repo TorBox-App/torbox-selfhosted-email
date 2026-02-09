@@ -1,4 +1,4 @@
-import * as aws from "@pulumi/aws";
+import type * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import type {
   CdnStackConfig,
@@ -10,7 +10,7 @@ import {
   createCdnBucket,
   createCdnDistribution,
 } from "./resources/s3-cdn.js";
-import { roleExists } from "./shared/resource-checks.js";
+import { createServiceIAMRole } from "./shared/iam.js";
 import { createVercelOIDC } from "./vercel-oidc.js";
 
 /**
@@ -29,120 +29,52 @@ type CdnIAMConfig = {
  * Create IAM role for storage infrastructure
  */
 async function createCdnIAMRole(config: CdnIAMConfig): Promise<aws.iam.Role> {
-  // Build assume role policy based on provider
-  let assumeRolePolicy: pulumi.Output<string>;
-
-  if (config.provider === "vercel" && config.oidcProvider) {
-    assumeRolePolicy = pulumi.interpolate`{
-      "Version": "2012-10-17",
-      "Statement": [{
-        "Effect": "Allow",
-        "Principal": {
-          "Federated": "${config.oidcProvider.arn}"
-        },
-        "Action": "sts:AssumeRoleWithWebIdentity",
-        "Condition": {
-          "StringEquals": {
-            "oidc.vercel.com/${config.vercelTeamSlug}:aud": "https://vercel.com/${config.vercelTeamSlug}"
-          },
-          "StringLike": {
-            "oidc.vercel.com/${config.vercelTeamSlug}:sub": "owner:${config.vercelTeamSlug}:project:${config.vercelProjectName}:environment:*"
-          }
-        }
-      }]
-    }`;
-  } else if (config.provider === "aws") {
-    // Native AWS - EC2, Lambda, ECS can assume
-    assumeRolePolicy = pulumi.output(`{
-      "Version": "2012-10-17",
-      "Statement": [{
-        "Effect": "Allow",
-        "Principal": {
-          "Service": ["lambda.amazonaws.com", "ec2.amazonaws.com", "ecs-tasks.amazonaws.com"]
-        },
-        "Action": "sts:AssumeRole"
-      }]
-    }`);
-  } else {
-    // Other providers - will use access keys
-    throw new Error("Other providers not yet implemented");
-  }
-
-  // Check if role already exists
-  const roleName = "wraps-cdn-role";
-  const exists = await roleExists(roleName);
-
-  const role = exists
-    ? new aws.iam.Role(
-        roleName,
+  // Build policy statements for S3 access (contains Output values, must be resolved)
+  const resolvedStatements = pulumi
+    .all([config.bucketArn, config.distributionArn])
+    .apply(([bucketArn, distributionArn]) => {
+      const statements: any[] = [
         {
-          name: roleName,
-          assumeRolePolicy,
-          tags: {
-            ManagedBy: "wraps-cli",
-            Service: "cdn",
-            Provider: config.provider,
-          },
+          Sid: "StorageBucketAccess",
+          Effect: "Allow",
+          Action: [
+            "s3:PutObject",
+            "s3:GetObject",
+            "s3:DeleteObject",
+            "s3:ListBucket",
+            "s3:GetBucketLocation",
+            "s3:GetObjectTagging",
+            "s3:PutObjectTagging",
+          ],
+          Resource: [bucketArn, `${bucketArn}/*`],
         },
-        {
-          import: roleName,
-        }
-      )
-    : new aws.iam.Role(roleName, {
-        name: roleName,
-        assumeRolePolicy,
-        tags: {
-          ManagedBy: "wraps-cli",
-          Service: "cdn",
-          Provider: config.provider,
-        },
-      });
+      ];
 
-  // Build policy statements for S3 access
-  const statements: any[] = [
-    // S3 bucket access
-    {
-      Sid: "StorageBucketAccess",
-      Effect: "Allow",
-      Action: [
-        "s3:PutObject",
-        "s3:GetObject",
-        "s3:DeleteObject",
-        "s3:ListBucket",
-        "s3:GetBucketLocation",
-        "s3:GetObjectTagging",
-        "s3:PutObjectTagging",
-      ],
-      Resource: [config.bucketArn, pulumi.interpolate`${config.bucketArn}/*`],
-    },
-  ];
+      if (distributionArn) {
+        statements.push({
+          Sid: "CloudFrontInvalidation",
+          Effect: "Allow",
+          Action: [
+            "cloudfront:CreateInvalidation",
+            "cloudfront:GetInvalidation",
+            "cloudfront:ListInvalidations",
+          ],
+          Resource: distributionArn,
+        });
+      }
 
-  // CloudFront invalidation access (if CDN enabled)
-  if (config.distributionArn) {
-    statements.push({
-      Sid: "CloudFrontInvalidation",
-      Effect: "Allow",
-      Action: [
-        "cloudfront:CreateInvalidation",
-        "cloudfront:GetInvalidation",
-        "cloudfront:ListInvalidations",
-      ],
-      Resource: config.distributionArn,
+      return statements;
     });
-  }
 
-  // Attach policy to role
-  new aws.iam.RolePolicy("wraps-cdn-policy", {
-    role: role.name,
-    policy: pulumi.all([statements]).apply(([stmts]) =>
-      JSON.stringify({
-        Version: "2012-10-17",
-        Statement: stmts,
-      })
-    ),
+  return createServiceIAMRole({
+    serviceName: "cdn",
+    provider: config.provider,
+    oidcProvider: config.oidcProvider,
+    vercelTeamSlug: config.vercelTeamSlug,
+    vercelProjectName: config.vercelProjectName,
+    policyStatements: resolvedStatements,
+    extraTags: { Service: "cdn" },
   });
-
-  return role;
 }
 
 /**

@@ -9,7 +9,7 @@ import {
   listSESDomains,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { isAWSError } from "../../utils/shared/errors.js";
+import { isAWSNotFoundError } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -140,7 +140,7 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
         };
       } catch (error) {
         // Non-fatal: return partial info if individual domain detail fetch fails
-        if (isAWSError(error)) {
+        if (isAWSNotFoundError(error)) {
           return {
             domain: d.domain,
             status: d.verified ? ("verified" as const) : ("pending" as const),

@@ -6,8 +6,8 @@ import type {
   SMSStackOutputs,
   WrapsSMSConfig,
 } from "../types/index.js";
+import { createServiceIAMRole } from "./shared/iam.js";
 import {
-  roleExists,
   snsTopicExists,
   sqsQueueExists,
   tableExists,
@@ -24,88 +24,6 @@ async function createSMSIAMRole(config: {
   vercelProjectName?: string;
   smsConfig: WrapsSMSConfig;
 }): Promise<aws.iam.Role> {
-  let assumeRolePolicy: pulumi.Output<string>;
-
-  if (config.provider === "vercel" && config.oidcProvider) {
-    // For Vercel, allow both OIDC (for SDK) and Lambda (for event processor)
-    assumeRolePolicy = pulumi.interpolate`{
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Principal": {
-            "Federated": "${config.oidcProvider.arn}"
-          },
-          "Action": "sts:AssumeRoleWithWebIdentity",
-          "Condition": {
-            "StringEquals": {
-              "oidc.vercel.com/${config.vercelTeamSlug}:aud": "https://vercel.com/${config.vercelTeamSlug}"
-            },
-            "StringLike": {
-              "oidc.vercel.com/${config.vercelTeamSlug}:sub": "owner:${config.vercelTeamSlug}:project:${config.vercelProjectName}:environment:*"
-            }
-          }
-        },
-        {
-          "Effect": "Allow",
-          "Principal": {
-            "Service": "lambda.amazonaws.com"
-          },
-          "Action": "sts:AssumeRole"
-        }
-      ]
-    }`;
-  } else if (config.provider === "aws") {
-    assumeRolePolicy = pulumi.output(`{
-      "Version": "2012-10-17",
-      "Statement": [{
-        "Effect": "Allow",
-        "Principal": {
-          "Service": ["lambda.amazonaws.com", "ec2.amazonaws.com", "ecs-tasks.amazonaws.com"]
-        },
-        "Action": "sts:AssumeRole"
-      }]
-    }`);
-  } else {
-    throw new Error("Other providers not yet implemented");
-  }
-
-  const roleName = "wraps-sms-role";
-  const exists = await roleExists(roleName);
-
-  const role = exists
-    ? new aws.iam.Role(
-        roleName,
-        {
-          name: roleName,
-          assumeRolePolicy,
-          tags: {
-            ManagedBy: "wraps-cli",
-            Service: "sms",
-            Provider: config.provider,
-          },
-        },
-        {
-          import: roleName,
-          customTimeouts: { create: "2m", update: "2m", delete: "2m" },
-        }
-      )
-    : new aws.iam.Role(
-        roleName,
-        {
-          name: roleName,
-          assumeRolePolicy,
-          tags: {
-            ManagedBy: "wraps-cli",
-            Service: "sms",
-            Provider: config.provider,
-          },
-        },
-        {
-          customTimeouts: { create: "2m", update: "2m", delete: "2m" },
-        }
-      );
-
   // Build policy statements based on enabled features
   const statements: Record<string, unknown>[] = [];
 
@@ -202,16 +120,17 @@ async function createSMSIAMRole(config: {
     });
   }
 
-  // Attach policy to role
-  new aws.iam.RolePolicy("wraps-sms-policy", {
-    role: role.name,
-    policy: JSON.stringify({
-      Version: "2012-10-17",
-      Statement: statements,
-    }),
+  return createServiceIAMRole({
+    serviceName: "sms",
+    provider: config.provider,
+    oidcProvider: config.oidcProvider,
+    vercelTeamSlug: config.vercelTeamSlug,
+    vercelProjectName: config.vercelProjectName,
+    additionalVercelPrincipals: ["lambda.amazonaws.com"],
+    policyStatements: statements,
+    extraTags: { Service: "sms" },
+    customTimeouts: { create: "2m", update: "2m", delete: "2m" },
   });
-
-  return role;
 }
 
 /**

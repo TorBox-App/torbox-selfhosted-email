@@ -8,7 +8,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { errors, isAWSError } from "../../utils/shared/errors.js";
+import { errors, isAWSNotFoundError } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -50,7 +50,7 @@ async function getEmailIdentityInfo(
       mailFromDomain: response.MailFromAttributes?.MailFromDomain,
     };
   } catch (error) {
-    if (isAWSError(error)) {
+    if (isAWSNotFoundError(error)) {
       return { dkimTokens: [] };
     }
     throw error;

@@ -2140,9 +2140,11 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         iamUserArn: outputs.smtpUserArn,
         createdAt: new Date().toISOString(),
       };
-      await saveConnectionMetadata(metadata);
     }
   }
+
+  // Always persist metadata after all upgrade actions
+  await saveConnectionMetadata(metadata);
 
   // 16. Track successful upgrade
   const enabledFeatures: string[] = [];

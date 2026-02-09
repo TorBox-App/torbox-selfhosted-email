@@ -748,12 +748,12 @@ export async function listDomains(): Promise<void> {
             verified: details.VerifiedForSendingStatus,
             dkimStatus: details.DkimAttributes?.Status || "PENDING",
           };
-        } catch {
-          // guardrail:allow-swallowed-error — individual domain detail fetch failure is non-fatal in listing
+        } catch (error) {
+          // Non-fatal: return partial info if individual domain detail fetch fails
           return {
             name: domain.IdentityName!,
             verified: false,
-            dkimStatus: "UNKNOWN",
+            dkimStatus: isAWSNotFoundError(error) ? "UNKNOWN" : "ERROR",
           };
         }
       })
