@@ -21,7 +21,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   getVerifiedDomains,
@@ -66,6 +66,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useNaturalDateParser } from "@/hooks/use-natural-date-parser";
 import { useTemplates } from "@/hooks/use-template-queries";
 import type { SampleContact, VariableMapping } from "@/lib/batch";
 import { cn } from "@/lib/utils";
@@ -1393,6 +1394,16 @@ function ReviewStep({
     name: t.name,
     subject: t.subject,
   }));
+
+  const reviewRecipientFilter = useMemo(
+    () => ({
+      audienceType: data.audienceType,
+      topicId: data.audienceType === "topic" ? data.topicId : undefined,
+      segmentId: data.audienceType === "segment" ? data.segmentId : undefined,
+    }),
+    [data.audienceType, data.topicId, data.segmentId]
+  );
+
   const getAudienceLabel = () => {
     if (data.audienceType === "all") {
       return "All Contacts";
@@ -1415,29 +1426,6 @@ function ReviewStep({
     }
     return "Custom HTML";
   };
-
-  // Generate time options in 30-minute increments
-  const timeOptions = [];
-  for (let hour = 0; hour < 24; hour++) {
-    for (const minute of [0, 30]) {
-      const time = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-      const displayTime = format(new Date().setHours(hour, minute), "h:mm a");
-      timeOptions.push({ value: time, label: displayTime });
-    }
-  }
-
-  // Calculate the scheduled datetime for display
-  const getScheduledDateTime = () => {
-    if (!data.scheduledDate) {
-      return null;
-    }
-    const [hours, minutes] = data.scheduledTime.split(":").map(Number);
-    const scheduled = new Date(data.scheduledDate);
-    scheduled.setHours(hours, minutes, 0, 0);
-    return scheduled;
-  };
-
-  const scheduledDateTime = getScheduledDateTime();
 
   return (
     <div className="space-y-6">
@@ -1483,12 +1471,7 @@ function ReviewStep({
       {data.contentType === "template" && data.templateId && (
         <EmailPreviewCarousel
           organizationId={organizationId}
-          recipientFilter={{
-            audienceType: data.audienceType,
-            topicId: data.audienceType === "topic" ? data.topicId : undefined,
-            segmentId:
-              data.audienceType === "segment" ? data.segmentId : undefined,
-          }}
+          recipientFilter={reviewRecipientFilter}
           templateId={data.templateId}
           variableMappings={data.variableMappings}
         />
@@ -1517,133 +1500,11 @@ function ReviewStep({
       </Card>
 
       {/* Scheduling Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>When to Send</CardTitle>
-          <CardDescription>Send now or schedule for later</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            onValueChange={(v) => onChange({ scheduleType: v as ScheduleType })}
-            value={data.scheduleType}
-          >
-            {/* Send Now */}
-            <div className="flex items-start space-x-3 rounded-lg border p-4">
-              <RadioGroupItem id="now" value="now" />
-              <div className="flex-1">
-                <label
-                  className="cursor-pointer font-medium text-sm"
-                  htmlFor="now"
-                >
-                  <Send className="mr-1 inline h-4 w-4" />
-                  Send immediately
-                </label>
-                <p className="mt-1 text-muted-foreground text-xs">
-                  Start sending to recipients right away
-                </p>
-              </div>
-            </div>
-
-            {/* Schedule for Later */}
-            <div
-              className={cn(
-                "flex items-start space-x-3 rounded-lg border p-4",
-                !schedulingEnabled && "cursor-not-allowed opacity-60"
-              )}
-            >
-              <RadioGroupItem
-                disabled={!schedulingEnabled}
-                id="later"
-                value="later"
-              />
-              <div className="flex-1 space-y-3">
-                <div>
-                  <label
-                    className={cn(
-                      "font-medium text-sm",
-                      schedulingEnabled
-                        ? "cursor-pointer"
-                        : "cursor-not-allowed"
-                    )}
-                    htmlFor="later"
-                  >
-                    {schedulingEnabled ? (
-                      <Clock className="mr-1 inline h-4 w-4" />
-                    ) : (
-                      <Lock className="mr-1 inline h-4 w-4" />
-                    )}
-                    Schedule for later
-                    {!schedulingEnabled && (
-                      <span className="ml-2 text-muted-foreground text-xs">
-                        (Starter plan)
-                      </span>
-                    )}
-                  </label>
-                  <p className="mt-1 text-muted-foreground text-xs">
-                    {schedulingEnabled
-                      ? "Choose a specific date and time to send"
-                      : "Upgrade to Starter to schedule broadcasts for later"}
-                  </p>
-                </div>
-                {data.scheduleType === "later" && (
-                  <div className="flex flex-wrap gap-3">
-                    {/* Date Picker */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          className={cn(
-                            "w-[180px] justify-start text-left font-normal",
-                            !data.scheduledDate && "text-muted-foreground"
-                          )}
-                          variant="outline"
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {data.scheduledDate ? (
-                            format(data.scheduledDate, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="start" className="w-auto p-0">
-                        <Calendar
-                          disabled={(date) => date < new Date()}
-                          mode="single"
-                          onSelect={(date) => onChange({ scheduledDate: date })}
-                          selected={data.scheduledDate}
-                        />
-                      </PopoverContent>
-                    </Popover>
-
-                    {/* Time Picker */}
-                    <Select
-                      onValueChange={(v) => onChange({ scheduledTime: v })}
-                      value={data.scheduledTime}
-                    >
-                      <SelectTrigger className="w-[130px]">
-                        <Clock className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="Time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {data.scheduleType === "later" && scheduledDateTime && (
-                  <p className="text-muted-foreground text-xs">
-                    Scheduled for {format(scheduledDateTime, "PPPP 'at' p")}
-                  </p>
-                )}
-              </div>
-            </div>
-          </RadioGroup>
-        </CardContent>
-      </Card>
+      <SchedulingCard
+        data={data}
+        onChange={onChange}
+        schedulingEnabled={schedulingEnabled}
+      />
 
       <div className="flex justify-end pt-4">
         <Button
@@ -1675,5 +1536,236 @@ function ReviewStep({
         </Button>
       </div>
     </div>
+  );
+}
+
+// Scheduling Card Component - isolated to prevent NL input keystrokes from
+// re-rendering the rest of ReviewStep (notably EmailPreviewCarousel)
+function SchedulingCard({
+  data,
+  onChange,
+  schedulingEnabled,
+}: {
+  data: CampaignData;
+  onChange: (updates: Partial<CampaignData>) => void;
+  schedulingEnabled: boolean;
+}) {
+  // Natural language date input (state is local to this component)
+  const [nlText, setNlText] = useState("");
+  const { parsedDate, formattedPreview } = useNaturalDateParser(nlText);
+
+  // Sync parsed NL date → pickers (only when the value actually changes)
+  useEffect(() => {
+    if (!parsedDate) return;
+
+    // Snap time to nearest 30-minute slot
+    const minutes = parsedDate.getMinutes();
+    const snappedMinutes = minutes < 15 ? 0 : minutes < 45 ? 30 : 0;
+    const snappedHours =
+      minutes >= 45 ? parsedDate.getHours() + 1 : parsedDate.getHours();
+    const finalHours = snappedHours % 24;
+
+    const newTime = `${finalHours.toString().padStart(2, "0")}:${snappedMinutes.toString().padStart(2, "0")}`;
+    const newDate = new Date(parsedDate);
+    newDate.setHours(0, 0, 0, 0);
+
+    // Skip update if date and time haven't actually changed
+    const dateUnchanged =
+      data.scheduledDate &&
+      data.scheduledDate.getTime() === newDate.getTime();
+    const timeUnchanged = data.scheduledTime === newTime;
+    if (dateUnchanged && timeUnchanged) return;
+
+    onChange({ scheduledDate: newDate, scheduledTime: newTime });
+  }, [parsedDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear NL text when user picks via calendar/time dropdown
+  const handlePickerDateChange = (date: Date | undefined) => {
+    setNlText("");
+    onChange({ scheduledDate: date });
+  };
+
+  const handlePickerTimeChange = (time: string) => {
+    setNlText("");
+    onChange({ scheduledTime: time });
+  };
+
+  // Generate time options in 30-minute increments
+  const timeOptions = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (const minute of [0, 30]) {
+      const time = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+      const displayTime = format(new Date().setHours(hour, minute), "h:mm a");
+      timeOptions.push({ value: time, label: displayTime });
+    }
+  }
+
+  // Calculate the scheduled datetime for display
+  const getScheduledDateTime = () => {
+    if (!data.scheduledDate) {
+      return null;
+    }
+    const [hours, minutes] = data.scheduledTime.split(":").map(Number);
+    const scheduled = new Date(data.scheduledDate);
+    scheduled.setHours(hours, minutes, 0, 0);
+    return scheduled;
+  };
+
+  const scheduledDateTime = getScheduledDateTime();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>When to Send</CardTitle>
+        <CardDescription>Send now or schedule for later</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <RadioGroup
+          onValueChange={(v) => onChange({ scheduleType: v as ScheduleType })}
+          value={data.scheduleType}
+        >
+          {/* Send Now */}
+          <div className="flex items-start space-x-3 rounded-lg border p-4">
+            <RadioGroupItem id="now" value="now" />
+            <div className="flex-1">
+              <label
+                className="cursor-pointer font-medium text-sm"
+                htmlFor="now"
+              >
+                <Send className="mr-1 inline h-4 w-4" />
+                Send immediately
+              </label>
+              <p className="mt-1 text-muted-foreground text-xs">
+                Start sending to recipients right away
+              </p>
+            </div>
+          </div>
+
+          {/* Schedule for Later */}
+          <div
+            className={cn(
+              "flex items-start space-x-3 rounded-lg border p-4",
+              !schedulingEnabled && "cursor-not-allowed opacity-60"
+            )}
+          >
+            <RadioGroupItem
+              disabled={!schedulingEnabled}
+              id="later"
+              value="later"
+            />
+            <div className="flex-1 space-y-3">
+              <div>
+                <label
+                  className={cn(
+                    "font-medium text-sm",
+                    schedulingEnabled
+                      ? "cursor-pointer"
+                      : "cursor-not-allowed"
+                  )}
+                  htmlFor="later"
+                >
+                  {schedulingEnabled ? (
+                    <Clock className="mr-1 inline h-4 w-4" />
+                  ) : (
+                    <Lock className="mr-1 inline h-4 w-4" />
+                  )}
+                  Schedule for later
+                  {!schedulingEnabled && (
+                    <span className="ml-2 text-muted-foreground text-xs">
+                      (Starter plan)
+                    </span>
+                  )}
+                </label>
+                <p className="mt-1 text-muted-foreground text-xs">
+                  {schedulingEnabled
+                    ? "Choose a specific date and time to send"
+                    : "Upgrade to Starter to schedule broadcasts for later"}
+                </p>
+              </div>
+              {data.scheduleType === "later" && (
+                <div className="space-y-3">
+                  {/* Natural language date input */}
+                  <div className="space-y-1.5">
+                    <Input
+                      onChange={(e) => setNlText(e.target.value)}
+                      placeholder='Type a date, e.g. "next Wednesday at 9am"'
+                      value={nlText}
+                    />
+                    {formattedPreview && (
+                      <p className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400">
+                        <Check className="h-3.5 w-3.5" />
+                        {formattedPreview}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Date & time pickers as fallback */}
+                  <div className="space-y-1.5">
+                    <p className="text-muted-foreground text-xs">
+                      Or pick a date and time:
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {/* Date Picker */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            className={cn(
+                              "w-[180px] justify-start text-left font-normal",
+                              !data.scheduledDate && "text-muted-foreground"
+                            )}
+                            variant="outline"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {data.scheduledDate ? (
+                              format(data.scheduledDate, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-auto p-0">
+                          <Calendar
+                            disabled={(date) => date < new Date()}
+                            mode="single"
+                            onSelect={handlePickerDateChange}
+                            selected={data.scheduledDate}
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      {/* Time Picker */}
+                      <Select
+                        onValueChange={handlePickerTimeChange}
+                        value={data.scheduledTime}
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <Clock className="mr-2 h-4 w-4" />
+                          <SelectValue placeholder="Time" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeOptions.map((option) => (
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {data.scheduleType === "later" && scheduledDateTime && (
+                <p className="text-muted-foreground text-xs">
+                  Scheduled for {format(scheduledDateTime, "PPPP 'at' p")}
+                </p>
+              )}
+            </div>
+          </div>
+        </RadioGroup>
+      </CardContent>
+    </Card>
   );
 }
