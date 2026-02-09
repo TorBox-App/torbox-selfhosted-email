@@ -20,6 +20,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import Script from "next/script";
 import { parseAsString, useQueryStates } from "nuqs";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import Script from "next/script";
 
 // Turnstile types for Cloudflare bot protection
 declare global {
@@ -365,7 +365,7 @@ function ToolsPageInner() {
 
   // Render Turnstile widget when script is loaded
   useEffect(() => {
-    if (!turnstileReady || !window.turnstile) return;
+    if (!(turnstileReady && window.turnstile)) return;
 
     const container = document.getElementById("turnstile-container");
     if (!container) return;
@@ -513,8 +513,8 @@ function ToolsPageInner() {
   return (
     <div className="min-h-screen bg-background">
       <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         onLoad={() => setTurnstileReady(true)}
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
       />
       {/* Header */}

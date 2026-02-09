@@ -21,7 +21,14 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import {
   getVerifiedDomains,
@@ -1571,8 +1578,7 @@ function SchedulingCard({
 
     // Skip update if date and time haven't actually changed
     const dateUnchanged =
-      data.scheduledDate &&
-      data.scheduledDate.getTime() === newDate.getTime();
+      data.scheduledDate && data.scheduledDate.getTime() === newDate.getTime();
     const timeUnchanged = data.scheduledTime === newTime;
     if (dateUnchanged && timeUnchanged) return;
 
@@ -1658,9 +1664,7 @@ function SchedulingCard({
                 <label
                   className={cn(
                     "font-medium text-sm",
-                    schedulingEnabled
-                      ? "cursor-pointer"
-                      : "cursor-not-allowed"
+                    schedulingEnabled ? "cursor-pointer" : "cursor-not-allowed"
                   )}
                   htmlFor="later"
                 >
@@ -1744,10 +1748,7 @@ function SchedulingCard({
                         </SelectTrigger>
                         <SelectContent>
                           {timeOptions.map((option) => (
-                            <SelectItem
-                              key={option.value}
-                              value={option.value}
-                            >
+                            <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
                           ))}
