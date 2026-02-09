@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 
 // Turnstile types for Cloudflare bot protection
 declare global {
+  // biome-ignore lint/style/useConsistentTypeDefinitions: interface required for global Window augmentation
   interface Window {
     turnstile?: {
       render: (

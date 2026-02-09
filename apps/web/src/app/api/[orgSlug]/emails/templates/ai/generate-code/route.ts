@@ -1,7 +1,12 @@
 import { gateway } from "@ai-sdk/gateway";
 import { auth } from "@wraps/auth";
 import { aiConversation, brandKit, db, templateVariable } from "@wraps/db";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import {
+  convertToModelMessages,
+  streamText,
+  type UIMessage,
+  type UserContent,
+} from "ai";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -84,35 +89,43 @@ export async function POST(request: Request, context: RouteContext) {
     if (imageUrl) {
       try {
         const processedImage = await fetchAndProcessImage(imageUrl);
-        const lastUserIndex = modelMessages.findLastIndex(
-          (m) => m.role === "user"
-        );
+        let lastUserIndex = -1;
+        for (let i = modelMessages.length - 1; i >= 0; i--) {
+          if (modelMessages[i].role === "user") {
+            lastUserIndex = i;
+            break;
+          }
+        }
         if (lastUserIndex !== -1) {
           const lastUserMsg = modelMessages[lastUserIndex];
           const existingText =
             typeof lastUserMsg.content === "string"
               ? lastUserMsg.content
-              : lastUserMsg.content
-                  .filter(
-                    (p): p is { type: "text"; text: string } =>
-                      p.type === "text"
-                  )
-                  .map((p) => p.text)
-                  .join("");
+              : Array.isArray(lastUserMsg.content)
+                ? lastUserMsg.content
+                    .filter(
+                      (p): p is { type: "text"; text: string } =>
+                        p.type === "text"
+                    )
+                    .map((p) => p.text)
+                    .join("")
+                : "";
+
+          const newContent: UserContent = [
+            {
+              type: "image",
+              image: processedImage.base64,
+              mediaType: processedImage.mediaType,
+            },
+            {
+              type: "text",
+              text: existingText,
+            },
+          ];
 
           modelMessages[lastUserIndex] = {
-            ...lastUserMsg,
-            content: [
-              {
-                type: "image" as const,
-                image: processedImage.base64,
-                mimeType: processedImage.mediaType,
-              },
-              {
-                type: "text" as const,
-                text: existingText,
-              },
-            ],
+            role: "user" as const,
+            content: newContent,
           };
         }
       } catch (imageError) {
