@@ -607,77 +607,71 @@ export function CodeTemplateAIPanel({
             />
           </div>
 
-          <AIAttachmentChips
-            imageAttachment={imageAttachment}
-            onRemoveBrandKit={() => setSelectedBrandKitId(null)}
-            onRemoveImage={() => setImageAttachment(null)}
-            selectedBrandKit={
-              selectedBrandKit
-                ? {
-                    name: selectedBrandKit.companyName || "Brand Kit",
-                    primaryColor: selectedBrandKit.primaryColor,
-                  }
-                : null
-            }
-          />
-
-          <div className="h-10 rounded-b-xl bg-black/5 dark:bg-white/5">
-            <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5">
-              <AIImageUrlPopover
-                disabled={
-                  !!imageAttachment || isLoading || aiUsage?.remaining === 0
-                }
-                onAttach={setImageAttachment}
-                orgSlug={orgSlug}
-              />
-              {messages.length > 0 && !isLoading && (
-                <Button
-                  className="h-7 w-7"
-                  disabled={aiUsage?.remaining === 0}
-                  onClick={() => regenerate()}
-                  size="icon"
-                  title="Regenerate"
-                  type="button"
-                  variant="ghost"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </Button>
-              )}
-              {input.trim().length > 10 && (
-                <Button
-                  className="h-7 w-7"
-                  onClick={() => saveFavorite(input.trim())}
-                  size="icon"
-                  title="Save to favorites"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Heart className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-            <div className="absolute right-2.5 bottom-2.5">
+          <div className="flex min-h-10 items-center gap-1.5 rounded-b-xl bg-black/5 px-2.5 py-1.5 dark:bg-white/5">
+            <AIImageUrlPopover
+              disabled={
+                !!imageAttachment || isLoading || aiUsage?.remaining === 0
+              }
+              onAttach={setImageAttachment}
+              orgSlug={orgSlug}
+            />
+            <AIAttachmentChips
+              imageAttachment={imageAttachment}
+              onRemoveBrandKit={() => setSelectedBrandKitId(null)}
+              onRemoveImage={() => setImageAttachment(null)}
+              selectedBrandKit={
+                selectedBrandKit
+                  ? {
+                      name: selectedBrandKit.companyName || "Brand Kit",
+                      primaryColor: selectedBrandKit.primaryColor,
+                    }
+                  : null
+              }
+            />
+            <div className="flex-1" />
+            {messages.length > 0 && !isLoading && (
               <Button
-                className={cn(
-                  "h-7 w-7 transition-colors",
-                  input.trim() && !isLoading
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : ""
-                )}
-                disabled={
-                  !input.trim() || isLoading || aiUsage?.remaining === 0
-                }
+                className="h-7 w-7"
+                disabled={aiUsage?.remaining === 0}
+                onClick={() => regenerate()}
                 size="icon"
-                type="submit"
-                variant={input.trim() && !isLoading ? "default" : "ghost"}
+                title="Regenerate"
+                type="button"
+                variant="ghost"
               >
-                {isLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Send className="h-3.5 w-3.5" />
-                )}
+                <RefreshCw className="h-3.5 w-3.5" />
               </Button>
-            </div>
+            )}
+            {input.trim().length > 10 && (
+              <Button
+                className="h-7 w-7"
+                onClick={() => saveFavorite(input.trim())}
+                size="icon"
+                title="Save to favorites"
+                type="button"
+                variant="ghost"
+              >
+                <Heart className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            <Button
+              className={cn(
+                "h-7 w-7 transition-colors",
+                input.trim() && !isLoading
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : ""
+              )}
+              disabled={!input.trim() || isLoading || aiUsage?.remaining === 0}
+              size="icon"
+              type="submit"
+              variant={input.trim() && !isLoading ? "default" : "ghost"}
+            >
+              {isLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+            </Button>
           </div>
         </div>
       </form>

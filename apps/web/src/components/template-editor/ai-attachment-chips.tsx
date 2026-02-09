@@ -21,7 +21,7 @@ export function AIAttachmentChips({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 bg-black/5 px-3 py-1.5 dark:bg-white/5">
+    <>
       {imageAttachment && (
         <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs">
           <ImageIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -52,6 +52,6 @@ export function AIAttachmentChips({
           </button>
         </span>
       )}
-    </div>
+    </>
   );
 }
