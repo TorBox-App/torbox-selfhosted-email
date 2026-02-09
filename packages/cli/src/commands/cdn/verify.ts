@@ -38,7 +38,7 @@ async function checkDNSRecord(
     );
 
     return { found, value: records[0] };
-  } catch (_error: any) {
+  } catch (_error) {
     return { found: false };
   }
 }
@@ -67,7 +67,7 @@ async function checkCertificateStatus(
       status: cert?.Status || "UNKNOWN",
       validationStatus,
     };
-  } catch (_error: any) {
+  } catch (_error) {
     return { status: "ERROR" };
   }
 }
@@ -97,7 +97,7 @@ async function checkDistributionStatus(
       enabled: result.Distribution?.DistributionConfig?.Enabled ?? false,
       aliases,
     };
-  } catch (_error: any) {
+  } catch (_error) {
     return { status: "ERROR", enabled: false, aliases: [] };
   }
 }
@@ -164,7 +164,7 @@ export async function cdnVerify(options: CdnVerifyOptions): Promise<void> {
     });
 
     stackOutputs = await stack.outputs();
-  } catch (_error: any) {
+  } catch (_error) {
     progress.stop();
     clack.log.error("No CDN infrastructure found");
     console.log(

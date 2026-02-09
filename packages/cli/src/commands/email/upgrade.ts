@@ -1594,12 +1594,13 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         duration_ms: Date.now() - startTime,
       });
       return;
-    } catch (error: any) {
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       trackError("PREVIEW_FAILED", "email:upgrade", { step: "preview" });
-      if (error.message?.includes("stack is currently locked")) {
+      if (msg.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
-      throw new Error(`Preview failed: ${error.message}`);
+      throw new Error(`Preview failed: ${msg}`);
     }
   }
 
@@ -1713,7 +1714,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         };
       }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+
     // Track upgrade failure
     trackServiceUpgrade("email", {
       from_preset: metadata.services.email?.preset,
@@ -1723,13 +1726,13 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     });
 
     // Check if it's a lock file error
-    if (error.message?.includes("stack is currently locked")) {
+    if (msg.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "email:upgrade", { step: "deploy" });
       throw errors.stackLocked();
     }
 
     trackError("UPGRADE_FAILED", "email:upgrade", { step: "deploy" });
-    throw new Error(`Pulumi upgrade failed: ${error.message}`);
+    throw new Error(`Pulumi upgrade failed: ${msg}`);
   }
 
   // 13. Create DNS records using stored provider (or detect if not stored)
@@ -1812,10 +1815,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
               "You can manually add the required DNS records shown below"
             );
           }
-        } catch (error: any) {
-          progress.fail(
-            `Failed to create DNS records automatically: ${error.message}`
-          );
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          progress.fail(`Failed to create DNS records automatically: ${msg}`);
           progress.info(
             "You can manually add the required DNS records shown below"
           );
@@ -1996,10 +1998,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
               );
             }
           }
-        } catch (error: any) {
-          progress.fail(
-            `Failed to create ACM validation record: ${error.message}`
-          );
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          progress.fail(`Failed to create ACM validation record: ${msg}`);
         }
       }
     }

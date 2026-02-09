@@ -9,6 +9,7 @@ import {
   listSESDomains,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { isAWSError } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -88,13 +89,22 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
     });
 
     stackOutputs = await stack.outputs();
-  } catch (_error: any) {
-    progress.stop();
-    clack.log.error("No email infrastructure found");
-    console.log(
-      `\nRun ${pc.cyan("wraps email init")} to deploy email infrastructure.\n`
-    );
-    process.exit(1);
+  } catch (error) {
+    // Stack not found is expected when no infrastructure is deployed
+    if (
+      error instanceof Error &&
+      (error.message.includes("no stack named") ||
+        error.message.includes("not found"))
+    ) {
+      progress.stop();
+      clack.log.error("No email infrastructure found");
+      console.log(
+        `\nRun ${pc.cyan("wraps email init")} to deploy email infrastructure.\n`
+      );
+      process.exit(1);
+      return; // Return after process.exit for testing
+    }
+    throw error;
   }
 
   // 4. Get SES domains with DKIM tokens
@@ -128,17 +138,21 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
           isPrimary: tracked?.isPrimary,
           purpose: tracked?.purpose,
         };
-      } catch (_error) {
-        return {
-          domain: d.domain,
-          status: d.verified ? ("verified" as const) : ("pending" as const),
-          dkimTokens: undefined,
-          mailFromDomain: undefined,
-          mailFromStatus: undefined,
-          managed: tracked?.managed,
-          isPrimary: tracked?.isPrimary,
-          purpose: tracked?.purpose,
-        };
+      } catch (error) {
+        // Non-fatal: return partial info if individual domain detail fetch fails
+        if (isAWSError(error)) {
+          return {
+            domain: d.domain,
+            status: d.verified ? ("verified" as const) : ("pending" as const),
+            dkimTokens: undefined,
+            mailFromDomain: undefined,
+            mailFromStatus: undefined,
+            managed: tracked?.managed,
+            isPrimary: tracked?.isPrimary,
+            purpose: tracked?.purpose,
+          };
+        }
+        throw error;
       }
     })
   );

@@ -232,12 +232,13 @@ export async function config(options: EmailConfigOptions): Promise<void> {
         duration_ms: Date.now() - startTime,
       });
       return;
-    } catch (error: any) {
+    } catch (error) {
       trackError("PREVIEW_FAILED", "email:config", { step: "preview" });
-      if (error.message?.includes("stack is currently locked")) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
-      throw new Error(`Preview failed: ${error.message}`);
+      throw new Error(`Preview failed: ${msg}`);
     }
   }
 
@@ -312,7 +313,8 @@ export async function config(options: EmailConfigOptions): Promise<void> {
         };
       }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     // Track update failure
     trackCommand("email:config", {
       success: false,
@@ -320,13 +322,13 @@ export async function config(options: EmailConfigOptions): Promise<void> {
     });
 
     // Check if it's a lock file error
-    if (error.message?.includes("stack is currently locked")) {
+    if (msg.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "email:config", { step: "update" });
       throw errors.stackLocked();
     }
 
     trackError("UPDATE_FAILED", "email:config", { step: "update" });
-    throw new Error(`Pulumi update failed: ${error.message}`);
+    throw new Error(`Pulumi update failed: ${msg}`);
   }
 
   // 11. Update metadata timestamp (config stays the same)

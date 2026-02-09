@@ -255,12 +255,13 @@ export async function connect(options: ConnectOptions): Promise<void> {
         existing_identities: selectedIdentities.length,
       });
       return;
-    } catch (error: any) {
+    } catch (error) {
       trackError("PREVIEW_FAILED", "email:connect", { step: "preview" });
-      if (error.message?.includes("stack is currently locked")) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
-      throw new Error(`Preview failed: ${error.message}`);
+      throw new Error(`Preview failed: ${msg}`);
     }
   }
 
@@ -328,7 +329,8 @@ export async function connect(options: ConnectOptions): Promise<void> {
         };
       }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     // Track deployment failure
     trackServiceInit("email", false, {
       preset,
@@ -337,13 +339,13 @@ export async function connect(options: ConnectOptions): Promise<void> {
     });
 
     // Check if it's a lock file error
-    if (error.message?.includes("stack is currently locked")) {
+    if (msg.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "email:connect", { step: "deploy" });
       throw errors.stackLocked();
     }
 
     trackError("DEPLOYMENT_FAILED", "email:connect", { step: "deploy" });
-    throw new Error(`Pulumi deployment failed: ${error.message}`);
+    throw new Error(`Pulumi deployment failed: ${msg}`);
   }
 
   // 12. Create DNS records in Route53 (if hosted zone exists)
@@ -370,10 +372,9 @@ export async function connect(options: ConnectOptions): Promise<void> {
           mailFromDomain
         );
         progress.succeed("DNS records created in Route53");
-      } catch (error: any) {
-        progress.fail(
-          `Failed to create DNS records automatically: ${error.message}`
-        );
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        progress.fail(`Failed to create DNS records automatically: ${msg}`);
         progress.info(
           "You can manually add the required DNS records shown below"
         );

@@ -8,7 +8,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { errors } from "../../utils/shared/errors.js";
+import { errors, isAWSError } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -49,8 +49,11 @@ async function getEmailIdentityInfo(
       dkimTokens: response.DkimAttributes?.Tokens || [],
       mailFromDomain: response.MailFromAttributes?.MailFromDomain,
     };
-  } catch (_error) {
-    return { dkimTokens: [] };
+  } catch (error) {
+    if (isAWSError(error)) {
+      return { dkimTokens: [] };
+    }
+    throw error;
   }
 }
 
@@ -194,7 +197,8 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
               stackName,
               workDir: getPulumiWorkDir(),
             });
-          } catch (_error) {
+          } catch {
+            // guardrail:allow-swallowed-error — stack not found means no infrastructure to preview
             throw new Error("No email infrastructure found to preview");
           }
 
@@ -235,14 +239,15 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         duration_ms: Date.now() - startTime,
       });
       return;
-    } catch (error: any) {
+    } catch (error) {
       progress.stop();
-      if (error.message.includes("No email infrastructure found")) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("No email infrastructure found")) {
         clack.log.warn("No email infrastructure found to preview");
         process.exit(0);
       }
       trackError("PREVIEW_FAILED", "email destroy", { step: "preview" });
-      throw new Error(`Preview failed: ${error.message}`);
+      throw new Error(`Preview failed: ${msg}`);
     }
   }
 
@@ -261,8 +266,9 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
           mailFromDomain
         );
       });
-    } catch (error: any) {
-      clack.log.warn(`Could not delete DNS records: ${error.message}`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      clack.log.warn(`Could not delete DNS records: ${msg}`);
       clack.log.info("You may need to delete them manually from Route53");
     }
   }
@@ -287,7 +293,8 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
             stackName,
             workDir: getPulumiWorkDir(),
           });
-        } catch (_error) {
+        } catch {
+          // guardrail:allow-swallowed-error — stack not found means no infrastructure to destroy
           throw new Error("No email infrastructure found to destroy");
         }
 
@@ -302,16 +309,17 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         await stack.workspace.removeStack(stackName);
       }
     );
-  } catch (error: any) {
+  } catch (error) {
     progress.stop();
-    if (error.message.includes("No email infrastructure found")) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("No email infrastructure found")) {
       clack.log.warn("No email infrastructure found");
       // Still delete metadata if it exists
       await deleteConnectionMetadata(identity.accountId, region);
       process.exit(0);
     }
     // Check if it's a lock file error
-    if (error.message?.includes("stack is currently locked")) {
+    if (msg.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "email destroy", { step: "destroy" });
       throw errors.stackLocked();
     }

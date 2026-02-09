@@ -585,3 +585,203 @@ describe("no console.log in web app", () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────
+// Test 10: No swallowed errors in CLI commands
+// ─────────────────────────────────────────────────────────
+
+function getCLICommandFiles(): string[] {
+  return findFiles("packages/cli/src/commands/**/*.ts").filter(
+    (f) => !(f.includes("__tests__") || f.includes(".test."))
+  );
+}
+
+describe("no swallowed errors in CLI commands", () => {
+  test("catch blocks must not ignore errors via _error or bare catch", () => {
+    const files = getCLICommandFiles();
+    const violations: string[] = [];
+
+    // Matches catch(_error), catch (_error: any), catch (_error: unknown), etc.
+    const underscoredCatchRegex = /catch\s*\(\s*_error/;
+    // Matches bare catch { (no variable captured at all)
+    const bareCatchRegex = /\)\s*catch\s*\{|^\s*}\s*catch\s*\{/;
+
+    for (const file of files) {
+      const content = readFile(file);
+      const lines = content.split("\n");
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // Skip comments
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+
+        // Skip lines with escape hatch (check current line and next line,
+        // since the formatter may split `catch { // comment` across two lines)
+        if (line.includes("guardrail:allow-swallowed-error")) continue;
+        const nextLine = i + 1 < lines.length ? lines[i + 1] : "";
+        if (nextLine.includes("guardrail:allow-swallowed-error")) continue;
+
+        if (underscoredCatchRegex.test(line) || bareCatchRegex.test(line)) {
+          violations.push(
+            `${file}:${i + 1} — swallowed error (use specific error checks instead)`
+          );
+        }
+      }
+    }
+
+    // Ratchet: 38 remaining violations (mostly sms/, cdn/, shared/, templates/).
+    // Lower this number as violations are fixed.
+    expect(
+      violations.length,
+      `Expected ≤38 violations but found ${violations.length}. New swallowed errors added:\n${violations.join("\n")}`
+    ).toBeLessThanOrEqual(38);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test 11: No catch (error: any) in CLI commands
+// ─────────────────────────────────────────────────────────
+
+describe("no catch (error: any) in CLI commands", () => {
+  test("catch blocks must use unknown type, not any", () => {
+    const files = getCLICommandFiles();
+    const violations: string[] = [];
+
+    const catchAnyRegex = /catch\s*\(\s*\w+\s*:\s*any\s*\)/;
+
+    for (const file of files) {
+      const content = readFile(file);
+      const lines = content.split("\n");
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // Skip comments
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+
+        // Skip lines with escape hatch
+        if (line.includes("guardrail:allow-catch-any")) continue;
+
+        if (catchAnyRegex.test(line)) {
+          violations.push(
+            `${file}:${i + 1} — catch (error: any) should be catch (error) with type guards`
+          );
+        }
+      }
+    }
+
+    // Ratchet: 0 — all violations fixed.
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test 12: No metadata save before deployment completes
+// ─────────────────────────────────────────────────────────
+
+describe("metadata save order", () => {
+  test("saveConnectionMetadata must not appear before deployment calls in same function", () => {
+    const files = getCLICommandFiles();
+    const violations: string[] = [];
+
+    const saveRegex = /saveConnectionMetadata\s*\(/g;
+    const deployRegex =
+      /stack\.up\s*\(|deployEmailStack\s*\(|deploySmsStack\s*\(|deployCdnStack\s*\(/g;
+
+    for (const file of files) {
+      const content = readFile(file);
+
+      // Only check files that have both save and deploy
+      if (
+        !(
+          content.includes("saveConnectionMetadata") &&
+          (content.includes("stack.up") ||
+            content.includes("deployEmailStack") ||
+            content.includes("deploySmsStack") ||
+            content.includes("deployCdnStack"))
+        )
+      ) {
+        continue;
+      }
+
+      const lines = content.split("\n");
+
+      // Find all save and deploy line numbers
+      const saveLines: number[] = [];
+      const deployLines: number[] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.includes("guardrail:allow-early-save")) continue;
+
+        saveRegex.lastIndex = 0;
+        deployRegex.lastIndex = 0;
+
+        if (saveRegex.test(line)) {
+          saveLines.push(i + 1);
+        }
+        if (deployRegex.test(line)) {
+          deployLines.push(i + 1);
+        }
+      }
+
+      if (saveLines.length === 0 || deployLines.length === 0) continue;
+
+      // Check if any save appears before the first deploy
+      const firstDeploy = Math.min(...deployLines);
+      for (const saveLine of saveLines) {
+        if (saveLine < firstDeploy) {
+          violations.push(
+            `${file}:${saveLine} — saveConnectionMetadata before deployment at line ${firstDeploy}`
+          );
+        }
+      }
+    }
+
+    // Ratchet: 0 expected violations.
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test 13: No duplicate infrastructure helper functions
+// ─────────────────────────────────────────────────────────
+
+describe("no duplicate infrastructure helpers", () => {
+  test("resource-check functions must not be duplicated across files", () => {
+    const files = findFiles("packages/cli/src/infrastructure/**/*.ts").filter(
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
+    );
+
+    // Track function declarations
+    const functionLocations: Record<string, string[]> = {};
+    const funcDeclRegex =
+      /(?:async\s+)?function\s+(roleExists|tableExists|sqsQueueExists|snsTopicExists|lambdaFunctionExists)\s*\(/g;
+
+    for (const file of files) {
+      const content = readFile(file);
+
+      funcDeclRegex.lastIndex = 0;
+      for (const match of content.matchAll(funcDeclRegex)) {
+        const funcName = match[1];
+        if (!functionLocations[funcName]) {
+          functionLocations[funcName] = [];
+        }
+        functionLocations[funcName].push(file);
+      }
+    }
+
+    const violations: string[] = [];
+    for (const [funcName, locations] of Object.entries(functionLocations)) {
+      if (locations.length > 1) {
+        violations.push(`${funcName}() duplicated in: ${locations.join(", ")}`);
+      }
+    }
+
+    // Ratchet: 0 — all helpers extracted to shared/resource-checks.ts.
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});

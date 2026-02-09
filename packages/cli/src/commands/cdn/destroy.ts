@@ -204,14 +204,15 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
         duration_ms: Date.now() - startTime,
       });
       return;
-    } catch (error: any) {
+    } catch (error) {
       progress.stop();
-      if (error.message.includes("No CDN infrastructure found")) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("No CDN infrastructure found")) {
         clack.log.warn("No CDN infrastructure found to preview");
         process.exit(0);
       }
       trackError("PREVIEW_FAILED", "storage destroy", { step: "preview" });
-      throw new Error(`Preview failed: ${error.message}`);
+      throw new Error(`Preview failed: ${msg}`);
     }
   }
 
@@ -226,8 +227,9 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
           await deleteCdnDNSRecords(hostedZone?.id, customDomain);
         }
       );
-    } catch (error: any) {
-      clack.log.warn(`Could not delete DNS records: ${error.message}`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      clack.log.warn(`Could not delete DNS records: ${msg}`);
       clack.log.info("You may need to delete them manually from Route53");
     }
   }
@@ -241,9 +243,10 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
         await emptyS3Bucket(bucketName, region);
       }
     );
-  } catch (error: any) {
+  } catch (error) {
     // Bucket might not exist or already be empty
-    clack.log.info(`Note: ${error.message}`);
+    const msg = error instanceof Error ? error.message : String(error);
+    clack.log.info(`Note: ${msg}`);
   }
 
   // 9. Destroy Pulumi infrastructure
@@ -275,9 +278,10 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
         await stack.workspace.removeStack(stackName);
       }
     );
-  } catch (error: any) {
+  } catch (error) {
     progress.stop();
-    if (error.message.includes("No CDN infrastructure found")) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("No CDN infrastructure found")) {
       clack.log.warn("No CDN infrastructure found");
       // Still update metadata if it exists
       if (metadata) {
@@ -287,7 +291,7 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
       process.exit(0);
     }
     // Check if it's a lock file error
-    if (error.message?.includes("stack is currently locked")) {
+    if (msg.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "storage destroy", { step: "destroy" });
       throw errors.stackLocked();
     }

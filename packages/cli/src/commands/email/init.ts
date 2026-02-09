@@ -314,12 +314,13 @@ export async function init(options: InitOptions): Promise<void> {
         duration_ms: Date.now() - startTime,
       });
       return;
-    } catch (error: any) {
+    } catch (error) {
       trackError("PREVIEW_FAILED", "email:init", { step: "preview" });
-      if (error.message?.includes("stack is currently locked")) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
-      throw new Error(`Preview failed: ${error.message}`);
+      throw new Error(`Preview failed: ${msg}`);
     }
   }
 
@@ -415,7 +416,8 @@ export async function init(options: InitOptions): Promise<void> {
         };
       }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     // Track deployment failure
     trackServiceInit("email", false, {
       preset,
@@ -425,14 +427,14 @@ export async function init(options: InitOptions): Promise<void> {
     });
 
     // Check if it's a lock file error
-    if (error.message?.includes("stack is currently locked")) {
+    if (msg.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "email:init", { step: "deploy" });
       throw errors.stackLocked();
     }
 
     // Check for IAM permission errors in Pulumi deployment
     if (isPulumiError(error)) {
-      const { code, iamAction, service } = parsePulumiError(error);
+      const { code, iamAction, service } = parsePulumiError(error as Error);
 
       trackError(`PULUMI_${code}`, "email:init", {
         step: "deploy",
@@ -464,7 +466,7 @@ export async function init(options: InitOptions): Promise<void> {
     }
 
     trackError("DEPLOYMENT_FAILED", "email:init", { step: "deploy" });
-    throw new Error(`Pulumi deployment failed: ${error.message}`);
+    throw new Error(`Pulumi deployment failed: ${msg}`);
   }
 
   // 9. Save metadata for future upgrades and restore
@@ -586,9 +588,10 @@ export async function init(options: InitOptions): Promise<void> {
                 "Skipping DNS record creation. You can add them manually."
               );
             }
-          } catch (error: any) {
+          } catch (error) {
             progress.stop();
-            clack.log.warn(`Could not manage DNS records: ${error.message}`);
+            const msg = error instanceof Error ? error.message : String(error);
+            clack.log.warn(`Could not manage DNS records: ${msg}`);
           }
         } else {
           // For Vercel and Cloudflare, create records directly

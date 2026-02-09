@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import { build } from "esbuild";
+import { lambdaFunctionExists } from "../shared/resource-checks.js";
 
 // Node.js built-in modules must be external when bundling ESM for Lambda
 const nodeBuiltins = builtinModules.flatMap((m) => [m, `node:${m}`]);
@@ -49,29 +50,6 @@ export type LambdaFunctions = {
   eventProcessor: aws.lambda.Function;
   eventSourceMapping: aws.lambda.EventSourceMapping;
 };
-
-/**
- * Check if Lambda function exists
- */
-async function lambdaFunctionExists(functionName: string): Promise<boolean> {
-  try {
-    const { LambdaClient, GetFunctionCommand } = await import(
-      "@aws-sdk/client-lambda"
-    );
-    const lambda = new LambdaClient({
-      region: process.env.AWS_REGION || "us-east-1",
-    });
-
-    await lambda.send(new GetFunctionCommand({ FunctionName: functionName }));
-    return true;
-  } catch (error: any) {
-    if (error.name === "ResourceNotFoundException") {
-      return false;
-    }
-    console.error("Error checking for existing Lambda function:", error);
-    return false;
-  }
-}
 
 /**
  * Find existing event source mapping for Lambda function and SQS queue

@@ -197,15 +197,16 @@ export async function cdnSync(options: CdnSyncOptions): Promise<void> {
 
       return result.summary;
     });
-  } catch (error: any) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     trackCommand("storage:sync", {
       success: false,
-      error: error.message,
+      error: msg,
       region,
       duration_ms: Date.now() - startTime,
     });
 
-    clack.log.error(`Sync failed: ${error.message}`);
+    clack.log.error(`Sync failed: ${msg}`);
     process.exit(1);
   }
 

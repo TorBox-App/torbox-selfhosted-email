@@ -10,6 +10,7 @@ import {
   createCdnBucket,
   createCdnDistribution,
 } from "./resources/s3-cdn.js";
+import { roleExists } from "./shared/resource-checks.js";
 import { createVercelOIDC } from "./vercel-oidc.js";
 
 /**
@@ -23,31 +24,6 @@ type CdnIAMConfig = {
   bucketArn: pulumi.Output<string>;
   distributionArn?: pulumi.Output<string>;
 };
-
-/**
- * Check if IAM role exists
- */
-async function roleExists(roleName: string): Promise<boolean> {
-  try {
-    const { IAMClient, GetRoleCommand } = await import("@aws-sdk/client-iam");
-    const iam = new IAMClient({
-      region: process.env.AWS_REGION || "us-east-1",
-    });
-
-    await iam.send(new GetRoleCommand({ RoleName: roleName }));
-    return true;
-  } catch (error: any) {
-    if (
-      error.name === "NoSuchEntityException" ||
-      error.Code === "NoSuchEntity" ||
-      error.Error?.Code === "NoSuchEntity"
-    ) {
-      return false;
-    }
-    console.error("Error checking for existing IAM role:", error);
-    return false;
-  }
-}
 
 /**
  * Create IAM role for storage infrastructure

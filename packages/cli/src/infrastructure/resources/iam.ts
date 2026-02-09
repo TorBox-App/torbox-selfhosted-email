@@ -1,6 +1,7 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import type { Provider, WrapsEmailConfig } from "../../types/index.js";
+import { roleExists } from "../shared/resource-checks.js";
 
 /**
  * IAM role configuration
@@ -12,33 +13,6 @@ export type IAMRoleConfig = {
   vercelProjectName?: string;
   emailConfig: WrapsEmailConfig;
 };
-
-/**
- * Check if IAM role exists
- */
-async function roleExists(roleName: string): Promise<boolean> {
-  try {
-    const { IAMClient, GetRoleCommand } = await import("@aws-sdk/client-iam");
-    // IAM is global but SDK still requires a region
-    const iam = new IAMClient({
-      region: process.env.AWS_REGION || "us-east-1",
-    });
-
-    await iam.send(new GetRoleCommand({ RoleName: roleName }));
-    return true;
-  } catch (error: any) {
-    // AWS SDK v3 can return the error code in different places
-    if (
-      error.name === "NoSuchEntityException" ||
-      error.Code === "NoSuchEntity" ||
-      error.Error?.Code === "NoSuchEntity"
-    ) {
-      return false;
-    }
-    console.error("Error checking for existing IAM role:", error);
-    return false;
-  }
-}
 
 /**
  * Create IAM role for email infrastructure

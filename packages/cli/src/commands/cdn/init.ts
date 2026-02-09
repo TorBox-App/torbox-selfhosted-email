@@ -553,12 +553,13 @@ export async function init(options: CdnInitOptions): Promise<void> {
         duration_ms: Date.now() - startTime,
       });
       return;
-    } catch (error: any) {
+    } catch (error) {
       trackError("PREVIEW_FAILED", "storage:init", { step: "preview" });
-      if (error.message?.includes("stack is currently locked")) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("stack is currently locked")) {
         throw errors.stackLocked();
       }
-      throw new Error(`Preview failed: ${error.message}`);
+      throw new Error(`Preview failed: ${msg}`);
     }
   }
 
@@ -649,7 +650,8 @@ export async function init(options: CdnInitOptions): Promise<void> {
         };
       }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     // Track deployment failure
     trackServiceInit("cdn", false, {
       preset,
@@ -659,13 +661,13 @@ export async function init(options: CdnInitOptions): Promise<void> {
     });
 
     // Check if it's a lock file error
-    if (error.message?.includes("stack is currently locked")) {
+    if (msg.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "storage:init", { step: "deploy" });
       throw errors.stackLocked();
     }
 
     trackError("DEPLOYMENT_FAILED", "storage:init", { step: "deploy" });
-    throw new Error(`Pulumi deployment failed: ${error.message}`);
+    throw new Error(`Pulumi deployment failed: ${msg}`);
   }
 
   // 11. Save metadata for future upgrades and restore
@@ -868,9 +870,10 @@ export async function init(options: CdnInitOptions): Promise<void> {
               "Skipping DNS record creation. You can add them manually."
             );
           }
-        } catch (error: any) {
+        } catch (error) {
           progress.stop();
-          clack.log.warn(`Could not manage DNS records: ${error.message}`);
+          const msg = error instanceof Error ? error.message : String(error);
+          clack.log.warn(`Could not manage DNS records: ${msg}`);
         }
       }
     }

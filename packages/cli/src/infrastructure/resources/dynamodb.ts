@@ -1,5 +1,6 @@
 import * as aws from "@pulumi/aws";
 import type { ArchiveRetention } from "../../types/index.js";
+import { tableExists } from "../shared/resource-checks.js";
 
 /**
  * DynamoDB configuration
@@ -14,29 +15,6 @@ export type DynamoDBConfig = {
 export type DynamoDBTables = {
   emailHistory: aws.dynamodb.Table;
 };
-
-/**
- * Check if DynamoDB table exists
- */
-async function tableExists(tableName: string): Promise<boolean> {
-  try {
-    const { DynamoDBClient, DescribeTableCommand } = await import(
-      "@aws-sdk/client-dynamodb"
-    );
-    const dynamodb = new DynamoDBClient({
-      region: process.env.AWS_REGION || "us-east-1",
-    });
-
-    await dynamodb.send(new DescribeTableCommand({ TableName: tableName }));
-    return true;
-  } catch (error: any) {
-    if (error.name === "ResourceNotFoundException") {
-      return false;
-    }
-    console.error("Error checking for existing DynamoDB table:", error);
-    return false;
-  }
-}
 
 /**
  * Create DynamoDB tables for email tracking

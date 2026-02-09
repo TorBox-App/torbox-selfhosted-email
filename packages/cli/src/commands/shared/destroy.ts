@@ -24,7 +24,7 @@ export async function destroy(options: DestroyOptions): Promise<void> {
   try {
     identity = await validateAWSCredentials();
     spinner.stop("AWS credentials validated");
-  } catch (error: any) {
+  } catch (error) {
     spinner.stop("AWS credentials validation failed");
     throw error;
   }

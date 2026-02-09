@@ -71,7 +71,9 @@ describe("verify command", () => {
   });
 
   it("should exit when domain is not found in SES", async () => {
-    sesv2Mock.on(GetEmailIdentityCommand).rejects(new Error("Not found"));
+    const notFoundError = new Error("Not found");
+    notFoundError.name = "NotFoundException";
+    sesv2Mock.on(GetEmailIdentityCommand).rejects(notFoundError);
 
     // The verify function will call process.exit, but since we mock it,
     // the code continues and tries to access undefined properties
@@ -118,7 +120,8 @@ describe("verify command", () => {
       },
     });
 
-    mockResolverInstance.resolveCname.mockRejectedValue(new Error("ENOTFOUND"));
+    const dnsErr = Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" });
+    mockResolverInstance.resolveCname.mockRejectedValue(dnsErr);
     mockResolverInstance.resolveTxt
       .mockResolvedValueOnce([["v=spf1 include:amazonses.com ~all"]])
       .mockResolvedValueOnce([["v=DMARC1; p=quarantine"]]);
@@ -184,7 +187,9 @@ describe("verify command", () => {
     ]);
     mockResolverInstance.resolveTxt
       .mockResolvedValueOnce([["v=spf1 include:amazonses.com ~all"]])
-      .mockRejectedValueOnce(new Error("ENOTFOUND"));
+      .mockRejectedValueOnce(
+        Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" })
+      );
 
     await verify({ domain: "example.com" });
 
@@ -287,11 +292,15 @@ describe("verify command", () => {
     mockResolverInstance.resolveTxt
       .mockResolvedValueOnce([["v=spf1 include:amazonses.com ~all"]])
       .mockResolvedValueOnce([["v=DMARC1; p=quarantine"]])
-      .mockRejectedValueOnce(new Error("ENOTFOUND"));
+      .mockRejectedValueOnce(
+        Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" })
+      );
 
     mockResolverInstance.resolveMx = vi
       .fn()
-      .mockRejectedValue(new Error("ENOTFOUND"));
+      .mockRejectedValue(
+        Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" })
+      );
 
     await verify({ domain: "example.com" });
 

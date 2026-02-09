@@ -6,56 +6,13 @@ import type {
   SMSStackOutputs,
   WrapsSMSConfig,
 } from "../types/index.js";
+import {
+  roleExists,
+  snsTopicExists,
+  sqsQueueExists,
+  tableExists,
+} from "./shared/resource-checks.js";
 import { createVercelOIDC } from "./vercel-oidc.js";
-
-/**
- * Check if IAM role exists
- */
-async function roleExists(roleName: string): Promise<boolean> {
-  try {
-    const { IAMClient, GetRoleCommand } = await import("@aws-sdk/client-iam");
-    const iam = new IAMClient({
-      region: process.env.AWS_REGION || "us-east-1",
-    });
-    await iam.send(new GetRoleCommand({ RoleName: roleName }));
-    return true;
-  } catch (error: any) {
-    // AWS SDK v3 can return the error code in different places
-    if (
-      error.name === "NoSuchEntityException" ||
-      error.Code === "NoSuchEntity" ||
-      error.Error?.Code === "NoSuchEntity"
-    ) {
-      return false;
-    }
-    return false;
-  }
-}
-
-/**
- * Check if DynamoDB table exists
- */
-async function tableExists(tableName: string): Promise<boolean> {
-  try {
-    const { DynamoDBClient, DescribeTableCommand } = await import(
-      "@aws-sdk/client-dynamodb"
-    );
-    const dynamodb = new DynamoDBClient({
-      region: process.env.AWS_REGION || "us-east-1",
-    });
-    await dynamodb.send(new DescribeTableCommand({ TableName: tableName }));
-    return true;
-  } catch (error: unknown) {
-    if (
-      error instanceof Error &&
-      "name" in error &&
-      error.name === "ResourceNotFoundException"
-    ) {
-      return false;
-    }
-    return false;
-  }
-}
 
 /**
  * Create IAM role for SMS infrastructure
@@ -395,26 +352,6 @@ async function createSMSPhoneNumber(
 // to avoid serialization issues with dynamic providers
 
 /**
- * Check if SQS queue exists
- */
-async function sqsQueueExists(queueName: string): Promise<string | null> {
-  try {
-    const { SQSClient, GetQueueUrlCommand } = await import(
-      "@aws-sdk/client-sqs"
-    );
-    const sqs = new SQSClient({
-      region: process.env.AWS_REGION || "us-east-1",
-    });
-    const response = await sqs.send(
-      new GetQueueUrlCommand({ QueueName: queueName })
-    );
-    return response.QueueUrl || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Create SQS queues for event processing
  */
 async function createSMSSQSResources(): Promise<{
@@ -474,38 +411,6 @@ async function createSMSSQSResources(): Promise<{
       });
 
   return { queue, dlq };
-}
-
-/**
- * Check if SNS topic exists
- */
-async function snsTopicExists(topicName: string): Promise<string | null> {
-  try {
-    const { SNSClient, ListTopicsCommand } = await import(
-      "@aws-sdk/client-sns"
-    );
-    const sns = new SNSClient({
-      region: process.env.AWS_REGION || "us-east-1",
-    });
-    let nextToken: string | undefined;
-
-    do {
-      const response = await sns.send(
-        new ListTopicsCommand({ NextToken: nextToken })
-      );
-      const found = response.Topics?.find((t) =>
-        t.TopicArn?.endsWith(`:${topicName}`)
-      );
-      if (found?.TopicArn) {
-        return found.TopicArn;
-      }
-      nextToken = response.NextToken;
-    } while (nextToken);
-
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 /**

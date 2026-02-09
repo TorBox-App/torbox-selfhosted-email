@@ -43,6 +43,46 @@ export function isAWSError(
 }
 
 /**
+ * Check if a DNS resolution error indicates a genuinely missing record
+ * vs a network/DNS issue that should be surfaced to the user.
+ *
+ * Returns 'missing' for ENOTFOUND/ENODATA (record doesn't exist),
+ * 'network' for ETIMEOUT/ESERVFAIL (DNS infrastructure issue),
+ * or 'unknown' for other errors that should be re-thrown.
+ */
+export function classifyDNSError(
+  error: unknown
+): "missing" | "network" | "unknown" {
+  if (!(error instanceof Error)) {
+    return "unknown";
+  }
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code === "ENOTFOUND" || code === "ENODATA") {
+    return "missing";
+  }
+  if (code === "ETIMEOUT" || code === "ESERVFAIL" || code === "ECONNREFUSED") {
+    return "network";
+  }
+  return "unknown";
+}
+
+/**
+ * Check if an error is an AWS SDK "not found" type error.
+ * Does not gate on isAWSError() because these specific error names
+ * are unambiguous — if the name matches, it's a not-found error.
+ */
+export function isAWSNotFoundError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.name === "NotFoundException" ||
+    error.name === "NoSuchEntityException" ||
+    error.name === "NoSuchEntity" ||
+    error.name === "ResourceNotFoundException" ||
+    (error as any).$metadata?.httpStatusCode === 404
+  );
+}
+
+/**
  * Check if an error is a Pulumi deployment error
  */
 export function isPulumiError(error: unknown): boolean {

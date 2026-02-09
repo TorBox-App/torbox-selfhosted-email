@@ -106,7 +106,7 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
     });
 
     stackOutputs = await stack.outputs();
-  } catch (_error: any) {
+  } catch (_error) {
     clack.log.error("Failed to load storage stack state");
     process.exit(1);
   }
@@ -179,9 +179,10 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
       })
     );
     certStatus = certResponse.Certificate?.Status || "UNKNOWN";
-  } catch (error: any) {
+  } catch (error) {
     progress.fail("Failed to check certificate status");
-    clack.log.error(`Error: ${error.message}`);
+    const msg = error instanceof Error ? error.message : String(error);
+    clack.log.error(`Error: ${msg}`);
     process.exit(1);
   }
 
@@ -323,15 +324,16 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
         await stack.up({ onOutput: () => {} });
       }
     );
-  } catch (error: any) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     trackCommand("storage:upgrade", {
       success: false,
-      error: error.message,
+      error: msg,
       region,
       duration_ms: Date.now() - startTime,
     });
 
-    clack.log.error(`Upgrade failed: ${error.message}`);
+    clack.log.error(`Upgrade failed: ${msg}`);
     process.exit(1);
   }
 

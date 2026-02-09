@@ -160,9 +160,10 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
           duration_ms: Date.now() - startTime,
         });
         return;
-      } catch (error: any) {
+      } catch (error) {
         trackError("PREVIEW_FAILED", "email:restore", { step: "preview" });
-        throw new Error(`Preview failed: ${error.message}`);
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(`Preview failed: ${msg}`);
       }
     }
     return;
@@ -199,9 +200,10 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
         await stack.workspace.removeStack(
           metadata.services.email.pulumiStackName
         );
-      } catch (error: any) {
+      } catch (error) {
         trackError("DESTROY_FAILED", "email:restore", { step: "destroy" });
-        throw new Error(`Failed to destroy Pulumi stack: ${error.message}`);
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to destroy Pulumi stack: ${msg}`);
       }
     });
   }

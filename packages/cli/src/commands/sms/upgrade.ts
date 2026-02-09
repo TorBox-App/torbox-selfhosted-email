@@ -1026,7 +1026,8 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
         );
       });
     }
-  } catch (error: any) {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     trackServiceUpgrade("sms", {
       from_preset: metadata.services.sms?.preset,
       to_preset: newPreset,
@@ -1034,13 +1035,13 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
       duration_ms: Date.now() - startTime,
     });
 
-    if (error.message?.includes("stack is currently locked")) {
+    if (msg.includes("stack is currently locked")) {
       trackError("STACK_LOCKED", "sms:upgrade", { step: "deploy" });
       throw errors.stackLocked();
     }
 
     trackError("UPGRADE_FAILED", "sms:upgrade", { step: "deploy" });
-    throw new Error(`SMS upgrade failed: ${error.message}`);
+    throw new Error(`SMS upgrade failed: ${msg}`);
   }
 
   // 13. Update metadata

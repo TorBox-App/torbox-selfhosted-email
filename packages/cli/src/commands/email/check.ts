@@ -115,20 +115,21 @@ export async function check(options: CheckOptions): Promise<void> {
 
     // Exit with appropriate code
     process.exit(getExitCode(result.score.grade));
-  } catch (error: any) {
+  } catch (error) {
     spinner?.stop("Check failed");
+    const msg = error instanceof Error ? error.message : String(error);
 
     if (options.json) {
-      console.log(JSON.stringify({ error: error.message }));
+      console.log(JSON.stringify({ error: msg }));
     } else {
-      clack.log.error(error.message);
+      clack.log.error(msg);
     }
 
     const duration = Date.now() - startTime;
     trackCommand("email:check", {
       success: false,
       duration_ms: duration,
-      error: error.message,
+      error: msg,
     });
 
     process.exit(4);

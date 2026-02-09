@@ -22,6 +22,10 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import {
+  classifyDNSError,
+  isAWSNotFoundError,
+} from "../../utils/shared/errors.js";
+import {
   addDomainToMetadata,
   findConnectionsWithService,
   getAllTrackedDomains,
@@ -66,14 +70,17 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
 
     dkimTokens = identity.DkimAttributes?.Tokens || [];
     mailFromDomain = identity.MailFromAttributes?.MailFromDomain;
-  } catch (_error: any) {
-    progress.stop();
-    clack.log.error(`Domain ${options.domain} not found in SES`);
-    console.log(
-      `\nRun ${pc.cyan(`wraps email init --domain ${options.domain}`)} to add this domain.\n`
-    );
-    process.exit(1);
-    return; // Return after process.exit for testing
+  } catch (error) {
+    if (isAWSNotFoundError(error)) {
+      progress.stop();
+      clack.log.error(`Domain ${options.domain} not found in SES`);
+      console.log(
+        `\nRun ${pc.cyan(`wraps email init --domain ${options.domain}`)} to add this domain.\n`
+      );
+      process.exit(1);
+      return; // Return after process.exit for testing
+    }
+    throw error;
   }
 
   // 2. Check DNS records
@@ -100,12 +107,24 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
         status: found ? "verified" : "incorrect",
         records,
       });
-    } catch (_error) {
-      dnsResults.push({
-        name: dkimRecord,
-        type: "CNAME",
-        status: "missing",
-      });
+    } catch (error) {
+      const dnsClass = classifyDNSError(error);
+      if (dnsClass === "missing") {
+        dnsResults.push({
+          name: dkimRecord,
+          type: "CNAME",
+          status: "missing",
+        });
+      } else if (dnsClass === "network") {
+        dnsResults.push({
+          name: dkimRecord,
+          type: "CNAME",
+          status: "missing",
+          records: ["DNS lookup failed (network issue)"],
+        });
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -120,12 +139,24 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
       status: hasAmazonSES ? "verified" : spfRecord ? "incorrect" : "missing",
       records: spfRecord ? [spfRecord] : undefined,
     });
-  } catch (_error) {
-    dnsResults.push({
-      name: options.domain,
-      type: "TXT (SPF)",
-      status: "missing",
-    });
+  } catch (error) {
+    const dnsClass = classifyDNSError(error);
+    if (dnsClass === "missing") {
+      dnsResults.push({
+        name: options.domain,
+        type: "TXT (SPF)",
+        status: "missing",
+      });
+    } else if (dnsClass === "network") {
+      dnsResults.push({
+        name: options.domain,
+        type: "TXT (SPF)",
+        status: "missing",
+        records: ["DNS lookup failed (network issue)"],
+      });
+    } else {
+      throw error;
+    }
   }
 
   // Check DMARC record
@@ -138,12 +169,24 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
       status: dmarcRecord ? "verified" : "missing",
       records: dmarcRecord ? [dmarcRecord] : undefined,
     });
-  } catch (_error) {
-    dnsResults.push({
-      name: `_dmarc.${options.domain}`,
-      type: "TXT (DMARC)",
-      status: "missing",
-    });
+  } catch (error) {
+    const dnsClass = classifyDNSError(error);
+    if (dnsClass === "missing") {
+      dnsResults.push({
+        name: `_dmarc.${options.domain}`,
+        type: "TXT (DMARC)",
+        status: "missing",
+      });
+    } else if (dnsClass === "network") {
+      dnsResults.push({
+        name: `_dmarc.${options.domain}`,
+        type: "TXT (DMARC)",
+        status: "missing",
+        records: ["DNS lookup failed (network issue)"],
+      });
+    } else {
+      throw error;
+    }
   }
 
   // Check MAIL FROM domain records (if configured)
@@ -165,12 +208,24 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
             : "missing",
         records: mxRecords.map((r) => `${r.priority} ${r.exchange}`),
       });
-    } catch (_error) {
-      dnsResults.push({
-        name: mailFromDomain,
-        type: "MX",
-        status: "missing",
-      });
+    } catch (error) {
+      const dnsClass = classifyDNSError(error);
+      if (dnsClass === "missing") {
+        dnsResults.push({
+          name: mailFromDomain,
+          type: "MX",
+          status: "missing",
+        });
+      } else if (dnsClass === "network") {
+        dnsResults.push({
+          name: mailFromDomain,
+          type: "MX",
+          status: "missing",
+          records: ["DNS lookup failed (network issue)"],
+        });
+      } else {
+        throw error;
+      }
     }
 
     // Check SPF record for MAIL FROM domain
@@ -184,12 +239,24 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
         status: hasAmazonSES ? "verified" : spfRecord ? "incorrect" : "missing",
         records: spfRecord ? [spfRecord] : undefined,
       });
-    } catch (_error) {
-      dnsResults.push({
-        name: mailFromDomain,
-        type: "TXT (SPF)",
-        status: "missing",
-      });
+    } catch (error) {
+      const dnsClass = classifyDNSError(error);
+      if (dnsClass === "missing") {
+        dnsResults.push({
+          name: mailFromDomain,
+          type: "TXT (SPF)",
+          status: "missing",
+        });
+      } else if (dnsClass === "network") {
+        dnsResults.push({
+          name: mailFromDomain,
+          type: "TXT (SPF)",
+          status: "missing",
+          records: ["DNS lookup failed (network issue)"],
+        });
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -395,8 +462,8 @@ export async function addDomain(options: {
         `\nRun ${pc.cyan(`wraps email domains verify --domain ${domain}`)} to check verification status.\n`
       );
       return;
-    } catch (error: any) {
-      if (error.name !== "NotFoundException") {
+    } catch (error) {
+      if (!isAWSNotFoundError(error)) {
         throw error;
       }
     }
@@ -590,7 +657,7 @@ export async function addDomain(options: {
       purpose,
       subdomain: domain !== primaryDomain,
     });
-  } catch (error: any) {
+  } catch (error) {
     progress.stop();
     trackCommand("email:domains:add", { success: false });
     throw error;
@@ -652,7 +719,7 @@ export async function listDomains(): Promise<void> {
         trackedDomains = getAllTrackedDomains(metadata);
       }
     } catch {
-      // Metadata unavailable — all domains will show as unmanaged
+      // guardrail:allow-swallowed-error — metadata unavailable is non-fatal, domains show as unmanaged
     }
 
     const trackedSet = new Map(trackedDomains.map((d) => [d.domain, d]));
@@ -682,6 +749,7 @@ export async function listDomains(): Promise<void> {
             dkimStatus: details.DkimAttributes?.Status || "PENDING",
           };
         } catch {
+          // guardrail:allow-swallowed-error — individual domain detail fetch failure is non-fatal in listing
           return {
             name: domain.IdentityName!,
             verified: false,
@@ -742,7 +810,7 @@ export async function listDomains(): Promise<void> {
 
     // Show promotional footer (once per session)
     getTelemetryClient().showFooterOnce();
-  } catch (error: any) {
+  } catch (error) {
     progress.stop();
     trackCommand("email:domains:list", { success: false });
     throw error;
@@ -807,10 +875,10 @@ export async function getDkim(options: { domain: string }): Promise<void> {
       success: true,
       dkim_status: dkimStatus,
     });
-  } catch (error: any) {
+  } catch (error) {
     progress.stop();
     trackCommand("email:domains:get-dkim", { success: false });
-    if (error.name === "NotFoundException") {
+    if (isAWSNotFoundError(error)) {
       clack.log.error(`Domain ${options.domain} not found in SES`);
       console.log(
         `\nRun ${pc.cyan(`wraps email domains add ${options.domain}`)} to add this domain.\n`
@@ -850,7 +918,7 @@ export async function removeDomain(options: {
       const awsIdentity = await validateAWSCredentials();
       metadata = await loadConnectionMetadata(awsIdentity.accountId, region);
     } catch {
-      // Metadata unavailable — proceed without guard
+      // guardrail:allow-swallowed-error — metadata unavailable is non-fatal, proceed without guard
     }
 
     if (metadata) {
@@ -913,10 +981,10 @@ export async function removeDomain(options: {
       success: true,
     });
     trackFeature("domain_removed", {});
-  } catch (error: any) {
+  } catch (error) {
     progress.stop();
     trackCommand("email:domains:remove", { success: false });
-    if (error.name === "NotFoundException") {
+    if (isAWSNotFoundError(error)) {
       clack.log.error(`Domain ${options.domain} not found in SES`);
       process.exit(1);
       return;
