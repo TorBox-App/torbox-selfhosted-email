@@ -1,5 +1,15 @@
 # CLAUDE.md - Wraps CLI Project Context
 
+## Workflow
+
+Before modifying any code, read all relevant files and understand the full execution flow first. Do not start making changes while still exploring the codebase. If the task is complex, use a Task agent to explore the codebase before writing any code.
+
+## Error Handling
+
+When implementing new features that involve external API calls (e.g., AWS SDK, Vercel API), always wrap each API call with specific error handling that distinguishes between different error types (e.g., NotFound vs CredentialsError vs PermissionDenied). Never use generic catch-all error messages.
+
+When implementing multi-step features (e.g., create resource → save state → use resource), ensure each step's side effects are persisted before proceeding to the next step. Specifically: save all critical state (IDs, external references) immediately after creation, before any subsequent operations that might fail.
+
 ## Project Overview
 
 **Wraps** is a CLI tool and TypeScript SDK that deploys email infrastructure (AWS SES) to users' AWS accounts with zero stored credentials, beautiful developer experience, and AWS pricing.

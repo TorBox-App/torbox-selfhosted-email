@@ -1,6 +1,34 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(pnpm check)",
+      "Bash(pnpm check:all)",
+      "Bash(pnpm fix)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm --filter * build*)",
+      "Bash(pnpm --filter * test*)",
+      "Bash(pnpm test:guardrails)",
+      "Bash(npx tsc*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git tag*)",
+      "Bash(gh release*)"
+    ]
+  },
   "hooks": {
-    "PostToolUse": []
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsc --noEmit --pretty 2>&1 | head -20",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
   },
   "skills": [
     {
@@ -42,6 +70,16 @@
       "name": "test",
       "description": "Write Vitest tests with mocking and database integration",
       "path": ".claude/skills/testing-patterns.md"
+    },
+    {
+      "name": "debug",
+      "description": "Structured debugging: trace execution path, identify root cause, fix with tests",
+      "path": ".claude/skills/debug/SKILL.md"
+    },
+    {
+      "name": "explore",
+      "description": "Read-first codebase exploration before implementing features or fixes",
+      "path": ".claude/skills/explore/SKILL.md"
     },
     {
       "name": "dashboard",
