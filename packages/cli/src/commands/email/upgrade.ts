@@ -130,12 +130,24 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     console.log(`  Sending Domain: ${pc.cyan(config.domain)}`);
   }
 
+  // Detect if HTTPS tracking setup may be pending (certificate not yet validated / CloudFront not yet created)
+  // We check this by looking for httpsEnabled + customRedirectDomain in saved config.
+  // The actual certificate status is verified during the "finish" flow via checkCertificateValidation().
+  const hasHttpsTrackingPending =
+    config.tracking?.httpsEnabled && config.tracking?.customRedirectDomain;
+
   if (config.tracking?.enabled) {
     console.log(`  ${pc.green("✓")} Open & Click Tracking`);
     if (config.tracking.customRedirectDomain) {
-      console.log(
-        `    ${pc.dim("└─")} Custom domain: ${pc.cyan(config.tracking.customRedirectDomain)}`
-      );
+      if (hasHttpsTrackingPending) {
+        console.log(
+          `    ${pc.dim("└─")} Custom domain: ${pc.cyan(config.tracking.customRedirectDomain)} ${pc.yellow("(HTTPS pending - certificate validation required)")}`
+        );
+      } else {
+        console.log(
+          `    ${pc.dim("└─")} Custom domain: ${pc.cyan(config.tracking.customRedirectDomain)}`
+        );
+      }
     }
   }
 
@@ -201,76 +213,93 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   console.log("");
 
   // 6. Prompt for upgrade action
+  const upgradeOptions: Array<{
+    value: string;
+    label: string;
+    hint?: string;
+  }> = [];
+
+  // Show "finish tracking" option at the top if HTTPS tracking setup is pending
+  if (hasHttpsTrackingPending) {
+    upgradeOptions.push({
+      value: "finish-tracking-domain",
+      label: "Finish setting up custom tracking domain",
+      hint: `Complete HTTPS setup for ${config.tracking!.customRedirectDomain}`,
+    });
+  }
+
+  upgradeOptions.push(
+    {
+      value: "preset",
+      label: "Upgrade to a different preset",
+      hint: "Starter → Production → Enterprise",
+    },
+    {
+      value: "archiving",
+      label: config.emailArchiving?.enabled
+        ? "Change email archiving settings"
+        : "Enable email archiving",
+      hint: config.emailArchiving?.enabled
+        ? "Update retention or disable"
+        : "Store full email content with HTML",
+    },
+    {
+      value: "tracking-domain",
+      label: "Add/change custom tracking domain",
+      hint: "Use your own domain for email links",
+    },
+    {
+      value: "retention",
+      label: "Change email history retention",
+      hint: "7 days, 30 days, 90 days, 6 months, 1 year, 18 months",
+    },
+    {
+      value: "events",
+      label: "Customize tracked event types",
+      hint: "Choose which SES events to track",
+    },
+    {
+      value: "dedicated-ip",
+      label: "Enable dedicated IP address",
+      hint: "Requires 100k+ emails/day ($50-100/mo)",
+    },
+    {
+      value: "alerts",
+      label: config.alerts?.enabled
+        ? "Manage reputation alerts"
+        : "Enable reputation alerts",
+      hint: config.alerts?.enabled
+        ? "Update thresholds or notification settings"
+        : "Get notified before AWS suspends your account",
+    },
+    {
+      value: "custom",
+      label: "Custom configuration",
+      hint: "Modify multiple settings at once",
+    },
+    {
+      value: "wraps-dashboard",
+      label: metadata.services.email?.webhookSecret
+        ? "Manage Wraps Dashboard connection"
+        : "Connect to Wraps Dashboard",
+      hint: metadata.services.email?.webhookSecret
+        ? "Regenerate secret or disconnect"
+        : "Send events to dashboard for analytics",
+    },
+    {
+      value: "smtp-credentials",
+      label: metadata.services.email?.smtpCredentials?.enabled
+        ? "Manage SMTP credentials"
+        : "Enable SMTP credentials",
+      hint: metadata.services.email?.smtpCredentials?.enabled
+        ? "Rotate or disable credentials"
+        : "Generate credentials for PHP, WordPress, etc.",
+    }
+  );
+
   upgradeAction = await clack.select({
     message: "What would you like to do?",
-    options: [
-      {
-        value: "preset",
-        label: "Upgrade to a different preset",
-        hint: "Starter → Production → Enterprise",
-      },
-      {
-        value: "archiving",
-        label: config.emailArchiving?.enabled
-          ? "Change email archiving settings"
-          : "Enable email archiving",
-        hint: config.emailArchiving?.enabled
-          ? "Update retention or disable"
-          : "Store full email content with HTML",
-      },
-      {
-        value: "tracking-domain",
-        label: "Add/change custom tracking domain",
-        hint: "Use your own domain for email links",
-      },
-      {
-        value: "retention",
-        label: "Change email history retention",
-        hint: "7 days, 30 days, 90 days, 6 months, 1 year, 18 months",
-      },
-      {
-        value: "events",
-        label: "Customize tracked event types",
-        hint: "Choose which SES events to track",
-      },
-      {
-        value: "dedicated-ip",
-        label: "Enable dedicated IP address",
-        hint: "Requires 100k+ emails/day ($50-100/mo)",
-      },
-      {
-        value: "alerts",
-        label: config.alerts?.enabled
-          ? "Manage reputation alerts"
-          : "Enable reputation alerts",
-        hint: config.alerts?.enabled
-          ? "Update thresholds or notification settings"
-          : "Get notified before AWS suspends your account",
-      },
-      {
-        value: "custom",
-        label: "Custom configuration",
-        hint: "Modify multiple settings at once",
-      },
-      {
-        value: "wraps-dashboard",
-        label: metadata.services.email?.webhookSecret
-          ? "Manage Wraps Dashboard connection"
-          : "Connect to Wraps Dashboard",
-        hint: metadata.services.email?.webhookSecret
-          ? "Regenerate secret or disconnect"
-          : "Send events to dashboard for analytics",
-      },
-      {
-        value: "smtp-credentials",
-        label: metadata.services.email?.smtpCredentials?.enabled
-          ? "Manage SMTP credentials"
-          : "Enable SMTP credentials",
-        hint: metadata.services.email?.smtpCredentials?.enabled
-          ? "Rotate or disable credentials"
-          : "Generate credentials for PHP, WordPress, etc.",
-      },
-    ],
+    options: upgradeOptions,
   });
 
   if (clack.isCancel(upgradeAction)) {
@@ -283,6 +312,18 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
   // 7. Handle upgrade action
   switch (upgradeAction) {
+    case "finish-tracking-domain": {
+      // Skip all prompts — use the existing config as-is to re-run deployment
+      // The email-stack will check if the ACM certificate is now validated
+      // and create the CloudFront distribution if it is
+      clack.log.info(
+        `Checking certificate status for ${pc.cyan(config.tracking!.customRedirectDomain!)}...`
+      );
+      updatedConfig = { ...config };
+      newPreset = metadata.services.email?.preset;
+      break;
+    }
+
     case "preset": {
       // Show available presets (exclude "custom" since it's not a tier upgrade)
       const presets = getAllPresetInfo().filter(
