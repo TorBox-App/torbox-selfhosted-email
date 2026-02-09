@@ -31,9 +31,27 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import Script from "next/script";
 
-// API base URL - use prod API
-const API_URL = "https://api.wraps.dev";
+// Turnstile types for Cloudflare bot protection
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: string | HTMLElement,
+        options: {
+          sitekey: string;
+          callback?: (token: string) => void;
+          "expired-callback"?: () => void;
+          "error-callback"?: () => void;
+          appearance?: "managed" | "non-interactive" | "interaction-only";
+        }
+      ) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 
 type EmailCheckResult = {
   success: boolean;
@@ -289,10 +307,18 @@ function ToolsPageInner() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<EmailCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const hasAutoChecked = useRef(false);
+  const [turnstileReady, setTurnstileReady] = useState(false);
+  const turnstileToken = useRef<string | null>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
 
   const runCheck = async (checkDomain: string, checkDkim: string = dkim) => {
     if (!checkDomain.trim()) {
+      return;
+    }
+
+    const token = turnstileToken.current;
+    if (!token) {
+      setError("Please wait for verification to complete, then try again.");
       return;
     }
 
@@ -301,7 +327,7 @@ function ToolsPageInner() {
     setResult(null);
 
     try {
-      const response = await fetch(`${API_URL}/tools/email-check`, {
+      const response = await fetch("/api/tools/email-check", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -309,6 +335,7 @@ function ToolsPageInner() {
         body: JSON.stringify({
           domain: checkDomain.trim(),
           quick: true,
+          turnstileToken: token,
           ...(checkDkim.trim() && {
             dkimSelectors: checkDkim
               .split(",")
@@ -329,16 +356,38 @@ function ToolsPageInner() {
       setError(err instanceof Error ? err.message : "Failed to check domain");
     } finally {
       setIsLoading(false);
+      if (window.turnstile && turnstileWidgetId.current) {
+        window.turnstile.reset(turnstileWidgetId.current);
+        turnstileToken.current = null;
+      }
     }
   };
 
-  // Auto-check on mount if domain is present from URL
+  // Render Turnstile widget when script is loaded
   useEffect(() => {
-    if (domain && !hasAutoChecked.current) {
-      hasAutoChecked.current = true;
-      runCheck(domain, dkim);
-    }
-  }, [dkim, domain, runCheck]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!turnstileReady || !window.turnstile) return;
+
+    const container = document.getElementById("turnstile-container");
+    if (!container) return;
+
+    turnstileWidgetId.current = window.turnstile.render(container, {
+      sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "",
+      callback: (token: string) => {
+        turnstileToken.current = token;
+      },
+      "expired-callback": () => {
+        turnstileToken.current = null;
+      },
+      appearance: "interaction-only",
+    });
+
+    return () => {
+      if (turnstileWidgetId.current && window.turnstile) {
+        window.turnstile.remove(turnstileWidgetId.current);
+        turnstileWidgetId.current = null;
+      }
+    };
+  }, [turnstileReady]);
 
   const checkDomain = () => runCheck(domain, dkim);
 
@@ -463,6 +512,11 @@ function ToolsPageInner() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+        onLoad={() => setTurnstileReady(true)}
+        strategy="afterInteractive"
+      />
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
@@ -532,6 +586,8 @@ function ToolsPageInner() {
                   )}
                 </Button>
               </div>
+
+              <div className="mt-3" id="turnstile-container" />
 
               {/* Advanced Options */}
               <Collapsible onOpenChange={setShowAdvanced} open={showAdvanced}>
@@ -1424,10 +1480,7 @@ function ToolsPageInner() {
                     {["gmail.com", "microsoft.com", "stripe.com"].map((d) => (
                       <Button
                         key={d}
-                        onClick={() => {
-                          setParams({ domain: d });
-                          runCheck(d, "");
-                        }}
+                        onClick={() => setParams({ domain: d })}
                         size="sm"
                         variant="outline"
                       >
