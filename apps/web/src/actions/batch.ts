@@ -7,6 +7,7 @@ import {
   desc,
   eq,
   exists,
+  inArray,
   isNotNull,
   or,
   type SQL,
@@ -608,20 +609,20 @@ export async function cancelBatchSend(
   }
 }
 
-// Map of field names to SQL column references for segment filtering
-const COLUMN_MAP: Record<string, string> = {
-  status: "status",
-  email: "email",
-  lastActivityAt: "last_activity_at",
-  lastEmailSentAt: "last_email_sent_at",
-  lastEmailOpenedAt: "last_email_opened_at",
-  lastEmailClickedAt: "last_email_clicked_at",
-  emailsSent: "emails_sent",
-  emailsOpened: "emails_opened",
-  emailsClicked: "emails_clicked",
-  createdAt: "created_at",
-  confirmedAt: "confirmed_at",
-};
+// Map of field names to Drizzle column references for segment filtering
+const COLUMN_MAP = {
+  status: contact.status,
+  email: contact.email,
+  lastActivityAt: contact.lastActivityAt,
+  lastEmailSentAt: contact.lastEmailSentAt,
+  lastEmailOpenedAt: contact.lastEmailOpenedAt,
+  lastEmailClickedAt: contact.lastEmailClickedAt,
+  emailsSent: contact.emailsSent,
+  emailsOpened: contact.emailsOpened,
+  emailsClicked: contact.emailsClicked,
+  createdAt: contact.createdAt,
+  confirmedAt: contact.confirmedAt,
+} as const;
 
 /**
  * Build SQL condition from a single segment filter
@@ -674,12 +675,10 @@ function buildFilterSQL(filter: SegmentFilter): SQL | null {
   }
 
   // Handle standard contact fields
-  const columnName = COLUMN_MAP[field];
-  if (!columnName) {
+  const col = COLUMN_MAP[field as keyof typeof COLUMN_MAP];
+  if (!col) {
     return null;
   }
-
-  const col = sql.raw(`"${columnName}"`);
 
   switch (operator) {
     case "equals":
@@ -1009,15 +1008,24 @@ export async function listTopicsForBatch(organizationId: string): Promise<
       },
     });
 
-    // Get subscriber counts using SQL COUNT
-    const subscriberCounts = await db
-      .select({
-        topicId: contactTopic.topicId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(contactTopic)
-      .where(eq(contactTopic.status, "subscribed"))
-      .groupBy(contactTopic.topicId);
+    // Get subscriber counts scoped to this org's topics
+    const topicIds = topics.map((t) => t.id);
+    const subscriberCounts =
+      topicIds.length > 0
+        ? await db
+            .select({
+              topicId: contactTopic.topicId,
+              count: sql<number>`count(*)::int`,
+            })
+            .from(contactTopic)
+            .where(
+              and(
+                eq(contactTopic.status, "subscribed"),
+                inArray(contactTopic.topicId, topicIds)
+              )
+            )
+            .groupBy(contactTopic.topicId)
+        : [];
 
     const countMap = new Map(subscriberCounts.map((c) => [c.topicId, c.count]));
 

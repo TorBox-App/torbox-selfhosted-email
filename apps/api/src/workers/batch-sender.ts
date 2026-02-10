@@ -465,7 +465,6 @@ async function processJob(job: BatchJob): Promise<void> {
         recipientBatch.map(async (recipient) => {
           // Generate unsubscribe URLs for marketing emails
           let unsubscribeUrl: string | undefined;
-          let _preferencesUrl: string | undefined;
 
           if (isMarketing) {
             const unsubscribeToken = await generateUnsubscribeToken(
@@ -473,7 +472,6 @@ async function processJob(job: BatchJob): Promise<void> {
               organizationId
             );
             unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
-            _preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
           }
 
           // Build headers for marketing emails (RFC 8058)
@@ -577,12 +575,12 @@ async function processJob(job: BatchJob): Promise<void> {
     }
   }
 
-  // Track first email sent (fire-and-forget)
+  // Track first email sent
   if (sent > 0) {
-    trackFirstEmailSent(organizationId, {
+    await trackFirstEmailSent(organizationId, {
       channel: "email",
       source: "broadcast",
-    });
+    }).catch(console.error);
   }
 
   // Update batch progress
@@ -636,13 +634,15 @@ async function getContactsChunk(
   limit: number,
   filter?: RecipientFilter
 ): Promise<ContactChunk[]> {
-  // Build base conditions for channel
-  const conditions: ReturnType<typeof eq>[] = [];
-  conditions.push(eq(contact.organizationId, organizationId));
+  const conditions: (ReturnType<typeof eq> | ReturnType<typeof sql>)[] = [
+    eq(contact.organizationId, organizationId),
+  ];
 
   if (channel === "email") {
     conditions.push(isNotNull(contact.email));
-    // Active email status (null treated as active for backwards compat)
+    conditions.push(
+      sql`(${contact.emailStatus} = 'active' OR ${contact.emailStatus} IS NULL)`
+    );
   } else if (channel === "sms") {
     conditions.push(isNotNull(contact.phone));
     conditions.push(eq(contact.smsStatus, "opted_in"));
@@ -652,7 +652,6 @@ async function getContactsChunk(
 
   // Apply recipient filter
   if (filter?.audienceType === "topic" && filter.topicId) {
-    // Filter by topic subscription using EXISTS subquery
     const topicSubquery = db
       .select({ contactId: contactTopic.contactId })
       .from(contactTopic)
@@ -663,89 +662,12 @@ async function getContactsChunk(
           eq(contactTopic.status, "subscribed")
         )
       );
-
-    // Build query with topic filter
-    if (channel === "email") {
-      return db
-        .select({
-          id: contact.id,
-          email: contact.email,
-          phone: contact.phone,
-          firstName: contact.firstName,
-          lastName: contact.lastName,
-          company: contact.company,
-          jobTitle: contact.jobTitle,
-          properties: contact.properties,
-        })
-        .from(contact)
-        .where(
-          and(
-            eq(contact.organizationId, organizationId),
-            isNotNull(contact.email),
-            sql`(${contact.emailStatus} = 'active' OR ${contact.emailStatus} IS NULL)`,
-            exists(topicSubquery)
-          )
-        )
-        .orderBy(contact.createdAt)
-        .offset(offset)
-        .limit(limit);
-    }
-    // SMS with topic filter
-    return db
-      .select({
-        id: contact.id,
-        email: contact.email,
-        phone: contact.phone,
-        firstName: contact.firstName,
-        lastName: contact.lastName,
-        company: contact.company,
-        jobTitle: contact.jobTitle,
-        properties: contact.properties,
-      })
-      .from(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          isNotNull(contact.phone),
-          eq(contact.smsStatus, "opted_in"),
-          exists(topicSubquery)
-        )
-      )
-      .orderBy(contact.createdAt)
-      .offset(offset)
-      .limit(limit);
+    conditions.push(exists(topicSubquery));
   }
 
   // TODO: Add segment filtering when needed
   // if (filter?.audienceType === "segment" && filter.segmentId) { ... }
 
-  // Default: all contacts (no additional filter)
-  if (channel === "email") {
-    return db
-      .select({
-        id: contact.id,
-        email: contact.email,
-        phone: contact.phone,
-        firstName: contact.firstName,
-        lastName: contact.lastName,
-        company: contact.company,
-        jobTitle: contact.jobTitle,
-        properties: contact.properties,
-      })
-      .from(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          isNotNull(contact.email),
-          sql`(${contact.emailStatus} = 'active' OR ${contact.emailStatus} IS NULL)`
-        )
-      )
-      .orderBy(contact.createdAt)
-      .offset(offset)
-      .limit(limit);
-  }
-
-  // SMS - all contacts
   return db
     .select({
       id: contact.id,
@@ -758,13 +680,7 @@ async function getContactsChunk(
       properties: contact.properties,
     })
     .from(contact)
-    .where(
-      and(
-        eq(contact.organizationId, organizationId),
-        isNotNull(contact.phone),
-        eq(contact.smsStatus, "opted_in")
-      )
-    )
+    .where(and(...(conditions as Parameters<typeof and>)))
     .orderBy(contact.createdAt)
     .offset(offset)
     .limit(limit);

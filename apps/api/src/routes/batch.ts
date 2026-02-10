@@ -5,8 +5,8 @@
  * GET /v1/batch/:id - Get batch send status
  */
 
-import { batchSend, contact, db, eq } from "@wraps/db";
-import { and, isNotNull, sql } from "drizzle-orm";
+import { batchSend, contact, contactTopic, db, eq } from "@wraps/db";
+import { and, exists, isNotNull, sql } from "drizzle-orm";
 import { t } from "elysia";
 
 import {
@@ -117,7 +117,12 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       if (!recipientCount) {
         recipientCount = await getRecipientCount(
           authContext.organizationId,
-          body.channel ?? "email"
+          body.channel ?? "email",
+          {
+            audienceType: body.audienceType,
+            topicId: body.topicId,
+            segmentId: body.segmentId,
+          }
         );
       }
 
@@ -202,22 +207,23 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
   .get(
     "/:id",
     async (ctx) => {
-      const { params } = ctx;
+      const { params, set } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
       const [batch] = await db
         .select()
         .from(batchSend)
-        .where(eq(batchSend.id, params.id))
+        .where(
+          and(
+            eq(batchSend.id, params.id),
+            eq(batchSend.organizationId, authContext.organizationId)
+          )
+        )
         .limit(1);
 
       if (!batch) {
+        set.status = 404;
         throw new Error("Batch not found");
-      }
-
-      // Verify ownership
-      if (batch.organizationId !== authContext.organizationId) {
-        throw new Error("Not authorized");
       }
 
       return {
@@ -266,22 +272,21 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
       const { params, set } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
-      // Find the batch
+      // Find the batch (scoped by organization)
       const [batch] = await db
         .select()
         .from(batchSend)
-        .where(eq(batchSend.id, params.id))
+        .where(
+          and(
+            eq(batchSend.id, params.id),
+            eq(batchSend.organizationId, authContext.organizationId)
+          )
+        )
         .limit(1);
 
       if (!batch) {
         set.status = 404;
         throw new Error("Batch not found");
-      }
-
-      // Verify ownership
-      if (batch.organizationId !== authContext.organizationId) {
-        set.status = 403;
-        throw new Error("Not authorized");
       }
 
       // Can only cancel scheduled or queued batches
@@ -331,37 +336,53 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
 // Helper to count recipients for a batch
 async function getRecipientCount(
   organizationId: string,
-  channel: string
+  channel: string,
+  options?: {
+    audienceType?: string;
+    topicId?: string;
+    segmentId?: string;
+  }
 ): Promise<number> {
+  const conditions: ReturnType<typeof eq>[] = [
+    eq(contact.organizationId, organizationId),
+  ];
+
   if (channel === "email") {
-    // Count contacts with active email status (null treated as active for backwards compat)
-    const [result] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(contact)
+    conditions.push(isNotNull(contact.email));
+  } else if (channel === "sms") {
+    conditions.push(isNotNull(contact.phone));
+    conditions.push(eq(contact.smsStatus, "opted_in"));
+  } else {
+    return 0;
+  }
+
+  // Apply audience filtering
+  if (options?.audienceType === "topic" && options.topicId) {
+    const topicSubquery = db
+      .select({ contactId: contactTopic.contactId })
+      .from(contactTopic)
       .where(
         and(
-          eq(contact.organizationId, organizationId),
-          isNotNull(contact.email),
+          eq(contactTopic.contactId, contact.id),
+          eq(contactTopic.topicId, options.topicId),
+          eq(contactTopic.status, "subscribed")
+        )
+      );
+    conditions.push(exists(topicSubquery) as unknown as ReturnType<typeof eq>);
+  }
+
+  const whereClause =
+    channel === "email"
+      ? and(
+          ...conditions,
           sql`(${contact.emailStatus} = 'active' OR ${contact.emailStatus} IS NULL)`
         )
-      );
-    return result?.count ?? 0;
-  }
+      : and(...conditions);
 
-  // SMS - count contacts with opted_in status
-  if (channel === "sms") {
-    const [result] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(contact)
-      .where(
-        and(
-          eq(contact.organizationId, organizationId),
-          isNotNull(contact.phone),
-          eq(contact.smsStatus, "opted_in")
-        )
-      );
-    return result?.count ?? 0;
-  }
+  const [result] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(contact)
+    .where(whereClause);
 
-  return 0;
+  return result?.count ?? 0;
 }
