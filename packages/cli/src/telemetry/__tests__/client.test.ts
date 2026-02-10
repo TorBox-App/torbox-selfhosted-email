@@ -85,10 +85,19 @@ describe("TelemetryClient", () => {
       expect(client.isEnabled()).toBe(false);
     });
 
-    it("should enable telemetry", () => {
+    it("should enable telemetry and return null when no override", () => {
       client.disable();
-      client.enable();
+      const override = client.enable();
       expect(client.isEnabled()).toBe(true);
+      expect(override).toBeNull();
+    });
+
+    it("should return override reason when env prevents enable", () => {
+      process.env.DO_NOT_TRACK = "1";
+      const freshClient = new TelemetryClient();
+      const override = freshClient.enable();
+      expect(freshClient.isEnabled()).toBe(false);
+      expect(override).toContain("DO_NOT_TRACK");
     });
 
     it("should not track events when disabled", () => {
@@ -101,6 +110,38 @@ describe("TelemetryClient", () => {
 
       // Should not make any fetch calls when disabled
       expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getEnvOverride", () => {
+    it("should return null when no override", () => {
+      expect(client.getEnvOverride()).toBeNull();
+    });
+
+    it("should detect DO_NOT_TRACK", () => {
+      process.env.DO_NOT_TRACK = "1";
+      const freshClient = new TelemetryClient();
+      expect(freshClient.getEnvOverride()).toContain("DO_NOT_TRACK");
+    });
+
+    it("should detect WRAPS_TELEMETRY_DISABLED", () => {
+      process.env.WRAPS_TELEMETRY_DISABLED = "1";
+      const freshClient = new TelemetryClient();
+      expect(freshClient.getEnvOverride()).toContain(
+        "WRAPS_TELEMETRY_DISABLED"
+      );
+    });
+
+    it("should detect CI environment", () => {
+      process.env.CI = "true";
+      const freshClient = new TelemetryClient();
+      expect(freshClient.getEnvOverride()).toContain("CI");
+    });
+
+    it("should not treat VERCEL env var as CI", () => {
+      process.env.VERCEL = "1";
+      const freshClient = new TelemetryClient();
+      expect(freshClient.getEnvOverride()).toBeNull();
     });
   });
 

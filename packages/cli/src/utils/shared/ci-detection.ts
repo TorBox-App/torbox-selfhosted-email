@@ -37,8 +37,6 @@ export function isCI(): boolean {
     "TEAMCITY_VERSION", // TeamCity
     "TF_BUILD", // Azure Pipelines
     "CODEBUILD_BUILD_ID", // AWS CodeBuild
-    "NETLIFY", // Netlify
-    "VERCEL", // Vercel
     "HEROKU_TEST_RUN_ID", // Heroku CI
     "BUDDY", // Buddy
     "BITBUCKET_BUILD_NUMBER", // Bitbucket Pipelines

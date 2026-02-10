@@ -13,11 +13,20 @@ import { getTelemetryClient } from "../telemetry/client.js";
 export async function telemetryEnable(): Promise<void> {
   const client = getTelemetryClient();
 
-  client.enable();
+  const override = client.enable();
 
-  clack.log.success(pc.green("Telemetry enabled"));
-  console.log(`   Config: ${pc.dim(client.getConfigPath())}`);
-  console.log(`\n   ${pc.dim("Thank you for helping improve Wraps!")}\n`);
+  if (override) {
+    clack.log.warn(
+      "Telemetry enabled in config, but overridden by environment"
+    );
+    console.log(`   Reason: ${pc.yellow(override)}`);
+    console.log(`   Config: ${pc.dim(client.getConfigPath())}`);
+    console.log();
+  } else {
+    clack.log.success(pc.green("Telemetry enabled"));
+    console.log(`   Config: ${pc.dim(client.getConfigPath())}`);
+    console.log(`\n   ${pc.dim("Thank you for helping improve Wraps!")}\n`);
+  }
 }
 
 /**
@@ -43,10 +52,14 @@ export async function telemetryStatus(): Promise<void> {
 
   clack.intro(pc.bold("Telemetry Status"));
 
+  const override = client.getEnvOverride();
   const status = client.isEnabled() ? pc.green("Enabled") : pc.red("Disabled");
 
   console.log();
   console.log(`  ${pc.bold("Status:")} ${status}`);
+  if (!client.isEnabled() && override) {
+    console.log(`  ${pc.bold("Reason:")} ${pc.yellow(override)}`);
+  }
   console.log(`  ${pc.bold("Config file:")} ${pc.dim(client.getConfigPath())}`);
 
   // Show opt-out methods

@@ -231,33 +231,43 @@ export class TelemetryClient {
   }
 
   /**
-   * Enable telemetry
-   * Note: Won't override environment variable opt-outs (DO_NOT_TRACK, CI, etc.)
+   * Enable telemetry.
+   * Returns null if enabled, or a string describing why an env override prevented it.
    */
-  enable(): void {
+  enable(): string | null {
     this.config.setEnabled(true);
 
-    // Check if environment variables prevent telemetry
+    const override = this.getEnvOverride();
+    if (override) {
+      this.enabled = false;
+      return override;
+    }
+
+    this.enabled = true;
+    return null;
+  }
+
+  /**
+   * Check if an environment variable is overriding the config.
+   * Returns a human-readable reason, or null if no override.
+   */
+  getEnvOverride(): string | null {
     if (
       process.env.DO_NOT_TRACK === "1" ||
       process.env.DO_NOT_TRACK === "true"
     ) {
-      this.enabled = false;
-      return;
+      return "DO_NOT_TRACK environment variable is set";
     }
 
     if (process.env.WRAPS_TELEMETRY_DISABLED === "1") {
-      this.enabled = false;
-      return;
+      return "WRAPS_TELEMETRY_DISABLED environment variable is set";
     }
 
     if (isCI()) {
-      this.enabled = false;
-      return;
+      return "CI environment detected";
     }
 
-    // No env restrictions, enable telemetry
-    this.enabled = true;
+    return null;
   }
 
   /**
