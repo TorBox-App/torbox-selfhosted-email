@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Test: wraps email destroy handles pulumi failures gracefully
@@ -135,7 +135,7 @@ vi.mock("@pulumi/pulumi", () => ({
 
 // Mock the timeout wrapper to just execute the promise directly
 vi.mock("../utils/shared/timeout.js", () => ({
-  DEFAULT_PULUMI_TIMEOUT_MS: 600000,
+  DEFAULT_PULUMI_TIMEOUT_MS: 600_000,
   withTimeout: vi.fn(async (promise: Promise<any>) => promise),
 }));
 
@@ -240,9 +240,7 @@ describe("wraps email destroy - exit code 255 bug", () => {
   });
 
   it("should still throw for stack lock errors", async () => {
-    const lockError = new Error(
-      "the stack is currently locked by 1 lock(s)"
-    );
+    const lockError = new Error("the stack is currently locked by 1 lock(s)");
     mockStackDestroy.mockRejectedValue(lockError);
 
     const { emailDestroy } = await import("../commands/email/destroy.js");

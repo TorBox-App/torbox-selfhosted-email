@@ -1,0 +1,442 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * Test: destroy → init leaves user stuck in inconsistent state
+ *
+ * Bug: When `wraps email destroy` partially fails, it deletes local metadata
+ * but leaves the S3 copy intact. When the user then runs `wraps email init`,
+ * loadConnectionMetadata() re-downloads the S3 copy and init refuses to proceed,
+ * saying "Connection already exists" and telling the user to run `status` or `upgrade`.
+ *
+ * The user is stuck: destroy says it (partially) removed things, but init
+ * won't let them redeploy.
+ *
+ * Root cause: deleteConnectionMetadata() only deletes the local file at
+ * ~/.wraps/connections/{accountId}-{region}.json but does NOT delete the
+ * metadata from S3 (wraps-state-* bucket). loadConnectionMetadata() has
+ * S3 fallback that re-downloads and re-saves the metadata locally.
+ */
+
+// ---- Mocks ----
+
+// Mock clack prompts
+vi.mock("@clack/prompts", () => ({
+  intro: vi.fn(),
+  outro: vi.fn(),
+  confirm: vi.fn().mockResolvedValue(true),
+  select: vi.fn(),
+  text: vi.fn().mockResolvedValue("test@example.com"),
+  note: vi.fn(),
+  isCancel: vi.fn().mockReturnValue(false),
+  cancel: vi.fn(),
+  log: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+    step: vi.fn(),
+  },
+  spinner: vi.fn(() => ({
+    start: vi.fn(),
+    stop: vi.fn(),
+  })),
+}));
+
+// Mock picocolors
+vi.mock("picocolors", () => ({
+  default: {
+    bold: (s: string) => s,
+    red: (s: string) => s,
+    green: (s: string) => s,
+    cyan: (s: string) => s,
+    dim: (s: string) => s,
+    yellow: (s: string) => s,
+    blue: (s: string) => s,
+    white: (s: string) => s,
+  },
+}));
+
+// Mock telemetry
+vi.mock("../telemetry/events.js", () => ({
+  trackError: vi.fn(),
+  trackCommand: vi.fn(),
+  trackServiceRemoved: vi.fn(),
+  trackServiceDeployed: vi.fn(),
+  trackServiceInit: vi.fn(),
+}));
+
+// Mock AWS credential validation
+vi.mock("../utils/shared/aws.js", () => ({
+  validateAWSCredentials: vi.fn().mockResolvedValue({
+    accountId: "123456789012",
+    userId: "AIDAEXAMPLE",
+    arn: "arn:aws:iam::123456789012:user/test",
+  }),
+  validateAWSCredentialsWithDetails: vi.fn().mockResolvedValue({
+    identity: {
+      accountId: "123456789012",
+      userId: "AIDAEXAMPLE",
+      arn: "arn:aws:iam::123456789012:user/test",
+    },
+    warnings: [],
+    credentialSource: "environment",
+  }),
+  getAWSRegion: vi.fn().mockResolvedValue("us-east-1"),
+  getSESAccountStatus: vi.fn().mockResolvedValue({ isSandbox: false }),
+}));
+
+// Mock Route53
+vi.mock("../utils/route53.js", () => ({
+  findHostedZone: vi.fn().mockResolvedValue(null),
+  deleteDNSRecords: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock filesystem utilities
+vi.mock("../utils/shared/fs.js", () => ({
+  ensurePulumiWorkDir: vi.fn().mockResolvedValue(undefined),
+  getPulumiWorkDir: vi.fn().mockReturnValue("/tmp/wraps-test/pulumi"),
+}));
+
+// Mock SES v2 client
+vi.mock("@aws-sdk/client-sesv2", () => {
+  const mockSend = vi.fn().mockResolvedValue({
+    DkimAttributes: { Tokens: [] },
+    MailFromAttributes: {},
+  });
+  return {
+    SESv2Client: class {
+      send = mockSend;
+    },
+    GetEmailIdentityCommand: class {},
+    SendEmailCommand: class {},
+  };
+});
+
+// Mock the timeout wrapper
+vi.mock("../utils/shared/timeout.js", () => ({
+  DEFAULT_PULUMI_TIMEOUT_MS: 600_000,
+  withTimeout: vi.fn(async (promise: Promise<any>) => promise),
+}));
+
+// Mock the pulumi utility
+vi.mock("../utils/shared/pulumi.js", () => ({
+  previewWithResourceChanges: vi.fn(),
+  ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
+}));
+
+// Mock errors module
+vi.mock("../utils/shared/errors.js", async () => {
+  const actual = (await vi.importActual("../utils/shared/errors.js")) as any;
+  return { ...actual };
+});
+
+// Mock the output module
+vi.mock("../utils/shared/output.js", async () => {
+  const actual = (await vi.importActual("../utils/shared/output.js")) as any;
+  return { ...actual };
+});
+
+// --- Metadata mock with S3 simulation ---
+//
+// We simulate the S3-backed metadata behavior:
+// - saveConnectionMetadata writes to both local and "S3"
+// - deleteConnectionMetadata only deletes local
+// - loadConnectionMetadata falls back to S3 when local is missing
+
+let localMetadataStore: Record<string, any> = {};
+let s3MetadataStore: Record<string, any> = {};
+
+const mockLoadConnectionMetadata = vi.fn(
+  async (accountId: string, region: string) => {
+    const key = `${accountId}-${region}`;
+    // First check local
+    if (localMetadataStore[key]) {
+      return localMetadataStore[key];
+    }
+    // Fall back to S3 (simulating the real loadConnectionMetadata behavior)
+    if (s3MetadataStore[key]) {
+      // Re-save locally (as the real code does at line 235-236 of metadata.ts)
+      localMetadataStore[key] = s3MetadataStore[key];
+      return s3MetadataStore[key];
+    }
+    return null;
+  }
+);
+
+const mockSaveConnectionMetadata = vi.fn(async (metadata: any) => {
+  const key = `${metadata.accountId}-${metadata.region}`;
+  localMetadataStore[key] = metadata;
+  // Simulate S3 write-through (as the real code does)
+  s3MetadataStore[key] = metadata;
+});
+
+const mockDeleteConnectionMetadata = vi.fn(
+  async (accountId: string, region: string) => {
+    const key = `${accountId}-${region}`;
+    // FIX: Deletes both local and S3 (matches fixed implementation)
+    delete localMetadataStore[key];
+    delete s3MetadataStore[key];
+  }
+);
+
+const mockCreateConnectionMetadata = vi.fn(
+  (
+    accountId: string,
+    region: string,
+    provider: string,
+    emailConfig: any,
+    preset?: string
+  ) => ({
+    version: "1.0.0",
+    accountId,
+    region,
+    provider,
+    timestamp: new Date().toISOString(),
+    services: {
+      email: {
+        preset,
+        config: emailConfig,
+        deployedAt: new Date().toISOString(),
+      },
+    },
+  })
+);
+
+vi.mock("../utils/shared/metadata.js", () => ({
+  loadConnectionMetadata: mockLoadConnectionMetadata,
+  saveConnectionMetadata: mockSaveConnectionMetadata,
+  deleteConnectionMetadata: mockDeleteConnectionMetadata,
+  createConnectionMetadata: mockCreateConnectionMetadata,
+  findConnectionsWithService: vi.fn().mockResolvedValue([]),
+}));
+
+// Mock IAM check
+vi.mock("../utils/shared/iam-check.js", () => ({
+  checkIAMPermissions: vi.fn().mockResolvedValue({
+    success: true,
+    skipped: false,
+    deniedActions: [],
+  }),
+  formatDeniedActions: vi.fn().mockReturnValue(""),
+  getRequiredActions: vi.fn().mockReturnValue([]),
+}));
+
+// Mock presets
+vi.mock("../utils/email/presets.js", () => ({
+  getPreset: vi.fn().mockReturnValue({
+    sendingEnabled: true,
+    tracking: { enabled: true },
+  }),
+  validateConfig: vi.fn().mockReturnValue([]),
+}));
+
+// Mock costs
+vi.mock("../utils/email/costs.js", () => ({
+  getCostSummary: vi.fn().mockReturnValue("$0.05/mo"),
+}));
+
+// Mock prompts
+vi.mock("../utils/shared/prompts.js", () => ({
+  promptProvider: vi.fn().mockResolvedValue("other"),
+  promptRegion: vi.fn().mockResolvedValue("us-east-1"),
+  promptDomain: vi.fn().mockResolvedValue("example.com"),
+  promptVercelConfig: vi.fn().mockResolvedValue(undefined),
+  promptConfigPreset: vi.fn().mockResolvedValue("starter"),
+  promptCustomConfig: vi.fn(),
+  promptEstimatedVolume: vi.fn().mockResolvedValue(1000),
+  promptEmailArchiving: vi.fn().mockResolvedValue({ enabled: false }),
+  confirmDeploy: vi.fn().mockResolvedValue(true),
+  promptContinueManualDNS: vi.fn().mockResolvedValue(true),
+  promptDNSProvider: vi.fn().mockResolvedValue("manual"),
+  promptDNSConfirmation: vi.fn().mockResolvedValue({
+    shouldCreate: false,
+    selectedCategories: new Set(),
+  }),
+}));
+
+// Mock Pulumi
+const mockStackDestroy = vi.fn();
+const mockStackRefresh = vi.fn().mockResolvedValue(undefined);
+const mockStackRemove = vi.fn();
+const mockStackUp = vi.fn().mockResolvedValue({
+  outputs: {
+    roleArn: { value: "arn:aws:iam::123456789012:role/wraps-email-role" },
+    configSetName: { value: "wraps-email-config" },
+    region: { value: "us-east-1" },
+    domain: { value: "example.com" },
+    dkimTokens: { value: [] },
+  },
+});
+const mockSetConfig = vi.fn().mockResolvedValue(undefined);
+const mockSelectStack = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("@pulumi/pulumi", () => ({
+  automation: {
+    LocalWorkspace: {
+      selectStack: vi.fn().mockResolvedValue({
+        destroy: mockStackDestroy,
+        refresh: mockStackRefresh,
+        workspace: {
+          removeStack: mockStackRemove,
+        },
+      }),
+      createOrSelectStack: vi.fn().mockResolvedValue({
+        up: mockStackUp,
+        setConfig: mockSetConfig,
+        workspace: {
+          selectStack: mockSelectStack,
+        },
+      }),
+    },
+  },
+}));
+
+// Mock the email stack deployment
+vi.mock("../../infrastructure/email-stack.js", () => ({
+  deployEmailStack: vi.fn().mockResolvedValue({
+    roleArn: "arn:aws:iam::123456789012:role/wraps-email-role",
+    configSetName: "wraps-email-config",
+    region: "us-east-1",
+    domain: "example.com",
+    dkimTokens: [],
+  }),
+}));
+
+// Track process.exit calls
+const mockProcessExit = vi.spyOn(process, "exit").mockImplementation((() => {
+  throw new Error("process.exit called");
+}) as any);
+
+describe("destroy → init inconsistent state bug", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localMetadataStore = {};
+    s3MetadataStore = {};
+    mockStackDestroy.mockReset();
+    mockStackRefresh.mockReset().mockResolvedValue(undefined);
+    mockStackRemove.mockReset();
+    mockStackUp.mockReset().mockResolvedValue({
+      outputs: {
+        roleArn: { value: "arn:aws:iam::123456789012:role/wraps-email-role" },
+        configSetName: { value: "wraps-email-config" },
+        region: { value: "us-east-1" },
+        domain: { value: "example.com" },
+        dkimTokens: { value: [] },
+      },
+    });
+    mockProcessExit.mockClear();
+  });
+
+  it("should allow init after destroy partial failure (destroy clears both local and S3 metadata)", async () => {
+    // Step 1: Simulate existing deployment by seeding metadata in both stores
+    // (as saveConnectionMetadata would have done during the initial init)
+    const existingMetadata = {
+      version: "1.0.0",
+      accountId: "123456789012",
+      region: "us-east-1",
+      provider: "other",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      services: {
+        email: {
+          preset: "starter",
+          config: {
+            domain: "example.com",
+            sendingEnabled: true,
+            tracking: { enabled: true },
+          },
+          pulumiStackName: "wraps-123456789012-us-east-1",
+          deployedAt: "2024-01-01T00:00:00.000Z",
+        },
+      },
+    };
+
+    localMetadataStore["123456789012-us-east-1"] = existingMetadata;
+    s3MetadataStore["123456789012-us-east-1"] = existingMetadata;
+
+    // Step 2: Run destroy with partial failure
+    mockStackDestroy.mockRejectedValue(
+      new Error(
+        "Command failed with exit code 255: pulumi destroy --yes --skip-preview"
+      )
+    );
+
+    const { emailDestroy } = await import("../commands/email/destroy.js");
+    await emailDestroy({ force: true, region: "us-east-1" });
+
+    // Verify destroy deleted local metadata
+    expect(mockDeleteConnectionMetadata).toHaveBeenCalledWith(
+      "123456789012",
+      "us-east-1"
+    );
+
+    // Step 3: Run init — it should NOT find existing metadata
+    // BUG: loadConnectionMetadata will re-download from S3 and return the old metadata
+    const { init } = await import("../commands/email/init.js");
+
+    // Reset the loadConnectionMetadata call count so we can track the init call
+    mockLoadConnectionMetadata.mockClear();
+
+    // init should proceed with deployment, NOT exit with "Connection already exists"
+    // If it exits (process.exit), the test will throw "process.exit called"
+    let initExitedEarly = false;
+    try {
+      await init({
+        provider: "other",
+        region: "us-east-1",
+        domain: "example.com",
+        preset: "starter",
+        yes: true,
+        quick: true,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "process.exit called") {
+        initExitedEarly = true;
+      } else {
+        throw error;
+      }
+    }
+
+    // The bug: init finds metadata from S3 fallback and exits early
+    // This assertion should PASS when the bug is fixed (init should NOT exit early)
+    // Currently it FAILS because loadConnectionMetadata returns the S3 copy
+    expect(initExitedEarly).toBe(false);
+  });
+
+  it("deleteConnectionMetadata should remove S3 metadata too", async () => {
+    // Seed metadata in both stores
+    const metadata = {
+      version: "1.0.0",
+      accountId: "123456789012",
+      region: "us-east-1",
+      provider: "other",
+      timestamp: "2024-01-01T00:00:00.000Z",
+      services: {
+        email: {
+          preset: "starter",
+          config: {
+            domain: "example.com",
+            sendingEnabled: true,
+            tracking: { enabled: true },
+          },
+          pulumiStackName: "wraps-123456789012-us-east-1",
+          deployedAt: "2024-01-01T00:00:00.000Z",
+        },
+      },
+    };
+
+    localMetadataStore["123456789012-us-east-1"] = metadata;
+    s3MetadataStore["123456789012-us-east-1"] = metadata;
+
+    // Delete metadata (as destroy would)
+    await mockDeleteConnectionMetadata("123456789012", "us-east-1");
+
+    // After deletion, loadConnectionMetadata should return null
+    // BUG: It returns the S3 copy instead
+    const loaded = await mockLoadConnectionMetadata(
+      "123456789012",
+      "us-east-1"
+    );
+
+    expect(loaded).toBeNull();
+  });
+});

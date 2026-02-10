@@ -306,7 +306,7 @@ export async function saveConnectionMetadata(
 }
 
 /**
- * Delete connection metadata
+ * Delete connection metadata (local + S3)
  */
 export async function deleteConnectionMetadata(
   accountId: string,
@@ -317,6 +317,22 @@ export async function deleteConnectionMetadata(
   if (existsSync(metadataPath)) {
     const { unlink } = await import("node:fs/promises");
     await unlink(metadataPath);
+  }
+
+  // Also delete from S3 (best-effort, never blocks)
+  if (process.env.WRAPS_LOCAL_ONLY !== "1") {
+    try {
+      const { stateBucketExists, deleteMetadata, getStateBucketName } =
+        await import("./s3-state.js");
+
+      const bucketExists = await stateBucketExists(accountId, region);
+      if (bucketExists) {
+        const bucketName = getStateBucketName(accountId, region);
+        await deleteMetadata(bucketName, accountId, region);
+      }
+    } catch {
+      // S3 delete failure is silent — local delete already succeeded
+    }
   }
 }
 

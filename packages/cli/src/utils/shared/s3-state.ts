@@ -170,6 +170,26 @@ export async function uploadMetadata(
 }
 
 /**
+ * Delete connection metadata from S3
+ */
+export async function deleteMetadata(
+  bucketName: string,
+  accountId: string,
+  region: string
+): Promise<void> {
+  const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+  const client = new S3Client({ region });
+  const key = `metadata/${accountId}-${region}.json`;
+
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    })
+  );
+}
+
+/**
  * Download connection metadata from S3
  * Returns null if the key doesn't exist
  */
