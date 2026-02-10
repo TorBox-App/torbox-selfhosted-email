@@ -40,7 +40,9 @@ export async function readAuthConfig(): Promise<AuthConfig | null> {
 export async function saveAuthConfig(config: AuthConfig): Promise<void> {
   await ensureWrapsDir();
   const path = getConfigPath();
-  await writeFile(path, JSON.stringify(config, null, 2), "utf-8");
+  const existing = await readAuthConfig();
+  const merged = existing ? { ...existing, ...config } : config;
+  await writeFile(path, JSON.stringify(merged, null, 2), "utf-8");
   await chmod(path, 0o600);
 }
 
@@ -64,5 +66,11 @@ export async function resolveTokenAsync(flags?: {
     return sync;
   }
   const config = await readAuthConfig();
-  return config?.auth?.token || null;
+  if (!config?.auth?.token) {
+    return null;
+  }
+  if (config.auth.expiresAt && new Date(config.auth.expiresAt) <= new Date()) {
+    return null;
+  }
+  return config.auth.token;
 }

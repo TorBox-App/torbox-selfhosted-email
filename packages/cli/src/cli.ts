@@ -1234,13 +1234,6 @@ async function run() {
           );
           throw new Error(`Unknown auth command: ${subCommand || "(none)"}`);
       }
-      // Track auth commands
-      const authDuration = Date.now() - startTime;
-      const authCommandName = `auth:${subCommand}`;
-      trackCommand(authCommandName, {
-        success: true,
-        duration_ms: authDuration,
-      });
       return;
     }
 

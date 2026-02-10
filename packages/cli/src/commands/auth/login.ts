@@ -35,7 +35,7 @@ async function fetchOrganizations(
     if (!data) {
       return [];
     }
-    return data.map((org: any) => ({
+    return data.map((org: { id: string; name: string; slug: string }) => ({
       id: org.id,
       name: org.name,
       slug: org.slug,
@@ -93,7 +93,7 @@ export async function login(options: LoginOptions): Promise<void> {
     });
     trackError("DEVICE_AUTH_FAILED", "auth:login", { step: "request_code" });
     clack.log.error("Failed to start device authorization.");
-    process.exit(1);
+    throw new Error("Failed to start device authorization.");
   }
 
   const {
@@ -167,6 +167,10 @@ export async function login(options: LoginOptions): Promise<void> {
         clack.log.info(`Organization: ${pc.cyan(organizations[0].name)}`);
       } else if (organizations.length > 1) {
         clack.log.info(`${organizations.length} organizations available`);
+      } else {
+        clack.log.info(
+          `No organizations found. Create one at ${pc.underline(`${baseURL}/onboarding`)} and run ${pc.cyan("wraps auth login")} again.`
+        );
       }
 
       if (options.json) {
@@ -183,7 +187,8 @@ export async function login(options: LoginOptions): Promise<void> {
     }
 
     if (tokenError) {
-      const errorCode = (tokenError as any).error || (tokenError as any).code;
+      const err = tokenError as { error?: string; code?: string };
+      const errorCode = err.error || err.code;
 
       if (errorCode === "authorization_pending") {
         continue;
@@ -203,7 +208,7 @@ export async function login(options: LoginOptions): Promise<void> {
         trackError("ACCESS_DENIED", "auth:login", { step: "poll_token" });
         spinner.stop("Denied.");
         clack.log.error("Authorization was denied.");
-        process.exit(1);
+        throw new Error("Authorization was denied.");
       }
 
       if (errorCode === "expired_token") {
@@ -220,5 +225,5 @@ export async function login(options: LoginOptions): Promise<void> {
   trackError("DEVICE_CODE_EXPIRED", "auth:login", { step: "poll_token" });
   spinner.stop("Expired.");
   clack.log.error("Device code expired. Run `wraps auth login` to try again.");
-  process.exit(1);
+  throw new Error("Device code expired.");
 }

@@ -14,13 +14,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient, useSession } from "@/lib/auth-client";
 
+function formatCode(value: string): string {
+  const clean = value
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 8);
+  if (clean.length > 4) {
+    return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+  }
+  return clean;
+}
+
 function DeviceCodeForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, isPending: sessionPending } = useSession();
 
   const prefilled = searchParams.get("user_code") || "";
-  const [code, setCode] = useState(prefilled);
+  const [code, setCode] = useState(() => formatCode(prefilled));
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,17 +47,6 @@ function DeviceCodeForm() {
       );
     }
   }, [session, sessionPending, router, code]);
-
-  const formatCode = (value: string): string => {
-    const clean = value
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .toUpperCase()
-      .slice(0, 8);
-    if (clean.length > 4) {
-      return `${clean.slice(0, 4)}-${clean.slice(4)}`;
-    }
-    return clean;
-  };
 
   const handleCodeChange = (value: string) => {
     setCode(formatCode(value));
