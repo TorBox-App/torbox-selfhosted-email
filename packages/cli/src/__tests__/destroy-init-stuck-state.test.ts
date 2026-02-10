@@ -136,6 +136,11 @@ vi.mock("../utils/shared/output.js", async () => {
   return { ...actual };
 });
 
+// Mock the email test command (called by init post-deploy; not relevant to this test)
+vi.mock("../commands/email/test.js", () => ({
+  emailTest: vi.fn().mockResolvedValue(undefined),
+}));
+
 // --- Metadata mock with S3 simulation ---
 //
 // We simulate the S3-backed metadata behavior:

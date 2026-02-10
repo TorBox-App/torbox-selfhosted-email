@@ -22,10 +22,12 @@ vi.mock("../../utils/shared/aws.js");
 vi.mock("../../utils/shared/pulumi.js");
 vi.mock("../../utils/shared/fs.js");
 vi.mock("../../utils/shared/metadata.js");
+vi.mock("../../utils/shared/iam-check.js");
 vi.mock("../../utils/route53.js");
 vi.mock("../../utils/shared/prompts.js");
 vi.mock("../../utils/dns/index.js");
 vi.mock("../../infrastructure/email-stack.js");
+vi.mock("../email/test.js");
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -35,6 +37,7 @@ import * as dnsUtils from "../../utils/dns/index.js";
 import * as route53Utils from "../../utils/route53.js";
 import * as aws from "../../utils/shared/aws.js";
 import * as fsUtils from "../../utils/shared/fs.js";
+import * as iamCheck from "../../utils/shared/iam-check.js";
 import * as metadata from "../../utils/shared/metadata.js";
 import * as promptUtils from "../../utils/shared/prompts.js";
 import * as pulumiUtils from "../../utils/shared/pulumi.js";
@@ -88,6 +91,20 @@ describe("init command", () => {
       warnings: [],
     });
     vi.mocked(aws.getAWSRegion).mockResolvedValue("us-east-1");
+    vi.mocked(aws.getSESAccountStatus).mockResolvedValue({
+      isSandbox: false,
+    });
+
+    // Mock IAM permission check (prevents real AWS IAM calls)
+    vi.mocked(iamCheck.checkIAMPermissions).mockResolvedValue({
+      success: true,
+      deniedActions: [],
+      allowedActions: [],
+      skipped: true,
+      skipReason: "Mocked in test",
+    });
+    vi.mocked(iamCheck.getRequiredActions).mockReturnValue([]);
+    vi.mocked(iamCheck.formatDeniedActions).mockReturnValue("");
 
     // Mock Pulumi utilities
     vi.mocked(pulumiUtils.ensurePulumiInstalled).mockResolvedValue(false);

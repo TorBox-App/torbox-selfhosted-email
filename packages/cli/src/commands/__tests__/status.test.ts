@@ -27,6 +27,30 @@ vi.mock("@pulumi/pulumi", async () => {
   };
 });
 
+// Mock aws-detection to prevent real filesystem reads (SSO cache, AWS config)
+vi.mock("../../utils/shared/aws-detection.js", () => ({
+  detectAWSState: vi.fn().mockResolvedValue({
+    cliInstalled: true,
+    cliVersion: "2.15.0",
+    credentialsConfigured: true,
+    credentialSource: "environment",
+    profileName: "default",
+    accountId: "123456789012",
+    detectedProvider: null,
+    region: "us-east-1",
+    sso: {
+      configured: false,
+      profiles: [],
+      sessions: [],
+      tokenStatus: null,
+      activeProfile: null,
+    },
+  }),
+  getCurrentProfile: vi.fn().mockReturnValue("default"),
+  getConfiguredProfiles: vi.fn().mockReturnValue([]),
+  getSSOLoginCommand: vi.fn().mockReturnValue("aws sso login"),
+}));
+
 // Mock clack
 vi.mock("@clack/prompts", () => ({
   intro: vi.fn(),
