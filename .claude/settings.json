@@ -105,6 +105,11 @@
       "name": "blueprint",
       "description": "Research-first feature planning: parallel agents explore code, collect docs, mine patterns, then write a self-contained plan",
       "path": ".claude/skills/blueprint/SKILL.md"
+    },
+    {
+      "name": "research-swarm",
+      "description": "Parallel research agents: market/competitive, product/user, and technical lenses independently investigate a topic, then synthesize into ranked recommendations",
+      "path": ".claude/skills/research-swarm/SKILL.md"
     }
   ]
 }
