@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  ArrowRightLeft,
   BarChart3,
   Blocks,
   Book,
@@ -222,6 +223,16 @@ const navItems: NavSection[] = [
         title: "Building Workflows",
         href: "/docs/guides/workflows",
         icon: Workflow,
+      },
+      {
+        title: "Vercel Setup",
+        href: "/docs/guides/vercel-setup",
+        icon: Rocket,
+      },
+      {
+        title: "Migration Guide",
+        href: "/docs/guides/migration",
+        icon: ArrowRightLeft,
       },
       {
         title: "All Guides",

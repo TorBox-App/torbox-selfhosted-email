@@ -2,9 +2,11 @@
 
 import {
   ArrowRight,
+  ArrowRightLeft,
   Cloud,
   FileCode2,
   Globe,
+  Rocket,
   ShieldCheck,
   Sliders,
   Workflow,
@@ -62,6 +64,22 @@ const guides = [
     href: "/docs/guides/workflows",
     icon: Workflow,
     readTime: "10 min read",
+  },
+  {
+    title: "Vercel Setup",
+    description:
+      "Deploy email infrastructure with Vercel OIDC federation. Zero stored credentials, automatic rotation, and seamless integration.",
+    href: "/docs/guides/vercel-setup",
+    icon: Rocket,
+    readTime: "5 min read",
+  },
+  {
+    title: "Migration Guide",
+    description:
+      "Switch from SendGrid, Postmark, or Resend to Wraps. Side-by-side code comparisons and step-by-step migration instructions.",
+    href: "/docs/guides/migration",
+    icon: ArrowRightLeft,
+    readTime: "6 min read",
   },
 ];
 
