@@ -10,16 +10,50 @@ account. Zero credentials stored. OIDC authentication. You own everything.
 ## Docs
 
 - [Quickstart](https://wraps.dev/docs/quickstart/email): Deploy email in 30 seconds
+- [Next.js Guide](https://wraps.dev/docs/quickstart/email/nextjs): Send email from Next.js
+- [Express Guide](https://wraps.dev/docs/quickstart/email/express): Send email from Express
+- [Remix Guide](https://wraps.dev/docs/quickstart/email/remix): Send email from Remix
 - [SDK Reference](https://wraps.dev/docs/sdk-reference): @wraps.dev/email API
 - [SMS SDK Reference](https://wraps.dev/docs/sms-sdk-reference): @wraps.dev/sms API
-- [CLI Reference](https://wraps.dev/cli): All CLI commands and flags
+- [Platform SDK Reference](https://wraps.dev/docs/client-sdk-reference): @wraps.dev/client API
+- [CLI Reference](https://wraps.dev/docs/cli-reference): All CLI commands and flags
 - [Platform](https://wraps.dev/platform): Dashboard, templates, workflows
+
+## Infrastructure
+
+- [What Gets Deployed: Email](https://wraps.dev/docs/infrastructure/email): All AWS resources by preset
+- [What Gets Deployed: SMS](https://wraps.dev/docs/infrastructure/sms): SMS infrastructure details
+- [What Gets Deployed: CDN](https://wraps.dev/docs/infrastructure/cdn): CDN infrastructure details
+
+## Reference
+
+- [Error Codes](https://wraps.dev/docs/reference/errors): All CLI and SDK error codes with solutions
+- [Environment Variables](https://wraps.dev/docs/reference/environment-variables): All env vars for CLI, SDKs, and CI/CD
+
+## CLI Commands
+
+- [Email Commands](https://wraps.dev/docs/cli-reference/email): init, status, domains, upgrade, templates, workflows
+- [SMS Commands](https://wraps.dev/docs/cli-reference/sms): init, status, test, verify, register, destroy
+- [CDN Commands](https://wraps.dev/docs/cli-reference/cdn): init, status, verify, upgrade, destroy
+- [Auth Commands](https://wraps.dev/docs/cli-reference/auth): login, status, logout
+- [AWS Commands](https://wraps.dev/docs/cli-reference/aws): setup, doctor
+- [Platform Commands](https://wraps.dev/docs/cli-reference/platform): connect, update-role
+
+## Guides
+
+- [AWS Setup](https://wraps.dev/docs/guides/aws-setup): Configure AWS credentials
+- [Configuration Presets](https://wraps.dev/docs/guides/configuration-presets): Starter, Production, Enterprise
+- [Templates as Code](https://wraps.dev/docs/guides/templates): React Email templates workflow
+- [Building Workflows](https://wraps.dev/docs/guides/workflows): Automated email/SMS sequences
+- [Production Access](https://wraps.dev/docs/guides/production-access): Get SES production access
+- [Domain Verification](https://wraps.dev/docs/guides/domain-verification): DKIM, SPF, DMARC setup
 
 ## Code
 
 - [GitHub SDK](https://github.com/wraps-team/wraps-js): TypeScript SDK source
 - [npm @wraps.dev/email](https://npmjs.com/package/@wraps.dev/email): Email SDK
 - [npm @wraps.dev/sms](https://npmjs.com/package/@wraps.dev/sms): SMS SDK
+- [npm @wraps.dev/client](https://npmjs.com/package/@wraps.dev/client): Platform SDK
 - [npm @wraps.dev/cli](https://npmjs.com/package/@wraps.dev/cli): CLI package
 
 ## Optional

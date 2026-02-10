@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowRight,
   Blocks,
   Book,
@@ -9,6 +10,8 @@ import {
   Mail,
   MessageSquare,
   Rocket,
+  Server,
+  Settings,
   Terminal,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
@@ -98,6 +101,27 @@ const quickLinks = [
     title: "Guides",
     description: "Production access, domain verification, and more",
     href: "/docs/guides",
+    disabled: false,
+  },
+  {
+    icon: Server,
+    title: "Infrastructure",
+    description: "What gets deployed to your AWS account for each service",
+    href: "/docs/infrastructure/email",
+    disabled: false,
+  },
+  {
+    icon: AlertTriangle,
+    title: "Error Reference",
+    description: "All CLI error codes and SDK error classes with solutions",
+    href: "/docs/reference/errors",
+    disabled: false,
+  },
+  {
+    icon: Settings,
+    title: "Environment Variables",
+    description: "All env vars for CLI, SDKs, and CI/CD configuration",
+    href: "/docs/reference/environment-variables",
     disabled: false,
   },
 ];

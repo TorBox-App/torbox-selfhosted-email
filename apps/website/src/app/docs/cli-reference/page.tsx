@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import CLIReferencePageContent from "./page-content";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Docs", item: "https://wraps.dev/docs" },
+    { "@type": "ListItem", position: 2, name: "CLI Reference", item: "https://wraps.dev/docs/cli-reference" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "CLI Reference",

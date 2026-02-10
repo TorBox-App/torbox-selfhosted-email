@@ -1,5 +1,16 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import CLIReferenceEmailPageContent from "./page-content";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Docs", item: "https://wraps.dev/docs" },
+    { "@type": "ListItem", position: 2, name: "CLI Reference", item: "https://wraps.dev/docs/cli-reference" },
+    { "@type": "ListItem", position: 3, name: "Email", item: "https://wraps.dev/docs/cli-reference/email" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "Email CLI Commands",

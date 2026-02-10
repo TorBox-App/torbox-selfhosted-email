@@ -2,7 +2,10 @@
 
 import {
   ArrowRight,
+  Blocks,
+  Cloud,
   HardDrive,
+  KeyRound,
   Mail,
   MessageSquare,
   Terminal,
@@ -11,51 +14,7 @@ import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  CodeBlock,
-  CodeBlockBody,
-  CodeBlockContent,
-  CodeBlockCopyButton,
-  CodeBlockFilename,
-  CodeBlockFiles,
-  CodeBlockHeader,
-  CodeBlockItem,
-} from "@/components/ui/shadcn-io/code-block";
-
-// Helper component for CLI command blocks
-function CLICommand({ command }: { command: string }) {
-  return (
-    <CodeBlock
-      className="h-auto"
-      data={[{ language: "bash", filename: "terminal.sh", code: command }]}
-      defaultValue="bash"
-    >
-      <CodeBlockHeader>
-        <CodeBlockFiles>
-          {(item) => (
-            <CodeBlockFilename key={item.language} value={item.language}>
-              {item.filename}
-            </CodeBlockFilename>
-          )}
-        </CodeBlockFiles>
-        <CodeBlockCopyButton />
-      </CodeBlockHeader>
-      <CodeBlockBody>
-        {(item) => (
-          <CodeBlockItem
-            key={item.language}
-            lineNumbers={false}
-            value={item.language}
-          >
-            <CodeBlockContent language={item.language}>
-              {item.code}
-            </CodeBlockContent>
-          </CodeBlockItem>
-        )}
-      </CodeBlockBody>
-    </CodeBlock>
-  );
-}
+import { CLICommand } from "@/components/docs/cli-command";
 
 export default function CLIReferencePageContent() {
   return (
@@ -138,27 +97,158 @@ export default function CLIReferencePageContent() {
             </CardContent>
           </Card>
 
-          <Card className="opacity-60 transition-colors hover:border-primary/50">
+          <Card className="transition-colors hover:border-primary/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                <MessageSquare className="h-5 w-5 text-primary" />
                 SMS Commands
-                <Badge className="ml-auto text-xs" variant="secondary">
-                  Soon
-                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground text-sm">
-                Deploy AWS End User Messaging (Pinpoint) for SMS and MMS. Coming
-                soon.
+                Deploy AWS End User Messaging infrastructure for transactional
+                and marketing SMS.
               </p>
-              <Button className="w-full" disabled variant="outline">
-                Coming Soon
+              <Button asChild className="w-full" variant="outline">
+                <a href="/docs/cli-reference/sms">
+                  View SMS Commands
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="transition-colors hover:border-primary/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <KeyRound className="h-5 w-5 text-primary" />
+                Auth Commands
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4 text-muted-foreground text-sm">
+                Authenticate with the Wraps Platform for dashboard access,
+                templates, and workflows.
+              </p>
+              <Button asChild className="w-full" variant="outline">
+                <a href="/docs/cli-reference/auth">
+                  View Auth Commands
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="transition-colors hover:border-primary/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Cloud className="h-5 w-5 text-primary" />
+                AWS Commands
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4 text-muted-foreground text-sm">
+                Set up and diagnose your AWS credentials and permissions.
+              </p>
+              <Button asChild className="w-full" variant="outline">
+                <a href="/docs/cli-reference/aws">
+                  View AWS Commands
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="transition-colors hover:border-primary/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Blocks className="h-5 w-5 text-primary" />
+                Platform Commands
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4 text-muted-foreground text-sm">
+                Connect your AWS infrastructure to the Wraps Platform.
+              </p>
+              <Button asChild className="w-full" variant="outline">
+                <a href="/docs/cli-reference/platform">
+                  View Platform Commands
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
               </Button>
             </CardContent>
           </Card>
         </div>
+      </section>
+
+      {/* Global Commands */}
+      <section className="mb-12">
+        <h2 className="mb-6 font-bold text-2xl">Global Commands</h2>
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">wraps push</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Push templates and workflows to the Wraps Platform and SES
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">wraps news</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Show latest Wraps news and updates
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  wraps support
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Open support channel
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Global Flags */}
+      <section className="mb-12">
+        <h2 className="mb-6 font-bold text-2xl">Global Flags</h2>
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --account &lt;id&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Target a specific AWS account
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --token &lt;token&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  API token for authentication
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--verbose</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Enable verbose output
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--json</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Output JSON (where supported)
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       {/* Global Options */}

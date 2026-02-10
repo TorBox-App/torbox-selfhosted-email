@@ -1,5 +1,16 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import CdnQuickstartPageContent from "./page-content";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Docs", item: "https://wraps.dev/docs" },
+    { "@type": "ListItem", position: 2, name: "Quickstart", item: "https://wraps.dev/docs/quickstart" },
+    { "@type": "ListItem", position: 3, name: "CDN", item: "https://wraps.dev/docs/quickstart/cdn" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "CDN Quickstart",

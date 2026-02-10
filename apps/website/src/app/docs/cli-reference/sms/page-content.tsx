@@ -15,40 +15,7 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-
-function CLICommand({ command }: { command: string }) {
-  return (
-    <CodeBlock
-      className="h-auto"
-      data={[{ language: "bash", filename: "terminal.sh", code: command }]}
-      defaultValue="bash"
-    >
-      <CodeBlockHeader>
-        <CodeBlockFiles>
-          {(item) => (
-            <CodeBlockFilename key={item.language} value={item.language}>
-              {item.filename}
-            </CodeBlockFilename>
-          )}
-        </CodeBlockFiles>
-        <CodeBlockCopyButton />
-      </CodeBlockHeader>
-      <CodeBlockBody>
-        {(item) => (
-          <CodeBlockItem
-            key={item.language}
-            lineNumbers={false}
-            value={item.language}
-          >
-            <CodeBlockContent language={item.language}>
-              {item.code}
-            </CodeBlockContent>
-          </CodeBlockItem>
-        )}
-      </CodeBlockBody>
-    </CodeBlock>
-  );
-}
+import { CLICommand } from "@/components/docs/cli-command";
 
 export default function CLIReferenceSMSPageContent() {
   return (
@@ -166,22 +133,23 @@ export default function CLIReferenceSMSPageContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">What It Creates</CardTitle>
+            <CardTitle className="text-lg">What It Does</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>Creates an IAM role for your application</li>
               <li>
-                Phone number (simulator, toll-free, or 10DLC based on selection)
+                Provisions a phone number (simulator, toll-free, or 10DLC based
+                on selection)
               </li>
-              <li>Configuration set with event tracking</li>
-              <li>Opt-out list for compliance</li>
-              <li>SNS topic + SQS queue for event processing</li>
+              <li>Sets up an opt-out list for compliance</li>
+              <li>Configures event tracking via SNS + SQS</li>
               <li>
-                Lambda function for event processing (if event tracking enabled)
+                Deploys Lambda function for event processing (if event tracking
+                enabled)
               </li>
-              <li>DynamoDB table for message history (if enabled)</li>
-              <li>IAM role for your application</li>
-              <li>Protect configuration for fraud protection</li>
+              <li>Creates DynamoDB table for message history (if enabled)</li>
+              <li>Configures fraud protection</li>
             </ul>
           </CardContent>
         </Card>
@@ -203,7 +171,23 @@ export default function CLIReferenceSMSPageContent() {
             <CardTitle className="text-lg">Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <CLICommand command="npx @wraps.dev/cli sms status" />
+            <CLICommand command="npx @wraps.dev/cli sms status [options]" />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--json</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Output status as JSON
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -213,11 +197,11 @@ export default function CLIReferenceSMSPageContent() {
           </CardHeader>
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
-              <li>Phone number and type</li>
-              <li>Configuration preset and region</li>
+              <li>Phone numbers and type</li>
+              <li>Opt-out list configuration</li>
+              <li>Region and configuration preset</li>
               <li>Event tracking status</li>
-              <li>Message history table (if enabled)</li>
-              <li>IAM role ARN</li>
+              <li>All deployed resources</li>
             </ul>
           </CardContent>
         </Card>
@@ -265,7 +249,28 @@ export default function CLIReferenceSMSPageContent() {
                   Message content to send
                 </p>
               </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--json</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Output result as JSON
+                </p>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">What It Does</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>Sends a test SMS to the specified number</li>
+              <li>Shows delivery status and segment count</li>
+              <li>
+                Supports AWS simulator numbers for sandbox testing
+              </li>
+            </ul>
           </CardContent>
         </Card>
 
@@ -297,8 +302,8 @@ export default function CLIReferenceSMSPageContent() {
           wraps sms verify-number
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Verify a destination phone number for sandbox testing. Required before
-          you can send to real numbers in sandbox mode.
+          Verify a destination phone number for sandbox testing. In sandbox
+          mode, numbers must be verified before they can receive test messages.
         </p>
 
         <Card className="mb-4">
@@ -388,8 +393,8 @@ export default function CLIReferenceSMSPageContent() {
           wraps sms register
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Start the toll-free registration process. Required before toll-free
-          numbers can send messages at scale.
+          Submit a toll-free verification request to AWS for production sending.
+          Required before toll-free numbers can send messages at scale.
         </p>
 
         <Card className="mb-4">
@@ -465,6 +470,14 @@ export default function CLIReferenceSMSPageContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --preset &lt;name&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Target preset: starter, production, or enterprise
+                </p>
+              </div>
               <div>
                 <code className="rounded bg-muted px-2 py-1">
                   -r, --region &lt;region&gt;

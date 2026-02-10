@@ -5,50 +5,7 @@ import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  CodeBlock,
-  CodeBlockBody,
-  CodeBlockContent,
-  CodeBlockCopyButton,
-  CodeBlockFilename,
-  CodeBlockFiles,
-  CodeBlockHeader,
-  CodeBlockItem,
-} from "@/components/ui/shadcn-io/code-block";
-
-function CLICommand({ command }: { command: string }) {
-  return (
-    <CodeBlock
-      className="h-auto"
-      data={[{ language: "bash", filename: "terminal.sh", code: command }]}
-      defaultValue="bash"
-    >
-      <CodeBlockHeader>
-        <CodeBlockFiles>
-          {(item) => (
-            <CodeBlockFilename key={item.language} value={item.language}>
-              {item.filename}
-            </CodeBlockFilename>
-          )}
-        </CodeBlockFiles>
-        <CodeBlockCopyButton />
-      </CodeBlockHeader>
-      <CodeBlockBody>
-        {(item) => (
-          <CodeBlockItem
-            key={item.language}
-            lineNumbers={false}
-            value={item.language}
-          >
-            <CodeBlockContent language={item.language}>
-              {item.code}
-            </CodeBlockContent>
-          </CodeBlockItem>
-        )}
-      </CodeBlockBody>
-    </CodeBlock>
-  );
-}
+import { CLICommand } from "@/components/docs/cli-command";
 
 export default function CLIReferenceEmailPageContent() {
   return (
@@ -701,8 +658,8 @@ export default function CLIReferenceEmailPageContent() {
           wraps email sync
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Synchronize your local configuration with deployed infrastructure.
-          Useful after CLI updates.
+          Synchronize local state with deployed infrastructure. Useful after CLI
+          updates or manual AWS console changes.
         </p>
 
         <Card className="mb-4">
@@ -823,6 +780,340 @@ export default function CLIReferenceEmailPageContent() {
               <li>EventBridge rules and SQS queues</li>
               <li>Route53 DNS records (DKIM, DMARC, MAIL FROM) if confirmed</li>
               <li>Local metadata for email service</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* wraps email test */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email test
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Send a test email using the AWS SES mailbox simulator. Verify your
+          email infrastructure is working without affecting your sender
+          reputation.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli email test [options]" />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --to &lt;email&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Recipient email address (defaults to SES simulator address)
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --scenario &lt;type&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Simulator scenario: bounce, complaint, or success
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--json</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Output result as JSON
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">What It Does</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>Sends a test email via the AWS SES mailbox simulator</li>
+              <li>Shows the delivery result and message ID</li>
+              <li>
+                Supports different scenarios to test bounce and complaint
+                handling
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* wraps email check */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email check
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Run a comprehensive deliverability audit on your domain. Checks all
+          critical email authentication records and provides an overall
+          deliverability score.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli email check [options]" />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <code className="rounded bg-muted px-2 py-1">
+                  --domain &lt;domain&gt;
+                </code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Domain to audit
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--quick</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Skip blacklist check for faster results
+                </p>
+              </div>
+              <div>
+                <code className="rounded bg-muted px-2 py-1">--json</code>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  Output result as JSON
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">What It Checks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>DKIM records and signing configuration</li>
+              <li>SPF alignment and record validity</li>
+              <li>DMARC policy strength and configuration</li>
+              <li>MX record TLS support</li>
+              <li>Blacklist presence across major providers</li>
+              <li>Overall deliverability score with recommendations</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* wraps email templates */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email templates
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Manage email templates as code. Initialize a templates directory,
+          preview with hot-reload, and push compiled templates to SES and the
+          Wraps dashboard.
+        </p>
+
+        {/* templates init */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email templates init
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Initialize a templates-as-code directory with an example template,
+            configuration file, and brand file.
+          </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email templates init" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* templates preview */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email templates preview
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Start a local preview server with hot-reload for developing email
+            templates. Defaults to port 3333.
+          </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email templates preview" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* templates push */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email templates push
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Compile and push templates to AWS SES and the Wraps dashboard.
+          </p>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email templates push [options]" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Options</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --template &lt;name&gt;
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Push a specific template by name
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">--force</code>{" "}
+                  <span className="text-muted-foreground">
+                    Overwrite existing templates without confirmation
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">
+                    --dry-run
+                  </code>{" "}
+                  <span className="text-muted-foreground">
+                    Preview what would be pushed without making changes
+                  </span>
+                </li>
+                <li>
+                  <code className="rounded bg-muted px-2 py-1">--json</code>{" "}
+                  <span className="text-muted-foreground">
+                    Output result as JSON
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* wraps email workflows */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email workflows
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Validate and push email workflow definitions to the Wraps Platform.
+        </p>
+
+        {/* workflows validate */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email workflows validate
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Validate workflow definitions against the Wraps workflow schema.
+            Catches errors before pushing to production.
+          </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email workflows validate" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* workflows push */}
+        <div className="mb-8 ml-4">
+          <h3 className="mb-3 font-semibold text-xl">
+            wraps email workflows push
+          </h3>
+          <p className="mb-4 text-muted-foreground text-sm">
+            Push workflow definitions to the Wraps Platform.
+          </p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Usage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CLICommand command="npx @wraps.dev/cli email workflows push" />
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* wraps email config */}
+      <section className="mb-12">
+        <h2 className="mb-4 flex items-center gap-2 font-bold text-2xl">
+          <Terminal className="h-6 w-6 text-primary" />
+          wraps email config
+        </h2>
+        <p className="mb-4 text-muted-foreground">
+          Apply CLI configuration updates to deployed infrastructure. Syncs
+          local configuration changes with your deployed AWS resources.
+        </p>
+
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CLICommand command="npx @wraps.dev/cli email config" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">What It Does</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+              <li>
+                Reads local configuration and compares with deployed
+                infrastructure
+              </li>
+              <li>
+                Applies any pending configuration changes to AWS resources
+              </li>
+              <li>
+                Updates IAM policies, Lambda functions, and EventBridge rules as
+                needed
+              </li>
             </ul>
           </CardContent>
         </Card>

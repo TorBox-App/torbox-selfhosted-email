@@ -24,11 +24,11 @@ const breadcrumbSchema = {
 export const metadata: Metadata = {
   title: "Guides",
   description:
-    "In-depth guides for production access, domain verification, and AWS setup.",
+    "In-depth guides for production access, domain verification, AWS setup, templates, workflows, and configuration presets.",
   openGraph: {
     title: "Guides | Wraps",
     description:
-      "In-depth guides for production access, domain verification, and AWS setup.",
+      "In-depth guides for production access, domain verification, AWS setup, templates, workflows, and configuration presets.",
     type: "website",
     url: "https://wraps.dev/docs/guides",
   },
@@ -62,6 +62,9 @@ export default function GuidesPage() {
           <li>AWS Setup - Configure your AWS account for Wraps</li>
           <li>Production Access - Get AWS SES production access approval</li>
           <li>Domain Verification - Set up DKIM, SPF, and DMARC</li>
+          <li>Configuration Presets - Starter, Production, and Enterprise features and costs</li>
+          <li>Templates as Code - Write email templates as React components</li>
+          <li>Building Workflows - Automated email and SMS sequences</li>
         </ul>
       </nav>
       <GuidesPageContent />

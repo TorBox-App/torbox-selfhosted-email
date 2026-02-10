@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import ClientSDKReferencePageContent from "./page-content";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Docs", item: "https://wraps.dev/docs" },
+    { "@type": "ListItem", position: 2, name: "Platform SDK", item: "https://wraps.dev/docs/client-sdk-reference" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "Platform SDK Reference",

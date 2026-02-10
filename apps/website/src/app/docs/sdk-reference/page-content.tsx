@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Code2 } from "lucide-react";
+import { ArrowRight, Code2, Info } from "lucide-react";
 import { CopyForAIButton } from "@/components/docs/copy-for-ai-button";
 import { SectionHeading } from "@/components/docs/section-heading";
 import { DocsLayout } from "@/components/docs-layout";
@@ -68,6 +68,24 @@ const email = new WrapsEmail({
   region: 'us-east-1',
   endpoint: 'http://localhost:4566',
 });`;
+
+const wrapsEmailConfigCode = `type WrapsEmailConfig = {
+  region?: string;              // AWS region (default: 'us-east-1')
+  credentials?: {               // Explicit AWS credentials
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  };
+  roleArn?: string;             // IAM role for OIDC assumption
+  endpoint?: string;            // Custom endpoint (e.g., LocalStack)
+  configurationSetName?: string; // SES configuration set name
+  tableName?: string;           // DynamoDB table name override
+  accountId?: string;           // AWS account ID (for events)
+  suppressionListName?: string; // Custom suppression list name
+  maxRetries?: number;          // Max AWS SDK retries (default: 3)
+  timeout?: number;             // Request timeout in ms (default: 30000)
+  logger?: Logger;              // Custom logger instance
+};`;
 
 const basicEmailCode = `const result = await email.send({
   from: 'hello@yourdomain.com',
@@ -460,6 +478,11 @@ ${envVarsCode}
 ### Testing with LocalStack
 \`\`\`typescript
 ${localStackCode}
+\`\`\`
+
+### WrapsEmailConfig Type
+\`\`\`typescript
+${wrapsEmailConfigCode}
 \`\`\``,
 
   sendEmail: `## Send Email
@@ -818,6 +841,16 @@ The SDK is written in TypeScript and provides full type safety out of the box.
 \`\`\`typescript
 ${typescriptCode}
 \`\`\``,
+
+  defaultsAndLimits: `## SDK Defaults & Limits
+
+Important defaults and limits to keep in mind when using the SDK:
+
+- **No automatic retry on failure** — implement your own retry logic if \`retryable\` is \`true\`
+- **Default pagination**: 20 items per page
+- **Presigned URL expiry**: 1 hour (for attachments)
+- **Bulk send limit**: 50 destinations per call
+- **Attachment limit**: 100 per email (10 MB total message size)`,
 };
 
 const FULL_PAGE_MD = `# @wraps.dev/email SDK Reference
@@ -851,6 +884,8 @@ ${SECTION_MD.suppression}
 ${SECTION_MD.errorHandling}
 
 ${SECTION_MD.typescript}
+
+${SECTION_MD.defaultsAndLimits}
 
 ## Resources
 
@@ -1088,6 +1123,48 @@ export default function SDKReferencePageContent() {
                   language: "typescript",
                   filename: "localstack.ts",
                   code: localStackCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">WrapsEmailConfig Type</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "config-type.ts",
+                  code: wrapsEmailConfigCode,
                 },
               ]}
               defaultValue="typescript"
@@ -2889,6 +2966,53 @@ export default function SDKReferencePageContent() {
             )}
           </CodeBlockBody>
         </CodeBlock>
+      </section>
+
+      {/* SDK Defaults & Limits */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="defaults-and-limits"
+          markdown={SECTION_MD.defaultsAndLimits}
+          title="SDK Defaults & Limits"
+        />
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div className="text-sm">
+                <p className="mb-3 font-medium">
+                  Important defaults and limits to keep in mind:
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>
+                    <strong>No automatic retry on failure</strong> — implement
+                    your own retry logic if{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      retryable
+                    </code>{" "}
+                    is{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">true</code>
+                  </li>
+                  <li>
+                    <strong>Default pagination</strong>: 20 items per page
+                  </li>
+                  <li>
+                    <strong>Presigned URL expiry</strong>: 1 hour (for
+                    attachments)
+                  </li>
+                  <li>
+                    <strong>Bulk send limit</strong>: 50 destinations per call
+                  </li>
+                  <li>
+                    <strong>Attachment limit</strong>: 100 per email (10 MB total
+                    message size)
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       {/* Next Steps */}

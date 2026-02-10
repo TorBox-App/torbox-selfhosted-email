@@ -1,6 +1,14 @@
 "use client";
 
-import { ArrowRight, Cloud, Globe, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Cloud,
+  FileCode2,
+  Globe,
+  ShieldCheck,
+  Sliders,
+  Workflow,
+} from "lucide-react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +38,30 @@ const guides = [
     href: "/docs/guides/domain-verification",
     icon: Globe,
     readTime: "4 min read",
+  },
+  {
+    title: "Configuration Presets",
+    description:
+      "Understand Starter, Production, and Enterprise presets — features, costs, and how to choose the right one for your use case.",
+    href: "/docs/guides/configuration-presets",
+    icon: Sliders,
+    readTime: "5 min read",
+  },
+  {
+    title: "Templates as Code",
+    description:
+      "Write email templates as React components, preview them locally with hot-reload, and push to SES and the dashboard.",
+    href: "/docs/guides/templates",
+    icon: FileCode2,
+    readTime: "8 min read",
+  },
+  {
+    title: "Building Workflows",
+    description:
+      "Create automated email and SMS sequences using the Wraps workflow DSL. Define triggers, delays, conditions, and actions.",
+    href: "/docs/guides/workflows",
+    icon: Workflow,
+    readTime: "10 min read",
   },
 ];
 
@@ -91,8 +123,8 @@ export default function GuidesPageContent() {
       {/* Coming Soon */}
       <div className="mt-12 rounded-lg border border-dashed p-8 text-center">
         <p className="text-muted-foreground">
-          More guides coming soon: IP warming, bounce handling, and compliance
-          best practices.
+          More guides coming soon: IP warming, bounce handling, compliance best
+          practices, and multi-tenant email architecture.
         </p>
       </div>
     </DocsLayout>

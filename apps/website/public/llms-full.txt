@@ -149,6 +149,33 @@ wraps permissions             Show required IAM permissions
 wraps platform connect        Connect to Wraps Platform
 ```
 
+### Auth Commands
+
+```
+wraps auth login              Authenticate with Wraps Platform (device flow)
+wraps auth status             Show authentication status
+wraps auth logout             Clear stored credentials
+```
+
+### Platform Commands
+
+```
+wraps platform connect        Link AWS account to Wraps Platform
+wraps platform update-role    Update IAM role for Platform access
+```
+
+### Email Templates & Workflows
+
+```
+wraps email templates init    Initialize templates-as-code directory
+wraps email templates preview Start preview server with hot-reload
+wraps email templates push    Compile and push templates to SES + dashboard
+wraps email workflows validate Validate workflow definitions
+wraps email workflows push    Push workflows to Wraps Platform
+wraps email test              Send test email via SES simulator
+wraps email check [domain]    Deliverability audit (DKIM, SPF, DMARC, blacklists)
+```
+
 ### Common Flags
 
 ```
@@ -160,6 +187,9 @@ wraps platform connect        Connect to Wraps Platform
 --preset          Config preset (starter, production, enterprise, custom)
 --preview         Preview changes without deploying
 --json            JSON output (where supported)
+--account <id>    Target specific AWS account
+--token <token>   API token for authentication
+--verbose         Enable verbose output
 ```
 
 ## Email SDK Reference (@wraps.dev/email)
@@ -240,10 +270,47 @@ await email.templates.list();          // Returns template metadata[]
 await email.templates.delete(name);
 ```
 
+### Inbox API (WrapsInbox)
+
+```typescript
+import { WrapsInbox } from '@wraps.dev/email';
+const inbox = new WrapsInbox({ region: 'us-east-1' });
+
+await inbox.list({ limit: 20, domain: 'yourdomain.com' });
+await inbox.get(messageId);
+await inbox.getAttachment(messageId, attachmentId); // Returns presigned URL (1hr)
+await inbox.getRaw(messageId);
+await inbox.delete(messageId);
+await inbox.forward(messageId, { to: 'other@example.com' });
+await inbox.reply(messageId, { html: '<p>Reply</p>' });
+```
+
+### Events API (WrapsEmailEvents)
+
+```typescript
+import { WrapsEmailEvents } from '@wraps.dev/email';
+const events = new WrapsEmailEvents({ region: 'us-east-1', accountId: '123456789012' });
+
+await events.get(messageId);    // Events sorted by priority
+await events.list({ limit: 20, startTime: new Date() });
+```
+
+### Suppression API (WrapsEmailSuppression)
+
+```typescript
+import { WrapsEmailSuppression } from '@wraps.dev/email';
+const suppression = new WrapsEmailSuppression({ region: 'us-east-1' });
+
+await suppression.get(email);
+await suppression.add(email, 'BOUNCE');
+await suppression.remove(email);
+await suppression.list({ limit: 20, reason: 'BOUNCE' });
+```
+
 ### Error Types
 
 ```typescript
-import { ValidationError, SESError } from '@wraps.dev/email';
+import { ValidationError, SESError, DynamoDBError } from '@wraps.dev/email';
 
 // ValidationError: invalid input (bad email, missing fields)
 //   .field: string - which field failed
@@ -253,7 +320,18 @@ import { ValidationError, SESError } from '@wraps.dev/email';
 //   .code: string - 'MessageRejected', 'Throttling', etc.
 //   .requestId: string
 //   .retryable: boolean
+
+// DynamoDBError: email history read/write error
+//   .code: string, .requestId: string, .retryable: boolean
 ```
+
+### SDK Defaults & Limits
+
+- No automatic retry (implement your own if retryable is true)
+- Pagination: 20 items per page default
+- Presigned URL expiry: 1 hour
+- Bulk send: 50 destinations max per call
+- Attachments: 100 max, 10MB total
 
 ## SMS SDK Reference (@wraps.dev/sms)
 
@@ -323,15 +401,117 @@ calculateSegments('a'.repeat(200));      // 2
 validatePhoneNumber('+14155551234', 'to'); // Throws if invalid
 ```
 
+### sms.numbers.get(phoneNumberId)
+
+```typescript
+const number = await sms.numbers.get('phone-number-id');
+// Returns: { phoneNumberId, phoneNumber, numberType, messageType, twoWayEnabled }
+```
+
+### sms.optOuts.list(options?)
+
+```typescript
+const result = await sms.optOuts.list({ limit: 20 });
+// Returns: { entries: OptOutEntry[], nextToken?: string }
+```
+
 ### Error Types
 
 ```typescript
-import { SMSError, ValidationError, OptedOutError } from '@wraps.dev/sms';
+import { SMSError, ValidationError, OptedOutError, RateLimitError } from '@wraps.dev/sms';
 
 // ValidationError: invalid input (.field, .message)
 // OptedOutError: user opted out (.phoneNumber)
 // SMSError: AWS error (.code, .retryable)
+// RateLimitError: rate limit exceeded (.retryAfter in seconds)
 ```
+
+### SMS Utilities
+
+```typescript
+import { sanitizePhoneNumber } from '@wraps.dev/sms';
+sanitizePhoneNumber('(415) 555-1234');  // '+14155551234'
+```
+
+Note: Default messageType is TRANSACTIONAL. Batch sends are sequential (not parallel).
+
+## Platform SDK Reference (@wraps.dev/client)
+
+### defineConfig()
+
+```typescript
+import { defineConfig } from '@wraps.dev/client';
+
+export default defineConfig({
+  org: 'your-org-slug',
+  from: 'hello@yourdomain.com',
+  replyTo: 'support@yourdomain.com',
+  region: 'us-east-1',
+  environments: { staging: { from: 'staging@yourdomain.com' } },
+  defaultEnv: 'production',
+  templatesDir: './templates',
+  workflowsDir: './workflows',
+  brandFile: './brand.ts',
+  preview: { port: 3333 },
+});
+```
+
+### defineBrand()
+
+```typescript
+import { defineBrand } from '@wraps.dev/client';
+
+export default defineBrand({
+  companyName: 'Your Company',
+  colors: { primary: '#6366f1', secondary: '#a5b4fc', background: '#ffffff', text: '#1f2937', muted: '#9ca3af' },
+  fonts: { heading: 'Inter, sans-serif', body: 'Inter, sans-serif' },
+  buttonStyle: { borderRadius: '6px', padding: '12px 24px' },
+  logoUrl: 'https://yourdomain.com/logo.png',
+  address: '123 Main St, San Francisco, CA 94102',
+  socialLinks: { twitter: 'https://twitter.com/yourcompany' },
+});
+```
+
+### defineWorkflow()
+
+```typescript
+import { defineWorkflow, sendEmail, delay, condition, exit } from '@wraps.dev/client';
+
+export default defineWorkflow({
+  name: 'Welcome Sequence',
+  trigger: { type: 'contact.created' },
+  settings: { maxEnrollments: 1 },
+  steps: [
+    sendEmail('welcome', { template: 'welcome-email' }),
+    delay('wait', { days: 1 }),
+    condition('check', { field: 'contact.hasActivated', operator: 'equals', value: true,
+      branches: { yes: [exit('done')], no: [sendEmail('reminder', { template: 'activate' })] } }),
+  ],
+});
+```
+
+### Workflow Step Helpers
+
+- `sendEmail(id, { template, from?, fromName? })` - Send email
+- `sendSms(id, { template?, message? })` - Send SMS
+- `delay(id, { days?, hours?, minutes? })` - Wait
+- `condition(id, { field, operator, value, branches })` - Branch
+- `waitForEvent(id, { eventName, timeout? })` - Wait for event
+- `waitForEmailEngagement(id, { emailStepId, engagementType, timeout? })` - Wait for open/click
+- `exit(id, { reason?, markAs? })` - End workflow
+- `updateContact(id, { updates })` - Modify contact
+- `subscribeTopic(id, { topicId, channel })` - Subscribe
+- `unsubscribeTopic(id, { topicId, channel })` - Unsubscribe
+- `webhook(id, { url, method?, headers?, body? })` - External webhook
+
+### Trigger Types
+
+- `contact.created` - New contact added
+- `contact.updated` - Contact fields changed
+- `event.received` - Custom event received
+- `segment.entered` - Contact enters segment
+- `segment.exited` - Contact exits segment
+- `manual` - Manually triggered via API
 
 ## Authentication
 
@@ -454,16 +634,76 @@ Managed services charge $80-150+ for the same volume.
 - CDN for email assets and hosted images
 - Developer applications needing full AWS control
 
+## Environment Variables
+
+### Wraps Configuration
+- `WRAPS_LOCAL_ONLY` - Disable telemetry and API calls (default: false)
+- `WRAPS_API_KEY` - API key for Wraps Platform
+- `WRAPS_API_URL` - Custom API endpoint (default: https://api.wraps.dev)
+- `WRAPS_TELEMETRY_DISABLED` - Disable anonymous telemetry
+- `WRAPS_HOME` - Custom config directory (default: ~/.wraps)
+
+### AWS Credentials
+- `AWS_ACCESS_KEY_ID` - AWS access key
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key
+- `AWS_SESSION_TOKEN` - Temporary session token
+- `AWS_REGION` - AWS region (default: us-east-1)
+- `AWS_PROFILE` - Named AWS CLI profile
+- `AWS_ROLE_ARN` - IAM role ARN for OIDC assumption
+
+### DNS Automation
+- `CLOUDFLARE_API_TOKEN` - Cloudflare API token
+- `CLOUDFLARE_ZONE_ID` - Cloudflare zone ID
+- `VERCEL_TOKEN` - Vercel API token for DNS
+
+## Infrastructure: What Gets Deployed
+
+### Email (wraps email init)
+
+**All presets:** IAM role (OIDC trust), SES configuration set, email identity with DKIM
+
+**Production preset adds:** EventBridge rule, SQS queue + DLQ, Lambda processor (Node.js 20, 128MB), DynamoDB table (90-day TTL)
+
+**Enterprise preset adds:** Dedicated IP address, 365-day history, all 10 SES event types
+
+Architecture: SES → EventBridge → SQS + DLQ → Lambda → DynamoDB
+
+All resources tagged with ManagedBy: 'wraps-cli', prefixed with 'wraps-email-'
+
+### SMS (wraps sms init)
+
+IAM role, phone number (simulator or toll-free), opt-out list, event tracking
+
+### CDN (wraps cdn init)
+
+S3 bucket (private, versioned), CloudFront distribution (OAI, HTTPS), optional ACM certificate + custom domain
+
 ## Links
 
 - Website: https://wraps.dev
 - Quickstart: https://wraps.dev/docs/quickstart/email
-- SDK Reference: https://wraps.dev/docs/sdk-reference
+- Next.js Guide: https://wraps.dev/docs/quickstart/email/nextjs
+- Express Guide: https://wraps.dev/docs/quickstart/email/express
+- Remix Guide: https://wraps.dev/docs/quickstart/email/remix
+- Email SDK Reference: https://wraps.dev/docs/sdk-reference
 - SMS SDK Reference: https://wraps.dev/docs/sms-sdk-reference
-- CLI Reference: https://wraps.dev/cli
+- Platform SDK Reference: https://wraps.dev/docs/client-sdk-reference
+- CLI Reference: https://wraps.dev/docs/cli-reference
+- Auth Commands: https://wraps.dev/docs/cli-reference/auth
+- AWS Commands: https://wraps.dev/docs/cli-reference/aws
+- Platform Commands: https://wraps.dev/docs/cli-reference/platform
+- Infrastructure (Email): https://wraps.dev/docs/infrastructure/email
+- Infrastructure (SMS): https://wraps.dev/docs/infrastructure/sms
+- Infrastructure (CDN): https://wraps.dev/docs/infrastructure/cdn
+- Error Codes: https://wraps.dev/docs/reference/errors
+- Environment Variables: https://wraps.dev/docs/reference/environment-variables
+- Configuration Presets: https://wraps.dev/docs/guides/configuration-presets
+- Templates Guide: https://wraps.dev/docs/guides/templates
+- Workflows Guide: https://wraps.dev/docs/guides/workflows
 - GitHub (SDK): https://github.com/wraps-team/wraps-js
 - npm (email): https://npmjs.com/package/@wraps.dev/email
 - npm (sms): https://npmjs.com/package/@wraps.dev/sms
+- npm (client): https://npmjs.com/package/@wraps.dev/client
 - npm (cli): https://npmjs.com/package/@wraps.dev/cli
 
 ## Contact

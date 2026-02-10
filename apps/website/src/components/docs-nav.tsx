@@ -1,21 +1,29 @@
 "use client";
 
 import {
+  AlertTriangle,
   BarChart3,
   Blocks,
   Book,
   Box,
   ChevronRight,
   Cloud,
+  Code2,
+  FileCode2,
   FileText,
   Globe,
   HardDrive,
+  KeyRound,
   Layers,
   Mail,
   MessageSquare,
   Rocket,
+  Server,
+  Settings,
   ShieldCheck,
+  Sliders,
   Terminal,
+  Workflow,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -50,6 +58,9 @@ const navItems: NavSection[] = [
         children: [
           { title: "Email", href: "/docs/quickstart/email" },
           { title: "Inbound Email", href: "/docs/quickstart/email/inbound" },
+          { title: "Next.js", href: "/docs/quickstart/email/nextjs" },
+          { title: "Express", href: "/docs/quickstart/email/express" },
+          { title: "Remix", href: "/docs/quickstart/email/remix" },
           { title: "CDN", href: "/docs/quickstart/cdn" },
           { title: "SMS", href: "/docs/quickstart/sms" },
           { title: "Platform", href: "/docs/quickstart/platform" },
@@ -85,6 +96,21 @@ const navItems: NavSection[] = [
         href: "/docs/cli-reference/sms",
         icon: MessageSquare,
       },
+      {
+        title: "Auth Commands",
+        href: "/docs/cli-reference/auth",
+        icon: KeyRound,
+      },
+      {
+        title: "AWS Commands",
+        href: "/docs/cli-reference/aws",
+        icon: Cloud,
+      },
+      {
+        title: "Platform Commands",
+        href: "/docs/cli-reference/platform",
+        icon: Blocks,
+      },
     ],
   },
   {
@@ -111,6 +137,21 @@ const navItems: NavSection[] = [
     title: "Infrastructure",
     items: [
       {
+        title: "What Gets Deployed: Email",
+        href: "/docs/infrastructure/email",
+        icon: Server,
+      },
+      {
+        title: "What Gets Deployed: SMS",
+        href: "/docs/infrastructure/sms",
+        icon: Server,
+      },
+      {
+        title: "What Gets Deployed: CDN",
+        href: "/docs/infrastructure/cdn",
+        icon: Server,
+      },
+      {
         title: "CDK Construct",
         href: "/docs/cdk-reference",
         icon: Layers,
@@ -119,6 +160,21 @@ const navItems: NavSection[] = [
         title: "Pulumi Component",
         href: "/docs/pulumi-reference",
         icon: Box,
+      },
+    ],
+  },
+  {
+    title: "Reference",
+    items: [
+      {
+        title: "Error Codes",
+        href: "/docs/reference/errors",
+        icon: AlertTriangle,
+      },
+      {
+        title: "Environment Variables",
+        href: "/docs/reference/environment-variables",
+        icon: Settings,
       },
     ],
   },
@@ -151,6 +207,21 @@ const navItems: NavSection[] = [
         title: "Domain Verification",
         href: "/docs/guides/domain-verification",
         icon: Globe,
+      },
+      {
+        title: "Configuration Presets",
+        href: "/docs/guides/configuration-presets",
+        icon: Sliders,
+      },
+      {
+        title: "Templates as Code",
+        href: "/docs/guides/templates",
+        icon: FileCode2,
+      },
+      {
+        title: "Building Workflows",
+        href: "/docs/guides/workflows",
+        icon: Workflow,
       },
       {
         title: "All Guides",

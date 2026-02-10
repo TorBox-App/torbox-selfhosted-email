@@ -178,6 +178,67 @@ if (!error) {
   console.log('Batch cancelled successfully');
 }`;
 
+const defineConfigCode = `import { defineConfig } from '@wraps.dev/client';
+
+export default defineConfig({
+  org: 'your-org-slug',           // Organization slug (from dashboard)
+  from: 'hello@yourdomain.com',   // Default sender address
+  replyTo: 'support@yourdomain.com', // Default reply-to
+  region: 'us-east-1',            // AWS region
+  environments: {                  // Environment overrides
+    staging: { from: 'staging@yourdomain.com' },
+    production: { from: 'hello@yourdomain.com' },
+  },
+  defaultEnv: 'production',       // Default environment
+  templatesDir: './templates',     // Template source directory
+  workflowsDir: './workflows',    // Workflow source directory
+  brandFile: './brand.ts',        // Brand kit file
+  preview: {                       // Preview server config
+    port: 3333,
+  },
+});`;
+
+const defineBrandCode = `import { defineBrand } from '@wraps.dev/client';
+
+export default defineBrand({
+  companyName: 'Your Company',
+  colors: {
+    primary: '#6366f1',
+    secondary: '#a5b4fc',
+    background: '#ffffff',
+    text: '#1f2937',
+    muted: '#9ca3af',
+  },
+  fonts: {
+    heading: 'Inter, sans-serif',
+    body: 'Inter, sans-serif',
+  },
+  buttonStyle: {
+    borderRadius: '6px',
+    padding: '12px 24px',
+  },
+  logoUrl: 'https://yourdomain.com/logo.png',
+  address: '123 Main St, San Francisco, CA 94102',
+  socialLinks: {
+    twitter: 'https://twitter.com/yourcompany',
+    github: 'https://github.com/yourcompany',
+  },
+});`;
+
+const defineWorkflowCode = `import { defineWorkflow, sendEmail, delay, exit } from '@wraps.dev/client';
+
+export default defineWorkflow({
+  name: 'Welcome Sequence',
+  trigger: { type: 'contact.created' },
+  settings: { maxEnrollments: 1 },
+  steps: [
+    sendEmail('welcome', { template: 'welcome-email' }),
+    delay('wait', { days: 1 }),
+    sendEmail('followup', { template: 'day-2-followup' }),
+    exit('done'),
+  ],
+});`;
+
 const errorHandlingCode = `import { createPlatformClient } from '@wraps.dev/client';
 
 const client = createPlatformClient({
@@ -319,6 +380,70 @@ The SDK is fully typed using OpenAPI schema generation. All endpoints, request b
 \`\`\`typescript
 ${typescriptCode}
 \`\`\``,
+
+  defineConfig: `## defineConfig()
+
+Configure your Wraps project with environment-specific settings, template directories, and preview options.
+
+\`\`\`typescript
+${defineConfigCode}
+\`\`\`
+
+### Options
+| Option | Type | Description |
+|--------|------|-------------|
+| \`org\` | string | Organization slug from your dashboard |
+| \`from\` | string | Default sender email address |
+| \`replyTo\` | string | Default reply-to address (optional) |
+| \`region\` | string | AWS region (optional) |
+| \`environments\` | object | Per-environment overrides (optional) |
+| \`defaultEnv\` | string | Default environment name (optional) |
+| \`templatesDir\` | string | Path to template source files (optional) |
+| \`workflowsDir\` | string | Path to workflow source files (optional) |
+| \`brandFile\` | string | Path to brand kit file (optional) |
+| \`preview\` | object | Preview server configuration (optional) |`,
+
+  defineBrand: `## defineBrand()
+
+Define your brand kit for consistent email styling across all templates.
+
+\`\`\`typescript
+${defineBrandCode}
+\`\`\`
+
+### Options
+| Option | Type | Description |
+|--------|------|-------------|
+| \`companyName\` | string | Your company name |
+| \`colors\` | object | Brand colors (primary, secondary, background, text, muted) |
+| \`fonts\` | object | Font families for heading and body text |
+| \`buttonStyle\` | object | Default button styling (borderRadius, padding) |
+| \`logoUrl\` | string | URL to your company logo |
+| \`address\` | string | Physical address (for email footers) |
+| \`socialLinks\` | object | Social media URLs (optional) |`,
+
+  defineWorkflow: `## defineWorkflow()
+
+Define automated email workflows with triggers, conditions, and multi-step sequences. See the full [Building Workflows guide](/docs/guides/workflows) for details.
+
+\`\`\`typescript
+${defineWorkflowCode}
+\`\`\`
+
+### Workflow Step Helpers
+| Helper | Signature | Description |
+|--------|-----------|-------------|
+| \`sendEmail\` | \`sendEmail(id, { template, from?, fromName? })\` | Send an email using a template |
+| \`sendSms\` | \`sendSms(id, { template?, message? })\` | Send an SMS message |
+| \`delay\` | \`delay(id, { days?, hours?, minutes? })\` | Wait before the next step |
+| \`condition\` | \`condition(id, { field, operator, value, branches: { yes: [], no: [] } })\` | Branch based on a condition |
+| \`waitForEvent\` | \`waitForEvent(id, { eventName, timeout? })\` | Pause until an event occurs |
+| \`waitForEmailEngagement\` | \`waitForEmailEngagement(id, { emailStepId, engagementType, timeout? })\` | Wait for email open/click |
+| \`exit\` | \`exit(id, { reason?, markAs? })\` | End the workflow |
+| \`updateContact\` | \`updateContact(id, { updates: [{ field, operation, value }] })\` | Update contact properties |
+| \`subscribeTopic\` | \`subscribeTopic(id, { topicId, channel })\` | Subscribe contact to a topic |
+| \`unsubscribeTopic\` | \`unsubscribeTopic(id, { topicId, channel })\` | Unsubscribe from a topic |
+| \`webhook\` | \`webhook(id, { url, method?, headers?, body? })\` | Call an external webhook |`,
 };
 
 const FULL_PAGE_MD = `# @wraps.dev/client SDK Reference
@@ -338,6 +463,12 @@ ${SECTION_MD.batch}
 ${SECTION_MD.errorHandling}
 
 ${SECTION_MD.typescript}
+
+${SECTION_MD.defineConfig}
+
+${SECTION_MD.defineBrand}
+
+${SECTION_MD.defineWorkflow}
 
 ## Resources
 
@@ -987,6 +1118,505 @@ export default function ClientSDKReferencePageContent() {
             )}
           </CodeBlockBody>
         </CodeBlock>
+      </section>
+
+      {/* defineConfig() */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="define-config"
+          markdown={SECTION_MD.defineConfig}
+          title="defineConfig()"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Configure your Wraps project with environment-specific settings,
+          template directories, and preview options.
+        </p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "wraps.config.ts",
+              code: defineConfigCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+        <Card>
+          <CardContent className="p-6">
+            <h4 className="mb-3 font-medium">Options</h4>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Option</th>
+                  <th className="pb-2 text-left">Type</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">org</code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">Organization slug from your dashboard</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">from</code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">Default sender email address</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      replyTo
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">Default reply-to address (optional)</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      region
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">AWS region (optional)</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      environments
+                    </code>
+                  </td>
+                  <td className="py-2">object</td>
+                  <td className="py-2">
+                    Per-environment overrides (optional)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      defaultEnv
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">Default environment name (optional)</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      templatesDir
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">
+                    Path to template source files (optional)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      workflowsDir
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">
+                    Path to workflow source files (optional)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      brandFile
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">Path to brand kit file (optional)</td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      preview
+                    </code>
+                  </td>
+                  <td className="py-2">object</td>
+                  <td className="py-2">
+                    Preview server configuration (optional)
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* defineBrand() */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="define-brand"
+          markdown={SECTION_MD.defineBrand}
+          title="defineBrand()"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Define your brand kit for consistent email styling across all
+          templates.
+        </p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "brand.ts",
+              code: defineBrandCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+        <Card>
+          <CardContent className="p-6">
+            <h4 className="mb-3 font-medium">Options</h4>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Option</th>
+                  <th className="pb-2 text-left">Type</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      companyName
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">Your company name</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      colors
+                    </code>
+                  </td>
+                  <td className="py-2">object</td>
+                  <td className="py-2">
+                    Brand colors (primary, secondary, background, text, muted)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      fonts
+                    </code>
+                  </td>
+                  <td className="py-2">object</td>
+                  <td className="py-2">
+                    Font families for heading and body text
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      buttonStyle
+                    </code>
+                  </td>
+                  <td className="py-2">object</td>
+                  <td className="py-2">
+                    Default button styling (borderRadius, padding)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      logoUrl
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">URL to your company logo</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      address
+                    </code>
+                  </td>
+                  <td className="py-2">string</td>
+                  <td className="py-2">
+                    Physical address (for email footers)
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      socialLinks
+                    </code>
+                  </td>
+                  <td className="py-2">object</td>
+                  <td className="py-2">Social media URLs (optional)</td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* defineWorkflow() */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="define-workflow"
+          markdown={SECTION_MD.defineWorkflow}
+          title="defineWorkflow()"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Define automated email workflows with triggers, conditions, and
+          multi-step sequences. See the full{" "}
+          <a
+            className="text-primary underline underline-offset-4"
+            href="/docs/guides/workflows"
+          >
+            Building Workflows guide
+          </a>{" "}
+          for details.
+        </p>
+        <CodeBlock
+          className="mb-4 h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "welcome-workflow.ts",
+              code: defineWorkflowCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+
+        <Card>
+          <CardContent className="p-6">
+            <h4 className="mb-3 font-medium">Workflow Step Helpers</h4>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Helper</th>
+                  <th className="pb-2 text-left">Signature</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      sendEmail
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"sendEmail(id, { template, from?, fromName? })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      sendSms
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"sendSms(id, { template?, message? })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      delay
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"delay(id, { days?, hours?, minutes? })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      condition
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"condition(id, { field, operator, value, branches: { yes: [], no: [] } })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      waitForEvent
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"waitForEvent(id, { eventName, timeout? })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      waitForEmailEngagement
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"waitForEmailEngagement(id, { emailStepId, engagementType, timeout? })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      exit
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"exit(id, { reason?, markAs? })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      updateContact
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"updateContact(id, { updates: [{ field, operation, value }] })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      subscribeTopic
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"subscribeTopic(id, { topicId, channel })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      unsubscribeTopic
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"unsubscribeTopic(id, { topicId, channel })"}
+                    </code>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      webhook
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    <code className="text-xs">
+                      {"webhook(id, { url, method?, headers?, body? })"}
+                    </code>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       </section>
 
       {/* Next Steps */}

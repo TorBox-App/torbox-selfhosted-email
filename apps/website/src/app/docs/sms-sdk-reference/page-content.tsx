@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Code2 } from "lucide-react";
+import { ArrowRight, Code2, Info } from "lucide-react";
 import { CopyForAIButton } from "@/components/docs/copy-for-ai-button";
 import { SectionHeading } from "@/components/docs/section-heading";
 import { DocsLayout } from "@/components/docs-layout";
@@ -147,6 +147,48 @@ calculateSegments('Hello emojis!');    // 1 (Unicode)
 // Validate phone numbers
 validatePhoneNumber('+14155551234', 'to'); // OK
 validatePhoneNumber('4155551234', 'to');   // Throws ValidationError`;
+
+const getNumberCode = `const number = await sms.numbers.get('phone-number-id');
+
+// Returns
+console.log(number.phoneNumberId); // 'phone-number-id'
+console.log(number.phoneNumber);   // '+18005551234'
+console.log(number.numberType);    // 'TOLL_FREE'
+console.log(number.messageType);   // 'TRANSACTIONAL'
+console.log(number.twoWayEnabled); // false`;
+
+const optOutsListCode = `const result = await sms.optOuts.list({ limit: 20 });
+
+result.entries.forEach((entry) => {
+  console.log(\`\${entry.phoneNumber} opted out at \${entry.optedOutAt}\`);
+});
+
+// Paginate
+if (result.nextToken) {
+  const nextPage = await sms.optOuts.list({
+    limit: 20,
+    nextToken: result.nextToken,
+  });
+}`;
+
+const destroyCode = `// Remove all SMS infrastructure (phone numbers, opt-out lists)
+await sms.destroy();`;
+
+const rateLimitErrorCode = `import { RateLimitError } from '@wraps.dev/sms';
+
+try {
+  await sms.send({ to: '+14155551234', message: 'Hello!' });
+} catch (error) {
+  if (error instanceof RateLimitError) {
+    console.log('Rate limited, retry after:', error.retryAfter, 'seconds');
+    console.log('Message:', error.message);
+  }
+}`;
+
+const sanitizePhoneNumberCode = `import { sanitizePhoneNumber } from '@wraps.dev/sms';
+
+sanitizePhoneNumber('(415) 555-1234');  // '+14155551234'
+sanitizePhoneNumber('+1-415-555-1234'); // '+14155551234'`;
 
 const typescriptCode = `import { WrapsSMS, SendOptions, SendResult } from '@wraps.dev/sms';
 
@@ -347,6 +389,64 @@ Validate phone numbers are in E.164 format.
 ${utilitiesCode}
 \`\`\``,
 
+  getNumber: `## Get Phone Number
+
+Get details for a specific phone number by ID.
+
+### Method
+\`\`\`typescript
+sms.numbers.get(phoneNumberId: string): Promise<PhoneNumber>
+\`\`\`
+
+### Example
+\`\`\`typescript
+${getNumberCode}
+\`\`\``,
+
+  optOutsList: `## List Opt-Outs
+
+List all opted-out phone numbers with pagination.
+
+### Method
+\`\`\`typescript
+sms.optOuts.list(options?: { limit?: number; nextToken?: string }): Promise<OptOutListResult>
+\`\`\`
+
+### Example
+\`\`\`typescript
+${optOutsListCode}
+\`\`\``,
+
+  destroy: `## Destroy Infrastructure
+
+Remove all SMS infrastructure including phone numbers and opt-out lists. This action is irreversible.
+
+### Method
+\`\`\`typescript
+sms.destroy(): Promise<void>
+\`\`\`
+
+### Example
+\`\`\`typescript
+${destroyCode}
+\`\`\``,
+
+  rateLimitError: `## RateLimitError
+
+Thrown when AWS rate limits are exceeded. Includes a \`retryAfter\` property indicating how many seconds to wait before retrying.
+
+\`\`\`typescript
+${rateLimitErrorCode}
+\`\`\``,
+
+  sanitizePhoneNumber: `## sanitizePhoneNumber
+
+Utility function to sanitize phone numbers into E.164 format by removing formatting characters.
+
+\`\`\`typescript
+${sanitizePhoneNumberCode}
+\`\`\``,
+
   messageTypes: `## Message Types
 
 | Type | Use Case | Best Practices |
@@ -389,11 +489,21 @@ ${SECTION_MD.sendBatch}
 
 ${SECTION_MD.numbers}
 
+${SECTION_MD.getNumber}
+
 ${SECTION_MD.optOuts}
+
+${SECTION_MD.optOutsList}
 
 ${SECTION_MD.errorHandling}
 
+${SECTION_MD.rateLimitError}
+
 ${SECTION_MD.utilities}
+
+${SECTION_MD.sanitizePhoneNumber}
+
+${SECTION_MD.destroy}
 
 ${SECTION_MD.messageTypes}
 
@@ -892,6 +1002,54 @@ export default function SMSSDKReferencePageContent() {
         </CodeBlock>
       </section>
 
+      {/* Get Phone Number */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="get-number"
+          markdown={SECTION_MD.getNumber}
+          title="Get Phone Number"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Get details for a specific phone number by ID.
+        </p>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "get-number.ts",
+              code: getNumberCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+      </section>
+
       {/* Opt-Out Management */}
       <section className="mb-12">
         <SectionHeading
@@ -987,6 +1145,54 @@ export default function SMSSDKReferencePageContent() {
             </CodeBlock>
           </div>
         </div>
+      </section>
+
+      {/* List Opt-Outs */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="opt-outs-list"
+          markdown={SECTION_MD.optOutsList}
+          title="List Opt-Outs"
+        />
+        <p className="mb-4 text-muted-foreground">
+          List all opted-out phone numbers with pagination support.
+        </p>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "list-optouts.ts",
+              code: optOutsListCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
       </section>
 
       {/* Error Handling */}
@@ -1092,6 +1298,56 @@ export default function SMSSDKReferencePageContent() {
         </CodeBlock>
       </section>
 
+      {/* RateLimitError */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="rate-limit-error"
+          markdown={SECTION_MD.rateLimitError}
+          title="RateLimitError"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Thrown when AWS rate limits are exceeded. Includes a{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">retryAfter</code>{" "}
+          property indicating how many seconds to wait before retrying.
+        </p>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "rate-limit.ts",
+              code: rateLimitErrorCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+      </section>
+
       {/* Utilities */}
       <section className="mb-12">
         <SectionHeading
@@ -1110,6 +1366,104 @@ export default function SMSSDKReferencePageContent() {
               language: "typescript",
               filename: "utilities.ts",
               code: utilitiesCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+      </section>
+
+      {/* sanitizePhoneNumber */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="sanitize-phone-number"
+          markdown={SECTION_MD.sanitizePhoneNumber}
+          title="sanitizePhoneNumber"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Utility function to sanitize phone numbers into E.164 format by
+          removing formatting characters.
+        </p>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "sanitize.ts",
+              code: sanitizePhoneNumberCode,
+            },
+          ]}
+          defaultValue="typescript"
+        >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
+          <CodeBlockBody>
+            {(item) => (
+              <CodeBlockItem
+                key={item.language}
+                lineNumbers={false}
+                value={item.language}
+              >
+                <CodeBlockContent language={item.language}>
+                  {item.code}
+                </CodeBlockContent>
+              </CodeBlockItem>
+            )}
+          </CodeBlockBody>
+        </CodeBlock>
+      </section>
+
+      {/* Destroy Infrastructure */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="destroy"
+          markdown={SECTION_MD.destroy}
+          title="Destroy Infrastructure"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Remove all SMS infrastructure including phone numbers and opt-out
+          lists. This action is irreversible.
+        </p>
+        <CodeBlock
+          className="h-auto"
+          data={[
+            {
+              language: "typescript",
+              filename: "destroy.ts",
+              code: destroyCode,
             },
           ]}
           defaultValue="typescript"
@@ -1269,6 +1623,54 @@ export default function SMSSDKReferencePageContent() {
             </table>
           </CardContent>
         </Card>
+      </section>
+
+      {/* Behavior Notes */}
+      <section className="mb-12">
+        <h2 className="mb-4 font-bold text-2xl">Behavior Notes</h2>
+        <div className="space-y-4">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-3">
+                <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div className="text-sm">
+                  <p className="mb-1 font-medium">Sequential Batch Processing</p>
+                  <p className="text-muted-foreground">
+                    Batch sends are processed sequentially (not in parallel) to
+                    respect AWS rate limits. Each message is sent one at a time.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-3">
+                <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div className="text-sm">
+                  <p className="mb-1 font-medium">
+                    Default Message Type: TRANSACTIONAL
+                  </p>
+                  <p className="text-muted-foreground">
+                    The default{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      messageType
+                    </code>{" "}
+                    is{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      TRANSACTIONAL
+                    </code>
+                    . Set to{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      PROMOTIONAL
+                    </code>{" "}
+                    for marketing messages.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       {/* Next Steps */}
