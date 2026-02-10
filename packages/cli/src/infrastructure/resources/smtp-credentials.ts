@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import * as aws from "@pulumi/aws";
 import type * as pulumi from "@pulumi/pulumi";
+import { getDefaultRegion } from "../../constants.js";
 
 /**
  * SMTP credentials configuration
@@ -64,7 +65,7 @@ async function userExists(userName: string): Promise<boolean> {
   try {
     const { IAMClient, GetUserCommand } = await import("@aws-sdk/client-iam");
     const iam = new IAMClient({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
     await iam.send(new GetUserCommand({ UserName: userName }));
     return true;
@@ -106,6 +107,7 @@ export async function createSMTPCredentials(
           name: userName,
           tags: {
             ManagedBy: "wraps-cli",
+            Service: "email",
             Purpose: "SES SMTP Authentication",
           },
         },

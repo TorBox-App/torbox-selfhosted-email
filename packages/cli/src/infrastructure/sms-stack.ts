@@ -1,5 +1,6 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import { getDefaultRegion } from "../constants.js";
 import type {
   Provider,
   SMSStackConfig,
@@ -171,7 +172,7 @@ async function findExistingPhoneNumber(
       await import("@aws-sdk/client-pinpoint-sms-voice-v2");
 
     const client = new PinpointSMSVoiceV2Client({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
 
     const numberTypeMap: Record<string, string> = {

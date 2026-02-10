@@ -145,5 +145,6 @@ export async function createIAMRole(
     vercelTeamSlug: config.vercelTeamSlug,
     vercelProjectName: config.vercelProjectName,
     policyStatements: statements,
+    extraTags: { Service: "email" },
   });
 }

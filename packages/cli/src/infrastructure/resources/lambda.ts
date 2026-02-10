@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import { build } from "esbuild";
+import { getDefaultRegion } from "../../constants.js";
 import { lambdaFunctionExists } from "../shared/resource-checks.js";
 
 // Node.js built-in modules must be external when bundling ESM for Lambda
@@ -63,7 +64,7 @@ async function findEventSourceMapping(
       "@aws-sdk/client-lambda"
     );
     const lambda = new LambdaClient({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
 
     const response = await lambda.send(
@@ -177,6 +178,7 @@ export async function deployLambdaFunctions(
     }),
     tags: {
       ManagedBy: "wraps-cli",
+      Service: "email",
     },
   });
 
@@ -254,6 +256,7 @@ export async function deployLambdaFunctions(
           environment: lambdaEnvironment,
           tags: {
             ManagedBy: "wraps-cli",
+            Service: "email",
             Description:
               "Process SES email events from SQS and store in DynamoDB",
           },

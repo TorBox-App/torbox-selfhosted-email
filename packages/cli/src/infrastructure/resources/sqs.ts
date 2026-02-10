@@ -23,6 +23,7 @@ export async function createSQSResources(): Promise<SQSResources> {
     messageRetentionSeconds: 1_209_600, // 14 days
     tags: {
       ManagedBy: "wraps-cli",
+      Service: "email",
       Description: "Dead letter queue for failed SES event processing",
     },
   });
@@ -41,6 +42,7 @@ export async function createSQSResources(): Promise<SQSResources> {
     ),
     tags: {
       ManagedBy: "wraps-cli",
+      Service: "email",
       Description: "Queue for SES email events from EventBridge",
     },
   });

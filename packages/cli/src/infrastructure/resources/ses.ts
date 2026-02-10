@@ -139,6 +139,7 @@ export async function createSESResources(
     },
     tags: {
       ManagedBy: "wraps-cli",
+      Service: "email",
       Description: "Wraps email tracking configuration set",
     },
   };
@@ -252,6 +253,7 @@ export async function createSESResources(
           },
           tags: {
             ManagedBy: "wraps-cli",
+            Service: "email",
           },
         });
 

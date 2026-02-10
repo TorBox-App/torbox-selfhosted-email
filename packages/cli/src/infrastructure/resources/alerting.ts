@@ -77,6 +77,7 @@ export async function createAlertingResources(
     displayName: "Wraps Email Alerts",
     tags: {
       ManagedBy: "wraps-cli",
+      Service: "email",
       Description: "Alert notifications for email reputation and health",
     },
   });
@@ -128,6 +129,7 @@ export async function createAlertingResources(
       treatMissingData: "notBreaching", // Don't alarm if no data (no emails sent)
       tags: {
         ManagedBy: "wraps-cli",
+        Service: "email",
         Severity: "warning",
       },
     }
@@ -151,6 +153,7 @@ export async function createAlertingResources(
       treatMissingData: "notBreaching",
       tags: {
         ManagedBy: "wraps-cli",
+        Service: "email",
         Severity: "critical",
       },
     }
@@ -174,6 +177,7 @@ export async function createAlertingResources(
       treatMissingData: "notBreaching",
       tags: {
         ManagedBy: "wraps-cli",
+        Service: "email",
         Severity: "warning",
       },
     }
@@ -197,6 +201,7 @@ export async function createAlertingResources(
       treatMissingData: "notBreaching",
       tags: {
         ManagedBy: "wraps-cli",
+        Service: "email",
         Severity: "critical",
       },
     }
@@ -224,6 +229,7 @@ export async function createAlertingResources(
       treatMissingData: "notBreaching",
       tags: {
         ManagedBy: "wraps-cli",
+        Service: "email",
         Severity: "warning",
       },
     });

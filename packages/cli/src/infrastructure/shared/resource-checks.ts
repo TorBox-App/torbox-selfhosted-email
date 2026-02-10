@@ -5,6 +5,8 @@
  * exists before Pulumi tries to create it, so we can `import` instead.
  */
 
+import { getDefaultRegion } from "../../constants.js";
+
 /**
  * Check if an IAM role exists by name.
  * IAM is global; the SDK still requires a region parameter.
@@ -13,7 +15,7 @@ export async function roleExists(roleName: string): Promise<boolean> {
   try {
     const { IAMClient, GetRoleCommand } = await import("@aws-sdk/client-iam");
     const iam = new IAMClient({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
 
     await iam.send(new GetRoleCommand({ RoleName: roleName }));
@@ -42,7 +44,7 @@ export async function tableExists(tableName: string): Promise<boolean> {
       "@aws-sdk/client-dynamodb"
     );
     const dynamodb = new DynamoDBClient({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
 
     await dynamodb.send(new DescribeTableCommand({ TableName: tableName }));
@@ -68,7 +70,7 @@ export async function sqsQueueExists(
       "@aws-sdk/client-sqs"
     );
     const sqs = new SQSClient({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
     const response = await sqs.send(
       new GetQueueUrlCommand({ QueueName: queueName })
@@ -92,7 +94,7 @@ export async function snsTopicExists(
       "@aws-sdk/client-sns"
     );
     const sns = new SNSClient({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
     let nextToken: string | undefined;
 
@@ -127,7 +129,7 @@ export async function lambdaFunctionExists(
       "@aws-sdk/client-lambda"
     );
     const lambda = new LambdaClient({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
 
     await lambda.send(new GetFunctionCommand({ FunctionName: functionName }));

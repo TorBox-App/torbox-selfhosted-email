@@ -1,4 +1,5 @@
 import * as aws from "@pulumi/aws";
+import { getDefaultRegion } from "../constants.js";
 
 /**
  * Vercel OIDC configuration
@@ -18,7 +19,7 @@ async function getExistingOIDCProviderArn(url: string): Promise<string | null> {
     );
     // IAM is global but SDK still requires a region
     const iam = new IAMClient({
-      region: process.env.AWS_REGION || "us-east-1",
+      region: getDefaultRegion(),
     });
 
     const response = await iam.send(new ListOpenIDConnectProvidersCommand({}));

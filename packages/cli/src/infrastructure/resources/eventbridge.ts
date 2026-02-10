@@ -54,6 +54,7 @@ export async function createEventBridgeResources(
     }),
     tags: {
       ManagedBy: "wraps-cli",
+      Service: "email",
     },
   });
 
@@ -146,6 +147,7 @@ export async function createEventBridgeResources(
       }),
       tags: {
         ManagedBy: "wraps-cli",
+        Service: "email",
       },
     });
 
