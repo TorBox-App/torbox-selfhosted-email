@@ -2260,9 +2260,7 @@ export default function SDKReferencePageContent() {
 
         <div className="space-y-6">
           <div>
-            <p className="mb-2 font-medium text-sm">
-              Initialize with Events
-            </p>
+            <p className="mb-2 font-medium text-sm">Initialize with Events</p>
             <CodeBlock
               className="h-auto"
               data={[
@@ -2346,9 +2344,7 @@ export default function SDKReferencePageContent() {
           </div>
 
           <div>
-            <p className="mb-2 font-medium text-sm">
-              List Emails with Status
-            </p>
+            <p className="mb-2 font-medium text-sm">List Emails with Status</p>
             <CodeBlock
               className="h-auto"
               data={[
@@ -2443,9 +2439,7 @@ export default function SDKReferencePageContent() {
                       bounced
                     </code>
                   </td>
-                  <td className="py-2">
-                    Email bounced (hard or soft bounce)
-                  </td>
+                  <td className="py-2">Email bounced (hard or soft bounce)</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2">
@@ -2570,9 +2564,7 @@ export default function SDKReferencePageContent() {
           </div>
 
           <div>
-            <p className="mb-2 font-medium text-sm">
-              Add to Suppression List
-            </p>
+            <p className="mb-2 font-medium text-sm">Add to Suppression List</p>
             <CodeBlock
               className="h-auto"
               data={[
@@ -2658,9 +2650,7 @@ export default function SDKReferencePageContent() {
           </div>
 
           <div>
-            <p className="mb-2 font-medium text-sm">
-              List Suppressed Emails
-            </p>
+            <p className="mb-2 font-medium text-sm">List Suppressed Emails</p>
             <CodeBlock
               className="h-auto"
               data={[
