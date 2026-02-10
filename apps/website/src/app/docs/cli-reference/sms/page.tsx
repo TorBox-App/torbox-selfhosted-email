@@ -33,6 +33,11 @@ export const metadata: Metadata = {
 export default function CLIReferenceSMSPage() {
   return (
     <>
+      <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        id="breadcrumb-schema"
+        type="application/ld+json"
+      />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
         <h1>SMS CLI Commands</h1>

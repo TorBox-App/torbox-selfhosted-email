@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import FullGuidePageContent from "./page-content";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Docs", item: "https://wraps.dev/docs" },
+    { "@type": "ListItem", position: 2, name: "Guides", item: "https://wraps.dev/docs/guides" },
+    { "@type": "ListItem", position: 3, name: "AWS Setup", item: "https://wraps.dev/docs/guides/aws-setup" },
+    { "@type": "ListItem", position: 4, name: "Full Setup", item: "https://wraps.dev/docs/guides/aws-setup/full" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "Full AWS Setup",
@@ -22,6 +34,11 @@ export const metadata: Metadata = {
 export default function FullGuidePage() {
   return (
     <>
+      <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        id="breadcrumb-schema"
+        type="application/ld+json"
+      />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
         <h1>Full AWS Setup</h1>

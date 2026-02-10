@@ -32,6 +32,11 @@ export const metadata: Metadata = {
 export default function CLIReferencePage() {
   return (
     <>
+      <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        id="breadcrumb-schema"
+        type="application/ld+json"
+      />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
         <h1>Wraps CLI Reference</h1>
