@@ -42,61 +42,46 @@ import {
   promptSubdomainSuggestions,
 } from "../../utils/shared/prompts.js";
 
+type DNSResult = {
+  name: string;
+  type: string;
+  status: "verified" | "incorrect" | "missing";
+  records?: string[];
+};
+
+type VerifyCheckResult = {
+  dnsResults: DNSResult[];
+  verificationStatus: "verified" | "pending";
+  dkimStatus: string;
+  mailFromDomain?: string;
+  mailFromStatus: string;
+  allVerified: boolean;
+};
+
 /**
- * Verify domain DNS records and verification status
+ * Check DNS records and SES verification status for a domain.
+ * Extracted for reuse in --wait polling loop.
  */
-export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
-  clack.intro(pc.bold(`Verifying ${options.domain}`));
+async function checkVerification(
+  domain: string,
+  sesClient: SESv2Client,
+  region: string
+): Promise<VerifyCheckResult> {
+  const identity = await sesClient.send(
+    new GetEmailIdentityCommand({ EmailIdentity: domain })
+  );
 
-  const progress = new DeploymentProgress();
-  const region = await getAWSRegion();
+  const dkimTokens = identity.DkimAttributes?.Tokens || [];
+  const mailFromDomain = identity.MailFromAttributes?.MailFromDomain;
 
-  // 1. Check SES verification status
-  const sesClient = new SESv2Client({ region });
-  let identity;
-  let dkimTokens: string[] = [];
-  let mailFromDomain: string | undefined;
-
-  try {
-    identity = await progress.execute(
-      "Checking SES verification status",
-      async () => {
-        const response = await sesClient.send(
-          new GetEmailIdentityCommand({ EmailIdentity: options.domain })
-        );
-        return response;
-      }
-    );
-
-    dkimTokens = identity.DkimAttributes?.Tokens || [];
-    mailFromDomain = identity.MailFromAttributes?.MailFromDomain;
-  } catch (error) {
-    if (isAWSNotFoundError(error)) {
-      progress.stop();
-      clack.log.error(`Domain ${options.domain} not found in SES`);
-      console.log(
-        `\nRun ${pc.cyan(`wraps email init --domain ${options.domain}`)} to add this domain.\n`
-      );
-      process.exit(1);
-      return; // Return after process.exit for testing
-    }
-    throw error;
-  }
-
-  // 2. Check DNS records
+  // Check DNS records
   const resolver = new Resolver();
-  // Use public DNS servers for more reliable results
   resolver.setServers(["8.8.8.8", "1.1.1.1"]);
-  const dnsResults: Array<{
-    name: string;
-    type: string;
-    status: string;
-    records?: string[];
-  }> = [];
+  const dnsResults: DNSResult[] = [];
 
   // Check DKIM records
   for (const token of dkimTokens) {
-    const dkimRecord = `${token}._domainkey.${options.domain}`;
+    const dkimRecord = `${token}._domainkey.${domain}`;
     try {
       const records = await resolver.resolveCname(dkimRecord);
       const expected = `${token}.dkim.amazonses.com`;
@@ -130,11 +115,11 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
 
   // Check SPF record
   try {
-    const records = await resolver.resolveTxt(options.domain);
+    const records = await resolver.resolveTxt(domain);
     const spfRecord = records.flat().find((r) => r.startsWith("v=spf1"));
     const hasAmazonSES = spfRecord?.includes("include:amazonses.com");
     dnsResults.push({
-      name: options.domain,
+      name: domain,
       type: "TXT (SPF)",
       status: hasAmazonSES ? "verified" : spfRecord ? "incorrect" : "missing",
       records: spfRecord ? [spfRecord] : undefined,
@@ -143,13 +128,13 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
     const dnsClass = classifyDNSError(error);
     if (dnsClass === "missing") {
       dnsResults.push({
-        name: options.domain,
+        name: domain,
         type: "TXT (SPF)",
         status: "missing",
       });
     } else if (dnsClass === "network") {
       dnsResults.push({
-        name: options.domain,
+        name: domain,
         type: "TXT (SPF)",
         status: "missing",
         records: ["DNS lookup failed (network issue)"],
@@ -161,10 +146,10 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
 
   // Check DMARC record
   try {
-    const records = await resolver.resolveTxt(`_dmarc.${options.domain}`);
+    const records = await resolver.resolveTxt(`_dmarc.${domain}`);
     const dmarcRecord = records.flat().find((r) => r.startsWith("v=DMARC1"));
     dnsResults.push({
-      name: `_dmarc.${options.domain}`,
+      name: `_dmarc.${domain}`,
       type: "TXT (DMARC)",
       status: dmarcRecord ? "verified" : "missing",
       records: dmarcRecord ? [dmarcRecord] : undefined,
@@ -173,13 +158,13 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
     const dnsClass = classifyDNSError(error);
     if (dnsClass === "missing") {
       dnsResults.push({
-        name: `_dmarc.${options.domain}`,
+        name: `_dmarc.${domain}`,
         type: "TXT (DMARC)",
         status: "missing",
       });
     } else if (dnsClass === "network") {
       dnsResults.push({
-        name: `_dmarc.${options.domain}`,
+        name: `_dmarc.${domain}`,
         type: "TXT (DMARC)",
         status: "missing",
         records: ["DNS lookup failed (network issue)"],
@@ -260,18 +245,43 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
     }
   }
 
-  progress.stop();
-
-  // 3. Display results
   const verificationStatus = identity.VerifiedForSendingStatus
     ? "verified"
     : "pending";
   const dkimStatus = identity.DkimAttributes?.Status || "PENDING";
   const mailFromStatus =
     identity.MailFromAttributes?.MailFromDomainStatus || "NOT_CONFIGURED";
+  const allVerified =
+    verificationStatus === "verified" &&
+    dnsResults.every((r) => r.status === "verified");
+
+  return {
+    dnsResults,
+    verificationStatus,
+    dkimStatus,
+    mailFromDomain,
+    mailFromStatus,
+    allVerified,
+  };
+}
+
+/**
+ * Display verification results. Returns true if fully verified.
+ */
+function displayVerifyResults(
+  domain: string,
+  result: VerifyCheckResult
+): boolean {
+  const {
+    dnsResults,
+    verificationStatus,
+    dkimStatus,
+    mailFromDomain,
+    mailFromStatus,
+  } = result;
 
   const statusLines = [
-    `${pc.bold("Domain:")} ${options.domain}`,
+    `${pc.bold("Domain:")} ${domain}`,
     `${pc.bold("Verification Status:")} ${
       verificationStatus === "verified"
         ? pc.green("✓ Verified")
@@ -323,11 +333,133 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
 
   clack.note(dnsLines.join("\n"), "DNS Records");
 
-  // Summary
-  const allVerified = dnsResults.every((r) => r.status === "verified");
-  const someIncorrect = dnsResults.some((r) => r.status === "incorrect");
+  return result.allVerified;
+}
 
-  if (verificationStatus === "verified" && allVerified) {
+const DEFAULT_POLL_INTERVAL_S = 30;
+const MAX_POLL_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Verify domain DNS records and verification status
+ */
+export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
+  clack.intro(pc.bold(`Verifying ${options.domain}`));
+
+  const progress = new DeploymentProgress();
+  const region = await getAWSRegion();
+  const sesClient = new SESv2Client({ region });
+
+  // 1. Initial check — also validates domain exists in SES
+  let result: VerifyCheckResult;
+  try {
+    result = await progress.execute(
+      "Checking SES verification status",
+      async () => checkVerification(options.domain, sesClient, region)
+    );
+  } catch (error) {
+    if (isAWSNotFoundError(error)) {
+      progress.stop();
+      clack.log.error(`Domain ${options.domain} not found in SES`);
+      console.log(
+        `\nRun ${pc.cyan(`wraps email init --domain ${options.domain}`)} to add this domain.\n`
+      );
+      process.exit(1);
+      return; // Return after process.exit for testing
+    }
+    throw error;
+  }
+
+  progress.stop();
+
+  // 2. Display results
+  const allVerified = displayVerifyResults(options.domain, result);
+
+  // 3. Handle --wait polling
+  if (options.wait && !allVerified) {
+    const intervalS = options.interval ?? DEFAULT_POLL_INTERVAL_S;
+    const startTime = Date.now();
+    let attempt = 1;
+
+    console.log(
+      `\n${pc.dim(`Polling every ${intervalS}s until verified (timeout: 30 min). Press Ctrl+C to stop.`)}\n`
+    );
+
+    while (Date.now() - startTime < MAX_POLL_DURATION_MS) {
+      // Wait for the interval
+      await new Promise((resolve) => setTimeout(resolve, intervalS * 1000));
+      attempt++;
+
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      const elapsedStr =
+        elapsed >= 60
+          ? `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
+          : `${elapsed}s`;
+
+      try {
+        result = await progress.execute(
+          `Check #${attempt} (${elapsedStr} elapsed)`,
+          async () => checkVerification(options.domain, sesClient, region)
+        );
+      } catch {
+        // guardrail:allow-swallowed-error — DNS/SES check failure during polling is non-fatal, will retry
+        progress.stop();
+        clack.log.warn(`Check #${attempt} failed, will retry...`);
+        continue;
+      }
+
+      progress.stop();
+
+      if (result.allVerified) {
+        displayVerifyResults(options.domain, result);
+        clack.outro(
+          pc.green("✓ Domain is fully verified and ready to send emails!")
+        );
+        trackFeature("domain_verified", { dns_auto_detected: true });
+        trackCommand("email:domains:verify", {
+          success: true,
+          verified: true,
+          dkim_status: result.dkimStatus,
+          wait: true,
+          attempts: attempt,
+          elapsed_s: elapsed,
+        });
+        return;
+      }
+
+      // Show compact progress
+      const verified = result.dnsResults.filter(
+        (r) => r.status === "verified"
+      ).length;
+      const total = result.dnsResults.length;
+      clack.log.info(
+        pc.dim(
+          `${verified}/${total} records verified, ${result.verificationStatus === "verified" ? "SES verified" : "SES pending"}. Next check in ${intervalS}s...`
+        )
+      );
+    }
+
+    // Timeout reached
+    displayVerifyResults(options.domain, result);
+    clack.outro(
+      pc.yellow("⏱ Timeout reached. Domain is not yet fully verified.")
+    );
+    console.log(
+      `\nRe-run ${pc.cyan(`wraps email verify --domain ${options.domain} --wait`)} to continue polling.\n`
+    );
+    trackCommand("email:domains:verify", {
+      success: true,
+      verified: false,
+      dkim_status: result.dkimStatus,
+      wait: true,
+      timed_out: true,
+    });
+    return;
+  }
+
+  // 4. Non-wait summary
+  const someIncorrect = result.dnsResults.some((r) => r.status === "incorrect");
+
+  if (allVerified) {
     clack.outro(
       pc.green("✓ Domain is fully verified and ready to send emails!")
     );
@@ -345,15 +477,18 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
     );
     console.log("\nDNS records can take up to 48 hours to propagate.");
     console.log(
-      "SES verification usually completes within 72 hours after DNS propagation.\n"
+      "SES verification usually completes within 72 hours after DNS propagation."
+    );
+    console.log(
+      `\n${pc.dim("Tip:")} Run ${pc.cyan(`wraps email verify --domain ${options.domain} --wait`)} to poll automatically.\n`
     );
   }
 
   // Track verify command
   trackCommand("email:domains:verify", {
     success: true,
-    verified: verificationStatus === "verified" && allVerified,
-    dkim_status: dkimStatus,
+    verified: allVerified,
+    dkim_status: result.dkimStatus,
   });
 }
 

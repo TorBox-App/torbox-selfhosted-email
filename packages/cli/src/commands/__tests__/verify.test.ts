@@ -382,4 +382,93 @@ describe("verify command", () => {
       expect.stringContaining("DNS records can take up to 48 hours")
     );
   });
+
+  it("should suggest --wait flag when not fully verified", async () => {
+    sesv2Mock.on(GetEmailIdentityCommand).resolves({
+      VerifiedForSendingStatus: false,
+      DkimAttributes: {
+        Status: "PENDING",
+        Tokens: ["token1"],
+      },
+    });
+
+    mockResolverInstance.resolveCname.mockResolvedValue([
+      "token1.dkim.amazonses.com",
+    ]);
+    mockResolverInstance.resolveTxt
+      .mockResolvedValueOnce([["v=spf1 include:amazonses.com ~all"]])
+      .mockResolvedValueOnce([["v=DMARC1; p=quarantine"]]);
+
+    await verify({ domain: "example.com" });
+
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect.stringContaining("--wait")
+    );
+  });
+
+  it("should not enter wait loop when already fully verified", async () => {
+    sesv2Mock.on(GetEmailIdentityCommand).resolves({
+      VerifiedForSendingStatus: true,
+      DkimAttributes: {
+        Status: "SUCCESS",
+        Tokens: ["token1"],
+      },
+    });
+
+    mockResolverInstance.resolveCname.mockResolvedValue([
+      "token1.dkim.amazonses.com",
+    ]);
+    mockResolverInstance.resolveTxt
+      .mockResolvedValueOnce([["v=spf1 include:amazonses.com ~all"]])
+      .mockResolvedValueOnce([["v=DMARC1; p=quarantine"]]);
+
+    await verify({ domain: "example.com", wait: true });
+
+    // Should complete immediately — SES was called only once (no polling)
+    const calls = sesv2Mock.commandCalls(GetEmailIdentityCommand);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("should poll and succeed when DNS records verify on retry", async () => {
+    // First call: pending. Second call (in poll): verified.
+    sesv2Mock
+      .on(GetEmailIdentityCommand)
+      .resolvesOnce({
+        VerifiedForSendingStatus: false,
+        DkimAttributes: {
+          Status: "PENDING",
+          Tokens: ["token1"],
+        },
+      })
+      .resolvesOnce({
+        VerifiedForSendingStatus: true,
+        DkimAttributes: {
+          Status: "SUCCESS",
+          Tokens: ["token1"],
+        },
+      });
+
+    // First check: missing DKIM
+    const dnsErr = Object.assign(new Error("ENOTFOUND"), {
+      code: "ENOTFOUND",
+    });
+    mockResolverInstance.resolveCname
+      .mockRejectedValueOnce(dnsErr)
+      // Second check: found DKIM
+      .mockResolvedValueOnce(["token1.dkim.amazonses.com"]);
+
+    mockResolverInstance.resolveTxt
+      // First check: SPF + DMARC
+      .mockResolvedValueOnce([["v=spf1 include:amazonses.com ~all"]])
+      .mockResolvedValueOnce([["v=DMARC1; p=quarantine"]])
+      // Second check: SPF + DMARC
+      .mockResolvedValueOnce([["v=spf1 include:amazonses.com ~all"]])
+      .mockResolvedValueOnce([["v=DMARC1; p=quarantine"]]);
+
+    await verify({ domain: "example.com", wait: true, interval: 0.01 });
+
+    // Should have made 2 SES calls (initial + 1 poll)
+    const calls = sesv2Mock.commandCalls(GetEmailIdentityCommand);
+    expect(calls).toHaveLength(2);
+  });
 });

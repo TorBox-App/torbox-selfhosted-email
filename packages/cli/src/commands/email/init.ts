@@ -16,6 +16,7 @@ import { getCostSummary } from "../../utils/email/costs.js";
 import { getPreset, validateConfig } from "../../utils/email/presets.js";
 import {
   getAWSRegion,
+  getSESAccountStatus,
   validateAWSCredentialsWithDetails,
 } from "../../utils/shared/aws.js";
 import {
@@ -111,13 +112,17 @@ export async function init(options: InitOptions): Promise<void> {
   // 3. Get configuration (from options or prompts)
   let provider = options.provider;
   if (!provider) {
-    provider = await promptProvider();
+    provider = options.quick ? "other" : await promptProvider();
   }
 
   let region = options.region;
   if (!region) {
     const defaultRegion = await getAWSRegion();
-    region = await promptRegion(defaultRegion);
+    region = options.quick ? defaultRegion : await promptRegion(defaultRegion);
+  }
+
+  if (options.quick) {
+    progress.info(`Using region: ${pc.cyan(region)}`);
   }
 
   let domain = options.domain;
@@ -149,7 +154,11 @@ export async function init(options: InitOptions): Promise<void> {
   // 5. Configuration selection
   let preset = options.preset;
   if (!preset) {
-    preset = await promptConfigPreset();
+    preset = options.quick ? "starter" : await promptConfigPreset();
+  }
+
+  if (options.quick) {
+    progress.info(`Using preset: ${pc.cyan(preset)}`);
   }
 
   let emailConfig: WrapsEmailConfig;
@@ -158,12 +167,14 @@ export async function init(options: InitOptions): Promise<void> {
   } else {
     emailConfig = getPreset(preset)!;
 
-    // Prompt for email archiving (optional feature for presets)
-    const { promptEmailArchiving } = await import(
-      "../../utils/shared/prompts.js"
-    );
-    const archivingConfig = await promptEmailArchiving();
-    emailConfig.emailArchiving = archivingConfig;
+    // Prompt for email archiving (skip in quick mode)
+    if (!options.quick) {
+      const { promptEmailArchiving } = await import(
+        "../../utils/shared/prompts.js"
+      );
+      const archivingConfig = await promptEmailArchiving();
+      emailConfig.emailArchiving = archivingConfig;
+    }
   }
 
   // Set domain if provided
@@ -171,20 +182,23 @@ export async function init(options: InitOptions): Promise<void> {
     emailConfig.domain = domain;
   }
 
-  // Get estimated volume for cost calculation
-  const estimatedVolume = await promptEstimatedVolume();
+  // Get estimated volume for cost calculation (skip in quick mode)
+  let costSummary: string | undefined;
+  if (!options.quick) {
+    const estimatedVolume = await promptEstimatedVolume();
 
-  // Display cost summary
-  progress.info(`\n${pc.bold("Cost Estimate:")}`);
-  const costSummary = getCostSummary(emailConfig, estimatedVolume);
-  clack.log.info(costSummary);
+    // Display cost summary
+    progress.info(`\n${pc.bold("Cost Estimate:")}`);
+    costSummary = getCostSummary(emailConfig, estimatedVolume);
+    clack.log.info(costSummary);
 
-  // Validate configuration and show warnings
-  const warnings = validateConfig(emailConfig);
-  if (warnings.length > 0) {
-    progress.info(`\n${pc.yellow(pc.bold("Configuration Warnings:"))}`);
-    for (const warning of warnings) {
-      clack.log.warn(warning);
+    // Validate configuration and show warnings
+    const warnings = validateConfig(emailConfig);
+    if (warnings.length > 0) {
+      progress.info(`\n${pc.yellow(pc.bold("Configuration Warnings:"))}`);
+      for (const warning of warnings) {
+        clack.log.warn(warning);
+      }
     }
   }
 
@@ -200,8 +214,8 @@ export async function init(options: InitOptions): Promise<void> {
     metadata.vercel = vercelConfig;
   }
 
-  // Confirm deployment (skip if --yes flag or --preview flag)
-  if (!(options.yes || options.preview)) {
+  // Confirm deployment (skip if --yes, --quick, or --preview flag)
+  if (!(options.yes || options.quick || options.preview)) {
     const confirmed = await confirmDeploy();
     if (!confirmed) {
       clack.cancel("Deployment cancelled.");
@@ -490,11 +504,16 @@ export async function init(options: InitOptions): Promise<void> {
 
   progress.info("Connection metadata saved for upgrade and restore capability");
 
-  // 10. DNS Configuration - Support multiple DNS providers
+  // 10. DNS Configuration - Support multiple DNS providers (skip in quick mode)
   let dnsAutoCreated = false;
   let dnsProvider: "route53" | "vercel" | "cloudflare" | "manual" | undefined;
 
-  if (outputs.domain && outputs.dkimTokens && outputs.dkimTokens.length > 0) {
+  if (
+    !options.quick &&
+    outputs.domain &&
+    outputs.dkimTokens &&
+    outputs.dkimTokens.length > 0
+  ) {
     const {
       detectAvailableDNSProviders,
       getDNSCredentials,
@@ -696,7 +715,51 @@ export async function init(options: InitOptions): Promise<void> {
     mailFromDomain: outputs.mailFromDomain,
   });
 
-  // 13. Track successful deployment
+  // 13. Sandbox detection (non-blocking)
+  let isSandbox = false;
+  try {
+    const sesStatus = await getSESAccountStatus(region);
+    isSandbox = sesStatus.isSandbox;
+    if (sesStatus.isSandbox) {
+      console.log("");
+      clack.note(
+        [
+          `Your SES account is in ${pc.yellow("sandbox mode")}.`,
+          "",
+          "In sandbox mode you can only send to verified email addresses",
+          "or the SES mailbox simulator. To send to any recipient,",
+          "request production access in the AWS console:",
+          "",
+          pc.cyan(
+            `https://${region}.console.aws.amazon.com/ses/home?region=${region}#/account`
+          ),
+          "",
+          pc.dim(
+            "Sandbox is normal for new accounts. Production access typically takes 24 hours."
+          ),
+        ].join("\n"),
+        "SES Sandbox Mode"
+      );
+    }
+  } catch {
+    // guardrail:allow-swallowed-error — sandbox detection is non-fatal, skip notice if API fails
+  }
+
+  // 14. Post-deploy: offer to send a test email (skip in preview mode)
+  if (!options.preview) {
+    console.log("");
+    const wantTest = await clack.confirm({
+      message: "Send a test email to verify everything works?",
+      initialValue: true,
+    });
+
+    if (!clack.isCancel(wantTest) && wantTest) {
+      const { emailTest } = await import("./test.js");
+      await emailTest({ region });
+    }
+  }
+
+  // 15. Track successful deployment
   const duration = Date.now() - startTime;
   const enabledFeatures: string[] = [];
   if (emailConfig.tracking?.enabled) {
@@ -724,6 +787,7 @@ export async function init(options: InitOptions): Promise<void> {
     region,
     features: enabledFeatures,
     duration_ms: duration,
+    is_sandbox: isSandbox,
   });
 
   trackServiceDeployed("email", {
@@ -731,5 +795,6 @@ export async function init(options: InitOptions): Promise<void> {
     region,
     features: enabledFeatures,
     preset,
+    is_sandbox: isSandbox,
   });
 }

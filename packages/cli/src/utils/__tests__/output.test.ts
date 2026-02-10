@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DeploymentProgress,
   displayStatus,
@@ -217,6 +217,61 @@ describe("displaySuccess", () => {
         customTrackingDomain: "track.example.com",
       })
     ).not.toThrow();
+  });
+});
+
+describe("displaySuccess output content", () => {
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
+  });
+
+  it("should reference @wraps.dev/email SDK package", () => {
+    displaySuccess({
+      roleArn: "arn:aws:iam::123456789012:role/wraps-email-role",
+      region: "us-east-1",
+    });
+
+    const output = consoleLogSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).toContain("@wraps.dev/email");
+    expect(output).not.toContain("@wraps/sdk");
+  });
+
+  it("should embed SDK snippet with actual deployment values when domain is provided", () => {
+    displaySuccess({
+      roleArn: "arn:aws:iam::999888777666:role/wraps-email-role",
+      region: "eu-west-1",
+      domain: "myapp.com",
+    });
+
+    const output = consoleLogSpy.mock.calls.map((c) => c[0]).join("\n");
+    // SDK import
+    expect(output).toContain("import { Wraps } from '@wraps.dev/email'");
+    // Actual roleArn
+    expect(output).toContain("arn:aws:iam::999888777666:role/wraps-email-role");
+    // Actual region
+    expect(output).toContain("eu-west-1");
+    // Actual domain in from address
+    expect(output).toContain("hello@myapp.com");
+    // Has send example
+    expect(output).toContain("wraps.emails.send");
+  });
+
+  it("should not embed SDK snippet when domain is not provided", () => {
+    displaySuccess({
+      roleArn: "arn:aws:iam::123456789012:role/wraps-email-role",
+      region: "us-east-1",
+    });
+
+    const output = consoleLogSpy.mock.calls.map((c) => c[0]).join("\n");
+    expect(output).toContain("@wraps.dev/email");
+    expect(output).not.toContain("wraps.emails.send");
   });
 });
 

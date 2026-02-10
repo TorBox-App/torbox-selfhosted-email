@@ -3,12 +3,14 @@ import {
   ListIdentitiesCommand,
   SESClient,
 } from "@aws-sdk/client-ses";
+import { GetAccountCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { mockClient } from "aws-sdk-client-mock";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkRegion,
   getAWSRegion,
+  getSESAccountStatus,
   isSESSandbox,
   listSESDomains,
   validateAWSCredentials,
@@ -17,6 +19,7 @@ import { WrapsError } from "../shared/errors.js";
 
 const stsMock = mockClient(STSClient);
 const sesMock = mockClient(SESClient);
+const sesv2Mock = mockClient(SESv2Client);
 
 describe("validateAWSCredentials", () => {
   beforeEach(() => {
@@ -229,51 +232,94 @@ describe("listSESDomains", () => {
   });
 });
 
+describe("getSESAccountStatus", () => {
+  beforeEach(() => {
+    sesv2Mock.reset();
+  });
+
+  it("should return isSandbox true when ProductionAccessEnabled is false", async () => {
+    sesv2Mock.on(GetAccountCommand).resolves({
+      ProductionAccessEnabled: false,
+      SendQuota: {
+        Max24HourSend: 200,
+        MaxSendRate: 1,
+        SentLast24Hours: 5,
+      },
+      EnforcementStatus: "HEALTHY",
+    });
+
+    const result = await getSESAccountStatus("us-east-1");
+    expect(result.isSandbox).toBe(true);
+    expect(result.sendQuota).toEqual({
+      max24HourSend: 200,
+      maxSendRate: 1,
+      sentLast24Hours: 5,
+    });
+    expect(result.enforcementStatus).toBe("HEALTHY");
+  });
+
+  it("should return isSandbox false when ProductionAccessEnabled is true", async () => {
+    sesv2Mock.on(GetAccountCommand).resolves({
+      ProductionAccessEnabled: true,
+      SendQuota: {
+        Max24HourSend: 50_000,
+        MaxSendRate: 14,
+        SentLast24Hours: 100,
+      },
+      EnforcementStatus: "HEALTHY",
+    });
+
+    const result = await getSESAccountStatus("us-east-1");
+    expect(result.isSandbox).toBe(false);
+    expect(result.sendQuota?.max24HourSend).toBe(50_000);
+  });
+
+  it("should return isSandbox false on API error (graceful degradation)", async () => {
+    sesv2Mock.on(GetAccountCommand).rejects(new Error("Access denied"));
+
+    const result = await getSESAccountStatus("us-east-1");
+    expect(result.isSandbox).toBe(false);
+    expect(result.sendQuota).toBeUndefined();
+  });
+
+  it("should handle missing SendQuota in response", async () => {
+    sesv2Mock.on(GetAccountCommand).resolves({
+      ProductionAccessEnabled: false,
+    });
+
+    const result = await getSESAccountStatus("us-east-1");
+    expect(result.isSandbox).toBe(true);
+    expect(result.sendQuota).toBeUndefined();
+  });
+});
+
 describe("isSESSandbox", () => {
   beforeEach(() => {
-    sesMock.reset();
+    sesv2Mock.reset();
   });
 
-  it("should return false when SES API call succeeds", async () => {
-    sesMock.on(ListIdentitiesCommand).resolves({
-      Identities: ["example.com"],
+  it("should return true when account is in sandbox", async () => {
+    sesv2Mock.on(GetAccountCommand).resolves({
+      ProductionAccessEnabled: false,
     });
-
-    const result = await isSESSandbox("us-east-1");
-    expect(result).toBe(false);
-  });
-
-  it("should return false when no identities exist but API works", async () => {
-    sesMock.on(ListIdentitiesCommand).resolves({
-      Identities: [],
-    });
-
-    const result = await isSESSandbox("us-east-1");
-    expect(result).toBe(false);
-  });
-
-  it("should return true when InvalidParameterValue error occurs", async () => {
-    const error = new Error("Invalid parameter");
-    (error as any).name = "InvalidParameterValue";
-    sesMock.on(ListIdentitiesCommand).rejects(error);
 
     const result = await isSESSandbox("us-east-1");
     expect(result).toBe(true);
   });
 
-  it("should throw error for other API errors", async () => {
-    const error = new Error("Access denied");
-    (error as any).name = "AccessDenied";
-    sesMock.on(ListIdentitiesCommand).rejects(error);
+  it("should return false when account has production access", async () => {
+    sesv2Mock.on(GetAccountCommand).resolves({
+      ProductionAccessEnabled: true,
+    });
 
-    await expect(isSESSandbox("us-east-1")).rejects.toThrow("Access denied");
+    const result = await isSESSandbox("us-east-1");
+    expect(result).toBe(false);
   });
 
-  it("should handle network errors by rethrowing", async () => {
-    const error = new Error("Network timeout");
-    (error as any).name = "NetworkError";
-    sesMock.on(ListIdentitiesCommand).rejects(error);
+  it("should return false on API error", async () => {
+    sesv2Mock.on(GetAccountCommand).rejects(new Error("Network timeout"));
 
-    await expect(isSESSandbox("us-east-1")).rejects.toThrow("Network timeout");
+    const result = await isSESSandbox("us-east-1");
+    expect(result).toBe(false);
   });
 });

@@ -41,6 +41,7 @@ export type {
   EmailRestoreOptions,
   EmailStackConfig,
   EmailStackOutputs,
+  EmailTestOptions,
   EmailUpdateOptions,
   EmailUpgradeOptions,
   EmailVerifyOptions,

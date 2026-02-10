@@ -124,10 +124,33 @@ export function displaySuccess(outputs: SuccessOutputs) {
   lines.push(
     "",
     pc.bold("Next steps:"),
-    `  1. Install SDK: ${pc.yellow("npm install @wraps/sdk")}`,
-    `  2. View dashboard: ${pc.blue("https://app.wraps.dev")}`,
+    `  1. Install SDK: ${pc.yellow("npm install @wraps.dev/email")}`,
     ""
   );
+
+  // Embed ready-to-run SDK snippet with actual deployment values
+  if (outputs.domain) {
+    lines.push(
+      pc.bold("  Quick start:"),
+      "",
+      pc.dim("    import { Wraps } from '@wraps.dev/email';"),
+      pc.dim(""),
+      pc.dim("    const wraps = new Wraps({"),
+      pc.dim(`      roleArn: '${outputs.roleArn}',`),
+      pc.dim(`      region: '${outputs.region}'`),
+      pc.dim("    });"),
+      pc.dim(""),
+      pc.dim("    await wraps.emails.send({"),
+      pc.dim(`      from: 'hello@${outputs.domain}',`),
+      pc.dim("      to: 'user@example.com',"),
+      pc.dim("      subject: 'Hello from Wraps!',"),
+      pc.dim("      html: '<h1>It works!</h1>'"),
+      pc.dim("    });"),
+      ""
+    );
+  }
+
+  lines.push(`  2. View dashboard: ${pc.blue("https://app.wraps.dev")}`, "");
 
   clack.outro(pc.green("Email infrastructure deployed successfully!"));
   console.log(lines.join("\n"));

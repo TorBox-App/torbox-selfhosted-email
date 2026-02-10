@@ -4,6 +4,7 @@ import {
   ListIdentitiesCommand,
   SESClient,
 } from "@aws-sdk/client-ses";
+import { GetAccountCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import {
   type AWSSetupState,
@@ -227,31 +228,52 @@ export async function listSESDomains(region: string): Promise<SESDomain[]> {
 }
 
 /**
+ * SES account status including sandbox mode and send quota
+ */
+export type SESAccountStatus = {
+  isSandbox: boolean;
+  sendQuota?: {
+    max24HourSend: number;
+    maxSendRate: number;
+    sentLast24Hours: number;
+  };
+  enforcementStatus?: string;
+};
+
+/**
+ * Get SES account status including sandbox mode detection
+ * Uses SESv2 GetAccountCommand to check ProductionAccessEnabled
+ */
+export async function getSESAccountStatus(
+  region: string
+): Promise<SESAccountStatus> {
+  const sesv2 = new SESv2Client({ region });
+
+  try {
+    const response = await sesv2.send(new GetAccountCommand({}));
+    return {
+      isSandbox: !response.ProductionAccessEnabled,
+      sendQuota: response.SendQuota
+        ? {
+            max24HourSend: response.SendQuota.Max24HourSend ?? 0,
+            maxSendRate: response.SendQuota.MaxSendRate ?? 0,
+            sentLast24Hours: response.SendQuota.SentLast24Hours ?? 0,
+          }
+        : undefined,
+      enforcementStatus: response.EnforcementStatus,
+    };
+  } catch {
+    // guardrail:allow-swallowed-error — SES GetAccount may fail due to permissions or throttling, safe to default
+    return { isSandbox: false };
+  }
+}
+
+/**
  * Check if SES is in sandbox mode
  */
 export async function isSESSandbox(region: string): Promise<boolean> {
-  const ses = new SESClient({ region });
-
-  try {
-    // In sandbox mode, you can only send to verified addresses
-    // This is a heuristic - we check if there are any identities
-    await ses.send(
-      new ListIdentitiesCommand({
-        MaxItems: 1,
-      })
-    );
-
-    // If we can call this API, SES is enabled
-    // The actual sandbox check requires checking send quota
-    // For now, we'll return false (not sandbox) if the API works
-    return false;
-  } catch (error) {
-    // If we get an error about SES not being enabled, return true
-    if (error instanceof Error && error.name === "InvalidParameterValue") {
-      return true;
-    }
-    throw error;
-  }
+  const status = await getSESAccountStatus(region);
+  return status.isSandbox;
 }
 
 /**

@@ -57,6 +57,20 @@ export async function createIAMRole(
     });
   }
 
+  // Allow SES v2 Suppression List access (enabled by default)
+  if (config.emailConfig.suppressionList?.enabled !== false) {
+    statements.push({
+      Effect: "Allow",
+      Action: [
+        "ses:ListSuppressedDestinations",
+        "ses:GetSuppressedDestination",
+        "ses:PutSuppressedDestination",
+        "ses:DeleteSuppressedDestination",
+      ],
+      Resource: "*",
+    });
+  }
+
   // Allow DynamoDB access if history storage enabled
   if (config.emailConfig.eventTracking?.dynamoDBHistory) {
     statements.push({

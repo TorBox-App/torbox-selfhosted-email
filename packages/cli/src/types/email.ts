@@ -225,6 +225,16 @@ export type EmailInitOptions = {
   preset?: EmailConfigPreset;
   yes?: boolean;
   preview?: boolean;
+  quick?: boolean;
+};
+
+/**
+ * Command options for email test
+ */
+export type EmailTestOptions = {
+  region?: string;
+  to?: string;
+  scenario?: "success" | "bounce" | "complaint" | "ooto" | "suppression_list";
 };
 
 /**
@@ -318,6 +328,8 @@ export type EmailConnectOptions = {
  */
 export type EmailVerifyOptions = {
   domain: string;
+  wait?: boolean;
+  interval?: number;
 };
 
 /**

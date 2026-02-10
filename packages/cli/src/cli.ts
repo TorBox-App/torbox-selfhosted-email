@@ -44,6 +44,7 @@ import { emailStatus } from "./commands/email/status.js";
 import { templatesInit } from "./commands/email/templates/init.js";
 import { templatesPreview } from "./commands/email/templates/preview.js";
 import { templatesPush } from "./commands/email/templates/push.js";
+import { emailTest } from "./commands/email/test.js";
 import { upgrade } from "./commands/email/upgrade.js";
 import { workflowsPush } from "./commands/email/workflows/push.js";
 import { workflowsValidate } from "./commands/email/workflows/validate.js";
@@ -141,6 +142,7 @@ function showHelp() {
   console.log(
     `  ${pc.cyan("email status")}         Show email infrastructure details`
   );
+  console.log(`  ${pc.cyan("email test")}           Send a test email`);
   console.log(`  ${pc.cyan("email verify")}         Verify domain DNS records`);
   console.log(
     `  ${pc.cyan("email sync")}           Apply CLI updates to infrastructure`
@@ -386,6 +388,24 @@ args.options([
     name: "resend",
     description: "Resend verification code",
     defaultValue: false,
+  },
+  // Email test options
+  {
+    name: "scenario",
+    description:
+      "Test scenario (success, bounce, complaint, ooto, suppression_list)",
+    defaultValue: undefined,
+  },
+  // Email verify options
+  {
+    name: ["w", "wait"],
+    description: "Poll until DNS records are verified",
+    defaultValue: false,
+  },
+  {
+    name: "interval",
+    description: "Polling interval in seconds (default: 30)",
+    defaultValue: undefined,
   },
   // Email check options
   {
@@ -678,6 +698,15 @@ async function run() {
             preset: flags.preset,
             yes: flags.yes,
             preview: flags.preview,
+            quick: flags.quick,
+          });
+          break;
+
+        case "test":
+          await emailTest({
+            region: flags.region,
+            to: flags.to,
+            scenario: flags.scenario,
           });
           break;
 
@@ -744,7 +773,13 @@ async function run() {
             );
             throw new Error("Missing required flag: --domain");
           }
-          await verifyDomain({ domain: flags.domain });
+          await verifyDomain({
+            domain: flags.domain,
+            wait: flags.wait,
+            interval: flags.interval
+              ? Number.parseInt(flags.interval, 10)
+              : undefined,
+          });
           break;
         }
 
