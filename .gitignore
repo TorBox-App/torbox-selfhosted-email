@@ -74,3 +74,5 @@ sst-env.d.ts
 # next-agents-md
 .next-docs/
 next-env.d.ts
+
+.claude/blueprints/
