@@ -1,0 +1,77 @@
+import type { Metadata } from "next";
+import Script from "next/script";
+import PageContent from "./page-content";
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Docs",
+      item: "https://wraps.dev/docs",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Infrastructure",
+      item: "https://wraps.dev/docs/infrastructure",
+    },
+    {
+      "@type": "ListItem",
+      position: 3,
+      name: "EventBridge Events",
+      item: "https://wraps.dev/docs/infrastructure/events",
+    },
+  ],
+};
+
+export const metadata: Metadata = {
+  title: "EventBridge Events",
+  description:
+    "Every email event flows through your AWS account's EventBridge bus. Learn what events are available, their payloads, and how to create custom rules for alerts, analytics, and workflows.",
+  openGraph: {
+    title: "EventBridge Events | Wraps",
+    description:
+      "Every email event flows through your AWS account's EventBridge bus. Create custom rules for alerts, analytics, and workflows.",
+    type: "website",
+    url: "https://wraps.dev/docs/infrastructure/events",
+  },
+  twitter: {
+    title: "EventBridge Events | Wraps",
+    description:
+      "Every email event flows through your AWS account's EventBridge bus. Create custom rules for alerts, analytics, and workflows.",
+  },
+  alternates: {
+    canonical: "https://wraps.dev/docs/infrastructure/events",
+  },
+};
+
+export default function InfrastructureEventsPage() {
+  return (
+    <>
+      <Script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        id="breadcrumb-schema"
+        type="application/ld+json"
+      />
+      {/* Server-rendered content for SEO */}
+      <article aria-hidden="true" className="sr-only">
+        <h1>EventBridge Events</h1>
+        <p>
+          Every email event flows through your AWS account's EventBridge bus.
+          Create custom rules for alerts, analytics, and workflows.
+        </p>
+        <h2>How It Works</h2>
+        <h2>What Wraps Handles Automatically</h2>
+        <h2>Event Types Reference</h2>
+        <h2>Bounce and Complaint Reference</h2>
+        <h2>Creating Custom Rules</h2>
+        <h2>Common Use Cases</h2>
+        <h2>Quotas and Limits</h2>
+      </article>
+      <PageContent />
+    </>
+  );
+}

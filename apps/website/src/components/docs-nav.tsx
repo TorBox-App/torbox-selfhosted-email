@@ -25,6 +25,7 @@ import {
   Sliders,
   Terminal,
   Workflow,
+  Zap,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -151,6 +152,11 @@ const navItems: NavSection[] = [
         title: "What Gets Deployed: CDN",
         href: "/docs/infrastructure/cdn",
         icon: Server,
+      },
+      {
+        title: "EventBridge Events",
+        href: "/docs/infrastructure/events",
+        icon: Zap,
       },
       {
         title: "CDK Construct",
