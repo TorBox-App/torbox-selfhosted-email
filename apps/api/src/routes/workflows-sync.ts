@@ -19,9 +19,14 @@ import {
   type WorkflowTriggerType,
   workflow,
 } from "@wraps/db";
+import { inArray } from "drizzle-orm";
 import { t } from "elysia";
 import type { AuthContext } from "../middleware/auth";
 import { createAuthenticatedRoutes } from "../middleware/auth";
+
+type DbOrTx =
+  | typeof db
+  | Parameters<Parameters<(typeof db)["transaction"]>[0]>[0];
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ROUTES
@@ -37,13 +42,15 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
 
       // Resolve template slugs to IDs
       const resolvedSteps = await resolveTemplateReferences(
+        db,
         authContext.organizationId,
-        body.steps
+        body.steps as WorkflowStep[]
       );
 
-      const result = await upsertWorkflowFromCli(authContext, {
+      const result = await upsertWorkflowFromCli(db, authContext, {
         ...body,
         steps: resolvedSteps,
+        transitions: body.transitions as WorkflowTransition[],
       });
 
       if (result.conflict) {
@@ -76,12 +83,29 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
         ),
         sourceTs: t.String({ description: "Original TypeScript source code" }),
         sourceHash: t.String({ description: "SHA256 hash of source file" }),
-        steps: t.Array(t.Any(), {
-          description: "Flat array of workflow steps",
-        }),
-        transitions: t.Array(t.Any(), {
-          description: "Flat array of step transitions",
-        }),
+        steps: t.Array(
+          t.Object({
+            id: t.String(),
+            type: t.String(),
+            name: t.String(),
+            position: t.Object({ x: t.Number(), y: t.Number() }),
+            config: t.Any(),
+          }),
+          { description: "Flat array of workflow steps" }
+        ),
+        transitions: t.Array(
+          t.Object({
+            id: t.String(),
+            fromStepId: t.String(),
+            toStepId: t.String(),
+            condition: t.Optional(
+              t.Object({
+                branch: t.String(),
+              })
+            ),
+          }),
+          { description: "Flat array of step transitions" }
+        ),
         triggerType: t.String({ description: "Trigger type" }),
         triggerConfig: t.Optional(
           t.Any({ description: "Trigger configuration" })
@@ -122,26 +146,44 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
     }
   )
 
-  // POST /push/batch — Push multiple workflows atomically
+  // POST /push/batch — Push multiple workflows in a transaction
   .post(
     "/push/batch",
     async (ctx) => {
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
       const { body } = ctx;
 
-      // Process all workflows
-      const results = await Promise.all(
-        body.workflows.map(async (wf) => {
-          const resolvedSteps = await resolveTemplateReferences(
-            authContext.organizationId,
-            wf.steps
-          );
-          return upsertWorkflowFromCli(authContext, {
-            ...wf,
-            steps: resolvedSteps,
-          });
-        })
-      );
+      const results = await db.transaction(async (tx) => {
+        const settled = await Promise.allSettled(
+          body.workflows.map(async (wf) => {
+            const resolvedSteps = await resolveTemplateReferences(
+              tx,
+              authContext.organizationId,
+              wf.steps as WorkflowStep[]
+            );
+            return upsertWorkflowFromCli(tx, authContext, {
+              ...wf,
+              steps: resolvedSteps,
+              transitions: wf.transitions as WorkflowTransition[],
+            });
+          })
+        );
+
+        // If any rejected with unexpected errors, throw to rollback
+        const errors = settled.filter(
+          (s): s is PromiseRejectedResult => s.status === "rejected"
+        );
+        if (errors.length > 0) {
+          throw errors[0].reason;
+        }
+
+        return settled
+          .filter(
+            (s): s is PromiseFulfilledResult<UpsertResult> =>
+              s.status === "fulfilled"
+          )
+          .map((s) => s.value);
+      });
 
       // Check if any had conflicts
       const conflicts = results.filter((r) => r.conflict);
@@ -181,8 +223,27 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
             description: t.Optional(t.String()),
             sourceTs: t.String(),
             sourceHash: t.String(),
-            steps: t.Array(t.Any()),
-            transitions: t.Array(t.Any()),
+            steps: t.Array(
+              t.Object({
+                id: t.String(),
+                type: t.String(),
+                name: t.String(),
+                position: t.Object({ x: t.Number(), y: t.Number() }),
+                config: t.Any(),
+              })
+            ),
+            transitions: t.Array(
+              t.Object({
+                id: t.String(),
+                fromStepId: t.String(),
+                toStepId: t.String(),
+                condition: t.Optional(
+                  t.Object({
+                    branch: t.String(),
+                  })
+                ),
+              })
+            ),
             triggerType: t.String(),
             triggerConfig: t.Optional(t.Any()),
             settings: t.Optional(
@@ -308,6 +369,7 @@ type UpsertResult = {
  * The API needs to resolve these to actual template UUIDs.
  */
 export async function resolveTemplateReferences(
+  tx: DbOrTx,
   organizationId: string,
   steps: WorkflowStep[]
 ): Promise<WorkflowStep[]> {
@@ -327,11 +389,16 @@ export async function resolveTemplateReferences(
     return steps;
   }
 
-  // Fetch templates by slug
-  const templates = await db
+  // Fetch only the templates we need by slug
+  const templates = await tx
     .select({ id: template.id, slug: template.slug })
     .from(template)
-    .where(eq(template.organizationId, organizationId));
+    .where(
+      and(
+        eq(template.organizationId, organizationId),
+        inArray(template.slug, [...templateSlugs])
+      )
+    );
 
   const slugToId = new Map(
     templates.filter((t) => t.slug != null).map((t) => [t.slug!, t.id])
@@ -357,13 +424,14 @@ export async function resolveTemplateReferences(
 }
 
 export async function upsertWorkflowFromCli(
+  tx: DbOrTx,
   authContext: AuthContext,
   body: PushBody
 ): Promise<UpsertResult> {
   const now = new Date();
 
   // Check for existing workflow by (organizationId, slug)
-  const [existing] = await db
+  const [existing] = await tx
     .select({
       id: workflow.id,
       lastEditedFrom: workflow.lastEditedFrom,
@@ -391,7 +459,7 @@ export async function upsertWorkflowFromCli(
     }
 
     // Update existing workflow
-    await db
+    await tx
       .update(workflow)
       .set({
         name: body.name,
@@ -429,7 +497,7 @@ export async function upsertWorkflowFromCli(
 
   // Insert new workflow
   const id = crypto.randomUUID();
-  await db.insert(workflow).values({
+  await tx.insert(workflow).values({
     id,
     organizationId: authContext.organizationId,
     name: body.name,

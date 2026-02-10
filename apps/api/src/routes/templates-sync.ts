@@ -13,6 +13,10 @@ import { t } from "elysia";
 import type { AuthContext } from "../middleware/auth";
 import { createAuthenticatedRoutes } from "../middleware/auth";
 
+type DbOrTx =
+  | typeof db
+  | Parameters<Parameters<(typeof db)["transaction"]>[0]>[0];
+
 export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
   // POST /push — Upsert a single template from CLI
   .post(
@@ -21,7 +25,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
       const { body } = ctx;
 
-      const result = await upsertTemplateFromCli(authContext, body);
+      const result = await upsertTemplateFromCli(db, authContext, body);
 
       if (result.conflict) {
         ctx.set.status = 409;
@@ -60,7 +64,13 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
             description: "Email type for compliance",
           }
         ),
-        variables: t.Array(t.Any(), { description: "Template variables" }),
+        variables: t.Array(
+          t.Object({
+            name: t.String(),
+            fallback: t.Optional(t.String()),
+          }),
+          { description: "Template variables" }
+        ),
         sourceHash: t.String({ description: "SHA256 hash of source file" }),
         sesTemplateName: t.String({ description: "SES template name" }),
         cliProjectPath: t.Optional(
@@ -83,16 +93,35 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
     }
   )
 
-  // POST /push/batch — Push multiple templates atomically
+  // POST /push/batch — Push multiple templates in a transaction
   .post(
     "/push/batch",
     async (ctx) => {
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
       const { body } = ctx;
 
-      const results = await Promise.all(
-        body.templates.map((tmpl) => upsertTemplateFromCli(authContext, tmpl))
-      );
+      const results = await db.transaction(async (tx) => {
+        const settled = await Promise.allSettled(
+          body.templates.map((tmpl) =>
+            upsertTemplateFromCli(tx, authContext, tmpl)
+          )
+        );
+
+        // If any rejected with unexpected errors, throw to rollback
+        const errors = settled.filter(
+          (s): s is PromiseRejectedResult => s.status === "rejected"
+        );
+        if (errors.length > 0) {
+          throw errors[0].reason;
+        }
+
+        return settled
+          .filter(
+            (s): s is PromiseFulfilledResult<UpsertResult> =>
+              s.status === "fulfilled"
+          )
+          .map((s) => s.value);
+      });
 
       // Check if any had conflicts
       const conflicts = results.filter((r) => r.conflict);
@@ -137,7 +166,12 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
               t.Literal("marketing"),
               t.Literal("transactional"),
             ]),
-            variables: t.Array(t.Any()),
+            variables: t.Array(
+              t.Object({
+                name: t.String(),
+                fallback: t.Optional(t.String()),
+              })
+            ),
             sourceHash: t.String(),
             sesTemplateName: t.String(),
             cliProjectPath: t.Optional(t.String()),
@@ -209,7 +243,7 @@ export type PushBody = {
   subject: string;
   previewText?: string;
   emailType: "marketing" | "transactional";
-  variables: unknown[];
+  variables: Array<{ name: string; fallback?: string }>;
   sourceHash: string;
   sesTemplateName: string;
   cliProjectPath?: string;
@@ -225,13 +259,14 @@ type UpsertResult = {
 };
 
 export async function upsertTemplateFromCli(
+  tx: DbOrTx,
   authContext: AuthContext,
   body: PushBody
 ): Promise<UpsertResult> {
   const now = new Date();
 
   // Check for existing template by (organizationId, slug)
-  const [existing] = await db
+  const [existing] = await tx
     .select({
       id: template.id,
       lastEditedFrom: template.lastEditedFrom,
@@ -259,7 +294,7 @@ export async function upsertTemplateFromCli(
     }
 
     // Update existing template
-    await db
+    await tx
       .update(template)
       .set({
         source: body.source,
@@ -291,7 +326,7 @@ export async function upsertTemplateFromCli(
 
   // Insert new template
   const id = crypto.randomUUID();
-  await db.insert(template).values({
+  await tx.insert(template).values({
     id,
     organizationId: authContext.organizationId,
     name: body.slug,

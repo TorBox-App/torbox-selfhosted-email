@@ -12,6 +12,7 @@ import {
 } from "../../../utils/email/template-compiler.js";
 import { resolveTokenAsync } from "../../../utils/shared/config.js";
 import { errors } from "../../../utils/shared/errors.js";
+import { loadLockfile, saveLockfile } from "../../../utils/shared/lockfile.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
 
 type TemplatesPushOptions = {
@@ -21,21 +22,6 @@ type TemplatesPushOptions = {
   yes?: boolean;
   json?: boolean;
   token?: string;
-};
-
-type LockfileEntry = {
-  id?: string;
-  localHash: string;
-  remoteHash?: string;
-  sesTemplateName: string;
-  lastPushed: string;
-};
-
-type Lockfile = {
-  version: string;
-  org?: string;
-  lastSync: string;
-  templates: Record<string, LockfileEntry>;
 };
 
 type CompiledTemplate = {
@@ -90,8 +76,7 @@ export async function templatesPush(options: TemplatesPushOptions) {
   }
 
   // Load lockfile
-  const lockfilePath = join(wrapsDir, ".wraps", "lockfile.json");
-  const lockfile = await loadLockfile(lockfilePath);
+  const lockfile = await loadLockfile(wrapsDir);
 
   // Fetch remote template slugs to detect deletions
   const token = await resolveTokenAsync({ token: options.token });
@@ -196,31 +181,29 @@ export async function templatesPush(options: TemplatesPushOptions) {
   }
 
   // Push to SES
-  await pushToSES(compiled, progress);
+  const sesResults = await pushToSES(compiled, progress);
 
   // Push to API (token already resolved above)
-  const apiResults = await pushToAPI(
-    compiled,
-    token,
-    config.org,
-    progress,
-    options.force
-  );
+  const apiResults = await pushToAPI(compiled, token, progress, options.force);
 
-  // Update lockfile
+  // Only update lockfile for templates that succeeded in at least one target
   for (const t of compiled) {
+    const sesOk = sesResults.find((r) => r.slug === t.slug)?.success;
     const apiResult = apiResults.find((r) => r.slug === t.slug);
-    lockfile.templates[t.slug] = {
-      id: apiResult?.id,
-      localHash: t.sourceHash,
-      remoteHash: t.sourceHash,
-      sesTemplateName: t.sesTemplateName,
-      lastPushed: new Date().toISOString(),
-    };
+    const apiOk = apiResult?.success;
+    if (sesOk || apiOk) {
+      lockfile.templates[t.slug] = {
+        id: apiResult?.id,
+        localHash: t.sourceHash,
+        remoteHash: t.sourceHash,
+        sesTemplateName: t.sesTemplateName,
+        lastPushed: new Date().toISOString(),
+      };
+    }
   }
   lockfile.lastSync = new Date().toISOString();
   lockfile.org = config.org;
-  await saveLockfile(lockfilePath, lockfile);
+  await saveLockfile(wrapsDir, lockfile);
 
   // Output results
   if (options.json) {
@@ -456,9 +439,10 @@ async function pushToSES(
 
   const ses = new SESClient({ region });
 
-  for (const t of templates) {
-    progress.start(`Pushing ${pc.cyan(t.slug)} to SES`);
-    try {
+  const settled = await Promise.allSettled(
+    templates.map(async (t) => {
+      progress.start(`Pushing ${pc.cyan(t.slug)} to SES`);
+
       const templateData = {
         TemplateName: t.sesTemplateName,
         SubjectPart: t.subject,
@@ -486,12 +470,22 @@ async function pushToSES(
         await ses.send(new CreateTemplateCommand({ Template: templateData }));
       }
 
-      results.push({ slug: t.slug, success: true });
       progress.succeed(`Pushed ${pc.cyan(t.slug)} to SES`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      results.push({ slug: t.slug, success: false });
-      progress.fail(`SES push failed for ${t.slug}: ${msg}`);
+      return { slug: t.slug };
+    })
+  );
+
+  for (let i = 0; i < templates.length; i++) {
+    const result = settled[i];
+    if (result.status === "fulfilled") {
+      results.push({ slug: result.value.slug, success: true });
+    } else {
+      const msg =
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason);
+      results.push({ slug: templates[i].slug, success: false });
+      progress.fail(`SES push failed for ${templates[i].slug}: ${msg}`);
     }
   }
 
@@ -551,7 +545,6 @@ type APIPushResult = {
 async function pushToAPI(
   templates: CompiledTemplate[],
   token: string | null,
-  _org: string,
   progress: DeploymentProgress,
   force?: boolean
 ): Promise<APIPushResult[]> {
@@ -690,27 +683,6 @@ async function pushToAPI(
   }
 
   return results;
-}
-
-// ── Lockfile ──
-
-async function loadLockfile(path: string): Promise<Lockfile> {
-  if (!existsSync(path)) {
-    return { version: "1.0.0", lastSync: "", templates: {} };
-  }
-  try {
-    const content = await readFile(path, "utf-8");
-    return JSON.parse(content) as Lockfile;
-  } catch {
-    // guardrail:allow-swallowed-error — corrupted lockfile returns fresh default
-    return { version: "1.0.0", lastSync: "", templates: {} };
-  }
-}
-
-async function saveLockfile(path: string, lockfile: Lockfile): Promise<void> {
-  const dir = join(path, "..");
-  await mkdir(dir, { recursive: true });
-  await writeFile(path, JSON.stringify(lockfile, null, 2), "utf-8");
 }
 
 // ── Utilities ──

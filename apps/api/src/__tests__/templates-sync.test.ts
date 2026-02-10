@@ -92,7 +92,8 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
 
     const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
-    const result = await upsertTemplateFromCli(authContext, {
+    const { db } = await import("@wraps/db");
+    const result = await upsertTemplateFromCli(db as never, authContext, {
       ...basePushBody,
       force: false,
     });
@@ -114,7 +115,12 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
 
     const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
-    const result = await upsertTemplateFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    const result = await upsertTemplateFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.conflict).toBe(true);
     expect(lastUpdateSet).toBeNull();
@@ -129,7 +135,8 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
 
     const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
-    const result = await upsertTemplateFromCli(authContext, {
+    const { db } = await import("@wraps/db");
+    const result = await upsertTemplateFromCli(db as never, authContext, {
       ...basePushBody,
       force: true,
     });
@@ -151,7 +158,12 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
 
     const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
-    const result = await upsertTemplateFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    const result = await upsertTemplateFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.conflict).toBeUndefined();
     expect(result.created).toBe(false);
@@ -169,7 +181,12 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
 
     const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
-    const result = await upsertTemplateFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    const result = await upsertTemplateFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.conflict).toBeUndefined();
     expect(result.created).toBe(false);
@@ -180,7 +197,12 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
 
     const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
-    const result = await upsertTemplateFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    const result = await upsertTemplateFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.created).toBe(true);
     expect(result.conflict).toBeUndefined();
@@ -202,7 +224,8 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
 
     const { upsertTemplateFromCli } = await import("../routes/templates-sync");
 
-    await upsertTemplateFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    await upsertTemplateFromCli(db as never, authContext, basePushBody);
 
     expect(lastUpdateSet?.pushedFromCli).toBe(true);
     expect(lastUpdateSet?.status).toBe("PUBLISHED");

@@ -69,6 +69,10 @@ vi.mock("@wraps/db", () => ({
   inArray: vi.fn(),
 }));
 
+vi.mock("drizzle-orm", () => ({
+  inArray: vi.fn(),
+}));
+
 const authContext: AuthContext = {
   apiKeyId: "key-1",
   organizationId: "org-1",
@@ -131,7 +135,8 @@ describe("upsertWorkflowFromCli - Push Conflict Detection", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    const result = await upsertWorkflowFromCli(authContext, {
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(db as never, authContext, {
       ...basePushBody,
       force: false,
     });
@@ -152,7 +157,12 @@ describe("upsertWorkflowFromCli - Push Conflict Detection", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    const result = await upsertWorkflowFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.conflict).toBe(true);
     expect(lastUpdateSet).toBeNull();
@@ -167,7 +177,8 @@ describe("upsertWorkflowFromCli - Push Conflict Detection", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    const result = await upsertWorkflowFromCli(authContext, {
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(db as never, authContext, {
       ...basePushBody,
       force: true,
     });
@@ -189,7 +200,12 @@ describe("upsertWorkflowFromCli - Push Conflict Detection", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    const result = await upsertWorkflowFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.conflict).toBeUndefined();
     expect(result.created).toBe(false);
@@ -206,7 +222,12 @@ describe("upsertWorkflowFromCli - Push Conflict Detection", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    const result = await upsertWorkflowFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.conflict).toBeUndefined();
     expect(result.created).toBe(false);
@@ -219,7 +240,12 @@ describe("upsertWorkflowFromCli - Insert New Workflow", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    const result = await upsertWorkflowFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.created).toBe(true);
     expect(result.conflict).toBeUndefined();
@@ -238,7 +264,8 @@ describe("upsertWorkflowFromCli - Insert New Workflow", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    await upsertWorkflowFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, basePushBody);
 
     expect(lastInsertValues?.pushedFromCli).toBe(true);
   });
@@ -248,7 +275,8 @@ describe("upsertWorkflowFromCli - Insert New Workflow", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    await upsertWorkflowFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, basePushBody);
 
     expect(lastInsertValues?.sourceTs).toBe(basePushBody.sourceTs);
     expect(lastInsertValues?.sourceHash).toBe(basePushBody.sourceHash);
@@ -265,7 +293,8 @@ describe("upsertWorkflowFromCli - Update Existing Workflow", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    await upsertWorkflowFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, basePushBody);
 
     expect(lastUpdateSet?.pushedFromCli).toBe(true);
   });
@@ -279,7 +308,8 @@ describe("upsertWorkflowFromCli - Update Existing Workflow", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    await upsertWorkflowFromCli(authContext, basePushBody);
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, basePushBody);
 
     expect(lastUpdateSet?.steps).toEqual(basePushBody.steps);
     expect(lastUpdateSet?.transitions).toEqual(basePushBody.transitions);
@@ -294,7 +324,8 @@ describe("upsertWorkflowFromCli - Update Existing Workflow", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    await upsertWorkflowFromCli(authContext, {
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, {
       ...basePushBody,
       triggerType: "event",
       triggerConfig: { eventName: "signup" },
@@ -333,7 +364,12 @@ describe("resolveTemplateReferences", () => {
       },
     ];
 
-    const resolved = await resolveTemplateReferences("org-1", steps as any);
+    const { db } = await import("@wraps/db");
+    const resolved = await resolveTemplateReferences(
+      db as never,
+      "org-1",
+      steps as any
+    );
 
     expect((resolved[0].config as any).templateId).toBe("tmpl-uuid-1");
     expect((resolved[1].config as any).templateId).toBe("tmpl-uuid-2");
@@ -363,7 +399,12 @@ describe("resolveTemplateReferences", () => {
       },
     ];
 
-    const resolved = await resolveTemplateReferences("org-1", steps as any);
+    const { db } = await import("@wraps/db");
+    const resolved = await resolveTemplateReferences(
+      db as never,
+      "org-1",
+      steps as any
+    );
 
     expect(resolved[0].config).toEqual(steps[0].config);
     expect(resolved[1].config).toEqual(steps[1].config);
@@ -386,7 +427,12 @@ describe("resolveTemplateReferences", () => {
       },
     ];
 
-    const resolved = await resolveTemplateReferences("org-1", steps as any);
+    const { db } = await import("@wraps/db");
+    const resolved = await resolveTemplateReferences(
+      db as never,
+      "org-1",
+      steps as any
+    );
 
     // Should keep the original slug if not found (API will fail later with better error)
     expect((resolved[0].config as any).templateId).toBe("nonexistent");
@@ -399,7 +445,8 @@ describe("Workflow Settings", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    await upsertWorkflowFromCli(authContext, {
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, {
       ...basePushBody,
       settings: {
         allowReentry: true,
@@ -418,7 +465,8 @@ describe("Workflow Settings", () => {
 
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
-    await upsertWorkflowFromCli(authContext, {
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, {
       ...basePushBody,
       defaults: {
         from: "hello@example.com",

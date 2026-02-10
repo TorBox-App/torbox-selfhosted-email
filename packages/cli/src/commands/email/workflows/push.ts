@@ -16,7 +16,6 @@
  */
 
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
@@ -34,6 +33,7 @@ import {
 import { validateTransformedWorkflow } from "../../../utils/email/workflow-validator.js";
 import { resolveTokenAsync } from "../../../utils/shared/config.js";
 import { errors } from "../../../utils/shared/errors.js";
+import { loadLockfile, saveLockfile } from "../../../utils/shared/lockfile.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
 
 type WorkflowsPushOptions = {
@@ -43,21 +43,6 @@ type WorkflowsPushOptions = {
   yes?: boolean;
   json?: boolean;
   token?: string;
-};
-
-type LockfileWorkflowEntry = {
-  id?: string;
-  localHash: string;
-  remoteHash?: string;
-  lastPushed: string;
-};
-
-type Lockfile = {
-  version: string;
-  org?: string;
-  lastSync: string;
-  templates: Record<string, unknown>;
-  workflows: Record<string, LockfileWorkflowEntry>;
 };
 
 type TransformedWorkflowData = {
@@ -123,8 +108,7 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
   }
 
   // Load lockfile
-  const lockfilePath = join(wrapsDir, ".wraps", "lockfile.json");
-  const lockfile = await loadLockfile(lockfilePath);
+  const lockfile = await loadLockfile(wrapsDir);
 
   // Discover local templates for reference validation
   const templatesDir = join(wrapsDir, config.templatesDir || "./templates");
@@ -291,31 +275,23 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
 
   // Push to API
   const token = await resolveTokenAsync({ token: options.token });
-  const apiResults = await pushToAPI(
-    toProcess,
-    token,
-    config.org,
-    progress,
-    options.force
-  );
+  const apiResults = await pushToAPI(toProcess, token, progress, options.force);
 
-  // Update lockfile
-  if (!lockfile.workflows) {
-    lockfile.workflows = {};
-  }
-
+  // Only update lockfile for workflows that succeeded
   for (const w of toProcess) {
     const apiResult = apiResults.find((r) => r.slug === w.slug);
-    lockfile.workflows[w.slug] = {
-      id: apiResult?.id,
-      localHash: w.parsed.sourceHash,
-      remoteHash: w.parsed.sourceHash,
-      lastPushed: new Date().toISOString(),
-    };
+    if (apiResult?.success) {
+      lockfile.workflows[w.slug] = {
+        id: apiResult?.id,
+        localHash: w.parsed.sourceHash,
+        remoteHash: w.parsed.sourceHash,
+        lastPushed: new Date().toISOString(),
+      };
+    }
   }
   lockfile.lastSync = new Date().toISOString();
   lockfile.org = config.org;
-  await saveLockfile(lockfilePath, lockfile);
+  await saveLockfile(wrapsDir, lockfile);
 
   // Output results
   const pushed = apiResults.filter((r) => r.success);
@@ -381,7 +357,6 @@ type APIPushResult = {
 async function pushToAPI(
   workflows: TransformedWorkflowData[],
   token: string | null,
-  _org: string,
   progress: DeploymentProgress,
   force?: boolean
 ): Promise<APIPushResult[]> {
@@ -521,30 +496,4 @@ async function pushToAPI(
   }
 
   return results;
-}
-
-// ── Lockfile ──
-
-async function loadLockfile(path: string): Promise<Lockfile> {
-  if (!existsSync(path)) {
-    return { version: "1.0.0", lastSync: "", templates: {}, workflows: {} };
-  }
-  try {
-    const content = await readFile(path, "utf-8");
-    const parsed = JSON.parse(content) as Lockfile;
-    // Ensure workflows object exists
-    if (!parsed.workflows) {
-      parsed.workflows = {};
-    }
-    return parsed;
-  } catch {
-    // guardrail:allow-swallowed-error — corrupted lockfile returns fresh default
-    return { version: "1.0.0", lastSync: "", templates: {}, workflows: {} };
-  }
-}
-
-async function saveLockfile(path: string, lockfile: Lockfile): Promise<void> {
-  const dir = join(path, "..");
-  await mkdir(dir, { recursive: true });
-  await writeFile(path, JSON.stringify(lockfile, null, 2), "utf-8");
 }
