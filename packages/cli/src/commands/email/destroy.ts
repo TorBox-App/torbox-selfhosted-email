@@ -274,6 +274,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
   }
 
   // 8. Destroy Pulumi infrastructure
+  let destroyFailed = false;
   try {
     await progress.execute(
       "Destroying email infrastructure (this may take 2-3 minutes)",
@@ -298,9 +299,14 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
           throw new Error("No email infrastructure found to destroy");
         }
 
-        // Run destroy with timeout protection
+        // Refresh state to sync with actual AWS resources before destroying.
+        // This prevents failures when resources were manually deleted or drifted.
+        await stack.refresh({ onOutput: () => {} });
+
+        // Run destroy with timeout protection.
+        // continueOnError ensures partial deletes don't abort the entire operation.
         await withTimeout(
-          stack.destroy({ onOutput: () => {} }), // Suppress Pulumi output
+          stack.destroy({ onOutput: () => {}, continueOnError: true }),
           DEFAULT_PULUMI_TIMEOUT_MS,
           "Pulumi destroy"
         );
@@ -325,43 +331,56 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
     }
     trackError("DESTROY_FAILED", "email destroy", { step: "destroy" });
     clack.log.error("Email infrastructure destruction failed");
-    throw error;
+    destroyFailed = true;
+    clack.log.warn(
+      "Some resources may not have been fully removed. You can re-run this command or clean up manually in the AWS console."
+    );
   }
 
-  // 9. Delete connection metadata
+  // 9. Delete connection metadata (even on partial failure, so user isn't stuck)
   await deleteConnectionMetadata(identity.accountId, region);
 
   // 10. Display success message
   progress.stop();
 
-  const deletedItems = ["AWS infrastructure"];
-  if (shouldCleanDNS && hostedZone) {
-    deletedItems.push("Route53 DNS records");
-  }
-
-  clack.outro(pc.green("Email infrastructure has been removed"));
-
-  if (domain) {
-    console.log(`\n${pc.bold("Cleaned up:")}`);
-    for (const item of deletedItems) {
-      console.log(`  ${pc.green("✓")} ${item}`);
+  if (destroyFailed) {
+    clack.outro(
+      pc.yellow("Email infrastructure partially removed. Metadata cleaned up.")
+    );
+    console.log(
+      `\nRun ${pc.cyan("wraps email init")} to redeploy, or clean up remaining resources in the AWS console.\n`
+    );
+  } else {
+    const deletedItems = ["AWS infrastructure"];
+    if (shouldCleanDNS && hostedZone) {
+      deletedItems.push("Route53 DNS records");
     }
 
-    // Remind about SPF record
+    clack.outro(pc.green("Email infrastructure has been removed"));
+
+    if (domain) {
+      console.log(`\n${pc.bold("Cleaned up:")}`);
+      for (const item of deletedItems) {
+        console.log(`  ${pc.green("✓")} ${item}`);
+      }
+
+      // Remind about SPF record
+      console.log(
+        `\n${pc.dim("Note: SPF record was not deleted. Remove 'include:amazonses.com' manually if needed.")}`
+      );
+    }
+
     console.log(
-      `\n${pc.dim("Note: SPF record was not deleted. Remove 'include:amazonses.com' manually if needed.")}`
+      `\nRun ${pc.cyan("wraps email init")} to deploy infrastructure again.\n`
     );
   }
 
-  console.log(
-    `\nRun ${pc.cyan("wraps email init")} to deploy infrastructure again.\n`
-  );
-
-  // 11. Track successful destruction
+  // 11. Track destruction
   trackServiceRemoved("email", {
     reason: "user_initiated",
     region,
     duration_ms: Date.now() - startTime,
     dns_cleaned: shouldCleanDNS,
+    partial_failure: destroyFailed,
   });
 }

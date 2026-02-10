@@ -106,6 +106,7 @@ describe("email destroy command", () => {
 
     const mockStack = {
       destroy: vi.fn().mockResolvedValue(undefined),
+      refresh: vi.fn().mockResolvedValue(undefined),
       workspace: {
         removeStack: vi.fn().mockResolvedValue(undefined),
       },
@@ -254,12 +255,17 @@ describe("email destroy command", () => {
       await expect(emailDestroy({})).rejects.toThrow();
     });
 
-    it("should handle stack destroy failures", async () => {
+    it("should handle stack destroy failures gracefully", async () => {
       const mockStack = await setupPulumiMock();
       mockStack.destroy.mockRejectedValue(new Error("Destroy failed"));
 
-      await expect(emailDestroy({ force: true })).rejects.toThrow(
-        "Destroy failed"
+      // Destroy failures are now handled gracefully — no throw
+      await emailDestroy({ force: true });
+
+      // Metadata should still be cleaned up so user isn't stuck
+      expect(metadata.deleteConnectionMetadata).toHaveBeenCalledWith(
+        "123456789012",
+        "us-east-1"
       );
     });
   });
@@ -470,6 +476,7 @@ describe("global destroy command", () => {
     const pulumi = await import("@pulumi/pulumi");
     const mockStack = {
       destroy: vi.fn().mockResolvedValue(undefined),
+      refresh: vi.fn().mockResolvedValue(undefined),
       workspace: {
         removeStack: vi.fn().mockResolvedValue(undefined),
       },
