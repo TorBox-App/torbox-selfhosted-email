@@ -3,6 +3,7 @@
 import type { BrandKit } from "@wraps/db";
 import {
   Check,
+  FileText,
   Globe,
   Loader2,
   MoreHorizontal,
@@ -117,6 +118,12 @@ export function OrganizationSettingsBrandKits({
   const [isSaving, setIsSaving] = useState(false);
   const [extractDomain, setExtractDomain] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
+  const [templates, setTemplates] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [isExtractingFromTemplate, setIsExtractingFromTemplate] =
+    useState(false);
 
   const canEdit = userRole === "owner" || userRole === "admin";
 
@@ -143,9 +150,43 @@ export function OrganizationSettingsBrandKits({
     fetchBrandKits();
   }, [fetchBrandKits]);
 
+  const fetchTemplates = useCallback(async () => {
+    if (!organization.slug) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/${organization.slug}/emails/templates`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const reactEmailTemplates = data.filter(
+          (t: { sourceFormat: string }) => t.sourceFormat === "react-email"
+        );
+        setTemplates(
+          reactEmailTemplates.map((t: { id: string; name: string }) => ({
+            id: t.id,
+            name: t.name,
+          }))
+        );
+      }
+    } catch (_error) {
+      // Silently fail - template extraction is optional
+    }
+  }, [organization.slug]);
+
+  // Fetch react-email templates when dialog opens for creation
+  useEffect(() => {
+    if (isDialogOpen && !editingKit) {
+      fetchTemplates();
+    }
+  }, [isDialogOpen, editingKit, fetchTemplates]);
+
   const handleOpenCreate = () => {
     setEditingKit(null);
     setFormData(defaultFormData);
+    setSelectedTemplateId("");
     setIsDialogOpen(true);
   };
 
@@ -337,6 +378,82 @@ export function OrganizationSettingsBrandKits({
     }
   };
 
+  const handleExtractFromTemplate = async () => {
+    if (!(organization.slug && selectedTemplateId)) {
+      return;
+    }
+
+    setIsExtractingFromTemplate(true);
+    try {
+      const response = await fetch(
+        `/api/${organization.slug}/brand-kits/from-template`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ templateId: selectedTemplateId }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const extracted = data.brandKit;
+
+        // Ensure colors are valid hex format for color picker (#rrggbb)
+        const ensureHexColor = (color: string, fallback: string): string => {
+          if (!color) {
+            return fallback;
+          }
+          const hex = color.trim().toLowerCase();
+          if (/^#[0-9a-f]{6}$/.test(hex)) {
+            return hex;
+          }
+          return fallback;
+        };
+
+        // Populate form with extracted data
+        setFormData({
+          name: extracted.name || "",
+          logoUrl: extracted.logoUrl || "",
+          primaryColor: ensureHexColor(
+            extracted.primaryColor,
+            defaultFormData.primaryColor
+          ),
+          secondaryColor: ensureHexColor(
+            extracted.secondaryColor,
+            defaultFormData.secondaryColor
+          ),
+          backgroundColor: ensureHexColor(
+            extracted.backgroundColor,
+            defaultFormData.backgroundColor
+          ),
+          textColor: ensureHexColor(
+            extracted.textColor,
+            defaultFormData.textColor
+          ),
+          fontFamily: extracted.fontFamily || defaultFormData.fontFamily,
+          headingFontFamily: extracted.headingFontFamily || "",
+          buttonStyle: extracted.buttonStyle || defaultFormData.buttonStyle,
+          buttonRadius: extracted.buttonRadius || defaultFormData.buttonRadius,
+          companyName: extracted.companyName || "",
+          companyAddress: "",
+        });
+
+        toast.success("Brand elements extracted from template!", {
+          description: "Review and adjust the extracted values before saving.",
+        });
+        setSelectedTemplateId("");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to extract brand kit from template");
+      }
+    } catch (error) {
+      console.error("Error extracting brand kit from template:", error);
+      toast.error("Failed to extract brand kit from template");
+    } finally {
+      setIsExtractingFromTemplate(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -491,8 +608,7 @@ export function OrganizationSettingsBrandKits({
                     <h4 className="font-medium">Quick Start</h4>
                   </div>
                   <p className="mb-3 text-muted-foreground text-sm">
-                    Enter your website URL to automatically extract brand
-                    colors, logo, and company name.
+                    Extract brand colors and fonts automatically.
                   </p>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -527,6 +643,59 @@ export function OrganizationSettingsBrandKits({
                       )}
                     </Button>
                   </div>
+
+                  {templates.length > 0 && (
+                    <>
+                      <div className="relative my-3">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs">
+                          <span className="bg-muted/30 px-2 text-muted-foreground">
+                            or
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <FileText className="-translate-y-1/2 absolute top-1/2 left-3 z-10 h-4 w-4 text-muted-foreground" />
+                          <Select
+                            onValueChange={setSelectedTemplateId}
+                            value={selectedTemplateId}
+                          >
+                            <SelectTrigger className="pl-9">
+                              <SelectValue placeholder="Select a template" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {templates.map((t) => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          disabled={
+                            !selectedTemplateId || isExtractingFromTemplate
+                          }
+                          onClick={handleExtractFromTemplate}
+                          type="button"
+                          variant="secondary"
+                        >
+                          {isExtractingFromTemplate ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Extracting...
+                            </>
+                          ) : (
+                            "Extract"
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="relative">

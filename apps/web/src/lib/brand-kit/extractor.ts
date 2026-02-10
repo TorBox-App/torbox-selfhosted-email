@@ -355,7 +355,7 @@ function extractColors(html: string): {
 /**
  * Normalize any color format to hex
  */
-function normalizeColor(color: string): string | null {
+export function normalizeColor(color: string): string | null {
   const trimmed = color.trim().toLowerCase();
 
   // Skip CSS variable references

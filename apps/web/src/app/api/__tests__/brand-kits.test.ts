@@ -1,4 +1,4 @@
-import { brandKit, db, member, organization, user } from "@wraps/db";
+import { brandKit, db, member, organization, template, user } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import {
   afterAll,
@@ -78,6 +78,23 @@ vi.mock("@/lib/organization", () => ({
   }),
 }));
 
+// Mock brand kit HTML extractor
+vi.mock("@/lib/brand-kit/extract-from-html", () => ({
+  extractBrandKitFromHtml: vi.fn((html: string, name: string) => ({
+    primaryColor: "#e74c3c",
+    secondaryColor: "#3498db",
+    backgroundColor: "#f5f5f5",
+    textColor: "#333333",
+    fontFamily: "'Helvetica Neue', sans-serif",
+    headingFontFamily: null,
+    logoUrl: "https://example.com/logo.png",
+    companyName: null,
+    sourceDomain: "",
+    buttonStyle: "rounded",
+    buttonRadius: "8px",
+  })),
+}));
+
 // Mock brand kit extractor
 vi.mock("@/lib/brand-kit/extractor", () => ({
   extractBrandKitFromDomain: vi.fn(async (domain: string) => ({
@@ -124,16 +141,21 @@ beforeAll(async () => {
     });
 });
 
-// Clean up brand kits before each test
+// Clean up brand kits and templates before each test
 beforeEach(async () => {
-  // Delete all brand kits for this test org
   await db
     .delete(brandKit)
     .where(eq(brandKit.organizationId, testOrganization.id));
+  await db
+    .delete(template)
+    .where(eq(template.organizationId, testOrganization.id));
 });
 
 // Clean up after all tests
 afterAll(async () => {
+  await db
+    .delete(template)
+    .where(eq(template.organizationId, testOrganization.id));
   await db
     .delete(brandKit)
     .where(eq(brandKit.organizationId, testOrganization.id));
@@ -1167,5 +1189,191 @@ describe("Brand Kits API - Authorization", () => {
 
     expect(response.status).toBe(403);
     expect(data.error).toBe("Forbidden");
+  });
+
+  it("should return 403 for unauthorized template extraction", async () => {
+    const { POST } = await import(
+      "../[orgSlug]/brand-kits/from-template/route"
+    );
+
+    const request = new Request(
+      "http://localhost/api/unauthorized-org/brand-kits/from-template",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          templateId: "some-id",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: "unauthorized-org" }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(data.error).toBe("Forbidden");
+  });
+});
+
+describe("Brand Kits API - POST /api/[orgSlug]/brand-kits/from-template", () => {
+  it("should require templateId parameter", async () => {
+    const { POST } = await import(
+      "../[orgSlug]/brand-kits/from-template/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/brand-kits/from-template`,
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toBe("Template ID is required");
+  });
+
+  it("should return 404 for non-existent template", async () => {
+    const { POST } = await import(
+      "../[orgSlug]/brand-kits/from-template/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/brand-kits/from-template`,
+      {
+        method: "POST",
+        body: JSON.stringify({ templateId: "non-existent-template" }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.error).toBe("Template not found");
+  });
+
+  it("should return 400 for non-react-email template", async () => {
+    // Create a tiptap template (not react-email)
+    await db.insert(template).values({
+      id: "test-brandkit-tiptap-template",
+      organizationId: testOrganization.id,
+      name: "TipTap Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      sourceFormat: "tiptap",
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/brand-kits/from-template/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/brand-kits/from-template`,
+      {
+        method: "POST",
+        body: JSON.stringify({ templateId: "test-brandkit-tiptap-template" }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toContain("react-email");
+  });
+
+  it("should return 400 for react-email template without compiledHtml", async () => {
+    // Create a react-email template without compiled HTML
+    await db.insert(template).values({
+      id: "test-brandkit-no-html-template",
+      organizationId: testOrganization.id,
+      name: "No HTML Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      sourceFormat: "react-email",
+      compiledHtml: null,
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/brand-kits/from-template/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/brand-kits/from-template`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          templateId: "test-brandkit-no-html-template",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.error).toContain("react-email");
+  });
+
+  it("should extract brand kit from react-email template", async () => {
+    // Create a react-email template with compiled HTML
+    await db.insert(template).values({
+      id: "test-brandkit-react-email-template",
+      organizationId: testOrganization.id,
+      name: "Welcome Email",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      sourceFormat: "react-email",
+      compiledHtml:
+        '<html><body><div style="background-color: #e74c3c;">Hello</div></body></html>',
+    });
+
+    const { POST } = await import(
+      "../[orgSlug]/brand-kits/from-template/route"
+    );
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/brand-kits/from-template`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          templateId: "test-brandkit-react-email-template",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.brandKit).toBeDefined();
+    expect(data.brandKit.autoExtracted).toBe(true);
+    expect(data.brandKit.name).toBe("Brand from Welcome Email");
+    expect(data.brandKit.primaryColor).toBeDefined();
+    expect(data.brandKit.fontFamily).toBeDefined();
+    expect(data.brandKit.buttonStyle).toBeDefined();
+    expect(data.brandKit.buttonRadius).toBeDefined();
   });
 });

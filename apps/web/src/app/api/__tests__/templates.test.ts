@@ -649,7 +649,8 @@ describe("Templates API - POST /api/[orgSlug]/emails/templates/[id]/duplicate", 
       status: "PUBLISHED",
       // CLI-push specific fields
       sourceFormat: "react-email",
-      source: 'import { Html } from "@react-email/components"; export default function Welcome() { return <Html><h1>Hello</h1></Html>; }',
+      source:
+        'import { Html } from "@react-email/components"; export default function Welcome() { return <Html><h1>Hello</h1></Html>; }',
       compiledHtml: "<html><h1>Hello</h1></html>",
       compiledText: "Hello",
       sourceHash: "abc123def456",
@@ -680,7 +681,9 @@ describe("Templates API - POST /api/[orgSlug]/emails/templates/[id]/duplicate", 
     expect(data.name).toBe("CLI Pushed Template (Copy)");
 
     expect(data.sourceFormat).toBe("react-email");
-    expect(data.source).toBe('import { Html } from "@react-email/components"; export default function Welcome() { return <Html><h1>Hello</h1></Html>; }');
+    expect(data.source).toBe(
+      'import { Html } from "@react-email/components"; export default function Welcome() { return <Html><h1>Hello</h1></Html>; }'
+    );
     expect(data.compiledHtml).toBe("<html><h1>Hello</h1></html>");
     expect(data.compiledText).toBe("Hello");
     expect(data.subject).toBe("Welcome {{firstName}}!");

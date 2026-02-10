@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Globe, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, FileText, Globe, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -28,6 +28,8 @@ import {
   useBrandKit,
   useCreateBrandKit,
   useExtractBrandKit,
+  useExtractBrandKitFromTemplate,
+  useReactEmailTemplates,
   useUpdateBrandKit,
 } from "@/hooks/use-brand-kit-queries";
 
@@ -91,9 +93,12 @@ export default function BrandKitEditPage() {
   const createBrandKit = useCreateBrandKit(orgSlug);
   const updateBrandKit = useUpdateBrandKit(orgSlug, brandKitId);
   const extractBrandKit = useExtractBrandKit(orgSlug);
+  const extractFromTemplate = useExtractBrandKitFromTemplate(orgSlug);
+  const { data: reactEmailTemplates } = useReactEmailTemplates(orgSlug, isNew);
 
   const [formData, setFormData] = useState<BrandKitFormData>(defaultFormData);
   const [extractDomain, setExtractDomain] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Populate form when editing existing kit
@@ -172,6 +177,65 @@ export default function BrandKitEditPage() {
       setExtractDomain("");
     } catch {
       toast.error("Failed to extract brand kit");
+    }
+  };
+
+  const handleExtractFromTemplate = async () => {
+    if (!selectedTemplateId) {
+      return;
+    }
+
+    try {
+      const result = await extractFromTemplate.mutateAsync(selectedTemplateId);
+      const extracted = result.brandKit;
+
+      const ensureHexColor = (
+        color: string | undefined,
+        fallback: string
+      ): string => {
+        if (!color) {
+          return fallback;
+        }
+        const hex = color.trim().toLowerCase();
+        if (/^#[0-9a-f]{6}$/.test(hex)) {
+          return hex;
+        }
+        return fallback;
+      };
+
+      setFormData({
+        name: extracted.name || "",
+        logoUrl: extracted.logoUrl || "",
+        primaryColor: ensureHexColor(
+          extracted.primaryColor,
+          defaultFormData.primaryColor
+        ),
+        secondaryColor: ensureHexColor(
+          extracted.secondaryColor,
+          defaultFormData.secondaryColor
+        ),
+        backgroundColor: ensureHexColor(
+          extracted.backgroundColor,
+          defaultFormData.backgroundColor
+        ),
+        textColor: ensureHexColor(
+          extracted.textColor,
+          defaultFormData.textColor
+        ),
+        fontFamily: extracted.fontFamily || defaultFormData.fontFamily,
+        headingFontFamily: extracted.headingFontFamily || "",
+        buttonStyle: extracted.buttonStyle || defaultFormData.buttonStyle,
+        buttonRadius: extracted.buttonRadius || defaultFormData.buttonRadius,
+        companyName: extracted.companyName || "",
+        companyAddress: "",
+      });
+
+      toast.success("Brand elements extracted from template!", {
+        description: "Review and adjust the extracted values before saving.",
+      });
+      setSelectedTemplateId("");
+    } catch {
+      toast.error("Failed to extract brand kit from template");
     }
   };
 
@@ -268,11 +332,10 @@ export default function BrandKitEditPage() {
                   Quick Start
                 </CardTitle>
                 <CardDescription>
-                  Enter your website URL to automatically extract brand colors,
-                  logo, and company name.
+                  Extract brand colors and fonts automatically.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Globe className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -307,6 +370,58 @@ export default function BrandKitEditPage() {
                     )}
                   </Button>
                 </div>
+
+                {reactEmailTemplates && reactEmailTemplates.length > 0 && (
+                  <>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="bg-card px-2 text-muted-foreground">
+                          or
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <FileText className="absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Select
+                          onValueChange={setSelectedTemplateId}
+                          value={selectedTemplateId}
+                        >
+                          <SelectTrigger className="pl-9">
+                            <SelectValue placeholder="Select a template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {reactEmailTemplates.map((t) => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        disabled={
+                          !selectedTemplateId || extractFromTemplate.isPending
+                        }
+                        onClick={handleExtractFromTemplate}
+                        variant="secondary"
+                      >
+                        {extractFromTemplate.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Extracting...
+                          </>
+                        ) : (
+                          "Extract"
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}

@@ -177,3 +177,48 @@ export function useExtractBrandKit(orgSlug: string) {
     },
   });
 }
+
+// Extract brand kit from template mutation
+export function useExtractBrandKitFromTemplate(orgSlug: string) {
+  return useMutation({
+    mutationFn: async (templateId: string) => {
+      const response = await fetch(`/api/${orgSlug}/brand-kits/from-template`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(
+          error.error || "Failed to extract brand kit from template"
+        );
+      }
+      return response.json() as Promise<{
+        success: boolean;
+        brandKit: Partial<BrandKit> & {
+          headingFontFamily?: string | null;
+          buttonStyle?: string;
+          buttonRadius?: string;
+        };
+      }>;
+    },
+  });
+}
+
+// Fetch react-email templates for brand kit extraction
+export function useReactEmailTemplates(orgSlug: string, enabled = false) {
+  return useQuery({
+    queryKey: ["templates", "react-email", orgSlug],
+    queryFn: async () => {
+      const response = await fetch(`/api/${orgSlug}/emails/templates`);
+      if (!response.ok) {
+        throw new Error("Failed to load templates");
+      }
+      const data = await response.json();
+      return data.filter(
+        (t: { sourceFormat: string }) => t.sourceFormat === "react-email"
+      ) as Array<{ id: string; name: string }>;
+    },
+    enabled,
+  });
+}
