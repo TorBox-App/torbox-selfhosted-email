@@ -76,3 +76,4 @@ sst-env.d.ts
 next-env.d.ts
 
 .claude/blueprints/
+.claude/research/
