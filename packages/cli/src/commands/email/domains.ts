@@ -116,7 +116,9 @@ async function checkVerification(
   // Check SPF record
   try {
     const records = await resolver.resolveTxt(domain);
-    const spfRecord = records.flat().find((r) => r.startsWith("v=spf1"));
+    const spfRecord = records
+      .map((c) => c.join(""))
+      .find((r) => r.startsWith("v=spf1"));
     const hasAmazonSES = spfRecord?.includes("include:amazonses.com");
     dnsResults.push({
       name: domain,
@@ -147,7 +149,9 @@ async function checkVerification(
   // Check DMARC record
   try {
     const records = await resolver.resolveTxt(`_dmarc.${domain}`);
-    const dmarcRecord = records.flat().find((r) => r.startsWith("v=DMARC1"));
+    const dmarcRecord = records
+      .map((c) => c.join(""))
+      .find((r) => r.startsWith("v=DMARC1"));
     dnsResults.push({
       name: `_dmarc.${domain}`,
       type: "TXT (DMARC)",
@@ -216,7 +220,9 @@ async function checkVerification(
     // Check SPF record for MAIL FROM domain
     try {
       const records = await resolver.resolveTxt(mailFromDomain);
-      const spfRecord = records.flat().find((r) => r.startsWith("v=spf1"));
+      const spfRecord = records
+        .map((c) => c.join(""))
+        .find((r) => r.startsWith("v=spf1"));
       const hasAmazonSES = spfRecord?.includes("include:amazonses.com");
       dnsResults.push({
         name: mailFromDomain,

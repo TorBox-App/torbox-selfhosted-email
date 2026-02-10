@@ -13,6 +13,10 @@ import {
   SIMULATOR_SCENARIOS,
 } from "../../utils/email/ses-simulator.js";
 import {
+  pollDomainVerification,
+  verifySandboxRecipient,
+} from "../../utils/email/verification.js";
+import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
@@ -145,7 +149,39 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
     }
   }
 
-  // 5. Check domain verification status before sending
+  // 5. Sandbox recipient verification (for custom emails in sandbox mode)
+  if (options.isSandbox && toEmail && !isSimulatorAddress(toEmail)) {
+    progress.stop();
+    clack.log.warn(
+      `SES is in sandbox mode — recipient ${pc.cyan(toEmail)} must be verified to receive emails.`
+    );
+
+    const shouldVerify = await clack.confirm({
+      message: `Send a verification email to ${toEmail} now?`,
+      initialValue: true,
+    });
+
+    if (clack.isCancel(shouldVerify) || !shouldVerify) {
+      clack.log.info(
+        `Skipping recipient verification. You can use ${pc.cyan("success@simulator.amazonses.com")} instead.`
+      );
+      return;
+    }
+
+    const result = await verifySandboxRecipient(toEmail, region);
+    if (!result.verified) {
+      if (result.error) {
+        clack.log.warn(`Could not send verification email: ${result.error}`);
+      } else {
+        clack.log.warn(
+          "Recipient verification timed out. You can try again later or use a simulator address."
+        );
+      }
+      return;
+    }
+  }
+
+  // 6. Check domain verification status before sending
   const fromEmail = `test@${domain}`;
   const sesClient = new SESv2Client({ region });
 
@@ -157,25 +193,59 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
     if (!identityResponse.VerifiedForSendingStatus) {
       progress.stop();
       const dkimStatus = identityResponse.DkimAttributes?.Status || "PENDING";
-      clack.log.error(
-        `Sending domain ${pc.cyan(domain)} is not yet verified (DKIM: ${dkimStatus})`
-      );
-      console.log(
-        "\nDKIM DNS records need to propagate before you can send emails."
-      );
-      console.log("This typically takes a few minutes after deployment.\n");
-      console.log(
-        `Run ${pc.cyan(`wraps email domains verify --domain ${domain}`)} to check DNS status.\n`
-      );
-      process.exit(1);
-      return;
+
+      if (options.postDeploy) {
+        // Post-deploy: offer to wait for DNS verification instead of hard exit
+        clack.log.warn(
+          `Sending domain ${pc.cyan(domain)} is not yet verified (DKIM: ${dkimStatus})`
+        );
+
+        const shouldWait = await clack.confirm({
+          message: "Wait for DNS verification? (typically a few minutes)",
+          initialValue: true,
+        });
+
+        if (clack.isCancel(shouldWait) || !shouldWait) {
+          clack.log.info(
+            `You can send a test email later with ${pc.cyan("wraps email test")}`
+          );
+          return;
+        }
+
+        const verified = await pollDomainVerification(domain, region);
+        if (!verified) {
+          clack.log.warn(
+            "DNS verification is still pending. You can retry later."
+          );
+          console.log(
+            `\nRun ${pc.cyan(`wraps email domains verify --domain ${domain} --wait`)} to keep polling.\n`
+          );
+          return;
+        }
+      } else {
+        // Standalone invocation: hard error
+        clack.log.error(
+          `Sending domain ${pc.cyan(domain)} is not yet verified (DKIM: ${dkimStatus})`
+        );
+        console.log(
+          "\nDKIM DNS records need to propagate before you can send emails."
+        );
+        console.log("This typically takes a few minutes after deployment.\n");
+        console.log(
+          `Run ${pc.cyan(`wraps email domains verify --domain ${domain}`)} to check DNS status.\n`
+        );
+        process.exit(1);
+        return;
+      }
     }
-  } catch (identityError: unknown) {
-    // If we can't check verification, proceed with the send attempt
-    // and let the SES error handler provide guidance
+  } catch {
+    // guardrail:allow-swallowed-error — verification check may fail due to permissions, proceed with send attempt
+    clack.log.warn(
+      "Could not check domain verification status — proceeding with send attempt"
+    );
   }
 
-  // 6. Send test email
+  // 7. Send test email
   try {
     const messageId = await progress.execute(
       `Sending test email to ${toEmail}`,
@@ -214,7 +284,7 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
 
     progress.stop();
 
-    // 6. Display success
+    // 8. Display success
     const isSimulator = isSimulatorAddress(toEmail!);
 
     console.log("\n");
@@ -238,7 +308,7 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
       "Email Sent"
     );
 
-    // 7. Track success
+    // 9. Track success
     trackCommand("email:test", {
       success: true,
       is_simulator: isSimulator,

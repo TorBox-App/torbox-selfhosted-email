@@ -238,6 +238,8 @@ export type EmailTestOptions = {
   region?: string;
   to?: string;
   scenario?: "success" | "bounce" | "complaint" | "ooto" | "suppression_list";
+  isSandbox?: boolean;
+  postDeploy?: boolean;
 };
 
 /**

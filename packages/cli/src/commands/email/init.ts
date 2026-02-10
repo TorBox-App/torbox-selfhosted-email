@@ -722,24 +722,30 @@ export async function init(options: InitOptions): Promise<void> {
     isSandbox = sesStatus.isSandbox;
     if (sesStatus.isSandbox) {
       console.log("");
-      clack.note(
-        [
-          `Your SES account is in ${pc.yellow("sandbox mode")}.`,
-          "",
-          "In sandbox mode you can only send to verified email addresses",
-          "or the SES mailbox simulator. To send to any recipient,",
-          "request production access in the AWS console:",
-          "",
-          pc.cyan(
-            `https://${region}.console.aws.amazon.com/ses/home?region=${region}#/account`
-          ),
-          "",
-          pc.dim(
-            "Sandbox is normal for new accounts. Production access typically takes 24 hours."
-          ),
-        ].join("\n"),
-        "SES Sandbox Mode"
-      );
+      if (sesStatus.sandboxUncertain) {
+        clack.log.info(
+          `Could not confirm SES account status — assuming ${pc.yellow("sandbox mode")} for safety.`
+        );
+      } else {
+        clack.note(
+          [
+            `Your SES account is in ${pc.yellow("sandbox mode")}.`,
+            "",
+            "In sandbox mode you can only send to verified email addresses",
+            "or the SES mailbox simulator. To send to any recipient,",
+            "request production access in the AWS console:",
+            "",
+            pc.cyan(
+              `https://${region}.console.aws.amazon.com/ses/home?region=${region}#/account`
+            ),
+            "",
+            pc.dim(
+              "Sandbox is normal for new accounts. Production access typically takes 24 hours."
+            ),
+          ].join("\n"),
+          "SES Sandbox Mode"
+        );
+      }
     }
   } catch {
     // guardrail:allow-swallowed-error — sandbox detection is non-fatal, skip notice if API fails
@@ -755,7 +761,7 @@ export async function init(options: InitOptions): Promise<void> {
 
     if (!clack.isCancel(wantTest) && wantTest) {
       const { emailTest } = await import("./test.js");
-      await emailTest({ region });
+      await emailTest({ region, isSandbox, postDeploy: true });
     }
   }
 

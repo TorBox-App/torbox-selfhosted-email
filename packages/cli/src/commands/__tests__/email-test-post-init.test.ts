@@ -67,6 +67,14 @@ vi.mock("../../utils/shared/aws.js", () => ({
   }),
 }));
 
+// Mock verification utilities
+vi.mock("../../utils/email/verification.js", () => ({
+  pollDomainVerification: vi.fn().mockResolvedValue(true),
+  verifySandboxRecipient: vi
+    .fn()
+    .mockResolvedValue({ verified: true, email: "user@example.com" }),
+}));
+
 const FRESHLY_DEPLOYED_METADATA = {
   version: "1.0.0",
   accountId: "123456789012",
@@ -242,5 +250,86 @@ describe("post-init test email bug: unverified FROM domain", () => {
     expect(consoleOutput).toContain("simulator.amazonses.com");
 
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("postDeploy: polls DNS instead of hard exit when domain unverified", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(
+      FRESHLY_DEPLOYED_METADATA
+    );
+
+    const clack = await import("@clack/prompts");
+    vi.mocked(clack.confirm).mockResolvedValue(true);
+
+    // Domain starts unverified
+    sesv2Mock.on(GetEmailIdentityCommand).resolves({
+      VerifiedForSendingStatus: false,
+      DkimAttributes: { Status: "PENDING" },
+    });
+
+    const { pollDomainVerification } = await import(
+      "../../utils/email/verification.js"
+    );
+    vi.mocked(pollDomainVerification).mockResolvedValue(true);
+
+    sesv2Mock.on(SendEmailCommand).resolves({
+      MessageId: "post-init-verified-id",
+    });
+
+    await emailTest({
+      to: "success@simulator.amazonses.com",
+      region: "us-east-1",
+      postDeploy: true,
+    });
+
+    // Should have polled for verification
+    expect(pollDomainVerification).toHaveBeenCalledWith(
+      "mynewapp.com",
+      "us-east-1"
+    );
+
+    // Should have proceeded to send
+    const sendCalls = sesv2Mock.commandCalls(SendEmailCommand);
+    expect(sendCalls).toHaveLength(1);
+
+    // Should NOT have called process.exit
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it("postDeploy: graceful return when DNS polling times out", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(
+      FRESHLY_DEPLOYED_METADATA
+    );
+
+    const clack = await import("@clack/prompts");
+    vi.mocked(clack.confirm).mockResolvedValue(true);
+
+    sesv2Mock.on(GetEmailIdentityCommand).resolves({
+      VerifiedForSendingStatus: false,
+      DkimAttributes: { Status: "PENDING" },
+    });
+
+    const { pollDomainVerification } = await import(
+      "../../utils/email/verification.js"
+    );
+    vi.mocked(pollDomainVerification).mockResolvedValue(false);
+
+    await emailTest({
+      to: "success@simulator.amazonses.com",
+      region: "us-east-1",
+      postDeploy: true,
+    });
+
+    // Should NOT have called process.exit (graceful return)
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    // Should NOT have attempted to send
+    const sendCalls = sesv2Mock.commandCalls(SendEmailCommand);
+    expect(sendCalls).toHaveLength(0);
   });
 });

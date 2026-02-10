@@ -221,8 +221,8 @@ export async function listSESDomains(region: string): Promise<SESDomain[]> {
       domain,
       verified: attributes[domain]?.VerificationStatus === "Success",
     }));
-  } catch (error) {
-    console.error("Error listing SES domains:", error);
+  } catch {
+    // guardrail:allow-swallowed-error — listing SES domains may fail due to permissions, safe to return empty
     return [];
   }
 }
@@ -232,6 +232,7 @@ export async function listSESDomains(region: string): Promise<SESDomain[]> {
  */
 export type SESAccountStatus = {
   isSandbox: boolean;
+  sandboxUncertain?: boolean;
   sendQuota?: {
     max24HourSend: number;
     maxSendRate: number;
@@ -263,8 +264,8 @@ export async function getSESAccountStatus(
       enforcementStatus: response.EnforcementStatus,
     };
   } catch {
-    // guardrail:allow-swallowed-error — SES GetAccount may fail due to permissions or throttling, safe to default
-    return { isSandbox: false };
+    // guardrail:allow-swallowed-error — SES GetAccount may fail due to permissions or throttling, default to sandbox (safer: offers extra help)
+    return { isSandbox: true, sandboxUncertain: true };
   }
 }
 

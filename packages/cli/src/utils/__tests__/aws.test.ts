@@ -187,18 +187,9 @@ describe("listSESDomains", () => {
   it("should return empty array on API error", async () => {
     sesMock.on(ListIdentitiesCommand).rejects(new Error("API Error"));
 
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
     const domains = await listSESDomains("us-east-1");
 
     expect(domains).toEqual([]);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Error listing SES domains:",
-      expect.any(Error)
-    );
-
-    consoleErrorSpy.mockRestore();
   });
 
   it("should handle multiple domains correctly", async () => {
@@ -274,11 +265,12 @@ describe("getSESAccountStatus", () => {
     expect(result.sendQuota?.max24HourSend).toBe(50_000);
   });
 
-  it("should return isSandbox false on API error (graceful degradation)", async () => {
+  it("should return isSandbox true with sandboxUncertain on API error (safe default)", async () => {
     sesv2Mock.on(GetAccountCommand).rejects(new Error("Access denied"));
 
     const result = await getSESAccountStatus("us-east-1");
-    expect(result.isSandbox).toBe(false);
+    expect(result.isSandbox).toBe(true);
+    expect(result.sandboxUncertain).toBe(true);
     expect(result.sendQuota).toBeUndefined();
   });
 
@@ -316,10 +308,10 @@ describe("isSESSandbox", () => {
     expect(result).toBe(false);
   });
 
-  it("should return false on API error", async () => {
+  it("should return true on API error (safe default)", async () => {
     sesv2Mock.on(GetAccountCommand).rejects(new Error("Network timeout"));
 
     const result = await isSESSandbox("us-east-1");
-    expect(result).toBe(false);
+    expect(result).toBe(true);
   });
 });

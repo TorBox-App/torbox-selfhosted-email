@@ -1,4 +1,8 @@
-import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
+import {
+  GetEmailIdentityCommand,
+  SESv2Client,
+  SendEmailCommand,
+} from "@aws-sdk/client-sesv2";
 import { mockClient } from "aws-sdk-client-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emailTest } from "../email/test.js";
@@ -47,6 +51,14 @@ vi.mock("../../utils/shared/aws.js", () => ({
     userId: "AIDAI123456789",
     arn: "arn:aws:iam::123456789012:user/test",
   }),
+}));
+
+// Mock verification utilities
+vi.mock("../../utils/email/verification.js", () => ({
+  pollDomainVerification: vi.fn().mockResolvedValue(true),
+  verifySandboxRecipient: vi
+    .fn()
+    .mockResolvedValue({ verified: true, email: "user@example.com" }),
 }));
 
 const MOCK_METADATA = {
@@ -246,5 +258,141 @@ describe("email test command", () => {
       expect.objectContaining({ success: false })
     );
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("postDeploy + unverified domain: offers to wait, proceeds after verified", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(MOCK_METADATA);
+
+    const clack = await import("@clack/prompts");
+    vi.mocked(clack.confirm).mockResolvedValue(true);
+
+    // Domain starts unverified
+    sesv2Mock.on(GetEmailIdentityCommand).resolves({
+      VerifiedForSendingStatus: false,
+      DkimAttributes: { Status: "PENDING" },
+    });
+
+    // Mock pollDomainVerification to return true (verified)
+    const { pollDomainVerification } = await import(
+      "../../utils/email/verification.js"
+    );
+    vi.mocked(pollDomainVerification).mockResolvedValue(true);
+
+    sesv2Mock.on(SendEmailCommand).resolves({
+      MessageId: "test-post-deploy-id",
+    });
+
+    await emailTest({
+      to: "success@simulator.amazonses.com",
+      postDeploy: true,
+    });
+
+    // Should have called pollDomainVerification
+    expect(pollDomainVerification).toHaveBeenCalledWith(
+      "example.com",
+      "us-east-1"
+    );
+
+    // Should have sent the email after verification
+    const sendCalls = sesv2Mock.commandCalls(SendEmailCommand);
+    expect(sendCalls).toHaveLength(1);
+
+    // Should NOT have called process.exit
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it("postDeploy + unverified domain + user declines: graceful exit (no process.exit)", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(MOCK_METADATA);
+
+    const clack = await import("@clack/prompts");
+    vi.mocked(clack.confirm).mockResolvedValue(false);
+
+    // Domain is unverified
+    sesv2Mock.on(GetEmailIdentityCommand).resolves({
+      VerifiedForSendingStatus: false,
+      DkimAttributes: { Status: "PENDING" },
+    });
+
+    await emailTest({
+      to: "success@simulator.amazonses.com",
+      postDeploy: true,
+    });
+
+    // Should NOT have called process.exit (graceful return)
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    // Should NOT have attempted to send email
+    const sendCalls = sesv2Mock.commandCalls(SendEmailCommand);
+    expect(sendCalls).toHaveLength(0);
+  });
+
+  it("isSandbox + custom email: offers recipient verification", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(MOCK_METADATA);
+
+    const clack = await import("@clack/prompts");
+    vi.mocked(clack.confirm).mockResolvedValue(true);
+
+    const { verifySandboxRecipient } = await import(
+      "../../utils/email/verification.js"
+    );
+    vi.mocked(verifySandboxRecipient).mockResolvedValue({
+      verified: true,
+      email: "user@example.com",
+    });
+
+    sesv2Mock.on(SendEmailCommand).resolves({
+      MessageId: "test-sandbox-id",
+    });
+
+    await emailTest({
+      to: "user@example.com",
+      isSandbox: true,
+    });
+
+    // Should have called verifySandboxRecipient
+    expect(verifySandboxRecipient).toHaveBeenCalledWith(
+      "user@example.com",
+      "us-east-1"
+    );
+
+    // Should have sent the email after verification
+    const sendCalls = sesv2Mock.commandCalls(SendEmailCommand);
+    expect(sendCalls).toHaveLength(1);
+  });
+
+  it("isSandbox + simulator email: skips recipient verification", async () => {
+    const { loadConnectionMetadata } = await import(
+      "../../utils/shared/metadata.js"
+    );
+    vi.mocked(loadConnectionMetadata).mockResolvedValue(MOCK_METADATA);
+
+    const { verifySandboxRecipient } = await import(
+      "../../utils/email/verification.js"
+    );
+
+    sesv2Mock.on(SendEmailCommand).resolves({
+      MessageId: "test-simulator-id",
+    });
+
+    await emailTest({
+      to: "success@simulator.amazonses.com",
+      isSandbox: true,
+    });
+
+    // Should NOT have called verifySandboxRecipient for simulator addresses
+    expect(verifySandboxRecipient).not.toHaveBeenCalled();
+
+    // Should have sent the email directly
+    const sendCalls = sesv2Mock.commandCalls(SendEmailCommand);
+    expect(sendCalls).toHaveLength(1);
   });
 });
