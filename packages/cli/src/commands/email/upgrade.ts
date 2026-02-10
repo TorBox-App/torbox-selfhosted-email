@@ -1667,6 +1667,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         // This ensures Pulumi knows about resources that already exist
         await stack.refresh({ onOutput: () => {} });
 
+        // Skip import flags — the stack already exists so resources are tracked in state
+        stackConfig.skipResourceImports = true;
+
         // Pulumi will automatically detect changes and only update what's needed
         const upResult = await stack.up({ onOutput: () => {} });
         const pulumiOutputs = upResult.outputs;

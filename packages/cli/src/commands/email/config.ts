@@ -291,6 +291,9 @@ export async function config(options: EmailConfigOptions): Promise<void> {
         // Refresh state to sync with actual AWS resources (prevents AlreadyExists errors)
         await stack.refresh({ onOutput: () => {} });
 
+        // Skip import flags — the stack already exists so resources are tracked in state
+        stackConfig.skipResourceImports = true;
+
         // Pulumi will automatically detect changes and only update what's needed
         const upResult = await stack.up({ onOutput: () => {} });
         const pulumiOutputs = upResult.outputs;

@@ -107,9 +107,10 @@ export async function deployEmailStack(
   // 4. SES resources (if tracking or event tracking enabled)
   let sesResources;
   if (emailConfig.tracking?.enabled || emailConfig.eventTracking?.enabled) {
-    // Check if the event destination already exists in AWS but not in Pulumi state
-    // This can happen if resources were created outside Pulumi or state got out of sync
+    // Check if the event destination already exists in AWS but not in Pulumi state.
+    // Skip this check when skipResourceImports is true (resources already in state).
     const shouldImportEventDest =
+      !config.skipResourceImports &&
       emailConfig.eventTracking?.enabled &&
       (await eventDestinationExists(
         "wraps-email-tracking",
@@ -149,6 +150,7 @@ export async function deployEmailStack(
       eventTrackingEnabled: emailConfig.eventTracking?.enabled, // Pass flag to create EventBridge destination
       tlsRequired: emailConfig.tlsRequired, // Require TLS encryption for all emails
       importExistingEventDestination: shouldImportEventDest, // Import if exists to avoid AlreadyExistsException
+      skipResourceImports: config.skipResourceImports, // Skip import flags when resources already in Pulumi state
     });
   }
 

@@ -170,6 +170,9 @@ export type EmailStackConfig = {
     webhookSecret: string; // API key for webhook authentication
     webhookUrl?: string; // Override webhook URL (defaults to api.wraps.dev)
   };
+  // Skip Pulumi import flags when resources already exist in Pulumi state.
+  // Prevents import collisions when redeploying an existing stack (e.g., platform connect after email init).
+  skipResourceImports?: boolean;
 };
 
 /**

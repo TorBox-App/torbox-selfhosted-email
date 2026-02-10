@@ -367,6 +367,15 @@ async function deployEventBridge(
 
     await stack.setConfig("aws:region", { value: region });
     await stack.refresh({ onOutput: () => {} });
+
+    // Check if resources already exist in Pulumi state (e.g., from a prior `wraps email init`).
+    // If so, skip import flags to avoid collision — the resources are already tracked.
+    const stackState = await stack.exportStack();
+    const resourceCount = stackState.deployment?.resources?.length ?? 0;
+    if (resourceCount > 1) {
+      stackConfig.skipResourceImports = true;
+    }
+
     await stack.up({ onOutput: () => {} });
   });
 
@@ -1001,6 +1010,14 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
 
         await stack.setConfig("aws:region", { value: region });
         await stack.refresh({ onOutput: () => {} });
+
+        // Check if resources already exist in Pulumi state to avoid import collisions
+        const stackState = await stack.exportStack();
+        const resourceCount = stackState.deployment?.resources?.length ?? 0;
+        if (resourceCount > 1) {
+          stackConfig.skipResourceImports = true;
+        }
+
         await stack.up({ onOutput: () => {} });
       });
 

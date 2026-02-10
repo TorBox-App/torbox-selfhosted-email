@@ -19,6 +19,7 @@ export type SESResourcesConfig = {
   eventTrackingEnabled?: boolean; // NEW: Whether to create EventBridge event destination
   tlsRequired?: boolean; // Require TLS encryption for all emails
   importExistingEventDestination?: boolean; // Import existing event destination if it exists
+  skipResourceImports?: boolean; // Skip import flags when resources already exist in Pulumi state
 };
 
 /**
@@ -158,15 +159,19 @@ export async function createSESResources(
     };
   }
 
-  // Check if configuration set already exists
+  // Check if configuration set already exists in AWS
   const configSetName = "wraps-email-tracking";
   const exists = await configurationSetExists(configSetName, config.region);
 
-  const configSet = exists
-    ? new aws.sesv2.ConfigurationSet(configSetName, configSetOptions, {
-        import: configSetName, // Import existing configuration set
-      })
-    : new aws.sesv2.ConfigurationSet(configSetName, configSetOptions);
+  // Only use import when the resource exists in AWS but not yet in Pulumi state.
+  // When skipResourceImports is true, the resource is already tracked in state
+  // (e.g., from a prior `wraps email init`), so import would cause a collision.
+  const configSet =
+    exists && !config.skipResourceImports
+      ? new aws.sesv2.ConfigurationSet(configSetName, configSetOptions, {
+          import: configSetName,
+        })
+      : new aws.sesv2.ConfigurationSet(configSetName, configSetOptions);
 
   // SES can only send to the default EventBridge bus
   // We'll use EventBridge rules to route from default bus to SQS
@@ -206,11 +211,12 @@ export async function createSESResources(
         },
       },
       {
-        // Import existing resource if it already exists in AWS
-        // This prevents AlreadyExistsException when the resource exists but isn't in Pulumi state
-        import: config.importExistingEventDestination
-          ? `wraps-email-tracking|${eventDestName}`
-          : undefined,
+        // Import existing resource if it already exists in AWS but not in Pulumi state.
+        // Skip when skipResourceImports is true (resource already tracked in state).
+        import:
+          config.importExistingEventDestination && !config.skipResourceImports
+            ? `wraps-email-tracking|${eventDestName}`
+            : undefined,
       }
     );
   }
@@ -228,10 +234,25 @@ export async function createSESResources(
     );
 
     // Use SES v2 API to create email identity with configuration set
-    domainIdentity = identityExists
-      ? new aws.sesv2.EmailIdentity(
-          "wraps-email-domain",
-          {
+    domainIdentity =
+      identityExists && !config.skipResourceImports
+        ? new aws.sesv2.EmailIdentity(
+            "wraps-email-domain",
+            {
+              emailIdentity: config.domain,
+              configurationSetName: configSet.configurationSetName,
+              dkimSigningAttributes: {
+                nextSigningKeyLength: "RSA_2048_BIT",
+              },
+              tags: {
+                ManagedBy: "wraps-cli",
+              },
+            },
+            {
+              import: config.domain,
+            }
+          )
+        : new aws.sesv2.EmailIdentity("wraps-email-domain", {
             emailIdentity: config.domain,
             configurationSetName: configSet.configurationSetName, // Link configuration set to domain
             dkimSigningAttributes: {
@@ -239,23 +260,9 @@ export async function createSESResources(
             },
             tags: {
               ManagedBy: "wraps-cli",
+              Service: "email",
             },
-          },
-          {
-            import: config.domain, // Import existing identity
-          }
-        )
-      : new aws.sesv2.EmailIdentity("wraps-email-domain", {
-          emailIdentity: config.domain,
-          configurationSetName: configSet.configurationSetName, // Link configuration set to domain
-          dkimSigningAttributes: {
-            nextSigningKeyLength: "RSA_2048_BIT",
-          },
-          tags: {
-            ManagedBy: "wraps-cli",
-            Service: "email",
-          },
-        });
+          });
 
     // Extract DKIM tokens for DNS configuration
     dkimTokens = domainIdentity.dkimSigningAttributes.apply(
