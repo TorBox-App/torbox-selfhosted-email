@@ -5,6 +5,7 @@ import { listTopics } from "@/actions/topics";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import { ContactAnalytics } from "./components/contact-analytics";
+import { ContactsEmptyState } from "./components/contacts-empty-state";
 import { ContactsTable } from "./components/contacts-table";
 
 type ContactsPageProps = {
@@ -73,6 +74,20 @@ export default async function ContactsPage({
   const total = contactsResult.success ? contactsResult.total : 0;
   const topics = topicsResult.success ? topicsResult.topics : [];
   const proFeaturesEnabled = topicsFeature.allowed;
+
+  const hasFilters = !!(search || emailStatus || topicId);
+  const isEmpty = total === 0 && !hasFilters;
+
+  if (isEmpty) {
+    return (
+      <div className="px-4 lg:px-6">
+        <ContactsEmptyState
+          organizationId={orgWithMembership.id}
+          orgSlug={orgSlug}
+        />
+      </div>
+    );
+  }
 
   return (
     <>
