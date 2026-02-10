@@ -13,6 +13,8 @@ import {
   MessageSquare,
   Rocket,
   Send,
+  ShieldCheck,
+  Sparkles,
   Tags,
   Terminal,
   Users,
@@ -36,6 +38,52 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "Platform v0.14.0",
+    date: "February 2026",
+    icon: Sparkles,
+    iconColor:
+      "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    title: "AI Template Editor & Workflows-as-Code",
+    items: [
+      "AI code assistant with live preview pane and resizable split view",
+      "Brand kit picker and local image uploads in AI assistant",
+      "Bulk template actions with SES sync on delete",
+      <>
+        Natural language date input for broadcast scheduling (e.g.{" "}
+        <Code>next Tuesday at 9am</Code>)
+      </>,
+      "Workflows-as-code: define and push automations from the CLI",
+      "CloudFormation template brought to full CLI parity",
+      "Activation email series and product update templates",
+      <>
+        Auto-create contacts for <Code>SUBSCRIPTION</Code> events
+      </>,
+    ],
+  },
+  {
+    version: "CLI v2.12",
+    date: "February 2026",
+    icon: ShieldCheck,
+    iconColor:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    title: "Reliability & Security",
+    items: [
+      "Batch send security, correctness, and maintainability fixes",
+      "Device auth flow fixes for telemetry, errors, and config",
+      "Delete S3 metadata on destroy to prevent stuck state after partial failure",
+      "Graceful Pulumi destroy failure handling instead of leaving stale metadata",
+      "Domain verification check before test email send",
+      "Prevent Pulumi import collision when stack already has resources",
+      <>
+        Fix CI detection silently disabling telemetry for Vercel and Netlify
+        users
+      </>,
+      <>
+        <Code>wraps email templates preview</Code> command
+      </>,
+    ],
+  },
   {
     version: "CLI v2.7.0 + SDK v0.6.0",
     date: "February 2026",
