@@ -277,7 +277,89 @@ const url = await email.inbox.getAttachment('email-abc123', 'attachment-id', {
 const inboxDeleteCode = `// Delete email and all associated files (parsed JSON, raw MIME, attachments)
 await email.inbox.delete('email-abc123');`;
 
-const errorHandlingCode = `import { WrapsEmail, SESError, ValidationError } from '@wraps.dev/email';
+// Events code examples
+const eventsInitCode = `const email = new WrapsEmail({
+  historyTableName: 'wraps-email-history',
+});`;
+
+const eventsGetCode = `// Get full status and event timeline for an email
+const status = await email.events.get('message-id-from-send');
+
+if (status) {
+  console.log('Status:', status.status);     // 'delivered', 'opened', 'bounced', etc.
+  console.log('From:', status.from);
+  console.log('To:', status.to);
+  console.log('Subject:', status.subject);
+  console.log('Sent at:', new Date(status.sentAt));
+  console.log('Last event:', new Date(status.lastEventAt));
+
+  // Full event timeline
+  for (const event of status.events) {
+    console.log(\`  \${event.type} at \${new Date(event.timestamp)}\`);
+    if (event.metadata) console.log('    metadata:', event.metadata);
+  }
+}`;
+
+const eventsListCode = `// List recent emails with status (paginated)
+const { emails, nextToken } = await email.events.list({
+  accountId: '123456789012',
+  startTime: new Date('2025-01-01'),
+  maxResults: 20,
+});
+
+for (const item of emails) {
+  console.log(\`\${item.messageId}: \${item.status} - \${item.subject}\`);
+}
+
+// Fetch next page
+if (nextToken) {
+  const nextPage = await email.events.list({
+    accountId: '123456789012',
+    continuationToken: nextToken,
+  });
+}`;
+
+// Suppression code examples
+const suppressionGetCode = `// Check if an email is suppressed
+const entry = await email.suppression.get('user@example.com');
+
+if (entry) {
+  console.log('Suppressed:', entry.email);
+  console.log('Reason:', entry.reason);       // 'BOUNCE' or 'COMPLAINT'
+  console.log('Since:', entry.lastUpdated);
+  console.log('Message ID:', entry.messageId); // original bounce/complaint message
+} else {
+  console.log('Email is not suppressed');
+}`;
+
+const suppressionAddCode = `// Manually add an email to the suppression list
+await email.suppression.add('bad-address@example.com', 'BOUNCE');
+
+// Also works for complaints
+await email.suppression.add('unsubscribed@example.com', 'COMPLAINT');`;
+
+const suppressionRemoveCode = `// Remove from suppression list (idempotent — won't throw if not found)
+await email.suppression.remove('user@example.com');`;
+
+const suppressionListCode = `// List all suppressed emails (paginated)
+const { entries, nextToken } = await email.suppression.list({
+  reason: 'BOUNCE',                    // optional: filter by reason
+  startDate: new Date('2025-01-01'),   // optional
+  maxResults: 100,                     // default: 100, max: 1000
+});
+
+for (const entry of entries) {
+  console.log(\`\${entry.email}: \${entry.reason} (since \${entry.lastUpdated})\`);
+}
+
+// Paginate
+if (nextToken) {
+  const nextPage = await email.suppression.list({
+    continuationToken: nextToken,
+  });
+}`;
+
+const errorHandlingCode = `import { WrapsEmail, SESError, DynamoDBError, ValidationError } from '@wraps.dev/email';
 
 try {
   await email.send({ ... });
@@ -291,6 +373,11 @@ try {
     console.error('SES error:', error.message);
     console.error('Code:', error.code); // 'MessageRejected', 'Throttling'
     console.error('Request ID:', error.requestId);
+    console.error('Retryable:', error.retryable);
+  } else if (error instanceof DynamoDBError) {
+    // DynamoDB error (events API)
+    console.error('DynamoDB error:', error.message);
+    console.error('Code:', error.code);
     console.error('Retryable:', error.retryable);
   }
 }`;
@@ -638,6 +725,76 @@ await email.inbox.delete('email-abc123');
 | \`inbox.getRaw(emailId)\` | Get presigned URL for raw MIME email |
 | \`inbox.delete(emailId)\` | Delete email and all associated files |`,
 
+  events: `## Email Events
+
+Track the delivery lifecycle of every email. Requires event tracking infrastructure deployed with \`wraps email init\` (Production or Enterprise preset).
+
+### Initialize with Events
+\`\`\`typescript
+${eventsInitCode}
+\`\`\`
+
+### Get Email Status
+\`\`\`typescript
+${eventsGetCode}
+\`\`\`
+
+### List Emails with Status
+\`\`\`typescript
+${eventsListCode}
+\`\`\`
+
+### Status Values
+| Status | Description |
+|--------|-------------|
+| \`sent\` | Email accepted by SES |
+| \`delivered\` | Email delivered to recipient's mail server |
+| \`opened\` | Recipient opened the email (tracking pixel) |
+| \`clicked\` | Recipient clicked a link in the email |
+| \`bounced\` | Email bounced (hard or soft bounce) |
+| \`complained\` | Recipient marked as spam |
+| \`suppressed\` | Email suppressed by SES (on suppression list) |
+
+Negative statuses (bounced, complained, suppressed) always override positive ones. Status is derived from the highest-priority event.
+
+### Available Methods
+| Method | Description |
+|--------|-------------|
+| \`events.get(messageId)\` | Get full status and event timeline for an email |
+| \`events.list(options)\` | List emails with status, filtered by account and time range |`,
+
+  suppression: `## Suppression List
+
+Manage the SES account-level suppression list. Emails on this list are automatically blocked from sending. The suppression API is always available — no extra configuration needed.
+
+### Check if Suppressed
+\`\`\`typescript
+${suppressionGetCode}
+\`\`\`
+
+### Add to Suppression List
+\`\`\`typescript
+${suppressionAddCode}
+\`\`\`
+
+### Remove from Suppression List
+\`\`\`typescript
+${suppressionRemoveCode}
+\`\`\`
+
+### List Suppressed Emails
+\`\`\`typescript
+${suppressionListCode}
+\`\`\`
+
+### Available Methods
+| Method | Description |
+|--------|-------------|
+| \`suppression.get(email)\` | Check if an email is suppressed (returns null if not) |
+| \`suppression.add(email, reason)\` | Add email to suppression list |
+| \`suppression.remove(email)\` | Remove from suppression list (idempotent) |
+| \`suppression.list(options?)\` | List suppressed emails with filters and pagination |`,
+
   errorHandling: `## Error Handling
 
 The SDK throws typed errors for different failure scenarios.
@@ -647,6 +804,7 @@ The SDK throws typed errors for different failure scenarios.
 |-------|-------------|
 | \`ValidationError\` | Invalid input parameters (includes \`field\` property) |
 | \`SESError\` | AWS SES error (includes \`code\`, \`requestId\`, \`retryable\` properties) |
+| \`DynamoDBError\` | DynamoDB error from events API (includes \`code\`, \`requestId\`, \`retryable\` properties) |
 
 ### Example
 \`\`\`typescript
@@ -685,6 +843,10 @@ ${SECTION_MD.sendTemplate}
 ${SECTION_MD.sendBulkTemplate}
 
 ${SECTION_MD.inbox}
+
+${SECTION_MD.events}
+
+${SECTION_MD.suppression}
 
 ${SECTION_MD.errorHandling}
 
@@ -2079,6 +2241,522 @@ export default function SDKReferencePageContent() {
         </Card>
       </section>
 
+      {/* Email Events */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="events"
+          markdown={SECTION_MD.events}
+          title="Email Events"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Track the delivery lifecycle of every email. Requires event tracking
+          infrastructure deployed with{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">
+            wraps email init
+          </code>{" "}
+          (Production or Enterprise preset).
+        </p>
+
+        <div className="space-y-6">
+          <div>
+            <p className="mb-2 font-medium text-sm">
+              Initialize with Events
+            </p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "events-init.ts",
+                  code: eventsInitCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">Get Email Status</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "events-get.ts",
+                  code: eventsGetCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">
+              List Emails with Status
+            </p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "events-list.ts",
+                  code: eventsListCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+        </div>
+
+        <Card className="mt-6">
+          <CardContent className="p-6">
+            <h4 className="mb-3 font-medium">Status Values</h4>
+            <table className="mb-6 w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Status</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">sent</code>
+                  </td>
+                  <td className="py-2">Email accepted by SES</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      delivered
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    {"Email delivered to recipient's mail server"}
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      opened
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Recipient opened the email (tracking pixel)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      clicked
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Recipient clicked a link in the email
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      bounced
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Email bounced (hard or soft bounce)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      complained
+                    </code>
+                  </td>
+                  <td className="py-2">Recipient marked as spam</td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      suppressed
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Email suppressed by SES (on suppression list)
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="text-muted-foreground text-sm">
+              Negative statuses (bounced, complained, suppressed) always
+              override positive ones. Status is derived from the
+              highest-priority event.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-4">
+          <CardContent className="p-6">
+            <h4 className="mb-3 font-medium">Available Methods</h4>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Method</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      events.get(messageId)
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Get full status and event timeline for an email
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      events.list(options)
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    List emails with status, filtered by account and time range
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Suppression List */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="suppression"
+          markdown={SECTION_MD.suppression}
+          title="Suppression List"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Manage the SES account-level suppression list. Emails on this list are
+          automatically blocked from sending. The suppression API is always
+          available — no extra configuration needed.
+        </p>
+
+        <div className="space-y-6">
+          <div>
+            <p className="mb-2 font-medium text-sm">Check if Suppressed</p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "suppression-get.ts",
+                  code: suppressionGetCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">
+              Add to Suppression List
+            </p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "suppression-add.ts",
+                  code: suppressionAddCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">
+              Remove from Suppression List
+            </p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "suppression-remove.ts",
+                  code: suppressionRemoveCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <p className="mb-2 font-medium text-sm">
+              List Suppressed Emails
+            </p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "suppression-list.ts",
+                  code: suppressionListCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+        </div>
+
+        <Card className="mt-6">
+          <CardContent className="p-6">
+            <h4 className="mb-3 font-medium">Available Methods</h4>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 text-left">Method</th>
+                  <th className="pb-2 text-left">Description</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      suppression.get(email)
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Check if an email is suppressed (returns null if not)
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      suppression.add(email, reason)
+                    </code>
+                  </td>
+                  <td className="py-2">Add email to suppression list</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      suppression.remove(email)
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    Remove from suppression list (idempotent)
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      suppression.list(options?)
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    List suppressed emails with filters and pagination
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Error Handling */}
       <section className="mb-12">
         <SectionHeading
@@ -2111,7 +2789,7 @@ export default function SDKReferencePageContent() {
                     property)
                   </td>
                 </tr>
-                <tr>
+                <tr className="border-b">
                   <td className="py-2">
                     <code className="rounded bg-muted px-1.5 py-0.5">
                       SESError
@@ -2119,6 +2797,17 @@ export default function SDKReferencePageContent() {
                   </td>
                   <td className="py-2">
                     AWS SES error (includes <code>code</code>,{" "}
+                    <code>requestId</code>, <code>retryable</code> properties)
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      DynamoDBError
+                    </code>
+                  </td>
+                  <td className="py-2">
+                    DynamoDB error from events API (includes <code>code</code>,{" "}
                     <code>requestId</code>, <code>retryable</code> properties)
                   </td>
                 </tr>

@@ -24,7 +24,7 @@ const breadcrumbSchema = {
 export const metadata: Metadata = {
   title: "Email SDK Reference",
   description:
-    "Complete API reference for @wraps.dev/email TypeScript SDK. Send emails, use templates, handle errors, and integrate with AWS SES in your Node.js app.",
+    "Complete API reference for @wraps.dev/email TypeScript SDK. Send emails, use templates, track delivery events, manage suppression lists, and integrate with AWS SES.",
   openGraph: {
     title: "Email SDK Reference | Wraps",
     description:
@@ -58,6 +58,8 @@ export default function SDKReferencePage() {
         <h2>Configuration</h2>
         <h2>Sending Emails</h2>
         <h2>Templates</h2>
+        <h2>Email Events</h2>
+        <h2>Suppression List</h2>
         <h2>Error Handling</h2>
       </article>
       <SDKReferencePageContent />
