@@ -1,4 +1,8 @@
-import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
+import {
+  GetEmailIdentityCommand,
+  SESv2Client,
+  SendEmailCommand,
+} from "@aws-sdk/client-sesv2";
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
@@ -141,14 +145,42 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
     }
   }
 
-  // 5. Send test email
+  // 5. Check domain verification status before sending
   const fromEmail = `test@${domain}`;
+  const sesClient = new SESv2Client({ region });
 
+  try {
+    const identityResponse = await sesClient.send(
+      new GetEmailIdentityCommand({ EmailIdentity: domain })
+    );
+
+    if (!identityResponse.VerifiedForSendingStatus) {
+      progress.stop();
+      const dkimStatus = identityResponse.DkimAttributes?.Status || "PENDING";
+      clack.log.error(
+        `Sending domain ${pc.cyan(domain)} is not yet verified (DKIM: ${dkimStatus})`
+      );
+      console.log(
+        "\nDKIM DNS records need to propagate before you can send emails."
+      );
+      console.log("This typically takes a few minutes after deployment.\n");
+      console.log(
+        `Run ${pc.cyan(`wraps email domains verify --domain ${domain}`)} to check DNS status.\n`
+      );
+      process.exit(1);
+      return;
+    }
+  } catch (identityError: unknown) {
+    // If we can't check verification, proceed with the send attempt
+    // and let the SES error handler provide guidance
+  }
+
+  // 6. Send test email
   try {
     const messageId = await progress.execute(
       `Sending test email to ${toEmail}`,
       async () => {
-        const client = new SESv2Client({ region });
+        const client = sesClient;
 
         const response = await client.send(
           new SendEmailCommand({
@@ -233,11 +265,37 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
       errorMessage.includes("MessageRejected")
     ) {
       if (errorMessage.includes("not verified")) {
-        clack.log.error("Email address is not verified");
-        console.log("\nIn sandbox mode, recipient addresses must be verified.");
-        console.log(
-          `Simulator addresses always work: ${pc.cyan("success@simulator.amazonses.com")}\n`
+        // Parse which identity failed to distinguish FROM domain vs TO address
+        const failedIdentityMatch = errorMessage.match(
+          /identities failed the check.*?:\s*(.+)/i
         );
+        const failedIdentity = failedIdentityMatch?.[1]?.trim();
+        const isFromDomainFailure =
+          failedIdentity &&
+          (failedIdentity === fromEmail ||
+            failedIdentity.endsWith(`@${domain}`) ||
+            failedIdentity === domain);
+
+        if (isFromDomainFailure) {
+          clack.log.error(
+            `Sending domain ${pc.cyan(domain)} is not yet verified`
+          );
+          console.log(
+            "\nDKIM DNS records need to propagate before you can send emails."
+          );
+          console.log("This typically takes a few minutes after deployment.\n");
+          console.log(
+            `Run ${pc.cyan(`wraps email domains verify --domain ${domain}`)} to check DNS status.\n`
+          );
+        } else {
+          clack.log.error("Email address is not verified");
+          console.log(
+            "\nIn sandbox mode, recipient addresses must be verified."
+          );
+          console.log(
+            `Simulator addresses always work: ${pc.cyan("success@simulator.amazonses.com")}\n`
+          );
+        }
       } else {
         clack.log.error(`Email rejected: ${errorMessage}`);
       }
