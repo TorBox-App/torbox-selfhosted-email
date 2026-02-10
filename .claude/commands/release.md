@@ -50,7 +50,11 @@ Examples: `cli-v2.9.3`, `cdk-v1.0.0`, `pulumi-v0.5.0-beta.1`
 5. **Push** the commit
 6. **Create annotated tag**: `git tag -a <package>-v<new-version> -m "<package>-v<new-version>"`
 7. **Push the tag**: `git push origin <package>-v<new-version>`
-8. **Create GitHub release** with `gh release create` using the tag
+8. **Create GitHub release** using:
+   ```
+   gh release create <package>-v<new-version> --title "<package>-v<new-version>" --notes "<release notes>"
+   ```
+   **IMPORTANT**: Use `--notes` (or `-n`), NOT `--body`. The `gh release create` command does not have a `--body` flag.
 
 ## Release Notes Format
 
