@@ -420,25 +420,41 @@ export function ContactTimeline({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Load timeline on mount
+  // Load timeline on mount or when contactId changes
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       setIsLoading(true);
       setError(null);
 
-      const result = await getContactTimeline(contactId, organizationId);
+      try {
+        const result = await getContactTimeline(contactId, organizationId);
 
-      if (result.success) {
-        setEvents(result.events);
-        setHasMore(result.hasMore);
-      } else {
-        setError(result.error);
+        if (cancelled) return;
+
+        if (result.success) {
+          setEvents(result.events);
+          setHasMore(result.hasMore);
+        } else {
+          setError(result.error);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Failed to load activity");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-
-      setIsLoading(false);
     }
 
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [contactId, organizationId]);
 
   // Load more handler

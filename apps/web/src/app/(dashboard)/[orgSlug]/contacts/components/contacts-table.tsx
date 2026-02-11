@@ -147,6 +147,43 @@ export function ContactsTable({
   const [selectedContact, setSelectedContact] =
     useState<ContactWithMeta | null>(null);
 
+  // URL-driven contact detail sheet: contactId in the URL is the source of truth
+  const urlContactId = searchParams.get("contactId");
+
+  // Sync selectedContact from table data when URL has a contactId
+  useEffect(() => {
+    if (!urlContactId) return;
+    const existing = contacts.find((c) => c.id === urlContactId);
+    if (existing) {
+      setSelectedContact(existing);
+    }
+    setDetailsSheetOpen(true);
+  }, [urlContactId, contacts]);
+
+  const openContactDetail = useCallback(
+    (contact: ContactWithMeta) => {
+      setSelectedContact(contact);
+      setDetailsSheetOpen(true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("contactId", contact.id);
+      router.replace(`/${orgSlug}/contacts?${params.toString()}`, {
+        scroll: false,
+      });
+    },
+    [router, orgSlug, searchParams]
+  );
+
+  const closeContactDetail = useCallback(() => {
+    setDetailsSheetOpen(false);
+    setSelectedContact(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("contactId");
+    const qs = params.toString();
+    router.replace(`/${orgSlug}/contacts${qs ? `?${qs}` : ""}`, {
+      scroll: false,
+    });
+  }, [router, orgSlug, searchParams]);
+
   // Navigation helpers
   const updateSearchParams = useCallback(
     (updates: Record<string, string | undefined>) => {
@@ -183,11 +220,10 @@ export function ContactsTable({
         setDeleteDialogOpen(true);
       },
       onViewDetails: (contact: ContactWithMeta) => {
-        setSelectedContact(contact);
-        setDetailsSheetOpen(true);
+        openContactDetail(contact);
       },
     }),
-    []
+    [openContactDetail]
   );
 
   const baseColumns = useMemo(
@@ -650,10 +686,7 @@ export function ContactsTable({
                   className="cursor-pointer hover:bg-muted/50"
                   data-state={row.getIsSelected() && "selected"}
                   key={row.id}
-                  onClick={() => {
-                    setSelectedContact(row.original);
-                    setDetailsSheetOpen(true);
-                  }}
+                  onClick={() => openContactDetail(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -805,11 +838,9 @@ export function ContactsTable({
       {/* Details Sheet */}
       <ContactDetailsSheet
         contact={selectedContact}
+        contactId={urlContactId}
         isPending={isPending}
-        onClose={() => {
-          setDetailsSheetOpen(false);
-          setSelectedContact(null);
-        }}
+        onClose={closeContactDetail}
         onSave={handleUpdateContact}
         open={detailsSheetOpen}
         organizationId={organizationId}

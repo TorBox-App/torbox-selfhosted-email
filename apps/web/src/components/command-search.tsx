@@ -1,33 +1,50 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Command as CommandPrimitive } from "cmdk";
 import {
   BarChart3,
   Building2,
   Cloud,
   CreditCard,
+  FilePlus,
   FileText,
+  Filter,
+  GitBranch,
   Key,
+  Loader2,
   type LucideIcon,
   Mail,
+  Palette,
   Search,
+  Send,
+  SendHorizontal,
   Settings,
   Shield,
+  Tag,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import {
   type ComponentPropsWithoutRef,
   type ElementRef,
   forwardRef,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
 } from "react";
-
+import { getContact } from "@/actions/contacts";
+import type { SearchEntityType, SearchResultItem } from "@/actions/search";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useActiveOrganization } from "@/contexts/organization-context";
+import { useCommandSearch } from "@/hooks/use-command-search";
+import { useRecentItems } from "@/hooks/use-recent-items";
 import { cn } from "@/lib/utils";
+
+// ─── Styled cmdk wrappers ────────────────────────────────────────────
 
 const Command = forwardRef<
   ElementRef<typeof CommandPrimitive>,
@@ -46,16 +63,25 @@ Command.displayName = CommandPrimitive.displayName;
 
 const CommandInput = forwardRef<
   ElementRef<typeof CommandPrimitive.Input>,
-  ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.Input
-    className={cn(
-      "mb-4 flex h-12 w-full border-zinc-200 border-b border-none bg-transparent px-4 py-3 text-[17px] outline-none placeholder:text-zinc-500 dark:border-zinc-800 dark:placeholder:text-zinc-400",
-      className
+  ComponentPropsWithoutRef<typeof CommandPrimitive.Input> & {
+    isLoading?: boolean;
+  }
+>(({ className, isLoading, ...props }, ref) => (
+  <div className="relative flex items-center border-zinc-200 border-b px-4 dark:border-zinc-800">
+    {isLoading ? (
+      <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin text-zinc-400" />
+    ) : (
+      <Search className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
     )}
-    ref={ref}
-    {...props}
-  />
+    <CommandPrimitive.Input
+      className={cn(
+        "flex h-12 w-full bg-transparent py-3 text-[17px] outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-400",
+        className
+      )}
+      ref={ref}
+      {...props}
+    />
+  </div>
 ));
 CommandInput.displayName = CommandPrimitive.Input.displayName;
 
@@ -125,7 +151,42 @@ const CommandItem = forwardRef<
 ));
 CommandItem.displayName = CommandPrimitive.Item.displayName;
 
-type SearchItem = {
+// ─── Entity type config ──────────────────────────────────────────────
+
+const ENTITY_CONFIG: Record<
+  SearchEntityType,
+  { label: string; icon: LucideIcon }
+> = {
+  contact: { label: "Contacts", icon: Users },
+  template: { label: "Templates", icon: FileText },
+  broadcast: { label: "Broadcasts", icon: Send },
+  workflow: { label: "Workflows", icon: GitBranch },
+  segment: { label: "Segments", icon: Filter },
+  topic: { label: "Topics", icon: Tag },
+  brandKit: { label: "Brand Kits", icon: Palette },
+};
+
+function getStatusStyle(status: string | null): string | null {
+  if (!status) return null;
+  const s = status.toLowerCase();
+  if (s === "draft")
+    return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+  if (s === "published" || s === "enabled" || s === "completed")
+    return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+  if (s === "archived" || s === "paused")
+    return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";
+  if (s === "scheduled")
+    return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+  if (s === "default")
+    return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400";
+  if (s === "failed")
+    return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+  return null;
+}
+
+// ─── Static navigation items ─────────────────────────────────────────
+
+type StaticItem = {
   title: string;
   url: string;
   group: string;
@@ -134,6 +195,8 @@ type SearchItem = {
   keywords?: string[];
 };
 
+// ─── CommandSearch ────────────────────────────────────────────────────
+
 type CommandSearchProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -141,16 +204,37 @@ type CommandSearchProps = {
 
 export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const commandRef = useRef<HTMLDivElement>(null);
   const { activeOrganization } = useActiveOrganization();
+  const hasTrackedSearch = useRef(false);
 
   const orgSlug = activeOrganization?.slug;
+  const orgId = activeOrganization?.id;
 
-  // Build search items with org-aware URLs
-  const searchItems: SearchItem[] = useMemo(() => {
-    const items: SearchItem[] = [];
+  const { inputValue, setInputValue, results, isSearching, isServerMode } =
+    useCommandSearch(orgId);
+  const { recentItems, addRecentItem } = useRecentItems(orgId);
 
-    // Organization Navigation (only if org is selected)
+  // Reset input when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setInputValue("");
+      hasTrackedSearch.current = false;
+    }
+  }, [open, setInputValue]);
+
+  // Track search when entering server mode
+  useEffect(() => {
+    if (isServerMode && !hasTrackedSearch.current) {
+      hasTrackedSearch.current = true;
+      posthog.capture("cmd_k_searched");
+    }
+  }, [isServerMode]);
+
+  // Build static items
+  const staticItems: StaticItem[] = useMemo(() => {
+    const items: StaticItem[] = [];
     if (orgSlug) {
       items.push(
         {
@@ -171,7 +255,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
         },
         {
           title: "Analytics",
-          url: `/${orgSlug}/analytics`,
+          url: `/${orgSlug}/emails/analytics`,
           group: "Navigation",
           icon: BarChart3,
           shortcut: "G A",
@@ -179,8 +263,6 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
         }
       );
     }
-
-    // Organization Settings (only if org is selected)
     if (orgSlug) {
       items.push(
         {
@@ -221,8 +303,6 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
         }
       );
     }
-
-    // User Account Settings (always available)
     items.push(
       {
         title: "Security",
@@ -239,26 +319,68 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
         keywords: ["delete", "preferences"],
       }
     );
-
     return items;
   }, [orgSlug]);
 
-  const groupedItems = searchItems.reduce(
-    (acc, item) => {
-      if (!acc[item.group]) {
-        acc[item.group] = [];
-      }
-      acc[item.group].push(item);
-      return acc;
-    },
-    {} as Record<string, SearchItem[]>
-  );
+  const groupedStatic = useMemo(() => {
+    const groups: Record<string, StaticItem[]> = {};
+    for (const item of staticItems) {
+      if (!groups[item.group]) groups[item.group] = [];
+      groups[item.group].push(item);
+    }
+    return groups;
+  }, [staticItems]);
+
+  // Quick actions
+  const quickActions = useMemo(() => {
+    if (!orgSlug) return [];
+    return [
+      {
+        title: "New Contact",
+        url: `/${orgSlug}/contacts?new=true`,
+        icon: UserPlus,
+      },
+      {
+        title: "New Template",
+        url: `/${orgSlug}/emails/templates?new=true`,
+        icon: FilePlus,
+      },
+      {
+        title: "New Broadcast",
+        url: `/${orgSlug}/emails/broadcasts?new=true`,
+        icon: SendHorizontal,
+      },
+      {
+        title: "New Workflow",
+        url: `/${orgSlug}/automations?new=true`,
+        icon: GitBranch,
+      },
+    ];
+  }, [orgSlug]);
 
   const handleSelect = useCallback(
-    (url: string) => {
+    (url: string, item?: SearchResultItem) => {
+      // Prefetch contact data so the detail sheet opens instantly
+      if (item?.type === "contact" && orgId) {
+        queryClient.prefetchQuery({
+          queryKey: ["contact", "detail", item.id],
+          queryFn: () =>
+            getContact(item.id, orgId).then((r) =>
+              r.success ? r.contact : null
+            ),
+          staleTime: 30_000,
+        });
+      }
       router.push(url);
       onOpenChange(false);
-      // Bounce effect like Vercel
+      if (item) {
+        addRecentItem(item);
+        posthog.capture("cmd_k_selected", {
+          type: item.type,
+          id: item.id,
+        });
+      }
+      // Bounce effect
       if (commandRef.current) {
         commandRef.current.style.transform = "scale(0.96)";
         setTimeout(() => {
@@ -268,8 +390,13 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
         }, 100);
       }
     },
-    [router, onOpenChange]
+    [router, onOpenChange, addRecentItem, orgId, queryClient]
   );
+
+  // Count total server results
+  const totalResults = isServerMode
+    ? Object.values(results).reduce((sum, arr) => sum + arr.length, 0)
+    : 0;
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
@@ -278,33 +405,141 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
         <Command
           className="transition-transform duration-100 ease-out"
           ref={commandRef}
+          shouldFilter={!isServerMode}
         >
-          <CommandInput autoFocus placeholder="Where do you want to go?" />
+          <CommandInput
+            autoFocus
+            isLoading={isSearching}
+            onValueChange={setInputValue}
+            placeholder="Search everything..."
+            value={inputValue}
+          />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
-            {Object.entries(groupedItems).map(([group, items]) => (
-              <CommandGroup heading={group} key={group}>
-                {items.map((item) => {
-                  const Icon = item.icon;
+
+            {isServerMode ? (
+              // ── Server results ──
+              <>
+                {(
+                  Object.entries(results) as [
+                    SearchEntityType,
+                    SearchResultItem[],
+                  ][]
+                ).map(([type, items]) => {
+                  if (items.length === 0) return null;
+                  const config = ENTITY_CONFIG[type];
+                  const GroupIcon = config.icon;
                   return (
-                    <CommandItem
-                      key={item.url}
-                      keywords={item.keywords}
-                      onSelect={() => handleSelect(item.url)}
-                      shortcut={item.shortcut}
-                      value={item.title}
-                    >
-                      {Icon && <Icon className="mr-2 h-4 w-4" />}
-                      {item.title}
-                    </CommandItem>
+                    <CommandGroup heading={config.label} key={type}>
+                      {items.map((item) => (
+                        <CommandItem
+                          key={item.id}
+                          onSelect={() => handleSelect(item.url, item)}
+                          value={`${item.title} ${item.subtitle ?? ""}`}
+                        >
+                          <GroupIcon className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
+                          <span className="truncate">{item.title}</span>
+                          {item.subtitle && (
+                            <span className="ml-1 truncate text-zinc-400 text-xs">
+                              {item.subtitle}
+                            </span>
+                          )}
+                          {item.status && <StatusBadge status={item.status} />}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
                   );
                 })}
-              </CommandGroup>
-            ))}
+              </>
+            ) : (
+              // ── Client mode ──
+              <>
+                {/* Recent Items */}
+                {recentItems.length > 0 && (
+                  <CommandGroup heading="Recent">
+                    {recentItems.map((item) => {
+                      const config = ENTITY_CONFIG[item.type];
+                      const Icon = config.icon;
+                      return (
+                        <CommandItem
+                          key={`recent-${item.id}`}
+                          onSelect={() => handleSelect(item.url, item)}
+                          value={`recent ${item.title}`}
+                        >
+                          <Icon className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
+                          <span className="truncate">{item.title}</span>
+                          {item.subtitle && (
+                            <span className="ml-1 truncate text-zinc-400 text-xs">
+                              {item.subtitle}
+                            </span>
+                          )}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                )}
+
+                {/* Quick Actions */}
+                {quickActions.length > 0 && (
+                  <CommandGroup heading="Quick Actions">
+                    {quickActions.map((action) => {
+                      const Icon = action.icon;
+                      return (
+                        <CommandItem
+                          key={action.url}
+                          keywords={[action.title.toLowerCase()]}
+                          onSelect={() => handleSelect(action.url)}
+                          value={action.title}
+                        >
+                          <Icon className="mr-2 h-4 w-4" />
+                          {action.title}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                )}
+
+                {/* Navigation / Settings / Account */}
+                {Object.entries(groupedStatic).map(([group, items]) => (
+                  <CommandGroup heading={group} key={group}>
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <CommandItem
+                          key={item.url}
+                          keywords={item.keywords}
+                          onSelect={() => handleSelect(item.url)}
+                          shortcut={item.shortcut}
+                          value={item.title}
+                        >
+                          {Icon && <Icon className="mr-2 h-4 w-4" />}
+                          {item.title}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                ))}
+              </>
+            )}
           </CommandList>
         </Command>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const style = getStatusStyle(status);
+  if (!style) return null;
+  return (
+    <span
+      className={cn(
+        "ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize",
+        style
+      )}
+    >
+      {status.toLowerCase()}
+    </span>
   );
 }
 

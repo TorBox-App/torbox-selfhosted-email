@@ -1,10 +1,12 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-store";
-import { Lock, Plus, Trash2, X } from "lucide-react";
+import { Loader2, Lock, Plus, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { getContact } from "@/actions/contacts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -52,6 +54,7 @@ type PropertyEntry = {
 
 type ContactDetailsSheetProps = {
   contact: ContactWithMeta | null;
+  contactId?: string | null;
   isPending: boolean;
   onClose: () => void;
   onSave: (data: {
@@ -76,7 +79,8 @@ type ContactDetailsSheetProps = {
 };
 
 export function ContactDetailsSheet({
-  contact,
+  contact: contactProp,
+  contactId,
   isPending,
   onClose,
   onSave,
@@ -90,6 +94,23 @@ export function ContactDetailsSheet({
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [properties, setProperties] = useState<PropertyEntry[]>([]);
+
+  // Self-fetch when we have a contactId but no contact prop.
+  // Uses React Query so the command palette can prefetchQuery with the same key
+  // and the data is already cached when the sheet opens.
+  const idToFetch = contactId && !contactProp ? contactId : null;
+  const { data: fetchedContact, isLoading } = useQuery({
+    queryKey: ["contact", "detail", idToFetch],
+    queryFn: async () => {
+      const result = await getContact(idToFetch!, organizationId);
+      if (!result.success) return null;
+      return result.contact;
+    },
+    enabled: open && !!idToFetch,
+    staleTime: 30_000,
+  });
+
+  const contact = contactProp ?? fetchedContact ?? null;
 
   // TanStack Form for contact details
   const form = useForm({
@@ -248,6 +269,37 @@ export function ContactDetailsSheet({
   const hasValidContact = !!(emailValue || phoneValue);
 
   if (!contact) {
+    // Show loading skeleton when sheet is open but data is still loading
+    if (open && isLoading) {
+      return (
+        <Sheet onOpenChange={(isOpen) => !isOpen && onClose()} open={open}>
+          <SheetContent
+            className="flex flex-col overflow-hidden p-0 sm:max-w-lg"
+            hideCloseButton
+          >
+            <SheetHeader className="border-b px-6 py-4">
+              <div className="flex items-center justify-between">
+                <SheetTitle className="font-semibold text-lg">
+                  Contact Details
+                </SheetTitle>
+                <Button
+                  className="h-8 w-8"
+                  onClick={onClose}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </div>
+            </SheetHeader>
+            <div className="flex flex-1 items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          </SheetContent>
+        </Sheet>
+      );
+    }
     return null;
   }
 
