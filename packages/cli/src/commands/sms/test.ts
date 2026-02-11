@@ -232,20 +232,19 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
     });
 
     // Handle specific error cases
-    const errorName = error instanceof Error ? (error as { name: string }).name : "";
+    const errorName =
+      error instanceof Error ? (error as { name: string }).name : "";
 
     if (errorName === "ConflictException" || errorMessage.includes("opt-out")) {
       clack.log.error("Destination number has opted out of messages");
-      console.log(
-        `\nThe recipient has opted out of receiving SMS messages.\n`
-      );
+      console.log("\nThe recipient has opted out of receiving SMS messages.\n");
     } else if (
       errorName === "ThrottlingException" ||
       errorMessage.includes("spending limit")
     ) {
       clack.log.error("SMS rate or spending limit reached");
       console.log(
-        `\nCheck your AWS account SMS spending limits in the console.\n`
+        "\nCheck your AWS account SMS spending limits in the console.\n"
       );
     } else if (errorName === "ValidationException") {
       clack.log.error(`Invalid request: ${errorMessage}`);

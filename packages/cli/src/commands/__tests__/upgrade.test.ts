@@ -1019,9 +1019,7 @@ describe("upgrade command", () => {
         },
       } as any);
 
-      vi.mocked(prompts.select).mockResolvedValueOnce(
-        "user-webhook" as never
-      );
+      vi.mocked(prompts.select).mockResolvedValueOnce("user-webhook" as never);
       vi.mocked(prompts.text).mockResolvedValue(
         "https://example.com/webhooks/email" as never
       );
@@ -1043,9 +1041,7 @@ describe("upgrade command", () => {
       // Secret should be generated (non-empty string)
       const callArgs = vi.mocked(deployEmailStack).mock.calls[0]![0];
       expect(callArgs.emailConfig.userWebhook?.secret).toBeTruthy();
-      expect(
-        typeof callArgs.emailConfig.userWebhook?.secret
-      ).toBe("string");
+      expect(typeof callArgs.emailConfig.userWebhook?.secret).toBe("string");
     });
 
     it("should auto-enable event tracking when selecting webhook without it", async () => {
@@ -1067,9 +1063,7 @@ describe("upgrade command", () => {
         },
       } as any);
 
-      vi.mocked(prompts.select).mockResolvedValueOnce(
-        "user-webhook" as never
-      );
+      vi.mocked(prompts.select).mockResolvedValueOnce("user-webhook" as never);
       // Confirm enabling event tracking
       vi.mocked(prompts.confirm)
         .mockResolvedValueOnce(true as never) // Enable event tracking
@@ -1187,9 +1181,7 @@ describe("upgrade command", () => {
       );
       // Secret should be different from original
       expect(callArgs.emailConfig.userWebhook?.secret).toBeTruthy();
-      expect(callArgs.emailConfig.userWebhook?.secret).not.toBe(
-        originalSecret
-      );
+      expect(callArgs.emailConfig.userWebhook?.secret).not.toBe(originalSecret);
     });
 
     it("should disable webhook", async () => {
@@ -1261,35 +1253,25 @@ describe("upgrade command", () => {
         },
       } as any);
 
-      vi.mocked(prompts.select).mockResolvedValueOnce(
-        "user-webhook" as never
-      );
+      vi.mocked(prompts.select).mockResolvedValueOnce("user-webhook" as never);
       vi.mocked(prompts.text).mockImplementation((opts: any) => {
         // Test validation rejects HTTP
         const httpResult = opts.validate?.("http://example.com/webhook");
         expect(httpResult).toBe("Webhook URL must use HTTPS");
 
         // Test validation rejects single-label hostname
-        const localhostResult = opts.validate?.(
-          "https://localhost/webhook"
-        );
-        expect(localhostResult).toBe(
-          "Webhook URL must use a public hostname"
-        );
+        const localhostResult = opts.validate?.("https://localhost/webhook");
+        expect(localhostResult).toBe("Webhook URL must use a public hostname");
 
         // Test validation rejects invalid URL
         const invalidResult = opts.validate?.("not-a-url");
         expect(invalidResult).toBe("Please enter a valid URL");
 
         // Test validation accepts valid HTTPS URL
-        const validResult = opts.validate?.(
-          "https://example.com/webhook"
-        );
+        const validResult = opts.validate?.("https://example.com/webhook");
         expect(validResult).toBeUndefined();
 
-        return Promise.resolve(
-          "https://example.com/webhooks/email" as never
-        );
+        return Promise.resolve("https://example.com/webhooks/email" as never);
       });
       vi.mocked(prompts.confirm).mockResolvedValue(true as never);
 
@@ -1367,11 +1349,9 @@ describe("upgrade command", () => {
 
     it("should cancel when declining event tracking prerequisite", async () => {
       await setupPulumiMock();
-      const exitSpy = vi
-        .spyOn(process, "exit")
-        .mockImplementation((() => {
-          throw new Error("process.exit(0)");
-        }) as any);
+      const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+        throw new Error("process.exit(0)");
+      }) as any);
 
       vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
         accountId: "123456789012",
@@ -1389,9 +1369,7 @@ describe("upgrade command", () => {
         },
       } as any);
 
-      vi.mocked(prompts.select).mockResolvedValueOnce(
-        "user-webhook" as never
-      );
+      vi.mocked(prompts.select).mockResolvedValueOnce("user-webhook" as never);
       // Decline enabling event tracking
       vi.mocked(prompts.confirm).mockResolvedValueOnce(false as never);
 

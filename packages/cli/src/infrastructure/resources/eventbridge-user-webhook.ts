@@ -1,5 +1,5 @@
 import * as aws from "@pulumi/aws";
-import * as pulumi from "@pulumi/pulumi";
+import type * as pulumi from "@pulumi/pulumi";
 
 /**
  * User webhook configuration
@@ -104,25 +104,22 @@ export function createUserWebhookResources(
   });
 
   // 5. Target on the existing SES events rule with InputTransformer
-  const target = new aws.cloudwatch.EventTarget(
-    "wraps-user-webhook-target",
-    {
-      rule: config.ruleName,
-      eventBusName: config.eventBusName,
-      arn: apiDestination.arn,
-      roleArn: role.arn,
-      inputTransformer: {
-        inputPaths: {
-          event: "$.detail.eventType",
-          detail: "$.detail",
-          timestamp: "$.time",
-          messageId: "$.detail.mail.messageId",
-        },
-        inputTemplate:
-          '{"event":<event>,"detail":<detail>,"timestamp":<timestamp>,"messageId":<messageId>,"source":"wraps"}',
+  const target = new aws.cloudwatch.EventTarget("wraps-user-webhook-target", {
+    rule: config.ruleName,
+    eventBusName: config.eventBusName,
+    arn: apiDestination.arn,
+    roleArn: role.arn,
+    inputTransformer: {
+      inputPaths: {
+        event: "$.detail.eventType",
+        detail: "$.detail",
+        timestamp: "$.time",
+        messageId: "$.detail.mail.messageId",
       },
-    }
-  );
+      inputTemplate:
+        '{"event":<event>,"detail":<detail>,"timestamp":<timestamp>,"messageId":<messageId>,"source":"wraps"}',
+    },
+  });
 
   return {
     connection,

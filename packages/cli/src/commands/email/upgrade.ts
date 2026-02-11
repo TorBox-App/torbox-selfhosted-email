@@ -206,9 +206,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
   if (config.userWebhook?.enabled) {
     console.log(`  ${pc.green("✓")} Webhook Endpoint`);
-    console.log(
-      `    ${pc.dim("└─")} URL: ${pc.cyan(config.userWebhook.url)}`
-    );
+    console.log(`    ${pc.dim("└─")} URL: ${pc.cyan(config.userWebhook.url)}`);
   }
 
   // Calculate current cost
@@ -2329,9 +2327,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         pc.dim("  Include this in the X-Wraps-Signature header validation")
       );
       console.log(
-        pc.dim(
-          "  to verify requests are from your Wraps deployment.\n"
-        )
+        pc.dim("  to verify requests are from your Wraps deployment.\n")
       );
     }
   }
