@@ -231,6 +231,11 @@ const navItems: NavSection[] = [
         icon: Workflow,
       },
       {
+        title: "Webhooks",
+        href: "/docs/guides/webhooks",
+        icon: Zap,
+      },
+      {
         title: "Vercel Setup",
         href: "/docs/guides/vercel-setup",
         icon: Rocket,
