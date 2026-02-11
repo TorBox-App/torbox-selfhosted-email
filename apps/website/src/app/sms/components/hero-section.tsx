@@ -1,9 +1,8 @@
 "use client";
 
-import { MessageSquare } from "lucide-react";
+import { ArrowRight, BookOpen } from "lucide-react";
 import { DotPattern } from "@/components/dot-pattern";
-import { Badge } from "@/components/ui/badge";
-import { WaitlistForm } from "./waitlist-form";
+import { Button } from "@/components/ui/button";
 
 export function SmsHeroSection() {
   return (
@@ -15,17 +14,6 @@ export function SmsHeroSection() {
 
       <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
-          {/* Coming Soon Badge */}
-          <div className="mb-8 flex justify-center">
-            <Badge
-              className="border-orange-500/30 bg-orange-500/10 px-4 py-2 text-orange-600 dark:text-orange-400"
-              variant="outline"
-            >
-              <MessageSquare className="mr-2 size-4" />
-              Coming Soon
-            </Badge>
-          </div>
-
           {/* Main Headline */}
           <h1 className="mb-6 text-pretty font-bold text-4xl tracking-tight sm:text-6xl lg:text-7xl">
             AWS SMS, simplified.
@@ -37,12 +25,24 @@ export function SmsHeroSection() {
             first, TypeScript SDK, zero vendor lock-in.
           </p>
 
-          {/* Waitlist Form */}
-          <div className="mx-auto mb-12 max-w-md">
-            <p className="mb-3 text-muted-foreground text-sm">
-              Join the waitlist to get early access
-            </p>
-            <WaitlistForm source="sms-hero" />
+          {/* CTA Buttons */}
+          <div className="mx-auto mb-12 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Button
+              asChild
+              className="bg-orange-500 hover:bg-orange-600"
+              size="lg"
+            >
+              <a href="/docs/quickstart/sms">
+                Get Started
+                <ArrowRight className="ml-1.5 size-4" />
+              </a>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <a href="/docs/cli-reference/sms">
+                <BookOpen className="mr-1.5 size-4" />
+                CLI Reference
+              </a>
+            </Button>
           </div>
 
           {/* Code Preview */}

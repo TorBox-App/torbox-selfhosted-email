@@ -1,13 +1,13 @@
 "use client";
 
-import { Check, MessageSquare } from "lucide-react";
-import { WaitlistForm } from "./waitlist-form";
+import { ArrowRight, BookOpen, Check, MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const benefits = [
-  "Early access to the SMS beta",
-  "Direct input on features",
-  "Founding customer pricing",
-  "Priority support",
+  "Toll-free numbers included",
+  "TypeScript SDK",
+  "Zero vendor lock-in",
+  "Real-time dashboard",
 ];
 
 export function SmsCtaSection() {
@@ -26,14 +26,14 @@ export function SmsCtaSection() {
 
               {/* Headline */}
               <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-                Be first in line for SMS
+                Start sending SMS today
               </h2>
 
               {/* Description */}
               <p className="mb-8 text-muted-foreground">
-                We're building SMS with the same BYOC model that makes our email
-                product compelling. Join the waitlist to get early access and
-                help shape the product.
+                Deploy SMS infrastructure to your AWS account in under 2
+                minutes. Same BYOC model as email — you own everything, pay AWS
+                directly.
               </p>
 
               {/* Benefits */}
@@ -49,9 +49,24 @@ export function SmsCtaSection() {
                 ))}
               </div>
 
-              {/* Waitlist Form */}
-              <div className="mx-auto max-w-md">
-                <WaitlistForm source="sms-cta" />
+              {/* CTA Buttons */}
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <Button
+                  asChild
+                  className="bg-orange-500 hover:bg-orange-600"
+                  size="lg"
+                >
+                  <a href="/docs/quickstart/sms">
+                    Get Started
+                    <ArrowRight className="ml-1.5 size-4" />
+                  </a>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <a href="/docs/cli-reference/sms">
+                    <BookOpen className="mr-1.5 size-4" />
+                    CLI Reference
+                  </a>
+                </Button>
               </div>
             </div>
           </div>

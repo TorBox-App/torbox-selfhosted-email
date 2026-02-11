@@ -33,9 +33,9 @@ const services = [
     aws: "AWS End User Messaging",
     price: "Pay per message",
     features: ["Two-way messaging", "Delivery receipts", "Number management"],
-    status: "coming",
-    href: "/sms",
-    cta: "Join Waitlist",
+    status: "available",
+    href: "/docs/quickstart/sms",
+    cta: "Get Started",
   },
 ];
 
