@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { createOrganizationAction } from "@/actions/organizations";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient, useSession } from "@/lib/auth-client";
+import { generateSlug } from "@/lib/utils/slug";
+
+type PageState = "enter-code" | "verifying" | "approve" | "create-org" | "success";
 
 function formatCode(value: string): string {
   const clean = value
@@ -25,15 +29,29 @@ function formatCode(value: string): string {
   return clean;
 }
 
-function DeviceCodeForm() {
+function getRawCode(formatted: string): string {
+  return formatted.replace(/-/g, "");
+}
+
+function DeviceFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, isPending: sessionPending } = useSession();
 
   const prefilled = searchParams.get("user_code") || "";
   const [code, setCode] = useState(() => formatCode(prefilled));
-  const [error, setError] = useState<string | null>(null);
+  const [validatedCode, setValidatedCode] = useState("");
+  const [state, setState] = useState<PageState>(
+    prefilled ? "verifying" : "enter-code"
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Org creation state
+  const [orgName, setOrgName] = useState("");
+  const [orgSlug, setOrgSlug] = useState("");
+  const [autoSlug, setAutoSlug] = useState(true);
+  const [createdOrgName, setCreatedOrgName] = useState("");
 
   // If not logged in, redirect to auth page with callback
   useEffect(() => {
@@ -41,19 +59,55 @@ function DeviceCodeForm() {
       return;
     }
     if (!session?.user) {
-      const callbackUrl = code ? `/device?user_code=${code}` : "/device";
+      const raw = getRawCode(code);
+      const callbackUrl = raw ? `/device?user_code=${raw}` : "/device";
       router.replace(
         `/auth?mode=signup&redirect=${encodeURIComponent(callbackUrl)}`
       );
     }
   }, [session, sessionPending, router, code]);
 
+  const verifyCode = useCallback(async (rawCode: string) => {
+    try {
+      const { data, error: verifyError } = await authClient.device({
+        query: { user_code: rawCode },
+      });
+
+      if (verifyError) {
+        setError("Invalid or expired code. Please try again.");
+        setState("enter-code");
+        return;
+      }
+
+      if (data?.status === "pending") {
+        setValidatedCode(rawCode);
+        setState("approve");
+      } else {
+        setError("This code has already been used or expired.");
+        setState("enter-code");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setState("enter-code");
+    }
+  }, []);
+
+  // Auto-verify prefilled code
+  useEffect(() => {
+    if (state === "verifying" && session?.user && prefilled) {
+      const raw = getRawCode(formatCode(prefilled));
+      if (raw.length === 8) {
+        verifyCode(raw);
+      } else {
+        setState("enter-code");
+      }
+    }
+  }, [state, session, prefilled, verifyCode]);
+
   const handleCodeChange = (value: string) => {
     setCode(formatCode(value));
     setError(null);
   };
-
-  const getRawCode = (formatted: string): string => formatted.replace(/-/g, "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,21 +120,36 @@ function DeviceCodeForm() {
     }
 
     setIsSubmitting(true);
+    await verifyCode(rawCode);
+    setIsSubmitting(false);
+  };
+
+  const handleApprove = async () => {
+    setIsSubmitting(true);
+    setError(null);
 
     try {
-      const { data, error: verifyError } = await authClient.device({
-        query: { user_code: rawCode },
+      const { error: approveError } = await authClient.device.approve({
+        userCode: validatedCode,
       });
 
-      if (verifyError) {
-        setError("Invalid or expired code. Please try again.");
+      if (approveError) {
+        const errorMsg =
+          (approveError as any).error === "expired_token"
+            ? "This code has expired. Please run `wraps auth login` again."
+            : "Failed to approve. The code may be invalid or expired.";
+        setError(errorMsg);
+        setIsSubmitting(false);
         return;
       }
 
-      if (data?.status === "pending") {
-        router.push(`/device/approve?user_code=${rawCode}`);
+      // Check if user has orgs
+      const { data: orgs } = await authClient.organization.list();
+
+      if (orgs && orgs.length > 0) {
+        setState("success");
       } else {
-        setError("This code has already been used or expired.");
+        setState("create-org");
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -89,14 +158,192 @@ function DeviceCodeForm() {
     }
   };
 
+  const handleDeny = async () => {
+    setIsSubmitting(true);
+
+    try {
+      await authClient.device.deny({ userCode: validatedCode });
+    } catch {
+      // Even if deny fails, redirect away
+    }
+
+    router.replace("/");
+  };
+
+  const handleCreateOrg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await createOrganizationAction({
+        name: orgName,
+        slug: orgSlug || undefined,
+      });
+
+      if (result.success) {
+        setCreatedOrgName(result.organization.name);
+        setState("success");
+      } else {
+        setError(result.error);
+      }
+    } catch {
+      setError("Failed to create organization. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOrgNameChange = (value: string) => {
+    setOrgName(value);
+    if (autoSlug) {
+      setOrgSlug(generateSlug(value));
+    }
+  };
+
   if (sessionPending || !session?.user) {
     return null;
   }
 
+  if (state === "verifying") {
+    return (
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">Authorize CLI</CardTitle>
+          <CardDescription>Verifying your code...</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (state === "success") {
+    return (
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">You're all set!</CardTitle>
+          <CardDescription>Return to your terminal to continue</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <p className="text-muted-foreground text-center text-sm">
+            Your CLI session has been authorized
+            {createdOrgName ? ` for ${createdOrgName}` : ""}. You can close this
+            tab.
+          </p>
+          <Button onClick={() => router.push("/")} variant="outline">
+            Open Dashboard
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (state === "create-org") {
+    return (
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">Create Organization</CardTitle>
+          <CardDescription>
+            Set up your organization to get started
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="grid gap-4" onSubmit={handleCreateOrg}>
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+            <div className="grid gap-2">
+              <Label htmlFor="org-name">Organization Name</Label>
+              <Input
+                autoFocus
+                id="org-name"
+                onChange={(e) => handleOrgNameChange(e.target.value)}
+                placeholder="Acme Inc."
+                required
+                type="text"
+                value={orgName}
+              />
+              <p className="text-muted-foreground text-xs">
+                The name of your organization or company
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="org-slug">URL Slug</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  wraps.dev/
+                </span>
+                <Input
+                  id="org-slug"
+                  onChange={(e) => {
+                    setOrgSlug(e.target.value);
+                    setAutoSlug(false);
+                  }}
+                  placeholder="acme-inc"
+                  type="text"
+                  value={orgSlug}
+                />
+              </div>
+            </div>
+            <Button disabled={isSubmitting || !orgName} type="submit">
+              {isSubmitting ? "Creating..." : "Create Organization"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (state === "approve") {
+    return (
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">Authorize CLI</CardTitle>
+          <CardDescription>
+            A CLI session is requesting access to your account
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+          <div className="rounded-lg border bg-muted/50 p-4 text-center">
+            <p className="text-muted-foreground mb-1 text-xs">
+              Confirm this matches your terminal
+            </p>
+            <p className="font-mono text-2xl tracking-widest">
+              {formatCode(validatedCode)}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              disabled={isSubmitting}
+              onClick={handleApprove}
+            >
+              {isSubmitting ? "Approving..." : "Approve"}
+            </Button>
+            <Button
+              disabled={isSubmitting}
+              onClick={handleDeny}
+              variant="outline"
+            >
+              Deny
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Default: enter-code state
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">Authorize Device</CardTitle>
+        <CardTitle className="text-xl">Authorize CLI</CardTitle>
         <CardDescription>Enter the code shown in your terminal</CardDescription>
       </CardHeader>
       <CardContent>
@@ -131,7 +378,7 @@ function DeviceCodeForm() {
 export default function DevicePage() {
   return (
     <Suspense>
-      <DeviceCodeForm />
+      <DeviceFlow />
     </Suspense>
   );
 }
