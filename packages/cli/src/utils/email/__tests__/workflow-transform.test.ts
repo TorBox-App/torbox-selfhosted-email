@@ -462,6 +462,28 @@ describe("transformWorkflow - Edge Cases", () => {
     expect(result.transitions).toHaveLength(1);
   });
 
+  it("should not create duplicate transitions when both branches are empty and followed by a step", () => {
+    const workflow = createWorkflow({
+      steps: [
+        conditionStep("check-1", {
+          yes: [],
+          no: [],
+        }),
+        sendEmailStep("email-after", "followup"),
+      ],
+    });
+    const result = transformWorkflow(workflow);
+
+    // Trigger + condition + email-after = 3
+    expect(result.steps).toHaveLength(3);
+
+    // Only one transition from check-1 to email-after (not two)
+    const reconvergenceTransitions = result.transitions.filter(
+      (t) => t.fromStepId === "check-1" && t.toStepId === "email-after"
+    );
+    expect(reconvergenceTransitions).toHaveLength(1);
+  });
+
   it("should generate unique transition IDs", () => {
     const workflow = createWorkflow({
       steps: [
@@ -475,5 +497,178 @@ describe("transformWorkflow - Edge Cases", () => {
     const ids = result.transitions.map((t) => t.id);
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BRANCH RECONVERGENCE TESTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("transformWorkflow - Branch Reconvergence", () => {
+  it("should connect branch leaves to the next step after a condition", () => {
+    const workflow = createWorkflow({
+      steps: [
+        conditionStep("check-1", {
+          yes: [sendEmailStep("email-yes", "activated")],
+          no: [sendEmailStep("email-no", "reminder")],
+        }),
+        // This step should be reachable from BOTH branches
+        delayStep("delay-after", 1, "days"),
+      ],
+    });
+    const result = transformWorkflow(workflow);
+
+    // Trigger + condition + email-yes + email-no + delay-after = 5
+    expect(result.steps).toHaveLength(5);
+    expect(result.steps.map((s) => s.id)).toContain("delay-after");
+
+    // Both branch leaves should transition to delay-after
+    const yesToDelay = result.transitions.find(
+      (t) => t.fromStepId === "email-yes" && t.toStepId === "delay-after"
+    );
+    const noToDelay = result.transitions.find(
+      (t) => t.fromStepId === "email-no" && t.toStepId === "delay-after"
+    );
+
+    expect(yesToDelay).toBeDefined();
+    expect(noToDelay).toBeDefined();
+    // Reconvergence transitions should NOT have branch conditions
+    expect(yesToDelay?.condition).toBeUndefined();
+    expect(noToDelay?.condition).toBeUndefined();
+  });
+
+  it("should handle reconvergence with empty branches", () => {
+    const workflow = createWorkflow({
+      steps: [
+        conditionStep("check-1", {
+          yes: [sendEmailStep("email-yes", "activated")],
+          no: [], // Empty no branch
+        }),
+        sendEmailStep("email-after", "followup"),
+      ],
+    });
+    const result = transformWorkflow(workflow);
+
+    // email-yes should connect to email-after
+    const yesToAfter = result.transitions.find(
+      (t) => t.fromStepId === "email-yes" && t.toStepId === "email-after"
+    );
+    expect(yesToAfter).toBeDefined();
+
+    // The condition itself should connect to email-after for the empty no branch
+    const condToAfter = result.transitions.find(
+      (t) => t.fromStepId === "check-1" && t.toStepId === "email-after"
+    );
+    expect(condToAfter).toBeDefined();
+  });
+
+  it("should not reconverge branches that end with exit", () => {
+    const workflow = createWorkflow({
+      steps: [
+        conditionStep("check-1", {
+          yes: [exitStep("exit-yes")],
+          no: [sendEmailStep("email-no", "reminder")],
+        }),
+        sendEmailStep("email-after", "followup"),
+      ],
+    });
+    const result = transformWorkflow(workflow);
+
+    // exit-yes should NOT connect to email-after
+    const exitToAfter = result.transitions.find(
+      (t) => t.fromStepId === "exit-yes" && t.toStepId === "email-after"
+    );
+    expect(exitToAfter).toBeUndefined();
+
+    // email-no SHOULD connect to email-after
+    const noToAfter = result.transitions.find(
+      (t) => t.fromStepId === "email-no" && t.toStepId === "email-after"
+    );
+    expect(noToAfter).toBeDefined();
+  });
+
+  it("should handle multiple conditions with reconvergence", () => {
+    const workflow = createWorkflow({
+      steps: [
+        conditionStep("check-1", {
+          yes: [],
+          no: [sendEmailStep("nudge-1", "reminder-1")],
+        }),
+        delayStep("delay-1", 3, "days"),
+        conditionStep("check-2", {
+          yes: [],
+          no: [sendEmailStep("nudge-2", "reminder-2")],
+        }),
+        sendEmailStep("email-final", "final"),
+      ],
+    });
+    const result = transformWorkflow(workflow);
+
+    // All steps should be present
+    expect(result.steps.map((s) => s.id)).toEqual(
+      expect.arrayContaining([
+        "trigger",
+        "check-1",
+        "nudge-1",
+        "delay-1",
+        "check-2",
+        "nudge-2",
+        "email-final",
+      ])
+    );
+
+    // check-1 (empty yes) and nudge-1 should both reach delay-1
+    const check1ToDelay = result.transitions.find(
+      (t) => t.fromStepId === "check-1" && t.toStepId === "delay-1"
+    );
+    const nudge1ToDelay = result.transitions.find(
+      (t) => t.fromStepId === "nudge-1" && t.toStepId === "delay-1"
+    );
+    expect(check1ToDelay).toBeDefined();
+    expect(nudge1ToDelay).toBeDefined();
+
+    // check-2 (empty yes) and nudge-2 should both reach email-final
+    const check2ToFinal = result.transitions.find(
+      (t) => t.fromStepId === "check-2" && t.toStepId === "email-final"
+    );
+    const nudge2ToFinal = result.transitions.find(
+      (t) => t.fromStepId === "nudge-2" && t.toStepId === "email-final"
+    );
+    expect(check2ToFinal).toBeDefined();
+    expect(nudge2ToFinal).toBeDefined();
+  });
+
+  it("should handle nested conditions with reconvergence at outer level", () => {
+    const workflow = createWorkflow({
+      steps: [
+        conditionStep("outer", {
+          yes: [
+            conditionStep("inner", {
+              yes: [sendEmailStep("email-a", "a")],
+              no: [sendEmailStep("email-b", "b")],
+            }),
+          ],
+          no: [sendEmailStep("email-c", "c")],
+        }),
+        sendEmailStep("email-after", "after"),
+      ],
+    });
+    const result = transformWorkflow(workflow);
+
+    // Inner branch leaves (email-a, email-b) and outer no leaf (email-c)
+    // should all reach email-after
+    const aToAfter = result.transitions.find(
+      (t) => t.fromStepId === "email-a" && t.toStepId === "email-after"
+    );
+    const bToAfter = result.transitions.find(
+      (t) => t.fromStepId === "email-b" && t.toStepId === "email-after"
+    );
+    const cToAfter = result.transitions.find(
+      (t) => t.fromStepId === "email-c" && t.toStepId === "email-after"
+    );
+
+    expect(aToAfter).toBeDefined();
+    expect(bToAfter).toBeDefined();
+    expect(cToAfter).toBeDefined();
   });
 });

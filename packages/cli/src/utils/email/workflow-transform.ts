@@ -244,12 +244,16 @@ function getTriggerName(type: WorkflowTriggerType): string {
 /**
  * Recursively flatten nested steps into flat arrays.
  *
+ * Supports branch reconvergence: when a condition appears in the middle of a
+ * step array, the leaf nodes of both branches are connected to the next step
+ * in the sequence so execution continues after the fork.
+ *
  * @param stepDefs - Array of step definitions to process
  * @param steps - Accumulator for flat steps
  * @param transitions - Accumulator for transitions
  * @param fromStepId - ID of the previous step to connect from
  * @param branch - Branch condition if inside a conditional branch
- * @returns ID of the last step in this sequence (for connecting subsequent steps)
+ * @returns IDs of the leaf steps in this sequence (for connecting subsequent steps)
  */
 function flattenSteps(
   stepDefs: StepDefinition[],
@@ -257,52 +261,86 @@ function flattenSteps(
   transitions: WorkflowTransition[],
   fromStepId: string,
   branch: "yes" | "no" | null
-): string | null {
-  let prevId = fromStepId;
+): string[] {
+  let prevIds = [fromStepId];
   let firstStepInBranch = true;
 
   for (const def of stepDefs) {
     const step = toWorkflowStep(def);
     steps.push(step);
 
-    // Create transition from previous step to this one
-    const transition: WorkflowTransition = {
-      id: `t-${prevId}-${step.id}`,
-      fromStepId: prevId,
-      toStepId: step.id,
-    };
+    // Create transitions from all previous leaf steps to this one
+    for (const prevId of prevIds) {
+      const transition: WorkflowTransition = {
+        id: `t-${prevId}-${step.id}`,
+        fromStepId: prevId,
+        toStepId: step.id,
+      };
 
-    // If this is the first step in a branch, add the branch condition
-    if (firstStepInBranch && branch) {
-      transition.condition = { branch };
+      // If this is the first step in a branch, add the branch condition
+      // but only for the transition from the condition node itself
+      if (firstStepInBranch && branch && prevId === fromStepId) {
+        transition.condition = { branch };
+      }
+
+      transitions.push(transition);
     }
 
-    transitions.push(transition);
     firstStepInBranch = false;
 
     // Handle conditional branches
     if (def.type === "condition" && def.branches) {
+      const leafIds: string[] = [];
+
       // Process "yes" branch
       if (def.branches.yes && def.branches.yes.length > 0) {
-        flattenSteps(def.branches.yes, steps, transitions, step.id, "yes");
+        const yesLeaves = flattenSteps(
+          def.branches.yes,
+          steps,
+          transitions,
+          step.id,
+          "yes"
+        );
+        leafIds.push(...yesLeaves);
+      } else {
+        // Empty yes branch — the condition node itself is a leaf for
+        // reconvergence, but we need a special transition with the branch
+        // condition pointing to the next continuation step (handled below)
+        leafIds.push(step.id);
       }
 
       // Process "no" branch
       if (def.branches.no && def.branches.no.length > 0) {
-        flattenSteps(def.branches.no, steps, transitions, step.id, "no");
+        const noLeaves = flattenSteps(
+          def.branches.no,
+          steps,
+          transitions,
+          step.id,
+          "no"
+        );
+        leafIds.push(...noLeaves);
+      } else if (!leafIds.includes(step.id)) {
+        // Only add if not already present (avoids duplicate transitions
+        // when both branches are empty)
+        leafIds.push(step.id);
       }
 
-      // After a condition with branches, we don't have a single "next" step
-      // The branches diverge and may or may not converge later
-      // For now, we don't auto-converge branches
-      // Return null to indicate the flow has branched
-      return null;
+      // Set prevIds to all the leaf steps — the next step in the sequence
+      // will receive transitions from each of them (reconvergence)
+      prevIds = leafIds;
+      continue;
     }
 
-    prevId = step.id;
+    // Exit steps are terminal — they should not reconverge
+    if (def.type === "exit") {
+      prevIds = [];
+      continue;
+    }
+
+    prevIds = [step.id];
   }
 
-  return prevId;
+  return prevIds;
 }
 
 /**
