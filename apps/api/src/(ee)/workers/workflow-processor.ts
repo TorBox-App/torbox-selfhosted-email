@@ -931,8 +931,8 @@ async function handleSendEmail(
     sentAt: new Date(),
   });
 
-  // Track first email sent (fire-and-forget)
-  trackFirstEmailSent(organizationId, {
+  // Track first email sent (must await in Lambda)
+  await trackFirstEmailSent(organizationId, {
     channel: "email",
     source: "workflow",
   });

@@ -25,7 +25,7 @@ function capture(
   }
 }
 
-/** Fire-and-forget platform event emission. Never throws. */
+/** Platform event emission. Never throws, but logs failures. */
 async function emit(
   contactEmail: string,
   event: string,
@@ -37,11 +37,14 @@ async function emit(
       return;
     }
     const client = createPlatformClient({ apiKey: key });
-    await client.POST("/v1/events/", {
+    const { error } = await client.POST("/v1/events/", {
       body: { name: event, contactEmail, properties },
     });
-  } catch {
-    // intentionally swallowed - tracking should never break the app
+    if (error) {
+      console.error(`[activation-tracking] emit ${event} failed:`, error);
+    }
+  } catch (err) {
+    console.error(`[activation-tracking] emit ${event} threw:`, err);
   }
 }
 
@@ -102,8 +105,8 @@ async function countSentMessages(organizationId: string): Promise<number> {
 }
 
 // ─── Tracking Helpers ────────────────────────────────────────────────────────
-// All helpers are async but callers should NOT await them (fire-and-forget).
 // Each helper is wrapped in try/catch so it never throws.
+// Callers should await these to ensure events are emitted before the context exits.
 
 // ─── Tier 1: Infrastructure Activation ───────────────────────────────────────
 // These represent the critical path to "can they send email?"
@@ -122,10 +125,10 @@ export async function trackAwsConnected(
       account_id: properties.accountId,
     };
     capture(userId, "aws_account_connected", props);
-    emit(userId, "aws_account.connected", props);
+    await emit(userId, "aws_account.connected", props);
     if (existing === 1) {
       capture(userId, "activation_aws_connected", props);
-      emit(userId, "activation.aws_connected", props);
+      await emit(userId, "activation.aws_connected", props);
     }
   } catch {
     // never throw from tracking
@@ -146,10 +149,10 @@ export async function trackDomainVerified(
       domain: properties.domain,
     };
     capture(userId, "domain_verified", props);
-    emit(userId, "domain.verified", props);
+    await emit(userId, "domain.verified", props);
     if (properties.isFirstDomain) {
       capture(userId, "activation_domain_verified", props);
-      emit(userId, "activation.domain_verified", props);
+      await emit(userId, "activation.domain_verified", props);
     }
   } catch {
     // never throw from tracking
@@ -173,7 +176,7 @@ export async function trackFirstEmailSent(
         source: properties.source,
       };
       capture(userId, "activation_first_email_sent", props);
-      emit(userId, "activation.first_email_sent", props);
+      await emit(userId, "activation.first_email_sent", props);
     }
   } catch {
     // never throw from tracking
@@ -196,11 +199,11 @@ export async function trackContactCreated(
       ...properties,
     };
     capture(userId, "contact_created", props);
-    emit(userId, "contact.created", props);
+    await emit(userId, "contact.created", props);
     if (existing === 1) {
       const firstProps = { organization_id: organizationId };
       capture(userId, "activation_first_contact", firstProps);
-      emit(userId, "activation.first_contact", firstProps);
+      await emit(userId, "activation.first_contact", firstProps);
     }
   } catch {
     // never throw from tracking
@@ -216,11 +219,11 @@ export async function trackContactsImported(
     const existing = await countContacts(organizationId);
     const props = { organization_id: organizationId, count: properties.count };
     capture(userId, "contacts_imported", props);
-    emit(userId, "contacts.imported", props);
+    await emit(userId, "contacts.imported", props);
     if (existing <= properties.count) {
       const firstProps = { organization_id: organizationId };
       capture(userId, "activation_first_contact", firstProps);
-      emit(userId, "activation.first_contact", firstProps);
+      await emit(userId, "activation.first_contact", firstProps);
     }
   } catch {
     // never throw from tracking
@@ -235,7 +238,7 @@ export async function trackWorkflowCreated(
   try {
     const props = { organization_id: organizationId, ...properties };
     capture(userId, "workflow_created", props);
-    emit(userId, "workflow.created", props);
+    await emit(userId, "workflow.created", props);
   } catch {
     // never throw from tracking
   }
@@ -250,11 +253,11 @@ export async function trackTemplateCreated(
     const existing = await countTemplates(organizationId);
     const props = { organization_id: organizationId, ...properties };
     capture(userId, "template_created", props);
-    emit(userId, "template.created", props);
+    await emit(userId, "template.created", props);
     if (existing === 1) {
       const firstProps = { organization_id: organizationId };
       capture(userId, "activation_first_template", firstProps);
-      emit(userId, "activation.first_template", firstProps);
+      await emit(userId, "activation.first_template", firstProps);
     }
   } catch {
     // never throw from tracking
@@ -269,7 +272,7 @@ export async function trackTemplatePublished(
   try {
     const props = { organization_id: organizationId, ...properties };
     capture(userId, "template_published", props);
-    emit(userId, "template.published", props);
+    await emit(userId, "template.published", props);
   } catch {
     // never throw from tracking
   }
@@ -288,14 +291,14 @@ export async function trackBroadcastCreated(
       recipient_count: properties.recipientCount,
     };
     capture(userId, "broadcast_created", props);
-    emit(userId, "broadcast.created", props);
+    await emit(userId, "broadcast.created", props);
     if (existing === 1) {
       const firstProps = {
         organization_id: organizationId,
         channel: properties.channel,
       };
       capture(userId, "activation_first_broadcast", firstProps);
-      emit(userId, "activation.first_broadcast", firstProps);
+      await emit(userId, "activation.first_broadcast", firstProps);
     }
   } catch {
     // never throw from tracking
@@ -310,10 +313,10 @@ export async function trackApiKeyCreated(
     const existing = await countApiKeys(organizationId);
     const props = { organization_id: organizationId };
     capture(userId, "api_key_created", props);
-    emit(userId, "api_key.created", props);
+    await emit(userId, "api_key.created", props);
     if (existing === 1) {
       capture(userId, "activation_first_api_key", props);
-      emit(userId, "activation.first_api_key", props);
+      await emit(userId, "activation.first_api_key", props);
     }
   } catch {
     // never throw from tracking

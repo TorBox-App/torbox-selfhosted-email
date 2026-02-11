@@ -299,8 +299,8 @@ export async function connectAWSAccountAction(
       "AWS account connected"
     );
 
-    // Fire-and-forget activation tracking
-    trackAwsConnected(session.user.id, validatedData.organizationId, {
+    // Activation tracking (awaited to ensure events emit before response)
+    await trackAwsConnected(session.user.email, validatedData.organizationId, {
       region: validatedData.region,
       accountId: validatedData.accountId,
     });
@@ -801,7 +801,7 @@ export async function scanAWSAccountFeatures(
     if (newDomains.length > 0) {
       const isFirstDomain = previousDomains.size === 0;
       for (const domain of newDomains) {
-        trackDomainVerified(session.user.id, organizationId, {
+        await trackDomainVerified(session.user.email, organizationId, {
           domain: domain.identity,
           isFirstDomain,
         });

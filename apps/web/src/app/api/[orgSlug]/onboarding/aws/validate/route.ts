@@ -106,8 +106,8 @@ export async function POST(request: Request, context: RouteContext) {
         });
       }
 
-      // Fire-and-forget activation tracking
-      trackAwsConnected(session.user.id, orgWithMembership.id, {
+      // Activation tracking (awaited to ensure events emit before response)
+      await trackAwsConnected(session.user.email, orgWithMembership.id, {
         region: "us-east-1",
         accountId,
       });

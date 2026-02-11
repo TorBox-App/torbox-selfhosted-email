@@ -63,6 +63,8 @@ batchQueue.subscribe(
       UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
       // PostHog for activation tracking
       POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
+      // Wraps platform for activation event emission
+      WRAPS_API_KEY: process.env.WRAPS_API_KEY ?? "",
     },
     nodejs: {
       install: ["pg"], // PostgreSQL driver for Drizzle
@@ -150,6 +152,8 @@ workflowQueue.subscribe(
       UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
       // PostHog for activation tracking
       POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
+      // Wraps platform for activation event emission
+      WRAPS_API_KEY: process.env.WRAPS_API_KEY ?? "",
     },
     nodejs: {
       install: ["pg"], // PostgreSQL driver for Drizzle
