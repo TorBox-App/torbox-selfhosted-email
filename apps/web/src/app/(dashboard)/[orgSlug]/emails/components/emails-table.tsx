@@ -12,7 +12,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { Download, Search, UserPlus } from "lucide-react";
+import { Download, Loader2, Search, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -44,6 +44,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { emailCSVColumns } from "@/lib/csv-columns";
+import { exportTableToCSV } from "@/lib/csv-export";
 import type { EmailListItem } from "../types";
 import { columns } from "./columns";
 
@@ -69,6 +76,7 @@ export function EmailsTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
   const [createContactsDialogOpen, setCreateContactsDialogOpen] =
     useState(false);
 
@@ -217,16 +225,28 @@ export function EmailsTable({
             </Kbd>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Button Group: Time Range | Status */}
-          <div className="flex">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Bulk Actions - shown when emails are selected */}
+          {selectedEmailIds.length > 0 && (
+            <Button
+              onClick={() => setCreateContactsDialogOpen(true)}
+              size="sm"
+              variant="outline"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add to contacts ({uniqueRecipientEmails.length})
+            </Button>
+          )}
+
+          {/* Button Group: Time Range | Status | Export */}
+          <div className="flex w-full sm:w-auto">
             <Select
               onValueChange={(value) => {
                 router.push(`/${orgSlug}/emails?days=${value}`);
               }}
               value={String(days)}
             >
-              <SelectTrigger className="w-[150px] rounded-r-none border-r-0 focus:z-10">
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[150px] rounded-r-none border-r-0 focus:z-10">
                 <SelectValue placeholder="Time range" />
               </SelectTrigger>
               <SelectContent>
@@ -251,7 +271,7 @@ export function EmailsTable({
                   : "all"
               }
             >
-              <SelectTrigger className="w-[140px] rounded-l-none focus:z-10">
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[140px] rounded-none border-r-0 focus:z-10">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -265,24 +285,47 @@ export function EmailsTable({
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="rounded-l-none focus:z-10"
+                  disabled={isExporting}
+                  onClick={() => {
+                    setIsExporting(true);
+                    try {
+                      const selectedRows = table.getSelectedRowModel().rows;
+                      const rows =
+                        selectedRows.length > 0
+                          ? selectedRows.map((r) => r.original)
+                          : table
+                              .getFilteredRowModel()
+                              .rows.map((r) => r.original);
+                      exportTableToCSV(
+                        rows,
+                        emailCSVColumns,
+                        `emails-${new Date().toISOString().slice(0, 10)}.csv`
+                      );
+                      if (rows.length > 0) {
+                        toast.success(`Exported ${rows.length} emails to CSV`);
+                      }
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                  size="icon"
+                  variant="outline"
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">Export</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Export as CSV</TooltipContent>
+            </Tooltip>
           </div>
-
-          {/* Bulk Actions - shown when emails are selected */}
-          {selectedEmailIds.length > 0 && (
-            <Button
-              onClick={() => setCreateContactsDialogOpen(true)}
-              size="sm"
-              variant="outline"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add to contacts ({uniqueRecipientEmails.length})
-            </Button>
-          )}
-
-          <Button size="icon" variant="outline">
-            <Download className="h-4 w-4" />
-            <span className="sr-only">Export</span>
-          </Button>
         </div>
       </div>
 

@@ -7,13 +7,16 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type RowSelectionState,
   type SortingState,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { Search, Zap } from "lucide-react";
+import { Download, Loader2, Search, Zap } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { exportAllEvents } from "@/actions/export";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
@@ -33,6 +36,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { eventCSVColumns } from "@/lib/csv-columns";
+import { exportTableToCSV } from "@/lib/csv-export";
 import type { DateRangePreset, EventWithContact } from "@/lib/events";
 import { createColumns } from "./columns";
 import { DateRangePicker } from "./date-range-picker";
@@ -68,6 +78,7 @@ export function EventsTable({
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   // Local input state (for immediate UI feedback)
   const [searchInput, setSearchInput] = useState(
@@ -82,6 +93,8 @@ export function EventsTable({
 
   // Track if this is the initial mount to avoid unnecessary navigation
   const isInitialMount = useRef(true);
+
+  const [isExporting, setIsExporting] = useState(false);
 
   // Sheet state
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
@@ -165,6 +178,7 @@ export function EventsTable({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
     manualPagination: true,
     manualFiltering: true, // Server-side filtering
     pageCount: Math.ceil(total / pageSize),
@@ -172,6 +186,7 @@ export function EventsTable({
       sorting,
       columnFilters,
       columnVisibility,
+      rowSelection,
       pagination: {
         pageIndex: page - 1,
         pageSize,
@@ -205,36 +220,95 @@ export function EventsTable({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Event Name Filter */}
-          <Select
-            onValueChange={(value) => {
-              updateSearchParams({
-                eventName: value === "all" ? undefined : value,
-                page: "1",
-              });
-            }}
-            value={eventNameFilter || "all"}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All events" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All events</SelectItem>
-              {eventNames.map((name) => (
-                <SelectItem key={name} value={name}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Date Range Filter */}
-          <DateRangePicker
-            dateFrom={dateFromParam ? new Date(dateFromParam) : undefined}
-            dateTo={dateToParam ? new Date(dateToParam) : undefined}
-            onDateRangeChange={handleDateRangeChange}
-            preset={datePreset as DateRangePreset | undefined}
-          />
+          {/* Button Group: Event Name | Date Range | Export */}
+          <div className="flex w-full sm:w-auto">
+            <Select
+              onValueChange={(value) => {
+                updateSearchParams({
+                  eventName: value === "all" ? undefined : value,
+                  page: "1",
+                });
+              }}
+              value={eventNameFilter || "all"}
+            >
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[180px] rounded-r-none border-r-0 focus:z-10">
+                <SelectValue placeholder="All events" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All events</SelectItem>
+                {eventNames.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <DateRangePicker
+              dateFrom={dateFromParam ? new Date(dateFromParam) : undefined}
+              dateTo={dateToParam ? new Date(dateToParam) : undefined}
+              onDateRangeChange={handleDateRangeChange}
+              preset={datePreset as DateRangePreset | undefined}
+              triggerClassName="rounded-none border-r-0 focus:z-10"
+            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="rounded-l-none focus:z-10"
+                  disabled={isExporting}
+                  onClick={async () => {
+                    setIsExporting(true);
+                    try {
+                      const selectedRows = table.getSelectedRowModel().rows;
+                      if (selectedRows.length > 0) {
+                        const rows = selectedRows.map((r) => r.original);
+                        exportTableToCSV(
+                          rows,
+                          eventCSVColumns,
+                          `events-${new Date().toISOString().slice(0, 10)}.csv`
+                        );
+                        toast.success(`Exported ${rows.length} events to CSV`);
+                      } else {
+                        const result = await exportAllEvents(organizationId, {
+                          search: searchInput || undefined,
+                          eventName: eventNameFilter || undefined,
+                          dateFrom: dateFromParam
+                            ? new Date(dateFromParam)
+                            : undefined,
+                          dateTo: dateToParam
+                            ? new Date(dateToParam)
+                            : undefined,
+                        });
+                        if (result.success) {
+                          exportTableToCSV(
+                            result.events,
+                            eventCSVColumns,
+                            `events-${new Date().toISOString().slice(0, 10)}.csv`
+                          );
+                          toast.success(
+                            `Exported ${result.events.length} events to CSV`
+                          );
+                        } else {
+                          toast.error("Failed to export events");
+                        }
+                      }
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                  size="icon"
+                  variant="outline"
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">Export</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Export as CSV</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type RowSelectionState,
   type SortingState,
   useReactTable,
   type VisibilityState,
@@ -17,6 +18,7 @@ import {
   CalendarClock,
   CheckCircle,
   Clock,
+  Download,
   Loader2,
   Mail,
   MessageSquare,
@@ -39,6 +41,7 @@ import { toast } from "sonner";
 import { cancelBatchSend } from "@/actions/batch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,11 +61,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   BATCH_STATUS_COLORS,
   BATCH_STATUS_LABELS,
   type BatchSendWithMeta,
   calculateProgress,
 } from "@/lib/batch";
+import { broadcastCSVColumns } from "@/lib/csv-columns";
+import { exportTableToCSV } from "@/lib/csv-export";
 
 type BatchTableProps = {
   batches: BatchSendWithMeta[];
@@ -87,9 +97,11 @@ export function BatchTable({
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [globalFilter, setGlobalFilter] = useState(
     searchParams.get("search") || ""
   );
+  const [isExporting, setIsExporting] = useState(false);
 
   // Ref for search input to enable keyboard shortcut
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -145,6 +157,46 @@ export function BatchTable({
 
   const columns = useMemo(
     () => [
+      {
+        id: "select",
+        header: ({
+          table,
+        }: {
+          table: {
+            getIsAllPageRowsSelected: () => boolean;
+            getIsSomePageRowsSelected: () => boolean;
+            toggleAllPageRowsSelected: (value: boolean) => void;
+          };
+        }) => (
+          <Checkbox
+            aria-label="Select all"
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+          />
+        ),
+        cell: ({
+          row,
+        }: {
+          row: {
+            getIsSelected: () => boolean;
+            toggleSelected: (value: boolean) => void;
+          };
+        }) => (
+          <Checkbox
+            aria-label="Select row"
+            checked={row.getIsSelected()}
+            onCheckedChange={(value: boolean) => row.toggleSelected(!!value)}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+      },
       {
         accessorKey: "name",
         header: ({
@@ -366,10 +418,12 @@ export function BatchTable({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
+      rowSelection,
       globalFilter,
     },
     getRowId: (row) => row.id,
@@ -394,9 +448,56 @@ export function BatchTable({
             </Kbd>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        {/* Button Group: Export | New Broadcast */}
+        <div className="flex w-full sm:w-auto">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className={
+                  canManage
+                    ? "rounded-r-none border-r-0 focus:z-10"
+                    : "focus:z-10"
+                }
+                disabled={isExporting}
+                onClick={() => {
+                  setIsExporting(true);
+                  try {
+                    const selectedRows = table.getSelectedRowModel().rows;
+                    const rows =
+                      selectedRows.length > 0
+                        ? selectedRows.map((r) => r.original)
+                        : table
+                            .getFilteredRowModel()
+                            .rows.map((r) => r.original);
+                    exportTableToCSV(
+                      rows,
+                      broadcastCSVColumns,
+                      `broadcasts-${new Date().toISOString().slice(0, 10)}.csv`
+                    );
+                    if (rows.length > 0) {
+                      toast.success(
+                        `Exported ${rows.length} broadcasts to CSV`
+                      );
+                    }
+                  } finally {
+                    setIsExporting(false);
+                  }
+                }}
+                size="icon"
+                variant="outline"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span className="sr-only">Export</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Export as CSV</TooltipContent>
+          </Tooltip>
           {canManage && (
-            <Button asChild size="sm">
+            <Button asChild className="rounded-l-none focus:z-10" size="sm">
               <Link href={`/${orgSlug}/emails/broadcasts/new`}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Broadcast

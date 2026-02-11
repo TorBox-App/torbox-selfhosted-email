@@ -5,6 +5,7 @@ import { ArrowUpDown, Eye, MoreHorizontal, User } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,29 @@ export function createColumns(
   actions: ColumnActions
 ): ColumnDef<EventWithContact>[] {
   return [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          aria-label="Select all"
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          aria-label="Select row"
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "createdAt",
       header: ({ column }) => (

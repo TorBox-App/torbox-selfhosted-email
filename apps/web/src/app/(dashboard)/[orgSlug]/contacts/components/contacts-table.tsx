@@ -12,7 +12,15 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { Plus, Search, Tags, Trash2, Upload } from "lucide-react";
+import {
+  Download,
+  Loader2,
+  Plus,
+  Search,
+  Tags,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   useCallback,
@@ -33,6 +41,7 @@ import {
   unsubscribeContactFromTopics,
   updateContact,
 } from "@/actions/contacts";
+import { exportAllContacts } from "@/actions/export";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -69,6 +78,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   type ContactStatus,
   type ContactWithMeta,
   EMAIL_STATUS_LABELS,
@@ -76,6 +90,8 @@ import {
   type EmailStatus,
   type SmsStatus,
 } from "@/lib/contacts";
+import { contactCSVColumns } from "@/lib/csv-columns";
+import { exportTableToCSV } from "@/lib/csv-export";
 import type { TopicWithMeta } from "@/lib/topics";
 import { createColumns } from "./columns";
 import { ContactDetailsSheet } from "./contact-details-sheet";
@@ -143,6 +159,7 @@ export function ContactsTable({
   const [bulkUnsubscribeDialogOpen, setBulkUnsubscribeDialogOpen] =
     useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState<string>("");
   const [selectedContact, setSelectedContact] =
     useState<ContactWithMeta | null>(null);
@@ -557,57 +574,63 @@ export function ContactsTable({
             </Kbd>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          {/* Email Status Filter */}
-          <Select
-            onValueChange={(value) => {
-              updateSearchParams({
-                emailStatus: value === "all" ? undefined : value,
-                page: "1",
-              });
-            }}
-            value={statusFilter || "all"}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {EMAIL_STATUSES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {EMAIL_STATUS_LABELS[status]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Topic Filter */}
-          {topics.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filter Group: Status | Topic */}
+          <div className="flex w-full sm:w-auto">
             <Select
               onValueChange={(value) => {
                 updateSearchParams({
-                  topicId: value === "all" ? undefined : value,
+                  emailStatus: value === "all" ? undefined : value,
                   page: "1",
                 });
               }}
-              value={topicFilter || "all"}
+              value={statusFilter || "all"}
             >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Topics" />
+              <SelectTrigger
+                className={
+                  topics.length > 0
+                    ? "min-w-0 flex-1 sm:flex-initial sm:w-[160px] rounded-r-none border-r-0 focus:z-10"
+                    : "min-w-0 flex-1 sm:flex-initial sm:w-[160px] focus:z-10"
+                }
+              >
+                <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Topics</SelectItem>
-                {topics.map((topic) => (
-                  <SelectItem key={topic.id} value={topic.id}>
-                    {topic.name}
+                <SelectItem value="all">All Statuses</SelectItem>
+                {EMAIL_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {EMAIL_STATUS_LABELS[status]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          )}
+            {topics.length > 0 && (
+              <Select
+                onValueChange={(value) => {
+                  updateSearchParams({
+                    topicId: value === "all" ? undefined : value,
+                    page: "1",
+                  });
+                }}
+                value={topicFilter || "all"}
+              >
+                <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[160px] rounded-l-none focus:z-10">
+                  <SelectValue placeholder="All Topics" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Topics</SelectItem>
+                  {topics.map((topic) => (
+                    <SelectItem key={topic.id} value={topic.id}>
+                      {topic.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
 
           {/* Bulk Actions - shown when contacts are selected */}
-          {canEdit && selectedContactIds.length > 0 && (
+          {selectedContactIds.length > 0 && canEdit && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline">
@@ -642,21 +665,109 @@ export function ContactsTable({
             </DropdownMenu>
           )}
 
-          {/* Import Button - placeholder */}
-          {canEdit && (
-            <Button size="sm" variant="outline">
-              <Upload className="mr-2 h-4 w-4" />
-              Import
-            </Button>
-          )}
-
-          {/* Add Contact Button */}
-          {canEdit && (
-            <Button onClick={() => setCreateDialogOpen(true)} size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Contact
-            </Button>
-          )}
+          {/* Action Group: Import | Export | Add Contact */}
+          <div className="flex w-full sm:w-auto">
+            {canEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    className="rounded-r-none border-r-0 focus:z-10"
+                    size="icon"
+                    variant="outline"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span className="sr-only">Import</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Import contacts</TooltipContent>
+              </Tooltip>
+            )}
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      className={
+                        canEdit
+                          ? "rounded-none border-r-0 focus:z-10"
+                          : "rounded-r-none border-r-0 focus:z-10"
+                      }
+                      disabled={isExporting}
+                      size="icon"
+                      variant="outline"
+                    >
+                      {isExporting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      <span className="sr-only">Export</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Export as CSV</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end">
+                {selectedContactIds.length > 0 && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const rows = table
+                        .getSelectedRowModel()
+                        .rows.map((r) => r.original);
+                      exportTableToCSV(
+                        rows,
+                        contactCSVColumns,
+                        `contacts-${new Date().toISOString().slice(0, 10)}.csv`
+                      );
+                      toast.success(
+                        `Exported ${rows.length} selected contacts to CSV`
+                      );
+                    }}
+                  >
+                    Export selected ({selectedContactIds.length})
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={async () => {
+                    setIsExporting(true);
+                    try {
+                      const result = await exportAllContacts(organizationId, {
+                        search: globalFilter || undefined,
+                        emailStatus: (statusFilter as EmailStatus) || undefined,
+                        topicId: topicFilter || undefined,
+                      });
+                      if (result.success) {
+                        exportTableToCSV(
+                          result.contacts,
+                          contactCSVColumns,
+                          `contacts-${new Date().toISOString().slice(0, 10)}.csv`
+                        );
+                        toast.success(
+                          `Exported ${result.contacts.length} contacts to CSV`
+                        );
+                      } else {
+                        toast.error("Failed to export contacts");
+                      }
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                >
+                  Export all
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {canEdit && (
+              <Button
+                className="rounded-l-none focus:z-10"
+                onClick={() => setCreateDialogOpen(true)}
+                size="sm"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Contact
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

@@ -29,6 +29,7 @@ type DateRangePickerProps = {
   dateFrom?: Date;
   dateTo?: Date;
   preset?: DateRangePreset;
+  triggerClassName?: string;
   onDateRangeChange: (
     dateFrom: Date | undefined,
     dateTo: Date | undefined,
@@ -40,6 +41,7 @@ export function DateRangePicker({
   dateFrom,
   dateTo,
   preset,
+  triggerClassName,
   onDateRangeChange,
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -106,12 +108,17 @@ export function DateRangePicker({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <>
       <Select
         onValueChange={handlePresetChange}
         value={selectedPreset || "all"}
       >
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger
+          className={cn(
+            "min-w-0 flex-1 sm:flex-initial sm:w-[160px]",
+            triggerClassName
+          )}
+        >
           <SelectValue placeholder="All time">{getDisplayValue()}</SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -161,6 +168,6 @@ export function DateRangePicker({
           </PopoverContent>
         </Popover>
       )}
-    </div>
+    </>
   );
 }

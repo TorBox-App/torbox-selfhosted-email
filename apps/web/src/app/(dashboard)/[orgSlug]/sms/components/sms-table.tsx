@@ -7,13 +7,15 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type RowSelectionState,
   type SortingState,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { Download, Search } from "lucide-react";
+import { Download, Loader2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
@@ -33,6 +35,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { smsCSVColumns } from "@/lib/csv-columns";
+import { exportTableToCSV } from "@/lib/csv-export";
 import type { SMSListItem } from "../types";
 import { columns } from "./columns";
 
@@ -49,7 +58,9 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Ref for search input to enable keyboard shortcut
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +87,7 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: (row, _columnId, filterValue) => {
       const search = filterValue.toLowerCase();
@@ -98,6 +110,7 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
       sorting,
       columnFilters,
       columnVisibility,
+      rowSelection,
       globalFilter,
     },
     initialState: {
@@ -130,16 +143,16 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
             </Kbd>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Button Group: Time Range | Status */}
-          <div className="flex">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Button Group: Time Range | Status | Export */}
+          <div className="flex w-full sm:w-auto">
             <Select
               onValueChange={(value) => {
                 router.push(`/${orgSlug}/sms?days=${value}`);
               }}
               value={String(days)}
             >
-              <SelectTrigger className="w-[150px] rounded-r-none border-r-0 focus:z-10">
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[150px] rounded-r-none border-r-0 focus:z-10">
                 <SelectValue placeholder="Time range" />
               </SelectTrigger>
               <SelectContent>
@@ -164,7 +177,7 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
                   : "all"
               }
             >
-              <SelectTrigger className="w-[140px] rounded-l-none focus:z-10">
+              <SelectTrigger className="min-w-0 flex-1 sm:flex-initial sm:w-[140px] rounded-none border-r-0 focus:z-10">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -177,12 +190,49 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
                 <SelectItem value="opted_out">Opted Out</SelectItem>
               </SelectContent>
             </Select>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  className="rounded-l-none focus:z-10"
+                  disabled={isExporting}
+                  onClick={() => {
+                    setIsExporting(true);
+                    try {
+                      const selectedRows = table.getSelectedRowModel().rows;
+                      const rows =
+                        selectedRows.length > 0
+                          ? selectedRows.map((r) => r.original)
+                          : table
+                              .getFilteredRowModel()
+                              .rows.map((r) => r.original);
+                      exportTableToCSV(
+                        rows,
+                        smsCSVColumns,
+                        `sms-${new Date().toISOString().slice(0, 10)}.csv`
+                      );
+                      if (rows.length > 0) {
+                        toast.success(
+                          `Exported ${rows.length} SMS messages to CSV`
+                        );
+                      }
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                  size="icon"
+                  variant="outline"
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">Export</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Export as CSV</TooltipContent>
+            </Tooltip>
           </div>
-
-          <Button size="icon" variant="outline">
-            <Download className="h-4 w-4" />
-            <span className="sr-only">Export</span>
-          </Button>
         </div>
       </div>
 
