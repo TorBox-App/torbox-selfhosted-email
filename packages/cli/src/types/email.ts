@@ -122,6 +122,13 @@ export type WrapsEmailConfig = {
   // Additional domains managed via `wraps email domains add`
   additionalDomains?: AdditionalDomain[];
 
+  // User webhook endpoint for SES events
+  userWebhook?: {
+    enabled: boolean;
+    url?: string;
+    secret?: string;
+  };
+
   // Advanced options
   ipPool?: string;
   dedicatedIp?: boolean;
@@ -150,6 +157,7 @@ export type EmailFeatureCostBreakdown = {
   waf?: FeatureCost;
   smtpCredentials?: FeatureCost;
   alerts?: FeatureCost;
+  userWebhook?: FeatureCost;
   total: FeatureCost;
 };
 
@@ -216,6 +224,9 @@ export type EmailStackOutputs = {
   inboundBucketArn?: string;
   inboundLambdaArn?: string;
   inboundReceivingDomain?: string;
+  // User webhook outputs
+  userWebhookUrl?: string;
+  userWebhookSecret?: string;
 };
 
 /**

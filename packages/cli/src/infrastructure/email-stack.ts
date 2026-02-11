@@ -176,6 +176,16 @@ export async function deployEmailStack(
       queueUrl: sqsResources.queue.url,
       // Include webhook config if provided (for Wraps platform integration)
       webhook: config.webhook,
+      // Include user webhook config if provided
+      userWebhook:
+        emailConfig.userWebhook?.enabled &&
+        emailConfig.userWebhook.url &&
+        emailConfig.userWebhook.secret
+          ? {
+              url: emailConfig.userWebhook.url,
+              secret: emailConfig.userWebhook.secret,
+            }
+          : undefined,
     });
   }
 
@@ -353,5 +363,12 @@ export async function deployEmailStack(
     inboundBucketArn: inboundResources?.bucketArn as any as string | undefined,
     inboundLambdaArn: inboundResources?.lambdaArn as any as string | undefined,
     inboundReceivingDomain: emailConfig.inbound?.receivingDomain,
+    // User webhook outputs
+    userWebhookUrl: emailConfig.userWebhook?.enabled
+      ? emailConfig.userWebhook.url
+      : undefined,
+    userWebhookSecret: emailConfig.userWebhook?.enabled
+      ? emailConfig.userWebhook.secret
+      : undefined,
   };
 }

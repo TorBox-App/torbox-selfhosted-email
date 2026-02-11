@@ -994,6 +994,414 @@ describe("upgrade command", () => {
     });
   });
 
+  describe("User Webhook Tests", () => {
+    it("should set up new webhook endpoint", async () => {
+      await setupPulumiMock();
+      // Start with event tracking already enabled
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            config: createStarterConfig({
+              eventTracking: {
+                enabled: true,
+                eventBridge: true,
+                events: ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT"],
+                dynamoDBHistory: false,
+              },
+            }),
+            preset: "starter",
+            pulumiStackName: "wraps-123456789012-us-east-1",
+          },
+        },
+      } as any);
+
+      vi.mocked(prompts.select).mockResolvedValueOnce(
+        "user-webhook" as never
+      );
+      vi.mocked(prompts.text).mockResolvedValue(
+        "https://example.com/webhooks/email" as never
+      );
+      vi.mocked(prompts.confirm).mockResolvedValue(true as never);
+
+      await upgrade({});
+
+      expect(deployEmailStack).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailConfig: expect.objectContaining({
+            userWebhook: expect.objectContaining({
+              enabled: true,
+              url: "https://example.com/webhooks/email",
+            }),
+          }),
+        })
+      );
+
+      // Secret should be generated (non-empty string)
+      const callArgs = vi.mocked(deployEmailStack).mock.calls[0]![0];
+      expect(callArgs.emailConfig.userWebhook?.secret).toBeTruthy();
+      expect(
+        typeof callArgs.emailConfig.userWebhook?.secret
+      ).toBe("string");
+    });
+
+    it("should auto-enable event tracking when selecting webhook without it", async () => {
+      await setupPulumiMock();
+      // Event tracking disabled
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            config: createStarterConfig({
+              eventTracking: { enabled: false },
+            }),
+            preset: "starter",
+            pulumiStackName: "wraps-123456789012-us-east-1",
+          },
+        },
+      } as any);
+
+      vi.mocked(prompts.select).mockResolvedValueOnce(
+        "user-webhook" as never
+      );
+      // Confirm enabling event tracking
+      vi.mocked(prompts.confirm)
+        .mockResolvedValueOnce(true as never) // Enable event tracking
+        .mockResolvedValueOnce(true as never); // Proceed with upgrade
+      vi.mocked(prompts.text).mockResolvedValue(
+        "https://example.com/webhooks/email" as never
+      );
+
+      await upgrade({});
+
+      expect(deployEmailStack).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailConfig: expect.objectContaining({
+            eventTracking: expect.objectContaining({
+              enabled: true,
+              eventBridge: true,
+            }),
+            userWebhook: expect.objectContaining({
+              enabled: true,
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should change webhook URL on existing webhook", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            config: createStarterConfig({
+              eventTracking: {
+                enabled: true,
+                eventBridge: true,
+                events: ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT"],
+              },
+              userWebhook: {
+                enabled: true,
+                url: "https://old.example.com/webhook",
+                secret: "existing-secret",
+              },
+            }),
+            preset: undefined,
+            pulumiStackName: "wraps-123456789012-us-east-1",
+          },
+        },
+      } as any);
+
+      vi.mocked(prompts.select)
+        .mockResolvedValueOnce("user-webhook" as never) // upgrade action
+        .mockResolvedValueOnce("change-url" as never); // manage action
+      vi.mocked(prompts.text).mockResolvedValue(
+        "https://new.example.com/webhook" as never
+      );
+      vi.mocked(prompts.confirm).mockResolvedValue(true as never);
+
+      await upgrade({});
+
+      expect(deployEmailStack).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailConfig: expect.objectContaining({
+            userWebhook: expect.objectContaining({
+              enabled: true,
+              url: "https://new.example.com/webhook",
+              secret: "existing-secret", // Secret preserved
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should regenerate webhook secret", async () => {
+      await setupPulumiMock();
+      const originalSecret = "original-secret-value";
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            config: createStarterConfig({
+              eventTracking: {
+                enabled: true,
+                eventBridge: true,
+                events: ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT"],
+              },
+              userWebhook: {
+                enabled: true,
+                url: "https://example.com/webhook",
+                secret: originalSecret,
+              },
+            }),
+            preset: undefined,
+            pulumiStackName: "wraps-123456789012-us-east-1",
+          },
+        },
+      } as any);
+
+      vi.mocked(prompts.select)
+        .mockResolvedValueOnce("user-webhook" as never)
+        .mockResolvedValueOnce("regenerate-secret" as never);
+      vi.mocked(prompts.confirm).mockResolvedValue(true as never);
+
+      await upgrade({});
+
+      const callArgs = vi.mocked(deployEmailStack).mock.calls[0]![0];
+      expect(callArgs.emailConfig.userWebhook?.enabled).toBe(true);
+      expect(callArgs.emailConfig.userWebhook?.url).toBe(
+        "https://example.com/webhook"
+      );
+      // Secret should be different from original
+      expect(callArgs.emailConfig.userWebhook?.secret).toBeTruthy();
+      expect(callArgs.emailConfig.userWebhook?.secret).not.toBe(
+        originalSecret
+      );
+    });
+
+    it("should disable webhook", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            config: createStarterConfig({
+              eventTracking: {
+                enabled: true,
+                eventBridge: true,
+                events: ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT"],
+              },
+              userWebhook: {
+                enabled: true,
+                url: "https://example.com/webhook",
+                secret: "some-secret",
+              },
+            }),
+            preset: undefined,
+            pulumiStackName: "wraps-123456789012-us-east-1",
+          },
+        },
+      } as any);
+
+      vi.mocked(prompts.select)
+        .mockResolvedValueOnce("user-webhook" as never)
+        .mockResolvedValueOnce("disable" as never);
+      vi.mocked(prompts.confirm)
+        .mockResolvedValueOnce(true as never) // Confirm disable
+        .mockResolvedValueOnce(true as never); // Proceed with upgrade
+
+      await upgrade({});
+
+      expect(deployEmailStack).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailConfig: expect.objectContaining({
+            userWebhook: expect.objectContaining({
+              enabled: false,
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should validate webhook URL requires HTTPS", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            config: createStarterConfig({
+              eventTracking: {
+                enabled: true,
+                eventBridge: true,
+                events: ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT"],
+              },
+            }),
+            preset: "starter",
+            pulumiStackName: "wraps-123456789012-us-east-1",
+          },
+        },
+      } as any);
+
+      vi.mocked(prompts.select).mockResolvedValueOnce(
+        "user-webhook" as never
+      );
+      vi.mocked(prompts.text).mockImplementation((opts: any) => {
+        // Test validation rejects HTTP
+        const httpResult = opts.validate?.("http://example.com/webhook");
+        expect(httpResult).toBe("Webhook URL must use HTTPS");
+
+        // Test validation rejects single-label hostname
+        const localhostResult = opts.validate?.(
+          "https://localhost/webhook"
+        );
+        expect(localhostResult).toBe(
+          "Webhook URL must use a public hostname"
+        );
+
+        // Test validation rejects invalid URL
+        const invalidResult = opts.validate?.("not-a-url");
+        expect(invalidResult).toBe("Please enter a valid URL");
+
+        // Test validation accepts valid HTTPS URL
+        const validResult = opts.validate?.(
+          "https://example.com/webhook"
+        );
+        expect(validResult).toBeUndefined();
+
+        return Promise.resolve(
+          "https://example.com/webhooks/email" as never
+        );
+      });
+      vi.mocked(prompts.confirm).mockResolvedValue(true as never);
+
+      await upgrade({});
+    });
+
+    it("should show webhook option in upgrade menu", async () => {
+      await setupPulumiMock();
+      vi.mocked(prompts.select)
+        .mockResolvedValueOnce("preset" as never)
+        .mockResolvedValueOnce("production" as never);
+      vi.mocked(prompts.confirm).mockResolvedValue(true as never);
+
+      await upgrade({});
+
+      // Verify the upgrade menu includes the webhook option
+      const selectCalls = vi.mocked(prompts.select).mock.calls;
+      const upgradeMenuCall = selectCalls.find(
+        (call) => call[0]?.message === "What would you like to do?"
+      );
+      expect(upgradeMenuCall).toBeDefined();
+
+      const options = (upgradeMenuCall![0] as any).options;
+      const webhookOption = options.find(
+        (o: any) => o.value === "user-webhook"
+      );
+      expect(webhookOption).toBeDefined();
+      expect(webhookOption.label).toBe("Configure webhook endpoint");
+    });
+
+    it("should show manage label when webhook already enabled", async () => {
+      await setupPulumiMock();
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            config: createStarterConfig({
+              eventTracking: {
+                enabled: true,
+                eventBridge: true,
+                events: ["SEND", "DELIVERY", "BOUNCE", "COMPLAINT"],
+              },
+              userWebhook: {
+                enabled: true,
+                url: "https://example.com/webhook",
+                secret: "some-secret",
+              },
+            }),
+            preset: undefined,
+            pulumiStackName: "wraps-123456789012-us-east-1",
+          },
+        },
+      } as any);
+
+      vi.mocked(prompts.select)
+        .mockResolvedValueOnce("preset" as never)
+        .mockResolvedValueOnce("production" as never);
+      vi.mocked(prompts.confirm).mockResolvedValue(true as never);
+
+      await upgrade({});
+
+      const selectCalls = vi.mocked(prompts.select).mock.calls;
+      const upgradeMenuCall = selectCalls.find(
+        (call) => call[0]?.message === "What would you like to do?"
+      );
+      const options = (upgradeMenuCall![0] as any).options;
+      const webhookOption = options.find(
+        (o: any) => o.value === "user-webhook"
+      );
+      expect(webhookOption.label).toBe("Manage webhook endpoint");
+    });
+
+    it("should cancel when declining event tracking prerequisite", async () => {
+      await setupPulumiMock();
+      const exitSpy = vi
+        .spyOn(process, "exit")
+        .mockImplementation((() => {
+          throw new Error("process.exit(0)");
+        }) as any);
+
+      vi.mocked(metadata.loadConnectionMetadata).mockResolvedValue({
+        accountId: "123456789012",
+        region: "us-east-1",
+        provider: "vercel",
+        timestamp: new Date().toISOString(),
+        services: {
+          email: {
+            config: createStarterConfig({
+              eventTracking: { enabled: false },
+            }),
+            preset: "starter",
+            pulumiStackName: "wraps-123456789012-us-east-1",
+          },
+        },
+      } as any);
+
+      vi.mocked(prompts.select).mockResolvedValueOnce(
+        "user-webhook" as never
+      );
+      // Decline enabling event tracking
+      vi.mocked(prompts.confirm).mockResolvedValueOnce(false as never);
+
+      await expect(upgrade({})).rejects.toThrow("process.exit");
+      expect(deployEmailStack).not.toHaveBeenCalled();
+
+      exitSpy.mockRestore();
+    });
+  });
+
   describe("--yes Flag Tests", () => {
     it("should skip confirmation with --yes flag", async () => {
       await setupPulumiMock();

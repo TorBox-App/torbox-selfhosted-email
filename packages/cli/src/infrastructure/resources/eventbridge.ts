@@ -14,6 +14,11 @@ export type EventBridgeConfig = {
     webhookSecret: string; // API key for webhook authentication
     webhookUrl?: string; // Override webhook URL (defaults to api.wraps.dev)
   };
+  // User webhook configuration
+  userWebhook?: {
+    url: string;
+    secret: string;
+  };
 };
 
 /**
@@ -26,6 +31,10 @@ export type EventBridgeResources = {
   webhookConnection?: aws.cloudwatch.EventConnection;
   webhookApiDestination?: aws.cloudwatch.EventApiDestination;
   webhookTarget?: aws.cloudwatch.EventTarget;
+  // User webhook resources (optional)
+  userWebhookConnection?: aws.cloudwatch.EventConnection;
+  userWebhookApiDestination?: aws.cloudwatch.EventApiDestination;
+  userWebhookTarget?: aws.cloudwatch.EventTarget;
 };
 
 /**
@@ -177,11 +186,34 @@ export async function createEventBridgeResources(
     });
   }
 
+  // Create user webhook API Destination (if configured)
+  let userWebhookConnection: aws.cloudwatch.EventConnection | undefined;
+  let userWebhookApiDestination: aws.cloudwatch.EventApiDestination | undefined;
+  let userWebhookTarget: aws.cloudwatch.EventTarget | undefined;
+
+  if (config.userWebhook) {
+    const { createUserWebhookResources } = await import(
+      "./eventbridge-user-webhook.js"
+    );
+    const userWebhookResources = createUserWebhookResources({
+      url: config.userWebhook.url,
+      secret: config.userWebhook.secret,
+      ruleName: rule.name,
+      eventBusName,
+    });
+    userWebhookConnection = userWebhookResources.connection;
+    userWebhookApiDestination = userWebhookResources.apiDestination;
+    userWebhookTarget = userWebhookResources.target;
+  }
+
   return {
     rule,
     target,
     webhookConnection,
     webhookApiDestination,
     webhookTarget,
+    userWebhookConnection,
+    userWebhookApiDestination,
+    userWebhookTarget,
   };
 }

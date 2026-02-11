@@ -204,6 +204,13 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     }
   }
 
+  if (config.userWebhook?.enabled) {
+    console.log(`  ${pc.green("✓")} Webhook Endpoint`);
+    console.log(
+      `    ${pc.dim("└─")} URL: ${pc.cyan(config.userWebhook.url)}`
+    );
+  }
+
   // Calculate current cost
   const currentCostData = calculateCosts(config, 50_000); // Assume 50k emails/mo for estimate
   console.log(
@@ -285,6 +292,15 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       hint: metadata.services.email?.webhookSecret
         ? "Regenerate secret or disconnect"
         : "Send events to dashboard for analytics",
+    },
+    {
+      value: "user-webhook",
+      label: config.userWebhook?.enabled
+        ? "Manage webhook endpoint"
+        : "Configure webhook endpoint",
+      hint: config.userWebhook?.enabled
+        ? `Sending events to ${config.userWebhook.url}`
+        : "Send SES events to your own URL",
     },
     {
       value: "smtp-credentials",
@@ -1264,6 +1280,189 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       break;
     }
 
+    case "user-webhook": {
+      const validateWebhookUrl = (value: string) => {
+        try {
+          const url = new URL(value);
+          if (url.protocol !== "https:") {
+            return "Webhook URL must use HTTPS";
+          }
+          if (!url.hostname.includes(".")) {
+            return "Webhook URL must use a public hostname";
+          }
+        } catch {
+          return "Please enter a valid URL";
+        }
+      };
+
+      // Check if event tracking is enabled (required for webhook)
+      if (!config.eventTracking?.enabled) {
+        clack.log.warn(
+          "Event tracking must be enabled to configure a webhook endpoint."
+        );
+        clack.log.info(
+          "Enabling event tracking will allow SES events to be sent to your endpoint."
+        );
+
+        const enableEventTracking = await clack.confirm({
+          message: "Enable event tracking now?",
+          initialValue: true,
+        });
+
+        if (clack.isCancel(enableEventTracking) || !enableEventTracking) {
+          clack.cancel("Webhook configuration cancelled.");
+          process.exit(0);
+        }
+
+        // Enable event tracking
+        updatedConfig = {
+          ...config,
+          eventTracking: {
+            enabled: true,
+            eventBridge: true,
+            events: [
+              "SEND",
+              "DELIVERY",
+              "OPEN",
+              "CLICK",
+              "BOUNCE",
+              "COMPLAINT",
+            ],
+            dynamoDBHistory: config.eventTracking?.dynamoDBHistory ?? false,
+            archiveRetention:
+              config.eventTracking?.archiveRetention ?? "90days",
+          },
+        };
+      }
+
+      if (config.userWebhook?.enabled) {
+        // Already configured - manage existing webhook
+        clack.log.info(
+          `Webhook endpoint currently sending events to: ${pc.cyan(config.userWebhook.url)}`
+        );
+
+        const action = await clack.select({
+          message: "What would you like to do?",
+          options: [
+            {
+              value: "change-url",
+              label: "Change webhook URL",
+              hint: config.userWebhook.url,
+            },
+            {
+              value: "regenerate-secret",
+              label: "Regenerate webhook secret",
+              hint: "Create new secret (update your endpoint)",
+            },
+            {
+              value: "disable",
+              label: "Disable webhook",
+              hint: "Stop sending events to your endpoint",
+            },
+            {
+              value: "cancel",
+              label: "Cancel",
+              hint: "Keep current settings",
+            },
+          ],
+        });
+
+        if (clack.isCancel(action) || action === "cancel") {
+          clack.log.info("No changes made.");
+          process.exit(0);
+        }
+
+        if (action === "disable") {
+          const confirmDisable = await clack.confirm({
+            message:
+              "Are you sure? Events will no longer be sent to your webhook endpoint.",
+            initialValue: false,
+          });
+
+          if (clack.isCancel(confirmDisable) || !confirmDisable) {
+            clack.log.info("Webhook not disabled.");
+            process.exit(0);
+          }
+
+          updatedConfig = {
+            ...updatedConfig,
+            userWebhook: { enabled: false },
+          };
+          newPreset = undefined;
+          break;
+        }
+
+        if (action === "change-url") {
+          const newUrl = await clack.text({
+            message: "New webhook URL:",
+            placeholder: "https://your-app.com/webhooks/email-events",
+            validate: validateWebhookUrl,
+          });
+
+          if (clack.isCancel(newUrl)) {
+            clack.cancel("Webhook configuration cancelled.");
+            process.exit(0);
+          }
+
+          updatedConfig = {
+            ...updatedConfig,
+            userWebhook: {
+              enabled: true,
+              url: newUrl as string,
+              secret: config.userWebhook.secret,
+            },
+          };
+          newPreset = undefined;
+          break;
+        }
+
+        if (action === "regenerate-secret") {
+          const newSecret = generateWebhookSecret();
+          updatedConfig = {
+            ...updatedConfig,
+            userWebhook: {
+              enabled: true,
+              url: config.userWebhook.url,
+              secret: newSecret,
+            },
+          };
+          newPreset = undefined;
+          break;
+        }
+      } else {
+        // New webhook setup
+        clack.log.info(`\n${pc.bold("Webhook Endpoint")}\n`);
+        clack.log.info(
+          pc.dim("Send SES events (send, delivery, open, click, bounce, etc.)")
+        );
+        clack.log.info(pc.dim("to your own HTTP endpoint in real-time.\n"));
+
+        const webhookUrl = await clack.text({
+          message: "Webhook URL (must be HTTPS):",
+          placeholder: "https://your-app.com/webhooks/email-events",
+          validate: validateWebhookUrl,
+        });
+
+        if (clack.isCancel(webhookUrl)) {
+          clack.cancel("Webhook configuration cancelled.");
+          process.exit(0);
+        }
+
+        const secret = generateWebhookSecret();
+
+        updatedConfig = {
+          ...updatedConfig,
+          userWebhook: {
+            enabled: true,
+            url: webhookUrl as string,
+            secret,
+          },
+        };
+        newPreset = undefined;
+      }
+      break;
+    }
+
     case "smtp-credentials": {
       // Check if already has SMTP credentials
       if (metadata.services.email?.smtpCredentials?.enabled) {
@@ -2112,6 +2311,31 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     );
   }
 
+  // Show user webhook configuration details
+  if (upgradeAction === "user-webhook" && updatedConfig.userWebhook?.enabled) {
+    console.log(pc.bold("Webhook Endpoint Configuration\n"));
+    console.log(`  ${pc.green("✓")} EventBridge API Destination created`);
+    console.log(
+      `  ${pc.green("✓")} Events will be sent to: ${pc.cyan(updatedConfig.userWebhook.url)}\n`
+    );
+
+    // Only show secret on first setup or regeneration (not URL change)
+    if (updatedConfig.userWebhook.secret !== config.userWebhook?.secret) {
+      console.log(pc.bold("  Webhook Secret (save this now!):\n"));
+      console.log(
+        `     ${pc.bgBlack(pc.white(` ${updatedConfig.userWebhook.secret} `))}\n`
+      );
+      console.log(
+        pc.dim("  Include this in the X-Wraps-Signature header validation")
+      );
+      console.log(
+        pc.dim(
+          "  to verify requests are from your Wraps deployment.\n"
+        )
+      );
+    }
+  }
+
   // Show SMTP credentials if enabled
   if (
     upgradeAction === "smtp-credentials" &&
@@ -2174,6 +2398,9 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   }
   if (updatedConfig.alerts?.enabled) {
     enabledFeatures.push("alerts");
+  }
+  if (updatedConfig.userWebhook?.enabled) {
+    enabledFeatures.push("user_webhook");
   }
 
   trackServiceUpgrade("email", {

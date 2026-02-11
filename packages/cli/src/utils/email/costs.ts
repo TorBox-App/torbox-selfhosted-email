@@ -45,6 +45,9 @@ const AWS_PRICING = {
   WAF_WEB_ACL_PER_MONTH: 5.0, // $5.00 per Web ACL per month
   WAF_RULE_PER_MONTH: 1.0, // $1.00 per rule per month
   WAF_REQUESTS_PER_MILLION: 0.6, // $0.60 per million requests
+
+  // EventBridge API Destination pricing
+  EVENTBRIDGE_API_DEST_PER_MILLION: 0.2, // $0.20 per million API Destination invocations
 } as const;
 
 /**
@@ -420,6 +423,30 @@ function calculateAlertingCost(
 }
 
 /**
+ * Calculate cost for user webhook (EventBridge API Destination invocations)
+ */
+function calculateUserWebhookCost(
+  config: WrapsEmailConfig,
+  emailsPerMonth: number
+): FeatureCost | undefined {
+  if (!config.userWebhook?.enabled) {
+    return;
+  }
+
+  // Each email generates ~2 events on average for webhook invocations
+  // (e.g. send + delivery, or send + delivery + open)
+  const estimatedInvocations = emailsPerMonth * 2;
+  const monthlyCost =
+    (estimatedInvocations / 1_000_000) *
+    AWS_PRICING.EVENTBRIDGE_API_DEST_PER_MILLION;
+
+  return {
+    monthly: monthlyCost,
+    description: "User webhook (API Destination invocations)",
+  };
+}
+
+/**
  * Calculate total infrastructure costs
  *
  * @param config Email configuration
@@ -439,6 +466,7 @@ export function calculateCosts(
   const waf = calculateWafCost(config, emailsPerMonth);
   const smtpCredentials = calculateSMTPCredentialsCost(config);
   const alerts = calculateAlertingCost(config);
+  const userWebhook = calculateUserWebhookCost(config, emailsPerMonth);
 
   // Calculate SES base costs (always present)
   const sesEmailCost =
@@ -456,7 +484,8 @@ export function calculateCosts(
     (dedicatedIp?.monthly || 0) +
     (waf?.monthly || 0) +
     (smtpCredentials?.monthly || 0) +
-    (alerts?.monthly || 0);
+    (alerts?.monthly || 0) +
+    (userWebhook?.monthly || 0);
 
   return {
     tracking,
@@ -468,6 +497,7 @@ export function calculateCosts(
     waf,
     smtpCredentials,
     alerts,
+    userWebhook,
     total: {
       monthly: totalMonthlyCost,
       perEmail: AWS_PRICING.SES_PER_EMAIL,
@@ -549,6 +579,11 @@ export function getCostSummary(
   if (costs.alerts) {
     lines.push(
       `  - ${costs.alerts.description}: ${formatCost(costs.alerts.monthly)}`
+    );
+  }
+  if (costs.userWebhook) {
+    lines.push(
+      `  - ${costs.userWebhook.description}: ${formatCost(costs.userWebhook.monthly)}`
     );
   }
 
