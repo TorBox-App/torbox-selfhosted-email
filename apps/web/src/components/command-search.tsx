@@ -419,38 +419,36 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
             {isServerMode ? (
               // ── Server results ──
-              <>
-                {(
-                  Object.entries(results) as [
-                    SearchEntityType,
-                    SearchResultItem[],
-                  ][]
-                ).map(([type, items]) => {
-                  if (items.length === 0) return null;
-                  const config = ENTITY_CONFIG[type];
-                  const GroupIcon = config.icon;
-                  return (
-                    <CommandGroup heading={config.label} key={type}>
-                      {items.map((item) => (
-                        <CommandItem
-                          key={item.id}
-                          onSelect={() => handleSelect(item.url, item)}
-                          value={`${item.title} ${item.subtitle ?? ""}`}
-                        >
-                          <GroupIcon className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
-                          <span className="truncate">{item.title}</span>
-                          {item.subtitle && (
-                            <span className="ml-1 truncate text-zinc-400 text-xs">
-                              {item.subtitle}
-                            </span>
-                          )}
-                          {item.status && <StatusBadge status={item.status} />}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  );
-                })}
-              </>
+              (
+                Object.entries(results) as [
+                  SearchEntityType,
+                  SearchResultItem[],
+                ][]
+              ).map(([type, items]) => {
+                if (items.length === 0) return null;
+                const config = ENTITY_CONFIG[type];
+                const GroupIcon = config.icon;
+                return (
+                  <CommandGroup heading={config.label} key={type}>
+                    {items.map((item) => (
+                      <CommandItem
+                        key={item.id}
+                        onSelect={() => handleSelect(item.url, item)}
+                        value={`${item.title} ${item.subtitle ?? ""}`}
+                      >
+                        <GroupIcon className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
+                        <span className="truncate">{item.title}</span>
+                        {item.subtitle && (
+                          <span className="ml-1 truncate text-zinc-400 text-xs">
+                            {item.subtitle}
+                          </span>
+                        )}
+                        {item.status && <StatusBadge status={item.status} />}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })
             ) : (
               // ── Client mode ──
               <>

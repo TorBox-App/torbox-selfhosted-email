@@ -132,7 +132,7 @@ function createTestApp() {
         createdAt: "2024-01-01T00:00:00.000Z",
       };
     })
-    .get("/v1/batch/:id", async (ctx) => {
+    .get("/v1/batch/:id", (ctx) => {
       const { params } = ctx;
 
       // Simulate not found

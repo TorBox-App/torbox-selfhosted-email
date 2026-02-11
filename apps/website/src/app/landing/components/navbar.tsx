@@ -27,7 +27,13 @@ import {
 import { useTheme } from "@/hooks/use-theme";
 import { trackEvent } from "@/utils/analytics";
 
-const navigationItems = [
+const navigationItems: {
+  name: string;
+  href: string;
+  badge?: string;
+  hasSubmenu?: boolean;
+  submenuType?: string;
+}[] = [
   {
     name: "Products",
     href: "/#features",
