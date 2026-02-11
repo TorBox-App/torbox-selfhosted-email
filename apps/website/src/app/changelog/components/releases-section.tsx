@@ -19,6 +19,7 @@ import {
   Terminal,
   Users,
   Workflow,
+  Zap,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -38,6 +39,29 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "CLI v2.13.0",
+    date: "February 2026",
+    icon: Zap,
+    iconColor:
+      "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    title: "Webhook Events",
+    items: [
+      "Configure an HTTPS webhook endpoint to receive real-time SES email events",
+      <>
+        CLI: <Code>wraps email upgrade</Code> → "Configure webhook endpoint"
+      </>,
+      "Events delivered via EventBridge API Destination with secret-based authentication",
+      <>
+        Supports all SES event types: delivery, bounce, complaint, open, click,
+        and more
+      </>,
+      <>
+        <Code>X-Wraps-Signature</Code> header for request verification
+      </>,
+      "Manage, regenerate secrets, or disable from the same upgrade menu",
+    ],
+  },
   {
     version: "Platform v0.14.0",
     date: "February 2026",
