@@ -16,7 +16,12 @@ import { Label } from "@/components/ui/label";
 import { authClient, useSession } from "@/lib/auth-client";
 import { generateSlug } from "@/lib/utils/slug";
 
-type PageState = "enter-code" | "verifying" | "approve" | "create-org" | "success";
+type PageState =
+  | "enter-code"
+  | "verifying"
+  | "approve"
+  | "create-org"
+  | "success";
 
 function formatCode(value: string): string {
   const clean = value
