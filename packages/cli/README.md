@@ -1,11 +1,10 @@
 # Wraps CLI
 
-> Deploy email infrastructure (SES, DynamoDB, Lambda, EventBridge) to your AWS account.
+> Deploy email, SMS, and CDN infrastructure to your AWS account.
 
 ## What It Creates
 
-Running `wraps email init` deploys these AWS resources to your account:
-
+### Email (`wraps email init`)
 - **IAM Role** with OIDC trust policy (for Vercel) or instance profile (for AWS-native)
 - **SES Configuration Set** with event tracking rules
 - **EventBridge Rule** to capture SES events
@@ -13,7 +12,20 @@ Running `wraps email init` deploys these AWS resources to your account:
 - **Lambda Function** to process events and write to DynamoDB
 - **DynamoDB Table** for email history storage
 
-All resources are tagged with `ManagedBy: wraps-cli` and prefixed with `wraps-email-`.
+### SMS (`wraps sms init`)
+- **IAM Role** with scoped permissions for End User Messaging
+- **Phone Pool** with toll-free number via AWS End User Messaging
+- **Lambda Function** to process delivery receipts
+- **DynamoDB Table** for message history storage
+- **EventBridge Rule** to capture SMS events
+
+### CDN (`wraps cdn init`)
+- **IAM Role** with scoped permissions for S3 and CloudFront
+- **S3 Bucket** with private access and origin access control
+- **CloudFront Distribution** with global edge caching
+- **ACM Certificate** with automatic DNS validation
+
+All resources are tagged with `ManagedBy: wraps-cli` and prefixed with `wraps-{service}-`.
 
 ## Features
 
@@ -49,32 +61,39 @@ npm install -g @wraps.dev/cli
 # or
 pnpm add -g @wraps.dev/cli
 # or use npx (no installation required)
-npx @wraps.dev/cli init
+npx @wraps.dev/cli email init
 ```
 
 ## Quick Start
 
-### 1. Deploy New Email Infrastructure
+### 1. Deploy Infrastructure
 
 ```bash
+# Email
 wraps email init
+
+# SMS
+wraps sms init
+
+# CDN
+wraps cdn init
 ```
 
-This will:
-- ✅ Validate your AWS credentials
-- ✅ Prompt for configuration preset (Starter, Production, Enterprise, or Custom)
-- ✅ Show estimated monthly costs based on your volume
-- ✅ Deploy infrastructure (IAM roles, SES, DynamoDB, Lambda, EventBridge, SQS)
-- ✅ Display next steps with role ARN and DNS records
+Each command will:
+- Validate your AWS credentials
+- Prompt for configuration options
+- Show estimated monthly costs
+- Deploy infrastructure via Pulumi
+- Display next steps with role ARN and any DNS records
 
 ### 2. Install the SDK
 
-After deploying, install the TypeScript SDK to send emails:
-
 ```bash
+# Email SDK
 npm install @wraps.dev/email
-# or
-pnpm add @wraps.dev/email
+
+# SMS SDK (coming soon to npm)
+npm install @wraps.dev/sms
 ```
 
 **Send your first email:**
@@ -92,6 +111,19 @@ await wraps.emails.send({
 });
 ```
 
+**Send your first SMS:**
+
+```typescript
+import { Wraps } from '@wraps.dev/sms';
+
+const wraps = new Wraps();
+
+await wraps.sms.send({
+  to: '+14155551234',
+  message: 'Your code is 123456',
+});
+```
+
 Learn more: [SDK Documentation](https://github.com/wraps-team/wraps-js) | [npm](https://www.npmjs.com/package/@wraps.dev/email)
 
 ### 3. Check Status
@@ -100,12 +132,7 @@ Learn more: [SDK Documentation](https://github.com/wraps-team/wraps-js) | [npm](
 wraps status
 ```
 
-Shows:
-- Active features and configuration across all services
-- AWS region and account
-- Verified domains
-- Deployed resources
-- Links to dashboard
+Shows active features and configuration across all services, AWS region and account, verified domains, deployed resources, and links to dashboard.
 
 ## Global Options
 
@@ -185,257 +212,172 @@ wraps email init --preview
 wraps email init --provider vercel --region us-east-1 --domain myapp.com --preset production
 ```
 
-#### `wraps email connect`
+#### Other Email Commands
 
-Connect to existing AWS SES infrastructure and add Wraps features.
+| Command | Description |
+|---------|-------------|
+| `wraps email connect` | Connect to existing AWS SES infrastructure |
+| `wraps email test` | Send a test email to verify your setup |
+| `wraps email check` | Check email deliverability for a domain |
+| `wraps email config` | Apply CLI config updates to infrastructure (alias: `sync`) |
+| `wraps email status` | Show email infrastructure details |
+| `wraps email upgrade` | Add features incrementally (presets, tracking domain, SMTP, dedicated IP, etc.) |
+| `wraps email verify` | Verify domain DNS records (DKIM, SPF, DMARC) |
+| `wraps email restore` | Restore infrastructure from saved metadata |
+| `wraps email destroy` | Remove all email infrastructure |
 
-**Example:**
+#### Domain Commands
 
-```bash
-wraps email connect
-```
+| Command | Description |
+|---------|-------------|
+| `wraps email domains add` | Add a new domain to SES with DKIM signing |
+| `wraps email domains list` | List all SES domains with verification status |
+| `wraps email domains get-dkim` | Get DKIM tokens for a domain |
+| `wraps email domains verify` | Verify domain DNS records |
+| `wraps email domains remove` | Remove a domain from SES |
 
-#### `wraps email domains`
+#### Inbound Email Commands
 
-Manage SES domains (add, list, verify, get DKIM tokens, remove).
+| Command | Description |
+|---------|-------------|
+| `wraps email inbound init` | Enable inbound email receiving |
+| `wraps email inbound status` | Show inbound email configuration |
+| `wraps email inbound verify` | Verify inbound DNS records |
+| `wraps email inbound test` | Send a test inbound email |
+| `wraps email inbound destroy` | Remove inbound email infrastructure |
 
-##### `wraps email domains add`
+#### Template Commands
 
-Add a new domain to SES with DKIM signing.
+| Command | Description |
+|---------|-------------|
+| `wraps email templates init` | Initialize templates-as-code in your project |
+| `wraps email templates push` | Push templates to SES and the dashboard |
+| `wraps email templates preview` | Preview templates in your browser |
 
-**Options:**
-- `-d, --domain <domain>` - Domain to add
+#### Workflow Commands
 
-**Example:**
+| Command | Description |
+|---------|-------------|
+| `wraps email workflows validate` | Validate workflow configuration files |
+| `wraps email workflows push` | Push workflows to the dashboard |
 
-```bash
-wraps email domains add --domain myapp.com
-```
+### SMS Commands
 
-##### `wraps email domains list`
+#### `wraps sms init`
 
-List all SES domains with verification status.
-
-**Example:**
-
-```bash
-wraps email domains list
-```
-
-##### `wraps email domains get-dkim`
-
-Get DKIM tokens for a domain (for DNS configuration).
-
-**Options:**
-- `-d, --domain <domain>` - Domain to get DKIM tokens for
-
-**Example:**
-
-```bash
-wraps email domains get-dkim --domain myapp.com
-```
-
-##### `wraps email domains verify`
-
-Verify domain DNS records (DKIM, SPF, DMARC, MX).
-
-**Options:**
-- `-d, --domain <domain>` - Domain to verify
-
-**Example:**
-
-```bash
-wraps email domains verify --domain myapp.com
-```
-
-##### `wraps email domains remove`
-
-Remove a domain from SES.
+Deploy SMS infrastructure to your AWS account.
 
 **Options:**
-- `-d, --domain <domain>` - Domain to remove
-- `-f, --force` - Skip confirmation prompt
-
-**Example:**
-
-```bash
-wraps email domains remove --domain myapp.com
-wraps email domains remove --domain myapp.com --force  # Skip confirmation
-```
-
-#### `wraps email upgrade`
-
-Add features to existing infrastructure incrementally without redeployment.
-
-**Options:**
-- `-r, --region <region>` - AWS region (uses saved connection if not specified)
+- `-p, --provider <provider>` - Hosting provider (vercel, aws, railway, other)
+- `-r, --region <region>` - AWS region (default: us-east-1)
 - `-y, --yes` - Skip confirmation prompts
 - `--preview` - Preview changes without deploying
 
-**Example:**
+**Examples:**
 
 ```bash
-wraps email upgrade
+# Interactive mode (recommended)
+wraps sms init
 
-# Preview upgrade changes before applying
-wraps email upgrade --preview
+# Preview what would be deployed
+wraps sms init --preview
+
+# With flags
+wraps sms init --provider vercel --region us-east-1
 ```
 
-Interactive wizard allows you to add:
+#### Other SMS Commands
 
-**Configuration Presets:**
-- Upgrade to a higher preset (Starter → Production → Enterprise)
-- Each preset includes additional features with transparent cost estimates
+| Command | Description |
+|---------|-------------|
+| `wraps sms status` | Show SMS infrastructure details |
+| `wraps sms test` | Send a test SMS message |
+| `wraps sms verify-number` | Verify a destination phone number |
+| `wraps sms sync` | Sync infrastructure with current config |
+| `wraps sms upgrade` | Upgrade SMS features |
+| `wraps sms register` | Register a toll-free number |
+| `wraps sms destroy` | Remove all SMS infrastructure |
 
-**Domain Configuration:**
-- **MAIL FROM Domain** - Custom MAIL FROM domain for better DMARC alignment
-  - Default: `mail.{yourdomain.com}`
-  - Requires MX and SPF DNS records
-  - Improves email deliverability and sender reputation
+### CDN Commands
 
-- **Custom Tracking Domain** - Branded tracking domain for opens/clicks
-  - Use your own domain instead of AWS default (`r.{region}.awstrack.me`)
-  - Requires single CNAME DNS record
-  - Improves email appearance and trust
-  - **Note:** Currently uses HTTP (not HTTPS). CloudFront + SSL support coming in v1.1.0
+#### `wraps cdn init`
 
-**Event Tracking:**
-- Customize tracked SES event types (SEND, DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT, etc.)
-- Select specific events to reduce processing costs
-- Full control over what gets stored in DynamoDB
-
-**Email History:**
-- Change retention period (7 days, 30 days, 90 days, 1 year)
-- Adjust based on compliance requirements
-- Transparent DynamoDB storage cost updates
-
-**Advanced Features:**
-- **Dedicated IP Address** - Reserved IP for high-volume sending
-  - Improves sender reputation control
-  - Required for 50,000+ emails/day
-  - Additional AWS charges apply (~$24.95/month)
-
-- **SMTP Credentials** - Generate SMTP username/password for legacy systems
-  - Works with PHP mail(), PHPMailer, WordPress, Nodemailer, and any SMTP client
-  - Creates IAM user with `ses:SendRawEmail` permission (scoped to your config set)
-  - Credentials shown once after creation - save them immediately!
-  - Supports rotation (invalidates old credentials) and disabling
-  - No additional AWS charges (uses existing SES pricing)
-
-  **SMTP Connection Details:**
-  ```
-  Server:     email-smtp.{region}.amazonaws.com
-  Port:       587 (STARTTLS) or 465 (TLS)
-  Encryption: TLS/STARTTLS required
-  ```
-
-  **Example - WordPress (WP Mail SMTP plugin):**
-  ```
-  SMTP Host:     email-smtp.us-east-1.amazonaws.com
-  SMTP Port:     587
-  Encryption:    TLS
-  SMTP Username: (from wraps email upgrade)
-  SMTP Password: (from wraps email upgrade)
-  ```
-
-  **Example - Nodemailer:**
-  ```javascript
-  const transporter = nodemailer.createTransport({
-    host: 'email-smtp.us-east-1.amazonaws.com',
-    port: 587,
-    secure: false, // STARTTLS
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-  ```
-
-#### `wraps email restore`
-
-Restore infrastructure from saved metadata.
+Deploy CDN infrastructure (S3 + CloudFront) to your AWS account.
 
 **Options:**
-- `-r, --region <region>` - AWS region to restore from
-- `-f, --force` - Force restore without confirmation (destructive)
-- `--preview` - Preview what would be removed without making changes
+- `-p, --provider <provider>` - Hosting provider (vercel, aws, railway, other)
+- `-r, --region <region>` - AWS region (default: us-east-1)
+- `-d, --domain <domain>` - Custom domain for the CDN
+- `-y, --yes` - Skip confirmation prompts
+- `--preview` - Preview changes without deploying
 
-**Example:**
+**Examples:**
 
 ```bash
-wraps email restore
-wraps email restore --preview  # Preview what would be removed
-wraps email restore --region us-west-2 --force  # Skip confirmation
+# Interactive mode (recommended)
+wraps cdn init
+
+# Preview what would be deployed
+wraps cdn init --preview
+
+# With flags
+wraps cdn init --provider vercel --region us-east-1 --domain cdn.myapp.com
 ```
+
+#### Other CDN Commands
+
+| Command | Description |
+|---------|-------------|
+| `wraps cdn status` | Show CDN infrastructure details |
+| `wraps cdn verify` | Check DNS and certificate validation status |
+| `wraps cdn upgrade` | Add a custom domain after certificate validation |
+| `wraps cdn sync` | Sync infrastructure with current config |
+| `wraps cdn destroy` | Remove all CDN infrastructure |
+
+### Auth Commands
+
+| Command | Description |
+|---------|-------------|
+| `wraps auth login` | Sign in to wraps.dev (device flow) |
+| `wraps auth status` | Show current authentication state |
+| `wraps auth logout` | Sign out and remove stored token |
+
+### AWS Commands
+
+| Command | Description |
+|---------|-------------|
+| `wraps aws setup` | Interactive AWS credentials setup wizard |
+| `wraps aws doctor` | Diagnose AWS configuration issues |
+
+### Platform Commands
+
+| Command | Description |
+|---------|-------------|
+| `wraps platform connect` | Connect to Wraps Platform (events + IAM) |
+| `wraps platform update-role` | Update platform IAM permissions |
 
 ### Global Commands
 
-These commands work across all services (email, SMS when available):
+These commands work across all services:
 
-#### `wraps status`
+| Command | Description |
+|---------|-------------|
+| `wraps status` | Show infrastructure status across all services |
+| `wraps console` | Launch local web console for monitoring |
+| `wraps destroy` | Remove all deployed infrastructure |
+| `wraps push` | Push templates to SES and dashboard (alias for `email templates push`) |
+| `wraps completion` | Generate shell completion script |
+| `wraps permissions` | Show required AWS IAM permissions (`--json` for policy output) |
+| `wraps news` | Show recent Wraps updates |
+| `wraps support` | Get help and support contact info |
 
-Show infrastructure status across all services.
+### Telemetry Commands
 
-**Options:**
-- `--account <account>` - Filter by AWS account ID or alias
-
-**Example:**
-
-```bash
-wraps status
-```
-
-Shows:
-- Active services and their configurations
-- AWS region and account
-- Verified domains
-- Deployed resources
-- Links to dashboard
-
-#### `wraps console`
-
-Launch local web console for monitoring all services.
-
-**Options:**
-- `--port <port>` - Port to run console on (default: 5555)
-- `--no-open` - Don't automatically open browser
-
-**Example:**
-
-```bash
-wraps console
-wraps console --port 3000 --no-open
-```
-
-Opens at `http://localhost:5555` with real-time tracking for email activity, delivery rates, bounces, complaints, and more.
-
-**Note:** The `wraps dashboard` command is deprecated. Use `wraps console` instead.
-
-#### `wraps destroy`
-
-Remove all deployed infrastructure across all services.
-
-**Options:**
-- `-f, --force` - Force destroy without confirmation (destructive)
-- `--preview` - Preview what would be destroyed without making changes
-
-**Example:**
-
-```bash
-wraps destroy
-wraps destroy --preview  # Preview what would be destroyed
-wraps destroy --force  # Skip confirmation
-```
-
-#### `wraps completion`
-
-Generate shell completion script.
-
-**Example:**
-
-```bash
-wraps completion
-```
+| Command | Description |
+|---------|-------------|
+| `wraps telemetry enable` | Enable anonymous usage telemetry |
+| `wraps telemetry disable` | Disable anonymous usage telemetry |
+| `wraps telemetry status` | Show current telemetry setting |
 
 ### Legacy Commands (Deprecated)
 
@@ -448,7 +390,7 @@ wraps verify    # → Use 'wraps email domains verify'
 wraps upgrade   # → Use 'wraps email upgrade'
 ```
 
-**Note:** `status`, `dashboard`, and `destroy` are now global commands that work across all services.
+**Note:** `status`, `console`, and `destroy` are now global commands that work across all services.
 
 ## Configuration Presets
 
@@ -536,7 +478,7 @@ Add these DNS records to your DNS provider:
 Uses OIDC federation - your Vercel deployment assumes an IAM role directly, no AWS credentials stored:
 
 ```bash
-wraps init --provider vercel
+wraps email init --provider vercel
 ```
 
 You'll be prompted for:
@@ -548,7 +490,7 @@ You'll be prompted for:
 For Lambda, ECS, or EC2 deployments - uses IAM roles automatically:
 
 ```bash
-wraps init --provider aws
+wraps email init --provider aws
 ```
 
 ### Other Providers
@@ -556,7 +498,7 @@ wraps init --provider aws
 For Railway, Render, or other platforms:
 
 ```bash
-wraps init --provider other
+wraps email init --provider other
 ```
 
 Note: Will require AWS access keys as environment variables.
@@ -608,26 +550,82 @@ packages/cli/
 │   │   ├── email/                # Email service commands
 │   │   │   ├── init.ts          # Deploy email infrastructure
 │   │   │   ├── connect.ts       # Connect existing SES
+│   │   │   ├── test.ts          # Send test email
+│   │   │   ├── check.ts         # Deliverability check
+│   │   │   ├── config.ts        # Apply CLI updates (sync)
 │   │   │   ├── console.ts       # Email dashboard
 │   │   │   ├── status.ts        # Show email setup
 │   │   │   ├── verify.ts        # DNS verification
 │   │   │   ├── upgrade.ts       # Add email features
 │   │   │   ├── restore.ts       # Restore from metadata
-│   │   │   └── destroy.ts       # Remove email infrastructure
-│   │   ├── sms/                  # SMS service commands (coming soon)
-│   │   ├── init.ts              # Legacy command (deprecated)
-│   │   ├── status.ts            # Legacy command (deprecated)
-│   │   └── ...                   # Other legacy commands
+│   │   │   ├── destroy.ts       # Remove email infrastructure
+│   │   │   ├── domains.ts       # Domain management (add, list, verify, get-dkim, remove)
+│   │   │   ├── inbound.ts       # Inbound email (init, status, verify, test, destroy)
+│   │   │   ├── templates/       # Templates-as-code
+│   │   │   │   ├── init.ts     # Initialize templates
+│   │   │   │   ├── push.ts     # Push templates to SES
+│   │   │   │   └── preview.ts  # Preview in browser
+│   │   │   └── workflows/       # Workflow automation
+│   │   │       ├── validate.ts  # Validate workflow files
+│   │   │       └── push.ts      # Push workflows
+│   │   ├── sms/                  # SMS service commands
+│   │   │   ├── init.ts          # Deploy SMS infrastructure
+│   │   │   ├── status.ts        # Show SMS setup
+│   │   │   ├── test.ts          # Send test SMS
+│   │   │   ├── verify-number.ts # Verify phone number
+│   │   │   ├── sync.ts          # Sync infrastructure
+│   │   │   ├── upgrade.ts       # Upgrade features
+│   │   │   ├── register.ts      # Register toll-free number
+│   │   │   └── destroy.ts       # Remove SMS infrastructure
+│   │   ├── cdn/                  # CDN service commands
+│   │   │   ├── init.ts          # Deploy CDN (S3 + CloudFront)
+│   │   │   ├── status.ts        # Show CDN setup
+│   │   │   ├── verify.ts        # Check DNS & certs
+│   │   │   ├── upgrade.ts       # Add custom domain
+│   │   │   ├── sync.ts          # Sync infrastructure
+│   │   │   └── destroy.ts       # Remove CDN infrastructure
+│   │   ├── auth/                 # Authentication
+│   │   │   ├── login.ts         # Sign in (device flow)
+│   │   │   ├── status.ts        # Show auth state
+│   │   │   └── logout.ts        # Sign out
+│   │   ├── aws/                  # AWS helpers
+│   │   │   ├── setup.ts         # AWS setup wizard
+│   │   │   └── doctor.ts        # Diagnose AWS config
+│   │   ├── platform/             # Wraps Platform
+│   │   │   ├── connect.ts       # Connect to Platform
+│   │   │   └── update-role.ts   # Update IAM permissions
+│   │   ├── shared/               # Cross-service commands
+│   │   │   ├── status.ts        # Status across all services
+│   │   │   ├── destroy.ts       # Destroy all infrastructure
+│   │   │   └── dashboard.ts     # Local web console
+│   │   ├── telemetry.ts         # Telemetry management
+│   │   ├── permissions.ts       # IAM permissions
+│   │   ├── news.ts              # Recent updates
+│   │   └── support.ts           # Help & support
 │   ├── infrastructure/           # Pulumi stacks
 │   │   ├── email-stack.ts       # Email infrastructure stack
+│   │   ├── sms-stack.ts         # SMS infrastructure stack
+│   │   ├── cdn-stack.ts         # CDN infrastructure stack
 │   │   ├── vercel-oidc.ts       # Vercel OIDC provider setup
+│   │   ├── shared/              # Shared infrastructure
+│   │   │   ├── iam.ts           # IAM roles and policies
+│   │   │   └── resource-checks.ts
 │   │   └── resources/           # Resource definitions
-│   │       ├── iam.ts           # IAM roles and policies
 │   │       ├── ses.ts           # SES configuration
-│   │       ├── dynamodb.ts      # Email history storage
-│   │       ├── lambda.ts        # Event processing
-│   │       ├── sqs.ts           # Event queues + DLQ
-│   │       └── eventbridge.ts   # SES event routing
+│   │       ├── dynamodb.ts      # DynamoDB tables
+│   │       ├── lambda.ts        # Lambda functions
+│   │       ├── sqs.ts           # SQS queues + DLQ
+│   │       ├── eventbridge.ts   # SES event routing
+│   │       ├── s3-cdn.ts        # S3 bucket for CDN
+│   │       ├── cloudfront.ts    # CloudFront distribution
+│   │       ├── acm.ts           # ACM certificates
+│   │       ├── s3-inbound.ts    # S3 for inbound emails
+│   │       ├── lambda-inbound.ts # Inbound processing
+│   │       ├── sqs-inbound.ts   # Inbound queue
+│   │       ├── eventbridge-inbound.ts
+│   │       ├── mail-manager.ts  # Mail manager
+│   │       ├── smtp-credentials.ts
+│   │       └── alerting.ts      # CloudWatch alerting
 │   ├── console/                  # Web dashboard (React)
 │   ├── lambda/                   # Lambda function source
 │   │   └── event-processor/     # SQS → DynamoDB processor
@@ -645,7 +643,7 @@ packages/cli/
 │   │       ├── presets.ts       # Config presets
 │   │       └── route53.ts       # DNS helpers
 │   └── types/
-│       ├── index.ts             # Type exports with backwards compat
+│       ├── index.ts             # Type exports
 │       ├── shared.ts            # Shared types
 │       ├── email.ts             # Email-specific types
 │       └── sms.ts               # SMS-specific types
@@ -796,42 +794,74 @@ wraps status
 
 # To redeploy, destroy the existing stack first
 wraps destroy
-wraps init
+wraps email init
 ```
 
 ## What's Included
 
-### Global Commands ✅
+### Global Commands
 - [x] `wraps status` - Show infrastructure status (all services)
 - [x] `wraps console` - Local web console (all services)
 - [x] `wraps destroy` - Remove all infrastructure (all services)
+- [x] `wraps push` - Push templates (alias for `email templates push`)
 - [x] `wraps completion` - Shell completion
+- [x] `wraps permissions` - Show required AWS IAM permissions
+- [x] `wraps news` - Show recent updates
+- [x] `wraps support` - Get help and support info
 
-### Platform Commands ✅
+### Auth Commands
+- [x] `wraps auth login` - Sign in to wraps.dev
+- [x] `wraps auth status` - Show auth state
+- [x] `wraps auth logout` - Sign out
+
+### AWS Commands
+- [x] `wraps aws setup` - Interactive AWS setup wizard
+- [x] `wraps aws doctor` - Diagnose AWS configuration
+
+### Platform Commands
+- [x] `wraps platform connect` - Connect to Wraps Platform
 - [x] `wraps platform update-role` - Update platform IAM permissions
 
-### Email Commands ✅
+### Email Commands
 - [x] `wraps email init` - Deploy new infrastructure
 - [x] `wraps email connect` - Connect existing SES
-- [x] `wraps email domains` - Domain management
-  - [x] `wraps email domains add` - Add domain to SES
-  - [x] `wraps email domains list` - List all domains
-  - [x] `wraps email domains get-dkim` - Get DKIM tokens
-  - [x] `wraps email domains verify` - Verify DNS records
-  - [x] `wraps email domains remove` - Remove domain
-- [x] `wraps email upgrade` - Incrementally add features:
-  - Configuration preset upgrades (Starter → Production → Enterprise)
-  - MAIL FROM domain for DMARC alignment
-  - Custom tracking domain for branded links
-  - Event type customization
-  - Email history retention periods
-  - Dedicated IP addresses
+- [x] `wraps email test` - Send a test email
+- [x] `wraps email check` - Check email deliverability
+- [x] `wraps email config` - Apply CLI updates to infrastructure (alias: `sync`)
+- [x] `wraps email status` - Show email infrastructure details
+- [x] `wraps email upgrade` - Add features incrementally
+- [x] `wraps email verify` - Verify domain DNS records
 - [x] `wraps email restore` - Restore from metadata
+- [x] `wraps email destroy` - Remove email infrastructure
+- [x] `wraps email domains` - Domain management (add, list, verify, get-dkim, remove)
+- [x] `wraps email inbound` - Inbound email (init, status, verify, test, destroy)
+- [x] `wraps email templates` - Templates-as-code (init, push, preview)
+- [x] `wraps email workflows` - Workflow automation (validate, push)
 
-### SMS Commands 🚧 (Coming Soon)
-- [ ] `wraps sms init` - Deploy SMS infrastructure
+### SMS Commands
+- [x] `wraps sms init` - Deploy SMS infrastructure
+- [x] `wraps sms status` - Show SMS infrastructure details
+- [x] `wraps sms test` - Send a test SMS
+- [x] `wraps sms verify-number` - Verify a destination phone number
+- [x] `wraps sms sync` - Sync infrastructure
+- [x] `wraps sms upgrade` - Upgrade SMS features
+- [x] `wraps sms register` - Register toll-free number
+- [x] `wraps sms destroy` - Remove SMS infrastructure
 
-### Features ✅
+### CDN Commands
+- [x] `wraps cdn init` - Deploy CDN infrastructure (S3 + CloudFront)
+- [x] `wraps cdn status` - Show CDN infrastructure details
+- [x] `wraps cdn verify` - Check DNS and certificate status
+- [x] `wraps cdn upgrade` - Add custom domain
+- [x] `wraps cdn sync` - Sync infrastructure
+- [x] `wraps cdn destroy` - Remove CDN infrastructure
+
+### Telemetry Commands
+- [x] `wraps telemetry enable` - Enable anonymous telemetry
+- [x] `wraps telemetry disable` - Disable anonymous telemetry
+- [x] `wraps telemetry status` - Show telemetry setting
+
+### Features
 - [x] Preview mode (`--preview`) for all deployment commands
 - [x] Configuration presets (Starter, Production, Enterprise, Custom)
 - [x] Cost estimation based on AWS pricing
@@ -845,28 +875,11 @@ wraps init
 - [x] Event pipeline: EventBridge → SQS → Lambda → DynamoDB
 - [x] Domain management (add, list, verify, remove)
 - [x] Suppression list for bounces/complaints
+- [x] Inbound email receiving and processing
+- [x] Templates-as-code with browser preview
+- [x] Workflow automation
 - [x] Non-destructive (never modifies existing resources)
 - [x] Built with @clack/prompts
-
-### Coming Soon
-
-#### v1.1.0 - Q1 2025
-- [ ] **HTTPS Custom Tracking Domains**
-  - [ ] Automatic CloudFront distribution creation
-  - [ ] ACM certificate provisioning and validation
-  - [ ] HTTPS enforcement for tracking links
-  - [ ] Seamless upgrade path from HTTP tracking domains
-
-#### Future Releases
-- [ ] **SMS Service** (`wraps sms`)
-  - [ ] AWS End User Messaging integration
-  - [ ] Multi-channel communication support
-
-- [ ] **Hosted App**
-  - [ ] Advanced analytics dashboard
-  - [ ] Email templates
-  - [ ] Bulk sending tools
-  - [ ] Tenant management
 
 ## License
 
