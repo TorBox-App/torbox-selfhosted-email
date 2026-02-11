@@ -270,8 +270,7 @@ export default function PageContent() {
                   {
                     code: "CREDENTIALS_NOT_FOUND",
                     message: "AWS credentials not found",
-                    solution:
-                      "Run wraps aws setup or configure AWS CLI",
+                    solution: "Run wraps aws setup or configure AWS CLI",
                   },
                   {
                     code: "CREDENTIALS_EXPIRED",
@@ -313,8 +312,7 @@ export default function PageContent() {
                   {
                     code: "OIDC_PROVIDER_ERROR",
                     message: "Failed to create OIDC provider",
-                    solution:
-                      "Check if provider already exists in IAM console",
+                    solution: "Check if provider already exists in IAM console",
                   },
                 ]}
               />
@@ -334,8 +332,7 @@ export default function PageContent() {
                   {
                     code: "STACK_NOT_FOUND",
                     message: "Pulumi stack not found",
-                    solution:
-                      "Run wraps email init to create infrastructure",
+                    solution: "Run wraps email init to create infrastructure",
                   },
                   {
                     code: "STACK_CONFLICT",
@@ -345,8 +342,7 @@ export default function PageContent() {
                   {
                     code: "DEPLOYMENT_FAILED",
                     message: "Infrastructure deployment failed",
-                    solution:
-                      "Check AWS CloudFormation console for details",
+                    solution: "Check AWS CloudFormation console for details",
                   },
                 ]}
               />
@@ -454,8 +450,7 @@ export default function PageContent() {
                   {
                     code: "METADATA_NOT_FOUND",
                     message: "Connection metadata not found",
-                    solution:
-                      "Run wraps email init or wraps email restore",
+                    solution: "Run wraps email init or wraps email restore",
                   },
                   {
                     code: "METADATA_CORRUPT",
@@ -902,8 +897,7 @@ export default function PageContent() {
                 <code className="rounded bg-muted px-1.5 py-0.5">
                   retryable
                 </code>{" "}
-                is{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5">true</code>,
+                is <code className="rounded bg-muted px-1.5 py-0.5">true</code>,
                 implement your own retry logic using the pattern below.
               </p>
             </div>

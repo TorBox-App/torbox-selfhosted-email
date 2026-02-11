@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Shield,
 } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,6 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { CLICommand } from "@/components/docs/cli-command";
 
 const envVarsExample = `WRAPS_AWS_ROLE_ARN=arn:aws:iam::123456789012:role/wraps-email-role
 WRAPS_AWS_REGION=us-east-1`;
@@ -61,9 +61,7 @@ export default function VercelSetupPageContent() {
         <Badge className="mb-4" variant="outline">
           Guide
         </Badge>
-        <h1 className="mb-4 font-bold text-4xl tracking-tight">
-          Vercel Setup
-        </h1>
+        <h1 className="mb-4 font-bold text-4xl tracking-tight">Vercel Setup</h1>
         <p className="text-lg text-muted-foreground">
           Deploy email infrastructure with Vercel OIDC federation. Zero stored
           credentials, automatic rotation, and seamless integration with your
@@ -178,16 +176,17 @@ export default function VercelSetupPageContent() {
         <div className="mb-4">
           <CLICommand command="npx @wraps.dev/cli email init -p vercel" />
         </div>
-        <p className="mb-4 text-muted-foreground">
-          The CLI will:
-        </p>
+        <p className="mb-4 text-muted-foreground">The CLI will:</p>
         <ol className="mb-4 list-decimal space-y-2 pl-6 text-muted-foreground">
           <li>Prompt for your Vercel team slug and project name</li>
           <li>Create an OIDC identity provider in your AWS account</li>
           <li>
             Configure an IAM trust policy scoped to your Vercel team and project
           </li>
-          <li>Deploy SES configuration, event tracking, and supporting infrastructure</li>
+          <li>
+            Deploy SES configuration, event tracking, and supporting
+            infrastructure
+          </li>
         </ol>
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">Vercel team and project slugs</p>
@@ -251,7 +250,9 @@ export default function VercelSetupPageContent() {
           </CodeBlockBody>
         </CodeBlock>
 
-        <h3 className="mb-3 font-medium text-lg">Per-Environment Configuration</h3>
+        <h3 className="mb-3 font-medium text-lg">
+          Per-Environment Configuration
+        </h3>
         <p className="mb-4 text-muted-foreground">
           In the Vercel dashboard, you can scope environment variables to
           specific environments for more granular control:
@@ -575,8 +576,8 @@ export default function VercelSetupPageContent() {
             <CardContent className="text-muted-foreground text-sm">
               <ul className="list-disc space-y-1 pl-4">
                 <li>
-                  Verify the AWS region in your environment variables matches the
-                  region where you deployed
+                  Verify the AWS region in your environment variables matches
+                  the region where you deployed
                 </li>
                 <li>
                   Run{" "}
@@ -628,8 +629,8 @@ export default function VercelSetupPageContent() {
                   the correct environment (Production, Preview, or Development)
                 </li>
                 <li>
-                  Redeploy your project after adding environment variables — they
-                  are not applied to existing deployments
+                  Redeploy your project after adding environment variables —
+                  they are not applied to existing deployments
                 </li>
               </ul>
             </CardContent>

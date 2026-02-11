@@ -10,11 +10,11 @@ import {
   MessageSquare,
   Terminal,
 } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CLICommand } from "@/components/docs/cli-command";
 
 export default function CLIReferencePageContent() {
   return (

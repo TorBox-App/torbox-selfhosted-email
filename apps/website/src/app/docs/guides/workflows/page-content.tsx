@@ -17,12 +17,7 @@ import {
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -206,7 +201,8 @@ const stepHelpers = [
   {
     name: "updateContact(id, config)",
     description: "Modify contact fields.",
-    config: "updates: [{ field, operation: 'set' | 'increment' | 'append', value }]",
+    config:
+      "updates: [{ field, operation: 'set' | 'increment' | 'append', value }]",
     icon: Users,
   },
   {
@@ -256,9 +252,7 @@ export default function WorkflowsPageContent() {
         <p className="mb-4 text-muted-foreground">
           A workflow is a sequence of steps triggered by an event. Each workflow
           is defined in a TypeScript file using the{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">
-            defineWorkflow
-          </code>{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5">defineWorkflow</code>{" "}
           helper and exported as the default export.
         </p>
         <CodeExample
@@ -334,9 +328,7 @@ export default function WorkflowsPageContent() {
               </tr>
               <tr>
                 <td className="py-3 pr-4 font-medium text-foreground">
-                  <code className="rounded bg-muted px-1.5 py-0.5">
-                    manual
-                  </code>
+                  <code className="rounded bg-muted px-1.5 py-0.5">manual</code>
                 </td>
                 <td className="py-3">Manually triggered via API</td>
               </tr>
@@ -370,9 +362,7 @@ export default function WorkflowsPageContent() {
                         <span className="text-muted-foreground text-xs">
                           {index + 1}.
                         </span>
-                        <code className="font-medium text-sm">
-                          {step.name}
-                        </code>
+                        <code className="font-medium text-sm">{step.name}</code>
                       </div>
                       <p className="mt-1 text-muted-foreground text-sm">
                         {step.description}
@@ -411,21 +401,15 @@ export default function WorkflowsPageContent() {
         <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
           <p className="font-medium text-sm">Validation checks:</p>
           <ul className="mt-2 space-y-1 text-muted-foreground text-sm">
-            <li>
-              All referenced templates exist in your templates directory
-            </li>
+            <li>All referenced templates exist in your templates directory</li>
             <li>Step IDs are unique within each workflow</li>
-            <li>
-              Condition branches reference valid step IDs
-            </li>
+            <li>Condition branches reference valid step IDs</li>
             <li>
               <code className="rounded bg-muted px-1 py-0.5">
                 waitForEmailEngagement
               </code>{" "}
               references a valid{" "}
-              <code className="rounded bg-muted px-1 py-0.5">
-                sendEmail
-              </code>{" "}
+              <code className="rounded bg-muted px-1 py-0.5">sendEmail</code>{" "}
               step
             </li>
           </ul>
@@ -457,9 +441,7 @@ export default function WorkflowsPageContent() {
               </code>{" "}
               segment, triggering the workflow
             </li>
-            <li>
-              A "we miss you" email is sent immediately
-            </li>
+            <li>A "we miss you" email is sent immediately</li>
             <li>
               The workflow waits up to 3 days for the contact to open the email
             </li>

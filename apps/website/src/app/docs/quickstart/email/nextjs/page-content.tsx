@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { CLICommand } from "@/components/docs/cli-command";
 
 const serverActionCode = `'use server'
 
@@ -246,10 +246,7 @@ export default function NextjsQuickstartPageContent() {
         <p className="mb-4 text-muted-foreground">
           Alternatively, create an API route for sending emails from any client:
         </p>
-        <TypeScriptCode
-          code={apiRouteCode}
-          filename="app/api/send/route.ts"
-        />
+        <TypeScriptCode code={apiRouteCode} filename="app/api/send/route.ts" />
       </section>
 
       {/* Step 6: Deploy to Vercel */}
@@ -269,9 +266,7 @@ export default function NextjsQuickstartPageContent() {
           <p className="mt-2 text-muted-foreground text-sm">
             When deploying to Vercel, Wraps uses OIDC for authentication — no
             AWS access keys needed. Just set{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5">
-              AWS_ROLE_ARN
-            </code>{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5">AWS_ROLE_ARN</code>{" "}
             in your Vercel environment variables.
           </p>
         </div>

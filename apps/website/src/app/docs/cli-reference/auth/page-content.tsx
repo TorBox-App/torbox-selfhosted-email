@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, Terminal } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { CLICommand } from "@/components/docs/cli-command";
 
 export default function CLIReferenceAuthPageContent() {
   return (
@@ -106,7 +106,9 @@ export default function CLIReferenceAuthPageContent() {
                 Displays a one-time code in the terminal for you to confirm in
                 the browser
               </li>
-              <li>Polls for authorization until you approve or the code expires</li>
+              <li>
+                Polls for authorization until you approve or the code expires
+              </li>
               <li>
                 Stores the access token in{" "}
                 <code className="rounded bg-muted px-1 py-0.5">
@@ -188,7 +190,9 @@ export default function CLIReferenceAuthPageContent() {
                 </code>
               </li>
               <li>Validates the token with the Wraps Platform API</li>
-              <li>Displays account email, organization name, and current plan</li>
+              <li>
+                Displays account email, organization name, and current plan
+              </li>
               <li>
                 Shows an error if not authenticated or if the token has expired
               </li>
@@ -229,9 +233,7 @@ export default function CLIReferenceAuthPageContent() {
                   ~/.wraps/auth.json
                 </code>
               </li>
-              <li>
-                Confirms successful logout with a message in the terminal
-              </li>
+              <li>Confirms successful logout with a message in the terminal</li>
               <li>
                 Does not revoke the token server-side (use the dashboard for
                 that)

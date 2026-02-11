@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, Terminal } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { CLICommand } from "@/components/docs/cli-command";
 
 export default function CLIReferenceAWSPageContent() {
   return (
@@ -35,9 +35,7 @@ export default function CLIReferenceAWSPageContent() {
         <Badge className="mb-4" variant="outline">
           CLI Reference / AWS
         </Badge>
-        <h1 className="mb-4 font-bold text-4xl tracking-tight">
-          AWS Commands
-        </h1>
+        <h1 className="mb-4 font-bold text-4xl tracking-tight">AWS Commands</h1>
         <p className="text-lg text-muted-foreground">
           Set up and diagnose your AWS credentials and permissions for Wraps.
         </p>
@@ -90,7 +88,9 @@ export default function CLIReferenceAWSPageContent() {
                   GetCallerIdentity
                 </code>
               </li>
-              <li>Tests SES permissions to ensure your account can send email</li>
+              <li>
+                Tests SES permissions to ensure your account can send email
+              </li>
               <li>Displays your AWS account ID and configured region</li>
             </ul>
           </CardContent>
@@ -154,8 +154,8 @@ export default function CLIReferenceAWSPageContent() {
           <CardContent>
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
               <li>
-                AWS credential chain (environment variables, profile,
-                SSO, instance role)
+                AWS credential chain (environment variables, profile, SSO,
+                instance role)
               </li>
               <li>
                 STS identity validation (
@@ -166,13 +166,8 @@ export default function CLIReferenceAWSPageContent() {
               </li>
               <li>
                 SES permissions (
-                <code className="rounded bg-muted px-1 py-0.5">
-                  SendEmail
-                </code>
-                ,{" "}
-                <code className="rounded bg-muted px-1 py-0.5">
-                  GetAccount
-                </code>
+                <code className="rounded bg-muted px-1 py-0.5">SendEmail</code>,{" "}
+                <code className="rounded bg-muted px-1 py-0.5">GetAccount</code>
                 )
               </li>
               <li>Region configuration and availability</li>

@@ -14,12 +14,7 @@ import {
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -78,9 +73,7 @@ export default function InfrastructureCdnPageContent() {
         </h1>
         <p className="text-lg text-muted-foreground">
           Every AWS resource Wraps creates when you run{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">
-            wraps cdn init
-          </code>
+          <code className="rounded bg-muted px-1.5 py-0.5">wraps cdn init</code>
           .
         </p>
       </div>
@@ -181,8 +174,8 @@ export default function InfrastructureCdnPageContent() {
                 <li>Global edge caching across 400+ locations</li>
                 <li>HTTPS enabled by default (CloudFront certificate)</li>
                 <li>
-                  Origin Access Identity (OAI) restricts S3 access to
-                  CloudFront only
+                  Origin Access Identity (OAI) restricts S3 access to CloudFront
+                  only
                 </li>
                 <li>
                   Cache behaviors optimized for static assets (images, CSS,
@@ -211,9 +204,7 @@ export default function InfrastructureCdnPageContent() {
                 <li>
                   S3 read/write permissions for uploading and managing assets
                 </li>
-                <li>
-                  CloudFront invalidation permissions for cache busting
-                </li>
+                <li>CloudFront invalidation permissions for cache busting</li>
                 <li>
                   OIDC trust policy for Vercel (or IAM trust for AWS-native
                   providers)
@@ -249,9 +240,7 @@ export default function InfrastructureCdnPageContent() {
             </CardHeader>
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
-                <li>
-                  SSL/TLS certificate for your custom domain
-                </li>
+                <li>SSL/TLS certificate for your custom domain</li>
                 <li>Auto-validated using DNS (CNAME record)</li>
                 <li>
                   Provisioned in{" "}
@@ -261,7 +250,9 @@ export default function InfrastructureCdnPageContent() {
                   (CloudFront requirement, regardless of your chosen region)
                 </li>
                 <li>Auto-renewing (managed by AWS)</li>
-                <li>Free of charge (ACM certificates are free for AWS services)</li>
+                <li>
+                  Free of charge (ACM certificates are free for AWS services)
+                </li>
               </ul>
             </CardContent>
           </Card>
@@ -279,12 +270,10 @@ export default function InfrastructureCdnPageContent() {
                   CNAME record pointing your custom domain to the CloudFront
                   distribution
                 </li>
+                <li>CNAME record for ACM certificate validation</li>
                 <li>
-                  CNAME record for ACM certificate validation
-                </li>
-                <li>
-                  If using Route53, records are created automatically. Otherwise,
-                  DNS records are displayed for manual configuration.
+                  If using Route53, records are created automatically.
+                  Otherwise, DNS records are displayed for manual configuration.
                 </li>
               </ul>
             </CardContent>
@@ -376,18 +365,16 @@ export default function InfrastructureCdnPageContent() {
                 <tbody>
                   <tr className="border-b">
                     <td className="p-4 font-medium">S3 Storage</td>
-                    <td className="p-4 text-muted-foreground">
-                      ~$0.023/GB/mo
-                    </td>
+                    <td className="p-4 text-muted-foreground">~$0.023/GB/mo</td>
                     <td className="p-4 text-muted-foreground">
                       Standard storage class
                     </td>
                   </tr>
                   <tr className="border-b">
-                    <td className="p-4 font-medium">CloudFront Data Transfer</td>
-                    <td className="p-4 text-muted-foreground">
-                      ~$0.085/GB
+                    <td className="p-4 font-medium">
+                      CloudFront Data Transfer
                     </td>
+                    <td className="p-4 text-muted-foreground">~$0.085/GB</td>
                     <td className="p-4 text-muted-foreground">
                       First 10 TB/mo to internet
                     </td>

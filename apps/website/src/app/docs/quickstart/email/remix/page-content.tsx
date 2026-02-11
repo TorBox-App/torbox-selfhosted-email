@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { CLICommand } from "@/components/docs/cli-command";
 
 const remixActionCode = `import type { ActionFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
@@ -255,9 +255,7 @@ export default function RemixQuickstartPageContent() {
           <p className="font-medium text-sm">Environment Variables</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground text-sm">
             <li>
-              <code className="rounded bg-muted px-1.5 py-0.5">
-                AWS_REGION
-              </code>{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5">AWS_REGION</code>{" "}
               — The AWS region where your infrastructure is deployed
             </li>
             <li>

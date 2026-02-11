@@ -6,8 +6,18 @@ const breadcrumbSchema = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Docs", item: "https://wraps.dev/docs" },
-    { "@type": "ListItem", position: 2, name: "Pulumi Component", item: "https://wraps.dev/docs/pulumi-reference" },
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Docs",
+      item: "https://wraps.dev/docs",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Pulumi Component",
+      item: "https://wraps.dev/docs/pulumi-reference",
+    },
   ],
 };
 

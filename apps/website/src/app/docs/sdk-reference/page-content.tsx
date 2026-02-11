@@ -3005,8 +3005,8 @@ export default function SDKReferencePageContent() {
                     <strong>Bulk send limit</strong>: 50 destinations per call
                   </li>
                   <li>
-                    <strong>Attachment limit</strong>: 100 per email (10 MB total
-                    message size)
+                    <strong>Attachment limit</strong>: 100 per email (10 MB
+                    total message size)
                   </li>
                 </ul>
               </div>

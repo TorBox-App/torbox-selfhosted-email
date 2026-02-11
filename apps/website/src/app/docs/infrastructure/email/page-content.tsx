@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   ArrowRight,
   ChevronDown,
@@ -15,15 +14,11 @@ import {
   Tag,
   Zap,
 } from "lucide-react";
+import { useState } from "react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -279,7 +274,9 @@ export default function InfrastructureEmailPageContent() {
                   </code>
                 </li>
                 <li>CloudWatch read access for monitoring</li>
-                <li>Unique external ID generated per deployment for security</li>
+                <li>
+                  Unique external ID generated per deployment for security
+                </li>
               </ul>
             </CardContent>
           </Card>
@@ -316,13 +313,9 @@ export default function InfrastructureEmailPageContent() {
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
                 <li>Domain identity with DKIM signing (RSA 2048-bit)</li>
-                <li>
-                  3 CNAME records generated for DKIM verification
-                </li>
+                <li>3 CNAME records generated for DKIM verification</li>
                 <li>Auto-verification when DNS records are configured</li>
-                <li>
-                  SPF and DMARC record guidance provided after deployment
-                </li>
+                <li>SPF and DMARC record guidance provided after deployment</li>
               </ul>
             </CardContent>
           </Card>
@@ -448,9 +441,7 @@ export default function InfrastructureEmailPageContent() {
                 <li>Runtime: Node.js 20</li>
                 <li>Memory: 128 MB</li>
                 <li>Timeout: 30 seconds</li>
-                <li>
-                  Triggered by SQS, writes processed events to DynamoDB
-                </li>
+                <li>Triggered by SQS, writes processed events to DynamoDB</li>
                 <li>Bundled with esbuild during deployment</li>
               </ul>
             </CardContent>
@@ -491,7 +482,9 @@ export default function InfrastructureEmailPageContent() {
         </div>
 
         <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
-          <p className="font-medium text-sm">Recommended for most applications</p>
+          <p className="font-medium text-sm">
+            Recommended for most applications
+          </p>
           <p className="mt-1 text-muted-foreground text-sm">
             The Production preset gives you full visibility into email delivery
             with real-time event tracking, a 90-day email history, and
@@ -515,9 +508,7 @@ export default function InfrastructureEmailPageContent() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">
-                Dedicated IP Address
-              </CardTitle>
+              <CardTitle className="text-lg">Dedicated IP Address</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
@@ -527,9 +518,7 @@ export default function InfrastructureEmailPageContent() {
                   Requires IP warming: ramp up sending volume gradually over 2-4
                   weeks
                 </li>
-                <li>
-                  ~$24.95/mo per dedicated IP (billed by AWS)
-                </li>
+                <li>~$24.95/mo per dedicated IP (billed by AWS)</li>
               </ul>
             </CardContent>
           </Card>
@@ -556,24 +545,12 @@ export default function InfrastructureEmailPageContent() {
                 Production tracks 6 event types. Enterprise adds 4 more:
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded bg-muted/50 p-2 text-sm">
-                  SEND
-                </div>
-                <div className="rounded bg-muted/50 p-2 text-sm">
-                  DELIVERY
-                </div>
-                <div className="rounded bg-muted/50 p-2 text-sm">
-                  OPEN
-                </div>
-                <div className="rounded bg-muted/50 p-2 text-sm">
-                  CLICK
-                </div>
-                <div className="rounded bg-muted/50 p-2 text-sm">
-                  BOUNCE
-                </div>
-                <div className="rounded bg-muted/50 p-2 text-sm">
-                  COMPLAINT
-                </div>
+                <div className="rounded bg-muted/50 p-2 text-sm">SEND</div>
+                <div className="rounded bg-muted/50 p-2 text-sm">DELIVERY</div>
+                <div className="rounded bg-muted/50 p-2 text-sm">OPEN</div>
+                <div className="rounded bg-muted/50 p-2 text-sm">CLICK</div>
+                <div className="rounded bg-muted/50 p-2 text-sm">BOUNCE</div>
+                <div className="rounded bg-muted/50 p-2 text-sm">COMPLAINT</div>
                 <div className="rounded border border-primary/30 bg-primary/5 p-2 text-sm">
                   REJECT
                 </div>
@@ -714,8 +691,8 @@ export default function InfrastructureEmailPageContent() {
           IAM Policy Details
         </h2>
         <p className="mb-4 text-muted-foreground">
-          Wraps follows the principle of least privilege. Each preset grants only
-          the permissions required for its features.
+          Wraps follows the principle of least privilege. Each preset grants
+          only the permissions required for its features.
         </p>
 
         <div className="space-y-4">

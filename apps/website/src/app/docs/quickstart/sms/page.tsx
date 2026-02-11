@@ -6,9 +6,24 @@ const breadcrumbSchema = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Docs", item: "https://wraps.dev/docs" },
-    { "@type": "ListItem", position: 2, name: "Quickstart", item: "https://wraps.dev/docs/quickstart" },
-    { "@type": "ListItem", position: 3, name: "SMS", item: "https://wraps.dev/docs/quickstart/sms" },
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Docs",
+      item: "https://wraps.dev/docs",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Quickstart",
+      item: "https://wraps.dev/docs/quickstart",
+    },
+    {
+      "@type": "ListItem",
+      position: 3,
+      name: "SMS",
+      item: "https://wraps.dev/docs/quickstart/sms",
+    },
   ],
 };
 

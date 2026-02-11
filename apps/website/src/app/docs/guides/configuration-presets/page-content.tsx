@@ -12,12 +12,7 @@ import {
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -311,14 +306,12 @@ export default function ConfigurationPresetsPageContent() {
         </Badge>
         <p className="mb-4 text-muted-foreground">
           Recommended for most applications. Includes everything in Starter plus
-          a full event processing pipeline with real-time tracking, email history
-          storage, and reputation metrics.
+          a full event processing pipeline with real-time tracking, email
+          history storage, and reputation metrics.
         </p>
         <Card className="mb-4">
           <CardContent className="p-6">
-            <h3 className="mb-3 font-medium">
-              Everything in Starter, plus:
-            </h3>
+            <h3 className="mb-3 font-medium">Everything in Starter, plus:</h3>
             <ul className="space-y-2">
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
@@ -459,19 +452,13 @@ export default function ConfigurationPresetsPageContent() {
                   Monthly Volume
                 </th>
                 <th className="pb-3 px-4 text-right font-medium">Starter</th>
-                <th className="pb-3 px-4 text-right font-medium">
-                  Production
-                </th>
-                <th className="pb-3 pl-4 text-right font-medium">
-                  Enterprise
-                </th>
+                <th className="pb-3 px-4 text-right font-medium">Production</th>
+                <th className="pb-3 pl-4 text-right font-medium">Enterprise</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
               <tr className="border-b">
-                <td className="py-3 pr-4 font-medium text-foreground">
-                  1,000
-                </td>
+                <td className="py-3 pr-4 font-medium text-foreground">1,000</td>
                 <td className="py-3 px-4 text-right">$0.15</td>
                 <td className="py-3 px-4 text-right">$2.15</td>
                 <td className="py-3 pl-4 text-right">$52</td>

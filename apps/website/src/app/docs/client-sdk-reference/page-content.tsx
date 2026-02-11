@@ -1184,7 +1184,9 @@ export default function ClientSDKReferencePageContent() {
                     <code className="rounded bg-muted px-1.5 py-0.5">org</code>
                   </td>
                   <td className="py-2">string</td>
-                  <td className="py-2">Organization slug from your dashboard</td>
+                  <td className="py-2">
+                    Organization slug from your dashboard
+                  </td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2">
@@ -1218,9 +1220,7 @@ export default function ClientSDKReferencePageContent() {
                     </code>
                   </td>
                   <td className="py-2">object</td>
-                  <td className="py-2">
-                    Per-environment overrides (optional)
-                  </td>
+                  <td className="py-2">Per-environment overrides (optional)</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2">
@@ -1396,9 +1396,7 @@ export default function ClientSDKReferencePageContent() {
                     </code>
                   </td>
                   <td className="py-2">string</td>
-                  <td className="py-2">
-                    Physical address (for email footers)
-                  </td>
+                  <td className="py-2">Physical address (for email footers)</td>
                 </tr>
                 <tr>
                   <td className="py-2">
@@ -1525,7 +1523,9 @@ export default function ClientSDKReferencePageContent() {
                   </td>
                   <td className="py-2">
                     <code className="text-xs">
-                      {"condition(id, { field, operator, value, branches: { yes: [], no: [] } })"}
+                      {
+                        "condition(id, { field, operator, value, branches: { yes: [], no: [] } })"
+                      }
                     </code>
                   </td>
                 </tr>
@@ -1549,15 +1549,15 @@ export default function ClientSDKReferencePageContent() {
                   </td>
                   <td className="py-2">
                     <code className="text-xs">
-                      {"waitForEmailEngagement(id, { emailStepId, engagementType, timeout? })"}
+                      {
+                        "waitForEmailEngagement(id, { emailStepId, engagementType, timeout? })"
+                      }
                     </code>
                   </td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2">
-                    <code className="rounded bg-muted px-1.5 py-0.5">
-                      exit
-                    </code>
+                    <code className="rounded bg-muted px-1.5 py-0.5">exit</code>
                   </td>
                   <td className="py-2">
                     <code className="text-xs">
@@ -1573,7 +1573,9 @@ export default function ClientSDKReferencePageContent() {
                   </td>
                   <td className="py-2">
                     <code className="text-xs">
-                      {"updateContact(id, { updates: [{ field, operation, value }] })"}
+                      {
+                        "updateContact(id, { updates: [{ field, operation, value }] })"
+                      }
                     </code>
                   </td>
                 </tr>

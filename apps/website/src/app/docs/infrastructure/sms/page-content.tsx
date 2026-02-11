@@ -15,12 +15,7 @@ import {
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -55,9 +50,7 @@ export default function InfrastructureSmsPageContent() {
         </h1>
         <p className="text-lg text-muted-foreground">
           Every AWS resource Wraps creates when you run{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">
-            wraps sms init
-          </code>
+          <code className="rounded bg-muted px-1.5 py-0.5">wraps sms init</code>
           .
         </p>
       </div>
@@ -180,7 +173,9 @@ export default function InfrastructureSmsPageContent() {
                   Automatic opt-out management (recipients can reply STOP)
                 </li>
                 <li>Maintained by AWS, ensuring TCPA compliance</li>
-                <li>Wraps automatically respects opt-out status before sending</li>
+                <li>
+                  Wraps automatically respects opt-out status before sending
+                </li>
               </ul>
             </CardContent>
           </Card>
@@ -257,18 +252,14 @@ export default function InfrastructureSmsPageContent() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">
-                Toll-Free Phone Number
-              </CardTitle>
+              <CardTitle className="text-lg">Toll-Free Phone Number</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
                 <li>Dedicated toll-free number (~$2/mo)</li>
                 <li>Higher carrier trust and deliverability</li>
                 <li>Supports both transactional and promotional messages</li>
-                <li>
-                  Two-way messaging (recipients can reply to your number)
-                </li>
+                <li>Two-way messaging (recipients can reply to your number)</li>
               </ul>
             </CardContent>
           </Card>
@@ -281,10 +272,10 @@ export default function InfrastructureSmsPageContent() {
             </CardHeader>
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
+                <li>EventBridge rule capturing delivery status events</li>
                 <li>
-                  EventBridge rule capturing delivery status events
+                  SQS queue with dead-letter queue for reliable processing
                 </li>
-                <li>SQS queue with dead-letter queue for reliable processing</li>
                 <li>Lambda function processing events into DynamoDB</li>
                 <li>DynamoDB table for message history (90-day TTL)</li>
               </ul>
@@ -302,16 +293,16 @@ export default function InfrastructureSmsPageContent() {
                   Opt-out status checked before every send (prevents accidental
                   messages)
                 </li>
-                <li>
-                  Dashboard view of opt-out statistics
-                </li>
+                <li>Dashboard view of opt-out statistics</li>
               </ul>
             </CardContent>
           </Card>
         </div>
 
         <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
-          <p className="font-medium text-sm">Recommended for most applications</p>
+          <p className="font-medium text-sm">
+            Recommended for most applications
+          </p>
           <p className="mt-1 text-muted-foreground text-sm">
             The Production preset gives you a real phone number, delivery
             tracking, and compliance-ready opt-out management for live SMS
@@ -339,9 +330,7 @@ export default function InfrastructureSmsPageContent() {
             </CardHeader>
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
-                <li>
-                  Automatic URL shortening and click tracking in messages
-                </li>
+                <li>Automatic URL shortening and click tracking in messages</li>
                 <li>Click-through rate analytics in the dashboard</li>
                 <li>Custom short domain support</li>
               </ul>
@@ -350,15 +339,11 @@ export default function InfrastructureSmsPageContent() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">
-                Dedicated Throughput
-              </CardTitle>
+              <CardTitle className="text-lg">Dedicated Throughput</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
-                <li>
-                  Higher messages-per-second rate for bulk sending
-                </li>
+                <li>Higher messages-per-second rate for bulk sending</li>
                 <li>Dedicated throughput allocation from AWS</li>
                 <li>Consistent delivery performance under load</li>
               </ul>

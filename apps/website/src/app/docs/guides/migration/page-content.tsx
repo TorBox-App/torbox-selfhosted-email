@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { CLICommand } from "@/components/docs/cli-command";
 
 const sendgridCode = `import sgMail from '@sendgrid/mail';
 
@@ -107,9 +107,7 @@ export default function MigrationGuidePageContent() {
               <li className="flex items-start gap-3">
                 <Check className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
                 <div>
-                  <span className="font-medium">
-                    $0.10 per 1,000 emails
-                  </span>
+                  <span className="font-medium">$0.10 per 1,000 emails</span>
                   <p className="text-muted-foreground text-sm">
                     Pay AWS directly at transparent pricing. No markup, no
                     surprise bills.
@@ -295,7 +293,9 @@ export default function MigrationGuidePageContent() {
           </CodeBlockBody>
         </CodeBlock>
         <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
-          <p className="font-medium text-sm">Same great DX, you own the infra</p>
+          <p className="font-medium text-sm">
+            Same great DX, you own the infra
+          </p>
           <p className="mt-2 text-muted-foreground text-sm">
             The API is intentionally familiar. The difference is that your
             emails flow through infrastructure you own in your AWS account.
@@ -341,9 +341,7 @@ export default function MigrationGuidePageContent() {
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary font-medium text-primary-foreground text-xs">
                     4
                   </div>
-                  <span className="font-medium">
-                    Update your send calls
-                  </span>
+                  <span className="font-medium">Update your send calls</span>
                 </div>
                 <p className="mt-1 pl-8 text-muted-foreground text-sm">
                   Swap your existing import and client initialization with the
@@ -427,18 +425,14 @@ export default function MigrationGuidePageContent() {
                     <td className="p-4 font-medium text-primary">$5</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="p-4 font-medium text-foreground">
-                      100,000
-                    </td>
+                    <td className="p-4 font-medium text-foreground">100,000</td>
                     <td className="p-4">$34.95</td>
                     <td className="p-4">$100</td>
                     <td className="p-4">$80</td>
                     <td className="p-4 font-medium text-primary">$10</td>
                   </tr>
                   <tr>
-                    <td className="p-4 font-medium text-foreground">
-                      500,000
-                    </td>
+                    <td className="p-4 font-medium text-foreground">500,000</td>
                     <td className="p-4">$249.95</td>
                     <td className="p-4">$500</td>
                     <td className="p-4">$380</td>

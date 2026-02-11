@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { CLICommand } from "@/components/docs/cli-command";
 
 const emailServiceCode = `import { WrapsEmail } from '@wraps.dev/email';
 
@@ -240,10 +240,7 @@ export default function ExpressQuickstartPageContent() {
           Create an Express route that accepts email parameters and sends using
           the SDK:
         </p>
-        <TypeScriptCode
-          code={sendRouteCode}
-          filename="src/routes/email.ts"
-        />
+        <TypeScriptCode code={sendRouteCode} filename="src/routes/email.ts" />
       </section>
 
       {/* Step 6: Error Handling Middleware */}

@@ -40,8 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     title: "Migration Guide | Wraps",
-    description:
-      "Switch from SendGrid, Postmark, or Resend to Wraps.",
+    description: "Switch from SendGrid, Postmark, or Resend to Wraps.",
   },
   alternates: {
     canonical: "https://wraps.dev/docs/guides/migration",

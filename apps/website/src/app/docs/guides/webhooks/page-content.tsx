@@ -238,9 +238,7 @@ export default function WebhooksPageContent() {
               </li>
               <li className="flex items-center gap-3">
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
-                <span>
-                  An HTTPS endpoint ready to receive POST requests
-                </span>
+                <span>An HTTPS endpoint ready to receive POST requests</span>
               </li>
             </ul>
           </CardContent>
@@ -321,9 +319,7 @@ export default function WebhooksPageContent() {
               3
             </div>
             <div className="flex-1">
-              <h3 className="mb-2 font-medium text-lg">
-                Enter your HTTPS URL
-              </h3>
+              <h3 className="mb-2 font-medium text-lg">Enter your HTTPS URL</h3>
               <p className="text-muted-foreground">
                 Provide the full URL where you want to receive events (e.g.{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5">
@@ -772,7 +768,7 @@ export default function WebhooksPageContent() {
                   <code className="rounded bg-muted px-1.5 py-0.5">
                     messageId
                   </code>{" "}
-                  + {" "}
+                  +{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5">event</code>
                 </li>
               </ul>

@@ -12,12 +12,7 @@ import {
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -222,8 +217,8 @@ export default function TemplatesPageContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
-              A shared brand kit for colors, fonts, and logos. Import it in
-              your templates to keep a consistent look across all emails.
+              A shared brand kit for colors, fonts, and logos. Import it in your
+              templates to keep a consistent look across all emails.
             </CardContent>
           </Card>
         </div>
@@ -314,9 +309,7 @@ export default function TemplatesPageContent() {
                     </code>
                   </td>
                   <td className="py-2 pr-4">string</td>
-                  <td className="py-2">
-                    "transactional" or "marketing"
-                  </td>
+                  <td className="py-2">"transactional" or "marketing"</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-medium text-foreground">
@@ -403,18 +396,12 @@ export default function TemplatesPageContent() {
           Once a template is pushed, you can send emails using the template name
           and pass in dynamic data through the SDK:
         </p>
-        <CodeExample
-          code={sendCode}
-          filename="send.ts"
-          language="typescript"
-        />
+        <CodeExample code={sendCode} filename="send.ts" language="typescript" />
         <p className="mt-4 text-muted-foreground text-sm">
           The template data is merged with the template at send time. Variable
           placeholders in the subject line (like{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">
-            {"{{name}}"}
-          </code>
-          ) are also replaced.
+          <code className="rounded bg-muted px-1.5 py-0.5">{"{{name}}"}</code>)
+          are also replaced.
         </p>
       </section>
 

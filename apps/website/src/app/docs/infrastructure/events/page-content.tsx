@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,15 +11,11 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
+import { useState } from "react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -447,13 +442,7 @@ function ExpandableSection({
 
 // ── Reusable CodeBlock Renderer ───────────────────────────────────────
 
-function JsonCodeBlock({
-  filename,
-  code,
-}: {
-  filename: string;
-  code: string;
-}) {
+function JsonCodeBlock({ filename, code }: { filename: string; code: string }) {
   return (
     <CodeBlock
       className="h-auto"
@@ -514,8 +503,8 @@ export default function InfrastructureEventsPageContent() {
         </h2>
         <p className="mb-4 text-muted-foreground">
           When you send an email through Wraps, SES publishes event
-          notifications to the default EventBridge bus in your AWS account. Wraps
-          creates a rule on that bus to capture events into its processing
+          notifications to the default EventBridge bus in your AWS account.
+          Wraps creates a rule on that bus to capture events into its processing
           pipeline &mdash; but because it&apos;s <em>your</em> bus, you can add
           your own rules alongside Wraps&apos; rule with zero configuration.
         </p>
@@ -557,12 +546,14 @@ export default function InfrastructureEventsPageContent() {
         </CodeBlock>
 
         <div className="mt-4 rounded-lg border-primary border-l-4 bg-primary/10 p-4">
-          <p className="font-medium text-sm">Your events, your bus, your rules</p>
+          <p className="font-medium text-sm">
+            Your events, your bus, your rules
+          </p>
           <p className="mt-1 text-muted-foreground text-sm">
             EventBridge evaluates every rule on the bus independently. Adding
-            your own rules has no impact on Wraps&apos; processing pipeline,
-            and you get native fan-out, content-based filtering, and IAM
-            security &mdash; no webhook endpoints to manage.
+            your own rules has no impact on Wraps&apos; processing pipeline, and
+            you get native fan-out, content-based filtering, and IAM security
+            &mdash; no webhook endpoints to manage.
           </p>
         </div>
       </section>
@@ -593,66 +584,112 @@ export default function InfrastructureEventsPageContent() {
                 <tbody>
                   <tr className="border-b">
                     <td className="p-4">
-                      <code className="rounded bg-muted px-1 py-0.5">messageId</code>
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        messageId
+                      </code>
                     </td>
-                    <td className="p-4 text-muted-foreground">mail.messageId</td>
-                    <td className="p-4 text-muted-foreground">SES message ID (partition key)</td>
+                    <td className="p-4 text-muted-foreground">
+                      mail.messageId
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      SES message ID (partition key)
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4">
-                      <code className="rounded bg-muted px-1 py-0.5">sentAt</code>
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        sentAt
+                      </code>
                     </td>
-                    <td className="p-4 text-muted-foreground">mail.timestamp</td>
-                    <td className="p-4 text-muted-foreground">When the email was sent (sort key)</td>
+                    <td className="p-4 text-muted-foreground">
+                      mail.timestamp
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      When the email was sent (sort key)
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4">
-                      <code className="rounded bg-muted px-1 py-0.5">accountId</code>
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        accountId
+                      </code>
                     </td>
-                    <td className="p-4 text-muted-foreground">envelope.account</td>
-                    <td className="p-4 text-muted-foreground">Your AWS account ID</td>
+                    <td className="p-4 text-muted-foreground">
+                      envelope.account
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Your AWS account ID
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4">
                       <code className="rounded bg-muted px-1 py-0.5">from</code>
                     </td>
                     <td className="p-4 text-muted-foreground">mail.source</td>
-                    <td className="p-4 text-muted-foreground">Sender email address</td>
+                    <td className="p-4 text-muted-foreground">
+                      Sender email address
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4">
                       <code className="rounded bg-muted px-1 py-0.5">to</code>
                     </td>
-                    <td className="p-4 text-muted-foreground">mail.destination</td>
-                    <td className="p-4 text-muted-foreground">Recipient email addresses</td>
+                    <td className="p-4 text-muted-foreground">
+                      mail.destination
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Recipient email addresses
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4">
-                      <code className="rounded bg-muted px-1 py-0.5">subject</code>
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        subject
+                      </code>
                     </td>
-                    <td className="p-4 text-muted-foreground">mail.commonHeaders</td>
-                    <td className="p-4 text-muted-foreground">Email subject line</td>
+                    <td className="p-4 text-muted-foreground">
+                      mail.commonHeaders
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Email subject line
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4">
-                      <code className="rounded bg-muted px-1 py-0.5">eventType</code>
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        eventType
+                      </code>
                     </td>
-                    <td className="p-4 text-muted-foreground">detail.eventType</td>
-                    <td className="p-4 text-muted-foreground">Event type (Send, Delivery, Bounce, etc.)</td>
+                    <td className="p-4 text-muted-foreground">
+                      detail.eventType
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Event type (Send, Delivery, Bounce, etc.)
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4">
-                      <code className="rounded bg-muted px-1 py-0.5">eventData</code>
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        eventData
+                      </code>
                     </td>
-                    <td className="p-4 text-muted-foreground">Full event JSON</td>
-                    <td className="p-4 text-muted-foreground">Complete event payload for detailed analysis</td>
+                    <td className="p-4 text-muted-foreground">
+                      Full event JSON
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Complete event payload for detailed analysis
+                    </td>
                   </tr>
                   <tr>
                     <td className="p-4">
-                      <code className="rounded bg-muted px-1 py-0.5">expiresAt</code>
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        expiresAt
+                      </code>
                     </td>
                     <td className="p-4 text-muted-foreground">Computed</td>
-                    <td className="p-4 text-muted-foreground">TTL (90 days Production, 365 days Enterprise)</td>
+                    <td className="p-4 text-muted-foreground">
+                      TTL (90 days Production, 365 days Enterprise)
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -665,8 +702,10 @@ export default function InfrastructureEventsPageContent() {
           <p className="mt-1 text-muted-foreground text-sm">
             When SES reports a bounce with sub-type{" "}
             <code className="rounded bg-muted px-1 py-0.5">Suppressed</code> or{" "}
-            <code className="rounded bg-muted px-1 py-0.5">OnAccountSuppressionList</code>,
-            Wraps normalizes these into a distinct{" "}
+            <code className="rounded bg-muted px-1 py-0.5">
+              OnAccountSuppressionList
+            </code>
+            , Wraps normalizes these into a distinct{" "}
             <code className="rounded bg-muted px-1 py-0.5">Suppressed</code>{" "}
             event type in DynamoDB. This makes it easy to distinguish real
             bounces from suppression-list entries.
@@ -696,10 +735,14 @@ export default function InfrastructureEventsPageContent() {
                     <th className="p-4 text-left font-medium">Event</th>
                     <th className="p-4 text-left font-medium">
                       EventBridge{" "}
-                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">detail-type</code>
+                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                        detail-type
+                      </code>
                     </th>
                     <th className="p-4 text-left font-medium">
-                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">detail.eventType</code>
+                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                        detail.eventType
+                      </code>
                     </th>
                     <th className="p-4 text-left font-medium">When It Fires</th>
                   </tr>
@@ -707,71 +750,174 @@ export default function InfrastructureEventsPageContent() {
                 <tbody>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Send</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Sent</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Send</code></td>
-                    <td className="p-4 text-muted-foreground">Email accepted by SES for delivery</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Sent
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">Send</code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Email accepted by SES for delivery
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Delivery</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Delivered</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Delivery</code></td>
-                    <td className="p-4 text-muted-foreground">Recipient mail server accepted the email</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Delivered
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Delivery
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Recipient mail server accepted the email
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Open</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Opened</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Open</code></td>
-                    <td className="p-4 text-muted-foreground">Recipient opened the email (tracking pixel loaded)</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Opened
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">Open</code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Recipient opened the email (tracking pixel loaded)
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Click</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Clicked</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Click</code></td>
-                    <td className="p-4 text-muted-foreground">Recipient clicked a tracked link</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Clicked
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Click
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Recipient clicked a tracked link
+                    </td>
                   </tr>
                   <tr className="border-b bg-red-50/50 dark:bg-red-950/20">
                     <td className="p-4 font-medium">Bounce</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Bounced</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Bounce</code></td>
-                    <td className="p-4 text-muted-foreground">Email could not be delivered</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Bounced
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Bounce
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Email could not be delivered
+                    </td>
                   </tr>
                   <tr className="border-b bg-red-50/50 dark:bg-red-950/20">
                     <td className="p-4 font-medium">Complaint</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Complaint Received</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Complaint</code></td>
-                    <td className="p-4 text-muted-foreground">Recipient marked email as spam</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Complaint Received
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Complaint
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Recipient marked email as spam
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Reject</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Rejected</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Reject</code></td>
-                    <td className="p-4 text-muted-foreground">SES rejected the email (virus, policy)</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Rejected
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Reject
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      SES rejected the email (virus, policy)
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Delivery Delay</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Delivery Delayed</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">DeliveryDelay</code></td>
-                    <td className="p-4 text-muted-foreground">Temporary delivery issue, SES will retry</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Delivery Delayed
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        DeliveryDelay
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Temporary delivery issue, SES will retry
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Rendering Failure</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Rendering Failed</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Rendering Failure</code></td>
-                    <td className="p-4 text-muted-foreground">SES template rendering failed</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Rendering Failed
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Rendering Failure
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      SES template rendering failed
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Subscription</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Email Subscribed</code></td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Subscription</code></td>
-                    <td className="p-4 text-muted-foreground">Recipient changed subscription preferences</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Email Subscribed
+                      </code>
+                    </td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Subscription
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Recipient changed subscription preferences
+                    </td>
                   </tr>
                   <tr className="bg-blue-50/50 dark:bg-blue-950/20">
                     <td className="p-4 font-medium">Inbound Email</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">email.received</code></td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        email.received
+                      </code>
+                    </td>
                     <td className="p-4 text-muted-foreground">&mdash;</td>
                     <td className="p-4 text-muted-foreground">
                       Inbound email received (source:{" "}
-                      <code className="rounded bg-muted px-1 py-0.5">wraps.inbound</code>)
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        wraps.inbound
+                      </code>
+                      )
                     </td>
                   </tr>
                 </tbody>
@@ -792,28 +938,48 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.mail.messageId</code></td>
-                          <td className="p-3 text-muted-foreground">Unique SES message identifier</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.mail.messageId
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Unique SES message identifier
+                          </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.mail.source</code></td>
-                          <td className="p-3 text-muted-foreground">Sender (From) address</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.mail.source
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Sender (From) address
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.mail.destination</code></td>
-                          <td className="p-3 text-muted-foreground">Array of recipient addresses</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.mail.destination
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Array of recipient addresses
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="send-event.json" code={sendPayload} />
+              <JsonCodeBlock code={sendPayload} filename="send-event.json" />
             </div>
           </ExpandableSection>
 
@@ -826,28 +992,51 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.delivery.processingTimeMillis</code></td>
-                          <td className="p-3 text-muted-foreground">Time from send to delivery (ms)</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.delivery.processingTimeMillis
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Time from send to delivery (ms)
+                          </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.delivery.recipients</code></td>
-                          <td className="p-3 text-muted-foreground">Array of recipients who received the email</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.delivery.recipients
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Array of recipients who received the email
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.delivery.smtpResponse</code></td>
-                          <td className="p-3 text-muted-foreground">SMTP response from recipient server</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.delivery.smtpResponse
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            SMTP response from recipient server
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="delivery-event.json" code={deliveryPayload} />
+              <JsonCodeBlock
+                code={deliveryPayload}
+                filename="delivery-event.json"
+              />
             </div>
           </ExpandableSection>
 
@@ -860,28 +1049,51 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.bounce.bounceType</code></td>
-                          <td className="p-3 text-muted-foreground">Permanent, Transient, or Undetermined</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.bounce.bounceType
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Permanent, Transient, or Undetermined
+                          </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.bounce.bounceSubType</code></td>
-                          <td className="p-3 text-muted-foreground">Specific reason (General, NoEmail, Suppressed, etc.)</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.bounce.bounceSubType
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Specific reason (General, NoEmail, Suppressed, etc.)
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.bounce.bouncedRecipients</code></td>
-                          <td className="p-3 text-muted-foreground">Array with address, status, and diagnostic code</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.bounce.bouncedRecipients
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Array with address, status, and diagnostic code
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="bounce-event.json" code={bouncePayload} />
+              <JsonCodeBlock
+                code={bouncePayload}
+                filename="bounce-event.json"
+              />
             </div>
           </ExpandableSection>
 
@@ -894,20 +1106,31 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.reject.reason</code></td>
-                          <td className="p-3 text-muted-foreground">Why SES rejected the email (e.g., VIRUS)</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.reject.reason
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Why SES rejected the email (e.g., VIRUS)
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="reject-event.json" code={rejectPayload} />
+              <JsonCodeBlock
+                code={rejectPayload}
+                filename="reject-event.json"
+              />
             </div>
           </ExpandableSection>
 
@@ -920,28 +1143,52 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.deliveryDelay.delayType</code></td>
-                          <td className="p-3 text-muted-foreground">Reason for delay (e.g., TransientCommunicationFailure)</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.deliveryDelay.delayType
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Reason for delay (e.g.,
+                            TransientCommunicationFailure)
+                          </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.deliveryDelay.expirationTime</code></td>
-                          <td className="p-3 text-muted-foreground">When SES will stop retrying</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.deliveryDelay.expirationTime
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            When SES will stop retrying
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.deliveryDelay.delayedRecipients</code></td>
-                          <td className="p-3 text-muted-foreground">Array with address, status, and diagnostic code</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.deliveryDelay.delayedRecipients
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Array with address, status, and diagnostic code
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="delivery-delay-event.json" code={deliveryDelayPayload} />
+              <JsonCodeBlock
+                code={deliveryDelayPayload}
+                filename="delivery-delay-event.json"
+              />
             </div>
           </ExpandableSection>
         </div>
@@ -958,24 +1205,38 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.open.userAgent</code></td>
-                          <td className="p-3 text-muted-foreground">Recipient&apos;s browser/email client</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.open.userAgent
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Recipient&apos;s browser/email client
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.open.ipAddress</code></td>
-                          <td className="p-3 text-muted-foreground">IP address of the recipient</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.open.ipAddress
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            IP address of the recipient
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="open-event.json" code={openPayload} />
+              <JsonCodeBlock code={openPayload} filename="open-event.json" />
             </div>
           </ExpandableSection>
 
@@ -988,28 +1249,48 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.click.link</code></td>
-                          <td className="p-3 text-muted-foreground">URL that was clicked</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.click.link
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            URL that was clicked
+                          </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.click.userAgent</code></td>
-                          <td className="p-3 text-muted-foreground">Recipient&apos;s browser/email client</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.click.userAgent
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Recipient&apos;s browser/email client
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.click.ipAddress</code></td>
-                          <td className="p-3 text-muted-foreground">IP address of the recipient</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.click.ipAddress
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            IP address of the recipient
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="click-event.json" code={clickPayload} />
+              <JsonCodeBlock code={clickPayload} filename="click-event.json" />
             </div>
           </ExpandableSection>
 
@@ -1022,28 +1303,51 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.subscription.contactList</code></td>
-                          <td className="p-3 text-muted-foreground">Name of the SES contact list</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.subscription.contactList
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Name of the SES contact list
+                          </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.subscription.newTopicPreferences</code></td>
-                          <td className="p-3 text-muted-foreground">Updated subscription preferences</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.subscription.newTopicPreferences
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Updated subscription preferences
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.subscription.oldTopicPreferences</code></td>
-                          <td className="p-3 text-muted-foreground">Previous subscription preferences</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.subscription.oldTopicPreferences
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Previous subscription preferences
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="subscription-event.json" code={subscriptionPayload} />
+              <JsonCodeBlock
+                code={subscriptionPayload}
+                filename="subscription-event.json"
+              />
             </div>
           </ExpandableSection>
         </div>
@@ -1060,24 +1364,41 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.complaint.complainedRecipients</code></td>
-                          <td className="p-3 text-muted-foreground">Array of recipients who complained</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.complaint.complainedRecipients
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Array of recipients who complained
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.complaint.complaintFeedbackType</code></td>
-                          <td className="p-3 text-muted-foreground">Feedback type (abuse, not-spam, etc.)</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.complaint.complaintFeedbackType
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Feedback type (abuse, not-spam, etc.)
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="complaint-event.json" code={complaintPayload} />
+              <JsonCodeBlock
+                code={complaintPayload}
+                filename="complaint-event.json"
+              />
             </div>
           </ExpandableSection>
 
@@ -1090,24 +1411,41 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.failure.errorMessage</code></td>
-                          <td className="p-3 text-muted-foreground">Description of the rendering error</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.failure.errorMessage
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Description of the rendering error
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.failure.templateName</code></td>
-                          <td className="p-3 text-muted-foreground">Name of the SES template that failed</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.failure.templateName
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Name of the SES template that failed
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="rendering-failure-event.json" code={renderingFailurePayload} />
+              <JsonCodeBlock
+                code={renderingFailurePayload}
+                filename="rendering-failure-event.json"
+              />
             </div>
           </ExpandableSection>
         </div>
@@ -1119,9 +1457,16 @@ export default function InfrastructureEventsPageContent() {
             <div className="space-y-3">
               <div className="rounded-lg border-primary border-l-4 bg-primary/10 p-4">
                 <p className="text-muted-foreground text-sm">
-                  Inbound events use a different source (<code className="rounded bg-muted px-1 py-0.5">wraps.inbound</code>)
-                  and detail-type (<code className="rounded bg-muted px-1 py-0.5">email.received</code>) than SES outbound events.
-                  Filter for these separately in your EventBridge rules.
+                  Inbound events use a different source (
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    wraps.inbound
+                  </code>
+                  ) and detail-type (
+                  <code className="rounded bg-muted px-1 py-0.5">
+                    email.received
+                  </code>
+                  ) than SES outbound events. Filter for these separately in
+                  your EventBridge rules.
                 </p>
               </div>
               <Card>
@@ -1131,32 +1476,61 @@ export default function InfrastructureEventsPageContent() {
                       <thead>
                         <tr className="border-b bg-muted/50">
                           <th className="p-3 text-left font-medium">Field</th>
-                          <th className="p-3 text-left font-medium">Description</th>
+                          <th className="p-3 text-left font-medium">
+                            Description
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.from</code></td>
-                          <td className="p-3 text-muted-foreground">Sender email address</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.from
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Sender email address
+                          </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.to</code></td>
-                          <td className="p-3 text-muted-foreground">Array of recipient addresses</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.to
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Array of recipient addresses
+                          </td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.subject</code></td>
-                          <td className="p-3 text-muted-foreground">Email subject line</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.subject
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            Email subject line
+                          </td>
                         </tr>
                         <tr>
-                          <td className="p-3"><code className="rounded bg-muted px-1 py-0.5">detail.receivedAt</code></td>
-                          <td className="p-3 text-muted-foreground">When the inbound email was received</td>
+                          <td className="p-3">
+                            <code className="rounded bg-muted px-1 py-0.5">
+                              detail.receivedAt
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            When the inbound email was received
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
-              <JsonCodeBlock filename="inbound-event.json" code={inboundPayload} />
+              <JsonCodeBlock
+                code={inboundPayload}
+                filename="inbound-event.json"
+              />
             </div>
           </ExpandableSection>
         </div>
@@ -1195,64 +1569,133 @@ export default function InfrastructureEventsPageContent() {
                   <tr className="border-b bg-muted/50">
                     <th className="p-4 text-left font-medium">bounceType</th>
                     <th className="p-4 text-left font-medium">bounceSubType</th>
-                    <th className="p-4 text-left font-medium">Recommended Action</th>
+                    <th className="p-4 text-left font-medium">
+                      Recommended Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Permanent</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">General</code></td>
-                    <td className="p-4 text-muted-foreground">Suppress immediately &mdash; address is invalid</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        General
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Suppress immediately &mdash; address is invalid
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Permanent</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">NoEmail</code></td>
-                    <td className="p-4 text-muted-foreground">Suppress &mdash; mailbox does not exist</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        NoEmail
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Suppress &mdash; mailbox does not exist
+                    </td>
                   </tr>
                   <tr className="border-b bg-blue-50/50 dark:bg-blue-950/20">
                     <td className="p-4 font-medium">Permanent</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Suppressed</code></td>
-                    <td className="p-4 text-muted-foreground">Already on SES suppression list (Wraps normalizes to Suppressed)</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Suppressed
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Already on SES suppression list (Wraps normalizes to
+                      Suppressed)
+                    </td>
                   </tr>
                   <tr className="border-b bg-blue-50/50 dark:bg-blue-950/20">
                     <td className="p-4 font-medium">Permanent</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">OnAccountSuppressionList</code></td>
-                    <td className="p-4 text-muted-foreground">Account-level suppression (Wraps normalizes to Suppressed)</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        OnAccountSuppressionList
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Account-level suppression (Wraps normalizes to Suppressed)
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Permanent</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">UnsubscribedRecipient</code></td>
-                    <td className="p-4 text-muted-foreground">Recipient unsubscribed &mdash; remove from mailing list</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        UnsubscribedRecipient
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Recipient unsubscribed &mdash; remove from mailing list
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Transient</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">General</code></td>
-                    <td className="p-4 text-muted-foreground">Retry later &mdash; temporary issue</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        General
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Retry later &mdash; temporary issue
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Transient</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">MailboxFull</code></td>
-                    <td className="p-4 text-muted-foreground">Retry, suppress after repeated failures</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        MailboxFull
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Retry, suppress after repeated failures
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Transient</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">MessageTooLarge</code></td>
-                    <td className="p-4 text-muted-foreground">Reduce message size and resend</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        MessageTooLarge
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Reduce message size and resend
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Transient</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">ContentRejected</code></td>
-                    <td className="p-4 text-muted-foreground">Review email content for policy violations</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        ContentRejected
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Review email content for policy violations
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Transient</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">AttachmentRejected</code></td>
-                    <td className="p-4 text-muted-foreground">Review attachment type and size</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        AttachmentRejected
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Review attachment type and size
+                    </td>
                   </tr>
                   <tr>
                     <td className="p-4 font-medium">Undetermined</td>
-                    <td className="p-4"><code className="rounded bg-muted px-1 py-0.5">Undetermined</code></td>
-                    <td className="p-4 text-muted-foreground">Investigate manually &mdash; check diagnostic code</td>
+                    <td className="p-4">
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        Undetermined
+                      </code>
+                    </td>
+                    <td className="p-4 text-muted-foreground">
+                      Investigate manually &mdash; check diagnostic code
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1265,13 +1708,15 @@ export default function InfrastructureEventsPageContent() {
           <p className="mt-1 text-muted-foreground text-sm">
             Wraps automatically detects bounces with sub-type{" "}
             <code className="rounded bg-muted px-1 py-0.5">Suppressed</code> or{" "}
-            <code className="rounded bg-muted px-1 py-0.5">OnAccountSuppressionList</code>{" "}
+            <code className="rounded bg-muted px-1 py-0.5">
+              OnAccountSuppressionList
+            </code>{" "}
             and stores them with event type{" "}
-            <code className="rounded bg-muted px-1 py-0.5">Suppressed</code>{" "}
-            in DynamoDB instead of{" "}
-            <code className="rounded bg-muted px-1 py-0.5">Bounce</code>.
-            This keeps your bounce metrics accurate by excluding addresses that
-            were already suppressed.
+            <code className="rounded bg-muted px-1 py-0.5">Suppressed</code> in
+            DynamoDB instead of{" "}
+            <code className="rounded bg-muted px-1 py-0.5">Bounce</code>. This
+            keeps your bounce metrics accurate by excluding addresses that were
+            already suppressed.
           </p>
         </div>
       </section>
@@ -1299,45 +1744,63 @@ export default function InfrastructureEventsPageContent() {
                 Capture every email event on the bus. Use this to forward
                 everything to a single target.
               </p>
-              <JsonCodeBlock filename="pattern-all-events.json" code={ruleAllEvents} />
+              <JsonCodeBlock
+                code={ruleAllEvents}
+                filename="pattern-all-events.json"
+              />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Filter bounces and complaints only</CardTitle>
+              <CardTitle className="text-lg">
+                Filter bounces and complaints only
+              </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <p className="mb-3 text-muted-foreground text-sm">
                 Alert on the events that matter most for sender reputation.
               </p>
-              <JsonCodeBlock filename="pattern-bounces-complaints.json" code={ruleBouncesComplaints} />
+              <JsonCodeBlock
+                code={ruleBouncesComplaints}
+                filename="pattern-bounces-complaints.json"
+              />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Filter permanent bounces only</CardTitle>
+              <CardTitle className="text-lg">
+                Filter permanent bounces only
+              </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <p className="mb-3 text-muted-foreground text-sm">
                 Use content-based filtering to match only permanent hard
                 bounces. Transient bounces are excluded.
               </p>
-              <JsonCodeBlock filename="pattern-permanent-bounces.json" code={rulePermanentBounces} />
+              <JsonCodeBlock
+                code={rulePermanentBounces}
+                filename="pattern-permanent-bounces.json"
+              />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Match inbound email events</CardTitle>
+              <CardTitle className="text-lg">
+                Match inbound email events
+              </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <p className="mb-3 text-muted-foreground text-sm">
                 Inbound events use a different source. Match them separately
                 from outbound SES events.
               </p>
-              <JsonCodeBlock filename="pattern-inbound.json" code={ruleInbound} />
+              <JsonCodeBlock
+                code={ruleInbound}
+                filename="pattern-inbound.json"
+              />
             </CardContent>
           </Card>
         </div>
@@ -1357,27 +1820,39 @@ export default function InfrastructureEventsPageContent() {
                   <tbody>
                     <tr className="border-b">
                       <td className="p-4 font-medium">Lambda</td>
-                      <td className="p-4 text-muted-foreground">Custom processing, database writes, API calls</td>
+                      <td className="p-4 text-muted-foreground">
+                        Custom processing, database writes, API calls
+                      </td>
                     </tr>
                     <tr className="border-b">
                       <td className="p-4 font-medium">SNS</td>
-                      <td className="p-4 text-muted-foreground">Fan-out to email, SMS, Slack, PagerDuty</td>
+                      <td className="p-4 text-muted-foreground">
+                        Fan-out to email, SMS, Slack, PagerDuty
+                      </td>
                     </tr>
                     <tr className="border-b">
                       <td className="p-4 font-medium">SQS</td>
-                      <td className="p-4 text-muted-foreground">Buffered processing, batch operations</td>
+                      <td className="p-4 text-muted-foreground">
+                        Buffered processing, batch operations
+                      </td>
                     </tr>
                     <tr className="border-b">
                       <td className="p-4 font-medium">Step Functions</td>
-                      <td className="p-4 text-muted-foreground">Multi-step workflows, orchestration</td>
+                      <td className="p-4 text-muted-foreground">
+                        Multi-step workflows, orchestration
+                      </td>
                     </tr>
                     <tr className="border-b">
                       <td className="p-4 font-medium">API Destination</td>
-                      <td className="p-4 text-muted-foreground">Forward to external webhooks (Slack, Zapier, etc.)</td>
+                      <td className="p-4 text-muted-foreground">
+                        Forward to external webhooks (Slack, Zapier, etc.)
+                      </td>
                     </tr>
                     <tr>
                       <td className="p-4 font-medium">CloudWatch Logs</td>
-                      <td className="p-4 text-muted-foreground">Logging, debugging, audit trail</td>
+                      <td className="p-4 text-muted-foreground">
+                        Logging, debugging, audit trail
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -1401,7 +1876,9 @@ export default function InfrastructureEventsPageContent() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Alert on Bounces &amp; Complaints</CardTitle>
+              <CardTitle className="text-lg">
+                Alert on Bounces &amp; Complaints
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-3 text-muted-foreground text-sm">
@@ -1417,12 +1894,14 @@ export default function InfrastructureEventsPageContent() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Build Engagement Analytics</CardTitle>
+              <CardTitle className="text-lg">
+                Build Engagement Analytics
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-3 text-muted-foreground text-sm">
-                Capture open and click events in a Lambda function that writes to
-                your own database. Build custom dashboards with open rates,
+                Capture open and click events in a Lambda function that writes
+                to your own database. Build custom dashboards with open rates,
                 click-through rates, and per-link analytics.
               </p>
               <div className="rounded bg-muted/50 p-3 font-mono text-xs">
@@ -1487,22 +1966,30 @@ export default function InfrastructureEventsPageContent() {
                   <tr className="border-b">
                     <td className="p-4 font-medium">Rules per event bus</td>
                     <td className="p-4">300</td>
-                    <td className="p-4 text-muted-foreground">Adjustable up to 2,000 via AWS support</td>
+                    <td className="p-4 text-muted-foreground">
+                      Adjustable up to 2,000 via AWS support
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">Targets per rule</td>
                     <td className="p-4">5</td>
-                    <td className="p-4 text-muted-foreground">Hard limit (use fan-out via SNS for more)</td>
+                    <td className="p-4 text-muted-foreground">
+                      Hard limit (use fan-out via SNS for more)
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-4 font-medium">PutEvents rate</td>
                     <td className="p-4">10,000/sec</td>
-                    <td className="p-4 text-muted-foreground">Varies by region; SES manages publishing</td>
+                    <td className="p-4 text-muted-foreground">
+                      Varies by region; SES manages publishing
+                    </td>
                   </tr>
                   <tr>
                     <td className="p-4 font-medium">Event pattern size</td>
                     <td className="p-4">2,048 chars</td>
-                    <td className="p-4 text-muted-foreground">Adjustable via AWS support</td>
+                    <td className="p-4 text-muted-foreground">
+                      Adjustable via AWS support
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1517,7 +2004,9 @@ export default function InfrastructureEventsPageContent() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="transition-colors hover:border-primary/50">
             <CardHeader>
-              <CardTitle className="text-lg">What Gets Deployed: Email</CardTitle>
+              <CardTitle className="text-lg">
+                What Gets Deployed: Email
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4 text-muted-foreground text-sm">

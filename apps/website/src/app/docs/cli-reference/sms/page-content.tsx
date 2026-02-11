@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, Terminal } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,6 @@ import {
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { CLICommand } from "@/components/docs/cli-command";
 
 export default function CLIReferenceSMSPageContent() {
   return (
@@ -267,9 +267,7 @@ export default function CLIReferenceSMSPageContent() {
             <ul className="list-disc space-y-2 pl-5 text-muted-foreground text-sm">
               <li>Sends a test SMS to the specified number</li>
               <li>Shows delivery status and segment count</li>
-              <li>
-                Supports AWS simulator numbers for sandbox testing
-              </li>
+              <li>Supports AWS simulator numbers for sandbox testing</li>
             </ul>
           </CardContent>
         </Card>

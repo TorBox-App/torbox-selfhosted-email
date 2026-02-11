@@ -9,7 +9,6 @@ import {
   Box,
   ChevronRight,
   Cloud,
-  Code2,
   FileCode2,
   FileText,
   Globe,

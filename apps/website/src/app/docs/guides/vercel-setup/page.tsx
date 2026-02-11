@@ -40,8 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     title: "Vercel Setup Guide | Wraps",
-    description:
-      "Deploy email infrastructure with Vercel OIDC federation.",
+    description: "Deploy email infrastructure with Vercel OIDC federation.",
   },
   alternates: {
     canonical: "https://wraps.dev/docs/guides/vercel-setup",
@@ -59,9 +58,7 @@ export default function VercelSetupPage() {
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
         <h1>Vercel Setup Guide</h1>
-        <p>
-          Deploy email infrastructure with Vercel OIDC federation.
-        </p>
+        <p>Deploy email infrastructure with Vercel OIDC federation.</p>
         <h2>Overview</h2>
         <h2>Prerequisites</h2>
         <h2>Step 1: Deploy with Vercel Provider</h2>

@@ -1634,7 +1634,9 @@ export default function SMSSDKReferencePageContent() {
               <div className="flex items-start gap-3">
                 <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                 <div className="text-sm">
-                  <p className="mb-1 font-medium">Sequential Batch Processing</p>
+                  <p className="mb-1 font-medium">
+                    Sequential Batch Processing
+                  </p>
                   <p className="text-muted-foreground">
                     Batch sends are processed sequentially (not in parallel) to
                     respect AWS rate limits. Each message is sent one at a time.

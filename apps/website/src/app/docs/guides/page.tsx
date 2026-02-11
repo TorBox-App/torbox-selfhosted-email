@@ -62,10 +62,16 @@ export default function GuidesPage() {
           <li>AWS Setup - Configure your AWS account for Wraps</li>
           <li>Production Access - Get AWS SES production access approval</li>
           <li>Domain Verification - Set up DKIM, SPF, and DMARC</li>
-          <li>Configuration Presets - Starter, Production, and Enterprise features and costs</li>
+          <li>
+            Configuration Presets - Starter, Production, and Enterprise features
+            and costs
+          </li>
           <li>Templates as Code - Write email templates as React components</li>
           <li>Building Workflows - Automated email and SMS sequences</li>
-          <li>Vercel Setup - Deploy with OIDC federation and zero stored credentials</li>
+          <li>
+            Vercel Setup - Deploy with OIDC federation and zero stored
+            credentials
+          </li>
           <li>Migration Guide - Switch from SendGrid, Postmark, or Resend</li>
         </ul>
       </nav>

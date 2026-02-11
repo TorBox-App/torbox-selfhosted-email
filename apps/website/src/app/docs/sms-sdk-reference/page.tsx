@@ -6,8 +6,18 @@ const breadcrumbSchema = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Docs", item: "https://wraps.dev/docs" },
-    { "@type": "ListItem", position: 2, name: "SMS SDK", item: "https://wraps.dev/docs/sms-sdk-reference" },
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Docs",
+      item: "https://wraps.dev/docs",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "SMS SDK",
+      item: "https://wraps.dev/docs/sms-sdk-reference",
+    },
   ],
 };
 
