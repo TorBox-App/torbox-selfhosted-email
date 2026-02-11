@@ -9,7 +9,11 @@ import {
 } from "../../infrastructure/sms-stack.js";
 import { trackError, trackServiceUpgrade } from "../../telemetry/events.js";
 import type {
+  ArchiveRetention,
+  PhoneNumberType,
+  SMSConfigPreset,
   SMSStackConfig,
+  SMSStackOutputs,
   SMSUpgradeOptions,
   WrapsSMSConfig,
 } from "../../types/index.js";
@@ -357,7 +361,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
 
       updatedConfig = {
         ...config,
-        phoneNumberType: selectedType as any,
+        phoneNumberType: selectedType as PhoneNumberType,
         phoneNumber: undefined, // Will be assigned new number
       };
       newPreset = undefined;
@@ -397,7 +401,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
         process.exit(0);
       }
 
-      const presetConfig = getSMSPreset(selectedPreset as any);
+      const presetConfig = getSMSPreset(selectedPreset as SMSConfigPreset);
       if (presetConfig) {
         // Preserve phone number type if already set (e.g., toll-free shouldn't downgrade to simulator)
         updatedConfig = {
@@ -490,7 +494,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
             ...config,
             eventTracking: {
               ...config.eventTracking,
-              archiveRetention: retention as any,
+              archiveRetention: retention as ArchiveRetention,
             },
           };
         }
@@ -546,7 +550,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
             eventBridge: true,
             events: ["SENT", "DELIVERED", "FAILED", "OPTED_OUT"],
             dynamoDBHistory: true,
-            archiveRetention: retention as any,
+            archiveRetention: retention as ArchiveRetention,
           },
         };
       }
@@ -593,7 +597,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
           ...config.eventTracking,
           enabled: true,
           dynamoDBHistory: true,
-          archiveRetention: retention as any,
+          archiveRetention: retention as ArchiveRetention,
         },
       };
       newPreset = undefined;
@@ -723,7 +727,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
             ...config,
             messageArchiving: {
               enabled: true,
-              retention: retention as any,
+              retention: retention as ArchiveRetention,
             },
           };
         }
@@ -781,7 +785,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
           ...config,
           messageArchiving: {
             enabled: true,
-            retention: retention as any,
+            retention: retention as ArchiveRetention,
           },
         };
       }
@@ -900,19 +904,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
   };
 
   // 12. Update Pulumi stack
-  let outputs: {
-    roleArn: string;
-    phoneNumber: string | undefined;
-    phoneNumberArn: string | undefined;
-    configSetName: string | undefined;
-    tableName: string | undefined;
-    region: string;
-    lambdaFunctions: string[] | undefined;
-    snsTopicArn: string | undefined;
-    queueUrl: string | undefined;
-    dlqUrl: string | undefined;
-    optOutListArn: string | undefined;
-  };
+  let outputs: SMSStackOutputs;
   try {
     outputs = await progress.execute(
       "Updating SMS infrastructure (this may take 2-3 minutes)",
@@ -1047,7 +1039,7 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
   // 13. Update metadata
   updateServiceConfig(metadata, "sms", updatedConfig);
   if (metadata.services.sms) {
-    metadata.services.sms.preset = newPreset as any;
+    metadata.services.sms.preset = newPreset as SMSConfigPreset;
   }
   await saveConnectionMetadata(metadata);
 

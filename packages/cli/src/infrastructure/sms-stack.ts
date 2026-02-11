@@ -206,8 +206,13 @@ async function findExistingPhoneNumber(
       }
     }
     return null;
-  } catch {
-    return null;
+  } catch (error: unknown) {
+    // Permission errors, network failures, etc. should surface
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ResourceNotFoundException") {
+      return null;
+    }
+    throw error;
   }
 }
 
@@ -730,8 +735,13 @@ export async function createSMSPhonePoolWithSDK(
         }
       }
     }
-  } catch {
-    // Pool doesn't exist, create it
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ResourceNotFoundException") {
+      // Pool doesn't exist, continue to create it
+    } else {
+      throw error;
+    }
   }
 
   try {
@@ -748,9 +758,13 @@ export async function createSMSPhonePoolWithSDK(
       })
     );
     return response.PoolId;
-  } catch {
-    // Pool may already exist, phone number pending, or other error
-    return;
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ConflictException") {
+      // Pool already exists — benign
+      return;
+    }
+    throw error;
   }
 }
 
@@ -788,8 +802,13 @@ export async function createSMSEventDestinationWithSDK(
         return existingDest.EventDestinationName;
       }
     }
-  } catch {
-    // Config set may not exist yet
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ResourceNotFoundException") {
+      // Config set doesn't exist yet, continue to create
+    } else {
+      throw error;
+    }
   }
 
   try {
@@ -806,9 +825,13 @@ export async function createSMSEventDestinationWithSDK(
     return (
       response.EventDestination?.EventDestinationName || eventDestinationName
     );
-  } catch {
-    // Event destination may already exist
-    return eventDestinationName;
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ConflictException") {
+      // Event destination already exists — benign
+      return eventDestinationName;
+    }
+    throw error;
   }
 }
 
@@ -849,8 +872,13 @@ export async function deleteSMSPhonePoolWithSDK(region: string): Promise<void> {
         }
       }
     }
-  } catch {
-    // Pool may not exist
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ResourceNotFoundException") {
+      // Pool doesn't exist — nothing to delete
+    } else {
+      throw error;
+    }
   }
 }
 
@@ -874,8 +902,13 @@ export async function deleteSMSEventDestinationWithSDK(
         EventDestinationName: eventDestinationName,
       })
     );
-  } catch {
-    // Event destination may not exist
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ResourceNotFoundException") {
+      // Event destination doesn't exist — nothing to delete
+    } else {
+      throw error;
+    }
   }
 }
 
@@ -929,8 +962,13 @@ export async function createSMSProtectConfigurationWithSDK(
         break;
       }
     }
-  } catch {
-    // May not exist yet
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ResourceNotFoundException") {
+      // Protect configurations don't exist yet, continue to create
+    } else {
+      throw error;
+    }
   }
 
   try {
@@ -1021,8 +1059,13 @@ export async function createSMSProtectConfigurationWithSDK(
     }
 
     return protectConfigId;
-  } catch {
-    return;
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ConflictException") {
+      // Protect configuration already exists — benign
+      return;
+    }
+    throw error;
   }
 }
 
@@ -1073,7 +1116,12 @@ export async function deleteSMSProtectConfigurationWithSDK(
         }
       }
     }
-  } catch {
-    // Protect configuration may not exist
+  } catch (error: unknown) {
+    const name = error instanceof Error ? (error as { name: string }).name : "";
+    if (name === "ResourceNotFoundException") {
+      // Protect configuration doesn't exist — nothing to delete
+    } else {
+      throw error;
+    }
   }
 }

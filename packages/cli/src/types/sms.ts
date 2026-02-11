@@ -198,6 +198,7 @@ export type SMSUpdateOptions = {
 export type SMSDestroyOptions = {
   force?: boolean;
   preview?: boolean;
+  region?: string;
 };
 
 /**

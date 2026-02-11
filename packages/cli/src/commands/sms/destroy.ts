@@ -18,6 +18,7 @@ import {
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
 import {
+  findConnectionsWithService,
   loadConnectionMetadata,
   removeServiceFromConnection,
   saveConnectionMetadata,
@@ -27,6 +28,10 @@ import {
   displayPreview,
 } from "../../utils/shared/output.js";
 import { previewWithResourceChanges } from "../../utils/shared/pulumi.js";
+import {
+  DEFAULT_PULUMI_TIMEOUT_MS,
+  withTimeout,
+} from "../../utils/shared/timeout.js";
 
 /**
  * SMS Destroy command - Remove SMS infrastructure
@@ -50,8 +55,43 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
     async () => validateAWSCredentials()
   );
 
-  // 2. Get region
-  const region = await getAWSRegion();
+  // 2. Get region (honor --region flag, then multi-region discovery, then default)
+  let region = options.region || (await getAWSRegion());
+
+  // Multi-region discovery: if no explicit region, check for SMS deployments
+  if (
+    !(
+      options.region ||
+      process.env.AWS_REGION ||
+      process.env.AWS_DEFAULT_REGION
+    )
+  ) {
+    const smsConnections = await findConnectionsWithService(
+      identity.accountId,
+      "sms"
+    );
+
+    if (smsConnections.length === 1) {
+      // Auto-select the only available region
+      region = smsConnections[0].region;
+    } else if (smsConnections.length > 1) {
+      // Multiple regions found - prompt user to select
+      const selectedRegion = await clack.select({
+        message: "Multiple SMS deployments found. Which region to destroy?",
+        options: smsConnections.map((conn) => ({
+          value: conn.region,
+          label: conn.region,
+        })),
+      });
+
+      if (clack.isCancel(selectedRegion)) {
+        clack.cancel("Operation cancelled");
+        process.exit(0);
+      }
+
+      region = selectedRegion as string;
+    }
+  }
 
   // 3. Load connection metadata to get stack name
   const metadata = await loadConnectionMetadata(identity.accountId, region);
@@ -163,6 +203,7 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
   });
 
   // 7. Destroy Pulumi infrastructure
+  let destroyFailed = false;
   try {
     await progress.execute(
       "Destroying SMS infrastructure (this may take 2-3 minutes)",
@@ -185,8 +226,17 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
           throw new Error("No SMS infrastructure found to destroy");
         }
 
-        // Run destroy
-        await stack.destroy({ onOutput: () => {} }); // Suppress Pulumi output
+        // Refresh state to sync with actual AWS resources before destroying.
+        // This prevents failures when resources were manually deleted or drifted.
+        await stack.refresh({ onOutput: () => {} });
+
+        // Run destroy with timeout protection.
+        // continueOnError ensures partial deletes don't abort the entire operation.
+        await withTimeout(
+          stack.destroy({ onOutput: () => {}, continueOnError: true }),
+          DEFAULT_PULUMI_TIMEOUT_MS,
+          "Pulumi destroy"
+        );
 
         // Remove the stack from workspace
         await stack.workspace.removeStack(stackName);
@@ -213,34 +263,43 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
     }
 
     trackError("DESTROY_FAILED", "sms destroy", { step: "destroy" });
-    clack.log.error("SMS infrastructure destruction failed");
-    throw new Error(`SMS destruction failed: ${errorMessage}`);
+    destroyFailed = true;
+    clack.log.warn(
+      "Some resources may not have been fully removed. You can re-run this command or clean up manually in the AWS console."
+    );
   }
 
-  // 7. Remove SMS service from connection metadata
+  // 8. Remove SMS service from connection metadata (even on partial failure)
   if (metadata) {
     removeServiceFromConnection(metadata, "sms");
     await saveConnectionMetadata(metadata);
   }
 
-  // 8. Display success message
+  // 9. Display success or partial failure message
   progress.stop();
 
-  clack.outro(pc.green("SMS infrastructure has been removed"));
+  if (destroyFailed) {
+    clack.outro(
+      pc.yellow("SMS infrastructure partially removed. Metadata cleaned up.")
+    );
+  } else {
+    clack.outro(pc.green("SMS infrastructure has been removed"));
 
-  console.log(`\n${pc.bold("Cleaned up:")}`);
-  console.log(`  ${pc.green("✓")} Phone number released`);
-  console.log(`  ${pc.green("✓")} Configuration set deleted`);
-  console.log(`  ${pc.green("✓")} Event processing infrastructure removed`);
-  console.log(`  ${pc.green("✓")} IAM role deleted`);
+    console.log(`\n${pc.bold("Cleaned up:")}`);
+    console.log(`  ${pc.green("✓")} Phone number released`);
+    console.log(`  ${pc.green("✓")} Configuration set deleted`);
+    console.log(`  ${pc.green("✓")} Event processing infrastructure removed`);
+    console.log(`  ${pc.green("✓")} IAM role deleted`);
+  }
 
   console.log(
     `\nRun ${pc.cyan("wraps sms init")} to deploy infrastructure again.\n`
   );
 
-  // 9. Track successful destruction
+  // 10. Track destruction
   trackServiceRemoved("sms", {
     reason: "user_initiated",
+    partial_failure: destroyFailed,
     duration_ms: Date.now() - startTime,
   });
 }

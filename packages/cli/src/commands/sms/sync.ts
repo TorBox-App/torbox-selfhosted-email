@@ -8,7 +8,7 @@ import {
   deploySMSStack,
 } from "../../infrastructure/sms-stack.js";
 import { trackCommand, trackError } from "../../telemetry/events.js";
-import type { SMSStackConfig } from "../../types/index.js";
+import type { SMSStackConfig, SMSStackOutputs } from "../../types/index.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -99,19 +99,7 @@ export async function smsSync(options: SMSSyncOptions): Promise<void> {
   };
 
   // 6. Run Pulumi up to sync infrastructure
-  let outputs: {
-    roleArn: string;
-    phoneNumber: string | undefined;
-    phoneNumberArn: string | undefined;
-    configSetName: string | undefined;
-    tableName: string | undefined;
-    region: string;
-    lambdaFunctions: string[] | undefined;
-    snsTopicArn: string | undefined;
-    queueUrl: string | undefined;
-    dlqUrl: string | undefined;
-    optOutListArn: string | undefined;
-  };
+  let outputs: SMSStackOutputs;
 
   try {
     outputs = await progress.execute("Syncing SMS infrastructure", async () => {
@@ -217,7 +205,7 @@ export async function smsSync(options: SMSSyncOptions): Promise<void> {
         smsConfig.protectConfiguration = {
           enabled: true,
           allowedCountries: ["US"],
-          aitFiltering: true,
+          aitFiltering: false,
         };
       }
     }

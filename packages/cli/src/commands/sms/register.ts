@@ -43,8 +43,9 @@ async function getPhoneNumberDetails(region: string): Promise<{
       }
     }
     return null;
-  } catch (error) {
-    console.error("Error fetching phone number:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    clack.log.error(`Error fetching phone number: ${errorMessage}`);
     return null;
   }
 }

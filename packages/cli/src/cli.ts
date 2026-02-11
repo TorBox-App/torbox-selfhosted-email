@@ -1059,6 +1059,7 @@ async function run() {
           await smsDestroy({
             force: flags.force,
             preview: flags.preview,
+            region: flags.region,
           });
           break;
 

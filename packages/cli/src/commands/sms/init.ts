@@ -17,6 +17,7 @@ import type {
   SMSConfigPreset,
   SMSInitOptions,
   SMSStackConfig,
+  SMSStackOutputs,
   WrapsSMSConfig,
 } from "../../types/index.js";
 import {
@@ -343,19 +344,7 @@ export async function init(options: SMSInitOptions): Promise<void> {
   };
 
   // 7. Deploy infrastructure using Pulumi
-  let outputs: {
-    roleArn: string;
-    phoneNumber: string | undefined;
-    phoneNumberArn: string | undefined;
-    configSetName: string | undefined;
-    tableName: string | undefined;
-    region: string;
-    lambdaFunctions: string[] | undefined;
-    snsTopicArn: string | undefined;
-    queueUrl: string | undefined;
-    dlqUrl: string | undefined;
-    optOutListArn: string | undefined;
-  };
+  let outputs: SMSStackOutputs;
   try {
     outputs = await progress.execute(
       "Deploying SMS infrastructure (this may take 2-3 minutes)",
@@ -423,10 +412,21 @@ export async function init(options: SMSInitOptions): Promise<void> {
     );
 
     // 7a. Create phone pool via SDK (after Pulumi deployment)
+    let sdkResourceWarning = false;
     if (outputs.phoneNumberArn) {
-      await progress.execute("Creating phone pool", async () => {
-        await createSMSPhonePoolWithSDK(outputs.phoneNumberArn!, region);
-      });
+      try {
+        await progress.execute("Creating phone pool", async () => {
+          await createSMSPhonePoolWithSDK(outputs.phoneNumberArn!, region);
+        });
+      } catch (sdkError: unknown) {
+        sdkResourceWarning = true;
+        const msg =
+          sdkError instanceof Error ? sdkError.message : String(sdkError);
+        clack.log.warn(`Phone pool creation failed: ${msg}`);
+        clack.log.info(
+          `Run ${pc.cyan("wraps sms sync")} to retry SDK resource creation.`
+        );
+      }
     }
 
     // 7b. Create event destination via SDK (after Pulumi deployment)
@@ -435,27 +435,54 @@ export async function init(options: SMSInitOptions): Promise<void> {
       outputs.configSetName &&
       outputs.snsTopicArn
     ) {
-      await progress.execute("Configuring event destination", async () => {
-        await createSMSEventDestinationWithSDK(
-          outputs.configSetName!,
-          outputs.snsTopicArn!,
-          region
+      try {
+        await progress.execute("Configuring event destination", async () => {
+          await createSMSEventDestinationWithSDK(
+            outputs.configSetName!,
+            outputs.snsTopicArn!,
+            region
+          );
+        });
+      } catch (sdkError: unknown) {
+        sdkResourceWarning = true;
+        const msg =
+          sdkError instanceof Error ? sdkError.message : String(sdkError);
+        clack.log.warn(`Event destination creation failed: ${msg}`);
+        clack.log.info(
+          `Run ${pc.cyan("wraps sms sync")} to retry SDK resource creation.`
         );
-      });
+      }
     }
 
     // 7c. Create protect configuration via SDK (fraud protection)
     if (smsConfig.protectConfiguration?.enabled && outputs.configSetName) {
-      await progress.execute("Configuring fraud protection", async () => {
-        await createSMSProtectConfigurationWithSDK(
-          outputs.configSetName!,
-          region,
-          {
-            allowedCountries: smsConfig.protectConfiguration?.allowedCountries,
-            aitFiltering: smsConfig.protectConfiguration?.aitFiltering,
-          }
+      try {
+        await progress.execute("Configuring fraud protection", async () => {
+          await createSMSProtectConfigurationWithSDK(
+            outputs.configSetName!,
+            region,
+            {
+              allowedCountries:
+                smsConfig.protectConfiguration?.allowedCountries,
+              aitFiltering: smsConfig.protectConfiguration?.aitFiltering,
+            }
+          );
+        });
+      } catch (sdkError: unknown) {
+        sdkResourceWarning = true;
+        const msg =
+          sdkError instanceof Error ? sdkError.message : String(sdkError);
+        clack.log.warn(`Protect configuration creation failed: ${msg}`);
+        clack.log.info(
+          `Run ${pc.cyan("wraps sms sync")} to retry SDK resource creation.`
         );
-      });
+      }
+    }
+
+    if (sdkResourceWarning) {
+      clack.log.warn(
+        "Some SDK resources failed to create. Core infrastructure is deployed."
+      );
     }
   } catch (error: unknown) {
     trackServiceInit("sms", false, {

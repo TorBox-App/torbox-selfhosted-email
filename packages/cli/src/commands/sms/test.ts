@@ -12,14 +12,7 @@ import {
 } from "../../utils/shared/aws.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
-
-/**
- * Validate phone number format (E.164)
- */
-function isValidPhoneNumber(phone: string): boolean {
-  // E.164 format: +[country code][number]
-  return /^\+[1-9]\d{1,14}$/.test(phone);
-}
+import { isValidPhoneNumber } from "../../utils/sms/validation.js";
 
 /**
  * AWS SMS Simulator destination numbers for testing
@@ -239,16 +232,38 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
     });
 
     // Handle specific error cases
-    if (errorMessage.includes("not verified")) {
+    const errorName = error instanceof Error ? (error as { name: string }).name : "";
+
+    if (errorName === "ConflictException" || errorMessage.includes("opt-out")) {
+      clack.log.error("Destination number has opted out of messages");
+      console.log(
+        `\nThe recipient has opted out of receiving SMS messages.\n`
+      );
+    } else if (
+      errorName === "ThrottlingException" ||
+      errorMessage.includes("spending limit")
+    ) {
+      clack.log.error("SMS rate or spending limit reached");
+      console.log(
+        `\nCheck your AWS account SMS spending limits in the console.\n`
+      );
+    } else if (errorName === "ValidationException") {
+      clack.log.error(`Invalid request: ${errorMessage}`);
+    } else if (
+      errorMessage.includes("not verified") ||
+      errorMessage.includes("not registered")
+    ) {
       clack.log.error("Toll-free number registration is not complete");
       console.log(
-        `\nRun ${pc.cyan("wraps sms register")} to complete registration.\n`
+        `\nRun ${pc.cyan("wraps sms register")} to check registration status.\n`
       );
-    } else if (errorMessage.includes("opt-out")) {
-      clack.log.error("Destination number has opted out of messages");
-    } else if (errorMessage.includes("spending limit")) {
-      clack.log.error("AWS SMS spending limit reached");
-      console.log("\nVisit the AWS console to increase your spending limit.\n");
+    } else if (errorName === "AccessDeniedException") {
+      clack.log.error(
+        "Permission denied — IAM role may be missing SMS send permissions"
+      );
+      console.log(
+        `\nRun ${pc.cyan("wraps sms upgrade")} to update IAM policies.\n`
+      );
     } else {
       clack.log.error(`Failed to send SMS: ${errorMessage}`);
     }

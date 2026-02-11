@@ -16,13 +16,7 @@ import {
 } from "../../utils/shared/aws.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
-
-/**
- * Validate phone number format (E.164)
- */
-function isValidPhoneNumber(phone: string): boolean {
-  return /^\+[1-9]\d{1,14}$/.test(phone);
-}
+import { isValidPhoneNumber } from "../../utils/sms/validation.js";
 
 /**
  * SMS Verify Number command - Verify a destination phone number for sandbox testing
