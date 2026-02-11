@@ -13,8 +13,7 @@ import { Footer } from "./_components/footer";
 
 export const subject = "this is rare";
 export const emailType = "transactional" as const;
-export const previewText =
-  "Most users don't hit all 3 milestones this fast.";
+export const previewText = "Most users don't hit all 3 milestones this fast.";
 
 // -- Test Data (for preview) --
 
@@ -47,15 +46,13 @@ export default function ActivationCrushingIt({
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
               Most people take weeks to send their first email, create a
-              workflow, and send a broadcast. You did all three in under a
-              week.
+              workflow, and send a broadcast. You did all three in under a week.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              That tells me you&apos;re building something real. If you
-              ever need anything &mdash; a feature, help debugging, or
-              just want to bounce an idea &mdash; hit reply. I read every
-              one.
+              That tells me you&apos;re building something real. If you ever
+              need anything &mdash; a feature, help debugging, or just want to
+              bounce an idea &mdash; hit reply. I read every one.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">

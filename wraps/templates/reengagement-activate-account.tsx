@@ -272,8 +272,8 @@ export default function ReengagementActivateEmail({
                   >
                     wraps aws setup
                   </span>{" "}
-                  &mdash; it&rsquo;ll walk you through the whole thing. Or
-                  check the{" "}
+                  &mdash; it&rsquo;ll walk you through the whole thing. Or check
+                  the{" "}
                   <Link
                     href="https://wraps.dev/docs/guides/aws-setup"
                     style={{ color: "#fbbf24", textDecoration: "underline" }}

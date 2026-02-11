@@ -55,13 +55,9 @@ export default function NudgeCreateWorkflow({
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              Workflows let you define triggers once and emails send
-              themselves. A welcome series, a follow-up after signup,
-              whatever you need.{" "}
-              <Link
-                href={dashboardUrl}
-                className="text-gray-800 underline"
-              >
+              Workflows let you define triggers once and emails send themselves.
+              A welcome series, a follow-up after signup, whatever you need.{" "}
+              <Link className="text-gray-800 underline" href={dashboardUrl}>
                 Create your first workflow
               </Link>{" "}
               &mdash; takes about 2 minutes.

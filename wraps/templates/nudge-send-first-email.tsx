@@ -47,9 +47,9 @@ export default function NudgeSendFirstEmail({
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              Your email infrastructure deployed 2 days ago but you
-              haven&apos;t sent anything yet. The hardest part is done
-              &mdash; sending is 5 lines of code.
+              Your email infrastructure deployed 2 days ago but you haven&apos;t
+              sent anything yet. The hardest part is done &mdash; sending is 5
+              lines of code.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
@@ -67,8 +67,8 @@ export default function NudgeSendFirstEmail({
               with a from, to, and subject and you&apos;ll see it land in
               seconds.{" "}
               <Link
-                href="https://wraps.dev/docs/quickstart/email"
                 className="text-gray-800 underline"
+                href="https://wraps.dev/docs/quickstart/email"
               >
                 Here&apos;s the quickstart
               </Link>{" "}

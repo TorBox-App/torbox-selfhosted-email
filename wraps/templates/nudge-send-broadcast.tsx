@@ -12,12 +12,10 @@ import { Footer } from "./_components/footer";
 
 // -- Metadata --
 
-export const subject =
-  "you've got {{contactCount}} contacts waiting" as const;
+export const subject = "you've got {{contactCount}} contacts waiting" as const;
 export const subjectFallback = "your contacts are waiting" as const;
 export const emailType = "marketing" as const;
-export const previewText =
-  "You've been building a list. Time to use it.";
+export const previewText = "You've been building a list. Time to use it.";
 
 // -- Test Data (for preview) --
 
@@ -59,16 +57,12 @@ export default function NudgeSendBroadcast({
               {contactCount
                 ? `${contactCount.toLocaleString()} contacts`
                 : "contacts"}{" "}
-              and templates ready to go. A broadcast reaches your whole
-              list at once &mdash; and it costs $0.10 per 1,000 emails
-              through SES.
+              and templates ready to go. A broadcast reaches your whole list at
+              once &mdash; and it costs $0.10 per 1,000 emails through SES.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              <Link
-                href={dashboardUrl}
-                className="text-gray-800 underline"
-              >
+              <Link className="text-gray-800 underline" href={dashboardUrl}>
                 Send your first broadcast
               </Link>{" "}
               and see how it feels to reach everyone at once.
