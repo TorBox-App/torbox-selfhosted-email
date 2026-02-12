@@ -1,6 +1,0 @@
-language js
-
-`import $imports from $source` where {
-  $source <: `'moment'`,
-  register_diagnostic(span=$source, message="Use date-fns or native Intl API instead of moment.js (large bundle, deprecated).")
-}

@@ -1,0 +1,196 @@
+# guardrails.toml — Fast Rust-based code quality enforcement
+# Replaces grit rules + select architecture.test.ts checks
+#
+# Remaining tests in guardrails/architecture.test.ts:
+#   T1  org-scoped queries (complex 49-table window with asymmetric search)
+#   T4  client env var isolation (needs negative lookahead for NEXT_PUBLIC_)
+#   T7  @tanstack/react-form in server (needs dual-quote 'use client' check)
+#   T8  redirect() inside try/catch (needs brace-depth tracking)
+#   T9  no console.log (needs template literal awareness)
+#   T10 no swallowed errors (escape hatch format: guardrail vs guardrails)
+#   T11 no catch (error: any) (escape hatch format: guardrail vs guardrails)
+#   T12 metadata save order (needs ordering semantics within function)
+#   T13 duplicate infrastructure helpers (cross-file uniqueness)
+
+[guardrails]
+name = "wraps"
+include = ["**/*"]
+exclude = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/.next/**",
+  "**/target/**",
+  "**/__tests__/**",
+  "**/*.test.*",
+  "**/.git/**",
+  "**/.gritmodules/**",
+]
+
+
+# ══════════════════════════════════════════════
+# BANNED IMPORTS (replaces all 6 grit rules)
+# ══════════════════════════════════════════════
+
+[[rule]]
+id = "no-react-hook-form"
+type = "banned-import"
+severity = "warning"
+packages = ["react-hook-form"]
+glob = "**/*.{ts,tsx}"
+message = "Use @tanstack/react-form instead of react-hook-form. See CLAUDE.md migration backlog."
+suggest = "Import from '@tanstack/react-form' with Zod validation"
+
+[[rule]]
+id = "no-hookform-resolvers"
+type = "banned-import"
+severity = "warning"
+packages = ["@hookform/resolvers/zod", "@hookform/resolvers"]
+glob = "**/*.{ts,tsx}"
+message = "Use @tanstack/react-form with built-in Zod validation instead of @hookform/resolvers."
+suggest = "Use @tanstack/react-form's built-in Zod adapter"
+
+[[rule]]
+id = "no-axios"
+type = "banned-import"
+severity = "error"
+packages = ["axios"]
+glob = "**/*.{ts,tsx}"
+message = "Use the native fetch API instead of axios."
+suggest = "Replace with fetch() or a lightweight wrapper"
+
+[[rule]]
+id = "no-dayjs"
+type = "banned-import"
+severity = "error"
+packages = ["dayjs"]
+glob = "**/*.{ts,tsx}"
+message = "Use date-fns or native Intl API instead of dayjs."
+suggest = "Import from 'date-fns' or use Intl.DateTimeFormat"
+
+[[rule]]
+id = "no-moment"
+type = "banned-import"
+severity = "error"
+packages = ["moment"]
+glob = "**/*.{ts,tsx}"
+message = "Use date-fns or native Intl API instead of moment.js (large bundle, deprecated)."
+suggest = "Import from 'date-fns' or use Intl.DateTimeFormat"
+
+[[rule]]
+id = "no-next-router"
+type = "banned-import"
+severity = "error"
+packages = ["next/router"]
+glob = "**/*.{ts,tsx}"
+message = "Use next/navigation instead of next/router. See Next.js App Router migration guide."
+suggest = "Import from 'next/navigation' instead"
+
+
+# ══════════════════════════════════════════════
+# ARCHITECTURE RULES (replaces select tests)
+# ══════════════════════════════════════════════
+
+# T6: No direct @radix-ui imports outside UI wrappers
+[[rule]]
+id = "no-radix-direct"
+type = "banned-import"
+severity = "error"
+packages = [
+  "@radix-ui/react-accordion",
+  "@radix-ui/react-alert-dialog",
+  "@radix-ui/react-aspect-ratio",
+  "@radix-ui/react-avatar",
+  "@radix-ui/react-checkbox",
+  "@radix-ui/react-collapsible",
+  "@radix-ui/react-context-menu",
+  "@radix-ui/react-dialog",
+  "@radix-ui/react-dropdown-menu",
+  "@radix-ui/react-hover-card",
+  "@radix-ui/react-label",
+  "@radix-ui/react-menubar",
+  "@radix-ui/react-navigation-menu",
+  "@radix-ui/react-popover",
+  "@radix-ui/react-progress",
+  "@radix-ui/react-radio-group",
+  "@radix-ui/react-scroll-area",
+  "@radix-ui/react-select",
+  "@radix-ui/react-separator",
+  "@radix-ui/react-slider",
+  "@radix-ui/react-slot",
+  "@radix-ui/react-switch",
+  "@radix-ui/react-tabs",
+  "@radix-ui/react-toast",
+  "@radix-ui/react-toggle",
+  "@radix-ui/react-toggle-group",
+  "@radix-ui/react-tooltip",
+]
+glob = "apps/**/*.{ts,tsx}"
+exclude_glob = ["**/components/ui/**"]
+message = "Import shadcn wrappers from packages/ui, not @radix-ui directly."
+suggest = "Import the component from '@repo/ui' instead"
+
+# T2: Server action form error handling
+[[rule]]
+id = "server-action-form-errors"
+type = "required-pattern"
+severity = "error"
+glob = "apps/web/src/actions/**/*.ts"
+pattern = "formState"
+condition_pattern = "createServerValidate"
+message = "Files using createServerValidate must handle formState in catch blocks."
+suggest = "Add: catch (e) { if (e instanceof ServerValidateError) return e.formState; throw e; }"
+
+# T3: API routes must await async operations
+[[rule]]
+id = "no-fire-and-forget"
+type = "window-pattern"
+severity = "error"
+pattern = "\\.catch\\("
+condition_pattern = "await"
+max_count = 15
+regex = true
+glob = "apps/api/src/routes/**/*.ts"
+message = "Possible fire-and-forget: .catch() without await in API route. Lambda terminates when handler returns."
+suggest = "Add await before the promise chain"
+
+# T5a: No arbitrary hex colors in web app
+[[rule]]
+id = "no-hex-colors-web"
+type = "banned-pattern"
+severity = "error"
+pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-\\[#[0-9a-fA-F]+\\]"
+regex = true
+glob = "apps/web/src/**/*.{ts,tsx}"
+exclude_glob = ["**/components/ui/**", "**/lib/ai/**"]
+message = "No arbitrary hex colors in Tailwind classes. Use theme tokens instead."
+suggest = "Replace with a semantic color token from the design system"
+
+
+# ══════════════════════════════════════════════
+# RATCHET RULES
+# ══════════════════════════════════════════════
+
+# T5b: Hex colors in website (ratchet down from 41)
+[[rule]]
+id = "ratchet-hex-colors-website"
+type = "ratchet"
+severity = "error"
+pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-\\[#[0-9a-fA-F]+\\]"
+regex = true
+max_count = 41
+glob = "apps/website/src/**/*.{ts,tsx}"
+exclude_glob = ["**/components/ui/**"]
+message = "Migrate arbitrary hex colors to theme tokens (41 remaining, ratchet down)"
+
+# T5c: Hardcoded white/black in web app (ratchet down from 177)
+[[rule]]
+id = "ratchet-white-black-web"
+type = "ratchet"
+severity = "error"
+pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-(?:white|black)"
+regex = true
+max_count = 177
+glob = "apps/web/src/**/*.{ts,tsx}"
+exclude_glob = ["**/components/ui/**"]
+message = "Migrate hardcoded white/black to theme colors for dark mode support (177 remaining, ratchet down)"

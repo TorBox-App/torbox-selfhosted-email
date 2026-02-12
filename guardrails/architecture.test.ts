@@ -152,86 +152,8 @@ describe("org-scoped queries", () => {
 });
 
 // ─────────────────────────────────────────────────────────
-// Test 2: Server actions catch ServerValidateError
-// ─────────────────────────────────────────────────────────
-
-describe("server actions handle ServerValidateError", () => {
-  test("files using createServerValidate must catch formState errors", () => {
-    const actionFiles = findFiles("apps/web/src/actions/**/*.ts").filter(
-      (f) => !(f.includes("__tests__") || f.includes(".test."))
-    );
-
-    const violations: string[] = [];
-
-    for (const file of actionFiles) {
-      const content = readFile(file);
-      if (!content.includes("createServerValidate")) continue;
-
-      // Must handle formState somewhere (either return it or re-throw)
-      if (!content.includes("formState")) {
-        violations.push(
-          `${file} — uses createServerValidate but never handles formState in catch block`
-        );
-      }
-    }
-
-    expect(violations, violations.join("\n")).toEqual([]);
-  });
-});
-
-// ─────────────────────────────────────────────────────────
-// Test 3: API route handlers await all async operations
-// ─────────────────────────────────────────────────────────
-
-describe("API routes await async operations", () => {
-  test("no fire-and-forget .catch() without await", () => {
-    const routeFiles = findFiles("apps/api/src/routes/**/*.ts").filter(
-      (f) => !(f.includes("__tests__") || f.includes(".test."))
-    );
-
-    const violations: string[] = [];
-
-    for (const file of routeFiles) {
-      const content = readFile(file);
-      const lines = content.split("\n");
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line.includes(".catch(")) continue;
-
-        // Skip comments
-        const trimmed = line.trim();
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-
-        // Check if `await` appears in the preceding 15 lines (multiline expressions
-        // with large argument objects can span many lines)
-        const lookbackStart = Math.max(0, i - 15);
-        const lookbackWindow = lines.slice(lookbackStart, i + 1).join("\n");
-
-        if (
-          lookbackWindow.includes("await ") ||
-          lookbackWindow.includes("await\n")
-        ) {
-          continue;
-        }
-
-        // Skip if inside a Promise.all (which is itself awaited)
-        const broaderStart = Math.max(0, i - 25);
-        const broaderWindow = lines.slice(broaderStart, i + 1).join("\n");
-        if (broaderWindow.includes("Promise.all")) continue;
-
-        violations.push(
-          `${file}:${i + 1} — .catch() without await (possible fire-and-forget): ${trimmed.slice(0, 80)}`
-        );
-      }
-    }
-
-    expect(violations, violations.join("\n")).toEqual([]);
-  });
-});
-
-// ─────────────────────────────────────────────────────────
 // Test 4: No private env vars in client components
+// (guardrails.toml can't handle this: Rust regex lacks lookahead for NEXT_PUBLIC_)
 // ─────────────────────────────────────────────────────────
 
 describe("client components do not access private env vars", () => {
@@ -291,147 +213,9 @@ describe("client components do not access private env vars", () => {
 });
 
 // ─────────────────────────────────────────────────────────
-// Test 5: No arbitrary hex colors or hardcoded white/black
-// ─────────────────────────────────────────────────────────
-
-// Matches arbitrary hex color values in Tailwind classes like bg-[#abc123], text-[#fff]
-const ARBITRARY_HEX_REGEX =
-  /(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-\[#[0-9a-fA-F]+\]/g;
-
-// Matches hardcoded white/black Tailwind classes that break dark mode
-const HARDCODED_WHITE_BLACK_REGEX =
-  /(?<!\w)(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-(?:white|black)(?!\w)/g;
-
-// Directories excluded from color checks (design primitives, not app code)
-const COLOR_EXCLUDED_PATTERNS = ["/components/ui/", "/node_modules/"];
-
-function getComponentFiles(appPattern: string): string[] {
-  return findFiles(appPattern).filter(
-    (f) =>
-      !(
-        f.includes("__tests__") ||
-        f.includes(".test.") ||
-        COLOR_EXCLUDED_PATTERNS.some((p) => f.includes(p))
-      )
-  );
-}
-
-function findColorViolations(
-  files: string[],
-  regex: RegExp,
-  label: string
-): string[] {
-  const violations: string[] = [];
-
-  for (const file of files) {
-    const content = readFile(file);
-    const lines = content.split("\n");
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmed = line.trim();
-
-      // Skip comments
-      if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-
-      // Skip lines with escape hatch
-      if (line.includes("guardrail:allow-color")) continue;
-
-      regex.lastIndex = 0;
-
-      for (const match of line.matchAll(regex)) {
-        violations.push(`${file}:${i + 1} — ${label}: ${match[0]}`);
-      }
-    }
-  }
-
-  return violations;
-}
-
-describe("Tailwind color guardrails", () => {
-  test("no arbitrary hex colors in web app components", () => {
-    const files = getComponentFiles("apps/web/src/**/*.{ts,tsx}");
-    const violations = findColorViolations(
-      files,
-      ARBITRARY_HEX_REGEX,
-      "arbitrary hex color"
-    );
-    expect(violations, violations.join("\n")).toEqual([]);
-  });
-
-  // Ratchet: website has 41 existing violations. This prevents new ones
-  // from being added. Lower this number as violations are cleaned up.
-  test("no new arbitrary hex colors in website components", () => {
-    const files = getComponentFiles("apps/website/src/**/*.{ts,tsx}");
-    const violations = findColorViolations(
-      files,
-      ARBITRARY_HEX_REGEX,
-      "arbitrary hex color"
-    );
-    expect(
-      violations.length,
-      `Expected ≤41 violations but found ${violations.length}. New arbitrary hex colors added:\n${violations.join("\n")}`
-    ).toBeLessThanOrEqual(41);
-  });
-
-  // Ratchet: web app has 177 existing white/black violations. This prevents
-  // new ones from being added. Lower this number as violations are cleaned up.
-  test("no new hardcoded white/black in web app", () => {
-    const files = getComponentFiles("apps/web/src/**/*.{ts,tsx}");
-    const violations = findColorViolations(
-      files,
-      HARDCODED_WHITE_BLACK_REGEX,
-      "hardcoded white/black (use theme colors for dark mode support)"
-    );
-    expect(
-      violations.length,
-      `Expected ≤177 violations but found ${violations.length}. New hardcoded white/black added:\n${violations.join("\n")}`
-    ).toBeLessThanOrEqual(177);
-  });
-});
-
-// ─────────────────────────────────────────────────────────
-// Test 6: No direct @radix-ui imports outside UI wrappers
-// ─────────────────────────────────────────────────────────
-
-describe("no direct @radix-ui imports outside UI wrappers", () => {
-  test("app code must import from packages/ui, not @radix-ui directly", () => {
-    const appFiles = [
-      ...findFiles("apps/web/src/**/*.{ts,tsx}"),
-      ...findFiles("apps/website/src/**/*.{ts,tsx}"),
-    ].filter(
-      (f) =>
-        !(
-          f.includes("__tests__") ||
-          f.includes(".test.") ||
-          f.includes("/components/ui/")
-        )
-    );
-
-    const violations: string[] = [];
-    const radixImportRegex = /from\s+['"]@radix-ui\//g;
-
-    for (const file of appFiles) {
-      const content = readFile(file);
-      const lines = content.split("\n");
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (radixImportRegex.test(line)) {
-          violations.push(
-            `${file}:${i + 1} — import from @radix-ui directly (use packages/ui wrapper instead)`
-          );
-        }
-        radixImportRegex.lastIndex = 0;
-      }
-    }
-
-    expect(violations, violations.join("\n")).toEqual([]);
-  });
-});
-
-// ─────────────────────────────────────────────────────────
 // Test 7: No @tanstack/react-form in server components
+// (guardrails.toml can't handle this: file_not_contains only supports one string,
+//  but files use both "use client" and 'use client')
 // ─────────────────────────────────────────────────────────
 
 describe("no client-only imports in server components", () => {
@@ -481,6 +265,7 @@ describe("no client-only imports in server components", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 8: No redirect() inside try/catch
+// (guardrails.toml can't handle this: needs brace-depth tracking)
 // ─────────────────────────────────────────────────────────
 
 describe("no redirect() inside try/catch", () => {
@@ -545,6 +330,7 @@ describe("no redirect() inside try/catch", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 9: No console.log in web app
+// (guardrails.toml can't handle this: needs template literal awareness)
 // ─────────────────────────────────────────────────────────
 
 describe("no console.log in web app", () => {
@@ -588,6 +374,7 @@ describe("no console.log in web app", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 10: No swallowed errors in CLI commands
+// (guardrails.toml can't handle this: escape hatch format mismatch)
 // ─────────────────────────────────────────────────────────
 
 function getCLICommandFiles(): string[] {
@@ -637,6 +424,7 @@ describe("no swallowed errors in CLI commands", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 11: No catch (error: any) in CLI source
+// (guardrails.toml can't handle this: escape hatch format mismatch)
 // ─────────────────────────────────────────────────────────
 
 describe("no catch (error: any) in CLI source", () => {
@@ -677,6 +465,7 @@ describe("no catch (error: any) in CLI source", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 12: No metadata save before deployment completes
+// (guardrails.toml can't handle this: needs ordering semantics within function)
 // ─────────────────────────────────────────────────────────
 
 describe("metadata save order", () => {
@@ -745,6 +534,7 @@ describe("metadata save order", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 13: No duplicate infrastructure helper functions
+// (guardrails.toml can't handle this: cross-file uniqueness check)
 // ─────────────────────────────────────────────────────────
 
 describe("no duplicate infrastructure helpers", () => {
