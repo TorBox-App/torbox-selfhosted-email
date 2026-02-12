@@ -16,7 +16,7 @@
     "typecheck": "turbo run typecheck",
     "check": "npx ultracite@latest check",
     "check:errors": "npx ultracite@7.0.12 check --diagnostic-level=error",
-    "test:guardrails": "vitest run --config vitest.config.ts",
+    "test:guardrails": "vitest run --config vitest.config.ts && guardrails scan .",
     "check:all": "pnpm check:errors && pnpm typecheck && pnpm test:guardrails && pnpm build && pnpm test",
     "fix": "npx ultracite@latest fix",
     "clean": "turbo run clean && rm -rf node_modules",

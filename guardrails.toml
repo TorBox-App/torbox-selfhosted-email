@@ -194,3 +194,138 @@ max_count = 177
 glob = "apps/web/src/**/*.{ts,tsx}"
 exclude_glob = ["**/components/ui/**"]
 message = "Migrate hardcoded white/black to theme colors for dark mode support (177 remaining, ratchet down)"
+
+# Ratchet: reduce `as any` type assertions (baselined at 95)
+[[rule]]
+id = "ratchet-as-any"
+type = "ratchet"
+severity = "error"
+pattern = "as any"
+max_count = 93
+glob = "**/*.{ts,tsx}"
+exclude_glob = ["**/__tests__/**", "**/*.test.*", "**/*.config.*"]
+message = "Reduce 'as any' assertions — use proper types or 'as unknown' (93 remaining, ratchet down)"
+
+
+# ══════════════════════════════════════════════
+# BANNED DEPENDENCIES (audit package.json)
+# ══════════════════════════════════════════════
+
+[[rule]]
+id = "dep-no-axios"
+type = "banned-dependency"
+severity = "error"
+packages = ["axios"]
+message = "axios is banned. Use native fetch."
+
+[[rule]]
+id = "dep-no-moment"
+type = "banned-dependency"
+severity = "error"
+packages = ["moment", "dayjs"]
+message = "Use date-fns or Intl API instead."
+
+
+# ══════════════════════════════════════════════
+# ESM ENFORCEMENT
+# ══════════════════════════════════════════════
+
+[[rule]]
+id = "no-commonjs-require"
+type = "banned-pattern"
+severity = "error"
+pattern = "(?:^|\\s)require\\(['\"]"
+regex = true
+glob = "**/*.{ts,tsx}"
+exclude_glob = ["**/node_modules/**", "**/*.config.*", "**/next.config.*", "packages/pulumi/**"]
+message = "Use ESM imports, not require(). This is an ESM-only codebase."
+suggest = "Replace with: import ... from '...'"
+
+[[rule]]
+id = "no-module-exports"
+type = "banned-pattern"
+severity = "error"
+pattern = "^module\\.exports\\s*="
+regex = true
+glob = "**/*.{ts,tsx}"
+exclude_glob = ["**/node_modules/**", "**/*.config.*"]
+message = "Use export/export default, not module.exports."
+suggest = "Replace with: export default ... or export { ... }"
+
+
+# ══════════════════════════════════════════════
+# TYPE SAFETY
+# ══════════════════════════════════════════════
+
+[[rule]]
+id = "no-ts-ignore"
+type = "banned-pattern"
+severity = "error"
+pattern = "@ts-ignore"
+glob = "**/*.{ts,tsx}"
+message = "Use @ts-expect-error instead of @ts-ignore (fails when the suppressed error is fixed)."
+suggest = "Replace with @ts-expect-error and add a reason comment"
+
+
+# ══════════════════════════════════════════════
+# FILE PRESENCE
+# ══════════════════════════════════════════════
+
+[[rule]]
+id = "required-project-files"
+type = "file-presence"
+severity = "error"
+required = ["CLAUDE.md", "guardrails.toml", "turbo.json", "biome.json"]
+message = "Critical project files must not be deleted."
+
+[[rule]]
+id = "no-env-committed"
+type = "file-presence"
+severity = "error"
+forbidden = [".env", ".env.local", "apps/web/.env", "apps/api/.env"]
+message = "Environment files must not be committed to the repository."
+
+
+# ══════════════════════════════════════════════
+# INFRASTRUCTURE CONVENTIONS
+# ══════════════════════════════════════════════
+
+[[rule]]
+id = "resource-tagging"
+type = "required-pattern"
+severity = "error"
+glob = "packages/cli/src/infrastructure/resources/*.ts"
+exclude_glob = ["**/iam.ts", "**/__tests__/**"]
+pattern = "ManagedBy"
+message = "All infrastructure resources must include ManagedBy: 'wraps-cli' tag."
+suggest = "Add tags: { ManagedBy: 'wraps-cli' } to the resource (iam.ts is excluded — tags applied via shared/iam.ts helper)"
+
+[[rule]]
+id = "resource-prefix"
+type = "required-pattern"
+severity = "error"
+glob = "packages/cli/src/infrastructure/resources/*.ts"
+pattern = "wraps-"
+message = "All resource names must use the wraps- prefix."
+suggest = "Prefix the resource name with wraps-email- or wraps-sms-"
+
+
+# ══════════════════════════════════════════════
+# TAILWIND DESIGN SYSTEM
+# ══════════════════════════════════════════════
+
+[[rule]]
+id = "dark-mode-web"
+type = "tailwind-dark-mode"
+severity = "warning"
+glob = "apps/web/src/**/*.tsx"
+exclude_glob = ["**/components/ui/**"]
+message = "Color utilities need corresponding dark: variants for dark mode support."
+
+[[rule]]
+id = "theme-tokens-web"
+type = "tailwind-theme-tokens"
+severity = "warning"
+glob = "apps/web/src/**/*.tsx"
+exclude_glob = ["**/components/ui/**"]
+message = "Use semantic design tokens instead of raw Tailwind colors (e.g. bg-background, text-foreground)."
