@@ -673,14 +673,18 @@ function ConditionConfig({
             <SelectItem value="starts_with">Starts With</SelectItem>
             <SelectItem value="ends_with">Ends With</SelectItem>
             <SelectItem value="greater_than">Greater Than</SelectItem>
+            <SelectItem value="greater_than_or_equals">Greater Than or Equals</SelectItem>
             <SelectItem value="less_than">Less Than</SelectItem>
+            <SelectItem value="less_than_or_equals">Less Than or Equals</SelectItem>
+            <SelectItem value="is_true">Is True</SelectItem>
+            <SelectItem value="is_false">Is False</SelectItem>
             <SelectItem value="is_set">Is Set</SelectItem>
             <SelectItem value="is_not_set">Is Not Set</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {config.operator !== "is_set" && config.operator !== "is_not_set" && (
+      {!["is_set", "is_not_set", "is_true", "is_false"].includes(config.operator) && (
         <div className="space-y-2">
           <Label htmlFor="condition-value">Value</Label>
           <Input

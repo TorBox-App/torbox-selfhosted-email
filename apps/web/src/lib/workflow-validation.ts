@@ -294,10 +294,10 @@ function validateCondition(
     });
   }
 
-  // Value is required unless operator is is_set or is_not_set
+  // Value is required unless operator doesn't need one
+  const unaryOperators = ["is_set", "is_not_set", "is_true", "is_false"];
   if (
-    config.operator !== "is_set" &&
-    config.operator !== "is_not_set" &&
+    !unaryOperators.includes(config.operator) &&
     (config.value === undefined || config.value === "")
   ) {
     errors.push({
