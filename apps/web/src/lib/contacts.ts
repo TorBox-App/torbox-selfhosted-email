@@ -195,5 +195,11 @@ export type DeleteContactResult =
   | { success: false; error: string };
 
 export type ImportContactsResult =
-  | { success: true; imported: number; skipped: number; errors: string[] }
+  | {
+      success: true;
+      created: number;
+      updated: number;
+      skipped: number;
+      errors: Array<{ row: number; error: string }>;
+    }
   | { success: false; error: string };

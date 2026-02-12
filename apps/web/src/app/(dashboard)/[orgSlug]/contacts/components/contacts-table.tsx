@@ -96,6 +96,7 @@ import type { TopicWithMeta } from "@/lib/topics";
 import { createColumns } from "./columns";
 import { ContactDetailsSheet } from "./contact-details-sheet";
 import { ContactFormDialog } from "./contact-form-dialog";
+import { ImportContactsDialog } from "./import-contacts-dialog";
 
 type ContactsTableProps = {
   contacts: ContactWithMeta[];
@@ -159,6 +160,7 @@ export function ContactsTable({
   const [bulkUnsubscribeDialogOpen, setBulkUnsubscribeDialogOpen] =
     useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [selectedTopicId, setSelectedTopicId] = useState<string>("");
   const [selectedContact, setSelectedContact] =
@@ -169,7 +171,9 @@ export function ContactsTable({
 
   // Sync selectedContact from table data when URL has a contactId
   useEffect(() => {
-    if (!urlContactId) return;
+    if (!urlContactId) {
+      return;
+    }
     const existing = contacts.find((c) => c.id === urlContactId);
     if (existing) {
       setSelectedContact(existing);
@@ -672,6 +676,7 @@ export function ContactsTable({
                 <TooltipTrigger asChild>
                   <Button
                     className="rounded-r-none border-r-0 focus:z-10"
+                    onClick={() => setImportDialogOpen(true)}
                     size="icon"
                     variant="outline"
                   >
@@ -1067,6 +1072,15 @@ export function ContactsTable({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import Contacts Dialog */}
+      <ImportContactsDialog
+        onImportComplete={() => router.refresh()}
+        onOpenChange={setImportDialogOpen}
+        open={importDialogOpen}
+        organizationId={organizationId}
+        topics={topics}
+      />
 
       {/* Bulk Delete Dialog */}
       <Dialog
