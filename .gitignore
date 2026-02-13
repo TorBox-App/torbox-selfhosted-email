@@ -78,3 +78,5 @@ next-env.d.ts
 .claude/blueprints/
 .claude/research/
 .claude/spikes/
+.claude/audit/
+.claude/todos/
