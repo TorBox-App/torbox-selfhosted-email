@@ -4,6 +4,7 @@
  * POST /webhooks/ses/:awsAccountId - Receive SES events from EventBridge API Destination
  */
 
+import { timingSafeEqual } from "node:crypto";
 import {
   awsAccount,
   batchSend,
@@ -112,8 +113,10 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       return { error: "AWS account not found" };
     }
 
-    // 2. Validate API key
-    if (!account.webhookSecret || account.webhookSecret !== apiKey) {
+    // 2. Validate API key (constant-time comparison to prevent timing attacks)
+    const secretBuffer = Buffer.from(account.webhookSecret || "");
+    const keyBuffer = Buffer.from(apiKey || "");
+    if (!account.webhookSecret || secretBuffer.length !== keyBuffer.length || !timingSafeEqual(secretBuffer, keyBuffer)) {
       console.log(`[WEBHOOK] Invalid API key for account: ${awsAccountNumber}`);
       set.status = 401;
       return { error: "Invalid API key" };

@@ -79,13 +79,12 @@ const DEFAULT_CONFIG: InfrastructureConfig = {
 };
 
 /**
- * Generate a deterministic webhook secret from organization ID
- * This is used to authenticate webhook calls from customer AWS accounts
+ * Generate a cryptographically secure webhook secret
  */
-function generateWebhookSecret(organizationId: string): string {
-  // Use a simple hash-like approach for the webhook secret
-  // In production, this could be stored/retrieved from the database
-  return `whsec_${organizationId.replace(/-/g, "")}`;
+function generateSecureWebhookSecret(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /**
@@ -94,10 +93,9 @@ function generateWebhookSecret(organizationId: string): string {
 function generateQuickCreateUrl(
   config: InfrastructureConfig,
   templateUrl: string,
-  organizationId: string
+  organizationId: string,
+  webhookSecret: string
 ): string {
-  const webhookSecret = generateWebhookSecret(organizationId);
-
   const params = new URLSearchParams({
     templateURL: templateUrl,
     stackName: "wraps-email-infrastructure",
@@ -172,12 +170,15 @@ export function DeployInfrastructureStep({
   const [copiedInstall, setCopiedInstall] = useState(false);
   const [copiedDeploy, setCopiedDeploy] = useState(false);
 
+  // Generate a cryptographically secure webhook secret once on mount
+  const [webhookSecret] = useState(() => generateSecureWebhookSecret());
+
   const templateUrl =
     "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-email-infrastructure.yaml";
 
   const quickCreateUrl = useMemo(
-    () => generateQuickCreateUrl(config, templateUrl, organizationId),
-    [config, organizationId]
+    () => generateQuickCreateUrl(config, templateUrl, organizationId, webhookSecret),
+    [config, organizationId, webhookSecret]
   );
 
   const estimatedCost = useMemo(() => estimateMonthlyCost(config), [config]);
@@ -302,7 +303,7 @@ export function DeployInfrastructureStep({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
+          body: JSON.stringify({ ...data, webhookSecret }),
         }
       );
 
