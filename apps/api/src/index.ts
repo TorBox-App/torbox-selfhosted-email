@@ -20,6 +20,7 @@ import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
 import { workflowScheduleRoutes } from "./routes/workflow-schedules";
 import { workflowsSyncRoutes } from "./routes/workflows-sync";
+import { getPostHogClient } from "./lib/posthog";
 
 /**
  * OpenAPI documentation configuration
@@ -99,8 +100,12 @@ const openApiDocumentation = {
 };
 
 export const app = new Elysia()
-  .onError(({ error }) => {
-    // Return error message in response body
+  .onError(({ error, request }) => {
+    const posthog = getPostHogClient();
+    posthog.captureException(error instanceof Error ? error : new Error(String(error)), "api-error", {
+      url: request.url,
+      method: request.method,
+    });
     const message = error instanceof Error ? error.message : String(error);
     return { error: message };
   })

@@ -240,6 +240,15 @@ export async function handlePaymentFailed(
         `Failed to send payment failed email to ${admin.user.email}:`,
         emailError
       );
+      const posthog = getPostHogClient();
+      posthog?.captureException(
+        emailError instanceof Error ? emailError : new Error(String(emailError)),
+        admin.user.email,
+        {
+          context: "payment_failed_notification",
+          organizationId: org.id,
+        }
+      );
     }
   }
 
@@ -313,6 +322,15 @@ export async function handleCheckoutCompleted(
       );
     } catch (err) {
       console.error("Failed to fetch subscription from Stripe:", err);
+      const posthog = getPostHogClient();
+      posthog?.captureException(
+        err instanceof Error ? err : new Error(String(err)),
+        customerId,
+        {
+          context: "checkout_completed_stripe_fetch",
+          stripeSubscriptionId,
+        }
+      );
       // Fallback to metadata if available
       isAnnual =
         session.metadata?.annual === "true" ||
