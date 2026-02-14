@@ -3,6 +3,16 @@ import { chmod, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ensureWrapsDir, getWrapsDir } from "./fs.js";
 
+// ── URL Helpers ──
+
+export function getApiBaseUrl(): string {
+  return process.env.WRAPS_API_URL || "https://api.wraps.dev";
+}
+
+export function getAppBaseUrl(): string {
+  return process.env.WRAPS_APP_URL || "https://app.wraps.dev";
+}
+
 export type OrgInfo = {
   id: string;
   name: string;

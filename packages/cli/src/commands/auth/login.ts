@@ -7,7 +7,11 @@ import {
 import open from "open";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
-import { type OrgInfo, saveAuthConfig } from "../../utils/shared/config.js";
+import {
+  type OrgInfo,
+  getAppBaseUrl,
+  saveAuthConfig,
+} from "../../utils/shared/config.js";
 
 type LoginOptions = {
   token?: string;
@@ -75,7 +79,7 @@ export async function login(options: LoginOptions): Promise<void> {
   // Device flow
   clack.intro(pc.bold("Wraps \u203A Sign In"));
 
-  const baseURL = process.env.WRAPS_API_URL || "https://app.wraps.dev";
+  const baseURL = getAppBaseUrl();
   const authClient = createCliAuthClient(baseURL);
 
   const spinner = clack.spinner();

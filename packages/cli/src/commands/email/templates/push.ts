@@ -10,7 +10,10 @@ import {
   findCliNodeModules,
   loadWrapsConfig,
 } from "../../../utils/email/template-compiler.js";
-import { resolveTokenAsync } from "../../../utils/shared/config.js";
+import {
+  getApiBaseUrl,
+  resolveTokenAsync,
+} from "../../../utils/shared/config.js";
 import { errors } from "../../../utils/shared/errors.js";
 import { loadLockfile, saveLockfile } from "../../../utils/shared/lockfile.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
@@ -503,7 +506,7 @@ async function fetchRemoteTemplateSlugs(
     return null;
   }
 
-  const apiBase = process.env.WRAPS_API_URL || "https://api.wraps.dev";
+  const apiBase = getApiBaseUrl();
 
   try {
     // Use the existing /pull endpoint which returns CLI-pushed templates
@@ -555,7 +558,7 @@ async function pushToAPI(
     return templates.map((t) => ({ slug: t.slug, success: false }));
   }
 
-  const apiBase = process.env.WRAPS_API_URL || "https://api.wraps.dev";
+  const apiBase = getApiBaseUrl();
 
   const results: APIPushResult[] = [];
 

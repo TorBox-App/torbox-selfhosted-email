@@ -27,6 +27,7 @@ import {
 } from "../../utils/shared/aws.js";
 import {
   type OrgInfo,
+  getApiBaseUrl,
   readAuthConfig,
   resolveTokenAsync,
 } from "../../utils/shared/config.js";
@@ -528,7 +529,7 @@ async function registerConnection(params: {
   webhookEndpoint?: string;
   error?: string;
 }> {
-  const baseURL = process.env.WRAPS_API_URL || "https://api.wraps.dev";
+  const baseURL = getApiBaseUrl();
 
   const response = await fetch(`${baseURL}/v1/connections`, {
     method: "POST",

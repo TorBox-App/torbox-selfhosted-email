@@ -16,7 +16,8 @@ import type {
   TelemetryRequest,
 } from "./types.js";
 
-const DEFAULT_ENDPOINT = "https://wraps.dev/api/telemetry";
+const DEFAULT_ENDPOINT =
+  process.env.WRAPS_TELEMETRY_URL || "https://wraps.dev/api/telemetry";
 const DEFAULT_TIMEOUT = 2000; // 2 seconds
 
 /**

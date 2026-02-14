@@ -31,7 +31,10 @@ import {
   parseWorkflowTs,
 } from "../../../utils/email/workflow-ts.js";
 import { validateTransformedWorkflow } from "../../../utils/email/workflow-validator.js";
-import { resolveTokenAsync } from "../../../utils/shared/config.js";
+import {
+  getApiBaseUrl,
+  resolveTokenAsync,
+} from "../../../utils/shared/config.js";
 import { errors } from "../../../utils/shared/errors.js";
 import { loadLockfile, saveLockfile } from "../../../utils/shared/lockfile.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
@@ -367,7 +370,7 @@ async function pushToAPI(
     return workflows.map((w) => ({ slug: w.slug, success: false }));
   }
 
-  const apiBase = process.env.WRAPS_API_URL || "https://api.wraps.dev";
+  const apiBase = getApiBaseUrl();
   const results: APIPushResult[] = [];
 
   // Use batch endpoint if multiple workflows
