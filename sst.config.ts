@@ -21,7 +21,7 @@ export default $config({
         aws: {
           region: "us-east-1",
         },
-        cloudflare: true, // Uses CLOUDFLARE_API_TOKEN env var
+        ...(input?.stage === "production" && { cloudflare: true }),
       },
     };
   },
