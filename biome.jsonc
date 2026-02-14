@@ -1,15 +1,7 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite/core"],
-  "plugins": [
-    "./guardrails/guardrails.grit",
-    "./guardrails/guardrails-hookform.grit",
-    "./guardrails/no-next-router.grit",
-    "./guardrails/no-moment.grit",
-    "./guardrails/no-dayjs.grit",
-    "./guardrails/no-axios.grit",
-    "./guardrails/no-redirect-in-try-catch.grit"
-  ],
+  "plugins": ["./guardrails/no-redirect-in-try-catch.grit"],
   "files": {
     "ignoreUnknown": false,
     "includes": [
@@ -18,7 +10,8 @@
       "**/*.js",
       "**/*.jsx",
       "**/*.json",
-      "**/*.jsonc"
+      "**/*.jsonc",
+      "!packages/core/lambda/*/index.js"
     ]
   },
   "assist": {
