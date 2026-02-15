@@ -7,6 +7,10 @@ description: Build CLI commands using Clack prompts and Pulumi. Use when creatin
 
 You are an expert at building CLI commands for the Wraps CLI using Clack prompts and Pulumi.
 
+## CLI Architecture
+
+The CLI entry point (`packages/cli/src/cli.ts`) uses the `args` package for command routing. Individual commands use `@clack/prompts` for interactive prompts and `picocolors` for styled output. Don't confuse the two: `args` parses `wraps email init`, while `@clack/prompts` handles interactive questions within commands.
+
 ## Command Structure
 
 Commands live in `packages/cli/src/commands/` organized by service:

@@ -1,4 +1,4 @@
-# CLAUDE.md - Wraps CLI Project Context
+# CLAUDE.md - Wraps Project Context
 
 ## Workflow
 
@@ -12,11 +12,13 @@ When implementing multi-step features (e.g., create resource → save state → 
 
 ## Project Overview
 
-**Wraps** is a CLI tool and TypeScript SDK that deploys email infrastructure (AWS SES) to users' AWS accounts with zero stored credentials, beautiful developer experience, and AWS pricing.
+**Wraps** is a CLI tool, web platform, and TypeScript SDK that deploys communication infrastructure (email via AWS SES, SMS via AWS End User Messaging, CDN via S3+CloudFront) to users' AWS accounts with zero stored credentials, beautiful developer experience, and AWS pricing.
 
-**Core Value Proposition**: One command deploys production-ready email infrastructure to the user's AWS account with zero credentials stored, intuitive SDK, beautiful DX, and transparent AWS pricing.
+**Core Value Proposition**: One command deploys production-ready infrastructure to the user's AWS account with zero credentials stored, intuitive SDK, beautiful DX, and transparent AWS pricing.
 
-**TypeScript SDK**: [`@wraps.dev/email`](https://github.com/wraps-team/wraps-js) provides a simple, type-safe interface for sending emails through the deployed infrastructure. Available on [npm](https://www.npmjs.com/package/@wraps.dev/email).
+**TypeScript SDKs**:
+- [`@wraps.dev/email`](https://github.com/wraps-team/wraps-js) - Send emails through deployed SES infrastructure
+- `@wraps.dev/sms` - Send SMS through deployed AWS End User Messaging infrastructure
 
 ## Key Concepts
 
@@ -39,26 +41,39 @@ When implementing multi-step features (e.g., create resource → save state → 
 {
   "monorepo": "turborepo",
   "cli": {
-    "prompts": "@clack/prompts",
     "args": "args",
+    "prompts": "@clack/prompts",
     "colors": "picocolors",
-    "completion": "tabtab"
+    "completion": "tabtab",
+    "bundler": "tsup"
   },
   "infrastructure": "@pulumi/pulumi + @pulumi/aws",
+  "deployment": "sst (Serverless Stack)",
   "aws": "@aws-sdk/client-*",
-  "frontend": {
-    "framework": "React 19",
-    "bundler": "vite",
+  "web": {
+    "framework": "Next.js 16 (App Router, Turbopack)",
+    "react": "React 19",
     "styling": "tailwindcss 4.x + shadcn/ui",
     "components": "radix-ui",
-    "forms": "@tanstack/react-form + zod (server actions)",
-    "routing": "react-router-dom",
-    "state": "zustand"
+    "forms": "@tanstack/react-form + zod",
+    "state": "zustand",
+    "data": "@tanstack/react-query",
+    "editor": "TipTap (email templates)",
+    "workflow": "@xyflow/react (workflow builder)"
   },
-  "bundler": "tsup (CLI), vite (web)",
+  "api": {
+    "framework": "Elysia.js",
+    "runtime": "AWS Lambda (via SST)",
+    "auth": "better-auth (passkey + Stripe)"
+  },
+  "database": {
+    "orm": "drizzle-orm",
+    "provider": "@neondatabase/serverless (PostgreSQL)",
+    "migrations": "drizzle-kit"
+  },
   "runtime": "Node.js 20+",
   "language": "TypeScript (strict mode)",
-  "packageManager": "pnpm",
+  "packageManager": "pnpm 10",
   "linting": "ultracite + biome",
   "testing": "vitest"
 }
@@ -68,79 +83,88 @@ When implementing multi-step features (e.g., create resource → save state → 
 ```
 wraps/                            # Monorepo root
 ├── apps/
-│   └── website/                  # Marketing website (Vite + React + shadcn)
-│       ├── src/
-│       │   ├── app/             # App pages
-│       │   ├── components/      # React components
-│       │   ├── contexts/        # React contexts
-│       │   ├── hooks/           # Custom hooks
-│       │   ├── lib/             # Libraries
-│       │   └── utils/           # Utilities
-│       └── public/              # Public assets
+│   ├── api/                     # API server (Elysia.js on Lambda)
+│   │   └── src/
+│   │       ├── index.ts         # Elysia app entry point
+│   │       ├── lambda.ts        # Lambda handler
+│   │       ├── routes/          # API route handlers
+│   │       ├── middleware/       # Auth middleware
+│   │       ├── services/        # Business logic (workflow events, etc.)
+│   │       └── (ee)/            # Enterprise edition features
+│   ├── web/                     # Dashboard app (Next.js 16)
+│   │   └── src/
+│   │       ├── app/             # Next.js App Router
+│   │       │   ├── (auth)/      # Auth pages
+│   │       │   ├── (dashboard)/ # Dashboard pages
+│   │       │   ├── (onboarding)/ # Onboarding flow
+│   │       │   ├── (public)/    # Public pages (preferences, unsubscribe)
+│   │       │   ├── (subscription)/ # Billing pages
+│   │       │   └── api/         # Next.js API routes
+│   │       ├── actions/         # Server actions
+│   │       ├── components/
+│   │       │   ├── (ee)/        # Enterprise components
+│   │       │   │   └── workflow-builder/ # React Flow workflow canvas
+│   │       │   ├── template-editor/     # TipTap email template editor
+│   │       │   └── ui/          # shadcn/ui components
+│   │       ├── hooks/           # Custom hooks
+│   │       └── lib/             # Utilities
+│   └── website/                 # Marketing website (Next.js 16)
+│       └── src/
+│           ├── app/             # Pages + docs
+│           └── components/      # Marketing components
 ├── packages/
-│   ├── cli/                     # CLI package
+│   ├── auth/                    # Auth config (better-auth + Stripe webhooks)
+│   ├── cli/                     # CLI package (@wraps.dev/cli)
 │   │   ├── src/
 │   │   │   ├── cli.ts           # Entry point (multi-service router)
 │   │   │   ├── commands/        # CLI commands
-│   │   │   │   ├── email/       # Email service commands
-│   │   │   │   │   ├── init.ts    # Deploy email infrastructure
-│   │   │   │   │   ├── connect.ts # Connect existing SES
-│   │   │   │   │   ├── status.ts  # Show email setup
-│   │   │   │   │   ├── verify.ts  # Verify domain DNS
-│   │   │   │   │   ├── upgrade.ts # Upgrade email features
-│   │   │   │   │   ├── restore.ts # Restore email from metadata
-│   │   │   │   │   └── destroy.ts # Remove email infrastructure
-│   │   │   │   ├── sms/         # SMS service commands (coming soon)
-│   │   │   │   ├── init.ts      # Legacy command (deprecated)
-│   │   │   │   ├── connect.ts   # Legacy command (deprecated)
-│   │   │   │   └── ...          # Other legacy commands
+│   │   │   │   ├── auth/        # Auth commands (login, logout, status)
+│   │   │   │   ├── aws/         # AWS commands (doctor, setup)
+│   │   │   │   ├── cdn/         # CDN commands (init, status, sync, etc.)
+│   │   │   │   ├── email/       # Email commands (init, connect, status, etc.)
+│   │   │   │   │   ├── inbound.ts  # Inbound email receiving
+│   │   │   │   │   ├── templates/  # Templates-as-code (init, push, preview)
+│   │   │   │   │   └── workflows/  # Workflow management (push, validate)
+│   │   │   │   ├── platform/    # Platform commands (connect, update-role)
+│   │   │   │   ├── sms/         # SMS commands (init, status, test, etc.)
+│   │   │   │   └── workflow/    # Workflow commands
 │   │   │   ├── infrastructure/  # Pulumi stacks
-│   │   │   │   ├── email-stack.ts    # Email infrastructure stack
+│   │   │   │   ├── email-stack.ts    # Email infrastructure
+│   │   │   │   ├── sms-stack.ts      # SMS infrastructure
+│   │   │   │   ├── cdn-stack.ts      # CDN infrastructure (S3 + CloudFront)
 │   │   │   │   ├── vercel-oidc.ts    # Vercel OIDC setup
-│   │   │   │   └── resources/
-│   │   │   │       ├── iam.ts        # IAM role definitions
-│   │   │   │       ├── ses.ts        # SES configuration
-│   │   │   │       ├── dynamodb.ts   # DynamoDB tables
-│   │   │   │       ├── lambda.ts     # Lambda functions
-│   │   │   │       ├── sqs.ts        # SQS queues + DLQ
-│   │   │   │       └── eventbridge.ts # EventBridge rules
+│   │   │   │   └── resources/        # Pulumi resource definitions
 │   │   │   ├── utils/           # Utilities
 │   │   │   │   ├── shared/      # Shared utilities
-│   │   │   │   │   ├── aws.ts       # AWS SDK helpers
-│   │   │   │   │   ├── prompts.ts   # Prompt utilities (@clack/prompts)
-│   │   │   │   │   ├── metadata.ts  # Multi-service metadata storage
-│   │   │   │   │   ├── errors.ts    # Error handling
-│   │   │   │   │   ├── output.ts    # Console output (picocolors)
-│   │   │   │   │   ├── fs.ts        # File system helpers
-│   │   │   │   │   ├── scanner.ts   # Resource scanner
-│   │   │   │   │   └── pulumi.ts    # Pulumi utilities
 │   │   │   │   ├── email/       # Email-specific utilities
-│   │   │   │   │   ├── costs.ts     # Cost calculations
-│   │   │   │   │   ├── presets.ts   # Config presets
-│   │   │   │   │   └── route53.ts   # Route53 DNS helpers
-│   │   │   │   └── sms/         # SMS-specific utilities (coming soon)
-│   │   │   └── types/
-│   │   │       ├── index.ts     # Type exports with backwards compat
-│   │   │       ├── shared.ts    # Shared types (Provider, ServiceType, etc.)
-│   │   │       ├── email.ts     # Email-specific types
-│   │   │       └── sms.ts       # SMS-specific types
-│   │   └── lambda/              # Lambda function source
-│   │       └── event-processor/ # SQS -> DynamoDB processor
-│   ├── console-ui/              # Dashboard application (Vite + React)
+│   │   │   │   └── sms/         # SMS-specific utilities
+│   │   │   └── types/           # TypeScript types
+│   │   └── lambda/              # Lambda function source (bundled by esbuild)
+│   ├── console/                 # Embedded dashboard (Vite + React, bundled into CLI)
+│   ├── core/                    # Shared types, utilities, and Lambda code
+│   ├── db/                      # Database (Drizzle ORM + Neon PostgreSQL)
 │   │   └── src/
-│   │       ├── components/      # UI components
-│   │       ├── contexts/        # React contexts
-│   │       ├── hooks/           # Custom hooks
-│   │       ├── lib/             # Libraries
-│   │       └── styles/          # Styles
+│   │       ├── schema/          # Table definitions
+│   │       │   ├── app.ts       # Organizations, memberships
+│   │       │   ├── auth.ts      # Auth tables (better-auth)
+│   │       │   ├── batch.ts     # Email batch tracking
+│   │       │   ├── contacts.ts  # Contact management
+│   │       │   ├── events.ts    # Email/SMS events
+│   │       │   ├── segments.ts  # Audience segments
+│   │       │   ├── templates.ts # Email/SMS templates
+│   │       │   ├── usage.ts     # Usage tracking
+│   │       │   ├── workflows.ts # Workflow definitions
+│   │       │   └── waitlist.ts  # Waitlist
+│   │       └── migrations/      # Drizzle migrations
+│   ├── email/                   # Internal email utilities (React Email templates)
+│   ├── email-check/             # Email deliverability checker
+│   ├── cdk/                     # AWS CDK construct (alternative to CLI)
+│   ├── pulumi/                  # Pulumi component (npm package)
+│   ├── tui/                     # Terminal UI (Bun + @opentui)
 │   └── ui/                      # Shared UI components (shadcn)
-│       └── src/
-│           ├── components/      # Reusable components
-│           ├── hooks/           # Shared hooks
-│           ├── lib/             # Utilities
-│           └── styles/          # Shared styles
 ├── .github/workflows/           # GitHub Actions CI/CD
-├── .cursor/rules/               # Cursor IDE rules
+├── .claude/                     # Claude agent configs and skills
+├── sst.config.ts                # SST configuration
 └── turbo.json                   # Turborepo configuration
 ```
 
@@ -311,8 +335,8 @@ This migration happens **transparently** - users never need to manually update t
 The current v1.0.0 metadata format supports multiple services per AWS account/region:
 
 - **Email**: AWS SES configuration
-- **SMS**: AWS End User Messaging (coming soon)
-- **Queue**: AWS SQS/EventBridge (future)
+- **SMS**: AWS End User Messaging / Pinpoint SMS
+- **CDN**: S3 + CloudFront
 
 Each service maintains its own configuration, preset, and deployment timestamp while sharing the same AWS account credentials.
 
@@ -352,102 +376,75 @@ if (result.success) {
 
 ### Multi-Service Architecture
 
-Wraps CLI now uses a multi-service command structure to support email, SMS, and future services:
-
 ```bash
-wraps <service> <command>  # New format
+wraps <service> <command>
 wraps email init           # Deploy email infrastructure
-wraps sms init            # Deploy SMS infrastructure (coming soon)
+wraps sms init             # Deploy SMS infrastructure
+wraps cdn init             # Deploy CDN infrastructure
+wraps auth login           # Authenticate with Wraps Platform
 ```
 
-**Legacy commands** (deprecated but still work):
-```bash
-wraps init    # ⚠️ Deprecated: Use 'wraps email init'
-wraps status  # ⚠️ Deprecated: Use 'wraps email status'
-```
+### Service Commands
 
-### Email Commands
+#### Email (`wraps email ...`)
+| Command | Description |
+|---------|-------------|
+| `init` | Deploy new email infrastructure (SES, IAM, DynamoDB, Lambda, EventBridge, SQS) |
+| `connect` | Connect existing SES (non-destructive, creates `wraps-email-` prefixed resources) |
+| `status` | Show current email setup, resources, and links |
+| `check` | Check email deliverability for a domain |
+| `config` | Email configuration management |
+| `test` | Send a test email |
+| `upgrade` | Add features (dedicated IP, SMTP credentials, custom tracking domain, etc.) |
+| `restore` | Restore infrastructure from saved metadata |
+| `destroy` | Remove all email infrastructure |
+| `domains add/list/get-dkim/verify/remove` | Domain management for SES |
+| `inbound init/status/verify/test/destroy` | Inbound email receiving (MailManager + S3) |
+| `templates init/push/preview` | Templates-as-code management |
+| `workflows push/validate` | Workflow automation management |
 
-#### 1. `wraps email init` - Deploy New Email Infrastructure
-- Validates AWS credentials
-- Prompts for configuration preset (or custom config)
-- Shows estimated monthly costs based on volume
-- Validates configuration (warns about potential issues)
-- Deploys infrastructure using Pulumi
-- Sets up OIDC provider (if Vercel)
-- Creates IAM roles, SES config, DynamoDB, Lambda, EventBridge, SQS
-- Displays success message with next steps
+#### SMS (`wraps sms ...`)
+| Command | Description |
+|---------|-------------|
+| `init` | Deploy SMS infrastructure (AWS End User Messaging / Pinpoint) |
+| `status` | Show SMS setup |
+| `sync` | Apply config changes |
+| `test` | Send a test SMS |
+| `upgrade` | Add features |
+| `register` | Register phone number |
+| `verify-number` | Verify phone number |
+| `destroy` | Remove SMS infrastructure |
 
-#### 2. `wraps email connect` - Connect Existing SES
-- Scans existing AWS resources (SES domains, config sets)
-- Prompts for feature selection
-- Deploys **non-destructively** (always create new resources with `wraps-email-` prefix)
-- Never modifies existing resources
+#### CDN (`wraps cdn ...`)
+| Command | Description |
+|---------|-------------|
+| `init` | Deploy CDN infrastructure (S3 + CloudFront) |
+| `status` | Show CDN setup |
+| `sync` | Apply config changes |
+| `verify` | Verify domain DNS |
+| `upgrade` | Add features |
+| `destroy` | Remove CDN infrastructure |
 
-#### 3. `wraps email status` - Show Current Email Setup
-- Displays active features, region, domains
-- Shows all deployed resources
-- Links to dashboard and docs
+#### Platform (`wraps platform ...`)
+| Command | Description |
+|---------|-------------|
+| `connect` | Connect AWS account to Wraps Platform |
+| `update-role` | Update platform IAM permissions |
 
-#### 4. `wraps email verify` - Verify Domain DNS
-- Queries DNS records for domain
-- Checks DKIM, SPF, DMARC records
-- Provides guidance if records missing/incorrect
+#### Auth (`wraps auth ...`)
+| Command | Description |
+|---------|-------------|
+| `login` | Authenticate via device flow |
+| `status` | Show auth state |
+| `logout` | Sign out |
 
-#### 5. `wraps email domains` - Domain Management
-Comprehensive domain management commands for AWS SES:
-
-##### `wraps email domains add` - Add Domain to SES
-- Creates email identity in SES
-- Configures DKIM signing (RSA 2048-bit)
-- Returns DKIM tokens for DNS configuration
-- Options: `-d/--domain <domain>`
-
-##### `wraps email domains list` - List All Domains
-- Lists all SES email identities (domains only)
-- Shows verification status
-- Displays DKIM status
-- Filters out email addresses
-
-##### `wraps email domains get-dkim` - Get DKIM Tokens
-- Retrieves DKIM tokens for domain
-- Displays DNS records to configure
-- Shows current DKIM status
-- Options: `-d/--domain <domain>`
-
-##### `wraps email domains verify` - Verify DNS Records
-- Checks DKIM CNAME records
-- Verifies SPF TXT record
-- Validates DMARC TXT record
-- Checks MAIL FROM MX records (if configured)
-- Options: `-d/--domain <domain>`
-
-##### `wraps email domains remove` - Remove Domain
-- Deletes email identity from SES
-- Confirms before deletion (unless `--force`)
-- Options: `-d/--domain <domain>`, `-f/--force`
-
-#### 6. `wraps email upgrade` - Add Email Features
-- Shows currently enabled features
-- Prompts for additional features to enable
-- Deploys new resources incrementally
-- Updates IAM policies as needed
-- Options: upgrade preset, add custom tracking domain, change retention, enable dedicated IP, enable SMTP credentials
-
-#### 7. `wraps email restore` - Restore from Metadata
-- Restores email infrastructure from saved metadata
-- Useful for disaster recovery or re-deployment
-- Options: `-r/--region <region>`, `-f/--force`
-
-#### 8. `wraps email destroy` - Remove Email Infrastructure
-- Destroys all email infrastructure
-- Deletes connection metadata
-- Non-reversible (with confirmation prompt)
-- Options: `-f/--force`
+#### AWS (`wraps aws ...`)
+| Command | Description |
+|---------|-------------|
+| `doctor` | AWS account diagnostics |
+| `setup` | AWS CLI setup guide |
 
 ### CLI Flag Conventions
-
-Wraps uses consistent flag naming with short aliases across all commands:
 
 **Common Flags:**
 - `-p, --provider` - Hosting provider (vercel, aws, railway, other)
@@ -456,15 +453,10 @@ Wraps uses consistent flag naming with short aliases across all commands:
 - `-y, --yes` - Skip confirmation for non-destructive operations
 - `-f, --force` - Force operation without confirmation (destructive operations)
 
-**Destructive vs Non-Destructive:**
-- Use `--yes/-y` for non-destructive operations (init, connect, upgrade)
-- Use `--force/-f` for destructive operations (destroy, restore, domains remove)
-- This distinction helps prevent accidental data loss
-
 ## Critical Design Principles
 
 1. **Non-Destructive**: Never modify existing AWS resources
-2. **Namespace Everything**: All resources prefixed with `wraps-email`
+2. **Namespace Everything**: All resources prefixed with `wraps-{service}-` (e.g., `wraps-email-`, `wraps-sms-`)
 3. **Fail Fast**: Validate early, deploy confidently
 4. **Great UX**: Beautiful output, clear errors, helpful suggestions
 5. **Type-Safe**: Strict TypeScript throughout
@@ -475,25 +467,36 @@ Wraps uses consistent flag naming with short aliases across all commands:
 
 ### Infrastructure Deployment
 
-#### Pulumi Stack Entry Point
-- Use inline programs (no separate stack file)
-- Bundle Lambda functions on-the-fly using esbuild
-- Store deployment state in `~/.wraps/` directory
-- Generate unique external ID for IAM role (security)
+#### Pulumi Stacks
+- **Email** (`email-stack.ts`): SES, IAM, DynamoDB, Lambda, EventBridge, SQS, MailManager, S3 (inbound)
+- **SMS** (`sms-stack.ts`): AWS End User Messaging / Pinpoint SMS
+- **CDN** (`cdn-stack.ts`): S3 + CloudFront + ACM certificates
+- All stacks use inline Pulumi programs (no separate stack files)
+- Lambda functions bundled on-the-fly using esbuild
+- Deployment state stored in `~/.wraps/` directory
 
-#### IAM Roles
-Policies are feature-based and grant minimum required permissions:
-
-- **Vercel**: OIDC provider with AssumeRoleWithWebIdentity
-- **AWS Native**: Lambda, EC2, ECS can assume via IAM roles
-- **Base permissions**: Always include SES metrics + CloudWatch read access
-- **Sending enabled**: Adds SES send permissions (SendEmail, SendRawEmail, etc.)
-- **Event tracking**: Adds EventBridge + SQS permissions
-- **History storage**: Adds DynamoDB read/write permissions
+#### Infrastructure Resources (`packages/cli/src/infrastructure/resources/`)
+| Resource | Description |
+|----------|-------------|
+| `iam.ts` | IAM role definitions (OIDC, service roles) |
+| `ses.ts` | SES configuration (identities, config sets) |
+| `dynamodb.ts` | DynamoDB tables (email history) |
+| `lambda.ts` | Lambda functions (event processing) |
+| `lambda-inbound.ts` | Lambda for inbound email processing |
+| `sqs.ts` / `sqs-inbound.ts` | SQS queues + DLQ |
+| `eventbridge.ts` | EventBridge rules (outbound events) |
+| `eventbridge-inbound.ts` | EventBridge for inbound email events |
+| `eventbridge-user-webhook.ts` | User webhook events |
+| `mail-manager.ts` | AWS MailManager (email archives) |
+| `s3-cdn.ts` / `s3-inbound.ts` | S3 buckets (CDN, inbound emails) |
+| `cloudfront.ts` | CloudFront distribution |
+| `acm.ts` | ACM certificates |
+| `alerting.ts` | CloudWatch alerting |
+| `smtp-credentials.ts` | SMTP authentication |
 
 #### Resource Naming
-- All resources: `wraps-{resource-type}-`
-- Example: `wraps-email-role`, `wraps--email-tracking`, `wraps-email-history`
+- All resources: `wraps-{service}-{resource}`
+- Example: `wraps-email-role`, `wraps-email-tracking`, `wraps-sms-role`
 - Consistent tagging: `ManagedBy: 'wraps-cli'`
 
 ### Testing
@@ -513,33 +516,50 @@ Policies are feature-based and grant minimum required permissions:
 
 ## Key Files Reference
 
-- **notes/cli-spec.md**: Complete technical specification for CLI implementation
 - **THESIS.md**: Business strategy, product vision, go-to-market plan
-- **packages/cli/src/cli.ts**: CLI entry point (Commander.js setup)
-- **packages/cli/src/infrastructure/email-stack.ts**: Main Pulumi stack
-- **packages/cli/src/utils/errors.ts**: Error handling and common errors
-- **packages/cli/src/utils/output.ts**: Console output formatting utilities
-
+- **packages/cli/src/cli.ts**: CLI entry point (args-based multi-service router)
+- **packages/cli/src/infrastructure/email-stack.ts**: Email Pulumi stack
+- **packages/cli/src/infrastructure/sms-stack.ts**: SMS Pulumi stack
+- **packages/cli/src/infrastructure/cdn-stack.ts**: CDN Pulumi stack
+- **packages/cli/src/utils/shared/errors.ts**: Error handling and common errors
+- **packages/cli/src/utils/shared/config.ts**: Centralized API/app URL helpers
+- **packages/db/src/schema/**: All database table definitions
+- **apps/api/src/routes/**: API route handlers
+- **apps/api/src/services/workflow-events.ts**: Workflow event emission
+- **apps/web/src/actions/**: Next.js server actions
+- **apps/web/src/components/(ee)/workflow-builder/**: Workflow builder (React Flow)
+- **apps/web/src/components/template-editor/**: Email template editor (TipTap)
 
 ## Common Tasks
 
-### Adding a New Command
-1. Create file in `packages/cli/src/commands/`
+### Adding a CLI Command
+1. Create file in `packages/cli/src/commands/<service>/`
 2. Export async function that takes options
 3. Register in `packages/cli/src/cli.ts`
 4. Add error handling with `handleCLIError`
 5. Add spinner progress indicators
 6. Add success output with next steps
 
-### Adding a New Pulumi Resource
+### Adding a Pulumi Resource
 1. Create file in `packages/cli/src/infrastructure/resources/`
 2. Export async function that creates resource
 3. Tag with `ManagedBy: 'wraps-cli'`
 4. Return resource for use in stack
-5. Add to main stack in `email-stack.ts`
+5. Add to relevant stack (`email-stack.ts`, `sms-stack.ts`, or `cdn-stack.ts`)
+
+### Adding a Database Table/Column
+1. Edit or create schema file in `packages/db/src/schema/`
+2. Run `pnpm --filter @wraps/db db:generate` to generate migration
+3. Run `pnpm --filter @wraps/db db:push` to apply (or `db:migrate` for production)
+
+### Adding an API Route
+1. Create route file in `apps/api/src/routes/`
+2. Always scope queries by `organizationId`
+3. Always `await` async operations (Lambda terminates when handler returns)
+4. Emit workflow events for state changes (see `apps/api/CLAUDE.md`)
 
 ### Adding a New Error Type
-1. Add to `packages/cli/src/utils/errors.ts`
+1. Add to `packages/cli/src/utils/shared/errors.ts`
 2. Include error code, message, suggestion, and docsUrl
 3. Use in command files: `throw errors.yourError()`
 
@@ -547,74 +567,67 @@ Policies are feature-based and grant minimum required permissions:
 
 ### Prerequisites
 - Node.js 20+
-- pnpm
+- pnpm 10+
 - AWS CLI configured with valid credentials
 
 ### Local Development
 ```bash
-# Install dependencies
-pnpm install
-
-# Build CLI
-pnpm build
-
-# Test locally
-node dist/cli.js init
-
-# Watch mode (for development)
-pnpm dev
+pnpm install           # Install dependencies
+pnpm build             # Build all packages
+pnpm dev               # Watch mode (all packages)
+pnpm sst:dev           # Run SST dev (API Lambda + linked resources)
+pnpm cli email status  # Run CLI (auto-points at local API/app)
 ```
 
-### Testing
+### CLI Environment Variables
+
+The `pnpm cli` script automatically sets local dev URLs:
+
+| Variable | Default (via `pnpm cli`) | Production |
+|---|---|---|
+| `WRAPS_API_URL` | `http://localhost:3001` | `https://api.wraps.dev` |
+| `WRAPS_APP_URL` | `http://localhost:3000` | `https://app.wraps.dev` |
+
+URL helpers are centralized in `packages/cli/src/utils/shared/config.ts` (`getApiBaseUrl()`, `getAppBaseUrl()`).
+
+### Testing & Linting
 ```bash
-# Run tests
-pnpm test
-
-# Watch mode
-pnpm test:watch
-
-# Type checking
-pnpm check
-
-# Fix some type issues
-pnpm fix
+pnpm test              # Run all tests
+pnpm test:ee           # Run enterprise edition tests
+pnpm check             # Lint check (ultracite + biome)
+pnpm fix               # Auto-fix lint issues
+pnpm check:all         # Full CI check: lint → typecheck → guardrails → build → test
 ```
-
-## Success Criteria
-
-- ✅ One command deploys infrastructure (< 2 minutes)
-- ✅ Beautiful terminal output (spinners, colors, boxes)
-- ✅ Clear error messages with suggestions
-- ✅ Non-destructive (never breaks existing setups)
-- ✅ Type-safe (strict TypeScript)
-- ✅ Tested (critical paths have tests)
-- ✅ Works on macOS, Linux, Windows
 
 ## Resources
 
 - **Pulumi Docs**: https://www.pulumi.com/docs/
 - **AWS SDK v3**: https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/
-- **Commander.js**: https://github.com/tj/commander.js
-- **Inquirer**: https://github.com/SBoudrias/Inquirer.js
-- **Ora**: https://github.com/sindresorhus/ora
+- **Elysia.js**: https://elysiajs.com/
+- **Drizzle ORM**: https://orm.drizzle.team/
+- **Next.js**: https://nextjs.org/docs
+- **SST**: https://sst.dev/docs
+- **@clack/prompts**: https://github.com/bombshell-dev/clack
+- **better-auth**: https://www.better-auth.com/
 
 ## Notes for Claude
 
 - Follow the established patterns in existing code
 - Prioritize user experience (clear errors, beautiful output)
 - Never modify existing AWS resources (non-destructive principle)
-- Namespace everything with `wraps-${email|text|queue}-` prefix
+- Namespace everything with `wraps-{email|sms|cdn}-` prefix
 - Write tests for new features
 - Use TypeScript strict mode
 - Keep CLI commands simple and focused
-- run `pnpm check:all` before comitting
-- you can use `pnpm check` and `pnpm fix` from the root of our repo.
+- Run `pnpm check:all` before committing
+- You can use `pnpm check` and `pnpm fix` from the root of the repo
+- Enterprise features go in `(ee)/` directories
 
 ## Skills (Auto-Trigger Rules)
 
 Claude MUST automatically apply these skills when the task matches:
 
-### Forms (`/.claude/skills/create-form.md`)
+### Forms (`.claude/skills/create-form/SKILL.md`)
 **Trigger when**: Creating, editing, or refactoring any form component
 **Key rules**:
 - ALWAYS use `@tanstack/react-form` - NEVER use `react-hook-form`
@@ -622,7 +635,7 @@ Claude MUST automatically apply these skills when the task matches:
 - Zod validation with type inference
 - Server actions for form submissions (see server action skill)
 
-### Server Actions (`/.claude/skills/create-server-action.md`)
+### Server Actions (`.claude/skills/create-server-action/SKILL.md`)
 **Trigger when**: Creating form submission handlers or API mutations from client components
 **Key rules**:
 - Use `@tanstack/react-form/nextjs` utilities (`createServerValidate`, `ServerValidateError`)
@@ -630,7 +643,7 @@ Claude MUST automatically apply these skills when the task matches:
 - Always catch `ServerValidateError` and return `e.formState`
 - Return structured responses with `success` flag
 
-### API Routes (`/.claude/skills/wraps-api-developer.md`)
+### API Routes (`.claude/skills/wraps-api-developer/SKILL.md`)
 **Trigger when**: Creating or editing API routes in `apps/api/`
 **Key rules**:
 - ALWAYS await async operations (Lambda terminates when handler returns)
@@ -639,12 +652,11 @@ Claude MUST automatically apply these skills when the task matches:
 - Use correct REST semantics (PATCH adds, PUT replaces)
 
 ### Migration Backlog (Forms to Migrate)
-These files still use `react-hook-form` and should be migrated when touched:
+These files still use `react-hook-form` and should be migrated to `@tanstack/react-form` when touched:
 - `apps/web/src/components/template-editor/new-template-form.tsx`
 - `apps/web/src/components/template-editor/save-block-modal.tsx`
 - `apps/web/src/components/template-editor/send-test-modal.tsx`
 - `apps/web/src/components/template-editor/wrappers/template-name-dialog.tsx`
-- `apps/website/src/app/landing/components/contact-section.tsx`
 - `apps/web/src/app/(dashboard)/[orgSlug]/topics/components/preference-center-settings.tsx`
 - `apps/web/src/app/(dashboard)/[orgSlug]/topics/components/double-opt-in-settings.tsx`
 
