@@ -7,6 +7,7 @@ import {
   GitBranch,
   Hourglass,
   Mail,
+  MessageSquare,
   MousePointerClick,
   Sparkles,
   Zap,
@@ -224,6 +225,57 @@ const workflowTemplates: WorkflowTemplate[] = [
         description: "Recommend related products",
         icon: Mail,
         config: "cross-sell",
+      },
+    ],
+  },
+  {
+    id: "cascade",
+    name: "Cross-Channel Cascade",
+    description: "Reach users on their preferred channel",
+    steps: [
+      {
+        id: "trigger",
+        type: "trigger",
+        label: "Cart Abandoned",
+        description: "Triggered when a user abandons their cart",
+        icon: Zap,
+        config: "cart.abandoned",
+      },
+      {
+        id: "action-1",
+        type: "action",
+        label: "Send Recovery Email",
+        description: "Send a cart recovery email immediately",
+        icon: Mail,
+        config: "cart-recovery",
+      },
+      {
+        id: "wait-event-1",
+        type: "wait_event",
+        label: "Wait for Open",
+        description: "Wait up to 2 hours for the email to be opened",
+        icon: Hourglass,
+        config: "email.opened | timeout: 2 hours",
+      },
+      {
+        id: "condition",
+        type: "condition",
+        label: "Email Opened?",
+        description: "Check if the recovery email was opened",
+        icon: GitBranch,
+        config: "email.engaged == true",
+        yesBranch: {
+          label: "Send Thank You",
+          description: "Send a thank you with a discount code",
+          icon: Mail,
+          config: "thank-you-discount",
+        },
+        noBranch: {
+          label: "Send SMS Reminder",
+          description: "Fall back to SMS for users who didn't open",
+          icon: MessageSquare,
+          config: "cart-sms-reminder",
+        },
       },
     ],
   },
@@ -626,12 +678,36 @@ function WorkflowTemplateCard({
   isActive: boolean;
   onClick: () => void;
 }) {
-  const conditionCount = template.steps.filter(
-    (s) => s.type === "condition"
-  ).length;
-  const actionCount =
-    template.steps.filter((s) => s.type === "action").length +
-    conditionCount * 2; // Each condition has 2 branch actions
+  // Count emails and SMS across actions and branch actions
+  let emailCount = 0;
+  let smsCount = 0;
+  let branchCount = 0;
+  for (const step of template.steps) {
+    if (step.type === "action") {
+      if (step.icon === MessageSquare) {
+        smsCount += 1;
+      } else {
+        emailCount += 1;
+      }
+    }
+    if (step.type === "condition") {
+      branchCount += 1;
+      if (step.yesBranch) {
+        if (step.yesBranch.icon === MessageSquare) {
+          smsCount += 1;
+        } else {
+          emailCount += 1;
+        }
+      }
+      if (step.noBranch) {
+        if (step.noBranch.icon === MessageSquare) {
+          smsCount += 1;
+        } else {
+          emailCount += 1;
+        }
+      }
+    }
+  }
 
   return (
     <button
@@ -654,12 +730,38 @@ function WorkflowTemplateCard({
         <span className="font-semibold">{template.name}</span>
       </div>
       <p className="text-muted-foreground text-sm">{template.description}</p>
-      <div className="mt-3 flex items-center gap-1 text-muted-foreground text-xs">
-        <span>{template.steps.length} steps</span>
-        <span>•</span>
-        <span>{conditionCount} branches</span>
-        <span>•</span>
-        <span>{actionCount} emails</span>
+      <div className="mt-3 flex items-center gap-2.5 text-muted-foreground text-xs">
+        {emailCount > 0 && (
+          <span
+            className="flex items-center gap-1"
+            title={`${emailCount} email${emailCount > 1 ? "s" : ""}`}
+          >
+            <Mail className="size-3" />
+            {emailCount}
+          </span>
+        )}
+        {smsCount > 0 && (
+          <span className="flex items-center gap-1" title={`${smsCount} SMS`}>
+            <MessageSquare className="size-3" />
+            {smsCount}
+          </span>
+        )}
+        {branchCount > 0 && (
+          <span
+            className="flex items-center gap-1"
+            title={`${branchCount} branch${branchCount > 1 ? "es" : ""}`}
+          >
+            <GitBranch className="size-3" />
+            {branchCount}
+          </span>
+        )}
+        <span
+          className="flex items-center gap-1"
+          title={`${template.steps.length} steps`}
+        >
+          <Zap className="size-3" />
+          {template.steps.length}
+        </span>
       </div>
     </button>
   );
@@ -736,7 +838,7 @@ export function WorkflowBuilderSection() {
 
         {/* Template Selector */}
         <ScaleIn className="mb-8" delay={0.1}>
-          <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-3">
+          <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {workflowTemplates.map((template) => (
               <WorkflowTemplateCard
                 isActive={activeTemplate.id === template.id}
@@ -748,6 +850,20 @@ export function WorkflowBuilderSection() {
                 template={template}
               />
             ))}
+          </div>
+          <div className="mx-auto mt-2 flex items-center justify-center gap-4 text-muted-foreground/60 text-xs">
+            <span className="flex items-center gap-1">
+              <Mail className="size-3" /> Emails
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageSquare className="size-3" /> SMS
+            </span>
+            <span className="flex items-center gap-1">
+              <GitBranch className="size-3" /> Branches
+            </span>
+            <span className="flex items-center gap-1">
+              <Zap className="size-3" /> Steps
+            </span>
           </div>
         </ScaleIn>
 

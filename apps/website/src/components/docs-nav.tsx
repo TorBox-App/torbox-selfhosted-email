@@ -230,6 +230,11 @@ const navItems: NavSection[] = [
         icon: Workflow,
       },
       {
+        title: "Cross-Channel Orchestration",
+        href: "/docs/guides/orchestration",
+        icon: Layers,
+      },
+      {
         title: "Webhooks",
         href: "/docs/guides/webhooks",
         icon: Zap,

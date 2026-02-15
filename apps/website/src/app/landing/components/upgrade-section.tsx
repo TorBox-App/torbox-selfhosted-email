@@ -92,6 +92,13 @@ const comparisonFeatures = [
     scale: true,
   },
   {
+    feature: "Cross-channel cascades",
+    free: false,
+    starter: true,
+    growth: true,
+    scale: true,
+  },
+  {
     feature: "Topics & segments",
     free: false,
     starter: false,

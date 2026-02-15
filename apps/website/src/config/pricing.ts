@@ -501,6 +501,13 @@ export const FEATURE_COMPARISON: FeatureComparison[] = [
     scale: true,
   },
   {
+    name: "Cross-channel cascades",
+    free: false,
+    starter: true,
+    growth: true,
+    scale: true,
+  },
+  {
     name: "Event tracking",
     free: false,
     starter: true,
