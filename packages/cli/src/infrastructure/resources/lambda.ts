@@ -130,18 +130,15 @@ export async function getLambdaCode(functionName: string): Promise<string> {
   }
 
   // Bundle with esbuild
-  // Banner injects createRequire so CJS deps (like mailparser) can require() Node.js builtins in ESM
+  // CJS format avoids ESM/CJS interop issues with deps like mailparser that use require()
   await build({
     entryPoints: [sourcePath],
     bundle: true,
     platform: "node",
     target: "node24",
-    format: "esm",
-    outfile: join(outdir, "index.mjs"),
+    format: "cjs",
+    outfile: join(outdir, "index.js"),
     external: ["@aws-sdk/*", ...nodeBuiltins],
-    banner: {
-      js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
-    },
     minify: true,
     sourcemap: false,
   });

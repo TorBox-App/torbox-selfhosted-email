@@ -24,7 +24,7 @@ const packageRoot = join(__dirname, "..");
 async function buildLambda(name: string): Promise<void> {
   const sourcePath = join(packageRoot, "lambda", name, "index.ts");
   const outDir = join(packageRoot, "lambda", name);
-  const outFile = join(outDir, "index.mjs");
+  const outFile = join(outDir, "index.js");
   const markerFile = join(outDir, ".bundled");
 
   // Create output directory if needed
@@ -43,18 +43,15 @@ async function buildLambda(name: string): Promise<void> {
   console.log(`  Output: ${outFile}`);
 
   // Bundle with esbuild
-  // Banner injects createRequire so CJS deps (like mailparser) can require() Node.js builtins in ESM
+  // CJS format avoids ESM/CJS interop issues with deps like mailparser that use require()
   await build({
     entryPoints: [sourcePath],
     bundle: true,
     platform: "node",
     target: "node20",
-    format: "esm",
+    format: "cjs",
     outfile: outFile,
     external: ["@aws-sdk/*", ...nodeBuiltins],
-    banner: {
-      js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
-    },
     minify: true,
     sourcemap: false,
   });
