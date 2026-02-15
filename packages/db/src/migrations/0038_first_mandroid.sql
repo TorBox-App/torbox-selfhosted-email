@@ -1,0 +1,1 @@
+ALTER TABLE "contact" ADD COLUMN "preferred_channel" text;

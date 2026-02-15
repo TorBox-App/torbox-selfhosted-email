@@ -15,6 +15,13 @@ import { organization, user } from "./auth";
 import { contact, topic } from "./contacts";
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Magic field name for cascade engagement conditions */
+export const CASCADE_ENGAGEMENT_FIELD = "engagement.status" as const;
+
+// ═══════════════════════════════════════════════════════════════════════════
 // TYPES (for JSONB columns)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -117,6 +124,19 @@ export type WorkflowStepConfig =
   | { type: "unsubscribe_topic"; topicId: string; channel: "email" | "sms" };
 
 /**
+ * A channel in a cascade sequence (mirrors the code API's CascadeChannel)
+ */
+export type CascadeChannelConfig = {
+  /** Stable ID for React key when reordering */
+  id?: string;
+  type: "email" | "sms";
+  templateId?: string;
+  body?: string;
+  engagement?: "opened" | "clicked";
+  waitDuration?: number; // seconds to wait for engagement
+};
+
+/**
  * A step in the workflow (node on the canvas)
  */
 export type WorkflowStep = {
@@ -125,6 +145,10 @@ export type WorkflowStep = {
   name: string;
   position: { x: number; y: number };
   config: WorkflowStepConfig;
+  /** If this step belongs to a cascade group, the group's ID */
+  cascadeGroupId?: string;
+  /** Cascade reconstruction metadata - only set on first step of cascade group */
+  cascadeChannels?: CascadeChannelConfig[];
 };
 
 /**

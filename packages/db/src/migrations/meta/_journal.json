@@ -267,6 +267,27 @@
       "when": 1770410092203,
       "tag": "0037_swift_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1771011134837,
+      "tag": "0038_first_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1771015552801,
+      "tag": "0039_fixed_stryfe",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1771100000000,
+      "tag": "0040_add_channel_check_constraints",
+      "breakpoints": true
     }
   ]
 }

@@ -51,6 +51,12 @@ export const template = pgTable(
     // Email type determines compliance behavior
     emailType: emailTypeEnum("email_type").default("marketing").notNull(), // marketing = unsubscribe headers, transactional = no unsubscribe
 
+    // Channel: email or sms
+    channel: text("channel")
+      .$type<"email" | "sms">()
+      .default("email")
+      .notNull(),
+
     // Single content field (Yjs-compatible structure)
     content: jsonb("content").$type<Record<string, unknown>>().notNull(),
 
@@ -383,6 +389,7 @@ export const aiConversationRelations = relations(aiConversation, ({ one }) => ({
 }));
 
 // Types
+export type TemplateChannel = "email" | "sms";
 export type EmailType = "marketing" | "transactional";
 export type Template = typeof template.$inferSelect;
 export type NewTemplate = typeof template.$inferInsert;

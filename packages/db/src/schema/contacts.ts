@@ -28,6 +28,7 @@ export type SmsStatus =
   | "opted_in"
   | "opted_out"
   | "invalid";
+export type PreferredChannel = "email" | "sms";
 
 /**
  * @deprecated Use EmailStatus instead. Kept for backwards compatibility.
@@ -103,6 +104,7 @@ export const contact = pgTable(
     lastName: text("last_name"),
     company: text("company"),
     jobTitle: text("job_title"),
+    preferredChannel: text("preferred_channel").$type<PreferredChannel>(),
 
     // Custom attributes (for additional/custom fields)
     properties: json("properties")

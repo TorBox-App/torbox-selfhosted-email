@@ -1,0 +1,1 @@
+ALTER TABLE "template" ADD COLUMN "channel" text DEFAULT 'email' NOT NULL;
