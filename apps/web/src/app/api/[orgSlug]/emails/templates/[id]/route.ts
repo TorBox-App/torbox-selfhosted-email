@@ -5,9 +5,25 @@ import { brandKit, db, template, templateVersion } from "@wraps/db";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
+
+const updateTemplateSchema = z
+  .object({
+    content: z.record(z.string(), z.unknown()).optional(),
+    name: z.string().max(255).optional(),
+    description: z.string().max(1000).nullable().optional(),
+    subject: z.string().max(500).nullable().optional(),
+    emailType: z.enum(["marketing", "transactional"]).optional(),
+    status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+    variables: z.array(z.record(z.string(), z.unknown())).optional(),
+    testData: z.record(z.string(), z.unknown()).optional(),
+    compiledText: z.string().max(10_000).optional(),
+    createVersion: z.boolean().optional(),
+  })
+  .strict();
 
 type RouteContext = {
   params: Promise<{
@@ -114,7 +130,16 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parsed = updateTemplateSchema.safeParse(rawBody);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request body", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
     const {
       content,
       name,
@@ -124,7 +149,9 @@ export async function PUT(request: Request, context: RouteContext) {
       status,
       variables,
       testData,
-    } = body;
+      compiledText,
+      createVersion,
+    } = parsed.data;
 
     // Build update object
     const updateData: Record<string, unknown> = {
@@ -170,10 +197,10 @@ export async function PUT(request: Request, context: RouteContext) {
         const compiledHtml = await render(emailComponent);
 
         // Generate plain text version using react-email's robust converter
-        const compiledText = toPlainText(compiledHtml);
+        const generatedText = toPlainText(compiledHtml);
 
         updateData.compiledHtml = compiledHtml;
-        updateData.compiledText = compiledText;
+        updateData.compiledText = generatedText;
       } catch (compileError) {
         // Log but don't fail the save - template content is still saved
         const log = createRequestLogger({
@@ -208,6 +235,9 @@ export async function PUT(request: Request, context: RouteContext) {
     if (testData !== undefined) {
       updateData.testData = testData;
     }
+    if (compiledText !== undefined && typeof compiledText === "string") {
+      updateData.compiledText = compiledText;
+    }
 
     // Update template
     const [updated] = await db
@@ -233,8 +263,6 @@ export async function PUT(request: Request, context: RouteContext) {
     // 1. It's a manual save (createVersion: true)
     // 2. OR it's been more than 5 minutes since the last version
     if (content !== undefined) {
-      const { createVersion } = body;
-
       // Get the most recent version
       const versions = await db.query.templateVersion.findMany({
         where: eq(templateVersion.templateId, id),

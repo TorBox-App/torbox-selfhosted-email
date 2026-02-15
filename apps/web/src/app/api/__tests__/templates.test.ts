@@ -476,6 +476,82 @@ describe("Templates API - PUT /api/[orgSlug]/emails/templates/[id]", () => {
     expect(data.status).toBe("PUBLISHED");
   });
 
+  it("should update compiledText for SMS templates", async () => {
+    // Create an SMS template
+    await db.insert(template).values({
+      id: "test-template-sms-update",
+      organizationId: testOrganization.id,
+      name: "SMS Update Test",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "DRAFT",
+      channel: "sms",
+      compiledText: "Original message",
+    });
+
+    const { PUT } = await import("../[orgSlug]/emails/templates/[id]/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-sms-update`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          compiledText: "Updated SMS message with {{contact.firstName}}",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-sms-update",
+      }),
+    };
+
+    const response = await PUT(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.compiledText).toBe(
+      "Updated SMS message with {{contact.firstName}}"
+    );
+  });
+
+  it("should reject non-string compiledText values", async () => {
+    // Create a template
+    await db.insert(template).values({
+      id: "test-template-bad-compiled",
+      organizationId: testOrganization.id,
+      name: "Bad Compiled Test",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "DRAFT",
+      compiledText: "Original",
+    });
+
+    const { PUT } = await import("../[orgSlug]/emails/templates/[id]/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-bad-compiled`,
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          compiledText: 12_345,
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-bad-compiled",
+      }),
+    };
+
+    const response = await PUT(request, context);
+
+    // Zod schema rejects non-string compiledText with 400
+    expect(response.status).toBe(400);
+  });
+
   it("should return 404 for non-existent template", async () => {
     const { PUT } = await import("../[orgSlug]/emails/templates/[id]/route");
 
@@ -884,6 +960,93 @@ describe("Templates API - GET /api/[orgSlug]/emails/templates/[id]/versions/[ver
 
     expect(response.status).toBe(404);
     expect(data.error).toBe("Version not found");
+  });
+});
+
+describe("Templates API - POST SMS channel support", () => {
+  it("should create a template with channel 'sms'", async () => {
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/templates`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: "SMS Welcome",
+          channel: "sms",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.channel).toBe("sms");
+    // SMS templates should have null subject
+    expect(data.subject).toBeNull();
+    // SMS templates get empty doc content
+    expect(data.content).toEqual({ type: "doc", content: [] });
+  });
+
+  it("should default to 'email' channel for invalid channel values", async () => {
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/templates`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Invalid Channel Template",
+          channel: "push-notification",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.channel).toBe("email");
+    // Email templates get TipTap content with placeholder text
+    expect(data.content).toEqual({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Start editing your template..." }],
+        },
+      ],
+    });
+  });
+
+  it("should default to 'email' channel when no channel is provided", async () => {
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/templates`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: "No Channel Template",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.channel).toBe("email");
   });
 });
 

@@ -20,6 +20,7 @@ import {
   bulkDeleteTemplates,
   bulkUpdateTemplateStatus,
   bulkUpdateTemplateType,
+  publishTemplateToSES,
 } from "../templates";
 
 // Test data
@@ -132,15 +133,16 @@ vi.mock("@/lib/aws/credential-cache", () => ({
   })),
 }));
 
-const { mockDeleteSESTemplate } = vi.hoisted(() => ({
+const { mockDeleteSESTemplate, mockUpsertSESTemplate } = vi.hoisted(() => ({
   mockDeleteSESTemplate: vi.fn(async () => {}),
+  mockUpsertSESTemplate: vi.fn(async () => {}),
 }));
 
 vi.mock("@wraps/email", () => ({
   deleteSESTemplate: mockDeleteSESTemplate,
   generateSESTemplateName: vi.fn((id: string, _name: string) => `wraps-${id}`),
   transformVariablesForSes: vi.fn((text: string) => text),
-  upsertSESTemplate: vi.fn(async () => {}),
+  upsertSESTemplate: mockUpsertSESTemplate,
 }));
 
 vi.mock("@react-email/render", () => ({
@@ -663,5 +665,63 @@ describe("Template Bulk Actions", () => {
         expect(result.error).toBe("Invalid status");
       }
     });
+  });
+});
+
+describe("publishTemplateToSES - SMS Channel", () => {
+  it("should publish SMS template without calling SES", async () => {
+    mockUpsertSESTemplate.mockClear();
+
+    const id = await createTestTemplate({
+      name: "SMS Template",
+      channel: "sms",
+      compiledText: "Hello {{contact.firstName}}!",
+      status: "DRAFT",
+    });
+
+    const result = await publishTemplateToSES(id, testOrganization.id);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.sesTemplateName).toBe("");
+    }
+
+    // SES should NOT have been called
+    expect(mockUpsertSESTemplate).not.toHaveBeenCalled();
+
+    // Template should be PUBLISHED in the DB
+    const updated = await db.query.template.findFirst({
+      where: eq(template.id, id),
+    });
+    expect(updated?.status).toBe("PUBLISHED");
+    expect(updated?.publishedAt).not.toBeNull();
+  });
+
+  it("should publish email template via SES as normal", async () => {
+    mockUpsertSESTemplate.mockClear();
+
+    const id = await createTestTemplate({
+      name: "Email Template",
+      channel: "email",
+      subject: "Welcome!",
+      status: "DRAFT",
+    });
+
+    const result = await publishTemplateToSES(id, testOrganization.id);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.sesTemplateName).not.toBe("");
+    }
+
+    // SES SHOULD have been called
+    expect(mockUpsertSESTemplate).toHaveBeenCalledTimes(1);
+
+    // Template should be PUBLISHED in the DB with sesTemplateName
+    const updated = await db.query.template.findFirst({
+      where: eq(template.id, id),
+    });
+    expect(updated?.status).toBe("PUBLISHED");
+    expect(updated?.sesTemplateName).not.toBeNull();
   });
 });

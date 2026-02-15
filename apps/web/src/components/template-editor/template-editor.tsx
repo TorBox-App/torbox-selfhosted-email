@@ -52,6 +52,12 @@ const CodeTemplateEditor = dynamic(
   { ssr: false }
 );
 
+// Dynamic import for SMS template editor
+const SmsTemplateEditor = dynamic(
+  () => import("./sms-template-editor").then((m) => m.SmsTemplateEditor),
+  { ssr: false }
+);
+
 // Dynamic imports for modals - only loaded when opened
 const SendTestModal = dynamic(
   () => import("./send-test-modal").then((m) => m.SendTestModal),
@@ -135,6 +141,18 @@ export function TemplateEditor({
   // No template data
   if (!template) {
     return null;
+  }
+
+  // SMS templates get a lightweight textarea editor
+  if (template.channel === "sms") {
+    return (
+      <SmsTemplateEditor
+        className={className}
+        key={template.id}
+        orgSlug={orgSlug}
+        template={template}
+      />
+    );
   }
 
   // Code templates (pushed via CLI) get a dedicated editor experience

@@ -231,3 +231,67 @@ describe("upsertTemplateFromCli - Push Conflict Detection", () => {
     expect(lastUpdateSet?.status).toBe("PUBLISHED");
   });
 });
+
+describe("upsertTemplateFromCli - Channel Passthrough", () => {
+  it("should set channel=sms on insert when provided", async () => {
+    mockExistingTemplate = null;
+
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
+
+    const { db } = await import("@wraps/db");
+    await upsertTemplateFromCli(db as never, authContext, {
+      ...basePushBody,
+      channel: "sms",
+    });
+
+    expect(lastInsertValues).not.toBeNull();
+    expect(lastInsertValues?.channel).toBe("sms");
+  });
+
+  it("should default channel to email on insert when not provided", async () => {
+    mockExistingTemplate = null;
+
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
+
+    const { db } = await import("@wraps/db");
+    await upsertTemplateFromCli(db as never, authContext, basePushBody);
+
+    expect(lastInsertValues).not.toBeNull();
+    expect(lastInsertValues?.channel).toBe("email");
+  });
+
+  it("should set channel=sms on update when provided", async () => {
+    mockExistingTemplate = {
+      id: "tmpl-1",
+      lastEditedFrom: "cli",
+      updatedAt: new Date(),
+    };
+
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
+
+    const { db } = await import("@wraps/db");
+    await upsertTemplateFromCli(db as never, authContext, {
+      ...basePushBody,
+      channel: "sms",
+    });
+
+    expect(lastUpdateSet).not.toBeNull();
+    expect(lastUpdateSet?.channel).toBe("sms");
+  });
+
+  it("should default channel to email on update when not provided", async () => {
+    mockExistingTemplate = {
+      id: "tmpl-1",
+      lastEditedFrom: "cli",
+      updatedAt: new Date(),
+    };
+
+    const { upsertTemplateFromCli } = await import("../routes/templates-sync");
+
+    const { db } = await import("@wraps/db");
+    await upsertTemplateFromCli(db as never, authContext, basePushBody);
+
+    expect(lastUpdateSet).not.toBeNull();
+    expect(lastUpdateSet?.channel).toBe("email");
+  });
+});

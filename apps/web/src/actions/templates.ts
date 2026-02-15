@@ -128,6 +128,25 @@ export async function publishTemplateToSES(
       return { success: false, error: "Template not found" };
     }
 
+    // SMS templates don't need SES publishing
+    if (templateData.channel === "sms") {
+      const now = new Date();
+      await db
+        .update(template)
+        .set({
+          status: "PUBLISHED",
+          publishedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(template.id, templateId),
+            eq(template.organizationId, organizationId)
+          )
+        );
+      return { success: true, sesTemplateName: "" };
+    }
+
     // Validate subject is set
     if (!templateData.subject) {
       return {

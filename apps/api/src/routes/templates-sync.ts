@@ -64,6 +64,11 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
             description: "Email type for compliance",
           }
         ),
+        channel: t.Optional(
+          t.Union([t.Literal("email"), t.Literal("sms")], {
+            description: "Template channel (default: email)",
+          })
+        ),
         variables: t.Array(
           t.Object({
             name: t.String(),
@@ -166,6 +171,9 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
               t.Literal("marketing"),
               t.Literal("transactional"),
             ]),
+            channel: t.Optional(
+              t.Union([t.Literal("email"), t.Literal("sms")])
+            ),
             variables: t.Array(
               t.Object({
                 name: t.String(),
@@ -200,6 +208,7 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
           source: template.source,
           subject: template.subject,
           emailType: template.emailType,
+          channel: template.channel,
           variables: template.variables,
           sourceHash: template.sourceHash,
           status: template.status,
@@ -243,6 +252,7 @@ export type PushBody = {
   subject: string;
   previewText?: string;
   emailType: "marketing" | "transactional";
+  channel?: "email" | "sms";
   variables: Array<{ name: string; fallback?: string }>;
   sourceHash: string;
   sesTemplateName: string;
@@ -304,6 +314,7 @@ export async function upsertTemplateFromCli(
         compiledHtml: body.compiledHtml,
         compiledText: body.compiledText,
         emailType: body.emailType,
+        channel: body.channel ?? "email",
         variables: body.variables as Record<string, unknown>[],
         sesTemplateName: body.sesTemplateName,
         status: "PUBLISHED",
@@ -338,6 +349,7 @@ export async function upsertTemplateFromCli(
     compiledHtml: body.compiledHtml,
     compiledText: body.compiledText,
     emailType: body.emailType,
+    channel: body.channel ?? "email",
     variables: body.variables as Record<string, unknown>[],
     sesTemplateName: body.sesTemplateName,
     content: {}, // Empty content for code-pushed templates

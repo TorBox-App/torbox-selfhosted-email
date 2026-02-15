@@ -41,13 +41,22 @@ export async function GET(request: Request, context: RouteContext) {
     // Get query parameters
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const channel = searchParams.get("channel");
 
     // Build query conditions
     const conditions = [eq(template.organizationId, orgWithMembership.id)];
 
-    if (status) {
+    const validStatuses = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
+    if (status && (validStatuses as readonly string[]).includes(status)) {
       conditions.push(
-        eq(template.status, status as "DRAFT" | "PUBLISHED" | "ARCHIVED")
+        eq(template.status, status as (typeof validStatuses)[number])
+      );
+    }
+
+    const validChannels = ["email", "sms"] as const;
+    if (channel && (validChannels as readonly string[]).includes(channel)) {
+      conditions.push(
+        eq(template.channel, channel as (typeof validChannels)[number])
       );
     }
 
@@ -162,7 +171,7 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { name, description, subject } = await request.json();
+    const { name, description, subject, channel } = await request.json();
 
     if (!name || typeof name !== "string") {
       return NextResponse.json(
@@ -171,6 +180,25 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    // Determine channel (default to email)
+    const templateChannel = channel === "sms" ? "sms" : "email";
+
+    // SMS templates use plain text content, email templates use TipTap
+    const defaultContent =
+      templateChannel === "sms"
+        ? { type: "doc", content: [] }
+        : {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  { type: "text", text: "Start editing your template..." },
+                ],
+              },
+            ],
+          };
+
     // Create template with empty content
     const [newTemplate] = await db
       .insert(template)
@@ -178,18 +206,9 @@ export async function POST(request: Request, context: RouteContext) {
         organizationId: orgWithMembership.id,
         name: name.trim(),
         description: description?.trim() || null,
-        subject: subject?.trim() || null,
-        content: {
-          type: "doc",
-          content: [
-            {
-              type: "paragraph",
-              content: [
-                { type: "text", text: "Start editing your template..." },
-              ],
-            },
-          ],
-        },
+        subject: templateChannel === "sms" ? null : subject?.trim() || null,
+        channel: templateChannel,
+        content: defaultContent,
         createdBy: session.user.id,
         status: "DRAFT",
       })

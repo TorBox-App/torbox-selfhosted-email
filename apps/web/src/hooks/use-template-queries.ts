@@ -71,6 +71,7 @@ export function useUpdateTemplate(orgSlug: string, templateId: string) {
       subject?: string;
       emailType?: "marketing" | "transactional";
       status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+      compiledText?: string;
     }) => {
       const response = await fetch(
         `/api/${orgSlug}/emails/templates/${templateId}`,
@@ -140,6 +141,7 @@ export function useCreateTemplate(orgSlug: string) {
       name: string;
       description?: string;
       subject?: string;
+      channel?: "email" | "sms";
     }) => {
       const response = await fetch(`/api/${orgSlug}/emails/templates`, {
         method: "POST",

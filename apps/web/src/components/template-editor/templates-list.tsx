@@ -14,6 +14,8 @@ import {
   FileText,
   Filter,
   Loader2,
+  Mail,
+  MessageSquare,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -119,12 +121,14 @@ type FilterState = {
   types: Set<"marketing" | "transactional">;
   statuses: Set<"DRAFT" | "PUBLISHED" | "ARCHIVED">;
   usage: Set<"broadcasts" | "automations" | "unused">;
+  channels: Set<"email" | "sms">;
 };
 
 const defaultFilters: FilterState = {
   types: new Set(),
   statuses: new Set(),
   usage: new Set(),
+  channels: new Set(),
 };
 
 type SortColumn = "name" | "type" | "status" | "usage" | "updated";
@@ -296,7 +300,8 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
     searchQuery ||
     filters.types.size > 0 ||
     filters.statuses.size > 0 ||
-    filters.usage.size > 0;
+    filters.usage.size > 0 ||
+    filters.channels.size > 0;
 
   // Filter and sort templates
   const filteredTemplates = useMemo(() => {
@@ -316,6 +321,14 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
           ?.toLowerCase()
           .includes(query);
         if (!(matchesName || matchesDescription)) {
+          return false;
+        }
+      }
+
+      // Channel filter
+      if (filters.channels.size > 0) {
+        const templateChannel = template.channel || "email";
+        if (!filters.channels.has(templateChannel as "email" | "sms")) {
           return false;
         }
       }
@@ -419,6 +432,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
               <TableRow>
                 <TableHead className="w-12" />
                 <TableHead>Name</TableHead>
+                <TableHead>Channel</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Used in</TableHead>
@@ -435,6 +449,9 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-5 w-48" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16" />
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-5 w-24" />
@@ -481,7 +498,10 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
   }
 
   const activeFilterCount =
-    filters.types.size + filters.statuses.size + filters.usage.size;
+    filters.types.size +
+    filters.statuses.size +
+    filters.usage.size +
+    filters.channels.size;
 
   return (
     <TooltipProvider>
@@ -550,6 +570,21 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                   onCheckedChange={() => toggleFilter("statuses", "ARCHIVED")}
                 >
                   Archived
+                </DropdownMenuCheckboxItem>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Channel</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem
+                  checked={filters.channels.has("email")}
+                  onCheckedChange={() => toggleFilter("channels", "email")}
+                >
+                  Email
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filters.channels.has("sms")}
+                  onCheckedChange={() => toggleFilter("channels", "sms")}
+                >
+                  SMS
                 </DropdownMenuCheckboxItem>
 
                 <DropdownMenuSeparator />
@@ -650,6 +685,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                 >
                   Name
                 </SortableHeader>
+                <TableHead className="w-20">Channel</TableHead>
                 <SortableHeader
                   column="type"
                   currentSort={sort}
@@ -686,7 +722,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                 <TableRow>
                   <TableCell
                     className="h-32 text-center text-muted-foreground"
-                    colSpan={7}
+                    colSpan={8}
                   >
                     {hasActiveFilters
                       ? "No templates match your filters"
@@ -936,6 +972,7 @@ function TemplateRow({
   const isPublished = template.status === "PUBLISHED";
   const emailType = template.emailType || "marketing";
   const typeConfig = emailTypeConfig[emailType];
+  const templateChannel = (template.channel as "email" | "sms") || "email";
 
   const hasUsage = template.broadcastCount > 0 || template.automationCount > 0;
 
@@ -964,6 +1001,18 @@ function TemplateRow({
               {template.description}
             </span>
           )}
+        </div>
+      </TableCell>
+
+      {/* Channel */}
+      <TableCell>
+        <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+          {templateChannel === "sms" ? (
+            <MessageSquare className="h-3.5 w-3.5" />
+          ) : (
+            <Mail className="h-3.5 w-3.5" />
+          )}
+          <span className="capitalize">{templateChannel}</span>
         </div>
       </TableCell>
 
