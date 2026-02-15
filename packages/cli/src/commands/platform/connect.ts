@@ -26,8 +26,8 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import {
-  type OrgInfo,
   getApiBaseUrl,
+  type OrgInfo,
   readAuthConfig,
   resolveTokenAsync,
 } from "../../utils/shared/config.js";

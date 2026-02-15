@@ -80,3 +80,6 @@ next-env.d.ts
 .claude/spikes/
 .claude/audit/
 .claude/todos/
+
+# MCP configuration (may contain connection strings)
+.mcp.json

@@ -13,7 +13,10 @@
       "Bash(git diff*)",
       "Bash(git log*)",
       "Bash(git tag*)",
-      "Bash(gh release*)"
+      "Bash(gh release*)",
+      "Bash(AWS_PROFILE=wraps-dogfood aws logs*)",
+      "Bash(AWS_PROFILE=wraps-dogfood aws cloudwatch*)",
+      "Bash(vercel logs*)"
     ]
   },
   "hooks": {

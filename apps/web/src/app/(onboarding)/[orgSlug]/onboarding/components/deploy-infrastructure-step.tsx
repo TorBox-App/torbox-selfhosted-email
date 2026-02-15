@@ -177,7 +177,13 @@ export function DeployInfrastructureStep({
     "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-email-infrastructure.yaml";
 
   const quickCreateUrl = useMemo(
-    () => generateQuickCreateUrl(config, templateUrl, organizationId, webhookSecret),
+    () =>
+      generateQuickCreateUrl(
+        config,
+        templateUrl,
+        organizationId,
+        webhookSecret
+      ),
     [config, organizationId, webhookSecret]
   );
 

@@ -20,7 +20,7 @@
     "check:all": "pnpm check:errors && pnpm typecheck && pnpm test:guardrails && pnpm build && pnpm test",
     "fix": "npx ultracite@latest fix",
     "clean": "turbo run clean && rm -rf node_modules",
-    "cli": "node packages/cli/dist/cli.js",
+    "cli": "WRAPS_API_URL=http://localhost:3001 WRAPS_APP_URL=http://localhost:3000 node packages/cli/dist/cli.js",
     "tui": "pnpm -F=tui tui",
     "sst:dev": "dotenv -e apps/web/.env.local -- sst dev",
     "sst:deploy": "sst deploy",

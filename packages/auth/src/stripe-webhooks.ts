@@ -242,7 +242,9 @@ export async function handlePaymentFailed(
       );
       const posthog = getPostHogClient();
       posthog?.captureException(
-        emailError instanceof Error ? emailError : new Error(String(emailError)),
+        emailError instanceof Error
+          ? emailError
+          : new Error(String(emailError)),
         admin.user.email,
         {
           context: "payment_failed_notification",
