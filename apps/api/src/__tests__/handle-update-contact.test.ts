@@ -50,7 +50,7 @@ vi.mock("@wraps/db", () => ({
     id: "contact.id",
     organizationId: "contact.organizationId",
   },
-  eq: (...args: unknown[]) => mockEq(...args),
+  eq: (a: unknown, b: unknown) => mockEq(a, b),
   CASCADE_ENGAGEMENT_FIELD: "engagement.status",
   awsAccount: {},
   contactTopic: {},

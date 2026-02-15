@@ -77,13 +77,13 @@ export async function templatesInit(options: TemplatesInitOptions) {
         try {
           const url = new URL(pkg.homepage);
           detectedDomain = url.hostname;
-        // guardrails:allow-next-line no-swallowed-errors — invalid URL is expected
+          // guardrails:allow-next-line no-swallowed-errors — invalid URL is expected
         } catch {
           // ignore invalid URL
         }
       }
     }
-  // guardrails:allow-next-line no-swallowed-errors — package.json may not exist
+    // guardrails:allow-next-line no-swallowed-errors — package.json may not exist
   } catch {
     // ignore package.json read errors
   }
@@ -104,7 +104,7 @@ export async function templatesInit(options: TemplatesInitOptions) {
         }
       }
     }
-  // guardrails:allow-next-line no-swallowed-errors — metadata may not exist
+    // guardrails:allow-next-line no-swallowed-errors — metadata may not exist
   } catch {
     // ignore metadata read errors
   }

@@ -755,7 +755,7 @@ async function tryGetSesDkimTokens(domain: string): Promise<string[]> {
     }
 
     return [];
-  // guardrails:allow-next-line no-swallowed-errors — best-effort DKIM lookup, falls back to common selectors
+    // guardrails:allow-next-line no-swallowed-errors — best-effort DKIM lookup, falls back to common selectors
   } catch {
     // No credentials, no metadata, or other error - fall back to common selectors
     return [];

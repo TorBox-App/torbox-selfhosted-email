@@ -76,7 +76,7 @@ export async function sqsQueueExists(
       new GetQueueUrlCommand({ QueueName: queueName })
     );
     return response.QueueUrl || null;
-  // guardrails:allow-next-line no-swallowed-errors — queue not found is expected
+    // guardrails:allow-next-line no-swallowed-errors — queue not found is expected
   } catch {
     return null;
   }
@@ -112,7 +112,7 @@ export async function snsTopicExists(
     } while (nextToken);
 
     return null;
-  // guardrails:allow-next-line no-swallowed-errors — topic not found is expected
+    // guardrails:allow-next-line no-swallowed-errors — topic not found is expected
   } catch {
     return null;
   }

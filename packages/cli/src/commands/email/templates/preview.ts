@@ -143,7 +143,7 @@ export async function templatesPreview(options: TemplatesPreviewOptions) {
             emailType: compiled.emailType,
             previewText: compiled.previewText,
           });
-        // guardrails:allow-next-line no-swallowed-errors — compilation error shows placeholder
+          // guardrails:allow-next-line no-swallowed-errors — compilation error shows placeholder
         } catch {
           meta.push({
             slug,

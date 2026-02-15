@@ -83,9 +83,8 @@ export async function pollDomainVerification(
       spinner.message(
         `DKIM: ${dkimStatus} — ${elapsedStr} elapsed, checking every ${intervalMs / 1000}s...`
       );
-    // guardrails:allow-next-line no-swallowed-errors — transient API errors during polling are non-fatal, will retry
-    } catch {
-    }
+      // guardrails:allow-next-line no-swallowed-errors — transient API errors during polling are non-fatal, will retry
+    } catch {}
   }
 
   const totalElapsed = Math.round((Date.now() - startTime) / 1000);
@@ -154,9 +153,8 @@ export async function verifySandboxRecipient(
       spinner.message(
         `Waiting for ${email} to click verification link (${elapsedStr} elapsed)...`
       );
-    // guardrails:allow-next-line no-swallowed-errors — transient API errors during polling are non-fatal, will retry
-    } catch {
-    }
+      // guardrails:allow-next-line no-swallowed-errors — transient API errors during polling are non-fatal, will retry
+    } catch {}
   }
 
   spinner.stop(pc.yellow(`⏱ Timed out waiting for ${email} to verify`));

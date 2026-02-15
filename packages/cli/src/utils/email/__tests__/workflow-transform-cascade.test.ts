@@ -7,7 +7,6 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  type StepDefinition,
   transformWorkflow,
   type WorkflowDefinition,
 } from "../workflow-transform.js";
@@ -167,9 +166,7 @@ describe("transformWorkflow — cascadeGroupId preservation", () => {
     };
 
     const transformed = transformWorkflow(definition);
-    const emailStep = transformed.steps.find(
-      (s) => s.id === "regular-email"
-    );
+    const emailStep = transformed.steps.find((s) => s.id === "regular-email");
     expect(emailStep).toBeDefined();
     expect(
       (emailStep as { cascadeGroupId?: string }).cascadeGroupId

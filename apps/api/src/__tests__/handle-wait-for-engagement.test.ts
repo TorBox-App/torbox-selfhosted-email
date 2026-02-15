@@ -13,9 +13,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 let lastExecutionUpdate: Record<string, unknown> | null = null;
 
 // Mock send_email step execution for the "completed" query
-let mockPreviousStepExecs: Array<Record<string, unknown>> = [];
+let mockPreviousStepExecs: Record<string, unknown>[] = [];
 
-const mockScheduleWaitTimeout = vi.fn(() => Promise.resolve("scheduler-1"));
+const mockScheduleWaitTimeout = vi.fn((..._args: any[]) =>
+  Promise.resolve("scheduler-1")
+);
 
 // Mock drizzle-orm (and, sql are imported from here in the source)
 const mockAnd = vi.fn((...args: unknown[]) => ({ _op: "and", args }));
@@ -103,7 +105,7 @@ vi.mock("../services/workflow-queue", () => ({
   deleteScheduledStep: vi.fn(),
   enqueueWorkflowStep: vi.fn(),
   enqueueWorkflowStepBatch: vi.fn(),
-  scheduleWaitTimeout: (...args: unknown[]) => mockScheduleWaitTimeout(...args),
+  scheduleWaitTimeout: (...args: any[]) => mockScheduleWaitTimeout(...args),
   scheduleWorkflowStep: vi.fn(),
 }));
 
@@ -240,7 +242,7 @@ describe("handleWaitForEmailEngagement", () => {
     expect(andArgs.length).toBe(4);
     // The 4th argument should be the SQL LIKE filter (not undefined)
     expect(andArgs[3]).toBeDefined();
-    expect(andArgs[3]._sql).toBe(true);
+    expect((andArgs[3] as any)._sql).toBe(true);
   });
 
   it("does not apply cascadeGroupId filter when absent", async () => {
