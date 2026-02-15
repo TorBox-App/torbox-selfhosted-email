@@ -8,6 +8,7 @@ import type {
   ContactStatus,
   ContactWithMeta,
   EmailStatus,
+  PreferredChannel,
   SmsStatus,
 } from "@/lib/contacts";
 import type { EventWithContact, ListEventsOptions } from "@/lib/events";
@@ -156,6 +157,7 @@ export async function exportAllContacts(
         lastName: c.lastName,
         company: c.company,
         jobTitle: c.jobTitle,
+        preferredChannel: c.preferredChannel as PreferredChannel | null,
         properties: (c.properties as Record<string, unknown>) || {},
         lastActivityAt: c.lastActivityAt,
         createdAt: c.createdAt,

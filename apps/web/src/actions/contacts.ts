@@ -26,6 +26,7 @@ import type {
   EmailStatus,
   GetContactResult,
   ListContactsResult,
+  PreferredChannel,
   SmsStatus,
   UpdateContactResult,
 } from "@/lib/contacts";
@@ -41,6 +42,7 @@ export type {
   EmailStatus,
   GetContactResult,
   ListContactsResult,
+  PreferredChannel,
   SmsStatus,
   UpdateContactResult,
 } from "@/lib/contacts";
@@ -244,6 +246,7 @@ export async function listContacts(
         lastName: c.lastName,
         company: c.company,
         jobTitle: c.jobTitle,
+        preferredChannel: c.preferredChannel as PreferredChannel | null,
         // Shared
         properties: (c.properties as Record<string, unknown>) || {},
         lastActivityAt: c.lastActivityAt,
@@ -354,6 +357,7 @@ export async function getContact(
         lastName: c.lastName,
         company: c.company,
         jobTitle: c.jobTitle,
+        preferredChannel: c.preferredChannel as PreferredChannel | null,
         // Shared
         properties: (c.properties as Record<string, unknown>) || {},
         lastActivityAt: c.lastActivityAt,
@@ -396,6 +400,7 @@ export async function createContact(
     lastName?: string;
     company?: string;
     jobTitle?: string;
+    preferredChannel?: PreferredChannel | null;
     emailStatus?: EmailStatus;
     smsStatus?: SmsStatus;
     properties?: Record<string, unknown>;
@@ -514,6 +519,7 @@ export async function createContact(
         lastName: data.lastName || null,
         company: data.company || null,
         jobTitle: data.jobTitle || null,
+        preferredChannel: data.preferredChannel ?? null,
         // Shared
         properties: data.properties || {},
         createdBy: access.userId,
@@ -566,6 +572,7 @@ export async function updateContact(
     lastName?: string | null;
     company?: string | null;
     jobTitle?: string | null;
+    preferredChannel?: PreferredChannel | null;
     emailStatus?: EmailStatus;
     smsStatus?: SmsStatus;
     properties?: Record<string, unknown>;
@@ -750,6 +757,10 @@ export async function updateContact(
 
     if (data.jobTitle !== undefined) {
       updateData.jobTitle = data.jobTitle;
+    }
+
+    if (data.preferredChannel !== undefined) {
+      updateData.preferredChannel = data.preferredChannel;
     }
 
     // Validate that contact still has at least email or phone

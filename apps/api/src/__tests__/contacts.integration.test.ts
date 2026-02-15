@@ -247,6 +247,43 @@ describe("Contacts API Integration", () => {
       expect(body.contacts[0].email).toBe("active@test.com");
     });
 
+    it("filters by preferredChannel", async () => {
+      await db.insert(contact).values([
+        {
+          organizationId: testOrg.id,
+          email: "email-pref@test.com",
+          emailHash: "hash-email-pref",
+          preferredChannel: "email",
+          properties: {},
+        },
+        {
+          organizationId: testOrg.id,
+          email: "sms-pref@test.com",
+          emailHash: "hash-sms-pref",
+          preferredChannel: "sms",
+          properties: {},
+        },
+        {
+          organizationId: testOrg.id,
+          email: "no-pref@test.com",
+          emailHash: "hash-no-pref",
+          properties: {},
+        },
+      ]);
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts?preferredChannel=email")
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.contacts).toHaveLength(1);
+      expect(body.contacts[0].email).toBe("email-pref@test.com");
+      expect(body.contacts[0].preferredChannel).toBe("email");
+    });
+
     it("searches by email", async () => {
       await db.insert(contact).values([
         {
@@ -309,6 +346,30 @@ describe("Contacts API Integration", () => {
       expect(body.email).toBe("test@example.com");
       expect(body.topics).toHaveLength(1);
       expect(body.topics[0].topicName).toBe("Test Newsletter");
+    });
+
+    it("returns preferredChannel in response", async () => {
+      const [newContact] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "channel-get@example.com",
+          emailHash: "hash-channel-get",
+          emailStatus: "active",
+          preferredChannel: "email",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${newContact.id}`)
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.preferredChannel).toBe("email");
     });
 
     it("returns 404 for non-existent contact", async () => {
@@ -393,6 +454,50 @@ describe("Contacts API Integration", () => {
         .where(eq(contactTopic.contactId, body.id));
       expect(subscriptions).toHaveLength(1);
       expect(subscriptions[0].topicId).toBe(testTopic.id);
+    });
+
+    it("creates contact with preferredChannel", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "channel-pref@example.com",
+            preferredChannel: "sms",
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+      expect(body.preferredChannel).toBe("sms");
+
+      // Verify in database
+      const [dbContact] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, body.id));
+      expect(dbContact.preferredChannel).toBe("sms");
+    });
+
+    it("creates contact with null preferredChannel by default", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "no-channel-pref@example.com",
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+      expect(body.preferredChannel).toBeNull();
     });
 
     it("returns 400 when no email or phone provided", async () => {
@@ -767,6 +872,73 @@ describe("Contacts API Integration", () => {
         name: "New Name",
         company: "Acme Inc",
       });
+    });
+
+    it("updates preferredChannel", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "update-channel@example.com",
+          emailHash: "hash-update-channel",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preferredChannel: "email" }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.preferredChannel).toBe("email");
+
+      // Verify in database
+      const [updated] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, existing.id));
+      expect(updated.preferredChannel).toBe("email");
+    });
+
+    it("clears preferredChannel with null", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "clear-channel@example.com",
+          emailHash: "hash-clear-channel",
+          preferredChannel: "sms",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preferredChannel: null }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.preferredChannel).toBeNull();
+
+      // Verify in database
+      const [updated] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, existing.id));
+      expect(updated.preferredChannel).toBeNull();
     });
 
     it("returns 404 for non-existent contact", async () => {

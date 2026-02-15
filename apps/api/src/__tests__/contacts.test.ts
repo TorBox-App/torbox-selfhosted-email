@@ -18,6 +18,7 @@ vi.mock("@wraps/db", () => ({
     phoneHash: "phone_hash",
     emailStatus: "email_status",
     smsStatus: "sms_status",
+    preferredChannel: "preferred_channel",
     properties: "properties",
     emailsSent: "emails_sent",
     emailsOpened: "emails_opened",
@@ -70,6 +71,7 @@ function createTestApp() {
             phone: "+15551234567",
             emailStatus: "active",
             smsStatus: "opted_in",
+            preferredChannel: null,
             properties: {},
             emailsSent: 10,
             emailsOpened: 5,
@@ -100,6 +102,7 @@ function createTestApp() {
         phone: "+15551234567",
         emailStatus: "active",
         smsStatus: "opted_in",
+        preferredChannel: null,
         properties: { name: "Test User" },
         emailsSent: 10,
         emailsOpened: 5,
@@ -138,6 +141,7 @@ function createTestApp() {
         phone: body.phone || null,
         emailStatus: body.emailStatus || (body.email ? "active" : null),
         smsStatus: body.smsStatus || (body.phone ? "pending_consent" : null),
+        preferredChannel: body.preferredChannel || null,
         properties: body.properties || {},
         emailsSent: 0,
         emailsOpened: 0,
@@ -163,6 +167,7 @@ function createTestApp() {
         phone: body.phone ?? "+15551234567",
         emailStatus: body.emailStatus ?? "active",
         smsStatus: body.smsStatus ?? "opted_in",
+        preferredChannel: body.preferredChannel ?? null,
         properties: body.properties ?? {},
         emailsSent: 10,
         emailsOpened: 5,
@@ -224,6 +229,7 @@ describe("Contacts API", () => {
       expect(body.page).toBe(1);
       expect(body.pageSize).toBe(50);
       expect(body.totalPages).toBe(1);
+      expect(body.contacts[0].preferredChannel).toBeNull();
     });
 
     it("respects pagination parameters", async () => {
@@ -261,6 +267,7 @@ describe("Contacts API", () => {
       const body = await response.json();
       expect(body.id).toBe("contact-123");
       expect(body.email).toBe("test@example.com");
+      expect(body.preferredChannel).toBeNull();
       expect(body.topics).toHaveLength(1);
       expect(body.topics[0].topicName).toBe("Newsletter");
     });
@@ -311,6 +318,24 @@ describe("Contacts API", () => {
       expect(body.smsStatus).toBe("pending_consent");
     });
 
+    it("creates contact with preferredChannel", async () => {
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: "new@example.com",
+            preferredChannel: "sms",
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+      expect(body.preferredChannel).toBe("sms");
+    });
+
     it("requires email or phone", async () => {
       const response = await app.handle(
         new Request("http://localhost/v1/contacts", {
@@ -356,6 +381,36 @@ describe("Contacts API", () => {
 
       const body = await response.json();
       expect(body.email).toBe("updated@example.com");
+    });
+
+    it("updates preferredChannel", async () => {
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts/contact-123", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preferredChannel: "email" }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.preferredChannel).toBe("email");
+    });
+
+    it("clears preferredChannel with null", async () => {
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts/contact-123", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preferredChannel: null }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.preferredChannel).toBeNull();
     });
 
     it("returns 404 for non-existent contact", async () => {

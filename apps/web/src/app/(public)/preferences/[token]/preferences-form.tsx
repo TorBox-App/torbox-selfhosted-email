@@ -22,6 +22,8 @@ type PreferencesFormProps = {
   organizationId: string;
   topics: Topic[];
   isGloballyUnsubscribed: boolean;
+  hasMultipleChannels: boolean;
+  preferredChannel: "email" | "sms" | null;
   brandColor: string;
   orgName?: string;
 };
@@ -32,6 +34,8 @@ export function PreferencesForm({
   organizationId,
   topics,
   isGloballyUnsubscribed: initiallyUnsubscribed,
+  hasMultipleChannels,
+  preferredChannel: initialPreferredChannel,
   brandColor,
   orgName,
 }: PreferencesFormProps) {
@@ -49,6 +53,9 @@ export function PreferencesForm({
   const [pendingTopics, setPendingTopics] = useState<Set<string>>(
     () => new Set(topics.filter((t) => t.pending).map((t) => t.id))
   );
+  const [selectedChannel, setSelectedChannel] = useState<
+    "email" | "sms" | null
+  >(initialPreferredChannel);
   const [resendingFor, setResendingFor] = useState<string | null>(null);
   const [isGloballyUnsubscribed, setIsGloballyUnsubscribed] = useState(
     initiallyUnsubscribed
@@ -77,7 +84,8 @@ export function PreferencesForm({
         token,
         contactId,
         organizationId,
-        subscriptions
+        subscriptions,
+        hasMultipleChannels ? selectedChannel : undefined
       );
       if (result.success) {
         // Update pending topics state
@@ -327,6 +335,56 @@ export function PreferencesForm({
           <p className="text-gray-500 text-sm dark:text-gray-400">
             No email topics available.
           </p>
+        </div>
+      )}
+
+      {/* Channel preference */}
+      {hasMultipleChannels && (
+        <div className="space-y-1">
+          <h2 className="mb-3 font-medium text-gray-900 text-sm dark:text-white">
+            Preferred Channel
+          </h2>
+          <p className="mb-3 text-gray-500 text-xs dark:text-gray-400">
+            Choose how you'd prefer to be contacted.
+          </p>
+          <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+            {(
+              [
+                { value: null, label: "No preference" },
+                { value: "email", label: "Email" },
+                { value: "sms", label: "SMS" },
+              ] as const
+            ).map((option) => (
+              <label
+                className="flex cursor-pointer items-center gap-4 p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                key={option.label}
+              >
+                <div className="relative flex h-5 items-center">
+                  <input
+                    checked={selectedChannel === option.value}
+                    className="h-4 w-4 cursor-pointer appearance-none rounded-full border-2 border-gray-300 transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 dark:border-gray-600"
+                    name="preferredChannel"
+                    onChange={() => setSelectedChannel(option.value)}
+                    style={{
+                      backgroundColor:
+                        selectedChannel === option.value
+                          ? brandColor
+                          : undefined,
+                    }}
+                    type="radio"
+                  />
+                  {selectedChannel === option.value && (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                    </div>
+                  )}
+                </div>
+                <span className="font-medium text-gray-900 text-sm dark:text-white">
+                  {option.label}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
       )}
 

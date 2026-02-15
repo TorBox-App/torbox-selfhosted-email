@@ -58,6 +58,17 @@ export const SMS_STATUS_COLORS: Record<SmsStatus, string> = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
+// PREFERRED CHANNEL
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const PREFERRED_CHANNELS = ["email", "sms"] as const;
+export type PreferredChannel = (typeof PREFERRED_CHANNELS)[number];
+export const PREFERRED_CHANNEL_LABELS: Record<PreferredChannel, string> = {
+  email: "Email",
+  sms: "SMS",
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
 // LEGACY STATUS (deprecated, for backwards compatibility)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -133,6 +144,7 @@ export type ContactWithMeta = {
   lastName: string | null;
   company: string | null;
   jobTitle: string | null;
+  preferredChannel: PreferredChannel | null;
 
   // Shared
   properties: Record<string, unknown>;

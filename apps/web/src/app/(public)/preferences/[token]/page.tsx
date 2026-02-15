@@ -1,4 +1,5 @@
 import {
+  awsAccount,
   contact,
   contactTopic,
   db,
@@ -103,7 +104,9 @@ export default async function PreferencesPage({
     .select({
       id: contact.id,
       email: contact.email,
+      phone: contact.phone,
       emailStatus: contact.emailStatus,
+      preferredChannel: contact.preferredChannel,
     })
     .from(contact)
     .where(
@@ -171,6 +174,20 @@ export default async function PreferencesPage({
     topicDetails.map((t) => [t.id, t.doubleOptIn])
   );
 
+  // Check if org has SMS enabled on any AWS account
+  const [smsEnabledAccount] = await db
+    .select({ id: awsAccount.id })
+    .from(awsAccount)
+    .where(
+      and(
+        eq(awsAccount.organizationId, organizationId),
+        eq(awsAccount.smsEnabled, true)
+      )
+    )
+    .limit(1);
+
+  const orgHasSms = !!smsEnabledAccount;
+
   // Build topic list with subscription status
   const topicsWithStatus = topics.map((t) => {
     const sub = subscriptions.find((s) => s.topicId === t.id);
@@ -234,11 +251,15 @@ export default async function PreferencesPage({
           <PreferencesForm
             brandColor={brandColor}
             contactId={contactId}
+            hasMultipleChannels={
+              !!(contactRecord.email && contactRecord.phone && orgHasSms)
+            }
             isGloballyUnsubscribed={
               contactRecord.emailStatus === "unsubscribed"
             }
             organizationId={organizationId}
             orgName={orgWithSettings?.name || undefined}
+            preferredChannel={contactRecord.preferredChannel}
             token={token}
             topics={topicsWithStatus}
           />

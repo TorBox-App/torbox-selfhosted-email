@@ -13,15 +13,7 @@
  */
 
 import { createHash } from "node:crypto";
-import {
-  contact,
-  contactTopic,
-  db,
-  type EmailStatus,
-  eq,
-  type SmsStatus,
-  topic,
-} from "@wraps/db";
+import { contact, contactTopic, db, eq, topic } from "@wraps/db";
 import { sendTopicConfirmationEmail } from "@wraps/email";
 import { and, desc, inArray, or, sql } from "drizzle-orm";
 import { t } from "elysia";
@@ -64,6 +56,9 @@ const contactResponseSchema = t.Object({
   }),
   smsStatus: t.Union([t.String(), t.Null()], {
     description: "SMS subscription status",
+  }),
+  preferredChannel: t.Union([t.String(), t.Null()], {
+    description: "Preferred communication channel",
   }),
   properties: t.Object({}, { additionalProperties: true }),
   emailsSent: t.Number({ description: "Number of emails sent" }),
@@ -113,6 +108,11 @@ const createContactSchema = t.Object({
       ],
       { description: "SMS consent status" }
     )
+  ),
+  preferredChannel: t.Optional(
+    t.Union([t.Literal("email"), t.Literal("sms")], {
+      description: "Preferred communication channel",
+    })
   ),
   properties: propertiesSchema,
   topicIds: t.Optional(
@@ -172,6 +172,11 @@ const updateContactSchema = t.Object({
       { description: "SMS consent status" }
     )
   ),
+  preferredChannel: t.Optional(
+    t.Union([t.Literal("email"), t.Literal("sms"), t.Null()], {
+      description: "Preferred communication channel (null to clear)",
+    })
+  ),
   properties: propertiesSchema,
   topicIds: t.Optional(
     t.Array(t.String({ maxLength: 36 }), {
@@ -196,13 +201,34 @@ const listContactsQuerySchema = t.Object({
     })
   ),
   emailStatus: t.Optional(
-    t.String({ description: "Filter by email status", maxLength: 20 })
+    t.Union(
+      [
+        t.Literal("active"),
+        t.Literal("unsubscribed"),
+        t.Literal("bounced"),
+        t.Literal("complained"),
+      ],
+      { description: "Filter by email status" }
+    )
   ),
   smsStatus: t.Optional(
-    t.String({ description: "Filter by SMS status", maxLength: 20 })
+    t.Union(
+      [
+        t.Literal("pending_consent"),
+        t.Literal("opted_in"),
+        t.Literal("opted_out"),
+        t.Literal("invalid"),
+      ],
+      { description: "Filter by SMS status" }
+    )
   ),
   search: t.Optional(
     t.String({ description: "Search by email or phone", maxLength: 255 })
+  ),
+  preferredChannel: t.Optional(
+    t.Union([t.Literal("email"), t.Literal("sms")], {
+      description: "Filter by preferred channel",
+    })
   ),
 });
 
@@ -251,13 +277,15 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       ];
 
       if (query.emailStatus) {
-        conditions.push(
-          eq(contact.emailStatus, query.emailStatus as EmailStatus)
-        );
+        conditions.push(eq(contact.emailStatus, query.emailStatus));
       }
 
       if (query.smsStatus) {
-        conditions.push(eq(contact.smsStatus, query.smsStatus as SmsStatus));
+        conditions.push(eq(contact.smsStatus, query.smsStatus));
+      }
+
+      if (query.preferredChannel) {
+        conditions.push(eq(contact.preferredChannel, query.preferredChannel));
       }
 
       if (query.search) {
@@ -290,6 +318,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           jobTitle: contact.jobTitle,
           emailStatus: contact.emailStatus,
           smsStatus: contact.smsStatus,
+          preferredChannel: contact.preferredChannel,
           properties: contact.properties,
           emailsSent: contact.emailsSent,
           emailsOpened: contact.emailsOpened,
@@ -382,6 +411,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         jobTitle: result.jobTitle,
         emailStatus: result.emailStatus,
         smsStatus: result.smsStatus,
+        preferredChannel: result.preferredChannel,
         properties: result.properties,
         emailsSent: result.emailsSent,
         emailsOpened: result.emailsOpened,
@@ -488,6 +518,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           lastName: body.lastName ?? null,
           company: body.company ?? null,
           jobTitle: body.jobTitle ?? null,
+          preferredChannel: body.preferredChannel ?? null,
           properties: body.properties ?? {},
           createdBy: authContext.userId,
         })
@@ -584,6 +615,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           lastName: newContact.lastName,
           company: newContact.company,
           jobTitle: newContact.jobTitle,
+          preferredChannel: newContact.preferredChannel,
         },
       }).catch((err) => {
         console.error("[contacts] Failed to emit contact_created event:", err);
@@ -639,6 +671,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         jobTitle: newContact.jobTitle,
         emailStatus: newContact.emailStatus,
         smsStatus: newContact.smsStatus,
+        preferredChannel: newContact.preferredChannel,
         properties: newContact.properties,
         emailsSent: newContact.emailsSent,
         emailsOpened: newContact.emailsOpened,
@@ -736,6 +769,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       if (body.jobTitle !== undefined) {
         updateValues.jobTitle = body.jobTitle;
+      }
+
+      if (body.preferredChannel !== undefined) {
+        updateValues.preferredChannel = body.preferredChannel;
       }
 
       // Update contact
@@ -1028,6 +1065,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           lastName: updated.lastName,
           company: updated.company,
           jobTitle: updated.jobTitle,
+          preferredChannel: updated.preferredChannel,
         },
       }).catch((err) => {
         console.error("[contacts] Failed to emit contact_updated event:", err);
@@ -1059,6 +1097,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         jobTitle: updated.jobTitle,
         emailStatus: updated.emailStatus,
         smsStatus: updated.smsStatus,
+        preferredChannel: updated.preferredChannel,
         properties: updated.properties,
         emailsSent: updated.emailsSent,
         emailsOpened: updated.emailsOpened,

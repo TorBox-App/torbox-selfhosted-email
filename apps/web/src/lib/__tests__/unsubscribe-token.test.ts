@@ -35,9 +35,7 @@ describe("Unsubscribe Token", () => {
       vi.stubEnv("NODE_ENV", "production");
       vi.stubEnv("UNSUBSCRIBE_SECRET", "");
 
-      const { generateUnsubscribeToken } = await import(
-        "../unsubscribe-token"
-      );
+      const { generateUnsubscribeToken } = await import("../unsubscribe-token");
 
       await expect(
         generateUnsubscribeToken("contact-123", "org-456")
@@ -67,9 +65,7 @@ describe("Unsubscribe Token", () => {
 
   describe("generateUnsubscribeToken", () => {
     it("should generate a valid JWT token", async () => {
-      const { generateUnsubscribeToken } = await import(
-        "../unsubscribe-token"
-      );
+      const { generateUnsubscribeToken } = await import("../unsubscribe-token");
 
       const token = await generateUnsubscribeToken("contact-123", "org-456");
 
@@ -116,9 +112,7 @@ describe("Unsubscribe Token", () => {
     });
 
     it("should return null for token signed with different secret", async () => {
-      const { generateUnsubscribeToken } = await import(
-        "../unsubscribe-token"
-      );
+      const { generateUnsubscribeToken } = await import("../unsubscribe-token");
 
       const token = await generateUnsubscribeToken("contact-123", "org-456");
 

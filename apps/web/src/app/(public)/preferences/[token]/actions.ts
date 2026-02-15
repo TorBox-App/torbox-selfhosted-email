@@ -1,6 +1,13 @@
 "use server";
 
-import { contact, contactTopic, db, eq, topic } from "@wraps/db";
+import {
+  contact,
+  contactTopic,
+  db,
+  eq,
+  type PreferredChannel,
+  topic,
+} from "@wraps/db";
 import { determineSubscriptionStatus } from "@wraps/email";
 import { and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -19,12 +26,23 @@ export async function updatePreferences(
   token: string,
   contactId: string,
   organizationId: string,
-  subscriptions: Record<string, boolean>
+  subscriptions: Record<string, boolean>,
+  preferredChannel?: PreferredChannel | null
 ): Promise<ActionResult> {
   // Verify token matches the contact
   const payload = await verifyUnsubscribeToken(token);
   if (!payload || payload.cid !== contactId || payload.oid !== organizationId) {
     return { success: false, error: "Invalid token" };
+  }
+
+  // Validate preferredChannel at runtime
+  if (
+    preferredChannel !== undefined &&
+    preferredChannel !== null &&
+    preferredChannel !== "email" &&
+    preferredChannel !== "sms"
+  ) {
+    return { success: false, error: "Invalid preferred channel" };
   }
 
   try {
@@ -149,6 +167,22 @@ export async function updatePreferences(
       }
     }
 
+    // Update preferred channel if provided
+    if (preferredChannel !== undefined) {
+      await db
+        .update(contact)
+        .set({
+          preferredChannel,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(contact.id, contactId),
+            eq(contact.organizationId, organizationId)
+          )
+        );
+    }
+
     revalidatePath(`/preferences/${token}`);
     return {
       success: true,
@@ -184,9 +218,14 @@ export async function unsubscribeGlobally(
         emailStatus: "unsubscribed",
         emailUnsubscribedAt: now,
       })
-      .where(eq(contact.id, contactId));
+      .where(
+        and(
+          eq(contact.id, contactId),
+          eq(contact.organizationId, organizationId)
+        )
+      );
 
-    // Unsubscribe from all topics
+    // Unsubscribe from all topics for this contact
     await db
       .update(contactTopic)
       .set({
