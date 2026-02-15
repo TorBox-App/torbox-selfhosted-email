@@ -75,6 +75,8 @@ import {
   telemetryEnable,
   telemetryStatus,
 } from "./commands/telemetry.js";
+// Workflow commands
+import { workflowInit } from "./commands/workflow/init.js";
 import { getTelemetryClient } from "./telemetry/client.js";
 import { trackCommand } from "./telemetry/events.js";
 import {
@@ -1163,6 +1165,36 @@ async function run() {
       return;
     }
 
+    // Handle Workflow subcommands (e.g., wraps workflow init)
+    if (primaryCommand === "workflow") {
+      switch (subCommand) {
+        case "init":
+          await workflowInit({
+            yes: flags.yes,
+          });
+          break;
+
+        default:
+          clack.log.error(
+            `Unknown workflow command: ${subCommand || "(none)"}`
+          );
+          console.log(`\nAvailable commands: ${pc.cyan("init")}\n`);
+          console.log(`Run ${pc.cyan("wraps --help")} for more information.\n`);
+          throw new Error(
+            `Unknown workflow command: ${subCommand || "(none)"}`
+          );
+      }
+      // Track workflow commands
+      const workflowDuration = Date.now() - startTime;
+      const workflowCommandName = `workflow:${subCommand}`;
+      trackCommand(workflowCommandName, {
+        success: true,
+        duration_ms: workflowDuration,
+        service: "workflow",
+      });
+      return;
+    }
+
     // Handle Platform subcommands
     if (primaryCommand === "platform") {
       if (!subCommand) {
@@ -1363,6 +1395,7 @@ async function run() {
       case "sms":
       case "cdn":
       case "aws":
+      case "workflow":
         console.log(
           `\nPlease specify a command for ${primaryCommand} service.\n`
         );

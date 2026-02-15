@@ -10,6 +10,7 @@
 
 import {
   and,
+  awsAccount,
   db,
   eq,
   type TriggerConfig,
@@ -430,6 +431,13 @@ export async function upsertWorkflowFromCli(
 ): Promise<UpsertResult> {
   const now = new Date();
 
+  // Look up the org's AWS account so workflows can send emails/SMS
+  const [orgAwsAccount] = await tx
+    .select({ id: awsAccount.id })
+    .from(awsAccount)
+    .where(eq(awsAccount.organizationId, authContext.organizationId))
+    .limit(1);
+
   // Check for existing workflow by (organizationId, slug)
   const [existing] = await tx
     .select({
@@ -470,6 +478,7 @@ export async function upsertWorkflowFromCli(
         transitions: body.transitions,
         triggerType: body.triggerType as WorkflowTriggerType,
         triggerConfig: body.triggerConfig ?? {},
+        awsAccountId: orgAwsAccount?.id ?? null,
         allowReentry: body.settings?.allowReentry ?? false,
         reentryDelaySeconds: body.settings?.reentryDelaySeconds,
         maxConcurrentExecutions: body.settings?.maxConcurrentExecutions,
@@ -500,6 +509,7 @@ export async function upsertWorkflowFromCli(
   await tx.insert(workflow).values({
     id,
     organizationId: authContext.organizationId,
+    awsAccountId: orgAwsAccount?.id ?? null,
     name: body.name,
     slug: body.slug,
     description: body.description,

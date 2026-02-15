@@ -116,7 +116,11 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
     // 2. Validate API key (constant-time comparison to prevent timing attacks)
     const secretBuffer = Buffer.from(account.webhookSecret || "");
     const keyBuffer = Buffer.from(apiKey || "");
-    if (!account.webhookSecret || secretBuffer.length !== keyBuffer.length || !timingSafeEqual(secretBuffer, keyBuffer)) {
+    if (
+      !account.webhookSecret ||
+      secretBuffer.length !== keyBuffer.length ||
+      !timingSafeEqual(secretBuffer, keyBuffer)
+    ) {
       console.log(`[WEBHOOK] Invalid API key for account: ${awsAccountNumber}`);
       set.status = 401;
       return { error: "Invalid API key" };

@@ -222,6 +222,91 @@ export const webhook = (id, config) => {
   };
 };
 
+/**
+ * cascade(id, config) — expand a cross-channel cascade into primitive steps.
+ *
+ * For each email channel (except the last), we emit:
+ *   send_email → wait_for_email_engagement → condition (engaged?)
+ * with the condition's "yes" branch containing an exit node and the "no"
+ * branch falling through to the next channel.
+ *
+ * Non-email channels (SMS) emit only a send step.
+ *
+ * Every generated step carries cascadeGroupId = id so the execution
+ * engine can scope engagement queries to the correct group.
+ */
+export const cascade = (id, config) => {
+  const channels = config.channels || [];
+  const steps = [];
+
+  for (let i = 0; i < channels.length; i++) {
+    const channel = channels[i];
+    const isLast = i === channels.length - 1;
+
+    if (channel.type === 'email') {
+      // Send email step
+      steps.push({
+        id: id + '-send-' + i,
+        type: 'send_email',
+        name: 'Cascade: send ' + (channel.template || 'email'),
+        config: { type: 'send_email', templateId: channel.template },
+        cascadeGroupId: id,
+      });
+
+      // If not last channel, add wait + condition
+      if (!isLast && channel.waitFor) {
+        const waitSeconds = durationToSeconds(channel.waitFor) || 259200;
+        const waitId = id + '-wait-' + i;
+        const condId = id + '-cond-' + i;
+        const exitId = id + '-exit-' + i;
+
+        // Wait for engagement step
+        steps.push({
+          id: waitId,
+          type: 'wait_for_email_engagement',
+          name: 'Cascade: wait for ' + (channel.engagement || 'opened'),
+          config: { type: 'wait_for_email_engagement', timeoutSeconds: waitSeconds },
+          cascadeGroupId: id,
+        });
+
+        // Condition step: check engagement.status
+        steps.push({
+          id: condId,
+          type: 'condition',
+          name: 'Cascade: email engaged?',
+          config: {
+            type: 'condition',
+            field: 'engagement.status',
+            operator: 'equals',
+            value: 'true',
+          },
+          cascadeGroupId: id,
+          branches: {
+            yes: [{
+              id: exitId,
+              type: 'exit',
+              name: 'Exit',
+              config: { type: 'exit', reason: 'Engaged via email' },
+              cascadeGroupId: id,
+            }],
+          },
+        });
+      }
+    } else if (channel.type === 'sms') {
+      // Send SMS step
+      steps.push({
+        id: id + '-send-' + i,
+        type: 'send_sms',
+        name: 'Cascade: send ' + (channel.template || 'sms'),
+        config: { type: 'send_sms', template: channel.template, body: channel.body },
+        cascadeGroupId: id,
+      });
+    }
+  }
+
+  return steps;
+};
+
 // Internal helpers
 function normalizeDuration(duration) {
   if (duration.days !== undefined) {

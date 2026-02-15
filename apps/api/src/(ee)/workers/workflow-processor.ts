@@ -13,12 +13,14 @@ import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { toPlainText } from "@react-email/render";
 import {
   awsAccount,
+  CASCADE_ENGAGEMENT_FIELD,
   contact,
   contactTopic,
   db,
   eq,
   messageSend,
   organization,
+  type PreferredChannel,
   type TriggerConfig,
   template,
   type WorkflowStep,
@@ -572,7 +574,7 @@ async function executeStep(
       return await handleDelay(config, execution, step.id, organizationId);
 
     case "condition":
-      return handleCondition(config, contactRecord, execution);
+      return await handleCondition(config, contactRecord, execution, step);
 
     case "update_contact":
       return await handleUpdateContact(config, contactRecord);
@@ -592,7 +594,7 @@ async function executeStep(
       return await handleWaitForEmailEngagement(
         config,
         execution,
-        step.id,
+        step,
         organizationId
       );
 
@@ -1281,11 +1283,59 @@ async function handleDelay(
   return { action: "wait" };
 }
 
-function handleCondition(
+async function handleCondition(
   config: Extract<WorkflowStepConfig, { type: "condition" }>,
   contactRecord: typeof contact.$inferSelect,
-  execution: typeof workflowExecution.$inferSelect
-): { action: "next"; branch: "yes" | "no" } {
+  execution: typeof workflowExecution.$inferSelect,
+  step: WorkflowStep
+): Promise<{ action: "next"; branch: "yes" | "no" }> {
+  // Handle engagement.status — used by cascade condition steps to check
+  // whether the contact engaged with a previous email. The preceding
+  // wait_for_email_engagement step records its branch ("opened", "clicked",
+  // "bounced", or "timeout") on the step execution row.
+  if (config.field === CASCADE_ENGAGEMENT_FIELD) {
+    // Scope to the same cascade group to avoid picking up engagement results
+    // from a different cascade node in the same workflow execution.
+    // Cascade step IDs follow the pattern: ${cascadeGroupId}-cond-${i},
+    // and wait steps are: ${cascadeGroupId}-wait-${i}.
+    const cascadeGroupId = step.cascadeGroupId;
+    const waitStepFilter = cascadeGroupId
+      ? sql`${workflowStepExecution.stepId} LIKE ${`${cascadeGroupId}-wait-%`}`
+      : undefined;
+
+    const previousWaitStep = await db
+      .select({ branch: workflowStepExecution.branch })
+      .from(workflowStepExecution)
+      .where(
+        and(
+          eq(workflowStepExecution.executionId, execution.id),
+          eq(workflowStepExecution.stepType, "wait_for_email_engagement"),
+          eq(workflowStepExecution.status, "completed"),
+          waitStepFilter
+        )
+      )
+      .orderBy(sql`${workflowStepExecution.completedAt} DESC`)
+      .limit(1);
+
+    const engaged =
+      previousWaitStep[0]?.branch === "opened" ||
+      previousWaitStep[0]?.branch === "clicked";
+
+    // The cascade expansion uses operator "equals" / value "true",
+    // so "true" === "true" when engaged, "false" !== "true" when not.
+    const fieldValue = String(engaged);
+    const conditionMet = evaluateCondition(
+      fieldValue,
+      config.operator,
+      config.value
+    );
+
+    return {
+      action: "next",
+      branch: conditionMet ? "yes" : "no",
+    };
+  }
+
   // Get the field value from contact properties
   const properties = contactRecord.properties as Record<string, unknown> | null;
   const triggerData = execution.triggerData as Record<string, unknown> | null;
@@ -1338,6 +1388,23 @@ export function evaluateCondition(
       return Number(fieldValue) > Number(compareValue);
     case "less_than":
       return Number(fieldValue) < Number(compareValue);
+    case "greater_than_or_equals":
+      return Number(fieldValue) >= Number(compareValue);
+    case "less_than_or_equals":
+      return Number(fieldValue) <= Number(compareValue);
+    case "is_true":
+      return (
+        fieldValue === true || strFieldValue === "true" || strFieldValue === "1"
+      );
+    case "is_false":
+      return (
+        fieldValue === false ||
+        fieldValue === null ||
+        fieldValue === undefined ||
+        strFieldValue === "false" ||
+        strFieldValue === "0" ||
+        strFieldValue === ""
+      );
     case "is_set":
       return (
         fieldValue !== null && fieldValue !== undefined && fieldValue !== ""
@@ -1352,7 +1419,15 @@ export function evaluateCondition(
   }
 }
 
-async function handleUpdateContact(
+const FIRST_CLASS_CONTACT_FIELDS = new Set([
+  "preferredChannel",
+  "firstName",
+  "lastName",
+  "company",
+  "jobTitle",
+]);
+
+export async function handleUpdateContact(
   config: Extract<WorkflowStepConfig, { type: "update_contact" }>,
   contactRecord: typeof contact.$inferSelect
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
@@ -1360,14 +1435,58 @@ async function handleUpdateContact(
   const currentProperties =
     (contactRecord.properties as Record<string, unknown>) || {};
   const newProperties = { ...currentProperties };
+  const directUpdates: Partial<typeof contact.$inferInsert> = {};
 
   for (const update of updates) {
+    const isFirstClass = FIRST_CLASS_CONTACT_FIELDS.has(update.field);
+
     switch (update.operation) {
       case "set":
-        newProperties[update.field] = update.value;
+        if (isFirstClass) {
+          switch (update.field) {
+            case "preferredChannel":
+              directUpdates.preferredChannel =
+                update.value as PreferredChannel | null;
+              break;
+            case "firstName":
+              directUpdates.firstName = update.value as string | null;
+              break;
+            case "lastName":
+              directUpdates.lastName = update.value as string | null;
+              break;
+            case "company":
+              directUpdates.company = update.value as string | null;
+              break;
+            case "jobTitle":
+              directUpdates.jobTitle = update.value as string | null;
+              break;
+          }
+        } else {
+          newProperties[update.field] = update.value;
+        }
         break;
       case "unset":
-        delete newProperties[update.field];
+        if (isFirstClass) {
+          switch (update.field) {
+            case "preferredChannel":
+              directUpdates.preferredChannel = null;
+              break;
+            case "firstName":
+              directUpdates.firstName = null;
+              break;
+            case "lastName":
+              directUpdates.lastName = null;
+              break;
+            case "company":
+              directUpdates.company = null;
+              break;
+            case "jobTitle":
+              directUpdates.jobTitle = null;
+              break;
+          }
+        } else {
+          delete newProperties[update.field];
+        }
         break;
       case "increment":
         newProperties[update.field] =
@@ -1397,8 +1516,17 @@ async function handleUpdateContact(
 
   await db
     .update(contact)
-    .set({ properties: newProperties, updatedAt: new Date() })
-    .where(eq(contact.id, contactRecord.id));
+    .set({
+      ...directUpdates,
+      properties: newProperties,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(contact.id, contactRecord.id),
+        eq(contact.organizationId, contactRecord.organizationId)
+      )
+    );
 
   return {
     action: "next",
@@ -1485,14 +1613,20 @@ async function handleWaitForEvent(
   return { action: "wait" };
 }
 
-async function handleWaitForEmailEngagement(
+export async function handleWaitForEmailEngagement(
   config: Extract<WorkflowStepConfig, { type: "wait_for_email_engagement" }>,
   execution: typeof workflowExecution.$inferSelect,
-  stepId: string,
+  step: WorkflowStep,
   organizationId: string
 ): Promise<{ action: "wait" }> {
   const timeoutSeconds = config.timeoutSeconds || 259_200; // Default 3 days
   const timeoutAt = new Date(Date.now() + timeoutSeconds * 1000);
+
+  // Scope to cascade group if applicable, so we match the correct email
+  const cascadeGroupId = step.cascadeGroupId;
+  const sendStepFilter = cascadeGroupId
+    ? sql`${workflowStepExecution.stepId} LIKE ${`${cascadeGroupId}-send-%`}`
+    : undefined;
 
   // Find the previous send_email step execution to get the message ID
   const previousStepExecs = await db
@@ -1502,7 +1636,8 @@ async function handleWaitForEmailEngagement(
       and(
         eq(workflowStepExecution.executionId, execution.id),
         eq(workflowStepExecution.stepType, "send_email"),
-        eq(workflowStepExecution.status, "completed")
+        eq(workflowStepExecution.status, "completed"),
+        sendStepFilter
       )
     )
     .orderBy(sql`${workflowStepExecution.completedAt} DESC`)
@@ -1516,7 +1651,7 @@ async function handleWaitForEmailEngagement(
   // Schedule timeout
   const schedulerName = await scheduleWaitTimeout({
     executionId: execution.id,
-    stepId,
+    stepId: step.id,
     organizationId,
     timeoutSeconds,
   });

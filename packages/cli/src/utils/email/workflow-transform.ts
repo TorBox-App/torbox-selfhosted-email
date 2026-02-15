@@ -70,6 +70,8 @@ export type StepDefinition = {
     yes?: StepDefinition[];
     no?: StepDefinition[];
   };
+  /** If this step belongs to a cascade group, the group's ID */
+  cascadeGroupId?: string;
 };
 
 /** Workflow definition from user */
@@ -103,6 +105,8 @@ export type WorkflowStep = {
   name: string;
   position: { x: number; y: number };
   config: Record<string, unknown>;
+  /** If this step belongs to a cascade group, the group's ID */
+  cascadeGroupId?: string;
 };
 
 /** Transition between steps */
@@ -347,13 +351,17 @@ function flattenSteps(
  * Convert a step definition to a WorkflowStep with DB-compatible config.
  */
 function toWorkflowStep(def: StepDefinition): WorkflowStep {
-  return {
+  const step: WorkflowStep = {
     id: def.id,
     type: def.type as WorkflowStepType,
     name: def.name || getDefaultStepName(def.type),
     position: { x: 0, y: 0 }, // Will be updated by assignPositions
     config: def.config,
   };
+  if (def.cascadeGroupId) {
+    step.cascadeGroupId = def.cascadeGroupId;
+  }
+  return step;
 }
 
 /**

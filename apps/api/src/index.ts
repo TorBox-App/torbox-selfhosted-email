@@ -9,6 +9,7 @@ import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { workflowsRoutes } from "./(ee)/routes/workflows";
+import { getPostHogClient } from "./lib/posthog";
 import { batchRoutes } from "./routes/batch";
 import { connectionsRoutes } from "./routes/connections";
 import { contactsRoutes } from "./routes/contacts";
@@ -20,7 +21,6 @@ import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
 import { workflowScheduleRoutes } from "./routes/workflow-schedules";
 import { workflowsSyncRoutes } from "./routes/workflows-sync";
-import { getPostHogClient } from "./lib/posthog";
 
 /**
  * OpenAPI documentation configuration
@@ -102,10 +102,14 @@ const openApiDocumentation = {
 export const app = new Elysia()
   .onError(({ error, request }) => {
     const posthog = getPostHogClient();
-    posthog.captureException(error instanceof Error ? error : new Error(String(error)), "api-error", {
-      url: request.url,
-      method: request.method,
-    });
+    posthog.captureException(
+      error instanceof Error ? error : new Error(String(error)),
+      "api-error",
+      {
+        url: request.url,
+        method: request.method,
+      }
+    );
     const message = error instanceof Error ? error.message : String(error);
     return { error: message };
   })

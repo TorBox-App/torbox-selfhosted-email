@@ -29,6 +29,10 @@ vi.mock("@wraps/db", () => ({
           const promise = Promise.resolve(mockTemplates);
           // Add limit method for workflow queries
           (promise as any).limit = vi.fn(() => {
+            // awsAccount queries return an account with id
+            if (table?.id === "awsAccount.id") {
+              return [{ id: "aws-acc-1" }];
+            }
             if (mockExistingWorkflow) {
               return [mockExistingWorkflow];
             }
@@ -61,6 +65,10 @@ vi.mock("@wraps/db", () => ({
         findMany: vi.fn(() => Promise.resolve(mockTemplates)),
       },
     },
+  },
+  awsAccount: {
+    id: "awsAccount.id",
+    organizationId: "awsAccount.organizationId",
   },
   workflow: "workflow",
   template: "template",
