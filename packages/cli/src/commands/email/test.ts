@@ -238,8 +238,8 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
         return;
       }
     }
+  // guardrails:allow-next-line no-swallowed-errors — verification check may fail due to permissions, proceed with send attempt
   } catch {
-    // guardrail:allow-swallowed-error — verification check may fail due to permissions, proceed with send attempt
     clack.log.warn(
       "Could not check domain verification status — proceeding with send attempt"
     );

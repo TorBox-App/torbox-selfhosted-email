@@ -372,96 +372,11 @@ describe("no console.log in web app", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────
-// Test 10: No swallowed errors in CLI commands
-// (guardrails.toml can't handle this: escape hatch format mismatch)
-// ─────────────────────────────────────────────────────────
-
 function getCLICommandFiles(): string[] {
   return findFiles("packages/cli/src/commands/**/*.ts").filter(
     (f) => !(f.includes("__tests__") || f.includes(".test."))
   );
 }
-
-describe("no swallowed errors in CLI commands", () => {
-  test("catch blocks must not ignore errors via _error or bare catch", () => {
-    const files = getCLICommandFiles();
-    const violations: string[] = [];
-
-    // Matches catch(_error), catch (_error: any), catch (_error: unknown), etc.
-    const underscoredCatchRegex = /catch\s*\(\s*_error/;
-    // Matches bare catch { (no variable captured at all)
-    const bareCatchRegex = /\)\s*catch\s*\{|^\s*}\s*catch\s*\{/;
-
-    for (const file of files) {
-      const content = readFile(file);
-      const lines = content.split("\n");
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmed = line.trim();
-
-        // Skip comments
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-
-        // Skip lines with escape hatch (check current line and next line,
-        // since the formatter may split `catch { // comment` across two lines)
-        if (line.includes("guardrail:allow-swallowed-error")) continue;
-        const nextLine = i + 1 < lines.length ? lines[i + 1] : "";
-        if (nextLine.includes("guardrail:allow-swallowed-error")) continue;
-
-        if (underscoredCatchRegex.test(line) || bareCatchRegex.test(line)) {
-          violations.push(
-            `${file}:${i + 1} — swallowed error (use specific error checks instead)`
-          );
-        }
-      }
-    }
-
-    expect(violations, violations.join("\n")).toEqual([]);
-  });
-});
-
-// ─────────────────────────────────────────────────────────
-// Test 11: No catch (error: any) in CLI source
-// (guardrails.toml can't handle this: escape hatch format mismatch)
-// ─────────────────────────────────────────────────────────
-
-describe("no catch (error: any) in CLI source", () => {
-  test("catch blocks must use unknown type, not any", () => {
-    const files = findFiles("packages/cli/src/**/*.ts").filter(
-      (f) => !(f.includes("__tests__") || f.includes(".test."))
-    );
-    const violations: string[] = [];
-
-    const catchAnyRegex = /catch\s*\(\s*\w+\s*:\s*any\s*\)/;
-
-    for (const file of files) {
-      const content = readFile(file);
-      const lines = content.split("\n");
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmed = line.trim();
-
-        // Skip comments
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-
-        // Skip lines with escape hatch
-        if (line.includes("guardrail:allow-catch-any")) continue;
-
-        if (catchAnyRegex.test(line)) {
-          violations.push(
-            `${file}:${i + 1} — catch (error: any) should be catch (error) with type guards`
-          );
-        }
-      }
-    }
-
-    // Ratchet: 0 — all violations fixed.
-    expect(violations, violations.join("\n")).toEqual([]);
-  });
-});
 
 // ─────────────────────────────────────────────────────────
 // Test 12: No metadata save before deployment completes

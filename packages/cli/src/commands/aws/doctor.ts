@@ -233,8 +233,8 @@ async function runDiagnostics(state: AWSSetupState): Promise<DoctorResult[]> {
           message: "SES has production access",
         });
       }
+    // guardrails:allow-next-line no-swallowed-errors — SES check is non-blocking diagnostic
     } catch {
-      // guardrail:allow-swallowed-error — SES check is non-blocking diagnostic
       results.push({
         status: "info",
         message: "Could not check SES status",

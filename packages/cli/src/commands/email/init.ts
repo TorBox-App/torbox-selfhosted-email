@@ -747,8 +747,8 @@ export async function init(options: InitOptions): Promise<void> {
         );
       }
     }
+  // guardrails:allow-next-line no-swallowed-errors — sandbox detection is non-fatal, skip notice if API fails
   } catch {
-    // guardrail:allow-swallowed-error — sandbox detection is non-fatal, skip notice if API fails
   }
 
   // 14. Post-deploy: offer to send a test email (skip in preview mode)

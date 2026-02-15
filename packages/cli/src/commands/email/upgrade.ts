@@ -1288,8 +1288,8 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           if (!url.hostname.includes(".")) {
             return "Webhook URL must use a public hostname";
           }
+        // guardrails:allow-next-line no-swallowed-errors — URL parse failure means invalid input
         } catch {
-          // guardrail:allow-swallowed-error — URL parse failure means invalid input
           return "Please enter a valid URL";
         }
       };

@@ -422,8 +422,8 @@ async function pushToSES(
     await validateAWSCredentialsWithDetails();
     hasAWSCredentials = true;
     region = await getAWSRegion();
+  // guardrails:allow-next-line no-swallowed-errors — no credentials means skip SES push
   } catch {
-    // guardrail:allow-swallowed-error — no credentials means skip SES push
     progress.info("No AWS credentials — skipping SES push");
     return templates.map((t) => ({ slug: t.slug, success: false }));
   }
@@ -527,8 +527,8 @@ async function fetchRemoteTemplateSlugs(
 
     const data = (await resp.json()) as { templates: Array<{ slug: string }> };
     return new Set(data.templates.map((t) => t.slug));
+  // guardrails:allow-next-line no-swallowed-errors — network error falls back to local detection
   } catch {
-    // guardrail:allow-swallowed-error — network error falls back to local detection
     // Network error = can't check remote, fall back to local-only detection
     progress.info(
       "Could not check remote templates — using local change detection only"

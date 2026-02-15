@@ -7,14 +7,13 @@
 #   T7  @tanstack/react-form in server (needs dual-quote 'use client' check)
 #   T8  redirect() inside try/catch (needs brace-depth tracking)
 #   T9  no console.log (needs template literal awareness)
-#   T10 no swallowed errors (escape hatch format: guardrail vs guardrails)
-#   T11 no catch (error: any) (escape hatch format: guardrail vs guardrails)
 #   T12 metadata save order (needs ordering semantics within function)
 #   T13 duplicate infrastructure helpers (cross-file uniqueness)
 
 [guardrails]
 name = "wraps"
 include = ["**/*"]
+# extends = ["security", "nextjs", "ai-codegen"]
 exclude = [
   "**/node_modules/**",
   "**/dist/**",
@@ -265,6 +264,31 @@ pattern = "@ts-ignore"
 glob = "**/*.{ts,tsx}"
 message = "Use @ts-expect-error instead of @ts-ignore (fails when the suppressed error is fixed)."
 suggest = "Replace with @ts-expect-error and add a reason comment"
+
+[[rule]]
+id = "no-catch-any"
+type = "banned-pattern"
+severity = "error"
+pattern = "catch\\s*\\(\\s*\\w+\\s*:\\s*any\\s*\\)"
+regex = true
+glob = "packages/cli/src/**/*.ts"
+message = "catch (error: any) should be catch (error) with type guards."
+suggest = "Use catch (error) and narrow with instanceof checks"
+
+
+# ══════════════════════════════════════════════
+# ERROR HANDLING
+# ══════════════════════════════════════════════
+
+[[rule]]
+id = "no-swallowed-errors"
+type = "banned-pattern"
+severity = "error"
+pattern = "catch\\s*\\(\\s*_\\w|[})\\]]\\s*catch\\s*\\{"
+regex = true
+glob = "packages/cli/src/commands/**/*.ts"
+message = "Swallowed error — use specific error checks instead of ignoring."
+suggest = "Capture the error and handle it with instanceof checks"
 
 
 # ══════════════════════════════════════════════

@@ -70,8 +70,8 @@ async function getRegistrationStatus(
     );
 
     return response.Registrations?.[0]?.RegistrationStatus || null;
+  // guardrails:allow-next-line no-swallowed-errors — optional registration lookup
   } catch {
-    // guardrail:allow-swallowed-error — optional registration lookup
     return null;
   }
 }
@@ -205,14 +205,14 @@ export async function smsRegister(options: SMSRegisterOptions): Promise<void> {
       // macOS
       await execAsync(`open "${consoleUrl}"`);
       clack.log.success("Opened AWS Console in your browser.");
+    // guardrails:allow-next-line no-swallowed-errors — cross-platform browser fallback
     } catch {
-      // guardrail:allow-swallowed-error — cross-platform browser fallback
       try {
         // Linux
         await execAsync(`xdg-open "${consoleUrl}"`);
         clack.log.success("Opened AWS Console in your browser.");
+      // guardrails:allow-next-line no-swallowed-errors — final fallback shows URL
       } catch {
-        // guardrail:allow-swallowed-error — final fallback shows URL
         // Fallback - just show the URL
         clack.log.info("Open this URL in your browser:");
         console.log(`\n  ${pc.cyan(consoleUrl)}\n`);

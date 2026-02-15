@@ -86,8 +86,8 @@ export async function cdnStatus(options: CdnStatusOptions): Promise<void> {
     });
 
     stackOutputs = await stack.outputs();
+  // guardrails:allow-next-line no-swallowed-errors — stack may not exist
   } catch (_error) {
-    // guardrail:allow-swallowed-error — stack may not exist
     progress.stop();
     clack.log.error("No CDN infrastructure found");
     console.log(

@@ -106,8 +106,8 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
     });
 
     stackOutputs = await stack.outputs();
+  // guardrails:allow-next-line no-swallowed-errors — shows user-friendly message
   } catch (_error) {
-    // guardrail:allow-swallowed-error — shows user-friendly message
     clack.log.error("Failed to load storage stack state");
     process.exit(1);
   }
@@ -129,8 +129,8 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
       const aliases =
         cfResponse.Distribution?.DistributionConfig?.Aliases?.Items || [];
       cloudFrontHasCustomDomain = aliases.includes(cdnConfig.cdn.customDomain);
+    // guardrails:allow-next-line no-swallowed-errors — optional CloudFront state check
     } catch {
-      // guardrail:allow-swallowed-error — optional CloudFront state check
       // Ignore errors checking CloudFront
     }
   }

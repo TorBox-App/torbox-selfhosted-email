@@ -8,8 +8,8 @@ import open from "open";
 import pc from "picocolors";
 import { trackCommand, trackError } from "../../telemetry/events.js";
 import {
-  type OrgInfo,
   getAppBaseUrl,
+  type OrgInfo,
   saveAuthConfig,
 } from "../../utils/shared/config.js";
 
@@ -44,8 +44,8 @@ async function fetchOrganizations(
       name: org.name,
       slug: org.slug,
     }));
+  // guardrails:allow-next-line no-swallowed-errors — org list is optional
   } catch {
-    // guardrail:allow-swallowed-error — org list is optional
     return [];
   }
 }
@@ -118,8 +118,8 @@ export async function login(options: LoginOptions): Promise<void> {
   try {
     await open(`${baseURL}/device?user_code=${user_code}`);
     clack.log.info("Opening browser...");
+  // guardrails:allow-next-line no-swallowed-errors — browser open is best-effort
   } catch {
-    // guardrail:allow-swallowed-error — browser open is best-effort
     // Browser didn't open, user will navigate manually
   }
 
