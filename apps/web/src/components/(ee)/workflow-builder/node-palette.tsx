@@ -6,6 +6,7 @@ import {
   Clock,
   GitBranch,
   Hourglass,
+  Layers,
   LogOut,
   Mail,
   MailOpen,
@@ -15,8 +16,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export type NodePaletteType = WorkflowStepType | "cascade";
+
 type NodePaletteItem = {
-  type: WorkflowStepType;
+  type: NodePaletteType;
   label: string;
   description: string;
   icon: React.ReactNode;
@@ -97,6 +100,13 @@ const paletteItems: NodePaletteItem[] = [
     accentColor: "bg-emerald-500",
   },
   {
+    type: "cascade",
+    label: "Cascade",
+    description: "Multi-channel sequence",
+    icon: <Layers className="h-4 w-4" />,
+    accentColor: "bg-gradient-to-r from-blue-500 to-green-500",
+  },
+  {
     type: "exit",
     label: "Exit",
     description: "End workflow",
@@ -106,7 +116,7 @@ const paletteItems: NodePaletteItem[] = [
 ];
 
 type NodePaletteProps = {
-  onAddNode: (type: WorkflowStepType) => void;
+  onAddNode: (type: NodePaletteType) => void;
   smsEnabled?: boolean;
 };
 
@@ -118,7 +128,7 @@ export function NodePalette({
   const visibleItems = smsEnabled
     ? paletteItems
     : paletteItems.filter((item) => item.type !== "send_sms");
-  const onDragStart = (event: React.DragEvent, nodeType: WorkflowStepType) => {
+  const onDragStart = (event: React.DragEvent, nodeType: NodePaletteType) => {
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
   };

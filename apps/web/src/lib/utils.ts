@@ -39,3 +39,80 @@ export function formatRelativeTime(date: Date): string {
   // For older dates, show the actual date
   return date.toLocaleDateString();
 }
+
+/**
+ * Format a duration in seconds to a compact string (e.g., "3d", "12h", "30m", "45s").
+ */
+export function formatDurationCompact(seconds: number): string {
+  if (seconds >= 86_400) {
+    const days = Math.floor(seconds / 86_400);
+    return `${days}d`;
+  }
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    return `${hours}h`;
+  }
+  if (seconds >= 60) {
+    const mins = Math.floor(seconds / 60);
+    return `${mins}m`;
+  }
+  return `${seconds}s`;
+}
+
+/**
+ * Parse a duration in seconds to an { amount, unit } pair for form inputs.
+ * Supports "minutes", "hours", "days". Falls back to the provided default
+ * when the value is 0 or doesn't cleanly divide into any unit.
+ */
+export function parseDurationToAmountUnit(
+  seconds: number,
+  fallback: { amount: number; unit: string } = { amount: 1, unit: "hours" }
+): { amount: number; unit: string } {
+  if (seconds >= 86_400) {
+    return { amount: Math.floor(seconds / 86_400), unit: "days" };
+  }
+  if (seconds >= 3600) {
+    return { amount: Math.floor(seconds / 3600), unit: "hours" };
+  }
+  if (seconds >= 60) {
+    return { amount: Math.floor(seconds / 60), unit: "minutes" };
+  }
+  return seconds > 0
+    ? { amount: Math.max(1, Math.round(seconds / 3600)), unit: "hours" }
+    : fallback;
+}
+
+/**
+ * Convert an { amount, unit } pair back to seconds.
+ */
+export function amountUnitToSeconds(amount: number, unit: string): number {
+  switch (unit) {
+    case "minutes":
+      return amount * 60;
+    case "hours":
+      return amount * 3600;
+    case "days":
+      return amount * 86_400;
+    default:
+      return amount;
+  }
+}
+
+/**
+ * Format a duration in seconds to a verbose string (e.g., "3 days", "12 hours").
+ */
+export function formatDurationVerbose(seconds: number): string {
+  if (seconds >= 86_400) {
+    const days = Math.floor(seconds / 86_400);
+    return `${days} day${days !== 1 ? "s" : ""}`;
+  }
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    return `${hours} hour${hours !== 1 ? "s" : ""}`;
+  }
+  if (seconds >= 60) {
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes} min${minutes !== 1 ? "s" : ""}`;
+  }
+  return `${seconds} sec${seconds !== 1 ? "s" : ""}`;
+}

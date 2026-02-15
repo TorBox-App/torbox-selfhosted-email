@@ -1,3 +1,4 @@
+export { CascadeNode } from "./cascade-node";
 export { ConditionNode } from "./condition-node";
 export { DelayNode } from "./delay-node";
 export { ExitNode } from "./exit-node";

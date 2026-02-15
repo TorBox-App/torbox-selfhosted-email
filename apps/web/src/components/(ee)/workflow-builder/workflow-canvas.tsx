@@ -1,6 +1,5 @@
 "use client";
 
-import type { WorkflowStepType } from "@wraps/db";
 import type {
   EdgeTypes,
   Node,
@@ -21,7 +20,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LabeledEdge } from "./edges/labeled-edge";
+import type { NodePaletteType } from "./node-palette";
 import { NodePalette } from "./node-palette";
+import { CascadeNode } from "./nodes/cascade-node";
 import { ConditionNode } from "./nodes/condition-node";
 import { DelayNode } from "./nodes/delay-node";
 import { ExitNode } from "./nodes/exit-node";
@@ -49,6 +50,8 @@ const nodeTypes: NodeTypes = {
   wait_for_email_engagement: WaitForEmailEngagementNode,
   subscribe_topic: TopicNode,
   unsubscribe_topic: TopicNode,
+  // Cascade (self-contained multi-channel node)
+  cascade: CascadeNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -100,7 +103,7 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
 
       const type = event.dataTransfer.getData(
         "application/reactflow"
-      ) as WorkflowStepType;
+      ) as NodePaletteType;
 
       if (!(type && reactFlowInstance && reactFlowWrapper.current)) {
         return;
@@ -129,7 +132,7 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
   }, [selectNode]);
 
   const handleAddNode = useCallback(
-    (type: WorkflowStepType) => {
+    (type: NodePaletteType) => {
       // Add node at center of viewport
       if (reactFlowInstance) {
         const { x, y, zoom } = reactFlowInstance.getViewport();

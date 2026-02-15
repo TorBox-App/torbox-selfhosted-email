@@ -34,7 +34,7 @@ export function BaseNode({
         "min-w-[180px] rounded-lg border-2 bg-background px-4 py-3 shadow-sm",
         "transition-all duration-150",
         selected ? "border-primary ring-2 ring-primary/20" : "border-border",
-        !isValid && "border-red-500 ring-2 ring-red-500/20"
+        !isValid && "border-destructive ring-2 ring-destructive/20"
       )}
     >
       {hasInput && (
@@ -67,7 +67,7 @@ export function BaseNode({
       </div>
 
       {!isValid && errorMessage && (
-        <div className="mt-2 text-red-500 text-xs">{errorMessage}</div>
+        <div className="mt-2 text-destructive text-xs">{errorMessage}</div>
       )}
 
       {hasOutput && !outputs && (

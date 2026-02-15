@@ -1,4 +1,5 @@
 import type {
+  CascadeChannelConfig,
   WorkflowStep,
   WorkflowStepConfig,
   WorkflowTransition,
@@ -393,6 +394,73 @@ function validateDelay(
       message: "Delay duration must be at least 1",
       severity: "error",
     });
+  }
+
+  return errors;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CASCADE CHANNEL VALIDATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Validates cascade channel configuration before expansion to primitive steps.
+ * Called by the store on cascade nodes during workflow definition generation.
+ */
+export function validateCascadeChannels(
+  nodeId: string,
+  channels: CascadeChannelConfig[]
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (channels.length === 0) {
+    errors.push({
+      nodeId,
+      field: "channels",
+      message: "Cascade must have at least one channel",
+      severity: "error",
+    });
+    return errors;
+  }
+
+  for (let i = 0; i < channels.length; i++) {
+    const channel = channels[i];
+    const isLast = i === channels.length - 1;
+
+    if (channel.type === "email" && !channel.templateId?.trim()) {
+      errors.push({
+        nodeId,
+        field: `channels[${i}].templateId`,
+        message: `Channel ${i + 1}: Email template is required`,
+        severity: "error",
+      });
+    }
+
+    if (
+      channel.type === "sms" &&
+      !channel.body?.trim() &&
+      !channel.templateId?.trim()
+    ) {
+      errors.push({
+        nodeId,
+        field: `channels[${i}].body`,
+        message: `Channel ${i + 1}: SMS message or template is required`,
+        severity: "error",
+      });
+    }
+
+    if (
+      !isLast &&
+      channel.type === "email" &&
+      (!channel.waitDuration || channel.waitDuration <= 0)
+    ) {
+      errors.push({
+        nodeId,
+        field: `channels[${i}].waitDuration`,
+        message: `Channel ${i + 1}: Wait duration is required for non-final channels`,
+        severity: "error",
+      });
+    }
   }
 
   return errors;

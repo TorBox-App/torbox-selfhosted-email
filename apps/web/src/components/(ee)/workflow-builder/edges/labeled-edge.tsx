@@ -46,6 +46,22 @@ export function LabeledEdge({
   } else if (sourceHandleId === "default") {
     label = "Default";
     labelColor = "bg-muted text-muted-foreground";
+  } else if (sourceHandleId === "engaged") {
+    label = "Engaged";
+    labelColor =
+      "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400";
+  } else if (sourceHandleId === "exhausted") {
+    label = "Exhausted";
+    labelColor =
+      "bg-gray-100 text-gray-700 dark:bg-gray-900/50 dark:text-gray-400";
+  }
+
+  // Determine stroke color
+  let strokeColor = "var(--color-muted-foreground, #9ca3af)";
+  if (sourceHandleId === "yes" || sourceHandleId === "engaged") {
+    strokeColor = "var(--color-green-500, #22c55e)";
+  } else if (sourceHandleId === "no") {
+    strokeColor = "var(--color-red-500, #ef4444)";
   }
 
   return (
@@ -56,12 +72,7 @@ export function LabeledEdge({
         style={{
           ...style,
           strokeWidth: 2,
-          stroke:
-            sourceHandleId === "yes"
-              ? "#22c55e"
-              : sourceHandleId === "no"
-                ? "#ef4444"
-                : "#9ca3af",
+          stroke: strokeColor,
         }}
       />
       {label && (
