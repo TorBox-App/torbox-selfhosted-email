@@ -31,23 +31,6 @@ exclude = [
 # BANNED IMPORTS (replaces all 6 grit rules)
 # ══════════════════════════════════════════════
 
-[[rule]]
-id = "no-react-hook-form"
-type = "banned-import"
-severity = "warning"
-packages = ["react-hook-form"]
-glob = "**/*.{ts,tsx}"
-message = "Use @tanstack/react-form instead of react-hook-form. See CLAUDE.md migration backlog."
-suggest = "Import from '@tanstack/react-form' with Zod validation"
-
-[[rule]]
-id = "no-hookform-resolvers"
-type = "banned-import"
-severity = "warning"
-packages = ["@hookform/resolvers/zod", "@hookform/resolvers"]
-glob = "**/*.{ts,tsx}"
-message = "Use @tanstack/react-form with built-in Zod validation instead of @hookform/resolvers."
-suggest = "Use @tanstack/react-form's built-in Zod adapter"
 
 [[rule]]
 id = "no-axios"
@@ -177,10 +160,10 @@ type = "ratchet"
 severity = "error"
 pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-\\[#[0-9a-fA-F]+\\]"
 regex = true
-max_count = 41
+max_count = 16
 glob = "apps/website/src/**/*.{ts,tsx}"
 exclude_glob = ["**/components/ui/**"]
-message = "Migrate arbitrary hex colors to theme tokens (41 remaining, ratchet down)"
+message = "Migrate arbitrary hex colors to theme tokens (16 remaining, ratchet down)"
 
 # T5c: Hardcoded white/black in web app (ratchet down from 177)
 [[rule]]
@@ -189,10 +172,56 @@ type = "ratchet"
 severity = "error"
 pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration)-(?:white|black)"
 regex = true
-max_count = 177
+max_count = 78
 glob = "apps/web/src/**/*.{ts,tsx}"
 exclude_glob = ["**/components/ui/**"]
-message = "Migrate hardcoded white/black to theme colors for dark mode support (177 remaining, ratchet down)"
+message = "Migrate hardcoded white/black to theme colors for dark mode support (78 remaining, ratchet down)"
+
+# Ratchet: react-hook-form → @tanstack/react-form migration (6 files remaining)
+[[rule]]
+id = "ratchet-react-hook-form"
+type = "ratchet"
+severity = "error"
+pattern = "from [\"']react-hook-form[\"']"
+regex = true
+max_count = 9
+glob = "**/*.{ts,tsx}"
+message = "Migrate react-hook-form to @tanstack/react-form (9 remaining, ratchet down)"
+
+# Ratchet: @hookform/resolvers → @tanstack/react-form Zod adapter (6 files remaining)
+[[rule]]
+id = "ratchet-hookform-resolvers"
+type = "ratchet"
+severity = "error"
+pattern = "from [\"']@hookform/resolvers"
+regex = true
+max_count = 6
+glob = "**/*.{ts,tsx}"
+message = "Migrate @hookform/resolvers to @tanstack/react-form Zod adapter (6 remaining, ratchet down)"
+
+# Ratchet: raw Tailwind color utilities missing dark: variants
+[[rule]]
+id = "ratchet-dark-mode-web"
+type = "ratchet"
+severity = "error"
+pattern = "(?:bg|text|border|ring|outline|shadow|accent|caret|fill|stroke|decoration|from|to|via)-(?:white|black|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\\d{2,3})"
+regex = true
+max_count = 1317
+glob = "apps/web/src/**/*.tsx"
+exclude_glob = ["**/components/ui/**"]
+message = "Migrate raw color utilities to theme tokens or add dark: variants (1317 remaining, ratchet down)"
+
+# Ratchet: raw Tailwind colors that should be semantic tokens
+[[rule]]
+id = "ratchet-theme-tokens-web"
+type = "ratchet"
+severity = "error"
+pattern = "(?:bg|text|border)-(?:white|black|(?:gray|slate)-(?:50|100|200|300|400|500|600|700|800|900|950))"
+regex = true
+max_count = 267
+glob = "apps/web/src/**/*.tsx"
+exclude_glob = ["**/components/ui/**"]
+message = "Use semantic tokens (bg-background, text-foreground, border-border) instead of raw colors (267 remaining, ratchet down)"
 
 # Ratchet: reduce `as any` type assertions (baselined at 95)
 [[rule]]
@@ -338,18 +367,3 @@ suggest = "Prefix the resource name with wraps-email- or wraps-sms-"
 # TAILWIND DESIGN SYSTEM
 # ══════════════════════════════════════════════
 
-[[rule]]
-id = "dark-mode-web"
-type = "tailwind-dark-mode"
-severity = "warning"
-glob = "apps/web/src/**/*.tsx"
-exclude_glob = ["**/components/ui/**"]
-message = "Color utilities need corresponding dark: variants for dark mode support."
-
-[[rule]]
-id = "theme-tokens-web"
-type = "tailwind-theme-tokens"
-severity = "warning"
-glob = "apps/web/src/**/*.tsx"
-exclude_glob = ["**/components/ui/**"]
-message = "Use semantic design tokens instead of raw Tailwind colors (e.g. bg-background, text-foreground)."
