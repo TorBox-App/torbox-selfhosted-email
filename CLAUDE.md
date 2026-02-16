@@ -509,10 +509,28 @@ wraps auth login           # Authenticate with Wraps Platform
 ### Code Style
 
 - Strict TypeScript mode
-- ESM modules (not CommonJS)
+- ESM modules (not CommonJS) — no `require()` or `module.exports`
 - Async/await (no callbacks)
 - Destructuring when appropriate
 - Clear variable names (no abbreviations unless obvious)
+- Use `@ts-expect-error` instead of `@ts-ignore` (fails when the error is fixed)
+- No `catch (e: any)` — use `catch (e)` with `instanceof` type guards
+- No swallowed errors (`catch (_e)`) in CLI commands — handle specifically
+
+### Banned Dependencies
+
+These are enforced by `guardrails.toml` and will fail CI:
+- **axios** — use native `fetch()`
+- **moment** / **dayjs** — use `date-fns` or `Intl` API
+- **next/router** — use `next/navigation` (App Router)
+- **@radix-ui/\*** directly in `apps/` — import from `components/ui/` (shadcn wrappers)
+- **react-hook-form** — use `@tanstack/react-form` (migration in progress, ratcheted)
+
+### Design System Rules
+
+- No arbitrary hex colors (`bg-[#xxx]`) in `apps/web/` — use theme tokens
+- Prefer semantic color tokens (`bg-background`, `text-foreground`, `border-border`) over raw Tailwind colors (`bg-gray-500`)
+- Ratchets are actively reducing: raw colors, `as any` assertions, and react-hook-form usage
 
 ## Key Files Reference
 
