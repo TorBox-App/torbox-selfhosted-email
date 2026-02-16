@@ -90,7 +90,7 @@ describe("toCSV", () => {
   it("handles null and undefined values", () => {
     const colsWithUndefined: CSVColumnDef<TestRow>[] = [
       { header: "Email", accessor: (r) => r.email },
-      { header: "Missing", accessor: () => undefined },
+      { header: "Missing", accessor: () => {} },
     ];
 
     const rows: TestRow[] = [
