@@ -12,7 +12,7 @@
  * 8. Slug generation from description
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthContext } from "../middleware/auth";
 
 // Mock auth middleware
@@ -65,6 +65,7 @@ describe("workflow-generate route", () => {
   });
 
   afterEach(() => {
+    // biome-ignore lint/performance/noDelete: process.env requires delete to fully remove keys (assignment sets to string "undefined")
     delete process.env.ANTHROPIC_API_KEY;
     globalThis.fetch = originalFetch;
   });
@@ -74,7 +75,11 @@ describe("workflow-generate route", () => {
       body,
       auth: authContext,
       set: { status: 200 },
-    } as unknown as { body: typeof body; auth: AuthContext; set: { status: number } };
+    } as unknown as {
+      body: typeof body;
+      auth: AuthContext;
+      set: { status: number };
+    };
   }
 
   it("should return generated code on success", async () => {
@@ -145,13 +150,14 @@ export default defineWorkflow({
   it("should return 503 when ANTHROPIC_API_KEY is not set", async () => {
     // Need to re-import with no key set
     vi.resetModules();
+    // biome-ignore lint/performance/noDelete: process.env requires delete to fully remove keys (assignment sets to string "undefined")
     delete process.env.ANTHROPIC_API_KEY;
 
     await import("../routes/workflow-generate");
 
     const { createAuthenticatedRoutes } = await import("../middleware/auth");
     const calls = vi.mocked(createAuthenticatedRoutes).mock.results;
-    const chain = calls[calls.length - 1]?.value;
+    const chain = calls.at(-1)?.value;
     const postCall = chain?.post.mock.calls[0];
     const handler = postCall?.[1];
 

@@ -26,11 +26,11 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   buildEmailStackConfig,
   loadConnectionMetadata,
@@ -571,9 +571,7 @@ export async function inboundStatus(
   console.log();
   console.log(pc.bold("  Inbound Email Configuration"));
   console.log();
-  console.log(
-    `  ${pc.dim("Receiving domain:")}  ${pc.cyan(receivingDomain)}`
-  );
+  console.log(`  ${pc.dim("Receiving domain:")}  ${pc.cyan(receivingDomain)}`);
   console.log(
     `  ${pc.dim("S3 bucket:")}         ${pc.cyan(inbound.bucketName || "")}`
   );

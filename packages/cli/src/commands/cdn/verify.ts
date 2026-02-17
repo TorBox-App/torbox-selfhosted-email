@@ -2,16 +2,16 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
-import { WrapsError } from "../../utils/shared/errors.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { WrapsError } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { findConnectionsWithService } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 

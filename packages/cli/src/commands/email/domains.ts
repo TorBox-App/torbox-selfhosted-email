@@ -22,9 +22,9 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import {
-  WrapsError,
   classifyDNSError,
   isAWSNotFoundError,
+  WrapsError,
 } from "../../utils/shared/errors.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {

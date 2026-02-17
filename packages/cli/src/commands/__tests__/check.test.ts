@@ -1,8 +1,8 @@
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { mockClient } from "aws-sdk-client-mock";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { check } from "../email/check";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setJsonMode } from "../../utils/shared/json-output";
+import { check } from "../email/check";
 
 const sesClientMock = mockClient(SESv2Client);
 

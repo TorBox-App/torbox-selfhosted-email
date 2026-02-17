@@ -14,15 +14,12 @@ import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   findConnectionsWithService,
   getAllTrackedDomains,
   loadConnectionMetadata,
 } from "../../utils/shared/metadata.js";
-import {
-  isJsonMode,
-  jsonSuccess,
-} from "../../utils/shared/json-output.js";
 import {
   DeploymentProgress,
   displayStatus,

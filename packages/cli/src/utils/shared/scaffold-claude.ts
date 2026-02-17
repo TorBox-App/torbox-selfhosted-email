@@ -88,7 +88,7 @@ export async function scaffoldClaudeSkill({
   const skillPath = join(skillDir, "SKILL.md");
 
   await mkdir(skillDir, { recursive: true });
-  await writeFile(skillPath, skillContent.trim() + "\n", "utf-8");
+  await writeFile(skillPath, `${skillContent.trim()}\n`, "utf-8");
 }
 
 function escapeRegex(str: string): string {

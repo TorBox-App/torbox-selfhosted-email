@@ -21,8 +21,7 @@ const mockScaffoldClaudeSkill = vi.fn();
 vi.mock("../../utils/shared/scaffold-claude.js", () => ({
   scaffoldClaudeMdSection: (...args: unknown[]) =>
     mockScaffoldClaudeMdSection(...args),
-  scaffoldClaudeSkill: (...args: unknown[]) =>
-    mockScaffoldClaudeSkill(...args),
+  scaffoldClaudeSkill: (...args: unknown[]) => mockScaffoldClaudeSkill(...args),
 }));
 
 // DeploymentProgress mock
@@ -33,6 +32,7 @@ const mockProgress = {
   info: vi.fn(),
 };
 vi.mock("../../utils/shared/output.js", () => ({
+  // biome-ignore lint/complexity/useArrowFunction: constructor mock needs lazy eval of mockProgress (vi.mock is hoisted)
   DeploymentProgress: vi.fn(function () {
     return mockProgress;
   }),
@@ -54,6 +54,7 @@ describe("workflowsInit", () => {
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     // Re-set DeploymentProgress mock
+    // biome-ignore lint/complexity/useArrowFunction: constructor mock requires regular function for `new`
     vi.mocked(DeploymentProgress).mockImplementation(function () {
       return mockProgress as never;
     });
@@ -181,9 +182,11 @@ describe("workflowsInit", () => {
     await workflowsInit({});
 
     // Should update the config file with workflowsDir
-    const configWrite = vi.mocked(writeFile).mock.calls.find(
-      (c) => typeof c[0] === "string" && c[0].includes("wraps.config.ts")
-    );
+    const configWrite = vi
+      .mocked(writeFile)
+      .mock.calls.find(
+        (c) => typeof c[0] === "string" && c[0].includes("wraps.config.ts")
+      );
     if (configWrite) {
       expect(configWrite[1]).toContain("workflowsDir");
     }
@@ -201,9 +204,11 @@ describe("workflowsInit", () => {
     await workflowsInit({});
 
     // Should NOT write to config (already has workflowsDir)
-    const configWrite = vi.mocked(writeFile).mock.calls.find(
-      (c) => typeof c[0] === "string" && c[0].includes("wraps.config.ts")
-    );
+    const configWrite = vi
+      .mocked(writeFile)
+      .mock.calls.find(
+        (c) => typeof c[0] === "string" && c[0].includes("wraps.config.ts")
+      );
     expect(configWrite).toBeUndefined();
   });
 

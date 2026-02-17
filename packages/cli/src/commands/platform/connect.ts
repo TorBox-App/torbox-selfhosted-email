@@ -35,6 +35,7 @@ import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import type { ConnectionMetadata } from "../../utils/shared/metadata.js";
 import {
   buildEmailStackConfig,
@@ -42,7 +43,6 @@ import {
   loadConnectionMetadata,
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import { promptVercelConfig } from "../../utils/shared/prompts.js";
 import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";

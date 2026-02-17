@@ -14,11 +14,11 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   createConnectionMetadata,
   loadConnectionMetadata,
@@ -55,7 +55,7 @@ export async function connect(options: ConnectOptions): Promise<void> {
         options.preview
           ? "Wraps Connect Preview"
           : "Wraps Connect - Link Existing Infrastructure"
-        )
+      )
     );
   }
 

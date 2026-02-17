@@ -193,9 +193,10 @@ export async function templatesInit(options: TemplatesInitOptions) {
       claudeFiles.push(".claude/skills/wraps-templates/SKILL.md");
 
       progress.succeed("Claude Code context scaffolded");
-    } catch {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       progress.info(
-        "Could not scaffold .claude/ context — template files are still ready"
+        `Could not scaffold .claude/ context — template files are still ready (${msg})`
       );
     }
   }

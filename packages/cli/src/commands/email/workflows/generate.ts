@@ -506,8 +506,12 @@ async function callGenerateApi(
     try {
       const parsed = JSON.parse(body);
       message = parsed.error || parsed.message || body;
-    } catch {
-      message = body;
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        message = body;
+      } else {
+        throw e;
+      }
     }
     throw errors.workflowGenerationFailed(message);
   }
@@ -609,9 +613,10 @@ async function autoValidate(
         `${pc.cyan(slug)} has ${errs.length} validation error(s) — review and fix manually`
       );
     }
-  } catch {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     progress.info(
-      `Could not auto-validate ${pc.cyan(slug)} — run ${pc.cyan("wraps email workflows validate")} manually`
+      `Could not auto-validate ${pc.cyan(slug)} — run ${pc.cyan("wraps email workflows validate")} manually (${msg})`
     );
   }
 }

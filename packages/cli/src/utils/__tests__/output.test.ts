@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setJsonMode } from "../shared/json-output.js";
 import {
   DeploymentProgress,
   displayStatus,
   displaySuccess,
 } from "../shared/output.js";
-import { setJsonMode } from "../shared/json-output.js";
 
 // Mock @clack/prompts
 vi.mock("@clack/prompts", () => ({

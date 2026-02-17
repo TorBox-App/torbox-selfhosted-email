@@ -97,12 +97,10 @@ export async function workflowsInit(options: WorkflowsInitOptions) {
     const tsFiles = files.filter(
       (f) => f.endsWith(".ts") && !f.startsWith("_")
     );
-    if (tsFiles.length > 0 && !options.force) {
-      if (!isJsonMode()) {
-        clack.log.warn(
-          `${pc.cyan("wraps/workflows/")} already contains ${tsFiles.length} workflow file(s). Use ${pc.bold("--force")} to overwrite.`
-        );
-      }
+    if (tsFiles.length > 0 && !options.force && !isJsonMode()) {
+      clack.log.warn(
+        `${pc.cyan("wraps/workflows/")} already contains ${tsFiles.length} workflow file(s). Use ${pc.bold("--force")} to overwrite.`
+      );
       // Still allow claude scaffolding even if workflows dir exists
     }
   }
@@ -113,9 +111,7 @@ export async function workflowsInit(options: WorkflowsInitOptions) {
 
   // Ensure wraps.config.ts exists with workflowsDir
   const configPath = join(cwd, "wraps", "wraps.config.ts");
-  if (!existsSync(configPath)) {
-    await writeFile(configPath, generateMinimalConfig(), "utf-8");
-  } else {
+  if (existsSync(configPath)) {
     // Check if workflowsDir is already in config
     const configContent = await readFile(configPath, "utf-8");
     if (!configContent.includes("workflowsDir")) {
@@ -128,6 +124,8 @@ export async function workflowsInit(options: WorkflowsInitOptions) {
         await writeFile(configPath, updated, "utf-8");
       }
     }
+  } else {
+    await writeFile(configPath, generateMinimalConfig(), "utf-8");
   }
 
   // Write example workflow (unless --no-example)
@@ -161,9 +159,10 @@ export async function workflowsInit(options: WorkflowsInitOptions) {
       filesCreated.push(".claude/skills/wraps-workflows/SKILL.md");
 
       progress.succeed("Claude Code context scaffolded");
-    } catch {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       progress.info(
-        "Could not scaffold .claude/ context — workflow files are still ready"
+        `Could not scaffold .claude/ context — workflow files are still ready (${msg})`
       );
     }
   }
@@ -201,14 +200,10 @@ export async function workflowsInit(options: WorkflowsInitOptions) {
   console.log(
     `  1. Edit or create workflows in ${pc.cyan("wraps/workflows/")}`
   );
-  console.log(
-    `  2. Validate: ${pc.cyan("wraps email workflows validate")}`
-  );
+  console.log(`  2. Validate: ${pc.cyan("wraps email workflows validate")}`);
   console.log(`  3. Push:     ${pc.cyan("wraps email workflows push")}`);
   if (!options.noClaude) {
-    console.log(
-      `  4. Use Claude Code to generate workflows from descriptions`
-    );
+    console.log("  4. Use Claude Code to generate workflows from descriptions");
   }
   console.log();
 }

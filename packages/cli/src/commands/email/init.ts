@@ -24,7 +24,6 @@ import {
   isPulumiError,
   parsePulumiError,
 } from "../../utils/shared/errors.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -34,6 +33,7 @@ import {
   formatDeniedActions,
   getRequiredActions,
 } from "../../utils/shared/iam-check.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   createConnectionMetadata,
   loadConnectionMetadata,

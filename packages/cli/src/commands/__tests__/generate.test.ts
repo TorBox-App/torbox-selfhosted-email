@@ -23,8 +23,8 @@ const mockProgress = {
   fail: vi.fn(),
   info: vi.fn(),
 };
-// Use a regular function (not arrow) so it works as a constructor with `new`
 vi.mock("../../utils/shared/output.js", () => ({
+  // biome-ignore lint/complexity/useArrowFunction: constructor mock needs lazy eval of mockProgress (vi.mock is hoisted)
   DeploymentProgress: vi.fn(function () {
     return mockProgress;
   }),
@@ -37,10 +37,7 @@ import { trackCommand } from "../../telemetry/events.js";
 import { transformWorkflow } from "../../utils/email/workflow-transform.js";
 import { parseWorkflowTs } from "../../utils/email/workflow-ts.js";
 import { validateTransformedWorkflow } from "../../utils/email/workflow-validator.js";
-import {
-  getApiBaseUrl,
-  resolveTokenAsync,
-} from "../../utils/shared/config.js";
+import { getApiBaseUrl, resolveTokenAsync } from "../../utils/shared/config.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 // Import after mocks
 import { workflowsGenerate } from "../email/workflows/generate.js";
@@ -52,7 +49,8 @@ describe("workflowsGenerate", () => {
     vi.clearAllMocks();
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    // Re-set DeploymentProgress mock after clearAllMocks (regular function, not arrow)
+    // Re-set DeploymentProgress mock after clearAllMocks
+    // biome-ignore lint/complexity/useArrowFunction: constructor mock requires regular function for `new`
     vi.mocked(DeploymentProgress).mockImplementation(function () {
       return mockProgress as never;
     });
@@ -459,9 +457,7 @@ export default defineWorkflow({
     });
 
     it("should handle validation failure gracefully", async () => {
-      vi.mocked(parseWorkflowTs).mockRejectedValue(
-        new Error("Parse error")
-      );
+      vi.mocked(parseWorkflowTs).mockRejectedValue(new Error("Parse error"));
 
       await workflowsGenerate({
         description: "Welcome series",
@@ -529,8 +525,7 @@ export default defineWorkflow({
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 502,
-        text: () =>
-          Promise.resolve(JSON.stringify({ error: "Server error" })),
+        text: () => Promise.resolve(JSON.stringify({ error: "Server error" })),
       });
 
       await expect(

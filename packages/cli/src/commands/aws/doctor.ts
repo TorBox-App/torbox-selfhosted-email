@@ -9,10 +9,6 @@ import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import { isSESSandbox } from "../../utils/shared/aws.js";
 import {
-  isJsonMode,
-  jsonSuccess,
-} from "../../utils/shared/json-output.js";
-import {
   type AWSSetupState,
   detectAWSState,
   formatSSOProfile,
@@ -21,6 +17,7 @@ import {
   hasConfigFile,
   hasCredentialsFile,
 } from "../../utils/shared/aws-detection.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 
 type DoctorResult = {
   status: "pass" | "warn" | "fail" | "info";

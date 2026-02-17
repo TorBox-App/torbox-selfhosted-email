@@ -8,8 +8,8 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { WrapsError } from "../../utils/shared/errors.js";
-import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { getPulumiWorkDir } from "../../utils/shared/fs.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   deleteConnectionMetadata,
   loadConnectionMetadata,

@@ -7,8 +7,8 @@ import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { mockClient } from "aws-sdk-client-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emailStatus } from "../email/status.js";
 import { setJsonMode } from "../../utils/shared/json-output.js";
+import { emailStatus } from "../email/status.js";
 
 const stsMock = mockClient(STSClient);
 const sesMock = mockClient(SESClient);

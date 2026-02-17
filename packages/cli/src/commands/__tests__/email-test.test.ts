@@ -5,8 +5,8 @@ import {
 } from "@aws-sdk/client-sesv2";
 import { mockClient } from "aws-sdk-client-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emailTest } from "../email/test.js";
 import { setJsonMode } from "../../utils/shared/json-output.js";
+import { emailTest } from "../email/test.js";
 
 const sesv2Mock = mockClient(SESv2Client);
 

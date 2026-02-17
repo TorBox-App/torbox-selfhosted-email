@@ -1,13 +1,13 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, FileJson, Terminal } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { CLICommand } from "@/components/docs/cli-command";
 import { CopyForAIButton } from "@/components/docs/copy-for-ai-button";
 import { SectionHeading } from "@/components/docs/section-heading";
-import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -298,8 +298,8 @@ export default function PageContent() {
         <p className="text-lg text-muted-foreground">
           Machine-readable output for every CLI command. Add{" "}
           <code className="rounded bg-muted px-1.5 py-0.5">--json</code> to any
-          command for structured output that AI agents, CI pipelines, and scripts
-          can parse.
+          command for structured output that AI agents, CI pipelines, and
+          scripts can parse.
         </p>
       </div>
 
@@ -360,9 +360,7 @@ export default function PageContent() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="px-4 py-2 text-left font-medium">
-                        Field
-                      </th>
+                      <th className="px-4 py-2 text-left font-medium">Field</th>
                       <th className="px-4 py-2 text-left font-medium">Type</th>
                       <th className="px-4 py-2 text-left font-medium">
                         Description
@@ -491,11 +489,11 @@ export default function PageContent() {
           title="Usage"
         />
         <p className="mb-4 text-muted-foreground">
-          Add the{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5">--json</code> flag
-          to any command. When active, all interactive prompts are suppressed and
-          output is written as a single JSON object to stdout. Logs and spinners
-          are sent to stderr so they do not interfere with JSON parsing.
+          Add the <code className="rounded bg-muted px-1.5 py-0.5">--json</code>{" "}
+          flag to any command. When active, all interactive prompts are
+          suppressed and output is written as a single JSON object to stdout.
+          Logs and spinners are sent to stderr so they do not interfere with
+          JSON parsing.
         </p>
         <CLICommand command={usageExamplesCode} />
       </section>

@@ -1,13 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import {
-  Bot,
-  Code2,
-  GitBranch,
-  MousePointerClick,
-  Play,
-} from "lucide-react";
+import { Bot, Code2, GitBranch, MousePointerClick, Play } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +43,7 @@ export default defineWorkflow({
   ],
 });`;
 
-const PUSH_CODE = `npx wraps email workflows push`;
+const PUSH_CODE = "npx wraps email workflows push";
 
 const features: {
   icon: LucideIcon;
