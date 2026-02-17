@@ -328,19 +328,36 @@ export async function getEventAnalytics(
       .orderBy(sql`DATE(${contactEvent.createdAt})`);
 
     // Fill in missing dates with 0 counts
+    // Normalize DB date keys to YYYY-MM-DD in case driver returns Date objects
     const dailyEvents: Array<{ date: string; count: number }> = [];
     const dateMap = new Map(
-      dailyEventsData.map((d) => [d.date, Number(d.count)])
+      dailyEventsData.map((d) => [
+        String(d.date).split("T")[0],
+        Number(d.count),
+      ])
     );
 
-    for (let i = 0; i < days; i++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split("T")[0];
+    // Use UTC dates to avoid timezone-related off-by-one issues
+    const cursor = new Date(
+      Date.UTC(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate()
+      )
+    );
+    const endUTC = Date.UTC(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
+
+    while (cursor.getTime() <= endUTC) {
+      const dateStr = cursor.toISOString().split("T")[0];
       dailyEvents.push({
         date: dateStr,
         count: dateMap.get(dateStr) ?? 0,
       });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
 
     // Get top 5 event names by count in this period

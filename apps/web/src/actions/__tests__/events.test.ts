@@ -16,7 +16,12 @@ import {
   it,
   vi,
 } from "vitest";
-import { getEvent, getEventNames, listEvents } from "../events";
+import {
+  getEvent,
+  getEventAnalytics,
+  getEventNames,
+  listEvents,
+} from "../events";
 
 // Test data
 const testUser = {
@@ -270,7 +275,8 @@ async function createTestEvent(
   contactId: string,
   eventName: string,
   eventData?: Record<string, unknown>,
-  orgId: string = testOrganization.id
+  orgId: string = testOrganization.id,
+  createdAt: Date = new Date()
 ) {
   const [event] = await db
     .insert(contactEvent)
@@ -279,10 +285,18 @@ async function createTestEvent(
       organizationId: orgId,
       eventName,
       eventData: eventData ?? null,
-      createdAt: new Date(),
+      createdAt,
     })
     .returning();
   return event;
+}
+
+/** Create a Date that is `daysAgo` days in the past at noon UTC */
+function daysAgo(days: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  d.setHours(12, 0, 0, 0);
+  return d;
 }
 
 describe("Events Server Actions", () => {
@@ -748,6 +762,207 @@ describe("Events Server Actions", () => {
         expect(result.eventNames).toContain("org1_event");
         expect(result.eventNames).toContain("shared_event_name");
         expect(result.eventNames).not.toContain("org2_event");
+      }
+    });
+  });
+
+  describe("getEventAnalytics", () => {
+    it("should return analytics with correct counts", async () => {
+      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(1));
+      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(2));
+      await createTestEvent(testContact2.id, "purchase", undefined, testOrganization.id, daysAgo(3));
+
+      const result = await getEventAnalytics(testOrganization.id, 30);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.totalEvents).toBe(3);
+        expect(result.analytics.eventsThisPeriod).toBe(3);
+      }
+    });
+
+    it("should count active contacts as distinct", async () => {
+      // 3 events from 2 distinct contacts
+      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(1));
+      await createTestEvent(testContact1.id, "button_click", undefined, testOrganization.id, daysAgo(1));
+      await createTestEvent(testContact2.id, "purchase", undefined, testOrganization.id, daysAgo(2));
+
+      const result = await getEventAnalytics(testOrganization.id, 30);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.activeContacts).toBe(2);
+        expect(result.analytics.avgEventsPerContact).toBe(1.5);
+      }
+    });
+
+    it("should separate totalEvents (all time) from eventsThisPeriod", async () => {
+      // 1 event within 30 days
+      await createTestEvent(testContact1.id, "recent", undefined, testOrganization.id, daysAgo(5));
+      // 1 event outside the 30-day window
+      await createTestEvent(testContact1.id, "old", undefined, testOrganization.id, daysAgo(45));
+
+      const result = await getEventAnalytics(testOrganization.id, 30);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.totalEvents).toBe(2);
+        expect(result.analytics.eventsThisPeriod).toBe(1);
+      }
+    });
+
+    it("should respect 7-day time range", async () => {
+      await createTestEvent(testContact1.id, "recent", undefined, testOrganization.id, daysAgo(3));
+      await createTestEvent(testContact1.id, "older", undefined, testOrganization.id, daysAgo(15));
+
+      const result = await getEventAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.eventsThisPeriod).toBe(1);
+        expect(result.analytics.totalEvents).toBe(2);
+      }
+    });
+
+    it("should return dailyEvents with YYYY-MM-DD date strings", async () => {
+      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(1));
+
+      const result = await getEventAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.dailyEvents.length).toBeGreaterThan(0);
+        for (const entry of result.analytics.dailyEvents) {
+          expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
+      }
+    });
+
+    it("should include today in dailyEvents", async () => {
+      await createTestEvent(testContact1.id, "today_event", undefined, testOrganization.id, new Date());
+
+      const result = await getEventAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const todayStr = new Date().toISOString().split("T")[0];
+        const todayEntry = result.analytics.dailyEvents.find(
+          (d) => d.date === todayStr
+        );
+        expect(todayEntry).toBeDefined();
+        expect(todayEntry!.count).toBeGreaterThanOrEqual(1);
+      }
+    });
+
+    it("should gap-fill dates with zero counts", async () => {
+      // Create event only on one day
+      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(3));
+
+      const result = await getEventAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const { dailyEvents } = result.analytics;
+        // Should have an entry for every day in the range
+        expect(dailyEvents.length).toBeGreaterThanOrEqual(7);
+        // Most days should have 0 count
+        const zeroDays = dailyEvents.filter((d) => d.count === 0);
+        expect(zeroDays.length).toBeGreaterThanOrEqual(6);
+        // The day with the event should have count 1
+        const nonZeroDays = dailyEvents.filter((d) => d.count > 0);
+        expect(nonZeroDays.length).toBe(1);
+        expect(nonZeroDays[0].count).toBe(1);
+      }
+    });
+
+    it("should aggregate multiple events on the same day", async () => {
+      const day = daysAgo(2);
+      await createTestEvent(testContact1.id, "view", undefined, testOrganization.id, day);
+      await createTestEvent(testContact1.id, "click", undefined, testOrganization.id, day);
+      await createTestEvent(testContact2.id, "view", undefined, testOrganization.id, day);
+
+      const result = await getEventAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const dayStr = day.toISOString().split("T")[0];
+        const entry = result.analytics.dailyEvents.find(
+          (d) => d.date === dayStr
+        );
+        expect(entry).toBeDefined();
+        expect(entry!.count).toBe(3);
+      }
+    });
+
+    it("should return top event names sorted by count descending", async () => {
+      const day = daysAgo(1);
+      // 3 page_views, 2 purchases, 1 signup
+      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, day);
+      await createTestEvent(testContact2.id, "page_view", undefined, testOrganization.id, day);
+      await createTestEvent(testContact3.id, "page_view", undefined, testOrganization.id, day);
+      await createTestEvent(testContact1.id, "purchase", undefined, testOrganization.id, day);
+      await createTestEvent(testContact2.id, "purchase", undefined, testOrganization.id, day);
+      await createTestEvent(testContact1.id, "signup", undefined, testOrganization.id, day);
+
+      const result = await getEventAnalytics(testOrganization.id, 30);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const { topEventNames } = result.analytics;
+        expect(topEventNames).toHaveLength(3);
+        expect(topEventNames[0]).toEqual({ name: "page_view", count: 3 });
+        expect(topEventNames[1]).toEqual({ name: "purchase", count: 2 });
+        expect(topEventNames[2]).toEqual({ name: "signup", count: 1 });
+      }
+    });
+
+    it("should limit top event names to 5", async () => {
+      const day = daysAgo(1);
+      const names = ["a", "b", "c", "d", "e", "f", "g"];
+      for (const name of names) {
+        await createTestEvent(testContact1.id, name, undefined, testOrganization.id, day);
+      }
+
+      const result = await getEventAnalytics(testOrganization.id, 30);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.topEventNames.length).toBeLessThanOrEqual(5);
+      }
+    });
+
+    it("should return zeros when no events exist", async () => {
+      const result = await getEventAnalytics(testOrganization.id, 30);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.totalEvents).toBe(0);
+        expect(result.analytics.eventsThisPeriod).toBe(0);
+        expect(result.analytics.activeContacts).toBe(0);
+        expect(result.analytics.avgEventsPerContact).toBe(0);
+        expect(result.analytics.topEventNames).toHaveLength(0);
+        expect(result.analytics.dailyEvents.every((d) => d.count === 0)).toBe(true);
+      }
+    });
+
+    it("should not include events from other organizations", async () => {
+      // Events in org 2
+      await createTestEvent(testContactOrg2.id, "org2_event", undefined, testOrganization2.id, daysAgo(1));
+      await createTestEvent(testContactOrg2.id, "org2_event", undefined, testOrganization2.id, daysAgo(2));
+
+      // One event in org 1
+      await createTestEvent(testContact1.id, "org1_event", undefined, testOrganization.id, daysAgo(1));
+
+      const result = await getEventAnalytics(testOrganization.id, 30);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.totalEvents).toBe(1);
+        expect(result.analytics.eventsThisPeriod).toBe(1);
+        expect(result.analytics.activeContacts).toBe(1);
+        expect(result.analytics.topEventNames).toEqual([
+          { name: "org1_event", count: 1 },
+        ]);
       }
     });
   });
