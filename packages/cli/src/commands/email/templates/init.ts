@@ -267,7 +267,7 @@ function generateConfigFile(
     ? `\n  region: '${region}',`
     : `\n  // region: 'us-east-1',`;
 
-  return `import { defineConfig } from '@wraps.dev/email';
+  return `import { defineConfig } from '@wraps.dev/client';
 
 export default defineConfig({
   org: '${org}',${fromLine}${regionLine}
@@ -278,7 +278,7 @@ export default defineConfig({
 }
 
 function generateBrandFile(): string {
-  return `import { defineBrand } from '@wraps.dev/email';
+  return `import { defineBrand } from '@wraps.dev/client';
 
 export default defineBrand({
   primaryColor: '#5046e5',

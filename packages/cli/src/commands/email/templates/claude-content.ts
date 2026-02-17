@@ -163,7 +163,7 @@ import {
 ### wraps.config.ts
 
 \`\`\`typescript
-import { defineConfig } from '@wraps.dev/email';
+import { defineConfig } from '@wraps.dev/client';
 
 export default defineConfig({
   org: 'my-org',                      // Organization slug
@@ -177,7 +177,7 @@ export default defineConfig({
 ### brand.ts
 
 \`\`\`typescript
-import { defineBrand } from '@wraps.dev/email';
+import { defineBrand } from '@wraps.dev/client';
 
 export default defineBrand({
   primaryColor: '#5046e5',

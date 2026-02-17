@@ -214,7 +214,7 @@ export async function workflowsInit(options: WorkflowsInitOptions) {
 }
 
 function generateMinimalConfig(): string {
-  return `import { defineConfig } from '@wraps.dev/email';
+  return `import { defineConfig } from '@wraps.dev/client';
 
 export default defineConfig({
   org: 'my-org',
