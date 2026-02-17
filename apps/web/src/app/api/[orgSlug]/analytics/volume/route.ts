@@ -3,6 +3,11 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import {
+  aggregateByDate,
+  gapFillDates,
+  generateDateRange,
+} from "@/lib/analytics-utils";
 import { getCloudWatchMetrics, SES_METRICS } from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -98,11 +103,9 @@ export async function GET(request: Request, context: RouteContext) {
       })
     );
 
-    // Aggregate data points by timestamp
-    const dataPointsMap = new Map<
-      number,
-      { sent: number; delivered: number; bounced: number }
-    >();
+    // Aggregate CloudWatch sub-day periods (1h, 6h) into daily totals
+    const keys = ["sent", "delivered", "bounced"] as const;
+    const dailyMap = new Map<string, Record<(typeof keys)[number], number>>();
 
     for (const metrics of metricsResults) {
       if (!metrics) {
@@ -110,36 +113,43 @@ export async function GET(request: Request, context: RouteContext) {
       }
 
       const timestamps = metrics.sent[0]?.Timestamps || [];
-      const sentValues = metrics.sent[0]?.Values || [];
-      const deliveredValues = metrics.delivered[0]?.Values || [];
-      const bouncedValues = metrics.bounced[0]?.Values || [];
+      const perAccount = aggregateByDate(
+        timestamps,
+        [
+          metrics.sent[0]?.Values || [],
+          metrics.delivered[0]?.Values || [],
+          metrics.bounced[0]?.Values || [],
+        ],
+        [...keys]
+      );
 
-      for (let i = 0; i < timestamps.length; i++) {
-        const timestamp = timestamps[i].getTime();
-        const existing = dataPointsMap.get(timestamp) || {
+      // Merge this account's daily totals into the overall map
+      for (const [dateStr, values] of perAccount) {
+        const existing = dailyMap.get(dateStr) || {
           sent: 0,
           delivered: 0,
           bounced: 0,
         };
-
-        dataPointsMap.set(timestamp, {
-          sent: existing.sent + (sentValues[i] || 0),
-          delivered: existing.delivered + (deliveredValues[i] || 0),
-          bounced: existing.bounced + (bouncedValues[i] || 0),
+        dailyMap.set(dateStr, {
+          sent: existing.sent + values.sent,
+          delivered: existing.delivered + values.delivered,
+          bounced: existing.bounced + values.bounced,
         });
       }
     }
 
-    // Convert to array and sort by timestamp
-    const dataPoints = Array.from(dataPointsMap.entries())
-      .map(([timestamp, values]) => ({
-        date: new Date(timestamp).toISOString().split("T")[0],
-        timestamp,
-        sent: Math.round(values.sent),
-        delivered: Math.round(values.delivered),
-        bounced: Math.round(values.bounced),
-      }))
-      .sort((a, b) => a.timestamp - b.timestamp);
+    // Gap-fill every day in the range including today, then round values
+    const dateRange = generateDateRange(startTime, endTime);
+    const dataPoints = gapFillDates(dateRange, dailyMap, {
+      sent: 0,
+      delivered: 0,
+      bounced: 0,
+    }).map((d) => ({
+      ...d,
+      sent: Math.round(d.sent),
+      delivered: Math.round(d.delivered),
+      bounced: Math.round(d.bounced),
+    }));
 
     return NextResponse.json(dataPoints);
   } catch (error) {

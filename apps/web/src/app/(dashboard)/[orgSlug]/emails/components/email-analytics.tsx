@@ -111,14 +111,19 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
 
   const isLoading = volumeLoading || overviewLoading || engagementLoading;
 
-  // Merge volume and engagement data, estimate opens/clicks from rates
+  // Merge volume and engagement data by date, estimate opens/clicks from rates
   const chartData = React.useMemo(() => {
     if (!volumeData) {
       return [];
     }
 
-    return volumeData.map((v, i) => {
-      const engagement = engagementData?.[i];
+    // Build a lookup map for engagement data by date
+    const engagementByDate = new Map(
+      engagementData?.map((e) => [e.date, e]) ?? []
+    );
+
+    return volumeData.map((v) => {
+      const engagement = engagementByDate.get(v.date);
       // Estimate opens and clicks from delivered count and rates
       const opened = engagement
         ? Math.round(v.delivered * (engagement.openRate / 100))

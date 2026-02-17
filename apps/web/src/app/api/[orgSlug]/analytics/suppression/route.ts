@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { gapFillDates, generateDateRange } from "@/lib/analytics-utils";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -148,25 +149,21 @@ export async function GET(request: Request, context: RouteContext) {
       dataPointsMap.set(date, existing);
     }
 
-    // Convert to array and sort by date
-    const dataPoints: SuppressionDataPoint[] = Array.from(
-      dataPointsMap.entries()
-    ).map(([date, values]) => {
-      const total = values.accountLevel + values.globalLevel;
-      const suppressionRate = values.sent > 0 ? (total / values.sent) * 100 : 0;
-
+    // Gap-fill every day in the range including today, then compute rates
+    const dateRange = generateDateRange(startTime, endTime);
+    const dataPoints: SuppressionDataPoint[] = gapFillDates(
+      dateRange,
+      dataPointsMap,
+      { accountLevel: 0, globalLevel: 0, sent: 0 }
+    ).map((d) => {
+      const total = d.accountLevel + d.globalLevel;
+      const suppressionRate = d.sent > 0 ? (total / d.sent) * 100 : 0;
       return {
-        date,
-        timestamp: new Date(date).getTime(),
-        accountLevel: values.accountLevel,
-        globalLevel: values.globalLevel,
+        ...d,
         total,
-        sent: values.sent,
         suppressionRate: Number.parseFloat(suppressionRate.toFixed(2)),
       };
     });
-
-    dataPoints.sort((a, b) => a.timestamp - b.timestamp);
 
     return NextResponse.json(dataPoints);
   } catch (error) {

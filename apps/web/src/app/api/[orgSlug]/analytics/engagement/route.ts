@@ -3,6 +3,11 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import {
+  aggregateByDate,
+  gapFillDates,
+  generateDateRange,
+} from "@/lib/analytics-utils";
 import { getCloudWatchMetrics, SES_METRICS } from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -105,11 +110,9 @@ export async function GET(request: Request, context: RouteContext) {
       })
     );
 
-    // Aggregate data points by timestamp
-    const dataPointsMap = new Map<
-      number,
-      { sent: number; delivered: number; opens: number; clicks: number }
-    >();
+    // Aggregate CloudWatch sub-day periods (1h, 6h) into daily totals
+    const keys = ["sent", "delivered", "opens", "clicks"] as const;
+    const dailyMap = new Map<string, Record<(typeof keys)[number], number>>();
 
     for (const metrics of metricsResults) {
       if (!metrics) {
@@ -117,47 +120,54 @@ export async function GET(request: Request, context: RouteContext) {
       }
 
       const timestamps = metrics.sent[0]?.Timestamps || [];
-      const sentValues = metrics.sent[0]?.Values || [];
-      const deliveredValues = metrics.delivered[0]?.Values || [];
-      const opensValues = metrics.opens[0]?.Values || [];
-      const clicksValues = metrics.clicks[0]?.Values || [];
+      const perAccount = aggregateByDate(
+        timestamps,
+        [
+          metrics.sent[0]?.Values || [],
+          metrics.delivered[0]?.Values || [],
+          metrics.opens[0]?.Values || [],
+          metrics.clicks[0]?.Values || [],
+        ],
+        [...keys]
+      );
 
-      for (let i = 0; i < timestamps.length; i++) {
-        const timestamp = timestamps[i].getTime();
-        const existing = dataPointsMap.get(timestamp) || {
+      // Merge this account's daily totals into the overall map
+      for (const [dateStr, values] of perAccount) {
+        const existing = dailyMap.get(dateStr) || {
           sent: 0,
           delivered: 0,
           opens: 0,
           clicks: 0,
         };
-
-        dataPointsMap.set(timestamp, {
-          sent: existing.sent + (sentValues[i] || 0),
-          delivered: existing.delivered + (deliveredValues[i] || 0),
-          opens: existing.opens + (opensValues[i] || 0),
-          clicks: existing.clicks + (clicksValues[i] || 0),
+        dailyMap.set(dateStr, {
+          sent: existing.sent + values.sent,
+          delivered: existing.delivered + values.delivered,
+          opens: existing.opens + values.opens,
+          clicks: existing.clicks + values.clicks,
         });
       }
     }
 
-    // Convert to array with calculated rates
-    const dataPoints = Array.from(dataPointsMap.entries())
-      .map(([timestamp, values]) => {
-        const openRate =
-          values.delivered > 0 ? (values.opens / values.delivered) * 100 : 0;
-        const clickRate =
-          values.delivered > 0 ? (values.clicks / values.delivered) * 100 : 0;
-        const ctr = values.opens > 0 ? (values.clicks / values.opens) * 100 : 0;
+    // Gap-fill every day in the range including today, then compute rates
+    const dateRange = generateDateRange(startTime, endTime);
+    const dataPoints = gapFillDates(dateRange, dailyMap, {
+      sent: 0,
+      delivered: 0,
+      opens: 0,
+      clicks: 0,
+    }).map((d) => {
+      const openRate = d.delivered > 0 ? (d.opens / d.delivered) * 100 : 0;
+      const clickRate = d.delivered > 0 ? (d.clicks / d.delivered) * 100 : 0;
+      const ctr = d.opens > 0 ? (d.clicks / d.opens) * 100 : 0;
 
-        return {
-          date: new Date(timestamp).toISOString().split("T")[0],
-          timestamp,
-          openRate: Number(openRate.toFixed(1)),
-          clickRate: Number(clickRate.toFixed(1)),
-          ctr: Number(ctr.toFixed(1)),
-        };
-      })
-      .sort((a, b) => a.timestamp - b.timestamp);
+      return {
+        date: d.date,
+        timestamp: d.timestamp,
+        openRate: Number(openRate.toFixed(1)),
+        clickRate: Number(clickRate.toFixed(1)),
+        ctr: Number(ctr.toFixed(1)),
+      };
+    });
 
     return NextResponse.json(dataPoints);
   } catch (error) {

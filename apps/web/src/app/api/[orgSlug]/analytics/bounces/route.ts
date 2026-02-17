@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { gapFillDates, generateDateRange } from "@/lib/analytics-utils";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -151,26 +152,21 @@ export async function GET(request: Request, context: RouteContext) {
       dataPointsMap.set(date, existing);
     }
 
-    // Convert to array and sort by date
-    const dataPoints: BounceDataPoint[] = Array.from(
-      dataPointsMap.entries()
-    ).map(([date, values]) => {
-      const total = values.permanent + values.transient + values.undetermined;
-      const bounceRate = values.sent > 0 ? (total / values.sent) * 100 : 0;
-
+    // Gap-fill every day in the range including today, then compute rates
+    const dateRange = generateDateRange(startTime, endTime);
+    const dataPoints: BounceDataPoint[] = gapFillDates(
+      dateRange,
+      dataPointsMap,
+      { permanent: 0, transient: 0, undetermined: 0, sent: 0 }
+    ).map((d) => {
+      const total = d.permanent + d.transient + d.undetermined;
+      const bounceRate = d.sent > 0 ? (total / d.sent) * 100 : 0;
       return {
-        date,
-        timestamp: new Date(date).getTime(),
-        permanent: values.permanent,
-        transient: values.transient,
-        undetermined: values.undetermined,
+        ...d,
         total,
-        sent: values.sent,
         bounceRate: Number.parseFloat(bounceRate.toFixed(2)),
       };
     });
-
-    dataPoints.sort((a, b) => a.timestamp - b.timestamp);
 
     return NextResponse.json(dataPoints);
   } catch (error) {

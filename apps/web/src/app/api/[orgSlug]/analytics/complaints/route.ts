@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { gapFillDates, generateDateRange } from "@/lib/analytics-utils";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -113,23 +114,19 @@ export async function GET(request: Request, context: RouteContext) {
       dataPointsMap.set(date, existing);
     }
 
-    // Convert to array and sort by date
-    const dataPoints: ComplaintDataPoint[] = Array.from(
-      dataPointsMap.entries()
-    ).map(([date, values]) => {
-      const complaintRate =
-        values.sent > 0 ? (values.complaints / values.sent) * 100 : 0;
-
+    // Gap-fill every day in the range including today, then compute rates
+    const dateRange = generateDateRange(startTime, endTime);
+    const dataPoints: ComplaintDataPoint[] = gapFillDates(
+      dateRange,
+      dataPointsMap,
+      { complaints: 0, sent: 0 }
+    ).map((d) => {
+      const complaintRate = d.sent > 0 ? (d.complaints / d.sent) * 100 : 0;
       return {
-        date,
-        timestamp: new Date(date).getTime(),
-        complaints: values.complaints,
-        sent: values.sent,
-        complaintRate: Number.parseFloat(complaintRate.toFixed(4)), // 4 decimals for small percentages
+        ...d,
+        complaintRate: Number.parseFloat(complaintRate.toFixed(4)),
       };
     });
-
-    dataPoints.sort((a, b) => a.timestamp - b.timestamp);
 
     return NextResponse.json(dataPoints);
   } catch (error) {
