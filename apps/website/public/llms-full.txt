@@ -201,13 +201,18 @@ import { WrapsEmail } from '@wraps.dev/email';
 
 const email = new WrapsEmail({
   region?: string,              // AWS region (default: us-east-1)
-  credentials?: {
-    accessKeyId: string,
-    secretAccessKey: string,
-    sessionToken?: string,
-  },
+  credentials?:                 // Static credentials or provider function
+    | { accessKeyId: string, secretAccessKey: string, sessionToken?: string }
+    | AwsCredentialIdentityProvider,
   roleArn?: string,             // IAM role for OIDC
+  roleSessionName?: string,     // Session name for AssumeRole (default: 'wraps-email-session')
   endpoint?: string,            // Custom endpoint (LocalStack)
+  client?: SESClient,           // Pre-configured SES client (overrides region/credentials/roleArn)
+  s3Client?: S3Client,          // Pre-configured S3 client for inbox
+  sesv2Client?: SESv2Client,    // Pre-configured SES v2 client for suppression/batch
+  dynamodbClient?: DynamoDBDocumentClient, // Pre-configured DynamoDB client for events
+  inboxBucketName?: string,     // S3 bucket for inbound email (enables email.inbox)
+  historyTableName?: string,    // DynamoDB table for events (enables email.events)
 });
 ```
 
@@ -246,6 +251,24 @@ await email.sendTemplate({
 });
 ```
 
+### email.sendBatch(params)
+
+```typescript
+const result = await email.sendBatch({
+  from: 'you@company.com',
+  entries: [                            // Up to 100, unique content per recipient
+    { to: 'alice@example.com', subject: 'Hi Alice', html: '<p>Hello Alice!</p>' },
+    { to: 'bob@example.com', subject: 'Hi Bob', html: '<p>Hello Bob!</p>' },
+  ],
+  replyTo: 'support@company.com',      // Optional, shared across all entries
+  tags: { campaign: 'welcome' },       // Optional default tags (overridable per entry)
+});
+
+// Returns: { results: BatchEntryResult[], successCount: number, failureCount: number }
+// Each result: { index, messageId?, status: 'success' | 'failure', error? }
+// Throws BatchError on partial failure
+```
+
 ### email.sendBulkTemplate(params)
 
 ```typescript
@@ -270,50 +293,62 @@ await email.templates.list();          // Returns template metadata[]
 await email.templates.delete(name);
 ```
 
-### Inbox API (WrapsInbox)
+### Optional Features: Inbox, Events, Suppression
+
+Inbox and Events are enabled by constructor config. Suppression is always available.
 
 ```typescript
-import { WrapsInbox } from '@wraps.dev/email';
-const inbox = new WrapsInbox({ region: 'us-east-1' });
+const email = new WrapsEmail({
+  inboxBucketName: 'my-inbox-bucket',   // enables email.inbox
+  historyTableName: 'my-events-table',  // enables email.events
+});
 
-await inbox.list({ limit: 20, domain: 'yourdomain.com' });
-await inbox.get(messageId);
-await inbox.getAttachment(messageId, attachmentId); // Returns presigned URL (1hr)
-await inbox.getRaw(messageId);
-await inbox.delete(messageId);
-await inbox.forward(messageId, { to: 'other@example.com' });
-await inbox.reply(messageId, { html: '<p>Reply</p>' });
+// email.inbox is null unless inboxBucketName is provided
+// email.events is null unless historyTableName is provided
+// email.suppression is always available
 ```
 
-### Events API (WrapsEmailEvents)
+### email.inbox (requires inboxBucketName)
 
 ```typescript
-import { WrapsEmailEvents } from '@wraps.dev/email';
-const events = new WrapsEmailEvents({ region: 'us-east-1', accountId: '123456789012' });
-
-await events.get(messageId);    // Events sorted by priority
-await events.list({ limit: 20, startTime: new Date() });
+if (email.inbox) {
+  await email.inbox.list({ maxResults: 20 });
+  await email.inbox.get(messageId);
+  await email.inbox.getAttachment(messageId, attachmentId); // Returns presigned URL (1hr)
+  await email.inbox.getRaw(messageId);
+  await email.inbox.delete(messageId);
+  await email.inbox.forward(messageId, { to: 'other@example.com', from: 'me@example.com' });
+  await email.inbox.reply(messageId, { from: 'me@example.com', html: '<p>Reply</p>' });
+}
 ```
 
-### Suppression API (WrapsEmailSuppression)
+### email.events (requires historyTableName)
 
 ```typescript
-import { WrapsEmailSuppression } from '@wraps.dev/email';
-const suppression = new WrapsEmailSuppression({ region: 'us-east-1' });
+if (email.events) {
+  await email.events.get(messageId);    // Events sorted by priority
+  await email.events.list({ accountId: '123456789012', maxResults: 50 });
+}
+```
 
-await suppression.get(email);
-await suppression.add(email, 'BOUNCE');
-await suppression.remove(email);
-await suppression.list({ limit: 20, reason: 'BOUNCE' });
+### email.suppression (always available)
+
+```typescript
+await email.suppression.get(emailAddress);
+await email.suppression.add(emailAddress, 'BOUNCE');
+await email.suppression.remove(emailAddress);
+await email.suppression.list({ reason: 'BOUNCE', maxResults: 100 });
 ```
 
 ### Error Types
 
 ```typescript
-import { ValidationError, SESError, DynamoDBError } from '@wraps.dev/email';
+import { ValidationError, SESError, DynamoDBError, BatchError, WrapsEmailError } from '@wraps.dev/email';
+
+// WrapsEmailError: base class for all email errors
 
 // ValidationError: invalid input (bad email, missing fields)
-//   .field: string - which field failed
+//   .field?: string - which field failed
 //   .message: string
 
 // SESError: AWS SES error (rate limit, unverified sender)
@@ -323,6 +358,11 @@ import { ValidationError, SESError, DynamoDBError } from '@wraps.dev/email';
 
 // DynamoDBError: email history read/write error
 //   .code: string, .requestId: string, .retryable: boolean
+
+// BatchError: partial failure in sendBatch()
+//   .results: BatchEntryResult[] - per-entry results
+//   .successCount: number
+//   .failureCount: number
 ```
 
 ### SDK Defaults & Limits
@@ -479,8 +519,8 @@ import { defineWorkflow, sendEmail, delay, condition, exit } from '@wraps.dev/cl
 
 export default defineWorkflow({
   name: 'Welcome Sequence',
-  trigger: { type: 'contact.created' },
-  settings: { maxEnrollments: 1 },
+  trigger: { type: 'contact_created' },
+  settings: { allowReentry: false, contactCooldownSeconds: 86400 },
   steps: [
     sendEmail('welcome', { template: 'welcome-email' }),
     delay('wait', { days: 1 }),
@@ -492,46 +532,88 @@ export default defineWorkflow({
 
 ### Workflow Step Helpers
 
-- `sendEmail(id, { template, from?, fromName? })` - Send email
-- `sendSms(id, { template?, message? })` - Send SMS
+- `sendEmail(id, { template, from?, fromName?, replyTo? })` - Send email
+- `sendSms(id, { template?, message?, senderId? })` - Send SMS
 - `delay(id, { days?, hours?, minutes? })` - Wait
 - `condition(id, { field, operator, value, branches })` - Branch
 - `waitForEvent(id, { eventName, timeout? })` - Wait for event
 - `waitForEmailEngagement(id, { emailStepId, engagementType, timeout? })` - Wait for open/click
 - `exit(id, { reason?, markAs? })` - End workflow
-- `updateContact(id, { updates })` - Modify contact
-- `subscribeTopic(id, { topicId, channel })` - Subscribe
-- `unsubscribeTopic(id, { topicId, channel })` - Unsubscribe
+- `updateContact(id, { updates })` - Modify contact fields (set, increment, decrement, append, remove)
+- `subscribeTopic(id, { topicId, channel? })` - Subscribe to topic
+- `unsubscribeTopic(id, { topicId, channel? })` - Unsubscribe from topic
 - `webhook(id, { url, method?, headers?, body? })` - External webhook
+- `cascade(id, { channels })` - Cross-channel cascade (see below)
 
 ### Trigger Types
 
-- `contact.created` - New contact added
-- `contact.updated` - Contact fields changed
-- `event.received` - Custom event received
-- `segment.entered` - Contact enters segment
-- `segment.exited` - Contact exits segment
-- `manual` - Manually triggered via API
+- `contact_created` - New contact added
+- `contact_updated` - Contact fields changed
+- `event` - Custom event received (requires `eventName`)
+- `segment_entry` - Contact enters segment (requires `segmentId`)
+- `segment_exit` - Contact exits segment (requires `segmentId`)
+- `schedule` - Cron-based schedule (requires `schedule` cron expression, optional `timezone`)
+- `api` - Triggered via API call
+- `topic_subscribed` - Contact subscribes to topic (requires `topicId`)
+- `topic_unsubscribed` - Contact unsubscribes from topic (requires `topicId`)
+
+### Workflow Settings
+
+```typescript
+settings?: {
+  allowReentry?: boolean,              // Allow same contact to re-enter
+  reentryDelaySeconds?: number,        // Min seconds between re-entries
+  maxConcurrentExecutions?: number,    // Max parallel executions
+  contactCooldownSeconds?: number,     // Cooldown before re-trigger
+}
+```
+
+### cascade() — Cross-Channel Orchestration
+
+Tries channels in order; stops when engagement is detected. Returns `StepDefinition[]`.
+
+```typescript
+import { defineWorkflow, cascade, sendEmail } from '@wraps.dev/client';
+
+export default defineWorkflow({
+  name: 'Notify User',
+  trigger: { type: 'event', eventName: 'payment_failed' },
+  steps: [
+    ...cascade('notify', {
+      channels: [
+        { type: 'email', template: 'payment-failed', waitFor: { hours: 2 }, engagement: 'opened' },
+        { type: 'sms', template: 'payment-failed-sms' },
+      ],
+    }),
+  ],
+});
+// Expands to: sendEmail → waitForEmailEngagement → condition (engaged?) → yes: exit → no: sendSms
+```
 
 ## Authentication
 
-All SDKs support the same authentication methods:
+All SDKs follow a 4-step credential resolution chain (in priority order):
 
-### 1. Default credential chain (recommended)
+### 1. Pre-configured AWS client (highest priority)
 ```typescript
-const email = new WrapsEmail();
-// Resolves: env vars -> ~/.aws/credentials -> IAM role (EC2/ECS/Lambda)
+import { SESClient } from '@aws-sdk/client-ses';
+const sesClient = new SESClient({ /* custom config */ });
+const email = new WrapsEmail({ client: sesClient });
+// Bypasses all other credential resolution
 ```
 
-### 2. OIDC (Vercel, EKS, GitHub Actions)
+### 2. OIDC role assumption (Vercel, EKS, GitHub Actions)
 ```typescript
 const email = new WrapsEmail({
   roleArn: process.env.AWS_ROLE_ARN,
+  roleSessionName: 'my-app-session', // Optional, defaults to 'wraps-email-session'
 });
+// Uses AssumeRoleWithWebIdentity via AWS_WEB_IDENTITY_TOKEN_FILE
 ```
 
-### 3. Explicit credentials
+### 3. Explicit credentials (static or provider function)
 ```typescript
+// Static credentials
 const email = new WrapsEmail({
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
@@ -539,6 +621,17 @@ const email = new WrapsEmail({
   },
   region: 'us-east-1',
 });
+
+// Credential provider function (e.g., from Vercel OIDC helper)
+const email = new WrapsEmail({
+  credentials: myCredentialProvider, // AwsCredentialIdentityProvider
+});
+```
+
+### 4. AWS SDK default chain (lowest priority, recommended)
+```typescript
+const email = new WrapsEmail();
+// Resolves: env vars -> ~/.aws/credentials -> ECS container -> EC2 instance metadata
 ```
 
 ## Common Workflows
@@ -700,6 +793,8 @@ S3 bucket (private, versioned), CloudFront distribution (OAI, HTTPS), optional A
 - Configuration Presets: https://wraps.dev/docs/guides/configuration-presets
 - Templates Guide: https://wraps.dev/docs/guides/templates
 - Workflows Guide: https://wraps.dev/docs/guides/workflows
+- Orchestration Guide: https://wraps.dev/docs/guides/orchestration
+- Webhooks Guide: https://wraps.dev/docs/guides/webhooks
 - GitHub (SDK): https://github.com/wraps-team/wraps-js
 - npm (email): https://npmjs.com/package/@wraps.dev/email
 - npm (sms): https://npmjs.com/package/@wraps.dev/sms

@@ -45,6 +45,8 @@ account. Zero credentials stored. OIDC authentication. You own everything.
 - [Configuration Presets](https://wraps.dev/docs/guides/configuration-presets): Starter, Production, Enterprise
 - [Templates as Code](https://wraps.dev/docs/guides/templates): React Email templates workflow
 - [Building Workflows](https://wraps.dev/docs/guides/workflows): Automated email/SMS sequences
+- [Orchestration](https://wraps.dev/docs/guides/orchestration): Cross-channel cascades and advanced orchestration
+- [Webhooks](https://wraps.dev/docs/guides/webhooks): Webhook event delivery setup
 - [Production Access](https://wraps.dev/docs/guides/production-access): Get SES production access
 - [Domain Verification](https://wraps.dev/docs/guides/domain-verification): DKIM, SPF, DMARC setup
 
