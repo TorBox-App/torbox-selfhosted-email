@@ -1,6 +1,10 @@
 "use client";
 
-import type { Workflow } from "@wraps/db";
+import type {
+  Workflow,
+  WorkflowStep,
+  WorkflowTransition,
+} from "@wraps/db";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 import { AIDesignPanel } from "./ai-design-panel";
@@ -62,10 +66,20 @@ export function WorkflowBuilder({
   const setSettingsPanelOpen = useWorkflowStore(
     (state) => state.setSettingsPanelOpen
   );
+  const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
 
   useEffect(() => {
     setWorkflow(workflow);
   }, [workflow, setWorkflow]);
+
+  // Auto-open settings panel for new workflows (only trigger node, no transitions)
+  useEffect(() => {
+    const steps = workflow.steps as WorkflowStep[];
+    const transitions = workflow.transitions as WorkflowTransition[];
+    if (steps.length <= 1 && transitions.length === 0) {
+      setSettingsPanelOpen(true);
+    }
+  }, [workflow.id, setSettingsPanelOpen]);
 
   return (
     <ReactFlowProvider>
@@ -81,7 +95,7 @@ export function WorkflowBuilder({
             <WorkflowCanvas
               smsEnabled={awsAccounts.some((a) => a.smsEnabled)}
             />
-            {settingsPanelOpen ? (
+            {settingsPanelOpen && !selectedNodeId ? (
               <WorkflowSettingsPanel
                 awsAccounts={awsAccounts}
                 onClose={() => setSettingsPanelOpen(false)}
