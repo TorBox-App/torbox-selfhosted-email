@@ -59,6 +59,8 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
     UNSUBSCRIBE_SECRET: process.env.UNSUBSCRIBE_SECRET,
     NEXT_PUBLIC_APP_URL:
       process.env.NEXT_PUBLIC_APP_URL ?? "https://app.wraps.dev",
+    // Anthropic API key for AI workflow generation
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
   },
   link: [rateLimitTable, batchQueue, workflowQueue],
   nodejs: {
