@@ -23,6 +23,7 @@ import {
   createContact,
   deleteContact,
   getContact,
+  getContactAnalytics,
   listContacts,
   subscribeContactToTopics,
   unsubscribeContactFromTopics,
@@ -912,6 +913,111 @@ describe("Contacts Server Actions", () => {
       // Should succeed but with 0 count
       expect(result.success).toBe(true);
       expect(result.count).toBe(0);
+    });
+  });
+
+  describe("getContactAnalytics", () => {
+    /** Insert a contact directly with a specific createdAt date */
+    async function insertContactAt(email: string, createdAt: Date) {
+      const [c] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrganization.id,
+          email,
+          createdAt,
+        })
+        .returning();
+      return c;
+    }
+
+    /** Create a Date that is `n` days in the past at noon UTC */
+    function daysAgo(n: number): Date {
+      const d = new Date();
+      d.setDate(d.getDate() - n);
+      d.setHours(12, 0, 0, 0);
+      return d;
+    }
+
+    it("should return dailyGrowth with YYYY-MM-DD date strings", async () => {
+      await insertContactAt("chart-fmt@test.com", daysAgo(1));
+
+      const result = await getContactAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.dailyGrowth.length).toBeGreaterThan(0);
+        for (const entry of result.analytics.dailyGrowth) {
+          expect(entry.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
+      }
+    });
+
+    it("should include today in dailyGrowth", async () => {
+      await insertContactAt("chart-today@test.com", new Date());
+
+      const result = await getContactAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const todayStr = new Date().toISOString().split("T")[0];
+        const todayEntry = result.analytics.dailyGrowth.find(
+          (d) => d.date === todayStr
+        );
+        expect(todayEntry).toBeDefined();
+        expect(todayEntry!.count).toBeGreaterThanOrEqual(1);
+      }
+    });
+
+    it("should gap-fill dates with zero counts", async () => {
+      await insertContactAt("chart-gap@test.com", daysAgo(3));
+
+      const result = await getContactAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const { dailyGrowth } = result.analytics;
+        // Should have an entry for every day in the range
+        expect(dailyGrowth.length).toBeGreaterThanOrEqual(7);
+        // Most days should have 0 count
+        const zeroDays = dailyGrowth.filter((d) => d.count === 0);
+        expect(zeroDays.length).toBeGreaterThanOrEqual(6);
+        // The day with the contact should have count 1
+        const nonZeroDays = dailyGrowth.filter((d) => d.count > 0);
+        expect(nonZeroDays.length).toBe(1);
+        expect(nonZeroDays[0].count).toBe(1);
+      }
+    });
+
+    it("should aggregate multiple contacts on the same day", async () => {
+      const day = daysAgo(2);
+      await insertContactAt("chart-agg1@test.com", day);
+      await insertContactAt("chart-agg2@test.com", day);
+      await insertContactAt("chart-agg3@test.com", day);
+
+      const result = await getContactAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        const dayStr = day.toISOString().split("T")[0];
+        const entry = result.analytics.dailyGrowth.find(
+          (d) => d.date === dayStr
+        );
+        expect(entry).toBeDefined();
+        expect(entry!.count).toBe(3);
+      }
+    });
+
+    it("should only count contacts within the requested period", async () => {
+      await insertContactAt("chart-recent@test.com", daysAgo(3));
+      await insertContactAt("chart-old@test.com", daysAgo(15));
+
+      const result = await getContactAnalytics(testOrganization.id, 7);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.analytics.newContactsThisPeriod).toBe(1);
+        expect(result.analytics.totalContacts).toBe(2);
+      }
     });
   });
 });

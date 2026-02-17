@@ -1798,9 +1798,11 @@ export async function getContactAnalytics(
     const avgClickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
 
     // Get daily growth data for chart
+    // Cast DATE() to text so the Neon driver returns "YYYY-MM-DD" strings
+    // instead of Date objects (which serialize as "YYYY-MM-DDT07:00:00.000Z")
     const dailyGrowthData = await db
       .select({
-        date: sql<string>`DATE(${contact.createdAt})`,
+        date: sql<string>`DATE(${contact.createdAt})::text`,
         count: count(),
       })
       .from(contact)
@@ -1814,19 +1816,32 @@ export async function getContactAnalytics(
       .orderBy(sql`DATE(${contact.createdAt})`);
 
     // Fill in missing dates with 0 counts
+    // Normalize DB date keys to YYYY-MM-DD in case driver returns Date objects
     const dailyGrowth: Array<{ date: string; count: number }> = [];
     const dateMap = new Map(
-      dailyGrowthData.map((d) => [d.date, Number(d.count)])
+      dailyGrowthData.map((d) => [
+        String(d.date).split("T")[0],
+        Number(d.count),
+      ])
     );
 
-    for (let i = 0; i <= days; i++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split("T")[0];
+    // Use UTC dates to avoid timezone-related off-by-one issues
+    const cursor = new Date(
+      Date.UTC(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate()
+      )
+    );
+    const endUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+
+    while (cursor.getTime() <= endUTC) {
+      const dateStr = cursor.toISOString().split("T")[0];
       dailyGrowth.push({
         date: dateStr,
         count: dateMap.get(dateStr) ?? 0,
       });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
 
     return {
