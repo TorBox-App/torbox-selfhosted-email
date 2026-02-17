@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Undo the global mock from vitest setup so we can test the real module
+vi.unmock("@/lib/activation-tracking");
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 // Mock PostHog (not the focus of this test)

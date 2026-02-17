@@ -7,7 +7,24 @@ import {
   user,
 } from "@wraps/db";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll } from "vitest";
+import { afterAll, beforeAll, vi } from "vitest";
+
+// Global mock: prevent activation-tracking from emitting real events to production.
+// Every exported function returns a resolved Promise (the real functions are async).
+const noop = () => Promise.resolve();
+vi.mock("@/lib/activation-tracking", () => ({
+  trackAwsConnected: vi.fn(noop),
+  trackDomainVerified: vi.fn(noop),
+  trackFirstEmailSent: vi.fn(noop),
+  trackOnboardingCompleted: vi.fn(noop),
+  trackContactCreated: vi.fn(noop),
+  trackContactsImported: vi.fn(noop),
+  trackWorkflowCreated: vi.fn(noop),
+  trackTemplateCreated: vi.fn(noop),
+  trackTemplatePublished: vi.fn(noop),
+  trackBroadcastCreated: vi.fn(noop),
+  trackApiKeyCreated: vi.fn(noop),
+}));
 
 // Test data - we'll insert these into the real database
 export const testUser = {
