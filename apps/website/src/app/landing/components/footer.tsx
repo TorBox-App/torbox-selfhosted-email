@@ -20,6 +20,7 @@ const footerLinks = {
     { name: "SDK Reference", href: "/docs/sdk-reference" },
     { name: "CDK Reference", href: "/docs/cdk-reference" },
     { name: "Pulumi Reference", href: "/docs/pulumi-reference" },
+    { name: "llms.txt", href: "/llms.txt" },
   ],
   resources: [
     { name: "Email Tools", href: "/tools" },
