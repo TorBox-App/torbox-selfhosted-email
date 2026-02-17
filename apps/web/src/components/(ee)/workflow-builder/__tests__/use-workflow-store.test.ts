@@ -573,6 +573,63 @@ describe("useWorkflowStore", () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // canvasViewport tracking
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("canvasViewport", () => {
+    it("should have default viewport of {0, 0, 1}", () => {
+      const state = useWorkflowStore.getState();
+      expect(state.canvasViewport).toEqual({ x: 0, y: 0, zoom: 1 });
+    });
+
+    it("should update viewport with setCanvasViewport", () => {
+      useWorkflowStore
+        .getState()
+        .setCanvasViewport({ x: 100, y: -50, zoom: 1.5 });
+      const state = useWorkflowStore.getState();
+
+      expect(state.canvasViewport).toEqual({ x: 100, y: -50, zoom: 1.5 });
+    });
+
+    it("should initialize viewport from saved workflow data", () => {
+      const mockWorkflow = createMockWorkflow({
+        steps: [],
+        transitions: [],
+        canvasViewport: { x: 200, y: 300, zoom: 0.8 },
+      });
+
+      useWorkflowStore.getState().setWorkflow(mockWorkflow);
+      const state = useWorkflowStore.getState();
+
+      expect(state.canvasViewport).toEqual({ x: 200, y: 300, zoom: 0.8 });
+    });
+
+    it("should use default viewport when workflow has null canvasViewport", () => {
+      const mockWorkflow = createMockWorkflow({
+        steps: [],
+        transitions: [],
+        canvasViewport: null as unknown as {
+          x: number;
+          y: number;
+          zoom: number;
+        },
+      });
+
+      useWorkflowStore.getState().setWorkflow(mockWorkflow);
+      const state = useWorkflowStore.getState();
+
+      expect(state.canvasViewport).toEqual({ x: 0, y: 0, zoom: 1 });
+    });
+
+    it("should return tracked viewport from getWorkflowDefinition", () => {
+      useWorkflowStore.getState().setCanvasViewport({ x: 42, y: -10, zoom: 2 });
+      const definition = useWorkflowStore.getState().getWorkflowDefinition();
+
+      expect(definition.canvasViewport).toEqual({ x: 42, y: -10, zoom: 2 });
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // Dirty state tracking
   // ═══════════════════════════════════════════════════════════════════════════
 

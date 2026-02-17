@@ -718,7 +718,12 @@ export async function deleteWorkflow(
       .where(
         and(
           eq(workflowExecution.workflowId, workflowId),
-          inArray(workflowExecution.status, ["pending", "active", "paused"])
+          inArray(workflowExecution.status, [
+            "pending",
+            "active",
+            "paused",
+            "waiting",
+          ])
         )
       );
 
@@ -932,21 +937,8 @@ export async function enableWorkflow(
       };
     }
 
-    // Enable workflow
-    await db
-      .update(workflow)
-      .set({
-        status: "enabled",
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(workflow.id, workflowId),
-          eq(workflow.organizationId, organizationId)
-        )
-      );
-
-    // If schedule trigger, create EventBridge schedule
+    // If schedule trigger, create EventBridge schedule BEFORE setting status
+    // to avoid a window where the workflow is "enabled" without a valid schedule
     if (existing.triggerType === "schedule" && triggerConfig.schedule) {
       const scheduleResult = await callWorkflowScheduleApi(
         workflowId,
@@ -959,22 +951,26 @@ export async function enableWorkflow(
       );
 
       if (!scheduleResult.success) {
-        // Rollback to paused on failure
-        await db
-          .update(workflow)
-          .set({ status: "paused", updatedAt: new Date() })
-          .where(
-            and(
-              eq(workflow.id, workflowId),
-              eq(workflow.organizationId, organizationId)
-            )
-          );
         return {
           success: false,
           error: `Failed to create schedule: ${scheduleResult.error}`,
         };
       }
     }
+
+    // Enable workflow (schedule already created if needed)
+    await db
+      .update(workflow)
+      .set({
+        status: "enabled",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(workflow.id, workflowId),
+          eq(workflow.organizationId, organizationId)
+        )
+      );
 
     // Revalidate
     revalidatePath("/[orgSlug]/automations", "page");
@@ -1031,11 +1027,12 @@ export async function disableWorkflow(
       return { success: false, error: "Workflow not found" };
     }
 
-    // Pause workflow
+    // Pause workflow and mark as edited from dashboard (for CLI conflict detection)
     await db
       .update(workflow)
       .set({
         status: "paused",
+        lastEditedFrom: "dashboard",
         updatedAt: new Date(),
       })
       .where(

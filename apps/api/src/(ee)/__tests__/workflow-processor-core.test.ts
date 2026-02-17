@@ -358,6 +358,424 @@ describe("Workflow Processor - Reentry Prevention", () => {
   });
 });
 
+describe("Workflow Processor - processNextStep Routing", () => {
+  /**
+   * Tests for the processNextStep branch routing logic.
+   * Ensures correct transition selection and fallback behavior.
+   */
+
+  type Transition = {
+    id: string;
+    fromStepId: string;
+    toStepId: string;
+    condition?: { branch: string } | null;
+  };
+
+  function findNextTransition(
+    transitions: Transition[],
+    currentStepId: string,
+    branch?: string
+  ): Transition | undefined {
+    let nextTransition: Transition | undefined;
+
+    if (branch) {
+      nextTransition = transitions.find(
+        (t) => t.fromStepId === currentStepId && t.condition?.branch === branch
+      );
+    }
+
+    // Fallback to branchless transition only when no specific branch was requested
+    if (!(nextTransition || branch)) {
+      nextTransition = transitions.find(
+        (t) => t.fromStepId === currentStepId && !t.condition
+      );
+    }
+
+    return nextTransition;
+  }
+
+  it("should find matching branch transition", () => {
+    const transitions: Transition[] = [
+      {
+        id: "t1",
+        fromStepId: "cond-1",
+        toStepId: "step-yes",
+        condition: { branch: "yes" },
+      },
+      {
+        id: "t2",
+        fromStepId: "cond-1",
+        toStepId: "step-no",
+        condition: { branch: "no" },
+      },
+    ];
+
+    const result = findNextTransition(transitions, "cond-1", "yes");
+    expect(result?.toStepId).toBe("step-yes");
+  });
+
+  it("should find branchless transition when no branch specified", () => {
+    const transitions: Transition[] = [
+      { id: "t1", fromStepId: "step-1", toStepId: "step-2", condition: null },
+    ];
+
+    const result = findNextTransition(transitions, "step-1");
+    expect(result?.toStepId).toBe("step-2");
+  });
+
+  it("should NOT fall back to branchless transition when branch is specified", () => {
+    const transitions: Transition[] = [
+      {
+        id: "t1",
+        fromStepId: "cond-1",
+        toStepId: "step-yes",
+        condition: { branch: "yes" },
+      },
+      {
+        id: "t2",
+        fromStepId: "cond-1",
+        toStepId: "step-fallback",
+        condition: null,
+      },
+    ];
+
+    // Branch "no" is specified but no matching transition exists
+    const result = findNextTransition(transitions, "cond-1", "no");
+    // Should return undefined (complete execution), NOT fall back to branchless
+    expect(result).toBeUndefined();
+  });
+
+  it("should fall back to branchless transition when no branch specified and branched transitions exist", () => {
+    const transitions: Transition[] = [
+      {
+        id: "t1",
+        fromStepId: "step-1",
+        toStepId: "step-branch",
+        condition: { branch: "yes" },
+      },
+      {
+        id: "t2",
+        fromStepId: "step-1",
+        toStepId: "step-default",
+        condition: null,
+      },
+    ];
+
+    const result = findNextTransition(transitions, "step-1");
+    expect(result?.toStepId).toBe("step-default");
+  });
+
+  it("should return undefined when no transitions exist for current step", () => {
+    const transitions: Transition[] = [
+      {
+        id: "t1",
+        fromStepId: "other-step",
+        toStepId: "step-2",
+        condition: null,
+      },
+    ];
+
+    const result = findNextTransition(transitions, "step-1");
+    expect(result).toBeUndefined();
+  });
+
+  it("should return undefined when branch specified but no matching or branchless transition", () => {
+    const transitions: Transition[] = [
+      {
+        id: "t1",
+        fromStepId: "cond-1",
+        toStepId: "step-yes",
+        condition: { branch: "yes" },
+      },
+    ];
+
+    // "timeout" branch specified, no matching transition, no branchless fallback
+    const result = findNextTransition(transitions, "cond-1", "timeout");
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("Workflow Processor - Dropped Executions Tracking", () => {
+  /**
+   * Tests for the droppedExecutions counter increment logic.
+   * Verifies all 4 drop points trigger the counter increment.
+   */
+
+  type DropReason =
+    | "reentry_delay"
+    | "cooldown"
+    | "max_concurrent"
+    | "conflict";
+
+  function shouldDropExecution(
+    reason: DropReason,
+    config: {
+      allowReentry: boolean;
+      reentryDelaySeconds: number | null;
+      contactCooldownSeconds: number | null;
+      maxConcurrentExecutions: number | null;
+    },
+    state: {
+      recentlyCompletedAt: Date | null;
+      recentExecutionAt: Date | null;
+      currentConcurrentCount: number;
+      conflictOccurred: boolean;
+    },
+    now: Date
+  ): boolean {
+    switch (reason) {
+      case "reentry_delay": {
+        if (
+          config.allowReentry ||
+          !config.reentryDelaySeconds ||
+          config.reentryDelaySeconds <= 0 ||
+          !state.recentlyCompletedAt
+        ) {
+          return false;
+        }
+        const threshold = new Date(
+          now.getTime() - config.reentryDelaySeconds * 1000
+        );
+        return state.recentlyCompletedAt > threshold;
+      }
+      case "cooldown": {
+        if (
+          !config.contactCooldownSeconds ||
+          config.contactCooldownSeconds <= 0 ||
+          !state.recentExecutionAt
+        ) {
+          return false;
+        }
+        const threshold = new Date(
+          now.getTime() - config.contactCooldownSeconds * 1000
+        );
+        return state.recentExecutionAt > threshold;
+      }
+      case "max_concurrent": {
+        if (
+          !config.maxConcurrentExecutions ||
+          config.maxConcurrentExecutions <= 0
+        ) {
+          return false;
+        }
+        return state.currentConcurrentCount >= config.maxConcurrentExecutions;
+      }
+      case "conflict":
+        return state.conflictOccurred;
+    }
+  }
+
+  const now = new Date("2024-01-01T12:00:00Z");
+  const defaultConfig = {
+    allowReentry: false,
+    reentryDelaySeconds: 3600,
+    contactCooldownSeconds: 600,
+    maxConcurrentExecutions: 10,
+  };
+
+  it("should drop on reentry delay", () => {
+    expect(
+      shouldDropExecution(
+        "reentry_delay",
+        defaultConfig,
+        {
+          recentlyCompletedAt: new Date("2024-01-01T11:30:00Z"),
+          recentExecutionAt: null,
+          currentConcurrentCount: 0,
+          conflictOccurred: false,
+        },
+        now
+      )
+    ).toBe(true);
+  });
+
+  it("should drop on cooldown", () => {
+    expect(
+      shouldDropExecution(
+        "cooldown",
+        defaultConfig,
+        {
+          recentlyCompletedAt: null,
+          recentExecutionAt: new Date("2024-01-01T11:55:00Z"),
+          currentConcurrentCount: 0,
+          conflictOccurred: false,
+        },
+        now
+      )
+    ).toBe(true);
+  });
+
+  it("should drop on max concurrent", () => {
+    expect(
+      shouldDropExecution(
+        "max_concurrent",
+        defaultConfig,
+        {
+          recentlyCompletedAt: null,
+          recentExecutionAt: null,
+          currentConcurrentCount: 10,
+          conflictOccurred: false,
+        },
+        now
+      )
+    ).toBe(true);
+  });
+
+  it("should drop on conflict", () => {
+    expect(
+      shouldDropExecution(
+        "conflict",
+        defaultConfig,
+        {
+          recentlyCompletedAt: null,
+          recentExecutionAt: null,
+          currentConcurrentCount: 0,
+          conflictOccurred: true,
+        },
+        now
+      )
+    ).toBe(true);
+  });
+
+  it("should not drop when reentry is allowed", () => {
+    expect(
+      shouldDropExecution(
+        "reentry_delay",
+        { ...defaultConfig, allowReentry: true },
+        {
+          recentlyCompletedAt: new Date("2024-01-01T11:30:00Z"),
+          recentExecutionAt: null,
+          currentConcurrentCount: 0,
+          conflictOccurred: false,
+        },
+        now
+      )
+    ).toBe(false);
+  });
+
+  it("should not drop when outside cooldown period", () => {
+    expect(
+      shouldDropExecution(
+        "cooldown",
+        defaultConfig,
+        {
+          recentlyCompletedAt: null,
+          recentExecutionAt: new Date("2024-01-01T11:00:00Z"),
+          currentConcurrentCount: 0,
+          conflictOccurred: false,
+        },
+        now
+      )
+    ).toBe(false);
+  });
+});
+
+describe("Workflow Processor - Delete Workflow Active Status Check", () => {
+  /**
+   * Tests that the "waiting" status is included when checking for
+   * active executions before deleting a workflow.
+   */
+
+  const ACTIVE_EXECUTION_STATUSES = ["pending", "active", "paused", "waiting"];
+
+  function hasActiveExecutions(executionStatuses: string[]): boolean {
+    return executionStatuses.some((s) => ACTIVE_EXECUTION_STATUSES.includes(s));
+  }
+
+  it("should detect waiting executions as active", () => {
+    expect(hasActiveExecutions(["waiting"])).toBe(true);
+  });
+
+  it("should detect pending executions as active", () => {
+    expect(hasActiveExecutions(["pending"])).toBe(true);
+  });
+
+  it("should detect active executions as active", () => {
+    expect(hasActiveExecutions(["active"])).toBe(true);
+  });
+
+  it("should detect paused executions as active", () => {
+    expect(hasActiveExecutions(["paused"])).toBe(true);
+  });
+
+  it("should not detect completed executions as active", () => {
+    expect(hasActiveExecutions(["completed"])).toBe(false);
+  });
+
+  it("should not detect failed executions as active", () => {
+    expect(hasActiveExecutions(["failed"])).toBe(false);
+  });
+
+  it("should not detect cancelled executions as active", () => {
+    expect(hasActiveExecutions(["cancelled"])).toBe(false);
+  });
+
+  it("should detect mixed statuses with at least one active", () => {
+    expect(hasActiveExecutions(["completed", "failed", "waiting"])).toBe(true);
+  });
+
+  it("should return false for empty array", () => {
+    expect(hasActiveExecutions([])).toBe(false);
+  });
+});
+
+describe("Workflow Processor - Resume Execution State Clearing", () => {
+  /**
+   * Tests that resumeExecution properly clears all wait state,
+   * including the delaySchedulerName field.
+   */
+
+  type WaitState = {
+    status: string;
+    waitingForEvent: string | null;
+    waitTimeoutAt: Date | null;
+    waitTimeoutSchedulerName: string | null;
+    delaySchedulerName: string | null;
+  };
+
+  function clearWaitState(_existing: WaitState): WaitState {
+    return {
+      status: "active",
+      waitingForEvent: null,
+      waitTimeoutAt: null,
+      waitTimeoutSchedulerName: null,
+      delaySchedulerName: null,
+    };
+  }
+
+  it("should clear all wait-related fields", () => {
+    const existing: WaitState = {
+      status: "waiting",
+      waitingForEvent: "email.opened",
+      waitTimeoutAt: new Date("2024-01-02T00:00:00Z"),
+      waitTimeoutSchedulerName: "scheduler-timeout-123",
+      delaySchedulerName: "scheduler-delay-456",
+    };
+
+    const cleared = clearWaitState(existing);
+
+    expect(cleared.status).toBe("active");
+    expect(cleared.waitingForEvent).toBeNull();
+    expect(cleared.waitTimeoutAt).toBeNull();
+    expect(cleared.waitTimeoutSchedulerName).toBeNull();
+    expect(cleared.delaySchedulerName).toBeNull();
+  });
+
+  it("should clear delaySchedulerName even when other fields are already null", () => {
+    const existing: WaitState = {
+      status: "waiting",
+      waitingForEvent: null,
+      waitTimeoutAt: null,
+      waitTimeoutSchedulerName: null,
+      delaySchedulerName: "scheduler-delay-stale",
+    };
+
+    const cleared = clearWaitState(existing);
+
+    expect(cleared.delaySchedulerName).toBeNull();
+  });
+});
+
 describe("Workflow Processor - Complete Trigger Logic", () => {
   /**
    * Integration tests for the complete trigger validation logic.

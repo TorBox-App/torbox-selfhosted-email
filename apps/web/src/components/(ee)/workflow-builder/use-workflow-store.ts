@@ -80,6 +80,7 @@ type WorkflowStoreState = {
   // React Flow state
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
+  canvasViewport: CanvasViewport;
 
   // UI state
   selectedNodeId: string | null;
@@ -118,6 +119,7 @@ type WorkflowStoreState = {
   selectNode: (nodeId: string | null) => void;
   toggleSettingsPanel: () => void;
   setSettingsPanelOpen: (open: boolean) => void;
+  setCanvasViewport: (viewport: CanvasViewport) => void;
 
   // Workflow actions
   updateWorkflowSettings: (settings: {
@@ -825,6 +827,7 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
   isSaving: false,
   nodes: [],
   edges: [],
+  canvasViewport: { x: 0, y: 0, zoom: 1 },
   selectedNodeId: null,
   settingsPanelOpen: false,
   validationResult: null,
@@ -834,11 +837,13 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
     const steps = workflow.steps as WorkflowStep[];
     const transitions = workflow.transitions as WorkflowTransition[];
     const nodes = stepsToNodes(steps);
+    const savedViewport = workflow.canvasViewport as CanvasViewport | null;
 
     set({
       workflow,
       nodes,
       edges: transitionsToEdges(transitions, steps),
+      canvasViewport: savedViewport ?? { x: 0, y: 0, zoom: 1 },
       isDirty: false,
       selectedNodeId: null,
     });
@@ -1044,6 +1049,10 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
     set({ settingsPanelOpen: open });
   },
 
+  setCanvasViewport: (viewport) => {
+    set({ canvasViewport: viewport });
+  },
+
   updateWorkflowSettings: (settings) => {
     set((state) => {
       if (!state.workflow) {
@@ -1083,7 +1092,7 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
         engagedExternalCascades
       ),
       transitions: [...filteredInternal, ...externalTransitions],
-      canvasViewport: { x: 0, y: 0, zoom: 1 },
+      canvasViewport: state.canvasViewport,
     };
   },
 

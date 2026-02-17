@@ -6,6 +6,7 @@ import type {
   NodeTypes,
   OnConnect,
   OnEdgesChange,
+  OnMoveEnd,
   OnNodesChange,
   OnReconnect,
 } from "@xyflow/react";
@@ -82,6 +83,9 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
   const addNode = useWorkflowStore((state) => state.addNode);
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
+  const setCanvasViewport = useWorkflowStore(
+    (state) => state.setCanvasViewport
+  );
 
   const nodesWithSelection = useMemo(
     () =>
@@ -131,6 +135,13 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
     selectNode(null);
   }, [selectNode]);
 
+  const onMoveEnd: OnMoveEnd = useCallback(
+    (_event, viewport) => {
+      setCanvasViewport({ x: viewport.x, y: viewport.y, zoom: viewport.zoom });
+    },
+    [setCanvasViewport]
+  );
+
   const handleAddNode = useCallback(
     (type: NodePaletteType) => {
       // Add node at center of viewport
@@ -164,6 +175,7 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
         onDrop={onDrop}
         onEdgesChange={onEdgesChange}
         onInit={setReactFlowInstance}
+        onMoveEnd={onMoveEnd}
         onNodeClick={onNodeClick}
         onNodesChange={onNodesChange}
         onPaneClick={onPaneClick}

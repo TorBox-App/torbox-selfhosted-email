@@ -131,6 +131,7 @@ async function triggerWorkflow(
       console.log(
         `Skipping - contact ${contactId} completed workflow recently (reentry delay: ${wf.reentryDelaySeconds}s)`
       );
+      await incrementDroppedExecutions(workflowId);
       return;
     }
   }
@@ -152,6 +153,7 @@ async function triggerWorkflow(
       console.log(
         `Skipping - contact ${contactId} in cooldown period (${wf.contactCooldownSeconds}s)`
       );
+      await incrementDroppedExecutions(workflowId);
       return;
     }
   }
@@ -172,6 +174,7 @@ async function triggerWorkflow(
       console.log(
         `Skipping - workflow ${workflowId} at max concurrent executions (${count}/${wf.maxConcurrentExecutions})`
       );
+      await incrementDroppedExecutions(workflowId);
       return;
     }
   }
@@ -220,6 +223,7 @@ async function triggerWorkflow(
     console.log(
       `Skipping - contact ${contactId} already in workflow ${workflowId} (conflict)`
     );
+    await incrementDroppedExecutions(workflowId);
     return;
   }
 
@@ -892,12 +896,11 @@ async function handleSendEmail(
           Template: {
             TemplateName: sesTemplateName,
             TemplateData: JSON.stringify(replacementData),
+            Headers: headers.length > 0 ? headers : undefined,
           },
         },
         ConfigurationSetName: "wraps-email-tracking",
         EmailTags: emailTags,
-        ListManagementOptions:
-          isMarketing && headers.length > 0 ? undefined : undefined,
       })
     );
 
@@ -1796,8 +1799,10 @@ async function processNextStep(
     );
   }
 
-  // Fallback to any transition from this step
-  if (!nextTransition) {
+  // Fallback to branchless transition only when no specific branch was requested.
+  // When a branch IS specified (e.g., condition "yes"/"no"), falling back to a
+  // branchless transition would incorrectly route through an unrelated path.
+  if (!(nextTransition || branch)) {
     nextTransition = transitions.find(
       (t) => t.fromStepId === currentStep.id && !t.condition
     );
@@ -1866,7 +1871,7 @@ async function resumeExecution(
     return;
   }
 
-  // Clear wait state
+  // Clear wait state (including stale delaySchedulerName from prior delay steps)
   await db
     .update(workflowExecution)
     .set({
@@ -1874,6 +1879,7 @@ async function resumeExecution(
       waitingForEvent: null,
       waitTimeoutAt: null,
       waitTimeoutSchedulerName: null,
+      delaySchedulerName: null,
       updatedAt: new Date(),
     })
     .where(eq(workflowExecution.id, executionId));
@@ -1925,6 +1931,18 @@ async function completeExecution(executionId: string): Promise<void> {
       })
       .where(eq(workflow.id, execution.workflowId));
   }
+}
+
+/**
+ * Increment the dropped executions counter on a workflow
+ */
+async function incrementDroppedExecutions(workflowId: string): Promise<void> {
+  await db
+    .update(workflow)
+    .set({
+      droppedExecutions: sql`${workflow.droppedExecutions} + 1`,
+    })
+    .where(eq(workflow.id, workflowId));
 }
 
 /**
