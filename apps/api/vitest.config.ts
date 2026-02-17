@@ -2,8 +2,8 @@ import path from "node:path";
 import { config } from "dotenv";
 import { defineConfig } from "vitest/config";
 
-// Load env from web app's .env.local
-config({ path: path.resolve(import.meta.dirname, "../web/.env.local") });
+// Load .env.test from web app (shared test database + config)
+config({ path: path.resolve(import.meta.dirname, "../web/.env.test") });
 
 export default defineConfig({
   test: {
