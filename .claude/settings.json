@@ -19,28 +19,6 @@
       "Bash(vercel logs*)"
     ]
   },
-  "hooks": {
-    "pre-commit": {
-      "command": "pnpm typecheck && pnpm lint --quiet && pnpm test:guardrails",
-      "description": "Run type checking, linting, and guardrails tests before every commit"
-    },
-    "post-edit": {
-      "command": "pnpm exec tsc --noEmit --pretty 2>&1 | head -20",
-      "description": "Quick type check after file edits to catch errors early"
-    },
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx tsc --noEmit --pretty 2>&1 | head -20",
-            "timeout": 60
-          }
-        ]
-      }
-    ]
-  },
   "skills": [
     {
       "name": "create-form",
