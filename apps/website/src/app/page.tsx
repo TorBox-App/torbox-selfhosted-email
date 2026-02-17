@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { AutomationsCodeSection } from "./landing/components/automations-code-section";
 import { CliTabbedSection } from "./landing/components/cli-tabbed-section";
 import { CTASection } from "./landing/components/cta-section";
 import { FaqSection } from "./landing/components/faq-section";
@@ -11,7 +12,6 @@ import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
 import { ProductTabbedSection } from "./landing/components/product-tabbed-section";
 import { TrustedBySection } from "./landing/components/trusted-by-section";
-import { WorkflowBuilderSection } from "./landing/components/workflow-builder-section";
 
 export const metadata: Metadata = {
   alternates: {
@@ -121,8 +121,8 @@ export default function LandingPage() {
           {/* Primary: Wraps Platform */}
           <ProductTabbedSection />
 
-          {/* Interactive Workflow Builder */}
-          <WorkflowBuilderSection />
+          {/* Automations */}
+          <AutomationsCodeSection />
 
           {/* Pricing */}
           <PricingSection />

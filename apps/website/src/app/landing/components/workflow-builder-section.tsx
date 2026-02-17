@@ -8,15 +8,12 @@ import {
   Hourglass,
   Mail,
   MessageSquare,
-  MousePointerClick,
   Sparkles,
   Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { FadeIn, ScaleIn } from "./animations";
 
 type StepType = "trigger" | "wait" | "wait_event" | "condition" | "action";
 
@@ -767,7 +764,7 @@ function WorkflowTemplateCard({
   );
 }
 
-export function WorkflowBuilderSection() {
+export function InteractiveWorkflowBuilder() {
   const [activeTemplate, setActiveTemplate] = useState(workflowTemplates[0]);
   const [activeSelection, setActiveSelection] = useState<ActiveSelection>({
     type: "step",
@@ -776,13 +773,12 @@ export function WorkflowBuilderSection() {
 
   const details = getStepDetails(activeTemplate, activeSelection);
 
-  // Calculate total step count including branch nodes
   const getTotalStepCount = () => {
     let count = 0;
     for (const step of activeTemplate.steps) {
       count += 1;
       if (step.type === "condition" && step.yesBranch && step.noBranch) {
-        count += 2; // Add yes and no branches
+        count += 2;
       }
     }
     return count;
@@ -816,234 +812,141 @@ export function WorkflowBuilderSection() {
   };
 
   return (
-    <section className="py-24" id="automations">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <FadeIn className="mx-auto mb-12 max-w-3xl text-center">
-          <Badge className="mb-4 bg-orange-500/10 text-orange-600 dark:text-orange-400">
-            Workflow Automations
-          </Badge>
-          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-            Build Automations,{" "}
-            <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">
-              Not Just Emails
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Design multi-step workflows that respond to user behavior. Trigger
-            on events, wait for actions, branch on conditions, and send the
-            right message at the right time.
-          </p>
-        </FadeIn>
+    <div className="space-y-6">
+      {/* Template Selector */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {workflowTemplates.map((template) => (
+          <WorkflowTemplateCard
+            isActive={activeTemplate.id === template.id}
+            key={template.id}
+            onClick={() => {
+              setActiveTemplate(template);
+              setActiveSelection({ type: "step", index: 0 });
+            }}
+            template={template}
+          />
+        ))}
+      </div>
+      <div className="flex items-center justify-center gap-4 text-muted-foreground/60 text-xs">
+        <span className="flex items-center gap-1">
+          <Mail className="size-3" /> Emails
+        </span>
+        <span className="flex items-center gap-1">
+          <MessageSquare className="size-3" /> SMS
+        </span>
+        <span className="flex items-center gap-1">
+          <GitBranch className="size-3" /> Branches
+        </span>
+        <span className="flex items-center gap-1">
+          <Zap className="size-3" /> Steps
+        </span>
+      </div>
 
-        {/* Template Selector */}
-        <ScaleIn className="mb-8" delay={0.1}>
-          <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {workflowTemplates.map((template) => (
-              <WorkflowTemplateCard
-                isActive={activeTemplate.id === template.id}
-                key={template.id}
-                onClick={() => {
-                  setActiveTemplate(template);
-                  setActiveSelection({ type: "step", index: 0 });
-                }}
-                template={template}
-              />
-            ))}
+      {/* Interactive Workflow Builder */}
+      <div className="overflow-hidden rounded-2xl border bg-card shadow-lg">
+        {/* Builder Header */}
+        <div className="flex items-center justify-between border-b bg-muted/30 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1.5">
+              <div className="size-3 rounded-full bg-red-500/80" />
+              <div className="size-3 rounded-full bg-yellow-500/80" />
+              <div className="size-3 rounded-full bg-green-500/80" />
+            </div>
+            <span className="font-medium">{activeTemplate.name}</span>
           </div>
-          <div className="mx-auto mt-2 flex items-center justify-center gap-4 text-muted-foreground/60 text-xs">
-            <span className="flex items-center gap-1">
-              <Mail className="size-3" /> Emails
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageSquare className="size-3" /> SMS
-            </span>
-            <span className="flex items-center gap-1">
-              <GitBranch className="size-3" /> Branches
-            </span>
-            <span className="flex items-center gap-1">
-              <Zap className="size-3" /> Steps
-            </span>
-          </div>
-        </ScaleIn>
+          <Badge variant="outline">{getTotalStepCount()} steps</Badge>
+        </div>
 
-        {/* Interactive Workflow Builder */}
-        <ScaleIn delay={0.2}>
-          <div className="mx-auto max-w-5xl">
-            <div className="overflow-hidden rounded-2xl border bg-card shadow-lg">
-              {/* Builder Header */}
-              <div className="flex items-center justify-between border-b bg-muted/30 px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5">
-                    <div className="size-3 rounded-full bg-red-500/80" />
-                    <div className="size-3 rounded-full bg-yellow-500/80" />
-                    <div className="size-3 rounded-full bg-green-500/80" />
-                  </div>
-                  <span className="font-medium">{activeTemplate.name}</span>
-                </div>
-                <Badge variant="outline">{getTotalStepCount()} steps</Badge>
-              </div>
+        {/* Builder Content */}
+        <div className="grid lg:grid-cols-2">
+          {/* Workflow Canvas */}
+          <div className="border-b p-6 lg:border-r lg:border-b-0">
+            <div className="flex flex-col items-center">
+              {activeTemplate.steps.map((step, index) => {
+                const isLastStep = index === activeTemplate.steps.length - 1;
 
-              {/* Builder Content */}
-              <div className="grid lg:grid-cols-2">
-                {/* Workflow Canvas */}
-                <div className="border-b p-6 lg:border-r lg:border-b-0">
-                  <div className="flex flex-col items-center">
-                    {activeTemplate.steps.map((step, index) => {
-                      const isLastStep =
-                        index === activeTemplate.steps.length - 1;
-
-                      if (step.type === "condition") {
-                        return (
-                          <div
-                            className="flex flex-col items-center"
-                            key={step.id}
-                          >
-                            <ConditionBranch
-                              activeBranch={
-                                activeSelection.type === "yes" &&
+                if (step.type === "condition") {
+                  return (
+                    <div className="flex flex-col items-center" key={step.id}>
+                      <ConditionBranch
+                        activeBranch={
+                          activeSelection.type === "yes" &&
+                          activeSelection.conditionIndex === index
+                            ? "yes"
+                            : activeSelection.type === "no" &&
                                 activeSelection.conditionIndex === index
-                                  ? "yes"
-                                  : activeSelection.type === "no" &&
-                                      activeSelection.conditionIndex === index
-                                    ? "no"
-                                    : null
-                              }
-                              isConditionActive={
-                                activeSelection.type === "step" &&
-                                activeSelection.index === index
-                              }
-                              onConditionClick={() =>
-                                setActiveSelection({ type: "step", index })
-                              }
-                              onNoClick={() =>
-                                setActiveSelection({
-                                  type: "no",
-                                  conditionIndex: index,
-                                })
-                              }
-                              onYesClick={() =>
-                                setActiveSelection({
-                                  type: "yes",
-                                  conditionIndex: index,
-                                })
-                              }
-                              step={step}
-                            />
-                            {/* Connector to next step if not last */}
-                            {!isLastStep && (
-                              <div className="flex h-8 flex-col items-center justify-center">
-                                <div className="h-full w-0.5 bg-border" />
-                                <ArrowDown className="size-4 text-muted-foreground" />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div
-                          className="flex flex-col items-center"
-                          key={step.id}
-                        >
-                          <WorkflowNode
-                            isActive={
-                              activeSelection.type === "step" &&
-                              activeSelection.index === index
-                            }
-                            onClick={() =>
-                              setActiveSelection({ type: "step", index })
-                            }
-                            step={step}
-                          />
-                          {/* Connector line */}
-                          {!isLastStep && (
-                            <div className="flex h-8 flex-col items-center justify-center">
-                              <div className="h-full w-0.5 bg-border" />
-                              <ArrowDown className="size-4 text-muted-foreground" />
-                            </div>
-                          )}
+                              ? "no"
+                              : null
+                        }
+                        isConditionActive={
+                          activeSelection.type === "step" &&
+                          activeSelection.index === index
+                        }
+                        onConditionClick={() =>
+                          setActiveSelection({ type: "step", index })
+                        }
+                        onNoClick={() =>
+                          setActiveSelection({
+                            type: "no",
+                            conditionIndex: index,
+                          })
+                        }
+                        onYesClick={() =>
+                          setActiveSelection({
+                            type: "yes",
+                            conditionIndex: index,
+                          })
+                        }
+                        step={step}
+                      />
+                      {!isLastStep && (
+                        <div className="flex h-8 flex-col items-center justify-center">
+                          <div className="h-full w-0.5 bg-border" />
+                          <ArrowDown className="size-4 text-muted-foreground" />
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      )}
+                    </div>
+                  );
+                }
 
-                {/* Step Details */}
-                <div className="bg-muted/20 p-6">
-                  <p className="mb-4 font-medium text-muted-foreground text-sm">
-                    Step {getCurrentStepNumber()} of {getTotalStepCount()}
-                  </p>
-                  {details && (
-                    <WorkflowDetails
-                      badgeType={details.badgeType}
-                      step={details.step}
+                return (
+                  <div className="flex flex-col items-center" key={step.id}>
+                    <WorkflowNode
+                      isActive={
+                        activeSelection.type === "step" &&
+                        activeSelection.index === index
+                      }
+                      onClick={() =>
+                        setActiveSelection({ type: "step", index })
+                      }
+                      step={step}
                     />
-                  )}
-                </div>
-              </div>
+                    {!isLastStep && (
+                      <div className="flex h-8 flex-col items-center justify-center">
+                        <div className="h-full w-0.5 bg-border" />
+                        <ArrowDown className="size-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </ScaleIn>
 
-        {/* Features Grid */}
-        <FadeIn className="mx-auto mt-16 max-w-4xl" delay={0.3}>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                icon: Zap,
-                title: "Event Triggers",
-                description: "Start workflows on any user action",
-              },
-              {
-                icon: Hourglass,
-                title: "Wait for Events",
-                description: "Pause until users take action",
-              },
-              {
-                icon: GitBranch,
-                title: "Yes/No Branching",
-                description: "Different paths based on conditions",
-              },
-              {
-                icon: Clock,
-                title: "Smart Delays",
-                description: "Wait hours, days, or until a date",
-              },
-            ].map((feature) => (
-              <div
-                className="flex flex-col items-center rounded-xl border bg-background p-6 text-center"
-                key={feature.title}
-              >
-                <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-orange-500/10">
-                  <feature.icon className="size-6 text-orange-500" />
-                </div>
-                <h4 className="mb-1 font-semibold">{feature.title}</h4>
-                <p className="text-muted-foreground text-sm">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
+          {/* Step Details */}
+          <div className="bg-muted/20 p-6">
+            <p className="mb-4 font-medium text-muted-foreground text-sm">
+              Step {getCurrentStepNumber()} of {getTotalStepCount()}
+            </p>
+            {details && (
+              <WorkflowDetails
+                badgeType={details.badgeType}
+                step={details.step}
+              />
+            )}
           </div>
-        </FadeIn>
-
-        {/* CTA */}
-        <FadeIn className="mt-12 text-center" delay={0.4}>
-          <Button
-            asChild
-            className="bg-orange-500 hover:bg-orange-600"
-            size="lg"
-          >
-            <a href="https://app.wraps.dev/auth?mode=signup">
-              Start Building Automations
-              <MousePointerClick className="ml-2 size-4" />
-            </a>
-          </Button>
-          <p className="mt-3 text-muted-foreground text-sm">
-            1 workflow included free. Unlimited workflows on Starter ($29/mo).
-          </p>
-        </FadeIn>
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
