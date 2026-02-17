@@ -85,7 +85,7 @@ export async function GET(request: Request, context: RouteContext) {
     >();
 
     // Initialize all days in the range
-    for (let i = 0; i < days; i++) {
+    for (let i = 0; i <= days; i++) {
       const date = new Date(startTime.getTime() + i * 24 * 60 * 60 * 1000);
       const dateKey = date.toISOString().split("T")[0];
       volumeByDay.set(dateKey, { sent: 0, delivered: 0, failed: 0 });

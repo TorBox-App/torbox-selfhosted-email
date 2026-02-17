@@ -139,7 +139,7 @@ export function InboundAnalytics({ emails }: InboundAnalyticsProps) {
 
     // Fill in missing dates using local time
     const dailyData: Array<{ date: string; count: number }> = [];
-    for (let i = 0; i < days; i++) {
+    for (let i = 0; i <= days; i++) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
       const dateStr = toLocalDateStr(date);

@@ -1819,7 +1819,7 @@ export async function getContactAnalytics(
       dailyGrowthData.map((d) => [d.date, Number(d.count)])
     );
 
-    for (let i = 0; i < days; i++) {
+    for (let i = 0; i <= days; i++) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
       const dateStr = date.toISOString().split("T")[0];
