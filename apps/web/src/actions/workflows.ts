@@ -5,6 +5,7 @@ import {
   type CanvasViewport,
   db,
   type TriggerConfig,
+  template,
   type Workflow,
   type WorkflowStep,
   type WorkflowTransition,
@@ -878,6 +879,46 @@ export async function enableWorkflow(
       return {
         success: false,
         error: "Workflow must have at least one action step",
+      };
+    }
+
+    // Defense-in-depth: verify referenced templates exist
+    const emailSteps = steps.filter((s) => s.type === "send_email");
+    const templateIds = emailSteps
+      .map((s) => (s.config.type === "send_email" ? s.config.templateId : ""))
+      .filter(Boolean);
+    const uniqueTemplateIds = [...new Set(templateIds)];
+
+    if (uniqueTemplateIds.length > 0) {
+      const foundTemplates = await db
+        .select({ id: template.id })
+        .from(template)
+        .where(
+          and(
+            eq(template.organizationId, organizationId),
+            inArray(template.id, uniqueTemplateIds)
+          )
+        );
+
+      const foundIds = new Set(foundTemplates.map((t) => t.id));
+      const missingCount = uniqueTemplateIds.filter(
+        (id) => !foundIds.has(id)
+      ).length;
+
+      if (missingCount > 0) {
+        return {
+          success: false,
+          error: `Cannot enable: ${missingCount} referenced template${missingCount > 1 ? "s do" : " does"} not exist`,
+        };
+      }
+    }
+
+    // Defense-in-depth: require sender email when email steps exist
+    if (emailSteps.length > 0 && !existing.defaultFrom) {
+      return {
+        success: false,
+        error:
+          "Please configure a sender email in workflow settings before enabling",
       };
     }
 

@@ -7,6 +7,7 @@ import {
   organization,
   organizationExtension,
   subscription,
+  template,
   user,
   workflow,
   workflowExecution,
@@ -94,6 +95,19 @@ const testRegularMember = {
   userId: testMemberUser.id,
   role: "member" as const,
   createdAt: new Date(),
+};
+
+const testTemplate = {
+  id: "test-workflows-template-1",
+  organizationId: testOrganization.id,
+  name: "Test Email Template",
+  subject: "Welcome",
+  content: {},
+  status: "PUBLISHED" as const,
+  type: "EMAIL" as const,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: testUser.id,
 };
 
 // Track current mock user
@@ -228,6 +242,15 @@ beforeAll(async () => {
       target: awsAccount.id,
       set: { name: testAwsAccount.name },
     });
+
+  // Insert test template (required for enabling workflows with email steps)
+  await db
+    .insert(template)
+    .values(testTemplate)
+    .onConflictDoUpdate({
+      target: template.id,
+      set: { name: testTemplate.name },
+    });
 });
 
 // Clean up workflows before each test and reset mock user
@@ -249,6 +272,7 @@ afterAll(async () => {
   await db
     .delete(workflow)
     .where(eq(workflow.organizationId, testOrganization.id));
+  await db.delete(template).where(eq(template.id, testTemplate.id));
   await db.delete(member).where(eq(member.id, testOwnerMember.id));
   await db.delete(member).where(eq(member.id, testRegularMember.id));
   await db
@@ -392,10 +416,11 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Add action step, awsAccountId, and enable
+      // Add action step, awsAccountId, defaultFrom, and enable
       const wf = listResult.workflows[0];
       await updateWorkflow(wf.id, testOrganization.id, {
         awsAccountId: testAwsAccount.id,
+        defaultFrom: "test@example.com",
         triggerConfig: { eventName: "signup" },
         steps: [
           ...(wf.steps as WorkflowStep[]),
@@ -404,7 +429,7 @@ describe("Workflows Server Actions", () => {
             type: "send_email",
             name: "Send Email",
             position: { x: 100, y: 200 },
-            config: { type: "send_email", templateId: "tmpl-1" },
+            config: { type: "send_email", templateId: testTemplate.id },
           },
         ],
         transitions: [
@@ -717,10 +742,11 @@ describe("Workflows Server Actions", () => {
         return;
       }
 
-      // Add required config including awsAccountId
+      // Add required config including awsAccountId, defaultFrom, and real template
       await updateWorkflow(createResult.workflow.id, testOrganization.id, {
         triggerConfig: { eventName: "signup" },
         awsAccountId: testAwsAccount.id,
+        defaultFrom: "test@example.com",
         steps: [
           ...(createResult.workflow.steps as WorkflowStep[]),
           {
@@ -728,7 +754,7 @@ describe("Workflows Server Actions", () => {
             type: "send_email",
             name: "Welcome",
             position: { x: 100, y: 200 },
-            config: { type: "send_email", templateId: "tmpl-1" },
+            config: { type: "send_email", templateId: testTemplate.id },
           },
         ],
         transitions: [

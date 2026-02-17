@@ -33,6 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { EnableReadinessDialog } from "./enable-readiness-dialog";
 import {
   useIsDirty,
   useIsSaving,
@@ -75,6 +76,9 @@ export function WorkflowToolbar({
   const toggleSettingsPanel = useWorkflowStore(
     (state) => state.toggleSettingsPanel
   );
+
+  // Readiness dialog state
+  const [readinessDialogOpen, setReadinessDialogOpen] = useState(false);
 
   // Editable name state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -189,10 +193,15 @@ export function WorkflowToolbar({
       return;
     }
 
+    setReadinessDialogOpen(true);
+  };
+
+  const handleConfirmEnable = () => {
     startEnableTransition(async () => {
       const result = await enableWorkflow(workflow.id, organizationId);
       if (result.success) {
         updateWorkflowAfterSave(result.workflow);
+        setReadinessDialogOpen(false);
         toast.success("Workflow enabled");
       } else {
         toast.error(result.error);
@@ -376,6 +385,16 @@ export function WorkflowToolbar({
           </TooltipProvider>
         )}
       </div>
+
+      <EnableReadinessDialog
+        isEnabling={isEnabling}
+        onEnable={handleConfirmEnable}
+        onOpenChange={setReadinessDialogOpen}
+        open={readinessDialogOpen}
+        organizationId={organizationId}
+        orgSlug={orgSlug}
+        workflow={workflow}
+      />
     </div>
   );
 }
