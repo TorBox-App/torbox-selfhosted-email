@@ -192,15 +192,6 @@ updateContact('mark-onboarded', {
 })
 \`\`\`
 
-### addToSegment(id, config) / removeFromSegment(id, config)
-
-Manage segment membership.
-
-\`\`\`typescript
-addToSegment('add-to-vip', { segmentId: 'vip-customers' })
-removeFromSegment('remove-from-trial', { segmentId: 'trial-users' })
-\`\`\`
-
 ### subscribeTopic(id, config) / unsubscribeTopic(id, config)
 
 Manage topic subscriptions.
@@ -236,19 +227,6 @@ Cross-channel cascade: tries channels in order, falling back if no engagement.
       type: 'sms',
       template: 'cart-sms-reminder', // Final fallback (no waitFor needed)
     },
-  ],
-})
-\`\`\`
-
-### abTest(id, config)
-
-Split contacts into A/B test variants by weight.
-
-\`\`\`typescript
-abTest('subject-test', {
-  variants: [
-    { weight: 50, steps: [sendEmail('variant-a', { template: 'welcome-a' })] },
-    { weight: 50, steps: [sendEmail('variant-b', { template: 'welcome-b' })] },
   ],
 })
 \`\`\`
