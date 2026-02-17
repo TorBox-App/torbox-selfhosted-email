@@ -15,7 +15,11 @@ import {
   createAuthenticatedRoutes,
 } from "../../middleware/auth";
 import { rateLimitMiddleware } from "../../middleware/rate-limit";
-import { enqueueWorkflowStep } from "../../services/workflow-queue";
+import {
+  enqueueWorkflowStep,
+  enqueueWorkflowStepBatch,
+  type WorkflowJob,
+} from "../../services/workflow-queue";
 
 // Common response schemas
 const _errorResponse = t.Object({
@@ -279,7 +283,8 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
         }
       }
 
-      // Process each contact request
+      // Process each contact request and collect jobs for batch enqueue
+      const jobs: WorkflowJob[] = [];
       for (const c of contacts) {
         let contactRecord: typeof contact.$inferSelect | undefined;
 
@@ -296,8 +301,7 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
           continue;
         }
 
-        // Enqueue the workflow trigger
-        await enqueueWorkflowStep({
+        jobs.push({
           type: "trigger",
           workflowId: wf.id,
           contactId: contactRecord.id,
@@ -307,6 +311,9 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
 
         results.triggered++;
       }
+
+      // Batch enqueue all trigger jobs
+      await enqueueWorkflowStepBatch(jobs);
 
       console.log(
         `[workflows] API batch trigger: workflow ${wf.id} for ${results.triggered} contacts`

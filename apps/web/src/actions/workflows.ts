@@ -432,8 +432,18 @@ export async function createWorkflow(
     // Revalidate
     revalidatePath("/[orgSlug]/automations", "page");
 
-    // Track activation event (fire-and-forget)
-    trackWorkflowCreated(access.userEmail, organizationId);
+    // Track activation event
+    await trackWorkflowCreated(access.userEmail, organizationId).catch(
+      (err) => {
+        const log = createActionLogger("createWorkflow", {
+          orgSlug: organizationId,
+        });
+        log.error(
+          { err: serializeError(err) },
+          "Failed to track workflow created"
+        );
+      }
+    );
 
     return await getWorkflow(newWorkflow.id, organizationId);
   } catch (error) {

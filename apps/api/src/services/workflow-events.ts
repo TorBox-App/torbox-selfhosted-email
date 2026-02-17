@@ -137,12 +137,6 @@ export async function emitTopicSubscribed(params: {
   topicId: string;
   topicName?: string;
 }): Promise<{ workflowsTriggered: number }> {
-  console.log("[workflow-events] emitTopicSubscribed called:", {
-    contactId: params.contactId,
-    organizationId: params.organizationId,
-    topicId: params.topicId,
-  });
-
   // Also check for topic_subscribed trigger type
   const matchingByEvent = await emitWorkflowEvent({
     eventName: "topic_subscribed",
@@ -167,12 +161,6 @@ export async function emitTopicSubscribed(params: {
         sql`${workflow.triggerConfig}->>'topicId' = ${params.topicId}`
       )
     );
-
-  console.log("[workflow-events] topic_subscribed query result:", {
-    organizationId: params.organizationId,
-    topicId: params.topicId,
-    matchingWorkflows: matchingByTrigger.map((w) => w.id),
-  });
 
   for (const wf of matchingByTrigger) {
     await enqueueWorkflowStep({
@@ -552,11 +540,9 @@ export async function cancelExecutionsForTopicUnsubscribe(params: {
     return { executionsCancelled: 0 };
   }
 
-  // Cancel each execution
+  // Clean up any scheduled steps (in parallel)
+  const schedulerCleanups: Promise<void>[] = [];
   for (const execution of activeExecutions) {
-    // Clean up any scheduled steps
-    const schedulerCleanups: Promise<void>[] = [];
-
     if (execution.delaySchedulerName) {
       schedulerCleanups.push(
         deleteScheduledStep(execution.delaySchedulerName).catch((err) => {
@@ -578,27 +564,38 @@ export async function cancelExecutionsForTopicUnsubscribe(params: {
         })
       );
     }
-
-    await Promise.all(schedulerCleanups);
-
-    // Mark execution as cancelled
-    await db
-      .update(workflowExecution)
-      .set({
-        status: "cancelled",
-        completedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(workflowExecution.id, execution.id));
-
-    // Decrement active execution count on workflow
-    await db
-      .update(workflow)
-      .set({
-        activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - 1)`,
-      })
-      .where(eq(workflow.id, execution.workflowId));
   }
+  await Promise.all(schedulerCleanups);
+
+  // Batch cancel all executions
+  const executionIds = activeExecutions.map((e) => e.id);
+  await db
+    .update(workflowExecution)
+    .set({
+      status: "cancelled",
+      completedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(inArray(workflowExecution.id, executionIds));
+
+  // Decrement active execution counts per workflow
+  const countsByWorkflow = new Map<string, number>();
+  for (const execution of activeExecutions) {
+    countsByWorkflow.set(
+      execution.workflowId,
+      (countsByWorkflow.get(execution.workflowId) ?? 0) + 1
+    );
+  }
+  await Promise.all(
+    [...countsByWorkflow.entries()].map(([wfId, count]) =>
+      db
+        .update(workflow)
+        .set({
+          activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - ${count})`,
+        })
+        .where(eq(workflow.id, wfId))
+    )
+  );
 
   console.log(
     `[workflow-events] Cancelled ${activeExecutions.length} execution(s) for contact ${contactId} unsubscribing from topic ${topicId}`

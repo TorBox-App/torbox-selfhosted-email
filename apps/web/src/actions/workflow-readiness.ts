@@ -28,7 +28,7 @@ export type ReadinessResult =
 
 async function verifyOrgAccess(
   organizationId: string
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; userEmail: string; role: string } | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -45,7 +45,15 @@ async function verifyOrgAccess(
       ),
   });
 
-  return membership ? { userId: session.user.id } : null;
+  if (!membership) {
+    return null;
+  }
+
+  return {
+    userId: session.user.id,
+    userEmail: session.user.email,
+    role: membership.role,
+  };
 }
 
 /**

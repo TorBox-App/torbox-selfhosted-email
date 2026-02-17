@@ -7,6 +7,8 @@
  * Called by server actions on enable/disable/update of scheduled workflows.
  */
 
+import { db, eq, workflow } from "@wraps/db";
+import { and } from "drizzle-orm";
 import { t } from "elysia";
 
 import {
@@ -17,6 +19,28 @@ import {
   createNextWorkflowSchedule,
   deleteWorkflowSchedule,
 } from "../services/workflow-scheduler";
+
+/**
+ * Verify the workflow belongs to the authenticated organization.
+ * Returns the workflow ID if valid, or null if not found.
+ */
+async function verifyWorkflowOwnership(
+  workflowId: string,
+  organizationId: string
+): Promise<boolean> {
+  const [wf] = await db
+    .select({ id: workflow.id })
+    .from(workflow)
+    .where(
+      and(
+        eq(workflow.id, workflowId),
+        eq(workflow.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  return !!wf;
+}
 
 export const workflowScheduleRoutes = createAuthenticatedRoutes(
   "/v1/workflow-schedules"
@@ -33,6 +57,16 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
     async (ctx) => {
       const { params, body, set } = ctx;
       const auth = (ctx as unknown as { auth: AuthContext }).auth;
+
+      // Verify workflow belongs to this organization
+      const isOwner = await verifyWorkflowOwnership(
+        params.workflowId,
+        auth.organizationId
+      );
+      if (!isOwner) {
+        set.status = 404;
+        return { success: false, error: "Workflow not found" };
+      }
 
       try {
         const scheduleName = await createNextWorkflowSchedule({
@@ -80,6 +114,17 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
     "/:workflowId/disable",
     async (ctx) => {
       const { params, set } = ctx;
+      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+
+      // Verify workflow belongs to this organization
+      const isOwner = await verifyWorkflowOwnership(
+        params.workflowId,
+        auth.organizationId
+      );
+      if (!isOwner) {
+        set.status = 404;
+        return { success: false, error: "Workflow not found" };
+      }
 
       try {
         await deleteWorkflowSchedule(params.workflowId);
@@ -118,6 +163,16 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
     async (ctx) => {
       const { params, body, set } = ctx;
       const auth = (ctx as unknown as { auth: AuthContext }).auth;
+
+      // Verify workflow belongs to this organization
+      const isOwner = await verifyWorkflowOwnership(
+        params.workflowId,
+        auth.organizationId
+      );
+      if (!isOwner) {
+        set.status = 404;
+        return { success: false, error: "Workflow not found" };
+      }
 
       try {
         // Delete old schedule first

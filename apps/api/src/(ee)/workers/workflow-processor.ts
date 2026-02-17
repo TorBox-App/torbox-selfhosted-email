@@ -94,11 +94,13 @@ async function triggerWorkflow(
   organizationId: string,
   eventData?: Record<string, unknown>
 ): Promise<void> {
-  // Load workflow
+  // Load workflow (scoped by org for defense-in-depth)
   const [wf] = await db
     .select()
     .from(workflow)
-    .where(eq(workflow.id, workflowId))
+    .where(
+      and(eq(workflow.id, workflowId), eq(workflow.organizationId, organizationId))
+    )
     .limit(1);
 
   if (!wf || wf.status !== "enabled") {
@@ -112,12 +114,15 @@ async function triggerWorkflow(
     wf.reentryDelaySeconds &&
     wf.reentryDelaySeconds > 0
   ) {
+    const reentryCutoff = new Date(
+      Date.now() - wf.reentryDelaySeconds * 1000
+    );
     const recentlyCompleted = await db.query.workflowExecution.findFirst({
       where: and(
         eq(workflowExecution.workflowId, workflowId),
         eq(workflowExecution.contactId, contactId),
         eq(workflowExecution.status, "completed"),
-        sql`${workflowExecution.completedAt} > NOW() - INTERVAL '${sql.raw(String(wf.reentryDelaySeconds))} seconds'`
+        sql`${workflowExecution.completedAt} > ${reentryCutoff}`
       ),
     });
 
@@ -131,11 +136,14 @@ async function triggerWorkflow(
 
   // Check contact cooldown (any workflow in this org)
   if (wf.contactCooldownSeconds && wf.contactCooldownSeconds > 0) {
+    const cooldownCutoff = new Date(
+      Date.now() - wf.contactCooldownSeconds * 1000
+    );
     const recentExecution = await db.query.workflowExecution.findFirst({
       where: and(
         eq(workflowExecution.organizationId, organizationId),
         eq(workflowExecution.contactId, contactId),
-        sql`${workflowExecution.createdAt} > NOW() - INTERVAL '${sql.raw(String(wf.contactCooldownSeconds))} seconds'`
+        sql`${workflowExecution.createdAt} > ${cooldownCutoff}`
       ),
     });
 
@@ -409,11 +417,16 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     return;
   }
 
-  // Load workflow
+  // Load workflow (scoped by org for defense-in-depth)
   const [wf] = await db
     .select()
     .from(workflow)
-    .where(eq(workflow.id, execution.workflowId))
+    .where(
+      and(
+        eq(workflow.id, execution.workflowId),
+        eq(workflow.organizationId, execution.organizationId)
+      )
+    )
     .limit(1);
 
   if (!wf) {
@@ -421,11 +434,16 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     return;
   }
 
-  // Load contact
+  // Load contact (scoped by org for defense-in-depth)
   const [contactRecord] = await db
     .select()
     .from(contact)
-    .where(eq(contact.id, execution.contactId))
+    .where(
+      and(
+        eq(contact.id, execution.contactId),
+        eq(contact.organizationId, execution.organizationId)
+      )
+    )
     .limit(1);
 
   if (!contactRecord) {
@@ -658,7 +676,7 @@ async function handleSendEmail(
     };
   }
 
-  // Get the workflow to find the AWS account and sender defaults
+  // Get the workflow to find the AWS account and sender defaults (scoped by org)
   const [wf] = await db
     .select({
       awsAccountId: workflow.awsAccountId,
@@ -667,7 +685,12 @@ async function handleSendEmail(
       defaultReplyTo: workflow.defaultReplyTo,
     })
     .from(workflow)
-    .where(eq(workflow.id, execution.workflowId))
+    .where(
+      and(
+        eq(workflow.id, execution.workflowId),
+        eq(workflow.organizationId, organizationId)
+      )
+    )
     .limit(1);
 
   if (!wf?.awsAccountId) {
@@ -695,7 +718,7 @@ async function handleSendEmail(
     throw new Error(`AWS account ${wf.awsAccountId} not found`);
   }
 
-  // Get template
+  // Get template (scoped by org for defense-in-depth)
   const [tmpl] = await db
     .select({
       id: template.id,
@@ -706,7 +729,12 @@ async function handleSendEmail(
       sesTemplateName: template.sesTemplateName,
     })
     .from(template)
-    .where(eq(template.id, config.templateId))
+    .where(
+      and(
+        eq(template.id, config.templateId),
+        eq(template.organizationId, organizationId)
+      )
+    )
     .limit(1);
 
   if (!tmpl) {
@@ -1089,7 +1117,7 @@ async function handleSendSms(
   config: Extract<WorkflowStepConfig, { type: "send_sms" }>,
   execution: typeof workflowExecution.$inferSelect,
   contactRecord: typeof contact.$inferSelect,
-  _organizationId: string
+  organizationId: string
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
   // Get the contact's phone number
   if (!contactRecord.phone) {
@@ -1122,14 +1150,19 @@ async function handleSendSms(
     };
   }
 
-  // Get the workflow to find the AWS account and sender defaults
+  // Get the workflow to find the AWS account and sender defaults (scoped by org)
   const [wf] = await db
     .select({
       awsAccountId: workflow.awsAccountId,
       defaultSenderId: workflow.defaultSenderId,
     })
     .from(workflow)
-    .where(eq(workflow.id, execution.workflowId))
+    .where(
+      and(
+        eq(workflow.id, execution.workflowId),
+        eq(workflow.organizationId, organizationId)
+      )
+    )
     .limit(1);
 
   if (!wf?.awsAccountId) {
@@ -1245,11 +1278,16 @@ async function handleDelay(
       break;
   }
 
-  // Find the next step after delay
+  // Find the next step after delay (scoped by org for defense-in-depth)
   const [wf] = await db
     .select()
     .from(workflow)
-    .where(eq(workflow.id, execution.workflowId))
+    .where(
+      and(
+        eq(workflow.id, execution.workflowId),
+        eq(workflow.organizationId, organizationId)
+      )
+    )
     .limit(1);
 
   const transitions = wf?.transitions as WorkflowTransition[] | undefined;
@@ -1802,11 +1840,16 @@ async function resumeExecution(
     return;
   }
 
-  // Load workflow
+  // Load workflow (scoped by org for defense-in-depth)
   const [wf] = await db
     .select()
     .from(workflow)
-    .where(eq(workflow.id, execution.workflowId))
+    .where(
+      and(
+        eq(workflow.id, execution.workflowId),
+        eq(workflow.organizationId, execution.organizationId)
+      )
+    )
     .limit(1);
 
   if (!wf) {
