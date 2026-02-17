@@ -310,9 +310,11 @@ export async function getEventAnalytics(
         : 0;
 
     // Get daily events data for chart
+    // Cast DATE() to text so the Neon driver returns "YYYY-MM-DD" strings
+    // instead of Date objects (which serialize as "YYYY-MM-DDT07:00:00.000Z")
     const dailyEventsData = await db
       .select({
-        date: sql<string>`DATE(${contactEvent.createdAt})`,
+        date: sql<string>`DATE(${contactEvent.createdAt})::text`,
         count: count(),
       })
       .from(contactEvent)
