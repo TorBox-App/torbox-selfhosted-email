@@ -29,7 +29,8 @@ function capture(
 async function emit(
   contactEmail: string,
   event: string,
-  properties: Record<string, unknown>
+  properties: Record<string, unknown>,
+  options?: { createIfMissing?: boolean }
 ) {
   try {
     const key = process.env.WRAPS_API_KEY;
@@ -38,7 +39,12 @@ async function emit(
     }
     const client = createPlatformClient({ apiKey: key });
     const { error } = await client.POST("/v1/events/", {
-      body: { name: event, contactEmail, properties },
+      body: {
+        name: event,
+        contactEmail,
+        properties,
+        ...(options?.createIfMissing && { createIfMissing: true }),
+      },
     });
     if (error) {
       console.error(`[activation-tracking] emit ${event} failed:`, error);
@@ -178,6 +184,21 @@ export async function trackFirstEmailSent(
       capture(userId, "activation_first_email_sent", props);
       await emit(userId, "activation.first_email_sent", props);
     }
+  } catch {
+    // never throw from tracking
+  }
+}
+
+export async function trackOnboardingCompleted(
+  userEmail: string,
+  organizationId: string
+) {
+  try {
+    const props = { organization_id: organizationId };
+    capture(organizationId, "onboarding_completed", props);
+    await emit(userEmail, "onboarding.completed", props, {
+      createIfMissing: true,
+    });
   } catch {
     // never throw from tracking
   }

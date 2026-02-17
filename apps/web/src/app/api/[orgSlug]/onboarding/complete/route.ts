@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { organizationExtension } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { trackOnboardingCompleted } from "@/lib/activation-tracking";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -58,6 +59,9 @@ export async function POST(_request: Request, context: RouteContext) {
         onboardingCompletedAt: new Date(),
       });
     }
+
+    // Emit onboarding.completed event to trigger workflows (e.g. activation drip)
+    await trackOnboardingCompleted(session.user.email, orgWithMembership.id);
 
     return NextResponse.json({
       success: true,
