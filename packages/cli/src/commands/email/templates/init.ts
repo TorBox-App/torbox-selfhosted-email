@@ -8,10 +8,19 @@ import { readAuthConfig } from "../../../utils/shared/config.js";
 import { WrapsError } from "../../../utils/shared/errors.js";
 import { isJsonMode, jsonSuccess } from "../../../utils/shared/json-output.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
+import {
+  scaffoldClaudeMdSection,
+  scaffoldClaudeSkill,
+} from "../../../utils/shared/scaffold-claude.js";
+import {
+  TEMPLATES_CLAUDE_MD_SECTION,
+  TEMPLATES_SKILL_CONTENT,
+} from "./claude-content.js";
 
 type TemplatesInitOptions = {
   org?: string;
   noExample?: boolean;
+  noClaude?: boolean;
   yes?: boolean;
   force?: boolean;
   json?: boolean;
@@ -164,6 +173,33 @@ export async function templatesInit(options: TemplatesInitOptions) {
 
   progress.succeed("Directory structure created");
 
+  // Scaffold .claude/ context (unless --no-claude)
+  const claudeFiles: string[] = [];
+  if (!options.noClaude) {
+    try {
+      progress.start("Scaffolding Claude Code context");
+      await scaffoldClaudeMdSection({
+        projectDir: cwd,
+        sectionId: "templates",
+        sectionContent: TEMPLATES_CLAUDE_MD_SECTION,
+      });
+      claudeFiles.push(".claude/CLAUDE.md");
+
+      await scaffoldClaudeSkill({
+        projectDir: cwd,
+        skillName: "wraps-templates",
+        skillContent: TEMPLATES_SKILL_CONTENT,
+      });
+      claudeFiles.push(".claude/skills/wraps-templates/SKILL.md");
+
+      progress.succeed("Claude Code context scaffolded");
+    } catch {
+      progress.info(
+        "Could not scaffold .claude/ context — template files are still ready"
+      );
+    }
+  }
+
   if (isJsonMode()) {
     jsonSuccess("email.templates.init", {
       org: orgSlug,
@@ -177,6 +213,7 @@ export async function templatesInit(options: TemplatesInitOptions) {
               "wraps/templates/welcome.tsx",
               "wraps/templates/_components/footer.tsx",
             ]),
+        ...claudeFiles,
       ],
     });
     return;
@@ -197,6 +234,11 @@ export async function templatesInit(options: TemplatesInitOptions) {
   if (!options.noExample) {
     console.log(
       `  ${pc.dim("Example:")}   ${pc.cyan("wraps/templates/welcome.tsx")}`
+    );
+  }
+  if (!options.noClaude && claudeFiles.length > 0) {
+    console.log(
+      `  ${pc.dim("AI Context:")} ${pc.cyan(".claude/skills/wraps-templates/")}`
     );
   }
   console.log();

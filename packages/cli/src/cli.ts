@@ -47,6 +47,7 @@ import { templatesPush } from "./commands/email/templates/push.js";
 import { emailTest } from "./commands/email/test.js";
 import { upgrade } from "./commands/email/upgrade.js";
 import { workflowsGenerate } from "./commands/email/workflows/generate.js";
+import { workflowsInit } from "./commands/email/workflows/init.js";
 import { workflowsPush } from "./commands/email/workflows/push.js";
 import { workflowsValidate } from "./commands/email/workflows/validate.js";
 // Info commands
@@ -189,10 +190,13 @@ function showHelp() {
   );
   console.log("Workflow Commands:");
   console.log(
+    `  ${pc.cyan("email workflows init")}      Initialize workflows-as-code`
+  );
+  console.log(
     `  ${pc.cyan("email workflows validate")}  Validate workflow files`
   );
   console.log(
-    `  ${pc.cyan("email workflows push")}     Push workflows to dashboard`
+    `  ${pc.cyan("email workflows push")}      Push workflows to dashboard`
   );
   console.log(
     `  ${pc.cyan("email workflows generate")} Generate workflow from template or AI\n`
@@ -486,6 +490,11 @@ args.options([
   {
     name: "noExample",
     description: "Skip creating example template",
+    defaultValue: false,
+  },
+  {
+    name: "noClaude",
+    description: "Skip scaffolding .claude/ context files",
     defaultValue: false,
   },
   {
@@ -942,6 +951,7 @@ async function run() {
               await templatesInit({
                 org: flags.org,
                 noExample: flags.noExample,
+                noClaude: flags.noClaude,
                 yes: flags.yes,
                 force: flags.force,
                 json: flags.json,
@@ -985,6 +995,16 @@ async function run() {
           const workflowsSubCommand = args.sub[2];
 
           switch (workflowsSubCommand) {
+            case "init":
+              await workflowsInit({
+                noExample: flags.noExample,
+                noClaude: flags.noClaude,
+                force: flags.force,
+                yes: flags.yes,
+                json: flags.json,
+              });
+              break;
+
             case "validate":
               await workflowsValidate({
                 workflow: flags.workflow,
@@ -1021,7 +1041,7 @@ async function run() {
                 `Unknown workflows command: ${workflowsSubCommand || "(none)"}`
               );
               console.log(
-                `\nAvailable commands: ${pc.cyan("validate")}, ${pc.cyan("push")}, ${pc.cyan("generate")}\n`
+                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("validate")}, ${pc.cyan("push")}, ${pc.cyan("generate")}\n`
               );
               throw new Error(
                 `Unknown workflows command: ${workflowsSubCommand || "(none)"}`
