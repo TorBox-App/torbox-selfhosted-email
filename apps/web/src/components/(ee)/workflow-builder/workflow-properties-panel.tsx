@@ -10,12 +10,13 @@ import {
   MessageSquare,
   Pencil,
   Plus,
+  RefreshCw,
   Settings,
   Trash2,
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const TemplateEditorDialog = dynamic(
   () =>
@@ -25,6 +26,10 @@ const TemplateEditorDialog = dynamic(
   { ssr: false }
 );
 
+import {
+  getVerifiedDomains,
+  type VerifiedIdentity,
+} from "@/actions/aws-accounts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,10 +83,51 @@ export function WorkflowPropertiesPanel({
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const updateNodeConfig = useWorkflowStore((state) => state.updateNodeConfig);
   const updateNodeName = useWorkflowStore((state) => state.updateNodeName);
+  const organizationId = useWorkflowStore(
+    (state) => state.workflow?.organizationId
+  );
+  const awsAccountId = useWorkflowStore(
+    (state) => state.workflow?.awsAccountId
+  );
 
   // Fetch templates via React Query (auto-refreshes when new templates are created)
   const { data: templatesData } = useTemplates(orgSlug);
   const templates = templatesData ?? [];
+
+  // Verified domains state (for email from address picker)
+  const [verifiedDomains, setVerifiedDomains] = useState<VerifiedIdentity[]>(
+    []
+  );
+  const [domainsLoading, setDomainsLoading] = useState(false);
+
+  const fetchDomains = useCallback(
+    async (accountId: string, forceRefresh = false) => {
+      if (!(accountId && organizationId)) {
+        setVerifiedDomains([]);
+        return;
+      }
+      setDomainsLoading(true);
+      try {
+        const result = await getVerifiedDomains(
+          accountId,
+          organizationId,
+          forceRefresh
+        );
+        if (result.success) {
+          setVerifiedDomains(result.identities);
+        }
+      } finally {
+        setDomainsLoading(false);
+      }
+    },
+    [organizationId]
+  );
+
+  useEffect(() => {
+    if (awsAccountId) {
+      fetchDomains(awsAccountId);
+    }
+  }, [awsAccountId, fetchDomains]);
 
   // Template editor dialog state
   const [showEditorDialog, setShowEditorDialog] = useState(false);
@@ -182,10 +228,15 @@ export function WorkflowPropertiesPanel({
         {data.type === "send_email" && (
           <SendEmailConfig
             config={data.config}
+            domainsLoading={domainsLoading}
             onChange={handleConfigChange}
             onCreateNew={handleCreateNewTemplate}
             onEditTemplate={handleEditTemplate}
+            onRefreshDomains={() =>
+              awsAccountId ? fetchDomains(awsAccountId, true) : undefined
+            }
             templates={templates}
+            verifiedDomains={verifiedDomains.filter((d) => d.type === "DOMAIN")}
           />
         )}
 
@@ -471,21 +522,48 @@ function TriggerConfig({
 function SendEmailConfig({
   config,
   templates,
+  verifiedDomains,
+  domainsLoading,
   onChange,
   onCreateNew,
   onEditTemplate,
+  onRefreshDomains,
 }: {
   config: WorkflowStepConfig;
   templates: Template[];
+  verifiedDomains: VerifiedIdentity[];
+  domainsLoading: boolean;
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
   onCreateNew?: () => void;
   onEditTemplate?: (templateId: string) => void;
+  onRefreshDomains?: () => void;
 }) {
   if (config.type !== "send_email") {
     return null;
   }
 
   const selectedTemplate = templates.find((t) => t.id === config.templateId);
+
+  // Parse existing from into prefix + domain
+  const existingFrom = config.from || "";
+  const [fromPrefix, fromDomain] = existingFrom.includes("@")
+    ? existingFrom.split("@")
+    : [existingFrom, ""];
+
+  // Check if existing from address uses an unverified domain
+  const hasUnverifiedDomain =
+    fromDomain &&
+    !domainsLoading &&
+    verifiedDomains.length > 0 &&
+    !verifiedDomains.some((d) => d.identity === fromDomain);
+
+  const handleFromChange = (prefix: string, domain: string) => {
+    if (prefix && domain) {
+      onChange({ from: `${prefix}@${domain}` });
+    } else if (!(prefix || domain)) {
+      onChange({ from: undefined });
+    }
+  };
 
   return (
     <>
@@ -551,6 +629,70 @@ function SendEmailConfig({
             Subject: {selectedTemplate.subject || "(no subject)"}
           </p>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>From Address (optional)</Label>
+          {onRefreshDomains && (
+            <Button
+              className="h-6 w-6"
+              disabled={domainsLoading}
+              onClick={onRefreshDomains}
+              size="icon"
+              title="Refresh domains"
+              type="button"
+              variant="ghost"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${domainsLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+          )}
+        </div>
+        {verifiedDomains.length > 0 ? (
+          <div className="flex items-center gap-1">
+            <Input
+              className="flex-1"
+              onChange={(e) => handleFromChange(e.target.value, fromDomain)}
+              placeholder="hello"
+              value={fromPrefix}
+            />
+            <span className="text-muted-foreground text-sm">@</span>
+            <Select
+              onValueChange={(value) => handleFromChange(fromPrefix, value)}
+              value={fromDomain}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Domain" />
+              </SelectTrigger>
+              <SelectContent>
+                {verifiedDomains.map((domain) => (
+                  <SelectItem key={domain.identity} value={domain.identity}>
+                    {domain.identity}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : domainsLoading ? (
+          <p className="text-muted-foreground text-xs">Loading domains...</p>
+        ) : (
+          <p className="text-muted-foreground text-xs">
+            No verified domains. Configure in Workflow Settings.
+          </p>
+        )}
+        {hasUnverifiedDomain && (
+          <Alert className="py-2" variant="destructive">
+            <AlertCircle className="h-3.5 w-3.5" />
+            <AlertDescription className="text-xs">
+              Domain "{fromDomain}" is not verified. Emails may fail to send.
+            </AlertDescription>
+          </Alert>
+        )}
+        <p className="text-muted-foreground text-xs">
+          Overrides the workflow default from address for this step.
+        </p>
       </div>
 
       <div className="space-y-2">

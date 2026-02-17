@@ -85,15 +85,15 @@ export function WorkflowToolbar({
   const [editedName, setEditedName] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Run validation when workflow structure changes
+  // Run validation when workflow structure or config changes
   // Use deferred isDirty to batch rapid changes and reduce CPU usage during drag operations
-  const _deferredIsDirty = useDeferredValue(isDirty);
+  const deferredIsDirty = useDeferredValue(isDirty);
   useEffect(() => {
     // Only run validation if we have nodes (workflow is loaded)
     if (nodeCount > 0) {
       runValidation();
     }
-  }, [runValidation, nodeCount]);
+  }, [runValidation, nodeCount, deferredIsDirty]);
 
   // Focus input when editing starts
   useEffect(() => {

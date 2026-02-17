@@ -1,10 +1,6 @@
 "use client";
 
-import type {
-  Workflow,
-  WorkflowStep,
-  WorkflowTransition,
-} from "@wraps/db";
+import type { Workflow, WorkflowStep, WorkflowTransition } from "@wraps/db";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 import { AIDesignPanel } from "./ai-design-panel";

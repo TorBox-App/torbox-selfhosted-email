@@ -31,6 +31,13 @@ vi.mock("@/components/template-editor/wrappers/template-editor-dialog", () => ({
   TemplateEditorDialog: () => null,
 }));
 
+// Mock the aws-accounts server actions
+vi.mock("@/actions/aws-accounts", () => ({
+  getVerifiedDomains: vi.fn(() =>
+    Promise.resolve({ success: true, identities: [] })
+  ),
+}));
+
 // Import after mocking
 import { WorkflowPropertiesPanel } from "../workflow-properties-panel";
 
