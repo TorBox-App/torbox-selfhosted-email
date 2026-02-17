@@ -99,7 +99,10 @@ async function triggerWorkflow(
     .select()
     .from(workflow)
     .where(
-      and(eq(workflow.id, workflowId), eq(workflow.organizationId, organizationId))
+      and(
+        eq(workflow.id, workflowId),
+        eq(workflow.organizationId, organizationId)
+      )
     )
     .limit(1);
 
@@ -114,9 +117,7 @@ async function triggerWorkflow(
     wf.reentryDelaySeconds &&
     wf.reentryDelaySeconds > 0
   ) {
-    const reentryCutoff = new Date(
-      Date.now() - wf.reentryDelaySeconds * 1000
-    );
+    const reentryCutoff = new Date(Date.now() - wf.reentryDelaySeconds * 1000);
     const recentlyCompleted = await db.query.workflowExecution.findFirst({
       where: and(
         eq(workflowExecution.workflowId, workflowId),

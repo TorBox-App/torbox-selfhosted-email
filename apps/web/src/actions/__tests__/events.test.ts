@@ -768,9 +768,27 @@ describe("Events Server Actions", () => {
 
   describe("getEventAnalytics", () => {
     it("should return analytics with correct counts", async () => {
-      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(1));
-      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(2));
-      await createTestEvent(testContact2.id, "purchase", undefined, testOrganization.id, daysAgo(3));
+      await createTestEvent(
+        testContact1.id,
+        "page_view",
+        undefined,
+        testOrganization.id,
+        daysAgo(1)
+      );
+      await createTestEvent(
+        testContact1.id,
+        "page_view",
+        undefined,
+        testOrganization.id,
+        daysAgo(2)
+      );
+      await createTestEvent(
+        testContact2.id,
+        "purchase",
+        undefined,
+        testOrganization.id,
+        daysAgo(3)
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 30);
 
@@ -783,9 +801,27 @@ describe("Events Server Actions", () => {
 
     it("should count active contacts as distinct", async () => {
       // 3 events from 2 distinct contacts
-      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(1));
-      await createTestEvent(testContact1.id, "button_click", undefined, testOrganization.id, daysAgo(1));
-      await createTestEvent(testContact2.id, "purchase", undefined, testOrganization.id, daysAgo(2));
+      await createTestEvent(
+        testContact1.id,
+        "page_view",
+        undefined,
+        testOrganization.id,
+        daysAgo(1)
+      );
+      await createTestEvent(
+        testContact1.id,
+        "button_click",
+        undefined,
+        testOrganization.id,
+        daysAgo(1)
+      );
+      await createTestEvent(
+        testContact2.id,
+        "purchase",
+        undefined,
+        testOrganization.id,
+        daysAgo(2)
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 30);
 
@@ -798,9 +834,21 @@ describe("Events Server Actions", () => {
 
     it("should separate totalEvents (all time) from eventsThisPeriod", async () => {
       // 1 event within 30 days
-      await createTestEvent(testContact1.id, "recent", undefined, testOrganization.id, daysAgo(5));
+      await createTestEvent(
+        testContact1.id,
+        "recent",
+        undefined,
+        testOrganization.id,
+        daysAgo(5)
+      );
       // 1 event outside the 30-day window
-      await createTestEvent(testContact1.id, "old", undefined, testOrganization.id, daysAgo(45));
+      await createTestEvent(
+        testContact1.id,
+        "old",
+        undefined,
+        testOrganization.id,
+        daysAgo(45)
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 30);
 
@@ -812,8 +860,20 @@ describe("Events Server Actions", () => {
     });
 
     it("should respect 7-day time range", async () => {
-      await createTestEvent(testContact1.id, "recent", undefined, testOrganization.id, daysAgo(3));
-      await createTestEvent(testContact1.id, "older", undefined, testOrganization.id, daysAgo(15));
+      await createTestEvent(
+        testContact1.id,
+        "recent",
+        undefined,
+        testOrganization.id,
+        daysAgo(3)
+      );
+      await createTestEvent(
+        testContact1.id,
+        "older",
+        undefined,
+        testOrganization.id,
+        daysAgo(15)
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 7);
 
@@ -825,7 +885,13 @@ describe("Events Server Actions", () => {
     });
 
     it("should return dailyEvents with YYYY-MM-DD date strings", async () => {
-      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(1));
+      await createTestEvent(
+        testContact1.id,
+        "page_view",
+        undefined,
+        testOrganization.id,
+        daysAgo(1)
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 7);
 
@@ -839,7 +905,13 @@ describe("Events Server Actions", () => {
     });
 
     it("should include today in dailyEvents", async () => {
-      await createTestEvent(testContact1.id, "today_event", undefined, testOrganization.id, new Date());
+      await createTestEvent(
+        testContact1.id,
+        "today_event",
+        undefined,
+        testOrganization.id,
+        new Date()
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 7);
 
@@ -856,7 +928,13 @@ describe("Events Server Actions", () => {
 
     it("should gap-fill dates with zero counts", async () => {
       // Create event only on one day
-      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, daysAgo(3));
+      await createTestEvent(
+        testContact1.id,
+        "page_view",
+        undefined,
+        testOrganization.id,
+        daysAgo(3)
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 7);
 
@@ -877,9 +955,27 @@ describe("Events Server Actions", () => {
 
     it("should aggregate multiple events on the same day", async () => {
       const day = daysAgo(2);
-      await createTestEvent(testContact1.id, "view", undefined, testOrganization.id, day);
-      await createTestEvent(testContact1.id, "click", undefined, testOrganization.id, day);
-      await createTestEvent(testContact2.id, "view", undefined, testOrganization.id, day);
+      await createTestEvent(
+        testContact1.id,
+        "view",
+        undefined,
+        testOrganization.id,
+        day
+      );
+      await createTestEvent(
+        testContact1.id,
+        "click",
+        undefined,
+        testOrganization.id,
+        day
+      );
+      await createTestEvent(
+        testContact2.id,
+        "view",
+        undefined,
+        testOrganization.id,
+        day
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 7);
 
@@ -897,12 +993,48 @@ describe("Events Server Actions", () => {
     it("should return top event names sorted by count descending", async () => {
       const day = daysAgo(1);
       // 3 page_views, 2 purchases, 1 signup
-      await createTestEvent(testContact1.id, "page_view", undefined, testOrganization.id, day);
-      await createTestEvent(testContact2.id, "page_view", undefined, testOrganization.id, day);
-      await createTestEvent(testContact3.id, "page_view", undefined, testOrganization.id, day);
-      await createTestEvent(testContact1.id, "purchase", undefined, testOrganization.id, day);
-      await createTestEvent(testContact2.id, "purchase", undefined, testOrganization.id, day);
-      await createTestEvent(testContact1.id, "signup", undefined, testOrganization.id, day);
+      await createTestEvent(
+        testContact1.id,
+        "page_view",
+        undefined,
+        testOrganization.id,
+        day
+      );
+      await createTestEvent(
+        testContact2.id,
+        "page_view",
+        undefined,
+        testOrganization.id,
+        day
+      );
+      await createTestEvent(
+        testContact3.id,
+        "page_view",
+        undefined,
+        testOrganization.id,
+        day
+      );
+      await createTestEvent(
+        testContact1.id,
+        "purchase",
+        undefined,
+        testOrganization.id,
+        day
+      );
+      await createTestEvent(
+        testContact2.id,
+        "purchase",
+        undefined,
+        testOrganization.id,
+        day
+      );
+      await createTestEvent(
+        testContact1.id,
+        "signup",
+        undefined,
+        testOrganization.id,
+        day
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 30);
 
@@ -920,7 +1052,13 @@ describe("Events Server Actions", () => {
       const day = daysAgo(1);
       const names = ["a", "b", "c", "d", "e", "f", "g"];
       for (const name of names) {
-        await createTestEvent(testContact1.id, name, undefined, testOrganization.id, day);
+        await createTestEvent(
+          testContact1.id,
+          name,
+          undefined,
+          testOrganization.id,
+          day
+        );
       }
 
       const result = await getEventAnalytics(testOrganization.id, 30);
@@ -941,17 +1079,37 @@ describe("Events Server Actions", () => {
         expect(result.analytics.activeContacts).toBe(0);
         expect(result.analytics.avgEventsPerContact).toBe(0);
         expect(result.analytics.topEventNames).toHaveLength(0);
-        expect(result.analytics.dailyEvents.every((d) => d.count === 0)).toBe(true);
+        expect(result.analytics.dailyEvents.every((d) => d.count === 0)).toBe(
+          true
+        );
       }
     });
 
     it("should not include events from other organizations", async () => {
       // Events in org 2
-      await createTestEvent(testContactOrg2.id, "org2_event", undefined, testOrganization2.id, daysAgo(1));
-      await createTestEvent(testContactOrg2.id, "org2_event", undefined, testOrganization2.id, daysAgo(2));
+      await createTestEvent(
+        testContactOrg2.id,
+        "org2_event",
+        undefined,
+        testOrganization2.id,
+        daysAgo(1)
+      );
+      await createTestEvent(
+        testContactOrg2.id,
+        "org2_event",
+        undefined,
+        testOrganization2.id,
+        daysAgo(2)
+      );
 
       // One event in org 1
-      await createTestEvent(testContact1.id, "org1_event", undefined, testOrganization.id, daysAgo(1));
+      await createTestEvent(
+        testContact1.id,
+        "org1_event",
+        undefined,
+        testOrganization.id,
+        daysAgo(1)
+      );
 
       const result = await getEventAnalytics(testOrganization.id, 30);
 

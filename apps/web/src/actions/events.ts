@@ -345,11 +345,7 @@ export async function getEventAnalytics(
         startDate.getDate()
       )
     );
-    const endUTC = Date.UTC(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
+    const endUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
 
     while (cursor.getTime() <= endUTC) {
       const dateStr = cursor.toISOString().split("T")[0];
