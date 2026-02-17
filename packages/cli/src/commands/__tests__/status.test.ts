@@ -8,6 +8,7 @@ import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { mockClient } from "aws-sdk-client-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emailStatus } from "../email/status.js";
+import { setJsonMode } from "../../utils/shared/json-output.js";
 
 const stsMock = mockClient(STSClient);
 const sesMock = mockClient(SESClient);
@@ -281,5 +282,65 @@ describe("email status command", () => {
         ]),
       })
     );
+  });
+
+  describe("JSON output", () => {
+    beforeEach(() => {
+      setJsonMode(true);
+    });
+
+    afterEach(() => {
+      setJsonMode(false);
+    });
+
+    it("should output JSON envelope when json mode is active", async () => {
+      stsMock.on(GetCallerIdentityCommand).resolves({
+        Account: "123456789012",
+        UserId: "AIDAI123456789",
+        Arn: "arn:aws:iam::123456789012:user/test",
+      });
+
+      const { LocalWorkspace } = await import("@pulumi/pulumi/automation");
+      vi.mocked(LocalWorkspace.selectStack).mockResolvedValue({
+        outputs: vi.fn().mockResolvedValue({
+          roleArn: { value: "arn:aws:iam::123456789012:role/wraps-email-role" },
+          region: { value: "us-east-1" },
+        }),
+      } as any);
+
+      sesMock
+        .on(ListIdentitiesCommand)
+        .resolves({ Identities: ["example.com"] })
+        .on(GetIdentityVerificationAttributesCommand)
+        .resolves({
+          VerificationAttributes: {
+            "example.com": { VerificationStatus: "Success" },
+          },
+        });
+
+      sesv2Mock.on(GetEmailIdentityCommand).resolves({
+        DkimAttributes: {
+          Tokens: ["token1", "token2", "token3"],
+          Status: "SUCCESS",
+        },
+      });
+
+      await emailStatus({ json: true });
+
+      const jsonCall = consoleLogSpy.mock.calls.find((call) => {
+        try {
+          const parsed = JSON.parse(call[0]);
+          return parsed.command === "email.status";
+        } catch {
+          return false;
+        }
+      });
+
+      expect(jsonCall).toBeDefined();
+      const output = JSON.parse(jsonCall![0]);
+      expect(output.success).toBe(true);
+      expect(output.command).toBe("email.status");
+      expect(output.data).toBeDefined();
+    });
   });
 });

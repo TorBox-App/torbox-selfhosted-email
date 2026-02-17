@@ -6,6 +6,7 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { trackCommand } from "../telemetry/events.js";
+import { isJsonMode, jsonSuccess } from "../utils/shared/json-output.js";
 
 /**
  * Options for the permissions command
@@ -608,9 +609,10 @@ export async function permissions(options: PermissionsOptions): Promise<void> {
 
   const policy = buildPolicy(options.service, options.preset);
 
-  if (options.json) {
-    // Output raw JSON
-    console.log(JSON.stringify(policy, null, 2));
+  if (isJsonMode()) {
+    jsonSuccess("permissions", {
+      policy: policy as unknown as Record<string, unknown>,
+    });
   } else {
     // Display human-readable summary
     displaySummary(options.service, options.preset);

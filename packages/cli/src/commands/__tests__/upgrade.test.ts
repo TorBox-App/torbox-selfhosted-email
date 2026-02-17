@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setJsonMode } from "../../utils/shared/json-output.js";
 
 // Mock all external dependencies
 vi.mock("@pulumi/pulumi", () => ({
@@ -1395,6 +1396,47 @@ describe("upgrade command", () => {
           call[0]?.message?.includes("Proceed with upgrade")
         );
       expect(confirmCalls).toHaveLength(0);
+    });
+  });
+
+  describe("JSON output", () => {
+    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      setJsonMode(true);
+      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      setJsonMode(false);
+      consoleLogSpy.mockRestore();
+    });
+
+    it("should output JSON envelope on successful upgrade", async () => {
+      await setupPulumiMock();
+      vi.mocked(prompts.select)
+        .mockResolvedValueOnce("preset" as never)
+        .mockResolvedValueOnce("production" as never);
+      vi.mocked(prompts.confirm).mockResolvedValue(true as never);
+
+      await upgrade({ json: true });
+
+      const jsonCall = consoleLogSpy.mock.calls.find((call) => {
+        try {
+          const parsed = JSON.parse(call[0]);
+          return parsed.command === "email.upgrade";
+        } catch {
+          return false;
+        }
+      });
+
+      expect(jsonCall).toBeDefined();
+      const output = JSON.parse(jsonCall![0]);
+      expect(output.success).toBe(true);
+      expect(output.command).toBe("email.upgrade");
+      expect(output.data).toBeDefined();
+      expect(output.data.upgraded).toBe(true);
+      expect(output.data.region).toBeDefined();
     });
   });
 });

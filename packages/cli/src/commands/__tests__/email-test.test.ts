@@ -6,6 +6,7 @@ import {
 import { mockClient } from "aws-sdk-client-mock";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emailTest } from "../email/test.js";
+import { setJsonMode } from "../../utils/shared/json-output.js";
 
 const sesv2Mock = mockClient(SESv2Client);
 
@@ -394,5 +395,47 @@ describe("email test command", () => {
     // Should have sent the email directly
     const sendCalls = sesv2Mock.commandCalls(SendEmailCommand);
     expect(sendCalls).toHaveLength(1);
+  });
+
+  describe("JSON output", () => {
+    beforeEach(() => {
+      setJsonMode(true);
+    });
+
+    afterEach(() => {
+      setJsonMode(false);
+    });
+
+    it("should output JSON envelope with messageId on success", async () => {
+      const { loadConnectionMetadata } = await import(
+        "../../utils/shared/metadata.js"
+      );
+      vi.mocked(loadConnectionMetadata).mockResolvedValue(MOCK_METADATA);
+
+      sesv2Mock.on(SendEmailCommand).resolves({
+        MessageId: "test-json-id-789",
+      });
+
+      await emailTest({
+        to: "success@simulator.amazonses.com",
+        json: true,
+      });
+
+      const jsonCall = consoleLogSpy.mock.calls.find((call) => {
+        try {
+          const parsed = JSON.parse(call[0]);
+          return parsed.command === "email.test";
+        } catch {
+          return false;
+        }
+      });
+
+      expect(jsonCall).toBeDefined();
+      const output = JSON.parse(jsonCall![0]);
+      expect(output.success).toBe(true);
+      expect(output.command).toBe("email.test");
+      expect(output.data).toBeDefined();
+      expect(output.data.messageId).toBe("test-json-id-789");
+    });
   });
 });

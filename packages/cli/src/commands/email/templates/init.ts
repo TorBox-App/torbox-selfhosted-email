@@ -6,6 +6,7 @@ import pc from "picocolors";
 import { trackCommand } from "../../../telemetry/events.js";
 import { readAuthConfig } from "../../../utils/shared/config.js";
 import { WrapsError } from "../../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../../utils/shared/json-output.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
 
 type TemplatesInitOptions = {
@@ -21,7 +22,7 @@ export async function templatesInit(options: TemplatesInitOptions) {
   const cwd = process.cwd();
   const wrapsDir = join(cwd, "wraps");
 
-  if (!options.json) {
+  if (!isJsonMode()) {
     clack.intro(pc.bold("Templates as Code"));
   }
 
@@ -43,7 +44,7 @@ export async function templatesInit(options: TemplatesInitOptions) {
     const orgs = config?.auth?.organizations;
     if (orgs?.length === 1) {
       orgSlug = orgs[0].slug;
-    } else if (orgs && orgs.length > 1 && !options.json) {
+    } else if (orgs && orgs.length > 1 && !isJsonMode()) {
       const selected = await clack.select({
         message: "Which organization?",
         options: orgs.map((o) => ({ value: o.slug, label: o.name })),
@@ -163,27 +164,21 @@ export async function templatesInit(options: TemplatesInitOptions) {
 
   progress.succeed("Directory structure created");
 
-  if (options.json) {
-    console.log(
-      JSON.stringify({
-        success: true,
-        command: "email.templates.init",
-        data: {
-          org: orgSlug,
-          dir: wrapsDir,
-          files: [
-            "wraps/wraps.config.ts",
-            "wraps/brand.ts",
-            ...(options.noExample
-              ? []
-              : [
-                  "wraps/templates/welcome.tsx",
-                  "wraps/templates/_components/footer.tsx",
-                ]),
-          ],
-        },
-      })
-    );
+  if (isJsonMode()) {
+    jsonSuccess("email.templates.init", {
+      org: orgSlug,
+      dir: wrapsDir,
+      files: [
+        "wraps/wraps.config.ts",
+        "wraps/brand.ts",
+        ...(options.noExample
+          ? []
+          : [
+              "wraps/templates/welcome.tsx",
+              "wraps/templates/_components/footer.tsx",
+            ]),
+      ],
+    });
     return;
   }
 

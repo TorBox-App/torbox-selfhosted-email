@@ -14,6 +14,8 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import { isValidPhoneNumber } from "../../utils/sms/validation.js";
@@ -27,7 +29,9 @@ export async function smsVerifyNumber(
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps SMS - Verify Destination Number"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps SMS - Verify Destination Number"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -91,6 +95,16 @@ export async function smsVerifyNumber(
         duration_ms: Date.now() - startTime,
       });
 
+      if (isJsonMode()) {
+        jsonSuccess("sms.verify-number.list", {
+          numbers: (response.VerifiedDestinationNumbers || []).map((n) => ({
+            phoneNumber: n.DestinationPhoneNumber,
+            status: n.Status,
+          })),
+        });
+        return;
+      }
+
       clack.outro(pc.green("Done!"));
       return;
     } catch (error: unknown) {
@@ -149,6 +163,14 @@ export async function smsVerifyNumber(
         duration_ms: Date.now() - startTime,
       });
 
+      if (isJsonMode()) {
+        jsonSuccess("sms.verify-number.delete", {
+          phoneNumber,
+          deleted: true,
+        });
+        return;
+      }
+
       clack.outro(pc.green("Done!"));
       return;
     } catch (error: unknown) {
@@ -165,6 +187,13 @@ export async function smsVerifyNumber(
 
   // Main flow: verify a new number
   let phoneNumber = options.phoneNumber;
+  if (!phoneNumber && isJsonMode()) {
+    throw new WrapsError(
+      "The --phone-number flag is required in JSON mode",
+      "MISSING_REQUIRED_FLAG",
+      "Provide --phone-number <number>"
+    );
+  }
   if (!phoneNumber) {
     const result = await clack.text({
       message: "Enter phone number to verify (E.164 format):",
@@ -239,6 +268,14 @@ export async function smsVerifyNumber(
         duration_ms: Date.now() - startTime,
       });
 
+      if (isJsonMode()) {
+        jsonSuccess("sms.verify-number.confirm", {
+          phoneNumber,
+          verified: true,
+        });
+        return;
+      }
+
       clack.outro(pc.green("Verification complete!"));
       return;
     } catch (error: unknown) {
@@ -303,6 +340,14 @@ export async function smsVerifyNumber(
         duration_ms: Date.now() - startTime,
       });
 
+      if (isJsonMode()) {
+        jsonSuccess("sms.verify-number.resend", {
+          phoneNumber,
+          codeSent: true,
+        });
+        return;
+      }
+
       clack.outro(pc.green("Code sent!"));
       return;
     } catch (error: unknown) {
@@ -329,6 +374,13 @@ export async function smsVerifyNumber(
     const existingNumber = listResponse.VerifiedDestinationNumbers?.[0];
     if (existingNumber?.Status === "VERIFIED") {
       progress.stop();
+      if (isJsonMode()) {
+        jsonSuccess("sms.verify-number.start", {
+          phoneNumber,
+          status: "already_verified",
+        });
+        return;
+      }
       clack.log.info(
         `Number ${pc.cyan(phoneNumber)} is already verified and ready to use!`
       );
@@ -352,6 +404,15 @@ export async function smsVerifyNumber(
       );
 
       progress.stop();
+
+      if (isJsonMode()) {
+        jsonSuccess("sms.verify-number.start", {
+          phoneNumber,
+          status: "pending",
+          codeSent: true,
+        });
+        return;
+      }
 
       clack.log.info(
         `Verification already in progress. New code sent to ${pc.cyan(phoneNumber)}`
@@ -411,6 +472,15 @@ export async function smsVerifyNumber(
       success: true,
       duration_ms: Date.now() - startTime,
     });
+
+    if (isJsonMode()) {
+      jsonSuccess("sms.verify-number.start", {
+        phoneNumber,
+        status: "code_sent",
+        codeSent: true,
+      });
+      return;
+    }
 
     clack.outro(pc.green("Verification started!"));
   } catch (error: unknown) {

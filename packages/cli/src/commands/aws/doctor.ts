@@ -9,6 +9,10 @@ import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
 import { isSESSandbox } from "../../utils/shared/aws.js";
 import {
+  isJsonMode,
+  jsonSuccess,
+} from "../../utils/shared/json-output.js";
+import {
   type AWSSetupState,
   detectAWSState,
   formatSSOProfile,
@@ -381,22 +385,39 @@ function generateSuggestions(
  */
 export async function doctor(): Promise<void> {
   const startTime = Date.now();
-  clack.intro(pc.bold("AWS Setup Diagnostics"));
 
-  const spinner = clack.spinner();
-  spinner.start("Running diagnostics...");
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("AWS Setup Diagnostics"));
+  }
+
+  const spinner = isJsonMode() ? null : clack.spinner();
+  spinner?.start("Running diagnostics...");
 
   const state = await detectAWSState();
   const results = await runDiagnostics(state);
 
-  spinner.stop("Diagnostics complete");
+  spinner?.stop("Diagnostics complete");
 
-  displayResults(results);
-
-  // Summary
+  // Summary counts
   const failCount = results.filter((r) => r.status === "fail").length;
   const warnCount = results.filter((r) => r.status === "warn").length;
   const passCount = results.filter((r) => r.status === "pass").length;
+
+  if (isJsonMode()) {
+    const suggestions = generateSuggestions(results, state);
+    jsonSuccess("aws.doctor", {
+      checks: results.map((r) => ({
+        name: r.message,
+        status: r.status,
+        ...(r.details ? { details: r.details } : {}),
+      })),
+      summary: { pass: passCount, warn: warnCount, fail: failCount },
+      suggestions,
+    });
+    return;
+  }
+
+  displayResults(results);
 
   if (failCount > 0) {
     clack.log.error(`${failCount} issue${failCount > 1 ? "s" : ""} found`);

@@ -240,6 +240,7 @@ export type EmailInitOptions = {
   yes?: boolean;
   preview?: boolean;
   quick?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -251,6 +252,7 @@ export type EmailTestOptions = {
   scenario?: "success" | "bounce" | "complaint" | "ooto" | "suppression_list";
   isSandbox?: boolean;
   postDeploy?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -337,6 +339,7 @@ export type EmailConnectOptions = {
   region?: string;
   yes?: boolean;
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -346,6 +349,7 @@ export type EmailVerifyOptions = {
   domain: string;
   wait?: boolean;
   interval?: number;
+  json?: boolean;
 };
 
 /**
@@ -355,6 +359,7 @@ export type EmailUpgradeOptions = {
   region?: string;
   yes?: boolean;
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -367,6 +372,7 @@ export type EmailConfigOptions = {
   region?: string;
   yes?: boolean;
   preview?: boolean;
+  json?: boolean;
 };
 
 /** @deprecated Use EmailConfigOptions instead */
@@ -379,6 +385,7 @@ export type EmailRestoreOptions = {
   region?: string;
   force?: boolean; // Destructive operation - restores previous configuration
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -390,6 +397,7 @@ export type EmailInboundInitOptions = {
   webhookUrl?: string;
   yes?: boolean;
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -398,6 +406,7 @@ export type EmailInboundInitOptions = {
 export type EmailInboundDestroyOptions = {
   region?: string;
   force?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -405,6 +414,7 @@ export type EmailInboundDestroyOptions = {
  */
 export type EmailInboundStatusOptions = {
   region?: string;
+  json?: boolean;
 };
 
 /**
@@ -412,6 +422,7 @@ export type EmailInboundStatusOptions = {
  */
 export type EmailInboundVerifyOptions = {
   region?: string;
+  json?: boolean;
 };
 
 /**
@@ -419,4 +430,5 @@ export type EmailInboundVerifyOptions = {
  */
 export type EmailInboundTestOptions = {
   region?: string;
+  json?: boolean;
 };

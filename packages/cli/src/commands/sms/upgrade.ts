@@ -22,6 +22,7 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -48,7 +49,9 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
   const startTime = Date.now();
   let upgradeAction: string | symbol = "";
 
-  clack.intro(pc.bold("Wraps SMS Upgrade - Enhance Your SMS Infrastructure"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps SMS Upgrade - Enhance Your SMS Infrastructure"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -1042,6 +1045,25 @@ export async function smsUpgrade(options: SMSUpgradeOptions): Promise<void> {
     metadata.services.sms.preset = newPreset as SMSConfigPreset;
   }
   await saveConnectionMetadata(metadata);
+
+  if (isJsonMode()) {
+    jsonSuccess("sms.upgrade", {
+      upgraded: true,
+      region: outputs.region,
+      action: typeof upgradeAction === "string" ? upgradeAction : undefined,
+      preset: newPreset,
+      roleArn: outputs.roleArn,
+      phoneNumber: outputs.phoneNumber,
+      configSetName: outputs.configSetName,
+    });
+    trackServiceUpgrade("sms", {
+      from_preset: metadata.services.sms?.preset,
+      to_preset: newPreset,
+      action: typeof upgradeAction === "string" ? upgradeAction : undefined,
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
 
   progress.info("Connection metadata updated");
 

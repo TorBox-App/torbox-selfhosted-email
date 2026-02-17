@@ -5,6 +5,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 
@@ -81,7 +82,9 @@ async function getRegistrationStatus(
  */
 export async function smsRegister(options: SMSRegisterOptions): Promise<void> {
   const startTime = Date.now();
-  clack.intro(pc.bold("Wraps SMS - Toll-Free Registration"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps SMS - Toll-Free Registration"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -117,6 +120,30 @@ export async function smsRegister(options: SMSRegisterOptions): Promise<void> {
     process.exit(1);
   }
 
+  // 5. Check registration status if available
+  let registrationStatus: string | null = null;
+  if (phoneDetails.registrationId) {
+    registrationStatus = await getRegistrationStatus(
+      region,
+      phoneDetails.registrationId
+    );
+  }
+
+  if (isJsonMode()) {
+    trackCommand("sms:register", {
+      success: true,
+      duration_ms: Date.now() - startTime,
+    });
+    jsonSuccess("sms.register", {
+      phoneNumber: phoneDetails.phoneNumber,
+      type: phoneDetails.type,
+      status: phoneDetails.status,
+      registrationId: phoneDetails.registrationId || null,
+      registrationStatus,
+    });
+    return;
+  }
+
   console.log("");
   console.log(
     `${pc.bold("Phone Number:")} ${pc.cyan(phoneDetails.phoneNumber)}`
@@ -126,15 +153,8 @@ export async function smsRegister(options: SMSRegisterOptions): Promise<void> {
     `${pc.bold("Status:")} ${phoneDetails.status === "ACTIVE" ? pc.green(phoneDetails.status) : pc.yellow(phoneDetails.status)}`
   );
 
-  // 5. Check registration status if available
-  if (phoneDetails.registrationId) {
-    const regStatus = await getRegistrationStatus(
-      region,
-      phoneDetails.registrationId
-    );
-    if (regStatus) {
-      console.log(`${pc.bold("Registration:")} ${pc.cyan(regStatus)}`);
-    }
+  if (registrationStatus) {
+    console.log(`${pc.bold("Registration:")} ${pc.cyan(registrationStatus)}`);
   }
 
   console.log("");

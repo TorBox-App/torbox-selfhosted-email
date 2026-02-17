@@ -20,6 +20,10 @@ import {
   loadConnectionMetadata,
 } from "../../utils/shared/metadata.js";
 import {
+  isJsonMode,
+  jsonSuccess,
+} from "../../utils/shared/json-output.js";
+import {
   DeploymentProgress,
   displayStatus,
 } from "../../utils/shared/output.js";
@@ -31,7 +35,9 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps Email Status"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps Email Status"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -164,7 +170,8 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
 
   // 6. Display status
   progress.stop();
-  displayStatus({
+
+  const statusData = {
     integrationLevel: integrationLevel as "dashboard-only" | "enhanced",
     region,
     domains: domainsWithTokens,
@@ -185,7 +192,14 @@ export async function emailStatus(options: StatusOptions): Promise<void> {
           cloudFrontDomain: stackOutputs.cloudFrontDomain?.value,
         }
       : undefined,
-  });
+  };
+
+  if (isJsonMode()) {
+    jsonSuccess("email.status", statusData);
+    return;
+  }
+
+  displayStatus(statusData);
 
   // 7. Track status command
   trackCommand("email:status", {

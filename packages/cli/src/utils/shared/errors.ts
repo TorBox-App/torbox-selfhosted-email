@@ -1,6 +1,7 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
 import { trackError } from "../../telemetry/events.js";
+import { isJsonMode, jsonError } from "./json-output.js";
 
 /**
  * Custom error class for Wraps CLI errors
@@ -230,9 +231,61 @@ export function sanitizeErrorMessage(error: unknown): string {
  * @param command - Optional command name for telemetry context
  */
 export function handleCLIError(error: unknown, command?: string): never {
-  console.error(""); // Blank line
-
   const cmdContext = command || "unknown";
+
+  // In JSON mode, convert any error to a JSON envelope and exit
+  if (isJsonMode()) {
+    let code = "UNKNOWN_ERROR";
+    let message = "An unexpected error occurred";
+    let suggestion: string | undefined;
+    let docsUrl: string | undefined;
+
+    if (error instanceof WrapsError) {
+      trackError(error.code, cmdContext);
+      code = error.code;
+      message = error.message;
+      suggestion = error.suggestion;
+      docsUrl = error.docsUrl;
+    } else if (isAWSError(error)) {
+      const parsed = parseAWSError(error);
+      code = `AWS_${parsed.code}`;
+      trackError(code, cmdContext, { action: parsed.action });
+      // Map to user-friendly WrapsError for message/suggestion
+      const wrapsErr = awsErrorToWrapsError(parsed.code, parsed.action);
+      message = wrapsErr.message;
+      suggestion = wrapsErr.suggestion;
+      docsUrl = wrapsErr.docsUrl;
+    } else if (isPulumiError(error)) {
+      const parsed = parsePulumiError(error as Error);
+      code = `PULUMI_${parsed.code}`;
+      trackError(code, cmdContext, {
+        iamAction: parsed.iamAction,
+        service: parsed.service,
+        errorType: (error as Error)?.constructor?.name,
+      });
+      const wrapsErr = pulumiErrorToWrapsError(
+        parsed.code,
+        parsed.iamAction,
+        parsed.service
+      );
+      message = wrapsErr.message;
+      suggestion = wrapsErr.suggestion;
+      docsUrl = wrapsErr.docsUrl;
+    } else {
+      trackError("UNHANDLED_ERROR", cmdContext, {
+        errorType:
+          error instanceof Error ? error.constructor.name : typeof error,
+        message: sanitizeErrorMessage(error),
+      });
+      message =
+        error instanceof Error ? error.message : String(error || message);
+    }
+
+    jsonError(cmdContext, { code, message, suggestion, docsUrl });
+    process.exit(1);
+  }
+
+  console.error(""); // Blank line
 
   if (error instanceof WrapsError) {
     // Track error (code only, never message)
@@ -263,32 +316,7 @@ export function handleCLIError(error: unknown, command?: string): never {
     const { code, action } = parseAWSError(error);
     trackError(`AWS_${code}`, cmdContext, { action });
 
-    // Convert to user-friendly message based on error type
-    let wrapsError: WrapsError;
-
-    switch (code) {
-      case "ExpiredTokenException":
-      case "TokenRefreshRequired":
-      case "SSOTokenExpired":
-        wrapsError = errors.sessionTokenExpired();
-        break;
-      case "InvalidClientTokenId":
-      case "InvalidAccessKeyId":
-      case "SignatureDoesNotMatch":
-        wrapsError = errors.accessKeyInvalid();
-        break;
-      case "AccessDenied":
-      case "AccessDeniedException":
-      case "UnauthorizedAccess":
-        wrapsError = errors.iamPermissionDenied(
-          action || "unknown",
-          "AWS resource",
-          "Ensure your IAM user/role has the required permissions."
-        );
-        break;
-      default:
-        wrapsError = errors.noAWSCredentials();
-    }
+    const wrapsError = awsErrorToWrapsError(code, action);
 
     clack.log.error(wrapsError.message);
     if (wrapsError.suggestion) {
@@ -315,40 +343,7 @@ export function handleCLIError(error: unknown, command?: string): never {
       errorType: (error as Error)?.constructor?.name,
     });
 
-    // Convert to user-friendly message based on error type
-    let wrapsError: WrapsError;
-
-    switch (code) {
-      case "STACK_LOCKED":
-        wrapsError = errors.stackLocked();
-        break;
-      case "SES_PERMISSION_DENIED":
-        wrapsError = errors.sesPermissionDenied(iamAction || "unknown");
-        break;
-      case "DYNAMODB_PERMISSION_DENIED":
-        wrapsError = errors.dynamoDBPermissionDenied();
-        break;
-      case "LAMBDA_PERMISSION_DENIED":
-        wrapsError = errors.lambdaPermissionDenied();
-        break;
-      case "EVENTBRIDGE_PERMISSION_DENIED":
-        wrapsError = errors.eventBridgePermissionDenied();
-        break;
-      case "SQS_PERMISSION_DENIED":
-        wrapsError = errors.sqsPermissionDenied();
-        break;
-      case "IAM_PERMISSION_DENIED":
-        wrapsError = errors.iamPermissionDenied(
-          iamAction || "unknown",
-          "AWS resource",
-          service
-            ? `Your IAM user/role needs ${service.toUpperCase()} permissions.`
-            : "Ensure your IAM user/role has the required permissions."
-        );
-        break;
-      default:
-        wrapsError = errors.pulumiError(sanitizeErrorMessage(error));
-    }
+    const wrapsError = pulumiErrorToWrapsError(code, iamAction, service);
 
     clack.log.error(wrapsError.message);
     if (wrapsError.suggestion) {
@@ -381,6 +376,68 @@ export function handleCLIError(error: unknown, command?: string): never {
   console.log(`\n${pc.dim("If this persists, please report at:")}`);
   console.log(`  ${pc.blue("https://github.com/wraps-team/wraps/issues")}\n`);
   process.exit(1);
+}
+
+/**
+ * Convert AWS error code to a user-friendly WrapsError.
+ * Extracted to share between JSON and human-readable paths.
+ */
+function awsErrorToWrapsError(code: string, action?: string): WrapsError {
+  switch (code) {
+    case "ExpiredTokenException":
+    case "TokenRefreshRequired":
+    case "SSOTokenExpired":
+      return errors.sessionTokenExpired();
+    case "InvalidClientTokenId":
+    case "InvalidAccessKeyId":
+    case "SignatureDoesNotMatch":
+      return errors.accessKeyInvalid();
+    case "AccessDenied":
+    case "AccessDeniedException":
+    case "UnauthorizedAccess":
+      return errors.iamPermissionDenied(
+        action || "unknown",
+        "AWS resource",
+        "Ensure your IAM user/role has the required permissions."
+      );
+    default:
+      return errors.noAWSCredentials();
+  }
+}
+
+/**
+ * Convert Pulumi error code to a user-friendly WrapsError.
+ * Extracted to share between JSON and human-readable paths.
+ */
+function pulumiErrorToWrapsError(
+  code: string,
+  iamAction?: string,
+  service?: string
+): WrapsError {
+  switch (code) {
+    case "STACK_LOCKED":
+      return errors.stackLocked();
+    case "SES_PERMISSION_DENIED":
+      return errors.sesPermissionDenied(iamAction || "unknown");
+    case "DYNAMODB_PERMISSION_DENIED":
+      return errors.dynamoDBPermissionDenied();
+    case "LAMBDA_PERMISSION_DENIED":
+      return errors.lambdaPermissionDenied();
+    case "EVENTBRIDGE_PERMISSION_DENIED":
+      return errors.eventBridgePermissionDenied();
+    case "SQS_PERMISSION_DENIED":
+      return errors.sqsPermissionDenied();
+    case "IAM_PERMISSION_DENIED":
+      return errors.iamPermissionDenied(
+        iamAction || "unknown",
+        "AWS resource",
+        service
+          ? `Your IAM user/role needs ${service.toUpperCase()} permissions.`
+          : "Ensure your IAM user/role has the required permissions."
+      );
+    default:
+      return errors.pulumiError("Deployment failed");
+  }
 }
 
 /**
@@ -690,5 +747,21 @@ export const errors = {
       "TEMPLATE_PUSH_FAILED",
       "Check your API key and network connection.",
       "https://wraps.dev/docs/templates-as-code"
+    ),
+
+  workflowGenerationFailed: (message?: string) =>
+    new WrapsError(
+      `Workflow generation failed${message ? `: ${message}` : ""}`,
+      "WORKFLOW_GENERATION_FAILED",
+      "Try rephrasing your description, or use a built-in template:\n  wraps email workflows generate --template welcome\n  wraps email workflows generate --template cart-recovery",
+      "https://wraps.dev/docs/guides/orchestration"
+    ),
+
+  aiUsageLimitReached: () =>
+    new WrapsError(
+      "AI generation usage limit reached",
+      "AI_USAGE_LIMIT_REACHED",
+      "Upgrade your plan for more AI generations, or use built-in templates:\n  wraps email workflows generate --template welcome\n  wraps email workflows generate --template cart-recovery",
+      "https://wraps.dev/docs/pricing"
     ),
 };

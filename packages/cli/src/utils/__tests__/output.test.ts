@@ -4,6 +4,7 @@ import {
   displayStatus,
   displaySuccess,
 } from "../shared/output.js";
+import { setJsonMode } from "../shared/json-output.js";
 
 // Mock @clack/prompts
 vi.mock("@clack/prompts", () => ({
@@ -90,6 +91,91 @@ describe("DeploymentProgress", () => {
 
     it("should handle step messages", () => {
       expect(() => progress.step("Step message")).not.toThrow();
+    });
+  });
+
+  describe("JSON mode", () => {
+    beforeEach(() => {
+      setJsonMode(true);
+    });
+
+    afterEach(() => {
+      setJsonMode(false);
+    });
+
+    it("start() is a no-op", async () => {
+      const clack = await import("@clack/prompts");
+
+      progress.start("Starting task");
+
+      expect(clack.spinner).not.toHaveBeenCalled();
+    });
+
+    it("succeed() is a no-op", async () => {
+      const clack = await import("@clack/prompts");
+
+      progress.succeed("Task completed");
+
+      expect(clack.log.success).not.toHaveBeenCalled();
+    });
+
+    it("fail() is a no-op", async () => {
+      const clack = await import("@clack/prompts");
+
+      progress.fail("Task failed");
+
+      expect(clack.log.error).not.toHaveBeenCalled();
+    });
+
+    it("info() is a no-op", async () => {
+      const clack = await import("@clack/prompts");
+
+      progress.info("Info message");
+
+      expect(clack.log.info).not.toHaveBeenCalled();
+    });
+
+    it("step() is a no-op", async () => {
+      const clack = await import("@clack/prompts");
+
+      progress.step("Step message");
+
+      expect(clack.log.step).not.toHaveBeenCalled();
+    });
+
+    it("stop() is a no-op", async () => {
+      const clack = await import("@clack/prompts");
+
+      progress.stop("Stopping");
+
+      expect(clack.spinner).not.toHaveBeenCalled();
+    });
+
+    it("execute() still runs function", async () => {
+      const mockFn = vi.fn().mockResolvedValue("json-result");
+
+      const result = await progress.execute("Test message", mockFn);
+
+      expect(mockFn).toHaveBeenCalledOnce();
+      expect(result).toBe("json-result");
+    });
+
+    it("execute() still throws on error", async () => {
+      const mockFn = vi.fn().mockRejectedValue(new Error("JSON error"));
+
+      await expect(progress.execute("Test message", mockFn)).rejects.toThrow(
+        "JSON error"
+      );
+      expect(mockFn).toHaveBeenCalledOnce();
+    });
+
+    it("execute() doesn't show spinner", async () => {
+      const clack = await import("@clack/prompts");
+      const mockFn = vi.fn().mockResolvedValue("result");
+
+      await progress.execute("Test message", mockFn);
+
+      expect(clack.spinner).not.toHaveBeenCalled();
     });
   });
 });

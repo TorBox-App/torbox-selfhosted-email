@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Cloud,
   FileCode2,
+  FileJson,
   FileText,
   Globe,
   HardDrive,
@@ -176,6 +177,11 @@ const navItems: NavSection[] = [
         title: "Error Codes",
         href: "/docs/reference/errors",
         icon: AlertTriangle,
+      },
+      {
+        title: "JSON Output",
+        href: "/docs/reference/json-output",
+        icon: FileJson,
       },
       {
         title: "Environment Variables",

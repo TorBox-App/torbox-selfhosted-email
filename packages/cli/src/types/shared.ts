@@ -64,6 +64,7 @@ export type DestroyOptions = {
   region?: string;
   service?: ServiceType; // Destroy specific service or all
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -73,6 +74,7 @@ export type StatusOptions = {
   account?: string;
   region?: string;
   service?: ServiceType; // Show specific service or all
+  json?: boolean;
 };
 
 /**
@@ -89,6 +91,7 @@ export type DashboardOptions = {
 export type UpdateRoleOptions = {
   region?: string;
   force?: boolean; // Skip confirmation prompt
+  json?: boolean;
 };
 
 /**

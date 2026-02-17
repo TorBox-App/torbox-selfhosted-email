@@ -13,6 +13,11 @@ import {
 } from "@wraps/email-check";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
+import {
+  isJsonMode,
+  jsonError,
+  jsonSuccess,
+} from "../../utils/shared/json-output.js";
 import { listConnections } from "../../utils/shared/metadata.js";
 
 export type CheckOptions = {
@@ -66,13 +71,13 @@ export async function check(options: CheckOptions): Promise<void> {
   }
 
   // Show intro
-  if (!options.json) {
+  if (!isJsonMode()) {
     clack.intro(pc.bold("Wraps Email Check"));
     console.log();
   }
 
   // Run the check
-  const spinner = options.json ? null : clack.spinner();
+  const spinner = isJsonMode() ? null : clack.spinner();
 
   spinner?.start(`Checking ${pc.cyan(domain)}...`);
 
@@ -99,8 +104,8 @@ export async function check(options: CheckOptions): Promise<void> {
     spinner?.stop(`Check complete in ${result.duration}ms`);
 
     // Output results
-    if (options.json) {
-      console.log(JSON.stringify(result, null, 2));
+    if (isJsonMode()) {
+      jsonSuccess("email.check", result as unknown as Record<string, unknown>);
     } else {
       displayResults(result, options);
     }
@@ -119,8 +124,8 @@ export async function check(options: CheckOptions): Promise<void> {
     spinner?.stop("Check failed");
     const msg = error instanceof Error ? error.message : String(error);
 
-    if (options.json) {
-      console.log(JSON.stringify({ error: msg }));
+    if (isJsonMode()) {
+      jsonError("email.check", { code: "CHECK_FAILED", message: msg });
     } else {
       clack.log.error(msg);
     }

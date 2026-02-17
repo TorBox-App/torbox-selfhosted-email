@@ -42,6 +42,7 @@ import {
   loadConnectionMetadata,
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import { promptVercelConfig } from "../../utils/shared/prompts.js";
 import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
@@ -573,7 +574,7 @@ async function authenticatedConnect(
 ): Promise<void> {
   const startTime = Date.now();
 
-  if (!options.json) {
+  if (!isJsonMode()) {
     intro(pc.bold("Connect to Wraps Platform"));
   }
 
@@ -598,7 +599,7 @@ async function authenticatedConnect(
       process.exit(1);
     }
 
-    if (!options.json) {
+    if (!isJsonMode()) {
       progress.info(`Organization: ${pc.cyan(org.name)}`);
     }
 
@@ -606,7 +607,7 @@ async function authenticatedConnect(
     if (hasEmail) {
       const emailConfig = metadata.services.email?.config;
       if (!emailConfig?.eventTracking?.enabled) {
-        if (!options.json) {
+        if (!isJsonMode()) {
           progress.stop();
           log.warn(
             "Event tracking must be enabled to connect to the Wraps Platform."
@@ -724,17 +725,14 @@ async function authenticatedConnect(
     progress.stop();
 
     // 9. Output
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          accountId: identity.accountId,
-          region,
-          organizationId: org.id,
-          connectionId: result.connectionId,
-          webhookConnected: true,
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("platform.connect", {
+        accountId: identity.accountId,
+        region,
+        organizationId: org.id,
+        connectionId: result.connectionId,
+        webhookConnected: true,
+      });
     } else {
       outro(pc.green("Platform connection complete!"));
 

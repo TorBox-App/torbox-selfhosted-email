@@ -84,6 +84,7 @@ import {
   setupTabCompletion,
 } from "./utils/shared/completion.js";
 import { handleCLIError } from "./utils/shared/errors.js";
+import { setJsonMode } from "./utils/shared/json-output.js";
 
 // Check Node.js version (requires 20+)
 const [nodeMajorVersion] = process.versions.node.split(".").map(Number);
@@ -489,6 +490,9 @@ args.options([
 const flags = args.parse(process.argv);
 const [primaryCommand, subCommand] = args.sub;
 
+// Enable JSON output mode globally when --json flag is passed
+setJsonMode(flags.json);
+
 // If no command provided, show interactive menu
 if (!primaryCommand) {
   async function interactiveMenu() {
@@ -701,6 +705,7 @@ async function run() {
             yes: flags.yes,
             preview: flags.preview,
             quick: flags.quick,
+            json: flags.json,
           });
           break;
 
@@ -709,6 +714,7 @@ async function run() {
             region: flags.region,
             to: flags.to,
             scenario: flags.scenario,
+            json: flags.json,
           });
           break;
 
@@ -732,6 +738,7 @@ async function run() {
             region: flags.region,
             yes: flags.yes,
             preview: flags.preview,
+            json: flags.json,
           });
           break;
 
@@ -741,6 +748,7 @@ async function run() {
             region: flags.region,
             yes: flags.yes,
             preview: flags.preview,
+            json: flags.json,
           });
           break;
 
@@ -749,6 +757,7 @@ async function run() {
             region: flags.region,
             yes: flags.yes,
             preview: flags.preview,
+            json: flags.json,
           });
           break;
 
@@ -757,6 +766,7 @@ async function run() {
             region: flags.region,
             force: flags.force,
             preview: flags.preview,
+            json: flags.json,
           });
           break;
 
@@ -764,6 +774,7 @@ async function run() {
           await emailStatus({
             account: flags.account,
             region: flags.region,
+            json: flags.json,
           });
           break;
 
@@ -796,6 +807,7 @@ async function run() {
                 subdomain: flags.domain, // reuse --domain flag for subdomain
                 yes: flags.yes,
                 preview: flags.preview,
+                json: flags.json,
               });
               break;
 
@@ -803,24 +815,28 @@ async function run() {
               await inboundDestroy({
                 region: flags.region,
                 force: flags.force,
+                json: flags.json,
               });
               break;
 
             case "status":
               await inboundStatus({
                 region: flags.region,
+                json: flags.json,
               });
               break;
 
             case "verify":
               await inboundVerify({
                 region: flags.region,
+                json: flags.json,
               });
               break;
 
             case "test":
               await inboundTest({
                 region: flags.region,
+                json: flags.json,
               });
               break;
 
@@ -997,6 +1013,7 @@ async function run() {
             force: flags.force,
             region: flags.region,
             preview: flags.preview,
+            json: flags.json,
           });
           break;
 
@@ -1027,12 +1044,14 @@ async function run() {
             region: flags.region,
             preset: flags.preset,
             yes: flags.yes,
+            json: flags.json,
           });
           break;
 
         case "status":
           await smsStatus({
             account: flags.account,
+            json: flags.json,
           });
           break;
 
@@ -1040,6 +1059,7 @@ async function run() {
           await smsTest({
             to: flags.to,
             message: flags.message,
+            json: flags.json,
           });
           break;
 
@@ -1047,6 +1067,7 @@ async function run() {
           await smsUpgrade({
             region: flags.region,
             yes: flags.yes,
+            json: flags.json,
           });
           break;
 
@@ -1062,6 +1083,7 @@ async function run() {
             force: flags.force,
             preview: flags.preview,
             region: flags.region,
+            json: flags.json,
           });
           break;
 
@@ -1072,6 +1094,7 @@ async function run() {
             list: flags.list,
             delete: flags.delete,
             resend: flags.resend,
+            json: flags.json,
           });
           break;
 
@@ -1110,18 +1133,21 @@ async function run() {
             domain: flags.domain,
             yes: flags.yes,
             preview: flags.preview,
+            json: flags.json,
           });
           break;
 
         case "status":
           await cdnStatus({
             region: flags.region,
+            json: flags.json,
           });
           break;
 
         case "verify":
           await cdnVerify({
             region: flags.region,
+            json: flags.json,
           });
           break;
 
@@ -1130,6 +1156,7 @@ async function run() {
             region: flags.region,
             yes: flags.yes,
             preview: flags.preview,
+            json: flags.json,
           });
           break;
 
@@ -1144,6 +1171,7 @@ async function run() {
             force: flags.force,
             region: flags.region,
             preview: flags.preview,
+            json: flags.json,
           });
           break;
 
@@ -1222,6 +1250,7 @@ async function run() {
           await updateRole({
             region: flags.region,
             force: flags.force,
+            json: flags.json,
           });
           break;
 
@@ -1319,6 +1348,7 @@ async function run() {
       case "status":
         await status({
           account: flags.account,
+          json: flags.json,
         });
         break;
 
@@ -1333,6 +1363,7 @@ async function run() {
         await destroy({
           force: flags.force,
           preview: flags.preview,
+          json: flags.json,
         });
         break;
 

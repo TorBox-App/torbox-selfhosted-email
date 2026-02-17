@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setJsonMode } from "../../utils/shared/json-output.js";
 
 // Mock all external dependencies
 vi.mock("@pulumi/pulumi", () => ({
@@ -379,6 +380,49 @@ describe("email destroy command", () => {
           stackName: "wraps-123456789012-us-east-1",
           workDir: "/mock/.wraps/pulumi",
         }
+      );
+    });
+  });
+
+  describe("JSON output", () => {
+    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      setJsonMode(true);
+      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      setJsonMode(false);
+      consoleLogSpy.mockRestore();
+    });
+
+    it("should output JSON envelope on successful destroy with --force", async () => {
+      const mockStack = await setupPulumiMock();
+      await emailDestroy({ force: true, json: true });
+
+      const jsonCall = consoleLogSpy.mock.calls.find((call) => {
+        try {
+          const parsed = JSON.parse(call[0]);
+          return parsed.command === "email.destroy";
+        } catch {
+          return false;
+        }
+      });
+
+      expect(jsonCall).toBeDefined();
+      const output = JSON.parse(jsonCall![0]);
+      expect(output.success).toBe(true);
+      expect(output.command).toBe("email.destroy");
+      expect(output.data).toBeDefined();
+      expect(output.data.region).toBeDefined();
+    });
+
+    it("should require --force flag in JSON mode", async () => {
+      await setupPulumiMock();
+
+      await expect(emailDestroy({ json: true })).rejects.toThrow(
+        "--force flag is required in JSON mode"
       );
     });
   });

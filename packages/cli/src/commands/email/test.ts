@@ -20,6 +20,8 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 
@@ -30,7 +32,9 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps Email Test"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps Email Test"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -69,6 +73,14 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
   let toEmail = options.to;
 
   if (!toEmail) {
+    if (isJsonMode() && !options.scenario) {
+      throw new WrapsError(
+        "The --to or --scenario flag is required in JSON mode",
+        "MISSING_REQUIRED_FLAG",
+        "Provide --to <email> or --scenario <scenario>"
+      );
+    }
+
     // Check if a scenario was passed via flag
     if (options.scenario) {
       const scenarioKey =
@@ -287,6 +299,23 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
     // 8. Display success
     const isSimulator = isSimulatorAddress(toEmail!);
 
+    // 9. Track success
+    trackCommand("email:test", {
+      success: true,
+      is_simulator: isSimulator,
+      duration_ms: Date.now() - startTime,
+    });
+
+    if (isJsonMode()) {
+      jsonSuccess("email.test", {
+        messageId: messageId || "unknown",
+        from: fromEmail,
+        to: toEmail!,
+        isSimulator,
+      });
+      return;
+    }
+
     console.log("\n");
     clack.log.success(pc.green("Test email sent successfully!"));
     console.log("");
@@ -307,13 +336,6 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
       ].join("\n"),
       "Email Sent"
     );
-
-    // 9. Track success
-    trackCommand("email:test", {
-      success: true,
-      is_simulator: isSimulator,
-      duration_ms: Date.now() - startTime,
-    });
 
     clack.outro(pc.green("Test complete!"));
   } catch (error: unknown) {

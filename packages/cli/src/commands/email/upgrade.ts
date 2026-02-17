@@ -22,6 +22,7 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -56,13 +57,15 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   const startTime = Date.now();
   let upgradeAction: string | symbol = "";
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Wraps Upgrade Preview"
-        : "Wraps Upgrade - Enhance Your Email Infrastructure"
-    )
-  );
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "Wraps Upgrade Preview"
+          : "Wraps Upgrade - Enhance Your Email Infrastructure"
+      )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -2369,6 +2372,26 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
 
   // Always persist metadata after all upgrade actions
   await saveConnectionMetadata(metadata);
+
+  if (isJsonMode()) {
+    jsonSuccess("email.upgrade", {
+      upgraded: true,
+      region: outputs.region!,
+      action: typeof upgradeAction === "string" ? upgradeAction : undefined,
+      preset: newPreset,
+      roleArn: outputs.roleArn,
+      configSetName: outputs.configSetName,
+      customTrackingDomain: outputs.customTrackingDomain,
+      httpsTrackingEnabled: outputs.httpsTrackingEnabled,
+    });
+    trackServiceUpgrade("email", {
+      from_preset: metadata.services.email?.preset,
+      to_preset: newPreset,
+      action: typeof upgradeAction === "string" ? upgradeAction : undefined,
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
 
   // 16. Track successful upgrade
   const enabledFeatures: string[] = [];

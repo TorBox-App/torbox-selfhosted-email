@@ -6,6 +6,8 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { emailDestroy } from "../email/destroy.js";
 
@@ -14,7 +16,19 @@ import { emailDestroy } from "../email/destroy.js";
  */
 export async function destroy(options: DestroyOptions): Promise<void> {
   trackCommand("destroy", { success: true });
-  clack.intro(pc.bold("Wraps Infrastructure Teardown"));
+
+  // JSON mode requires --force for destructive operations
+  if (isJsonMode() && !options.force) {
+    throw new WrapsError(
+      "--force flag is required in JSON mode for destructive operations",
+      "JSON_REQUIRES_FORCE",
+      "Add --force flag: wraps destroy --json --force"
+    );
+  }
+
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps Infrastructure Teardown"));
+  }
 
   // 1. Validate AWS credentials
   const spinner = clack.spinner();
@@ -62,6 +76,17 @@ export async function destroy(options: DestroyOptions): Promise<void> {
   }
 
   // 5. Multiple services - ask which to destroy
+  if (isJsonMode()) {
+    // In JSON mode, destroy all services
+    for (const service of deployedServices) {
+      if (service === "email") {
+        await emailDestroy(options);
+      }
+    }
+    jsonSuccess("destroy", { destroyed: true });
+    return;
+  }
+
   const serviceToDestroy = await clack.select({
     message: "Which service would you like to destroy?",
     options: [

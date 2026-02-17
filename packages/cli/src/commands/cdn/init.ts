@@ -25,6 +25,7 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -60,6 +61,7 @@ export type CdnInitOptions = {
   domain?: string;
   yes?: boolean;
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -347,13 +349,15 @@ async function promptEstimatedUsage(): Promise<{
 export async function init(options: CdnInitOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Wraps CDN Infrastructure Preview"
-        : "Wraps CDN Infrastructure Setup"
-    )
-  );
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "Wraps CDN Infrastructure Preview"
+          : "Wraps CDN Infrastructure Setup"
+      )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -677,6 +681,23 @@ export async function init(options: CdnInitOptions): Promise<void> {
   await saveConnectionMetadata(metadata);
 
   progress.info("Connection metadata saved");
+
+  // JSON mode: output results and skip interactive DNS steps
+  if (isJsonMode()) {
+    jsonSuccess("cdn.init", {
+      roleArn: outputs.roleArn,
+      bucketName: outputs.bucketName,
+      region: outputs.region,
+      distributionId: outputs.distributionId,
+    });
+    trackServiceDeployed("cdn", {
+      duration_ms: Date.now() - startTime,
+      region,
+      features: [],
+      preset,
+    });
+    return;
+  }
 
   // 12. Handle DNS for custom domain (follow email/SMS pattern)
   let dnsAutoCreated = false;

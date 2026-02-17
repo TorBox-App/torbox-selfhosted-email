@@ -11,6 +11,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 
@@ -30,7 +31,9 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
  */
 export async function updateRole(options: UpdateRoleOptions): Promise<void> {
   const startTime = Date.now();
-  intro(pc.bold("Update Platform Access Role"));
+  if (!isJsonMode()) {
+    intro(pc.bold("Update Platform Access Role"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -204,6 +207,15 @@ export async function updateRole(options: UpdateRoleOptions): Promise<void> {
     duration_ms: Date.now() - startTime,
     action: actionVerb,
   });
+
+  if (isJsonMode()) {
+    jsonSuccess("platform.update-role", {
+      updated: true,
+      action: actionVerb,
+      roleName,
+    });
+    return;
+  }
 
   outro(pc.green(`✓ Platform access role ${actionVerb} successfully`));
 

@@ -11,6 +11,10 @@ import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import {
+  isJsonMode,
+  jsonSuccess,
+} from "../../utils/shared/json-output.js";
 import { findConnectionsWithService } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 
@@ -19,6 +23,7 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
  */
 export type CdnStatusOptions = {
   region?: string;
+  json?: boolean;
 };
 
 /**
@@ -28,7 +33,9 @@ export async function cdnStatus(options: CdnStatusOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps CDN Status"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps CDN Status"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -99,7 +106,7 @@ export async function cdnStatus(options: CdnStatusOptions): Promise<void> {
   progress.stop();
 
   // 4. Display status
-  displayCdnStatus({
+  const cdnStatusData = {
     bucketName: stackOutputs.bucketName?.value,
     region: stackOutputs.region?.value || region,
     distributionId: stackOutputs.distributionId?.value,
@@ -112,7 +119,14 @@ export async function cdnStatus(options: CdnStatusOptions): Promise<void> {
     roleArn: stackOutputs.roleArn?.value,
     versioning: stackOutputs.versioning?.value,
     retention: stackOutputs.retention?.value,
-  });
+  };
+
+  if (isJsonMode()) {
+    jsonSuccess("cdn.status", cdnStatusData);
+    return;
+  }
+
+  displayCdnStatus(cdnStatusData);
 
   // 5. Track status command
   trackCommand("storage:status", {

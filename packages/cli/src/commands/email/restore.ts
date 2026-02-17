@@ -7,6 +7,8 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { getPulumiWorkDir } from "../../utils/shared/fs.js";
 import {
   deleteConnectionMetadata,
@@ -28,20 +30,31 @@ import { previewWithResourceChanges } from "../../utils/shared/pulumi.js";
 export async function restore(options: EmailRestoreOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Wraps Restore Preview"
-        : "Wraps Restore - Remove Wraps Infrastructure"
-    )
-  );
+  // JSON mode requires --force for destructive operations
+  if (isJsonMode() && !options.force) {
+    throw new WrapsError(
+      "--force flag is required in JSON mode for destructive operations",
+      "JSON_REQUIRES_FORCE",
+      "Add --force flag: wraps email restore --json --force"
+    );
+  }
 
-  clack.log.info(
-    `${pc.yellow("Note:")} This will remove all Wraps-managed infrastructure.`
-  );
-  clack.log.info(
-    "Your original AWS resources remain untouched (Wraps never modifies them).\n"
-  );
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "Wraps Restore Preview"
+          : "Wraps Restore - Remove Wraps Infrastructure"
+      )
+    );
+
+    clack.log.info(
+      `${pc.yellow("Note:")} This will remove all Wraps-managed infrastructure.`
+    );
+    clack.log.info(
+      "Your original AWS resources remain untouched (Wraps never modifies them).\n"
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -214,6 +227,18 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
   progress.info("Connection metadata deleted");
 
   // 8. Success message
+  if (isJsonMode()) {
+    jsonSuccess("email.restore", {
+      restored: true,
+      region,
+    });
+    trackServiceRemoved("email", {
+      reason: "user_initiated",
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
+
   console.log(
     `\n${pc.green("✓")} ${pc.bold("Infrastructure removed successfully!")}\n`
   );

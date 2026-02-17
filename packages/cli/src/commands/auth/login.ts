@@ -12,6 +12,7 @@ import {
   type OrgInfo,
   saveAuthConfig,
 } from "../../utils/shared/config.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 
 type LoginOptions = {
   token?: string;
@@ -68,8 +69,8 @@ export async function login(options: LoginOptions): Promise<void> {
       method: "api-key",
     });
 
-    if (options.json) {
-      console.log(JSON.stringify({ success: true, tokenType: "api-key" }));
+    if (isJsonMode()) {
+      jsonSuccess("auth.login", { tokenType: "api-key" });
     } else {
       clack.log.success("API key saved.");
     }
@@ -177,14 +178,11 @@ export async function login(options: LoginOptions): Promise<void> {
         );
       }
 
-      if (options.json) {
-        console.log(
-          JSON.stringify({
-            success: true,
-            tokenType: "session",
-            organizations,
-          })
-        );
+      if (isJsonMode()) {
+        jsonSuccess("auth.login", {
+          tokenType: "session",
+          organizations,
+        });
       }
 
       return;

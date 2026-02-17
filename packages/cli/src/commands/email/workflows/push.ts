@@ -36,6 +36,11 @@ import {
   resolveTokenAsync,
 } from "../../../utils/shared/config.js";
 import { errors } from "../../../utils/shared/errors.js";
+import {
+  isJsonMode,
+  jsonError,
+  jsonSuccess,
+} from "../../../utils/shared/json-output.js";
 import { loadLockfile, saveLockfile } from "../../../utils/shared/lockfile.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
 
@@ -64,7 +69,7 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
     throw errors.wrapsConfigNotFound();
   }
 
-  if (!options.json) {
+  if (!isJsonMode()) {
     clack.intro(pc.bold("Push Workflows"));
   }
 
@@ -79,14 +84,12 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
   const workflowsDir = join(wrapsDir, config.workflowsDir || "./workflows");
 
   if (!existsSync(workflowsDir)) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          command: "email.workflows.push",
-          data: { pushed: [], unchanged: [], errors: [] },
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("email.workflows.push", {
+        pushed: [],
+        unchanged: [],
+        errors: [],
+      });
     } else {
       clack.log.info("No workflows/ directory found.");
     }
@@ -96,14 +99,12 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
   const workflowFiles = await discoverWorkflows(workflowsDir, options.workflow);
 
   if (workflowFiles.length === 0) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          command: "email.workflows.push",
-          data: { pushed: [], unchanged: [], errors: [] },
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("email.workflows.push", {
+        pushed: [],
+        unchanged: [],
+        errors: [],
+      });
     } else {
       clack.log.info("No workflows found to push.");
     }
@@ -186,32 +187,19 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
 
   // Show validation errors and exit if any
   if (validationErrors.length > 0 || parseErrors.length > 0) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: false,
-          command: "email.workflows.push",
-          data: {
-            pushed: [],
-            unchanged,
-            errors: [
-              ...parseErrors.map((e) => ({
-                slug: e.slug,
-                type: "parse",
-                message: e.error,
-              })),
-              ...validationErrors.flatMap((v) =>
-                v.errors.map((e) => ({
-                  slug: v.slug,
-                  type: "validation",
-                  nodeId: e.nodeId,
-                  message: e.message,
-                }))
-              ),
-            ],
-          },
-        })
-      );
+    if (isJsonMode()) {
+      jsonError("email.workflows.push", {
+        code: "VALIDATION_FAILED",
+        message: [
+          ...parseErrors.map((e) => `${e.slug}: ${e.error}`),
+          ...validationErrors.flatMap((v) =>
+            v.errors.map(
+              (e) =>
+                `${v.slug}${e.nodeId ? ` [${e.nodeId}]` : ""}: ${e.message}`
+            )
+          ),
+        ].join("; "),
+      });
     } else {
       console.log();
       clack.log.error(
@@ -223,14 +211,12 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
   }
 
   if (toProcess.length === 0) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          command: "email.workflows.push",
-          data: { pushed: [], unchanged, errors: [] },
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("email.workflows.push", {
+        pushed: [],
+        unchanged,
+        errors: [],
+      });
     } else {
       clack.log.info(
         `${unchanged.length} workflow(s) unchanged. Use --force to re-push.`
@@ -241,24 +227,18 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
 
   // Dry run: show what would be pushed
   if (options.dryRun) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          command: "email.workflows.push",
-          dryRun: true,
-          data: {
-            wouldPush: toProcess.map((w) => ({
-              slug: w.slug,
-              name: w.parsed.definition.name,
-              triggerType: w.transformed.triggerType,
-              steps: w.transformed.steps.length,
-            })),
-            unchanged,
-            errors: [],
-          },
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("email.workflows.push", {
+        dryRun: true,
+        wouldPush: toProcess.map((w) => ({
+          slug: w.slug,
+          name: w.parsed.definition.name,
+          triggerType: w.transformed.triggerType,
+          steps: w.transformed.steps.length,
+        })),
+        unchanged,
+        errors: [],
+      });
     } else {
       console.log();
       clack.log.info(pc.bold("Dry run — no changes made"));
@@ -300,24 +280,22 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
   const pushed = apiResults.filter((r) => r.success);
   const conflicts = apiResults.filter((r) => r.conflict);
 
-  if (options.json) {
-    console.log(
-      JSON.stringify({
-        success: conflicts.length === 0,
-        command: "email.workflows.push",
-        data: {
-          pushed: pushed.map((r) => ({
-            slug: r.slug,
-            id: r.id,
-          })),
-          unchanged,
-          conflicts: conflicts.map((r) => ({
-            slug: r.slug,
-            message: "Workflow was edited on dashboard since last push",
-          })),
-        },
-      })
-    );
+  if (isJsonMode()) {
+    if (conflicts.length === 0) {
+      jsonSuccess("email.workflows.push", {
+        pushed: pushed.map((r) => ({
+          slug: r.slug,
+          id: r.id,
+        })),
+        unchanged,
+        conflicts: [],
+      });
+    } else {
+      jsonError("email.workflows.push", {
+        code: "CONFLICT",
+        message: `${conflicts.length} workflow(s) were edited on dashboard since last push`,
+      });
+    }
   } else {
     console.log();
     if (pushed.length > 0) {

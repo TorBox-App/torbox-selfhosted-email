@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setJsonMode } from "../../utils/shared/json-output.js";
 
 // Mock all external dependencies
 vi.mock("@pulumi/pulumi", () => ({
@@ -467,6 +468,42 @@ describe("connect command", () => {
           }),
         })
       );
+    });
+  });
+
+  describe("JSON output", () => {
+    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      setJsonMode(true);
+      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      setJsonMode(false);
+      consoleLogSpy.mockRestore();
+    });
+
+    it("should output JSON envelope on successful connect", async () => {
+      await setupPulumiMock();
+      await connect({ yes: true, json: true });
+
+      const jsonCall = consoleLogSpy.mock.calls.find((call) => {
+        try {
+          const parsed = JSON.parse(call[0]);
+          return parsed.command === "email.connect";
+        } catch {
+          return false;
+        }
+      });
+
+      expect(jsonCall).toBeDefined();
+      const output = JSON.parse(jsonCall![0]);
+      expect(output.success).toBe(true);
+      expect(output.command).toBe("email.connect");
+      expect(output.data).toBeDefined();
+      expect(output.data.roleArn).toBeDefined();
+      expect(output.data.region).toBeDefined();
     });
   });
 });

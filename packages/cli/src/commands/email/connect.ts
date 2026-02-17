@@ -14,6 +14,7 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -48,13 +49,15 @@ import { scanAWSResources } from "../../utils/shared/scanner.js";
 export async function connect(options: ConnectOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Wraps Connect Preview"
-        : "Wraps Connect - Link Existing Infrastructure"
-    )
-  );
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "Wraps Connect Preview"
+          : "Wraps Connect - Link Existing Infrastructure"
+        )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -401,6 +404,20 @@ export async function connect(options: ConnectOptions): Promise<void> {
   progress.info("Connection metadata saved");
 
   // 14. Display success message
+  if (isJsonMode()) {
+    jsonSuccess("email.connect", {
+      roleArn: outputs.roleArn,
+      configSetName: outputs.configSetName,
+      region: outputs.region!,
+    });
+    trackServiceDeployed("email", {
+      duration_ms: Date.now() - startTime,
+      features: [],
+      preset,
+    });
+    return;
+  }
+
   displaySuccess({
     roleArn: outputs.roleArn,
     configSetName: outputs.configSetName,

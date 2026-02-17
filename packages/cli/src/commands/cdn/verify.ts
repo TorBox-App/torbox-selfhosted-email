@@ -2,6 +2,8 @@ import * as clack from "@clack/prompts";
 import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { trackCommand } from "../../telemetry/events.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -18,6 +20,7 @@ import { DeploymentProgress } from "../../utils/shared/output.js";
  */
 export type CdnVerifyOptions = {
   region?: string;
+  json?: boolean;
 };
 
 /**
@@ -112,7 +115,9 @@ export async function cdnVerify(options: CdnVerifyOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps CDN Verification"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps CDN Verification"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -139,6 +144,14 @@ export async function cdnVerify(options: CdnVerifyOptions): Promise<void> {
     if (cdnConnections.length === 1) {
       region = cdnConnections[0].region;
     } else if (cdnConnections.length > 1) {
+      if (isJsonMode()) {
+        throw new WrapsError(
+          "Multiple CDN deployments found. Specify --region flag.",
+          "REGION_REQUIRED",
+          `Available regions: ${cdnConnections.map((c) => c.region).join(", ")}`
+        );
+      }
+
       const selectedRegion = await clack.select({
         message: "Multiple CDN deployments found. Which region?",
         options: cdnConnections.map((conn) => ({
@@ -322,6 +335,23 @@ export async function cdnVerify(options: CdnVerifyOptions): Promise<void> {
     cloudFrontAliases.some(
       (alias) => alias.toLowerCase() === targetDomain.toLowerCase()
     );
+
+  // JSON mode: output structured result
+  if (isJsonMode()) {
+    jsonSuccess("cdn.verify", {
+      verified: allPassed,
+      region,
+      domain: targetDomain,
+      distributionId,
+    });
+    trackCommand("storage:verify", {
+      success: allPassed,
+      region,
+      has_custom_domain: !!targetDomain,
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
 
   // 7. Summary
   clack.log.info("");

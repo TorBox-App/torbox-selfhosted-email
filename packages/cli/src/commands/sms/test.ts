@@ -10,6 +10,8 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 import { isValidPhoneNumber } from "../../utils/sms/validation.js";
@@ -36,7 +38,9 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps SMS Test"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps SMS Test"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -61,6 +65,13 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
 
   // 4. Get phone number to send to
   let toNumber = options.to;
+  if (!toNumber && isJsonMode()) {
+    throw new WrapsError(
+      "The --to flag is required in JSON mode",
+      "MISSING_REQUIRED_FLAG",
+      "Provide --to <phone-number>"
+    );
+  }
   if (!toNumber) {
     // First ask if they want to use a simulator number or enter their own
     const destinationType = await clack.select({
@@ -181,7 +192,25 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
 
     progress.stop();
 
-    // 7. Display success
+    // 7. Track success
+    trackCommand("sms:test", {
+      success: true,
+      phone_type: smsConfig?.phoneNumberType,
+      message_length: message?.length,
+      duration_ms: Date.now() - startTime,
+    });
+
+    if (isJsonMode()) {
+      jsonSuccess("sms.test", {
+        messageId: messageId || "unknown",
+        to: toNumber!,
+        message: message!,
+        phoneNumberType: smsConfig?.phoneNumberType || "simulator",
+      });
+      return;
+    }
+
+    // 8. Display success
     console.log("\n");
     clack.log.success(pc.green("Test SMS sent successfully!"));
     console.log("");
@@ -202,21 +231,13 @@ export async function smsTest(options: SMSTestOptions): Promise<void> {
       "SMS Sent"
     );
 
-    // 8. Show next steps
+    // 9. Show next steps
     if (smsConfig?.eventTracking?.enabled) {
       console.log("");
       clack.log.info(
         pc.dim("Event tracking is enabled. Check DynamoDB for delivery status.")
       );
     }
-
-    // 9. Track success
-    trackCommand("sms:test", {
-      success: true,
-      phone_type: smsConfig?.phoneNumberType,
-      message_length: message?.length,
-      duration_ms: Date.now() - startTime,
-    });
 
     clack.outro(pc.green("Test complete!"));
   } catch (error: unknown) {

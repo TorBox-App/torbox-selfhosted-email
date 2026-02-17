@@ -7,7 +7,8 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { errors } from "../../utils/shared/errors.js";
+import { WrapsError, errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -31,6 +32,7 @@ export type CdnDestroyOptions = {
   region?: string;
   force?: boolean;
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -39,13 +41,24 @@ export type CdnDestroyOptions = {
 export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "CDN Infrastructure Destruction Preview"
-        : "CDN Infrastructure Teardown"
-    )
-  );
+  // JSON mode requires --force for destructive operations
+  if (isJsonMode() && !options.force) {
+    throw new WrapsError(
+      "--force flag is required in JSON mode for destructive operations",
+      "JSON_REQUIRES_FORCE",
+      "Add --force flag: wraps cdn destroy --json --force"
+    );
+  }
+
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "CDN Infrastructure Destruction Preview"
+          : "CDN Infrastructure Teardown"
+      )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -74,6 +87,14 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
     if (cdnConnections.length === 1) {
       region = cdnConnections[0].region;
     } else if (cdnConnections.length > 1) {
+      if (isJsonMode()) {
+        throw new WrapsError(
+          "Multiple CDN deployments found. Specify --region flag.",
+          "REGION_REQUIRED",
+          `Available regions: ${cdnConnections.map((c) => c.region).join(", ")}`
+        );
+      }
+
       const selectedRegion = await clack.select({
         message: "Multiple CDN deployments found. Which region to destroy?",
         options: cdnConnections.map((conn) => ({
@@ -320,6 +341,21 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
 
   // 11. Display success message
   progress.stop();
+
+  if (isJsonMode()) {
+    jsonSuccess("cdn.destroy", {
+      destroyed: true,
+      region,
+      dns_cleaned: shouldCleanDNS,
+    });
+    trackServiceRemoved("cdn", {
+      reason: "user_initiated",
+      region,
+      duration_ms: Date.now() - startTime,
+      dns_cleaned: shouldCleanDNS,
+    });
+    return;
+  }
 
   const deletedItems = ["S3 bucket and all files", "CloudFront distribution"];
   if (shouldCleanDNS && hostedZone) {

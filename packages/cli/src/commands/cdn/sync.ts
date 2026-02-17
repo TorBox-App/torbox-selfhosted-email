@@ -5,6 +5,8 @@ import { deployCdnStack } from "../../infrastructure/cdn-stack.js";
 import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
 import type { CdnStackConfig, WrapsCdnConfig } from "../../types/index.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -33,7 +35,9 @@ export async function cdnSync(options: CdnSyncOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps CDN Sync"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps CDN Sync"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -59,6 +63,14 @@ export async function cdnSync(options: CdnSyncOptions): Promise<void> {
     if (cdnConnections.length === 1) {
       region = cdnConnections[0].region;
     } else if (cdnConnections.length > 1) {
+      if (isJsonMode()) {
+        throw new WrapsError(
+          "Multiple CDN deployments found. Specify --region flag.",
+          "REGION_REQUIRED",
+          `Available regions: ${cdnConnections.map((c) => c.region).join(", ")}`
+        );
+      }
+
       const selectedRegion = await clack.select({
         message: "Multiple CDN deployments found. Which region?",
         options: cdnConnections.map((conn) => ({
@@ -212,6 +224,19 @@ export async function cdnSync(options: CdnSyncOptions): Promise<void> {
   }
 
   // 6. Success
+  if (isJsonMode()) {
+    jsonSuccess("cdn.sync", {
+      synced: true,
+      region,
+    });
+    trackCommand("storage:sync", {
+      success: true,
+      region,
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
+
   clack.log.success(pc.green("CDN infrastructure synced!"));
 
   trackCommand("storage:sync", {

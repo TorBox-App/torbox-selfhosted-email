@@ -4,6 +4,8 @@ import pc from "picocolors";
 import { deployCdnStack } from "../../infrastructure/cdn-stack.js";
 import { getTelemetryClient } from "../../telemetry/client.js";
 import { trackCommand } from "../../telemetry/events.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import type {
   CdnStackConfig,
   CdnUpgradeOptions,
@@ -31,9 +33,11 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(
-    pc.bold(options.preview ? "Wraps CDN Upgrade Preview" : "Wraps CDN Upgrade")
-  );
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(options.preview ? "Wraps CDN Upgrade Preview" : "Wraps CDN Upgrade")
+    );
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -62,6 +66,14 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
     if (cdnConnections.length === 1) {
       region = cdnConnections[0].region;
     } else if (cdnConnections.length > 1) {
+      if (isJsonMode()) {
+        throw new WrapsError(
+          "Multiple CDN deployments found. Specify --region flag.",
+          "REGION_REQUIRED",
+          `Available regions: ${cdnConnections.map((c) => c.region).join(", ")}`
+        );
+      }
+
       const selectedRegion = await clack.select({
         message: "Multiple CDN deployments found. Which region?",
         options: cdnConnections.map((conn) => ({
@@ -346,6 +358,21 @@ export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
   }
 
   // 12. Display success
+  if (isJsonMode()) {
+    jsonSuccess("cdn.upgrade", {
+      upgraded: true,
+      region,
+      customDomain: pendingDomain,
+    });
+    trackCommand("storage:upgrade", {
+      success: true,
+      region,
+      custom_domain_added: true,
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
+
   clack.log.success(`\n${pc.green("")} ${pc.bold("Upgrade complete!")}\n`);
   clack.log.info(`Custom domain ${pc.cyan(pendingDomain)} is now active.\n`);
   clack.log.info(

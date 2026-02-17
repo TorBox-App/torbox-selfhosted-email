@@ -15,6 +15,7 @@ import {
   resolveTokenAsync,
 } from "../../../utils/shared/config.js";
 import { errors } from "../../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../../utils/shared/json-output.js";
 import { loadLockfile, saveLockfile } from "../../../utils/shared/lockfile.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
 
@@ -51,7 +52,7 @@ export async function templatesPush(options: TemplatesPushOptions) {
     throw errors.wrapsConfigNotFound();
   }
 
-  if (!options.json) {
+  if (!isJsonMode()) {
     clack.intro(pc.bold("Push Templates"));
   }
 
@@ -72,7 +73,7 @@ export async function templatesPush(options: TemplatesPushOptions) {
   const templateFiles = await discoverTemplates(templatesDir, options.template);
 
   if (templateFiles.length === 0) {
-    if (!options.json) {
+    if (!isJsonMode()) {
       clack.log.info("No templates found to push.");
     }
     return;
@@ -127,14 +128,12 @@ export async function templatesPush(options: TemplatesPushOptions) {
   }
 
   if (compiled.length === 0 && compileErrors.length === 0) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          command: "email.templates.push",
-          data: { pushed: [], unchanged, errors: [] },
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("email.templates.push", {
+        pushed: [],
+        unchanged,
+        errors: [],
+      });
     } else {
       clack.log.info(
         `${unchanged.length} template${unchanged.length === 1 ? "" : "s"} unchanged. Use --force to re-push.`
@@ -145,24 +144,18 @@ export async function templatesPush(options: TemplatesPushOptions) {
 
   // Dry run: show what would be pushed
   if (options.dryRun) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          command: "email.templates.push",
-          dryRun: true,
-          data: {
-            wouldPush: compiled.map((t) => ({
-              slug: t.slug,
-              subject: t.subject,
-              emailType: t.emailType,
-              variables: t.variables.length,
-            })),
-            unchanged,
-            errors: compileErrors,
-          },
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("email.templates.push", {
+        dryRun: true,
+        wouldPush: compiled.map((t) => ({
+          slug: t.slug,
+          subject: t.subject,
+          emailType: t.emailType,
+          variables: t.variables.length,
+        })),
+        unchanged,
+        errors: compileErrors,
+      });
     } else {
       console.log();
       clack.log.info(pc.bold("Dry run — no changes made"));
@@ -209,22 +202,16 @@ export async function templatesPush(options: TemplatesPushOptions) {
   await saveLockfile(wrapsDir, lockfile);
 
   // Output results
-  if (options.json) {
-    console.log(
-      JSON.stringify({
-        success: true,
-        command: "email.templates.push",
-        data: {
-          pushed: compiled.map((t) => ({
-            slug: t.slug,
-            id: apiResults.find((r) => r.slug === t.slug)?.id,
-            sesTemplateName: t.sesTemplateName,
-          })),
-          unchanged,
-          errors: compileErrors,
-        },
-      })
-    );
+  if (isJsonMode()) {
+    jsonSuccess("email.templates.push", {
+      pushed: compiled.map((t) => ({
+        slug: t.slug,
+        id: apiResults.find((r) => r.slug === t.slug)?.id,
+        sesTemplateName: t.sesTemplateName,
+      })),
+      unchanged,
+      errors: compileErrors,
+    });
   } else {
     console.log();
     clack.log.success(

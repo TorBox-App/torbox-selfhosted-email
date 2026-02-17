@@ -26,6 +26,7 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -52,13 +53,15 @@ import {
 export async function inboundInit(
   options: EmailInboundInitOptions
 ): Promise<void> {
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Inbound Email Infrastructure Preview"
-        : "Inbound Email Infrastructure Setup"
-    )
-  );
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "Inbound Email Infrastructure Preview"
+          : "Inbound Email Infrastructure Setup"
+      )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -345,6 +348,18 @@ export async function inboundInit(
   });
 
   // 17. Display success
+  if (isJsonMode()) {
+    jsonSuccess("email.inbound.init", {
+      receivingDomain,
+      subdomain,
+      bucketName: `wraps-inbound-${identity.accountId}-${region}`,
+      webhookUrl: webhookUrl || null,
+      dnsAutoCreated,
+      region,
+    });
+    return;
+  }
+
   console.log();
   clack.log.success(pc.bold("Inbound email infrastructure deployed!"));
   console.log();
@@ -378,7 +393,9 @@ export async function inboundInit(
 export async function inboundDestroy(
   options: EmailInboundDestroyOptions
 ): Promise<void> {
-  clack.intro(pc.bold("Inbound Email Infrastructure Teardown"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Inbound Email Infrastructure Teardown"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -483,6 +500,14 @@ export async function inboundDestroy(
     await saveConnectionMetadata(metadata);
   });
 
+  if (isJsonMode()) {
+    jsonSuccess("email.inbound.destroy", {
+      destroyed: true,
+      receivingDomain: inboundConfig.receivingDomain || "",
+    });
+    return;
+  }
+
   console.log();
   clack.log.success(pc.bold("Inbound email infrastructure removed."));
   console.log();
@@ -498,7 +523,9 @@ export async function inboundDestroy(
 export async function inboundStatus(
   options: EmailInboundStatusOptions
 ): Promise<void> {
-  clack.intro(pc.bold("Inbound Email Status"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Inbound Email Status"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -524,12 +551,28 @@ export async function inboundStatus(
 
   // 4. Check receipt rule status
   const activeRuleSet = await getActiveReceiptRuleSet(region);
+  const receivingDomain =
+    inbound.receivingDomain ||
+    `${inbound.subdomain}.${metadata.services.email.config.domain}`;
+
+  if (isJsonMode()) {
+    jsonSuccess("email.inbound.status", {
+      enabled: true,
+      receivingDomain,
+      bucketName: inbound.bucketName || "",
+      region,
+      webhookUrl: inbound.webhookUrl || null,
+      receiptRuleSetActive: activeRuleSet === RULE_SET_NAME,
+      retention: inbound.retention || null,
+    });
+    return;
+  }
 
   console.log();
   console.log(pc.bold("  Inbound Email Configuration"));
   console.log();
   console.log(
-    `  ${pc.dim("Receiving domain:")}  ${pc.cyan(inbound.receivingDomain || `${inbound.subdomain}.${metadata.services.email.config.domain}`)}`
+    `  ${pc.dim("Receiving domain:")}  ${pc.cyan(receivingDomain)}`
   );
   console.log(
     `  ${pc.dim("S3 bucket:")}         ${pc.cyan(inbound.bucketName || "")}`
@@ -553,7 +596,9 @@ export async function inboundStatus(
 export async function inboundVerify(
   options: EmailInboundVerifyOptions
 ): Promise<void> {
-  clack.intro(pc.bold("Inbound Email DNS Verification"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Inbound Email DNS Verification"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -654,6 +699,19 @@ export async function inboundVerify(
     allPassed = false;
   }
 
+  if (isJsonMode()) {
+    jsonSuccess("email.inbound.verify", {
+      receivingDomain,
+      allPassed,
+      checks: {
+        mx: { found: mxResult.found, verified: mxResult.hasSES },
+        spf: { found: spfResult.found, verified: spfResult.hasSES },
+        receiptRuleSet: { active: activeRuleSet === RULE_SET_NAME },
+      },
+    });
+    return;
+  }
+
   console.log();
   if (allPassed) {
     clack.log.success(pc.bold("All checks passed! Inbound email is ready."));
@@ -669,7 +727,9 @@ export async function inboundVerify(
 export async function inboundTest(
   options: EmailInboundTestOptions
 ): Promise<void> {
-  clack.intro(pc.bold("Inbound Email Test"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Inbound Email Test"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -807,6 +867,17 @@ export async function inboundTest(
 
   if (!found) {
     spinner.stop("Timed out waiting for email.");
+
+    if (isJsonMode()) {
+      jsonSuccess("email.inbound.test", {
+        sent: true,
+        received: false,
+        recipient: testRecipient,
+        receivingDomain,
+      });
+      return;
+    }
+
     console.log();
     clack.log.warn(
       "The test email was sent but not received within 30 seconds."
@@ -816,6 +887,16 @@ export async function inboundTest(
     console.log("  2. DNS propagation is still in progress");
     console.log("  3. Receipt rule set is not active\n");
     console.log(`  Run ${pc.cyan("wraps email inbound verify")} to check.\n`);
+    return;
+  }
+
+  if (isJsonMode()) {
+    jsonSuccess("email.inbound.test", {
+      sent: true,
+      received: true,
+      recipient: testRecipient,
+      receivingDomain,
+    });
     return;
   }
 

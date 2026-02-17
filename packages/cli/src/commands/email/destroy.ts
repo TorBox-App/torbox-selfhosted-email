@@ -4,6 +4,8 @@ import pc from "picocolors";
 import { trackError, trackServiceRemoved } from "../../telemetry/events.js";
 import type { DestroyOptions } from "../../types/index.js";
 import { deleteDNSRecords, findHostedZone } from "../../utils/route53.js";
+import { WrapsError } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   getAWSRegion,
   validateAWSCredentials,
@@ -63,13 +65,24 @@ async function getEmailIdentityInfo(
 export async function emailDestroy(options: DestroyOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Email Infrastructure Destruction Preview"
-        : "Email Infrastructure Teardown"
-    )
-  );
+  // JSON mode requires --force for destructive operations
+  if (isJsonMode() && !options.force) {
+    throw new WrapsError(
+      "--force flag is required in JSON mode for destructive operations",
+      "JSON_REQUIRES_FORCE",
+      "Add --force flag: wraps email destroy --json --force"
+    );
+  }
+
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "Email Infrastructure Destruction Preview"
+          : "Email Infrastructure Teardown"
+      )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -99,6 +112,14 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       // Auto-select the only available region
       region = emailConnections[0].region;
     } else if (emailConnections.length > 1) {
+      if (isJsonMode()) {
+        throw new WrapsError(
+          "Multiple email deployments found. Specify --region flag.",
+          "REGION_REQUIRED",
+          `Available regions: ${emailConnections.map((c) => c.region).join(", ")}`
+        );
+      }
+
       // Multiple regions found - prompt user to select
       const selectedRegion = await clack.select({
         message: "Multiple email deployments found. Which region to destroy?",
@@ -342,6 +363,23 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
 
   // 10. Display success message
   progress.stop();
+
+  if (isJsonMode()) {
+    jsonSuccess("email.destroy", {
+      destroyed: !destroyFailed,
+      region,
+      dns_cleaned: shouldCleanDNS,
+      partial_failure: destroyFailed,
+    });
+    trackServiceRemoved("email", {
+      reason: "user_initiated",
+      region,
+      duration_ms: Date.now() - startTime,
+      dns_cleaned: shouldCleanDNS,
+      partial_failure: destroyFailed,
+    });
+    return;
+  }
 
   if (destroyFailed) {
     clack.outro(

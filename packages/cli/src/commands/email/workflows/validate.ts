@@ -27,6 +27,11 @@ import {
 } from "../../../utils/email/workflow-ts.js";
 import { validateTransformedWorkflow } from "../../../utils/email/workflow-validator.js";
 import { errors } from "../../../utils/shared/errors.js";
+import {
+  isJsonMode,
+  jsonError,
+  jsonSuccess,
+} from "../../../utils/shared/json-output.js";
 import { DeploymentProgress } from "../../../utils/shared/output.js";
 
 type WorkflowsValidateOptions = {
@@ -44,7 +49,7 @@ export async function workflowsValidate(options: WorkflowsValidateOptions) {
     throw errors.wrapsConfigNotFound();
   }
 
-  if (!options.json) {
+  if (!isJsonMode()) {
     clack.intro(pc.bold("Validate Workflows"));
   }
 
@@ -59,14 +64,8 @@ export async function workflowsValidate(options: WorkflowsValidateOptions) {
   const workflowsDir = join(wrapsDir, config.workflowsDir || "./workflows");
 
   if (!existsSync(workflowsDir)) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          command: "email.workflows.validate",
-          data: { workflows: [], errors: [] },
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("email.workflows.validate", { workflows: [], errors: [] });
     } else {
       clack.log.info("No workflows/ directory found.");
     }
@@ -76,14 +75,8 @@ export async function workflowsValidate(options: WorkflowsValidateOptions) {
   const workflowFiles = await discoverWorkflows(workflowsDir, options.workflow);
 
   if (workflowFiles.length === 0) {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          success: true,
-          command: "email.workflows.validate",
-          data: { workflows: [], errors: [] },
-        })
-      );
+    if (isJsonMode()) {
+      jsonSuccess("email.workflows.validate", { workflows: [], errors: [] });
     } else {
       clack.log.info("No workflows found to validate.");
     }
@@ -167,20 +160,21 @@ export async function workflowsValidate(options: WorkflowsValidateOptions) {
   }
 
   // Output results
-  if (options.json) {
+  if (isJsonMode()) {
     const allValid =
       parseErrors.length === 0 && validationResults.every((r) => r.valid);
 
-    console.log(
-      JSON.stringify({
-        success: allValid,
-        command: "email.workflows.validate",
-        data: {
-          workflows: validationResults,
-          parseErrors,
-        },
-      })
-    );
+    if (allValid) {
+      jsonSuccess("email.workflows.validate", {
+        workflows: validationResults,
+        parseErrors,
+      });
+    } else {
+      jsonError("email.workflows.validate", {
+        code: "VALIDATION_FAILED",
+        message: "One or more workflows have validation errors",
+      });
+    }
   } else {
     console.log();
 

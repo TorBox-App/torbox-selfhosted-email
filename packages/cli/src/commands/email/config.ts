@@ -9,6 +9,7 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -36,13 +37,15 @@ import {
 export async function config(options: EmailConfigOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Wraps Config Preview"
-        : "Wraps Config - Apply CLI Updates to Infrastructure"
-    )
-  );
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "Wraps Config Preview"
+          : "Wraps Config - Apply CLI Updates to Infrastructure"
+      )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -341,6 +344,20 @@ export async function config(options: EmailConfigOptions): Promise<void> {
   progress.info("Connection metadata updated");
 
   // 12. Display success message
+  if (isJsonMode()) {
+    jsonSuccess("email.config", {
+      updated: true,
+      region: outputs.region!,
+      roleArn: outputs.roleArn,
+      configSetName: outputs.configSetName,
+    });
+    trackCommand("email:config", {
+      success: true,
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
+
   displaySuccess({
     roleArn: outputs.roleArn,
     configSetName: outputs.configSetName,

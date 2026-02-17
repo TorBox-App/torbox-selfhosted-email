@@ -1,3 +1,4 @@
+import * as clack from "@clack/prompts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   errors,
@@ -9,6 +10,7 @@ import {
   sanitizeErrorMessage,
   WrapsError,
 } from "../shared/errors.js";
+import { setJsonMode } from "../shared/json-output.js";
 
 describe("WrapsError", () => {
   it("should create error with all properties", () => {
@@ -159,6 +161,146 @@ describe("handleCLIError", () => {
     handleCLIError(error);
 
     expect(consoleErrorSpy).toHaveBeenCalledWith("");
+  });
+
+  describe("handleCLIError JSON mode", () => {
+    let clackErrorSpy: any;
+
+    beforeEach(() => {
+      setJsonMode(true);
+      clackErrorSpy = vi.spyOn(clack.log, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      setJsonMode(false);
+      clackErrorSpy.mockRestore();
+    });
+
+    it("should output JSON envelope for WrapsError", () => {
+      const error = new WrapsError(
+        "AWS credentials not found",
+        "NO_AWS_CREDENTIALS",
+        "Run: aws configure",
+        "https://wraps.dev/docs/credentials"
+      );
+
+      handleCLIError(error);
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output).toEqual({
+        success: false,
+        command: "unknown",
+        error: {
+          code: "NO_AWS_CREDENTIALS",
+          message: "AWS credentials not found",
+          suggestion: "Run: aws configure",
+          docsUrl: "https://wraps.dev/docs/credentials",
+        },
+      });
+    });
+
+    it("should output JSON envelope for WrapsError without suggestion/docsUrl", () => {
+      const error = new WrapsError("Simple error", "SIMPLE_ERROR");
+
+      handleCLIError(error);
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.success).toBe(false);
+      expect(output.command).toBe("unknown");
+      expect(output.error.code).toBe("SIMPLE_ERROR");
+      expect(output.error.message).toBe("Simple error");
+      expect(output.error.suggestion).toBeUndefined();
+      expect(output.error.docsUrl).toBeUndefined();
+    });
+
+    it("should use custom command context in JSON envelope", () => {
+      const error = new WrapsError("Test error", "TEST_ERROR");
+
+      handleCLIError(error, "email.init");
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.command).toBe("email.init");
+    });
+
+    it("should map AWS errors to JSON envelope", () => {
+      const error = new Error("Token has expired");
+      error.name = "ExpiredTokenException";
+
+      handleCLIError(error);
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.success).toBe(false);
+      expect(output.command).toBe("unknown");
+      expect(output.error.code).toBe("AWS_ExpiredTokenException");
+      expect(output.error.message).toContain("session token has expired");
+    });
+
+    it("should map Pulumi errors to JSON envelope", () => {
+      const error = new Error("AccessDenied for sqs:CreateQueue");
+
+      handleCLIError(error);
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.success).toBe(false);
+      expect(output.error.code).toBe("PULUMI_SQS_PERMISSION_DENIED");
+      expect(output.error.message).toContain("SQS permission denied");
+    });
+
+    it("should handle unknown errors in JSON mode", () => {
+      const error = new Error("something broke");
+
+      handleCLIError(error);
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output).toEqual({
+        success: false,
+        command: "unknown",
+        error: {
+          code: "UNKNOWN_ERROR",
+          message: "something broke",
+        },
+      });
+    });
+
+    it("should handle string errors in JSON mode", () => {
+      handleCLIError("a string error");
+
+      const output = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+      expect(output.success).toBe(false);
+      expect(output.error.code).toBe("UNKNOWN_ERROR");
+      expect(output.error.message).toBe("a string error");
+    });
+
+    it("should not call clack.log.error in JSON mode", () => {
+      // Make process.exit throw so execution stops at the JSON path
+      // and doesn't fall through to the clack code path
+      exitSpy.mockImplementation(() => {
+        throw new Error("process.exit");
+      });
+
+      const error = new WrapsError(
+        "Some error",
+        "SOME_ERROR",
+        "Fix it",
+        "https://wraps.dev/docs"
+      );
+
+      try {
+        handleCLIError(error);
+      } catch {
+        // Expected: process.exit throws
+      }
+
+      expect(clackErrorSpy).not.toHaveBeenCalled();
+    });
+
+    it("should still call process.exit(1) in JSON mode", () => {
+      const error = new WrapsError("Test error", "TEST_ERROR");
+
+      handleCLIError(error);
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
   });
 });
 

@@ -11,6 +11,10 @@ import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import {
+  isJsonMode,
+  jsonSuccess,
+} from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 
@@ -85,7 +89,9 @@ export async function smsStatus(_options: SMSStatusOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps SMS Status"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps SMS Status"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -133,7 +139,7 @@ export async function smsStatus(_options: SMSStatusOptions): Promise<void> {
   progress.stop();
 
   const smsConfig = metadata.services.sms.config;
-  displaySMSStatus({
+  const smsStatusData = {
     region,
     phoneNumber: stackOutputs.phoneNumber?.value as string | undefined,
     phoneNumberType: smsConfig?.phoneNumberType,
@@ -143,7 +149,14 @@ export async function smsStatus(_options: SMSStatusOptions): Promise<void> {
     eventTracking: smsConfig?.eventTracking?.enabled ?? false,
     roleArn: stackOutputs.roleArn?.value as string | undefined,
     preset: metadata.services.sms.preset,
-  });
+  };
+
+  if (isJsonMode()) {
+    jsonSuccess("sms.status", smsStatusData);
+    return;
+  }
+
+  displaySMSStatus(smsStatusData);
 
   // 6. Show next steps
   console.log("");

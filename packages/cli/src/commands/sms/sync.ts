@@ -14,6 +14,7 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -39,7 +40,9 @@ export type SMSSyncOptions = {
 export async function smsSync(options: SMSSyncOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(pc.bold("Wraps SMS Infrastructure Sync"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps SMS Infrastructure Sync"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -230,6 +233,18 @@ export async function smsSync(options: SMSSyncOptions): Promise<void> {
   }
 
   progress.stop();
+
+  if (isJsonMode()) {
+    jsonSuccess("sms.sync", {
+      synced: true,
+      region,
+    });
+    trackCommand("sms:sync", {
+      success: true,
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
 
   // 9. Display success
   console.log("\n");

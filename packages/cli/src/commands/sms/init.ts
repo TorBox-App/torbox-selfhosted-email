@@ -25,6 +25,7 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import { errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -187,7 +188,9 @@ async function promptEstimatedSMSVolume(): Promise<number> {
 export async function init(options: SMSInitOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(pc.bold("Wraps SMS Infrastructure Setup"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps SMS Infrastructure Setup"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -521,6 +524,21 @@ export async function init(options: SMSInitOptions): Promise<void> {
   await saveConnectionMetadata(metadata);
 
   progress.info("Connection metadata saved");
+
+  // JSON mode: output results and skip interactive display
+  if (isJsonMode()) {
+    jsonSuccess("sms.init", {
+      roleArn: outputs.roleArn,
+      region: outputs.region,
+      phoneNumber: outputs.phoneNumber,
+    });
+    trackServiceDeployed("sms", {
+      duration_ms: Date.now() - startTime,
+      features: [],
+      preset,
+    });
+    return;
+  }
 
   // 9. Display success message
   console.log("\n");

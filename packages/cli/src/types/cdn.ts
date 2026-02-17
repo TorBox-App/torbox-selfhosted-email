@@ -165,6 +165,7 @@ export type CdnInitOptions = {
   preset?: CdnConfigPreset;
   yes?: boolean; // Skip confirmation prompts
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -172,6 +173,7 @@ export type CdnInitOptions = {
  */
 export type CdnStatusOptions = {
   region?: string;
+  json?: boolean;
 };
 
 /**
@@ -179,6 +181,7 @@ export type CdnStatusOptions = {
  */
 export type CdnVerifyOptions = {
   region?: string;
+  json?: boolean;
 };
 
 /**
@@ -188,6 +191,7 @@ export type CdnDestroyOptions = {
   region?: string;
   force?: boolean; // Skip confirmation (destructive)
   preview?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -197,6 +201,7 @@ export type CdnUpgradeOptions = {
   region?: string;
   yes?: boolean;
   preview?: boolean;
+  json?: boolean;
 };
 
 /**

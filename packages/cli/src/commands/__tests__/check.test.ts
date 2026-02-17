@@ -1,7 +1,8 @@
 import { GetEmailIdentityCommand, SESv2Client } from "@aws-sdk/client-sesv2";
 import { mockClient } from "aws-sdk-client-mock";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { check } from "../email/check";
+import { setJsonMode } from "../../utils/shared/json-output";
 
 const sesClientMock = mockClient(SESv2Client);
 
@@ -438,6 +439,7 @@ describe("Email Check Command", () => {
     vi.clearAllMocks();
     mockExit.mockClear();
     mockConsoleLog.mockClear();
+    setJsonMode(false);
 
     // Mock spinner
     mockSpinner = {
@@ -509,10 +511,16 @@ describe("Email Check Command", () => {
       const mockResult = createMockResult({ domain: "json-test.com" });
       vi.mocked(runEmailCheck).mockResolvedValue(mockResult);
 
+      setJsonMode(true);
       await check({ domain: "json-test.com", json: true });
+      setJsonMode(false);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
-        JSON.stringify(mockResult, null, 2)
+        JSON.stringify({
+          success: true,
+          command: "email.check",
+          data: mockResult,
+        })
       );
     });
 
@@ -532,7 +540,9 @@ describe("Email Check Command", () => {
       const { runEmailCheck } = await import("@wraps/email-check");
       vi.mocked(runEmailCheck).mockResolvedValue(createMockResult());
 
+      setJsonMode(true);
       await check({ domain: "test.com", json: true });
+      setJsonMode(false);
 
       expect(mockSpinner.start).not.toHaveBeenCalled();
     });
@@ -691,10 +701,16 @@ describe("Email Check Command", () => {
       const { runEmailCheck } = await import("@wraps/email-check");
       vi.mocked(runEmailCheck).mockRejectedValue(new Error("Network error"));
 
+      setJsonMode(true);
       await check({ domain: "test.com", json: true });
+      setJsonMode(false);
 
       expect(mockConsoleLog).toHaveBeenCalledWith(
-        JSON.stringify({ error: "Network error" })
+        JSON.stringify({
+          success: false,
+          command: "email.check",
+          error: { code: "CHECK_FAILED", message: "Network error" },
+        })
       );
       expect(mockExit).toHaveBeenCalledWith(4);
     });

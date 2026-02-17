@@ -1,16 +1,24 @@
 import * as clack from "@clack/prompts";
 import pc from "picocolors";
+import { isJsonMode } from "./json-output.js";
 
 /**
- * Deployment progress tracker with spinners using clack
+ * Deployment progress tracker with spinners using clack.
+ * Automatically suppresses all visual output in JSON mode
+ * while still executing the underlying work.
  */
 export class DeploymentProgress {
   private currentSpinner: ReturnType<typeof clack.spinner> | null = null;
+
+  private get silent(): boolean {
+    return isJsonMode();
+  }
 
   /**
    * Start a spinner with a message
    */
   start(message: string) {
+    if (this.silent) return;
     this.currentSpinner = clack.spinner();
     this.currentSpinner.start(message);
   }
@@ -19,6 +27,7 @@ export class DeploymentProgress {
    * Mark current step as succeeded
    */
   succeed(message: string) {
+    if (this.silent) return;
     if (this.currentSpinner) {
       this.currentSpinner.stop(message);
     }
@@ -29,6 +38,7 @@ export class DeploymentProgress {
    * Mark current step as failed
    */
   fail(message: string) {
+    if (this.silent) return;
     if (this.currentSpinner) {
       this.currentSpinner.stop(message);
     }
@@ -39,6 +49,7 @@ export class DeploymentProgress {
    * Show info message
    */
   info(message: string) {
+    if (this.silent) return;
     clack.log.info(message);
   }
 
@@ -46,13 +57,18 @@ export class DeploymentProgress {
    * Show step message
    */
   step(message: string) {
+    if (this.silent) return;
     clack.log.step(message);
   }
 
   /**
-   * Execute a step with automatic spinner handling
+   * Execute a step with automatic spinner handling.
+   * Always runs the function; only suppresses visual output in JSON mode.
    */
   async execute<T>(message: string, fn: () => Promise<T>): Promise<T> {
+    if (this.silent) {
+      return fn();
+    }
     this.start(message);
     try {
       const result = await fn();
@@ -68,6 +84,7 @@ export class DeploymentProgress {
    * Stop the spinner
    */
   stop(message?: string) {
+    if (this.silent) return;
     if (this.currentSpinner) {
       this.currentSpinner.stop(message || "");
     }

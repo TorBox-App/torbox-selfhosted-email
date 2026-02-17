@@ -12,7 +12,8 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { errors } from "../../utils/shared/errors.js";
+import { WrapsError, errors } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -39,13 +40,24 @@ import {
 export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "SMS Infrastructure Destruction Preview"
-        : "SMS Infrastructure Teardown"
-    )
-  );
+  // JSON mode requires --force for destructive operations
+  if (isJsonMode() && !options.force) {
+    throw new WrapsError(
+      "--force flag is required in JSON mode for destructive operations",
+      "JSON_REQUIRES_FORCE",
+      "Add --force flag: wraps sms destroy --json --force"
+    );
+  }
+
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "SMS Infrastructure Destruction Preview"
+          : "SMS Infrastructure Teardown"
+      )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -75,6 +87,14 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
       // Auto-select the only available region
       region = smsConnections[0].region;
     } else if (smsConnections.length > 1) {
+      if (isJsonMode()) {
+        throw new WrapsError(
+          "Multiple SMS deployments found. Specify --region flag.",
+          "REGION_REQUIRED",
+          `Available regions: ${smsConnections.map((c) => c.region).join(", ")}`
+        );
+      }
+
       // Multiple regions found - prompt user to select
       const selectedRegion = await clack.select({
         message: "Multiple SMS deployments found. Which region to destroy?",
@@ -277,6 +297,20 @@ export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
 
   // 9. Display success or partial failure message
   progress.stop();
+
+  if (isJsonMode()) {
+    jsonSuccess("sms.destroy", {
+      destroyed: !destroyFailed,
+      region,
+      partial_failure: destroyFailed,
+    });
+    trackServiceRemoved("sms", {
+      reason: "user_initiated",
+      partial_failure: destroyFailed,
+      duration_ms: Date.now() - startTime,
+    });
+    return;
+  }
 
   if (destroyFailed) {
     clack.outro(

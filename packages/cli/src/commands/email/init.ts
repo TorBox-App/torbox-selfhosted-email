@@ -24,6 +24,7 @@ import {
   isPulumiError,
   parsePulumiError,
 } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -68,13 +69,15 @@ import {
 export async function init(options: InitOptions): Promise<void> {
   const startTime = Date.now();
 
-  clack.intro(
-    pc.bold(
-      options.preview
-        ? "Wraps Email Infrastructure Preview"
-        : "Wraps Email Infrastructure Setup"
-    )
-  );
+  if (!isJsonMode()) {
+    clack.intro(
+      pc.bold(
+        options.preview
+          ? "Wraps Email Infrastructure Preview"
+          : "Wraps Email Infrastructure Setup"
+      )
+    );
+  }
 
   const progress = new DeploymentProgress();
 
@@ -503,6 +506,24 @@ export async function init(options: InitOptions): Promise<void> {
   await saveConnectionMetadata(metadata);
 
   progress.info("Connection metadata saved for upgrade and restore capability");
+
+  // JSON mode: output results and skip interactive DNS/test steps
+  if (isJsonMode()) {
+    jsonSuccess("email.init", {
+      roleArn: outputs.roleArn,
+      configSetName: outputs.configSetName,
+      region: outputs.region!,
+      domain: outputs.domain,
+      dkimTokens: outputs.dkimTokens,
+    });
+    trackServiceDeployed("email", {
+      duration_ms: Date.now() - startTime,
+      region,
+      features: [],
+      preset,
+    });
+    return;
+  }
 
   // 10. DNS Configuration - Support multiple DNS providers (skip in quick mode)
   let dnsAutoCreated = false;

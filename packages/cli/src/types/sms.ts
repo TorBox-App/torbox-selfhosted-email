@@ -136,6 +136,7 @@ export type SMSInitOptions = {
   phoneNumber?: string;
   preset?: SMSConfigPreset;
   yes?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -182,6 +183,7 @@ export type SMSVerifyOptions = {
 export type SMSUpgradeOptions = {
   region?: string;
   yes?: boolean;
+  json?: boolean;
 };
 
 /**
@@ -199,6 +201,7 @@ export type SMSDestroyOptions = {
   force?: boolean;
   preview?: boolean;
   region?: string;
+  json?: boolean;
 };
 
 /**
@@ -207,6 +210,7 @@ export type SMSDestroyOptions = {
 export type SMSTestOptions = {
   to?: string;
   message?: string;
+  json?: boolean;
 };
 
 /**
@@ -214,6 +218,7 @@ export type SMSTestOptions = {
  */
 export type SMSStatusOptions = {
   account?: string;
+  json?: boolean;
 };
 
 /**
@@ -225,4 +230,5 @@ export type SMSVerifyNumberOptions = {
   list?: boolean;
   delete?: boolean;
   resend?: boolean;
+  json?: boolean;
 };

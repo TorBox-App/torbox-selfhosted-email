@@ -22,9 +22,11 @@ import {
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
 import {
+  WrapsError,
   classifyDNSError,
   isAWSNotFoundError,
 } from "../../utils/shared/errors.js";
+import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
   addDomainToMetadata,
   findConnectionsWithService,
@@ -349,7 +351,9 @@ const MAX_POLL_DURATION_MS = 30 * 60 * 1000; // 30 minutes
  * Verify domain DNS records and verification status
  */
 export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
-  clack.intro(pc.bold(`Verifying ${options.domain}`));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold(`Verifying ${options.domain}`));
+  }
 
   const progress = new DeploymentProgress();
   const region = await getAWSRegion();
@@ -378,7 +382,28 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
   progress.stop();
 
   // 2. Display results
-  const allVerified = displayVerifyResults(options.domain, result);
+  const allVerified = isJsonMode()
+    ? result.allVerified
+    : displayVerifyResults(options.domain, result);
+
+  // JSON mode: output and return (no --wait polling in JSON mode)
+  if (isJsonMode()) {
+    jsonSuccess("email.domains.verify", {
+      domain: options.domain,
+      verified: result.allVerified,
+      verificationStatus: result.verificationStatus,
+      dkimStatus: result.dkimStatus,
+      mailFromDomain: result.mailFromDomain,
+      mailFromStatus: result.mailFromStatus,
+      dnsRecords: result.dnsResults.map((r) => ({
+        name: r.name,
+        type: r.type,
+        status: r.status,
+        records: r.records,
+      })),
+    });
+    return;
+  }
 
   // 3. Handle --wait polling
   if (options.wait && !allVerified) {
@@ -516,7 +541,9 @@ export async function addDomain(options: {
   region?: string;
   yes?: boolean;
 }): Promise<void> {
-  clack.intro(pc.bold("Add Email Domain"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Add Email Domain"));
+  }
 
   const progress = new DeploymentProgress();
 
@@ -562,6 +589,14 @@ export async function addDomain(options: {
 
     // 2. Determine domain to add
     let domain = options.domain;
+
+    if (!domain && isJsonMode()) {
+      throw new WrapsError(
+        "The --domain flag is required in JSON mode",
+        "MISSING_REQUIRED_FLAG",
+        "Provide --domain <domain>"
+      );
+    }
 
     if (!domain) {
       progress.stop();
@@ -773,6 +808,29 @@ export async function addDomain(options: {
 
     // 8. Display success
     progress.stop();
+
+    // Track success
+    trackCommand("email:domains:add", {
+      success: true,
+      dns_auto_created: dnsAutoCreated,
+      has_mail_from: !!mailFromDomain,
+      purpose,
+    });
+    trackFeature("domain_added", {
+      purpose,
+      subdomain: domain !== primaryDomain,
+    });
+
+    if (isJsonMode()) {
+      jsonSuccess("email.domains.add", {
+        domain,
+        mailFromDomain,
+        purpose,
+        dnsAutoCreated,
+      });
+      return;
+    }
+
     clack.outro(pc.green(`✓ Domain ${domain} added successfully!`));
 
     if (dnsAutoCreated) {
@@ -786,18 +844,6 @@ export async function addDomain(options: {
       `  Verify: ${pc.cyan(`wraps email domains verify --domain ${domain}`)}`
     );
     console.log(`  Status: ${pc.cyan("wraps email status")}\n`);
-
-    // Track success
-    trackCommand("email:domains:add", {
-      success: true,
-      dns_auto_created: dnsAutoCreated,
-      has_mail_from: !!mailFromDomain,
-      purpose,
-    });
-    trackFeature("domain_added", {
-      purpose,
-      subdomain: domain !== primaryDomain,
-    });
   } catch (error) {
     progress.stop();
     trackCommand("email:domains:add", { success: false });
@@ -819,7 +865,9 @@ const PURPOSE_LABELS: Record<string, string> = {
  * List all domains configured in SES, cross-referenced with metadata.
  */
 export async function listDomains(): Promise<void> {
-  clack.intro(pc.bold("SES Email Domains"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("SES Email Domains"));
+  }
 
   const progress = new DeploymentProgress();
   const region = await getAWSRegion();
@@ -903,6 +951,30 @@ export async function listDomains(): Promise<void> {
     const managed = domainDetails.filter((d) => trackedSet.has(d.name));
     const unmanaged = domainDetails.filter((d) => !trackedSet.has(d.name));
 
+    if (isJsonMode()) {
+      trackCommand("email:domains:list", {
+        success: true,
+        domain_count: sesDomains.length,
+        managed_count: managed.length,
+      });
+      jsonSuccess("email.domains.list", {
+        domains: domainDetails.map((d) => {
+          const tracked = trackedSet.get(d.name);
+          return {
+            domain: d.name,
+            verified: d.verified,
+            dkimStatus: d.dkimStatus,
+            managed: !!tracked,
+            isPrimary: tracked?.isPrimary ?? false,
+            purpose: tracked?.purpose,
+          };
+        }),
+        totalCount: sesDomains.length,
+        managedCount: managed.length,
+      });
+      return;
+    }
+
     // Format managed domains
     if (managed.length > 0) {
       const managedLines = managed.map((d) => {
@@ -961,7 +1033,9 @@ export async function listDomains(): Promise<void> {
  * Get DKIM tokens for a domain
  */
 export async function getDkim(options: { domain: string }): Promise<void> {
-  clack.intro(pc.bold(`DKIM Tokens for ${options.domain}`));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold(`DKIM Tokens for ${options.domain}`));
+  }
 
   const progress = new DeploymentProgress();
   const region = await getAWSRegion();
@@ -982,6 +1056,24 @@ export async function getDkim(options: { domain: string }): Promise<void> {
     const dkimStatus = identity.DkimAttributes?.Status || "PENDING";
 
     progress.stop();
+
+    if (isJsonMode()) {
+      trackCommand("email:domains:get-dkim", {
+        success: true,
+        dkim_status: dkimStatus,
+      });
+      jsonSuccess("email.domains.get-dkim", {
+        domain: options.domain,
+        dkimStatus,
+        tokens: dkimTokens,
+        records: dkimTokens.map((token) => ({
+          name: `${token}._domainkey.${options.domain}`,
+          type: "CNAME",
+          value: `${token}.dkim.amazonses.com`,
+        })),
+      });
+      return;
+    }
 
     if (dkimTokens.length === 0) {
       clack.outro(pc.yellow("No DKIM tokens found for this domain"));
@@ -1038,7 +1130,9 @@ export async function removeDomain(options: {
   domain: string;
   force?: boolean;
 }): Promise<void> {
-  clack.intro(pc.bold(`Remove domain ${options.domain} from SES`));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold(`Remove domain ${options.domain} from SES`));
+  }
 
   const progress = new DeploymentProgress();
   const region = await getAWSRegion();
@@ -1113,13 +1207,22 @@ export async function removeDomain(options: {
     }
 
     progress.stop();
-    clack.outro(pc.green(`✓ Domain ${options.domain} removed successfully`));
 
     // Track remove domain success
     trackCommand("email:domains:remove", {
       success: true,
     });
     trackFeature("domain_removed", {});
+
+    if (isJsonMode()) {
+      jsonSuccess("email.domains.remove", {
+        domain: options.domain,
+        removed: true,
+      });
+      return;
+    }
+
+    clack.outro(pc.green(`✓ Domain ${options.domain} removed successfully`));
   } catch (error) {
     progress.stop();
     trackCommand("email:domains:remove", { success: false });

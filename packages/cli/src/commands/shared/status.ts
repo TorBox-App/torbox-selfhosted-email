@@ -11,6 +11,10 @@ import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
 } from "../../utils/shared/fs.js";
+import {
+  isJsonMode,
+  jsonSuccess,
+} from "../../utils/shared/json-output.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
 
 /**
@@ -20,7 +24,9 @@ export async function status(_options: StatusOptions): Promise<void> {
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 
-  clack.intro(pc.bold("Wraps Infrastructure Status"));
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Wraps Infrastructure Status"));
+  }
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(
@@ -28,11 +34,15 @@ export async function status(_options: StatusOptions): Promise<void> {
     async () => validateAWSCredentials()
   );
 
-  progress.info(`AWS Account: ${pc.cyan(identity.accountId)}`);
+  if (!isJsonMode()) {
+    progress.info(`AWS Account: ${pc.cyan(identity.accountId)}`);
+  }
 
   // 2. Get region
   const region = await getAWSRegion();
-  progress.info(`Region: ${pc.cyan(region)}`);
+  if (!isJsonMode()) {
+    progress.info(`Region: ${pc.cyan(region)}`);
+  }
 
   // 3. Check for deployed services
   const services: Array<{
@@ -89,6 +99,15 @@ export async function status(_options: StatusOptions): Promise<void> {
   }
 
   progress.stop();
+
+  if (isJsonMode()) {
+    jsonSuccess("status", {
+      accountId: identity.accountId,
+      region,
+      services,
+    });
+    return;
+  }
 
   // 4. Display services overview
   console.log();
