@@ -19,7 +19,6 @@ import { templatesSyncRoutes } from "./routes/templates-sync";
 import { toolsRoutes } from "./routes/tools";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
 import { webhooksRoutes } from "./routes/webhooks";
-import { workflowGenerateRoutes } from "./routes/workflow-generate";
 import { workflowScheduleRoutes } from "./routes/workflow-schedules";
 import { workflowsSyncRoutes } from "./routes/workflows-sync";
 
@@ -139,7 +138,6 @@ export const app = new Elysia()
   .use(unsubscribeRoutes)
   .use(templatesSyncRoutes)
   .use(workflowsSyncRoutes)
-  .use(workflowGenerateRoutes)
   .use(toolsRoutes)
   .use(workflowScheduleRoutes);
 

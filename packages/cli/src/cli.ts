@@ -199,7 +199,7 @@ function showHelp() {
     `  ${pc.cyan("email workflows push")}      Push workflows to dashboard`
   );
   console.log(
-    `  ${pc.cyan("email workflows generate")} Generate workflow from template or AI\n`
+    `  ${pc.cyan("email workflows generate")} Generate workflow from template\n`
   );
   console.log("SMS Commands:");
   console.log(`  ${pc.cyan("sms init")}             Deploy SMS infrastructure`);
@@ -1025,14 +1025,10 @@ async function run() {
 
             case "generate":
               await workflowsGenerate({
-                description: args.sub[3],
                 template: flags.template,
                 name: flags.name,
-                dryRun: flags.dryRun,
-                yes: flags.yes,
                 force: flags.force,
                 json: flags.json,
-                token: flags.token,
               });
               break;
 

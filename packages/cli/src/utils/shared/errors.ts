@@ -748,20 +748,4 @@ export const errors = {
       "Check your API key and network connection.",
       "https://wraps.dev/docs/templates-as-code"
     ),
-
-  workflowGenerationFailed: (message?: string) =>
-    new WrapsError(
-      `Workflow generation failed${message ? `: ${message}` : ""}`,
-      "WORKFLOW_GENERATION_FAILED",
-      "Try rephrasing your description, or use a built-in template:\n  wraps email workflows generate --template welcome\n  wraps email workflows generate --template cart-recovery",
-      "https://wraps.dev/docs/guides/orchestration"
-    ),
-
-  aiUsageLimitReached: () =>
-    new WrapsError(
-      "AI generation usage limit reached",
-      "AI_USAGE_LIMIT_REACHED",
-      "Upgrade your plan for more AI generations, or use built-in templates:\n  wraps email workflows generate --template welcome\n  wraps email workflows generate --template cart-recovery",
-      "https://wraps.dev/docs/pricing"
-    ),
 };
