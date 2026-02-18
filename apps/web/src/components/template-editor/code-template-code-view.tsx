@@ -29,6 +29,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { compileTemplate } from "@/lib/compile-template";
 
 type CodeTemplateCodeViewProps = {
   template: Template;
@@ -169,22 +170,8 @@ export function CodeTemplateCodeView({
     setCompileError(null);
 
     try {
-      // Step 1: Compile
-      const compileResp = await fetch(
-        `/api/${orgSlug}/emails/templates/${templateId}/compile`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source: editedSource }),
-        }
-      );
-
-      if (!compileResp.ok) {
-        const data = await compileResp.json();
-        throw new Error(data.message || data.error || "Compilation failed");
-      }
-
-      const compiled = await compileResp.json();
+      // Step 1: Compile in-browser (no server-side code execution)
+      const compiled = await compileTemplate(editedSource);
 
       // Step 2: Save
       const saveResp = await fetch(

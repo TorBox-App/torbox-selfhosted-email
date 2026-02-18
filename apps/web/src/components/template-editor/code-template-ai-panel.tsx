@@ -40,6 +40,7 @@ import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { extractTsxCode } from "@/lib/ai/extract-tsx-code";
+import { compileTemplate } from "@/lib/compile-template";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { AIAttachmentChips } from "./ai-attachment-chips";
@@ -253,21 +254,8 @@ export function CodeTemplateAIPanel({
 
     setIsCompiling(true);
     try {
-      const resp = await fetch(
-        `/api/${orgSlug}/emails/templates/${templateId}/compile`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source: pendingSource }),
-        }
-      );
-
-      if (!resp.ok) {
-        const data = await resp.json();
-        throw new Error(data.message || data.error || "Compilation failed");
-      }
-
-      const { compiledHtml } = await resp.json();
+      // Compile in-browser (no server-side code execution)
+      const { compiledHtml } = await compileTemplate(pendingSource);
       onApply(pendingSource, compiledHtml);
       setPendingSource(null);
     } catch (error) {

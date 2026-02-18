@@ -203,9 +203,12 @@ export async function updateMemberRole(
       };
     }
 
-    // Get the target member
+    // Get the target member (scoped to org to prevent cross-org IDOR)
     const targetMember = await db.query.member.findFirst({
-      where: eq(member.id, memberId),
+      where: and(
+        eq(member.id, memberId),
+        eq(member.organizationId, organizationId)
+      ),
     });
 
     if (!targetMember) {
@@ -234,11 +237,13 @@ export async function updateMemberRole(
       };
     }
 
-    // Update the role
+    // Update the role (scoped to org to prevent cross-org IDOR)
     await db
       .update(member)
       .set({ role: newRole })
-      .where(eq(member.id, memberId));
+      .where(
+        and(eq(member.id, memberId), eq(member.organizationId, organizationId))
+      );
 
     // Revalidate the members page
     const org = await db.query.organization.findFirst({
@@ -492,9 +497,12 @@ export async function removeMember(
       };
     }
 
-    // Get the target member
+    // Get the target member (scoped to org to prevent cross-org IDOR)
     const targetMember = await db.query.member.findFirst({
-      where: eq(member.id, memberId),
+      where: and(
+        eq(member.id, memberId),
+        eq(member.organizationId, organizationId)
+      ),
     });
 
     if (!targetMember) {
@@ -520,8 +528,12 @@ export async function removeMember(
       };
     }
 
-    // Remove the member
-    await db.delete(member).where(eq(member.id, memberId));
+    // Remove the member (scoped to org to prevent cross-org IDOR)
+    await db
+      .delete(member)
+      .where(
+        and(eq(member.id, memberId), eq(member.organizationId, organizationId))
+      );
 
     // Revalidate the members page
     const org = await db.query.organization.findFirst({
@@ -599,8 +611,30 @@ export async function cancelInvitation(
       };
     }
 
-    // Delete the invitation
-    await db.delete(invitation).where(eq(invitation.id, invitationId));
+    // Verify invitation belongs to this org before deleting (prevent cross-org IDOR)
+    const targetInvitation = await db.query.invitation.findFirst({
+      where: and(
+        eq(invitation.id, invitationId),
+        eq(invitation.organizationId, organizationId)
+      ),
+    });
+
+    if (!targetInvitation) {
+      return {
+        success: false,
+        error: "Invitation not found",
+      };
+    }
+
+    // Delete the invitation (scoped to org)
+    await db
+      .delete(invitation)
+      .where(
+        and(
+          eq(invitation.id, invitationId),
+          eq(invitation.organizationId, organizationId)
+        )
+      );
 
     // Revalidate the members page
     const org = await db.query.organization.findFirst({
