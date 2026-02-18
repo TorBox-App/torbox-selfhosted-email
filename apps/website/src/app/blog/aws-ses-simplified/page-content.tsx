@@ -453,7 +453,6 @@ export function PresetCards() {
         "All event types",
         "Reputation metrics",
       ],
-      popular: true,
     },
     {
       id: "enterprise",
@@ -482,11 +481,6 @@ export function PresetCards() {
           onClick={() => setSelected(preset.id)}
           type="button"
         >
-          {preset.popular && (
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-500 px-3 py-1 font-semibold text-white text-xs">
-              Popular
-            </span>
-          )}
           <h4 className="font-semibold text-foreground text-lg">
             {preset.name}
           </h4>

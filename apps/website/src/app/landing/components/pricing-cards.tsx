@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 import { memo, useState } from "react";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Button } from "@/components/ui/button";
@@ -55,16 +55,6 @@ export const PricingCards = memo(function PricingCards() {
             className={`relative overflow-hidden rounded-2xl border bg-background ${plan.highlight ? "border-2 border-orange-500" : ""}`}
             key={plan.name}
           >
-            {/* Popular badge */}
-            {plan.popular && (
-              <div className="absolute top-4 right-4">
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2 py-1 font-medium text-white text-xs">
-                  <Sparkles aria-hidden="true" className="h-3 w-3" />
-                  Popular
-                </span>
-              </div>
-            )}
-
             <div className="p-6">
               <div className="mb-4">
                 <div className="mb-2 flex items-center gap-2">

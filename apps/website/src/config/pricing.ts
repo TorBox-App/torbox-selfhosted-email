@@ -21,7 +21,6 @@ export type PricingTier = {
   period: string;
   description: string;
   highlight: boolean;
-  popular?: boolean;
   cta: string;
   ctaLink: string;
   features: string[];
@@ -220,7 +219,6 @@ export const PRICING_TIERS: PricingTier[] = [
     period: "/mo",
     description: "For growing startups",
     highlight: true,
-    popular: true,
     cta: "Subscribe",
     ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=growth",
     limits: TIER_LIMITS.growth,

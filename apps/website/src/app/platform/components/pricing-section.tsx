@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -82,16 +82,6 @@ export function DashboardPricingSection() {
                 key={tier.name}
                 transition={{ duration: 0.5, delay: 0.1 + index * 0.1 }}
               >
-                {/* Popular Badge */}
-                {tier.popular && (
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 px-2 py-1 font-medium text-white text-xs">
-                      <Sparkles className="size-3" />
-                      Popular
-                    </span>
-                  </div>
-                )}
-
                 {/* Header */}
                 <div
                   className={`border-b px-6 py-6 ${

@@ -1,7 +1,6 @@
 "use client";
 
-import { Check, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,7 +18,6 @@ export type PricingPlan = {
   price: string;
   frequency: string;
   features: string[];
-  popular?: boolean;
   current?: boolean;
 };
 
@@ -58,7 +56,6 @@ const defaultPlans: PricingPlan[] = [
       "Custom domain",
       "Abandoned cart recovery",
     ],
-    popular: true,
   },
   {
     id: "enterprise",
@@ -105,7 +102,7 @@ export function PricingPlans({
     if (mode === "billing" && currentPlanId === plan.id) {
       return "outline" as const;
     }
-    return plan.popular ? ("default" as const) : ("outline" as const);
+    return "outline" as const;
   };
 
   const isButtonDisabled = (plan: PricingPlan) =>
@@ -117,22 +114,10 @@ export function PricingPlans({
         <Card
           aria-labelledby={`${tier.id}-title`}
           className={cn("flex flex-col pt-0", {
-            "relative border-primary shadow-lg": tier.popular,
             "border-primary": currentPlanId === tier.id && mode === "billing",
           })}
           key={tier.id}
         >
-          {tier.popular && (
-            <div className="-top-3 absolute start-0 w-full">
-              <Badge className="mx-auto flex w-fit gap-1.5 rounded-full font-medium">
-                <Sparkles className="size-4!" />
-                {mode === "pricing" && <span>Most Popular</span>}
-                {currentPlanId === tier.id && mode === "billing" && (
-                  <span>Current Plan</span>
-                )}
-              </Badge>
-            </div>
-          )}
           <CardHeader className="space-y-2 pt-8 text-center">
             <CardTitle className="text-2xl" id={`${tier.id}-title`}>
               {tier.name}

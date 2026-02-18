@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   type BillingInterval,
   getAnnualTotal,
@@ -52,7 +52,6 @@ export function PlanSelector({
       {visiblePlans.map(({ id, plan }) => {
         const isSelected = selectedPlan === id;
         const isCurrent = currentPlan === id;
-        const isPopular = id === "growth";
         const isEarlyAdopter = hasEarlyAdopterPricing(plan);
         const displayPrice = getPriceByInterval(plan, billingInterval);
         const regularPrice =
@@ -73,20 +72,10 @@ export function PlanSelector({
             type="button"
           >
             {/* Early adopter badge */}
-            {isEarlyAdopter && !isPopular && (
+            {isEarlyAdopter && (
               <div className="-top-3 -translate-x-1/2 absolute left-1/2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 font-medium text-white text-xs">
                   Early Adopter
-                </span>
-              </div>
-            )}
-
-            {/* Popular badge (with early adopter note) */}
-            {isPopular && (
-              <div className="-top-3 -translate-x-1/2 absolute left-1/2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground text-xs">
-                  <Sparkles className="h-3 w-3" />
-                  {isEarlyAdopter ? "Popular - Early Adopter" : "Popular"}
                 </span>
               </div>
             )}
