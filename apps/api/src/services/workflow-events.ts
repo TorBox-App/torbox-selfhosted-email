@@ -93,25 +93,70 @@ export async function emitWorkflowEvent(params: {
 
 /**
  * Emit contact_created event
+ *
+ * Matches workflows with either:
+ * - triggerType: "event" + eventName: "contact_created" (generic event format)
+ * - triggerType: "contact_created" (direct trigger type from CLI-pushed workflows)
  */
 export async function emitContactCreated(params: {
   contactId: string;
   organizationId: string;
   contactData?: Record<string, unknown>;
 }): Promise<{ workflowsTriggered: number }> {
-  return emitWorkflowEvent({
+  const eventData = {
+    ...params.contactData,
+    createdAt: new Date().toISOString(),
+  };
+
+  // Match workflows with triggerType: "event" + eventName: "contact_created"
+  const matchingByEvent = await emitWorkflowEvent({
     eventName: "contact_created",
     contactId: params.contactId,
     organizationId: params.organizationId,
-    eventData: {
-      ...params.contactData,
-      createdAt: new Date().toISOString(),
-    },
+    eventData,
   });
+
+  // Match workflows with triggerType: "contact_created" (CLI-pushed format)
+  const matchingByTrigger = await db
+    .select({ id: workflow.id })
+    .from(workflow)
+    .where(
+      and(
+        eq(workflow.organizationId, params.organizationId),
+        eq(workflow.status, "enabled"),
+        eq(workflow.triggerType, "contact_created")
+      )
+    );
+
+  for (const wf of matchingByTrigger) {
+    await enqueueWorkflowStep({
+      type: "trigger",
+      workflowId: wf.id,
+      contactId: params.contactId,
+      organizationId: params.organizationId,
+      eventData,
+    });
+  }
+
+  if (matchingByTrigger.length > 0) {
+    log.info("contact_created trigger matched workflows", {
+      contactId: params.contactId,
+      workflowCount: matchingByTrigger.length,
+    });
+  }
+
+  return {
+    workflowsTriggered:
+      matchingByEvent.workflowsTriggered + matchingByTrigger.length,
+  };
 }
 
 /**
  * Emit contact_updated event
+ *
+ * Matches workflows with either:
+ * - triggerType: "event" + eventName: "contact_updated" (generic event format)
+ * - triggerType: "contact_updated" (direct trigger type from CLI-pushed workflows)
  */
 export async function emitContactUpdated(params: {
   contactId: string;
@@ -119,16 +164,53 @@ export async function emitContactUpdated(params: {
   updatedFields?: string[];
   contactData?: Record<string, unknown>;
 }): Promise<{ workflowsTriggered: number }> {
-  return emitWorkflowEvent({
+  const eventData = {
+    ...params.contactData,
+    updatedFields: params.updatedFields,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Match workflows with triggerType: "event" + eventName: "contact_updated"
+  const matchingByEvent = await emitWorkflowEvent({
     eventName: "contact_updated",
     contactId: params.contactId,
     organizationId: params.organizationId,
-    eventData: {
-      ...params.contactData,
-      updatedFields: params.updatedFields,
-      updatedAt: new Date().toISOString(),
-    },
+    eventData,
   });
+
+  // Match workflows with triggerType: "contact_updated" (CLI-pushed format)
+  const matchingByTrigger = await db
+    .select({ id: workflow.id })
+    .from(workflow)
+    .where(
+      and(
+        eq(workflow.organizationId, params.organizationId),
+        eq(workflow.status, "enabled"),
+        eq(workflow.triggerType, "contact_updated")
+      )
+    );
+
+  for (const wf of matchingByTrigger) {
+    await enqueueWorkflowStep({
+      type: "trigger",
+      workflowId: wf.id,
+      contactId: params.contactId,
+      organizationId: params.organizationId,
+      eventData,
+    });
+  }
+
+  if (matchingByTrigger.length > 0) {
+    log.info("contact_updated trigger matched workflows", {
+      contactId: params.contactId,
+      workflowCount: matchingByTrigger.length,
+    });
+  }
+
+  return {
+    workflowsTriggered:
+      matchingByEvent.workflowsTriggered + matchingByTrigger.length,
+  };
 }
 
 /**

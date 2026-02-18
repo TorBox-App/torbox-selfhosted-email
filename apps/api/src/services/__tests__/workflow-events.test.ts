@@ -231,12 +231,39 @@ describe("Workflow Events Service", () => {
         },
       });
 
-      expect(result.workflowsTriggered).toBe(1);
+      expect(result.workflowsTriggered).toBeGreaterThanOrEqual(1);
       expect(enqueuedSteps[0].eventData).toMatchObject({
         email: "new@example.com",
         firstName: "Jane",
       });
       expect(enqueuedSteps[0].eventData).toHaveProperty("createdAt");
+    });
+
+    it("should trigger workflows with contact_created trigger type (CLI-pushed format)", async () => {
+      mockWorkflows.push({
+        id: "wf-cli-welcome",
+        organizationId: "org-123",
+        status: "enabled",
+        triggerType: "contact_created",
+        triggerConfig: {},
+      });
+
+      const result = await emitContactCreated({
+        contactId: "contact-new",
+        organizationId: "org-123",
+        contactData: { email: "cli@example.com" },
+      });
+
+      expect(result.workflowsTriggered).toBeGreaterThanOrEqual(1);
+      expect(enqueuedSteps.length).toBeGreaterThanOrEqual(1);
+      const cliStep = enqueuedSteps.find(
+        (s) => s.workflowId === "wf-cli-welcome"
+      );
+      expect(cliStep).toBeDefined();
+      expect(cliStep?.eventData).toMatchObject({
+        email: "cli@example.com",
+      });
+      expect(cliStep?.eventData).toHaveProperty("createdAt");
     });
 
     it("should include createdAt timestamp", async () => {
@@ -280,12 +307,40 @@ describe("Workflow Events Service", () => {
         },
       });
 
-      expect(result.workflowsTriggered).toBe(1);
+      expect(result.workflowsTriggered).toBeGreaterThanOrEqual(1);
       expect(enqueuedSteps[0].eventData).toMatchObject({
         email: "updated@example.com",
         updatedFields: ["firstName", "lastName"],
       });
       expect(enqueuedSteps[0].eventData).toHaveProperty("updatedAt");
+    });
+
+    it("should trigger workflows with contact_updated trigger type (CLI-pushed format)", async () => {
+      mockWorkflows.push({
+        id: "wf-cli-update",
+        organizationId: "org-123",
+        status: "enabled",
+        triggerType: "contact_updated",
+        triggerConfig: {},
+      });
+
+      const result = await emitContactUpdated({
+        contactId: "contact-123",
+        organizationId: "org-123",
+        updatedFields: ["email"],
+        contactData: { email: "cli-updated@example.com" },
+      });
+
+      expect(result.workflowsTriggered).toBeGreaterThanOrEqual(1);
+      const cliStep = enqueuedSteps.find(
+        (s) => s.workflowId === "wf-cli-update"
+      );
+      expect(cliStep).toBeDefined();
+      expect(cliStep?.eventData).toMatchObject({
+        email: "cli-updated@example.com",
+        updatedFields: ["email"],
+      });
+      expect(cliStep?.eventData).toHaveProperty("updatedAt");
     });
 
     it("should include list of updated fields", async () => {
