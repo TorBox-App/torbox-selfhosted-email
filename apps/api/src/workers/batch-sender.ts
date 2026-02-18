@@ -17,12 +17,14 @@ import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { toPlainText } from "@react-email/render";
 import {
   batchSend,
+  buildConditionSQL,
   contact,
   contactTopic,
   db,
   eq,
   messageSend,
   organization,
+  segment,
   template,
 } from "@wraps/db";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
@@ -629,7 +631,7 @@ type RecipientFilter = {
   segmentId?: string;
 };
 
-async function getContactsChunk(
+export async function getContactsChunk(
   organizationId: string,
   channel: string,
   offset: number,
@@ -667,8 +669,27 @@ async function getContactsChunk(
     conditions.push(exists(topicSubquery));
   }
 
-  // TODO: Add segment filtering when needed
-  // if (filter?.audienceType === "segment" && filter.segmentId) { ... }
+  if (filter?.audienceType === "segment" && filter.segmentId) {
+    const [segmentRow] = await db
+      .select({ id: segment.id, condition: segment.condition })
+      .from(segment)
+      .where(
+        and(
+          eq(segment.id, filter.segmentId),
+          eq(segment.organizationId, organizationId)
+        )
+      );
+
+    if (!segmentRow) {
+      log.warn("Segment not found for batch send", { segmentId: filter.segmentId, organizationId });
+      return [];
+    }
+
+    const segmentSQL = buildConditionSQL(segmentRow.condition);
+    if (segmentSQL) {
+      conditions.push(segmentSQL);
+    }
+  }
 
   return db
     .select({
