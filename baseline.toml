@@ -13,7 +13,7 @@
 [baseline]
 name = "wraps"
 include = ["**/*"]
-# extends = ["security", "nextjs", "ai-codegen"]
+# extends = ["security", "ai-codegen"]
 exclude = [
   "**/node_modules/**",
   "**/dist/**",
@@ -25,6 +25,14 @@ exclude = [
   "**/.git/**",
   "**/.gritmodules/**",
 ]
+
+[[baseline.scoped]]
+preset = "nextjs"
+path = "apps/web"
+
+[[baseline.scoped]]
+preset = "nextjs"
+path = "apps/website"
 
 
 # ══════════════════════════════════════════════
@@ -366,4 +374,3 @@ suggest = "Prefix the resource name with wraps-email- or wraps-sms-"
 # ══════════════════════════════════════════════
 # TAILWIND DESIGN SYSTEM
 # ══════════════════════════════════════════════
-
