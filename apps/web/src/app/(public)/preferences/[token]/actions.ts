@@ -19,6 +19,34 @@ type ActionResult = {
   pendingTopics?: string[]; // Topic IDs that are now pending confirmation
 };
 
+type TopicChange = {
+  topicId: string;
+  topicName?: string;
+  action: "subscribed" | "unsubscribed";
+};
+
+/**
+ * Emit workflow events for topic subscription changes via the API.
+ * Fire-and-forget: failures are logged but never block the preference update.
+ */
+async function emitPreferenceEvents(
+  token: string,
+  contactId: string,
+  organizationId: string,
+  changes: TopicChange[]
+): Promise<void> {
+  if (changes.length === 0) return;
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.wraps.dev";
+  await fetch(`${apiUrl}/v1/preference-events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, contactId, organizationId, changes }),
+  }).catch((err) => {
+    console.error("[PREFERENCES] Failed to emit workflow events:", err);
+  });
+}
+
 /**
  * Update topic subscriptions for a contact
  */
@@ -48,6 +76,7 @@ export async function updatePreferences(
   try {
     const now = new Date();
     const pendingTopics: string[] = [];
+    const topicChanges: TopicChange[] = [];
 
     // Get contact email for confirmation emails
     const [contactRecord] = await db
@@ -139,6 +168,14 @@ export async function updatePreferences(
                   eq(contactTopic.topicId, topicId)
                 )
               );
+            // Track subscription change for workflow events (non-pending only)
+            if (newStatus === "subscribed") {
+              topicChanges.push({
+                topicId,
+                topicName: topicInfo.name,
+                action: "subscribed",
+              });
+            }
           }
         } else {
           // Create new subscription
@@ -149,6 +186,14 @@ export async function updatePreferences(
             subscribedAt: newStatus === "subscribed" ? now : null,
             confirmedAt: newStatus === "subscribed" ? now : null,
           });
+          // Track new subscription for workflow events (non-pending only)
+          if (newStatus === "subscribed") {
+            topicChanges.push({
+              topicId,
+              topicName: topicInfo.name,
+              action: "subscribed",
+            });
+          }
         }
       } else if (existing && existing.status !== "unsubscribed") {
         // Unsubscribe (from subscribed or pending)
@@ -164,6 +209,11 @@ export async function updatePreferences(
               eq(contactTopic.topicId, topicId)
             )
           );
+        topicChanges.push({
+          topicId,
+          topicName: topicInfo.name,
+          action: "unsubscribed",
+        });
       }
     }
 
@@ -182,6 +232,9 @@ export async function updatePreferences(
           )
         );
     }
+
+    // Emit workflow events for topic changes (fire-and-forget)
+    await emitPreferenceEvents(token, contactId, organizationId, topicChanges);
 
     revalidatePath(`/preferences/${token}`);
     return {
@@ -211,6 +264,21 @@ export async function unsubscribeGlobally(
   try {
     const now = new Date();
 
+    // Get all subscribed topics before unsubscribing (for event emission)
+    const subscribedTopics = await db
+      .select({
+        topicId: contactTopic.topicId,
+        topicName: topic.name,
+      })
+      .from(contactTopic)
+      .innerJoin(topic, eq(topic.id, contactTopic.topicId))
+      .where(
+        and(
+          eq(contactTopic.contactId, contactId),
+          eq(contactTopic.status, "subscribed")
+        )
+      );
+
     // Update contact to unsubscribed
     await db
       .update(contact)
@@ -233,6 +301,14 @@ export async function unsubscribeGlobally(
         unsubscribedAt: now,
       })
       .where(eq(contactTopic.contactId, contactId));
+
+    // Emit workflow events for all previously subscribed topics
+    const changes: TopicChange[] = subscribedTopics.map((t) => ({
+      topicId: t.topicId,
+      topicName: t.topicName,
+      action: "unsubscribed" as const,
+    }));
+    await emitPreferenceEvents(token, contactId, organizationId, changes);
 
     revalidatePath(`/preferences/${token}`);
     return { success: true };

@@ -15,6 +15,7 @@ import { connectionsRoutes } from "./routes/connections";
 import { contactsRoutes } from "./routes/contacts";
 import { eventsRoutes } from "./routes/events";
 import { healthRoutes } from "./routes/health";
+import { preferenceEventsRoutes } from "./routes/preference-events";
 import { templatesSyncRoutes } from "./routes/templates-sync";
 import { toolsRoutes } from "./routes/tools";
 import { unsubscribeRoutes } from "./routes/unsubscribe";
@@ -136,6 +137,7 @@ export const app = new Elysia()
   .use(workflowsRoutes)
   .use(webhooksRoutes)
   .use(unsubscribeRoutes)
+  .use(preferenceEventsRoutes)
   .use(templatesSyncRoutes)
   .use(workflowsSyncRoutes)
   .use(toolsRoutes)

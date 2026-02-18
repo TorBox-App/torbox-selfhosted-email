@@ -19,7 +19,11 @@ import {
 } from "vitest";
 
 import { generateUnsubscribeToken } from "@/lib/unsubscribe-token";
-import { resendConfirmation, updatePreferences } from "../actions";
+import {
+  resendConfirmation,
+  unsubscribeGlobally,
+  updatePreferences,
+} from "../actions";
 
 // Mock next/cache
 vi.mock("next/cache", () => ({
@@ -717,5 +721,221 @@ describe("Organization isolation", () => {
     const otherContactTopicIds = otherContactSubs.map((s) => s.topicId);
     expect(otherContactTopicIds).not.toContain(testRegularTopic.id);
     expect(otherContactTopicIds).not.toContain(testDoubleOptInTopic.id);
+  });
+});
+
+describe("Workflow event emission from preference center", () => {
+  const apiCalls: Array<{ url: string; options: RequestInit }> = [];
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(async () => {
+    apiCalls.length = 0;
+
+    // Intercept only API calls to preference-events, pass everything else through
+    vi.stubGlobal(
+      "fetch",
+      (url: string | URL | Request, options?: RequestInit) => {
+        const urlStr =
+          typeof url === "string"
+            ? url
+            : url instanceof URL
+              ? url.toString()
+              : url.url;
+        if (urlStr.includes("/v1/preference-events")) {
+          apiCalls.push({ url: urlStr, options: options || {} });
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ success: true, subscribed: 0, unsubscribed: 0 }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              }
+            )
+          );
+        }
+        return originalFetch(url as RequestInfo, options);
+      }
+    );
+
+    // Clean up contact topics
+    await db
+      .delete(contactTopic)
+      .where(eq(contactTopic.contactId, testContact.id));
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("should call API to emit topic_unsubscribed when a topic is unsubscribed", async () => {
+    // First subscribe to a topic
+    await db.insert(contactTopic).values({
+      contactId: testContact.id,
+      topicId: testRegularTopic.id,
+      status: "subscribed",
+      subscribedAt: new Date(),
+      confirmedAt: new Date(),
+    });
+
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    await updatePreferences(token, testContact.id, testOrganization.id, {
+      [testRegularTopic.id]: false,
+    });
+
+    // Verify API was called with unsubscribe event
+    expect(apiCalls.length).toBeGreaterThanOrEqual(1);
+    const body = JSON.parse(apiCalls[0].options.body as string);
+    expect(body.token).toBe(token);
+    expect(body.contactId).toBe(testContact.id);
+    expect(body.organizationId).toBe(testOrganization.id);
+    expect(body.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          topicId: testRegularTopic.id,
+          topicName: testRegularTopic.name,
+          action: "unsubscribed",
+        }),
+      ])
+    );
+  });
+
+  it("should call API to emit topic_subscribed for non-pending subscriptions", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    await updatePreferences(token, testContact.id, testOrganization.id, {
+      [testRegularTopic.id]: true,
+    });
+
+    expect(apiCalls.length).toBeGreaterThanOrEqual(1);
+    const body = JSON.parse(apiCalls[0].options.body as string);
+    expect(body.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          topicId: testRegularTopic.id,
+          topicName: testRegularTopic.name,
+          action: "subscribed",
+        }),
+      ])
+    );
+  });
+
+  it("should NOT emit topic_subscribed for pending (double opt-in) subscriptions", async () => {
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    await updatePreferences(token, testContact.id, testOrganization.id, {
+      [testDoubleOptInTopic.id]: true,
+    });
+
+    // If API was called, verify no "subscribed" action for the double opt-in topic
+    if (apiCalls.length > 0) {
+      const body = JSON.parse(apiCalls[0].options.body as string);
+      const subscribedChanges = body.changes.filter(
+        (c: { action: string; topicId: string }) =>
+          c.action === "subscribed" && c.topicId === testDoubleOptInTopic.id
+      );
+      expect(subscribedChanges).toHaveLength(0);
+    }
+  });
+
+  it("should call API to emit topic_unsubscribed for all topics on global unsubscribe", async () => {
+    // Subscribe to multiple topics first
+    await db.insert(contactTopic).values([
+      {
+        contactId: testContact.id,
+        topicId: testRegularTopic.id,
+        status: "subscribed",
+        subscribedAt: new Date(),
+        confirmedAt: new Date(),
+      },
+      {
+        contactId: testContact.id,
+        topicId: testDoubleOptInTopic.id,
+        status: "subscribed",
+        subscribedAt: new Date(),
+        confirmedAt: new Date(),
+      },
+    ]);
+
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    await unsubscribeGlobally(token, testContact.id, testOrganization.id);
+
+    expect(apiCalls.length).toBeGreaterThanOrEqual(1);
+    const body = JSON.parse(apiCalls[0].options.body as string);
+    expect(body.changes.length).toBeGreaterThanOrEqual(2);
+
+    const unsubChanges = body.changes.filter(
+      (c: { action: string }) => c.action === "unsubscribed"
+    );
+    expect(unsubChanges.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("should not fail preference update when event emission fails", async () => {
+    // Override fetch to fail for API calls
+    vi.stubGlobal(
+      "fetch",
+      (url: string | URL | Request, options?: RequestInit) => {
+        const urlStr =
+          typeof url === "string"
+            ? url
+            : url instanceof URL
+              ? url.toString()
+              : url.url;
+        if (urlStr.includes("/v1/preference-events")) {
+          return Promise.reject(new Error("Network error"));
+        }
+        return originalFetch(url as RequestInfo, options);
+      }
+    );
+
+    await db.insert(contactTopic).values({
+      contactId: testContact.id,
+      topicId: testRegularTopic.id,
+      status: "subscribed",
+      subscribedAt: new Date(),
+      confirmedAt: new Date(),
+    });
+
+    const token = await generateUnsubscribeToken(
+      testContact.id,
+      testOrganization.id
+    );
+
+    // The action should still succeed even if event emission fails
+    const result = await updatePreferences(
+      token,
+      testContact.id,
+      testOrganization.id,
+      { [testRegularTopic.id]: false }
+    );
+
+    expect(result.success).toBe(true);
+
+    // Verify the DB change still happened
+    const [subscription] = await db
+      .select()
+      .from(contactTopic)
+      .where(
+        and(
+          eq(contactTopic.contactId, testContact.id),
+          eq(contactTopic.topicId, testRegularTopic.id)
+        )
+      )
+      .limit(1);
+
+    expect(subscription.status).toBe("unsubscribed");
   });
 });
