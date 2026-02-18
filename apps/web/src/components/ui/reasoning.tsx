@@ -2,7 +2,7 @@
 
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible";
 import { Brain, ChevronDown } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   createContext,
   type ReactNode,
@@ -65,6 +65,7 @@ function Reasoning({
 
 function ReasoningTrigger({ className }: { className?: string }) {
   const { isOpen, isStreaming } = useReasoningContext();
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <CollapsiblePrimitive.Trigger
@@ -86,7 +87,7 @@ function ReasoningTrigger({ className }: { className?: string }) {
       </span>
       <motion.div
         animate={{ rotate: isOpen ? 180 : 0 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
       >
         <ChevronDown className="h-3.5 w-3.5" />
       </motion.div>
@@ -102,6 +103,7 @@ function ReasoningContent({
   className?: string;
 }) {
   const { isOpen, isStreaming } = useReasoningContext();
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <AnimatePresence initial={false}>
@@ -112,7 +114,11 @@ function ReasoningContent({
             className="overflow-hidden"
             exit={{ height: 0, opacity: 0 }}
             initial={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={
+              shouldReduceMotion
+                ? { duration: 0 }
+                : { duration: 0.2, ease: "easeInOut" }
+            }
           >
             <div
               className={cn(

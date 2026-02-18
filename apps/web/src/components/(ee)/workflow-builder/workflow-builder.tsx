@@ -2,7 +2,7 @@
 
 import type { Workflow, WorkflowStep, WorkflowTransition } from "@wraps/db";
 import { ReactFlowProvider } from "@xyflow/react";
-import { useEffect } from "react";
+import { useRef } from "react";
 import { AIDesignPanel } from "./ai-design-panel";
 import { useSettingsPanelOpen, useWorkflowStore } from "./use-workflow-store";
 import { WorkflowCanvas } from "./workflow-canvas";
@@ -64,18 +64,19 @@ export function WorkflowBuilder({
   );
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
 
-  useEffect(() => {
+  // Initialize store with workflow data once (and on workflow ID change)
+  const initializedForId = useRef<string | null>(null);
+  if (initializedForId.current !== workflow.id) {
+    initializedForId.current = workflow.id;
     setWorkflow(workflow);
-  }, [workflow, setWorkflow]);
 
-  // Auto-open settings panel for new workflows (only trigger node, no transitions)
-  useEffect(() => {
+    // Auto-open settings panel for new workflows (only trigger node, no transitions)
     const steps = workflow.steps as WorkflowStep[];
     const transitions = workflow.transitions as WorkflowTransition[];
     if (steps.length <= 1 && transitions.length === 0) {
       setSettingsPanelOpen(true);
     }
-  }, [workflow.id, setSettingsPanelOpen]);
+  }
 
   return (
     <ReactFlowProvider>

@@ -2,7 +2,12 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import { CheckIcon, CopyIcon } from "lucide-react";
-import { AnimatePresence, type HTMLMotionProps, motion } from "motion/react";
+import {
+  AnimatePresence,
+  type HTMLMotionProps,
+  motion,
+  useReducedMotion,
+} from "motion/react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -61,6 +66,7 @@ function CopyButton({
   ...props
 }: CopyButtonProps) {
   const [localIsCopied, setLocalIsCopied] = React.useState(isCopied ?? false);
+  const shouldReduceMotion = useReducedMotion();
   const Icon = localIsCopied ? CheckIcon : CopyIcon;
 
   React.useEffect(() => {
@@ -107,8 +113,8 @@ function CopyButton({
       className={cn(buttonVariants({ variant, size }), className)}
       data-slot="copy-button"
       onClick={handleCopy}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
+      whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
       {...(props as any)}
     >
       <AnimatePresence mode="wait">
@@ -118,7 +124,7 @@ function CopyButton({
           exit={{ scale: 0 }}
           initial={{ scale: 0 }}
           key={localIsCopied ? "check" : "copy"}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.15 }}
         >
           <Icon />
         </motion.span>

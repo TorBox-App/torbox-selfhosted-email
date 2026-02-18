@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronsUpDown, Pencil } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +36,7 @@ export function ConditionFieldCombobox({
   const [open, setOpen] = useState(false);
   const [customMode, setCustomMode] = useState(false);
   const [customValue, setCustomValue] = useState("");
+  const listboxId = useId();
 
   const { data: propertyKeys = [] } = usePropertyKeys(organizationId);
 
@@ -80,6 +81,8 @@ export function ConditionFieldCombobox({
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
         <Button
+          aria-controls={listboxId}
+          aria-expanded={open}
           className="w-full justify-between font-normal"
           role="combobox"
           variant="outline"
@@ -96,7 +99,7 @@ export function ConditionFieldCombobox({
       >
         <Command>
           <CommandInput placeholder="Search fields..." />
-          <CommandList>
+          <CommandList id={listboxId}>
             <CommandEmpty>No fields found.</CommandEmpty>
 
             {CONDITION_FIELD_GROUPS.map((group) => (

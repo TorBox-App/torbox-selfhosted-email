@@ -181,18 +181,23 @@ function TabsTrigger({
     return () => registerTrigger(value, null);
   }, [value, registerTrigger]);
 
+  const isActive = activeValue === value;
+
   return (
     <MotionHighlightItem className="size-full" value={value}>
       <motion.button
+        aria-controls={`tabpanel-${value}`}
+        aria-selected={isActive}
         className={cn(
           "z-[1] inline-flex size-full cursor-pointer items-center justify-center whitespace-nowrap rounded-sm px-2 py-1 font-medium text-sm ring-offset-background transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground",
           className
         )}
         data-slot="tabs-trigger"
-        data-state={activeValue === value ? "active" : "inactive"}
+        data-state={isActive ? "active" : "inactive"}
         onClick={() => handleValueChange(value)}
         ref={localRef}
         role="tab"
+        tabIndex={isActive ? 0 : -1}
         whileTap={{ scale: 0.95 }}
         {...(props as any)}
       >
@@ -277,6 +282,7 @@ function TabsContent({
       className={cn("overflow-hidden", className)}
       data-slot="tabs-content"
       exit={{ filter: "blur(0px)" }}
+      id={`tabpanel-${value}`}
       initial={{ filter: "blur(0px)" }}
       role="tabpanel"
       transition={{ type: "spring", stiffness: 200, damping: 25 }}

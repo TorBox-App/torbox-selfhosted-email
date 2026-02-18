@@ -183,6 +183,7 @@ export function AIChatPanel({
       }
     },
     onFinish: () => {
+      setIsGenerating(false);
       // Refetch usage after successful request to update warning state
       queryClient.invalidateQueries({ queryKey: getAiUsageQueryKey(orgSlug) });
     },
@@ -193,6 +194,7 @@ export function AIChatPanel({
   // Throttle AI requests to max 1 every 5 seconds to prevent spam
   const sendMessageThrottler = useThrottler(
     (text: string) => {
+      setIsGenerating(true);
       sendMessage({ text });
     },
     {
@@ -201,11 +203,6 @@ export function AIChatPanel({
       trailing: false, // Don't execute after wait period if called during cooldown
     }
   );
-
-  // Track generating state
-  useEffect(() => {
-    setIsGenerating(isLoading);
-  }, [isLoading, setIsGenerating]);
 
   // Show warning toast when approaching limit (only once per session)
   useEffect(() => {

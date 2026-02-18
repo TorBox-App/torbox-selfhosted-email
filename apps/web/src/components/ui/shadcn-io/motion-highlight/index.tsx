@@ -1,6 +1,11 @@
 "use client";
 
-import { AnimatePresence, motion, type Transition } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  type Transition,
+  useReducedMotion,
+} from "motion/react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -30,6 +35,7 @@ type MotionHighlightContextType<T extends string> = {
   enabled?: boolean;
   exitDelay?: number;
   forceUpdateBounds?: boolean;
+  shouldReduceMotion?: boolean;
 };
 
 const MotionHighlightContext = React.createContext<
@@ -199,6 +205,7 @@ function MotionHighlight<T extends string>({
   }, [value, defaultValue]);
 
   const id = React.useId();
+  const shouldReduceMotion = useReducedMotion() ?? false;
 
   React.useEffect(() => {
     if (mode !== "parent") {
@@ -255,10 +262,12 @@ function MotionHighlight<T extends string>({
                   data-slot="motion-highlight"
                   exit={{
                     opacity: 0,
-                    transition: {
-                      ...transition,
-                      delay: (transition?.delay ?? 0) + (exitDelay ?? 0),
-                    },
+                    transition: shouldReduceMotion
+                      ? { duration: 0 }
+                      : {
+                          ...transition,
+                          delay: (transition?.delay ?? 0) + (exitDelay ?? 0),
+                        },
                   }}
                   initial={{
                     top: boundsState.top,
@@ -267,7 +276,7 @@ function MotionHighlight<T extends string>({
                     height: boundsState.height,
                     opacity: 0,
                   }}
-                  transition={transition}
+                  transition={shouldReduceMotion ? { duration: 0 } : transition}
                 />
               )}
             </AnimatePresence>
@@ -308,6 +317,7 @@ function MotionHighlight<T extends string>({
         setActiveClassName: setActiveClassNameState,
         forceUpdateBounds: (props as ParentModeMotionHighlightProps)
           ?.forceUpdateBounds,
+        shouldReduceMotion,
       }}
     >
       {enabled
@@ -397,6 +407,7 @@ function MotionHighlightItem({
     exitDelay: contextExitDelay,
     forceUpdateBounds: contextForceUpdateBounds,
     setActiveClassName,
+    shouldReduceMotion: contextReducedMotion,
   } = useMotionHighlight();
 
   const element = children as React.ReactElement<ExtendedChildProps>;
@@ -404,7 +415,10 @@ function MotionHighlightItem({
     id ?? value ?? element.props?.["data-value"] ?? element.props?.id ?? itemId;
   const isActive = activeValue === childValue;
   const isDisabled = disabled === undefined ? contextDisabled : disabled;
-  const itemTransition = transition ?? contextTransition;
+  const baseTransition = transition ?? contextTransition;
+  const itemTransition = contextReducedMotion
+    ? { duration: 0 }
+    : baseTransition;
 
   const localRef = React.useRef<HTMLDivElement>(null);
   React.useImperativeHandle(

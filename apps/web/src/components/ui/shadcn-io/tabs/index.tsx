@@ -1,6 +1,11 @@
 "use client";
 
-import { type HTMLMotionProps, motion, type Transition } from "motion/react";
+import {
+  type HTMLMotionProps,
+  motion,
+  type Transition,
+  useReducedMotion,
+} from "motion/react";
 import * as React from "react";
 import {
   MotionHighlight,
@@ -169,6 +174,7 @@ function TabsTrigger({
   ...props
 }: TabsTriggerProps) {
   const { activeValue, handleValueChange, registerTrigger } = useTabs();
+  const shouldReduceMotion = useReducedMotion();
 
   const localRef = React.useRef<HTMLButtonElement | null>(null);
   React.useImperativeHandle(
@@ -181,19 +187,24 @@ function TabsTrigger({
     return () => registerTrigger(value, null);
   }, [value, registerTrigger]);
 
+  const isActive = activeValue === value;
+
   return (
     <MotionHighlightItem className="size-full" value={value}>
       <motion.button
+        aria-controls={`tabpanel-${value}`}
+        aria-selected={isActive}
         className={cn(
           "z-10 inline-flex size-full cursor-pointer items-center justify-center whitespace-nowrap rounded-sm px-2 py-1 font-medium text-sm ring-offset-background transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground",
           className
         )}
         data-slot="tabs-trigger"
-        data-state={activeValue === value ? "active" : "inactive"}
+        data-state={isActive ? "active" : "inactive"}
         onClick={() => handleValueChange(value)}
         ref={localRef}
         role="tab"
-        whileTap={{ scale: 0.95 }}
+        tabIndex={isActive ? 0 : -1}
+        whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
         {...(props as any)}
       >
         {children}
@@ -220,6 +231,7 @@ function TabsContents({
   ...props
 }: TabsContentsProps) {
   const { activeValue } = useTabs();
+  const shouldReduceMotion = useReducedMotion();
   const childrenArray = React.Children.toArray(children);
   const activeIndex = childrenArray.findIndex(
     (child): child is React.ReactElement<{ value: string }> =>
@@ -239,7 +251,7 @@ function TabsContents({
       <motion.div
         animate={{ x: `${activeIndex * -100}%` }}
         className="-mx-2 flex"
-        transition={transition}
+        transition={shouldReduceMotion ? { duration: 0 } : transition}
       >
         {childrenArray.map((child, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: Fixed order children array
@@ -264,6 +276,7 @@ function TabsContent({
   ...props
 }: TabsContentProps) {
   const { activeValue } = useTabs();
+  const shouldReduceMotion = useReducedMotion();
   const isActive = activeValue === value;
   return (
     <motion.div
@@ -271,9 +284,14 @@ function TabsContent({
       className={cn("overflow-hidden", className)}
       data-slot="tabs-content"
       exit={{ opacity: 1 }}
+      id={`tabpanel-${value}`}
       initial={{ opacity: 1 }}
       role="tabpanel"
-      transition={{ type: "spring", stiffness: 200, damping: 25 }}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : { type: "spring", stiffness: 200, damping: 25 }
+      }
       {...(props as any)}
     >
       {children}

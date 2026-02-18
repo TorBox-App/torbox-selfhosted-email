@@ -64,7 +64,6 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
   const [originalCode, setOriginalCode] = useState<string>("");
   const [editedCode, setEditedCode] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
   const [copied, setCopied] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
@@ -149,16 +148,13 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
     };
   }, [tiptapEditor?.state.doc, format, tiptapEditor, isEditing, previewText]);
 
-  // Track changes
-  useEffect(() => {
-    setHasChanges(editedCode !== originalCode);
-    setParseError(null);
-  }, [editedCode, originalCode]);
+  const hasChanges = editedCode !== originalCode;
 
   // Handle code changes in editor
   const handleCodeChange = (value: string | undefined) => {
     if (value !== undefined) {
       setEditedCode(value);
+      setParseError(null);
     }
   };
 
@@ -211,7 +207,6 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
 
         setIsEditing(false);
         setOriginalCode(editedCode);
-        setHasChanges(false);
         setIsApplying(false);
         toast.success(
           `${format === "react-email" ? "React Email" : format === "json" ? "JSON" : "HTML"} changes applied to editor`
@@ -229,7 +224,6 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
   const discardChanges = () => {
     setEditedCode(originalCode);
     setIsEditing(false);
-    setHasChanges(false);
     setParseError(null);
   };
 

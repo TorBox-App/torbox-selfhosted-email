@@ -10,7 +10,6 @@ import {
   Mail,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,28 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-type ArchivedEmail = {
-  messageId: string;
-  from: string;
-  to: string;
-  subject: string;
-  html?: string;
-  text?: string;
-  attachments: Array<{
-    filename?: string;
-    contentType: string;
-    size: number;
-  }>;
-  headers: Record<string, string | string[] | undefined>;
-  timestamp: Date;
-  metadata?: {
-    senderIp?: string;
-    tlsProtocol?: string;
-    tlsCipherSuite?: string;
-    senderHostname?: string;
-  };
-};
+import { useArchivedEmail } from "@/hooks/use-archived-email";
 
 type EmailArchiveViewerProps = {
   messageId: string;
@@ -57,63 +35,13 @@ export function EmailArchiveViewer({
   orgSlug,
   archivingEnabled,
 }: EmailArchiveViewerProps) {
-  const [archivedEmail, setArchivedEmail] = useState<ArchivedEmail | null>(
-    null
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: archivedEmail,
+    isLoading: loading,
+    error: queryError,
+  } = useArchivedEmail(orgSlug, messageId, archivingEnabled);
 
-  useEffect(() => {
-    const handleNotFound = () => {
-      setArchivedEmail(null);
-      setLoading(false);
-    };
-
-    const handleError = (err: unknown) => {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      setError(errorMessage);
-      console.error("Error fetching archived email:", err);
-    };
-
-    async function fetchArchivedEmail() {
-      if (!archivingEnabled) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const encodedId = encodeURIComponent(messageId);
-        const response = await fetch(
-          `/api/${orgSlug}/emails/${encodedId}/archive`
-        );
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            handleNotFound();
-            return;
-          }
-          throw new Error(
-            `Failed to fetch archived email: ${response.statusText}`
-          );
-        }
-
-        const data = await response.json();
-        setArchivedEmail({
-          ...data,
-          timestamp: new Date(data.timestamp),
-        });
-      } catch (err) {
-        handleError(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchArchivedEmail();
-  }, [messageId, orgSlug, archivingEnabled]);
+  const error = queryError?.message ?? null;
 
   // Not enabled - show premium upgrade message
   if (!archivingEnabled) {
