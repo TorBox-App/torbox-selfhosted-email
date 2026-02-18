@@ -24,7 +24,8 @@ import {
   applyNodeChanges,
   reconnectEdge,
 } from "@xyflow/react";
-import { create } from "zustand";
+import { create, useStore } from "zustand";
+import { temporal } from "zundo";
 import {
   type ValidationError,
   type ValidationResult,
@@ -820,7 +821,9 @@ function getDefaultName(type: WorkflowStepType): string {
 // STORE IMPLEMENTATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
+export const useWorkflowStore = create<WorkflowStoreState>()(
+  temporal(
+    (set, get) => ({
   // Initial state
   workflow: null,
   isDirty: false,
@@ -847,6 +850,9 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
       isDirty: false,
       selectedNodeId: null,
     });
+
+    // Clear undo/redo history on workflow load (fresh start)
+    useWorkflowStore.temporal.getState().clear();
   },
 
   setNodes: (nodes) => {
@@ -1169,7 +1175,19 @@ export const useWorkflowStore = create<WorkflowStoreState>((set, get) => ({
     // Run validation on the new flow
     get().runValidation();
   },
-}));
+}),
+    {
+      partialize: (state) => ({
+        nodes: state.nodes,
+        edges: state.edges,
+      }),
+      equality: (pastState, currentState) =>
+        pastState.nodes === currentState.nodes &&
+        pastState.edges === currentState.edges,
+      limit: 50,
+    },
+  ),
+);
 
 /**
  * Map validation errors from primitive cascade step IDs back to
@@ -1248,6 +1266,39 @@ export const useNodeValidation = (nodeId: string) => {
 
   return { isValid: !hasError, errorMessage: errorMessage || undefined };
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UNDO/REDO
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Handle undo/redo keyboard events.
+ * Accepts a plain key descriptor (not DOM-specific) for testability.
+ * Wire this to `onKeyDown` in the canvas component.
+ */
+export function handleUndoRedo(event: {
+  key: string;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+}) {
+  const mod = event.metaKey || event.ctrlKey;
+  if (!mod) return;
+
+  if (event.key === "z" && event.shiftKey) {
+    useWorkflowStore.temporal.getState().redo();
+  } else if (event.key === "z") {
+    useWorkflowStore.temporal.getState().undo();
+  } else if (event.key === "y") {
+    useWorkflowStore.temporal.getState().redo();
+  }
+}
+
+export const useCanUndo = () =>
+  useStore(useWorkflowStore.temporal, (state) => state.pastStates.length > 0);
+
+export const useCanRedo = () =>
+  useStore(useWorkflowStore.temporal, (state) => state.futureStates.length > 0);
 
 // Re-export validation types for convenience
 export type {

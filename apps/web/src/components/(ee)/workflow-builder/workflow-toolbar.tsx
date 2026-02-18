@@ -8,8 +8,10 @@ import {
   Pause,
   Pencil,
   Play,
+  Redo2,
   Save,
   Settings,
+  Undo2,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -35,6 +37,8 @@ import {
 } from "@/components/ui/tooltip";
 import { EnableReadinessDialog } from "./enable-readiness-dialog";
 import {
+  useCanRedo,
+  useCanUndo,
   useIsDirty,
   useIsSaving,
   useNodeCount,
@@ -76,6 +80,12 @@ export function WorkflowToolbar({
   const toggleSettingsPanel = useWorkflowStore(
     (state) => state.toggleSettingsPanel
   );
+
+  // Undo/redo state
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+  const handleUndo = () => useWorkflowStore.temporal.getState().undo();
+  const handleRedo = () => useWorkflowStore.temporal.getState().redo();
 
   // Readiness dialog state
   const [readinessDialogOpen, setReadinessDialogOpen] = useState(false);
@@ -306,6 +316,38 @@ export function WorkflowToolbar({
             </Tooltip>
           </TooltipProvider>
         )}
+
+        {/* Undo/Redo buttons */}
+        <TooltipProvider>
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  disabled={!canUndo}
+                  onClick={handleUndo}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Undo (⌘Z)</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  disabled={!canRedo}
+                  onClick={handleRedo}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Redo (⌘⇧Z)</TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
 
         {/* Settings button */}
         <TooltipProvider>

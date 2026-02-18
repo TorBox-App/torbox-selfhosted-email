@@ -34,7 +34,7 @@ import { TriggerNode } from "./nodes/trigger-node";
 import { UpdateContactNode } from "./nodes/update-contact-node";
 import { WaitForEmailEngagementNode } from "./nodes/wait-for-email-engagement-node";
 import { WaitForEventNode } from "./nodes/wait-for-event-node";
-import { useWorkflowStore } from "./use-workflow-store";
+import { handleUndoRedo, useWorkflowStore } from "./use-workflow-store";
 
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
@@ -157,8 +157,16 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
     [reactFlowInstance, addNode]
   );
 
+  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+    handleUndoRedo(e);
+  }, []);
+
   return (
-    <div className="relative h-full flex-1" ref={reactFlowWrapper}>
+    <div
+      className="relative h-full flex-1"
+      onKeyDown={onKeyDown}
+      ref={reactFlowWrapper}
+    >
       <ReactFlow
         defaultEdgeOptions={{
           type: "labeled",
