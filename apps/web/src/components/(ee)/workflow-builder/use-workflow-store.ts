@@ -24,8 +24,8 @@ import {
   applyNodeChanges,
   reconnectEdge,
 } from "@xyflow/react";
-import { create, useStore } from "zustand";
 import { temporal } from "zundo";
+import { create, useStore } from "zustand";
 import {
   type ValidationError,
   type ValidationResult,
@@ -824,358 +824,361 @@ function getDefaultName(type: WorkflowStepType): string {
 export const useWorkflowStore = create<WorkflowStoreState>()(
   temporal(
     (set, get) => ({
-  // Initial state
-  workflow: null,
-  isDirty: false,
-  isSaving: false,
-  nodes: [],
-  edges: [],
-  canvasViewport: { x: 0, y: 0, zoom: 1 },
-  selectedNodeId: null,
-  settingsPanelOpen: false,
-  validationResult: null,
-
-  // Actions
-  setWorkflow: (workflow) => {
-    const steps = workflow.steps as WorkflowStep[];
-    const transitions = workflow.transitions as WorkflowTransition[];
-    const nodes = stepsToNodes(steps);
-    const savedViewport = workflow.canvasViewport as CanvasViewport | null;
-
-    set({
-      workflow,
-      nodes,
-      edges: transitionsToEdges(transitions, steps),
-      canvasViewport: savedViewport ?? { x: 0, y: 0, zoom: 1 },
+      // Initial state
+      workflow: null,
       isDirty: false,
+      isSaving: false,
+      nodes: [],
+      edges: [],
+      canvasViewport: { x: 0, y: 0, zoom: 1 },
       selectedNodeId: null,
-    });
+      settingsPanelOpen: false,
+      validationResult: null,
 
-    // Clear undo/redo history on workflow load (fresh start)
-    useWorkflowStore.temporal.getState().clear();
-  },
+      // Actions
+      setWorkflow: (workflow) => {
+        const steps = workflow.steps as WorkflowStep[];
+        const transitions = workflow.transitions as WorkflowTransition[];
+        const nodes = stepsToNodes(steps);
+        const savedViewport = workflow.canvasViewport as CanvasViewport | null;
 
-  setNodes: (nodes) => {
-    set({ nodes, isDirty: true });
-  },
+        set({
+          workflow,
+          nodes,
+          edges: transitionsToEdges(transitions, steps),
+          canvasViewport: savedViewport ?? { x: 0, y: 0, zoom: 1 },
+          isDirty: false,
+          selectedNodeId: null,
+        });
 
-  setEdges: (edges) => {
-    set({ edges, isDirty: true });
-  },
-
-  onNodesChange: (changes) => {
-    // Only mark dirty for meaningful changes (position, remove, add)
-    // Skip selection and dimension changes which happen during initialization
-    const meaningfulChange = changes.some(
-      (change) =>
-        change.type === "position" ||
-        change.type === "remove" ||
-        change.type === "add"
-    );
-
-    set((state) => ({
-      nodes: applyNodeChanges(changes, state.nodes),
-      isDirty: meaningfulChange ? true : state.isDirty,
-    }));
-  },
-
-  onEdgesChange: (changes) => {
-    // Only mark dirty for meaningful changes (remove, add)
-    // Skip selection changes
-    const meaningfulChange = changes.some(
-      (change) => change.type === "remove" || change.type === "add"
-    );
-
-    set((state) => ({
-      edges: applyEdgeChanges(changes, state.edges),
-      isDirty: meaningfulChange ? true : state.isDirty,
-    }));
-  },
-
-  onConnect: (connection) => {
-    set((state) => ({
-      edges: addEdge(
-        {
-          ...connection,
-          id: crypto.randomUUID(),
-        },
-        state.edges
-      ),
-      isDirty: true,
-    }));
-  },
-
-  onReconnect: (oldEdge, newConnection) => {
-    set((state) => ({
-      edges: reconnectEdge(oldEdge, newConnection, state.edges),
-      isDirty: true,
-    }));
-  },
-
-  addNode: (type, position, config) => {
-    // Cascade: create a single self-contained node
-    if (type === "cascade") {
-      const id = crypto.randomUUID();
-      const newNode: WorkflowNode = {
-        id,
-        type: "cascade",
-        position,
-        data: {
-          stepId: id,
-          type: "cascade",
-          name: "Cascade",
-          config: { type: "exit" } as WorkflowStepConfig, // placeholder
-          isValid: true,
-          cascadeChannels: [
-            {
-              id: crypto.randomUUID(),
-              type: "email",
-              templateId: "",
-              engagement: "opened",
-              waitDuration: 259_200, // 3 days
-            },
-            { id: crypto.randomUUID(), type: "sms", body: "" },
-          ],
-        },
-      };
-
-      set((state) => ({
-        nodes: [...state.nodes, newNode],
-        isDirty: true,
-        selectedNodeId: id,
-      }));
-
-      return id;
-    }
-
-    // Normal node addition
-    const id = crypto.randomUUID();
-    const defaultConfig = getDefaultConfig(type);
-    const mergedConfig = config
-      ? { ...defaultConfig, ...config }
-      : defaultConfig;
-
-    const newNode: WorkflowNode = {
-      id,
-      type,
-      position,
-      data: {
-        stepId: id,
-        type,
-        name: getDefaultName(type),
-        config: mergedConfig as WorkflowStepConfig,
-        isValid: true,
+        // Clear undo/redo history on workflow load (fresh start)
+        useWorkflowStore.temporal.getState().clear();
       },
-    };
 
-    set((state) => ({
-      nodes: [...state.nodes, newNode],
-      isDirty: true,
-      selectedNodeId: id,
-    }));
+      setNodes: (nodes) => {
+        set({ nodes, isDirty: true });
+      },
 
-    return id;
-  },
+      setEdges: (edges) => {
+        set({ edges, isDirty: true });
+      },
 
-  updateNodeConfig: (nodeId, config) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                config: {
-                  ...node.data.config,
-                  ...config,
-                } as WorkflowStepConfig,
-              },
-            }
-          : node
-      ),
-      isDirty: true,
-    }));
-  },
-
-  updateNodeName: (nodeId, name) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                name,
-              },
-            }
-          : node
-      ),
-      isDirty: true,
-    }));
-  },
-
-  updateCascadeChannels: (nodeId, channels) => {
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                cascadeChannels: channels,
-              },
-            }
-          : node
-      ),
-      isDirty: true,
-    }));
-  },
-
-  deleteNode: (nodeId) => {
-    set((state) => ({
-      nodes: state.nodes.filter((node) => node.id !== nodeId),
-      edges: state.edges.filter(
-        (edge) => edge.source !== nodeId && edge.target !== nodeId
-      ),
-      selectedNodeId:
-        state.selectedNodeId === nodeId ? null : state.selectedNodeId,
-      isDirty: true,
-    }));
-  },
-
-  selectNode: (nodeId) => {
-    set({ selectedNodeId: nodeId });
-  },
-
-  toggleSettingsPanel: () => {
-    set((state) => ({ settingsPanelOpen: !state.settingsPanelOpen }));
-  },
-
-  setSettingsPanelOpen: (open) => {
-    set({ settingsPanelOpen: open });
-  },
-
-  setCanvasViewport: (viewport) => {
-    set({ canvasViewport: viewport });
-  },
-
-  updateWorkflowSettings: (settings) => {
-    set((state) => {
-      if (!state.workflow) {
-        return state;
-      }
-
-      return {
-        workflow: {
-          ...state.workflow,
-          ...settings,
-        },
-        isDirty: true,
-      };
-    });
-  },
-
-  getWorkflowDefinition: () => {
-    const state = get();
-    const { steps, internalTransitions, cascadeMappings } = nodesToSteps(
-      state.nodes
-    );
-    const { transitions: externalTransitions, engagedExternalCascades } =
-      edgesToTransitions(state.edges, cascadeMappings);
-
-    // Filter out internal condition→exit transitions for cascades that
-    // have externally-routed engaged edges (the exit node is replaced)
-    const filteredInternal = filterInternalTransitions(
-      internalTransitions,
-      cascadeMappings,
-      engagedExternalCascades
-    );
-
-    return {
-      steps: filterEngagedExitSteps(
-        steps,
-        cascadeMappings,
-        engagedExternalCascades
-      ),
-      transitions: [...filteredInternal, ...externalTransitions],
-      canvasViewport: state.canvasViewport,
-    };
-  },
-
-  setIsSaving: (isSaving) => {
-    set({ isSaving });
-  },
-
-  markClean: () => {
-    set({ isDirty: false });
-  },
-
-  updateWorkflowAfterSave: (workflow) => {
-    // Only update workflow metadata, don't touch nodes/edges
-    // This prevents React Flow from firing change events that would set isDirty=true
-    set({ workflow, isDirty: false });
-  },
-
-  runValidation: () => {
-    const state = get();
-    const { steps, internalTransitions, cascadeMappings } = nodesToSteps(
-      state.nodes
-    );
-    const { transitions: externalTransitions } = edgesToTransitions(
-      state.edges,
-      cascadeMappings
-    );
-    const result = validateWorkflow(steps, [
-      ...internalTransitions,
-      ...externalTransitions,
-    ]);
-
-    // Map validation errors from primitive cascade step IDs back to cascade node IDs
-    const mappedResult = mapCascadeValidationErrors(result, cascadeMappings);
-
-    // Validate cascade channel configs (template/body required, wait durations, etc.)
-    for (const node of state.nodes) {
-      if (node.type === "cascade" && node.data.cascadeChannels) {
-        const cascadeErrors = validateCascadeChannels(
-          node.id,
-          node.data.cascadeChannels
+      onNodesChange: (changes) => {
+        // Only mark dirty for meaningful changes (position, remove, add)
+        // Skip selection and dimension changes which happen during initialization
+        const meaningfulChange = changes.some(
+          (change) =>
+            change.type === "position" ||
+            change.type === "remove" ||
+            change.type === "add"
         );
-        mappedResult.errors.push(...cascadeErrors);
-        for (const error of cascadeErrors) {
-          if (error.nodeId) {
-            const existing =
-              mappedResult.errorsByNodeId.get(error.nodeId) || [];
-            existing.push(error);
-            mappedResult.errorsByNodeId.set(error.nodeId, existing);
+
+        set((state) => ({
+          nodes: applyNodeChanges(changes, state.nodes),
+          isDirty: meaningfulChange ? true : state.isDirty,
+        }));
+      },
+
+      onEdgesChange: (changes) => {
+        // Only mark dirty for meaningful changes (remove, add)
+        // Skip selection changes
+        const meaningfulChange = changes.some(
+          (change) => change.type === "remove" || change.type === "add"
+        );
+
+        set((state) => ({
+          edges: applyEdgeChanges(changes, state.edges),
+          isDirty: meaningfulChange ? true : state.isDirty,
+        }));
+      },
+
+      onConnect: (connection) => {
+        set((state) => ({
+          edges: addEdge(
+            {
+              ...connection,
+              id: crypto.randomUUID(),
+            },
+            state.edges
+          ),
+          isDirty: true,
+        }));
+      },
+
+      onReconnect: (oldEdge, newConnection) => {
+        set((state) => ({
+          edges: reconnectEdge(oldEdge, newConnection, state.edges),
+          isDirty: true,
+        }));
+      },
+
+      addNode: (type, position, config) => {
+        // Cascade: create a single self-contained node
+        if (type === "cascade") {
+          const id = crypto.randomUUID();
+          const newNode: WorkflowNode = {
+            id,
+            type: "cascade",
+            position,
+            data: {
+              stepId: id,
+              type: "cascade",
+              name: "Cascade",
+              config: { type: "exit" } as WorkflowStepConfig, // placeholder
+              isValid: true,
+              cascadeChannels: [
+                {
+                  id: crypto.randomUUID(),
+                  type: "email",
+                  templateId: "",
+                  engagement: "opened",
+                  waitDuration: 259_200, // 3 days
+                },
+                { id: crypto.randomUUID(), type: "sms", body: "" },
+              ],
+            },
+          };
+
+          set((state) => ({
+            nodes: [...state.nodes, newNode],
+            isDirty: true,
+            selectedNodeId: id,
+          }));
+
+          return id;
+        }
+
+        // Normal node addition
+        const id = crypto.randomUUID();
+        const defaultConfig = getDefaultConfig(type);
+        const mergedConfig = config
+          ? { ...defaultConfig, ...config }
+          : defaultConfig;
+
+        const newNode: WorkflowNode = {
+          id,
+          type,
+          position,
+          data: {
+            stepId: id,
+            type,
+            name: getDefaultName(type),
+            config: mergedConfig as WorkflowStepConfig,
+            isValid: true,
+          },
+        };
+
+        set((state) => ({
+          nodes: [...state.nodes, newNode],
+          isDirty: true,
+          selectedNodeId: id,
+        }));
+
+        return id;
+      },
+
+      updateNodeConfig: (nodeId, config) => {
+        set((state) => ({
+          nodes: state.nodes.map((node) =>
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    config: {
+                      ...node.data.config,
+                      ...config,
+                    } as WorkflowStepConfig,
+                  },
+                }
+              : node
+          ),
+          isDirty: true,
+        }));
+      },
+
+      updateNodeName: (nodeId, name) => {
+        set((state) => ({
+          nodes: state.nodes.map((node) =>
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    name,
+                  },
+                }
+              : node
+          ),
+          isDirty: true,
+        }));
+      },
+
+      updateCascadeChannels: (nodeId, channels) => {
+        set((state) => ({
+          nodes: state.nodes.map((node) =>
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    cascadeChannels: channels,
+                  },
+                }
+              : node
+          ),
+          isDirty: true,
+        }));
+      },
+
+      deleteNode: (nodeId) => {
+        set((state) => ({
+          nodes: state.nodes.filter((node) => node.id !== nodeId),
+          edges: state.edges.filter(
+            (edge) => edge.source !== nodeId && edge.target !== nodeId
+          ),
+          selectedNodeId:
+            state.selectedNodeId === nodeId ? null : state.selectedNodeId,
+          isDirty: true,
+        }));
+      },
+
+      selectNode: (nodeId) => {
+        set({ selectedNodeId: nodeId });
+      },
+
+      toggleSettingsPanel: () => {
+        set((state) => ({ settingsPanelOpen: !state.settingsPanelOpen }));
+      },
+
+      setSettingsPanelOpen: (open) => {
+        set({ settingsPanelOpen: open });
+      },
+
+      setCanvasViewport: (viewport) => {
+        set({ canvasViewport: viewport });
+      },
+
+      updateWorkflowSettings: (settings) => {
+        set((state) => {
+          if (!state.workflow) {
+            return state;
+          }
+
+          return {
+            workflow: {
+              ...state.workflow,
+              ...settings,
+            },
+            isDirty: true,
+          };
+        });
+      },
+
+      getWorkflowDefinition: () => {
+        const state = get();
+        const { steps, internalTransitions, cascadeMappings } = nodesToSteps(
+          state.nodes
+        );
+        const { transitions: externalTransitions, engagedExternalCascades } =
+          edgesToTransitions(state.edges, cascadeMappings);
+
+        // Filter out internal condition→exit transitions for cascades that
+        // have externally-routed engaged edges (the exit node is replaced)
+        const filteredInternal = filterInternalTransitions(
+          internalTransitions,
+          cascadeMappings,
+          engagedExternalCascades
+        );
+
+        return {
+          steps: filterEngagedExitSteps(
+            steps,
+            cascadeMappings,
+            engagedExternalCascades
+          ),
+          transitions: [...filteredInternal, ...externalTransitions],
+          canvasViewport: state.canvasViewport,
+        };
+      },
+
+      setIsSaving: (isSaving) => {
+        set({ isSaving });
+      },
+
+      markClean: () => {
+        set({ isDirty: false });
+      },
+
+      updateWorkflowAfterSave: (workflow) => {
+        // Only update workflow metadata, don't touch nodes/edges
+        // This prevents React Flow from firing change events that would set isDirty=true
+        set({ workflow, isDirty: false });
+      },
+
+      runValidation: () => {
+        const state = get();
+        const { steps, internalTransitions, cascadeMappings } = nodesToSteps(
+          state.nodes
+        );
+        const { transitions: externalTransitions } = edgesToTransitions(
+          state.edges,
+          cascadeMappings
+        );
+        const result = validateWorkflow(steps, [
+          ...internalTransitions,
+          ...externalTransitions,
+        ]);
+
+        // Map validation errors from primitive cascade step IDs back to cascade node IDs
+        const mappedResult = mapCascadeValidationErrors(
+          result,
+          cascadeMappings
+        );
+
+        // Validate cascade channel configs (template/body required, wait durations, etc.)
+        for (const node of state.nodes) {
+          if (node.type === "cascade" && node.data.cascadeChannels) {
+            const cascadeErrors = validateCascadeChannels(
+              node.id,
+              node.data.cascadeChannels
+            );
+            mappedResult.errors.push(...cascadeErrors);
+            for (const error of cascadeErrors) {
+              if (error.nodeId) {
+                const existing =
+                  mappedResult.errorsByNodeId.get(error.nodeId) || [];
+                existing.push(error);
+                mappedResult.errorsByNodeId.set(error.nodeId, existing);
+              }
+            }
+            if (cascadeErrors.some((e) => e.severity === "error")) {
+              mappedResult.isValid = false;
+            }
           }
         }
-        if (cascadeErrors.some((e) => e.severity === "error")) {
-          mappedResult.isValid = false;
-        }
-      }
-    }
 
-    // Only update validationResult, don't touch nodes to avoid infinite loops
-    set({ validationResult: mappedResult });
-    return mappedResult;
-  },
+        // Only update validationResult, don't touch nodes to avoid infinite loops
+        set({ validationResult: mappedResult });
+        return mappedResult;
+      },
 
-  applyAIFlow: (steps, transitions) => {
-    // Convert AI-generated steps and transitions to React Flow nodes and edges
-    const nodes = stepsToNodes(steps);
-    const edges = transitionsToEdges(transitions, steps);
+      applyAIFlow: (steps, transitions) => {
+        // Convert AI-generated steps and transitions to React Flow nodes and edges
+        const nodes = stepsToNodes(steps);
+        const edges = transitionsToEdges(transitions, steps);
 
-    set({
-      nodes,
-      edges,
-      isDirty: true,
-      selectedNodeId: null,
-    });
+        set({
+          nodes,
+          edges,
+          isDirty: true,
+          selectedNodeId: null,
+        });
 
-    // Run validation on the new flow
-    get().runValidation();
-  },
-}),
+        // Run validation on the new flow
+        get().runValidation();
+      },
+    }),
     {
       partialize: (state) => ({
         nodes: state.nodes,
@@ -1185,8 +1188,8 @@ export const useWorkflowStore = create<WorkflowStoreState>()(
         pastState.nodes === currentState.nodes &&
         pastState.edges === currentState.edges,
       limit: 50,
-    },
-  ),
+    }
+  )
 );
 
 /**
