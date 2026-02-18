@@ -10,6 +10,7 @@ import { contact, db, eq, workflow } from "@wraps/db";
 import { and, inArray } from "drizzle-orm";
 import { t } from "elysia";
 
+import { log } from "../../lib/logger";
 import {
   type AuthContext,
   createAuthenticatedRoutes,
@@ -134,9 +135,10 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
         eventData: data || {},
       });
 
-      console.log(
-        `[workflows] API trigger: workflow ${wf.id} for contact ${contactRecord.id}`
-      );
+      log.info("Workflow API trigger", {
+        workflowId: wf.id,
+        contactId: contactRecord.id,
+      });
 
       return {
         success: true,
@@ -315,9 +317,10 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
       // Batch enqueue all trigger jobs
       await enqueueWorkflowStepBatch(jobs);
 
-      console.log(
-        `[workflows] API batch trigger: workflow ${wf.id} for ${results.triggered} contacts`
-      );
+      log.info("Workflow API batch trigger", {
+        workflowId: wf.id,
+        triggered: results.triggered,
+      });
 
       return {
         success: results.errors.length === 0,

@@ -6,6 +6,9 @@
 import { createPlatformClient } from "@wraps.dev/client";
 import { type NextRequest, NextResponse } from "next/server";
 
+const structuredLog = (msg: string, data?: Record<string, unknown>) =>
+  console.info(JSON.stringify({ msg, ...data }));
+
 /**
  * Validate email format
  */
@@ -111,7 +114,9 @@ export async function POST(request: NextRequest) {
           : "";
 
       if (errorMessage.includes("already exists")) {
-        console.log(`Contact exists, subscribing to topic: ${normalizedEmail}`);
+        structuredLog("Waitlist: existing contact subscribing", {
+          email: normalizedEmail,
+        });
 
         // Find existing contact by email
         const searchResult = await client.GET("/v1/contacts/", {
@@ -154,9 +159,10 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        console.log(
-          `Existing contact subscribed to waitlist: ${normalizedEmail} for ${product}`
-        );
+        structuredLog("Waitlist: existing contact subscribed", {
+          email: normalizedEmail,
+          product,
+        });
         return NextResponse.json({ success: true }, { headers: corsHeaders });
       }
 
@@ -173,7 +179,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Contact added to waitlist: ${normalizedEmail} for ${product}`);
+    structuredLog("Waitlist: new contact added", {
+      email: normalizedEmail,
+      product,
+    });
     return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
     console.error("Failed to add to waitlist:", error);

@@ -8,6 +8,7 @@
 import { contactEvent, db, eq, workflow, workflowExecution } from "@wraps/db";
 import { and, inArray, sql } from "drizzle-orm";
 
+import { log } from "../lib/logger";
 import {
   evaluateConditionAsync,
   getSegmentsByIds,
@@ -48,10 +49,10 @@ export async function emitWorkflowEvent(params: {
       });
     } catch (error) {
       // Log but don't fail the event emission
-      console.error(
-        `[workflow-events] Failed to record event "${eventName}" for contact ${contactId}:`,
-        error
-      );
+      log.error("Failed to record workflow event", error, {
+        eventName,
+        contactId,
+      });
     }
   }
 
@@ -80,9 +81,11 @@ export async function emitWorkflowEvent(params: {
   }
 
   if (matchingWorkflows.length > 0) {
-    console.log(
-      `[workflow-events] Event "${eventName}" triggered ${matchingWorkflows.length} workflow(s) for contact ${contactId}`
-    );
+    log.info("Workflow event triggered workflows", {
+      eventName,
+      contactId,
+      workflowCount: matchingWorkflows.length,
+    });
   }
 
   return { workflowsTriggered: matchingWorkflows.length };
@@ -177,9 +180,9 @@ export async function emitTopicSubscribed(params: {
   }
 
   if (matchingByTrigger.length > 0) {
-    console.log(
-      `[workflow-events] topic_subscribed trigger matched ${matchingByTrigger.length} workflow(s)`
-    );
+    log.info("topic_subscribed trigger matched workflows", {
+      workflowCount: matchingByTrigger.length,
+    });
   }
 
   return {
@@ -247,9 +250,9 @@ export async function emitTopicUnsubscribed(params: {
   }
 
   if (matchingByTrigger.length > 0) {
-    console.log(
-      `[workflow-events] topic_unsubscribed trigger matched ${matchingByTrigger.length} workflow(s)`
-    );
+    log.info("topic_unsubscribed trigger matched workflows", {
+      workflowCount: matchingByTrigger.length,
+    });
   }
 
   return {
@@ -343,15 +346,16 @@ export async function checkSegmentEntry(params: {
           },
         });
 
-        console.log(
-          `[workflow-events] Segment entry: contact ${params.contactId} entered segment ${config.segmentId}, triggered workflow ${wf.id}`
-        );
+        log.info("Segment entry: triggered workflow", {
+          contactId: params.contactId,
+          segmentId: config.segmentId,
+          workflowId: wf.id,
+        });
       }
     } catch (error) {
-      console.error(
-        `[workflow-events] Error checking segment ${config.segmentId}:`,
-        error
-      );
+      log.error("Error checking segment entry", error, {
+        segmentId: config.segmentId,
+      });
     }
   }
 
@@ -468,15 +472,16 @@ export async function checkSegmentExit(params: {
           },
         });
 
-        console.log(
-          `[workflow-events] Segment exit: contact ${params.contactId} exited segment ${config.segmentId}, triggered workflow ${wf.id}`
-        );
+        log.info("Segment exit: triggered workflow", {
+          contactId: params.contactId,
+          segmentId: config.segmentId,
+          workflowId: wf.id,
+        });
       }
     } catch (error) {
-      console.error(
-        `[workflow-events] Error checking segment exit ${config.segmentId}:`,
-        error
-      );
+      log.error("Error checking segment exit", error, {
+        segmentId: config.segmentId,
+      });
     }
   }
 
@@ -546,10 +551,9 @@ export async function cancelExecutionsForTopicUnsubscribe(params: {
     if (execution.delaySchedulerName) {
       schedulerCleanups.push(
         deleteScheduledStep(execution.delaySchedulerName).catch((err) => {
-          console.error(
-            `[workflow-events] Failed to delete delay scheduler ${execution.delaySchedulerName}:`,
-            err
-          );
+          log.error("Failed to delete delay scheduler", err, {
+            schedulerName: execution.delaySchedulerName,
+          });
         })
       );
     }
@@ -557,10 +561,9 @@ export async function cancelExecutionsForTopicUnsubscribe(params: {
     if (execution.waitTimeoutSchedulerName) {
       schedulerCleanups.push(
         deleteScheduledStep(execution.waitTimeoutSchedulerName).catch((err) => {
-          console.error(
-            `[workflow-events] Failed to delete timeout scheduler ${execution.waitTimeoutSchedulerName}:`,
-            err
-          );
+          log.error("Failed to delete timeout scheduler", err, {
+            schedulerName: execution.waitTimeoutSchedulerName,
+          });
         })
       );
     }
@@ -597,9 +600,11 @@ export async function cancelExecutionsForTopicUnsubscribe(params: {
     )
   );
 
-  console.log(
-    `[workflow-events] Cancelled ${activeExecutions.length} execution(s) for contact ${contactId} unsubscribing from topic ${topicId}`
-  );
+  log.info("Workflow: cancelled executions for topic unsubscribe", {
+    contactId,
+    topicId,
+    count: activeExecutions.length,
+  });
 
   return { executionsCancelled: activeExecutions.length };
 }

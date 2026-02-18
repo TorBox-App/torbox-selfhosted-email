@@ -20,6 +20,9 @@ import { WrapsEmail } from "@wraps.dev/email";
 import { generateTopicConfirmationEmail } from "../emails/topic-confirmation";
 import { generateConfirmationUrl } from "./confirmation-token";
 
+const structuredLog = (msg: string, data?: Record<string, unknown>) =>
+  console.info(JSON.stringify({ msg, ...data }));
+
 /**
  * Substitute variables in template content.
  * Variables are in the format {{variableName}} or {{object.property}}
@@ -144,9 +147,11 @@ export async function sendTopicConfirmationEmail(
     organizationId,
   } = params;
 
-  console.log(
-    `[CONFIRMATION_EMAIL] Starting for contact=${contactId} topic=${topicId} org=${organizationId}`
-  );
+  structuredLog("Confirmation email: starting", {
+    contactId,
+    topicId,
+    organizationId,
+  });
 
   // Get organization name, AWS account, and topic settings in parallel
   const [[org], [account], [settings]] = await Promise.all([
@@ -174,9 +179,11 @@ export async function sendTopicConfirmationEmail(
       .limit(1),
   ]);
 
-  console.log(
-    `[CONFIRMATION_EMAIL] Loaded org=${org?.name} account=${account?.id || "NONE"} settings=${settings?.organizationId || "NONE"}`
-  );
+  structuredLog("Confirmation email: config loaded", {
+    orgName: org?.name,
+    accountId: account?.id,
+    hasSettings: !!settings,
+  });
 
   if (!account) {
     console.error(
@@ -210,9 +217,9 @@ export async function sendTopicConfirmationEmail(
       .limit(1);
 
     if (customTemplate?.compiledHtml && customTemplate?.subject) {
-      console.log(
-        `[CONFIRMATION_EMAIL] Using custom template ${settings.confirmationTemplateId}`
-      );
+      structuredLog("Confirmation email: using custom template", {
+        templateId: settings.confirmationTemplateId,
+      });
 
       // Define variables for substitution
       const variables: Record<string, string | undefined> = {
@@ -229,8 +236,9 @@ export async function sendTopicConfirmationEmail(
         ? substituteVariables(customTemplate.compiledText, variables)
         : htmlToPlainText(html);
     } else {
-      console.log(
-        `[CONFIRMATION_EMAIL] Custom template ${settings.confirmationTemplateId} not found or not compiled, using default`
+      structuredLog(
+        "Confirmation email: custom template not found, using default",
+        { templateId: settings.confirmationTemplateId }
       );
       const defaultEmail = generateTopicConfirmationEmail({
         url: confirmationUrl,
@@ -256,9 +264,10 @@ export async function sendTopicConfirmationEmail(
   }
 
   // Assume role to get SES credentials
-  console.log(
-    `[CONFIRMATION_EMAIL] Assuming role ${account.roleArn} in ${account.region}`
-  );
+  structuredLog("Confirmation email: assuming role", {
+    roleArn: account.roleArn,
+    region: account.region,
+  });
 
   const stsClient = new STSClient({
     region: account.region,
@@ -286,8 +295,6 @@ export async function sendTopicConfirmationEmail(
     throw new Error("Failed to assume AWS role");
   }
 
-  console.log("[CONFIRMATION_EMAIL] Role assumed successfully");
-
   const credentials = {
     accessKeyId: assumeRoleResponse.Credentials.AccessKeyId!,
     secretAccessKey: assumeRoleResponse.Credentials.SecretAccessKey!,
@@ -306,7 +313,6 @@ export async function sendTopicConfirmationEmail(
     replyToAddress = settings.confirmationReplyToEmail || undefined;
   } else {
     // Need to list identities to auto-detect verified domain
-    console.log("[CONFIRMATION_EMAIL] Listing email identities");
     const sesClient = new SESv2Client({
       region: account.region,
       credentials,
@@ -317,9 +323,9 @@ export async function sendTopicConfirmationEmail(
         PageSize: 100,
       })
     );
-    console.log(
-      `[CONFIRMATION_EMAIL] Found ${identitiesResponse.EmailIdentities?.length || 0} identities`
-    );
+    structuredLog("Confirmation email: found identities", {
+      count: identitiesResponse.EmailIdentities?.length || 0,
+    });
 
     const verifiedDomain = identitiesResponse.EmailIdentities?.find(
       (identity) =>
@@ -345,9 +351,10 @@ export async function sendTopicConfirmationEmail(
     credentials,
   });
 
-  console.log(
-    `[CONFIRMATION_EMAIL] Sending email from=${fromName ? `${fromName} <${fromAddress}>` : fromAddress} to=${contactEmail}`
-  );
+  structuredLog("Confirmation email: sending", {
+    from: fromAddress,
+    to: contactEmail,
+  });
 
   try {
     const result = await wrapsEmail.send({
@@ -359,9 +366,7 @@ export async function sendTopicConfirmationEmail(
       replyTo: replyToAddress,
     });
 
-    console.log(
-      `[CONFIRMATION_EMAIL] Email sent successfully, messageId=${result.messageId}`
-    );
+    structuredLog("Confirmation email: sent", { messageId: result.messageId });
     return true;
   } catch (error) {
     console.error("[CONFIRMATION_EMAIL] Failed to send email:", error);

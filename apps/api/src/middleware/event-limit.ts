@@ -13,6 +13,7 @@
 import { and, db, eq, eventUsageMonthly, sqlExpr as sql } from "@wraps/db";
 import { Elysia } from "elysia";
 
+import { log } from "../lib/logger";
 import type { AuthContext } from "./auth";
 
 // Tracked event limits per plan (tracked events per month)
@@ -151,9 +152,12 @@ export const eventLimitMiddleware = new Elysia({ name: "event-limit" }).derive(
 
       // Log warning at 100% (but don't block)
       if (currentUsage >= limit) {
-        console.log(
-          `[EVENT-LIMIT] Organization ${organizationId} at ${percentUsed}% of event limit (${currentUsage}/${limit})`
-        );
+        log.warn("Event limit reached", {
+          organizationId,
+          percentUsed,
+          currentUsage,
+          limit,
+        });
       }
     } catch (error) {
       // Re-throw limit exceeded errors

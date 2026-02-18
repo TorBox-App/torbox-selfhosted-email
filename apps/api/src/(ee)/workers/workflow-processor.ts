@@ -40,6 +40,7 @@ import { and, sql } from "drizzle-orm";
 import Handlebars from "handlebars";
 
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
+import { log } from "../../lib/logger";
 import { generateUnsubscribeToken } from "../../lib/unsubscribe-token";
 
 import { getCredentials } from "../../services/credentials";
@@ -79,7 +80,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
           break;
       }
     } catch (error) {
-      console.error("Error processing workflow job:", error);
+      log.error("Error processing workflow job", error);
       throw error; // Re-throw to let SQS retry
     }
   }
@@ -107,7 +108,7 @@ async function triggerWorkflow(
     .limit(1);
 
   if (!wf || wf.status !== "enabled") {
-    console.log(`Workflow ${workflowId} not found or not enabled`);
+    log.warn("Workflow not found or not enabled", { workflowId });
     return;
   }
 
@@ -128,9 +129,11 @@ async function triggerWorkflow(
     });
 
     if (recentlyCompleted) {
-      console.log(
-        `Skipping - contact ${contactId} completed workflow recently (reentry delay: ${wf.reentryDelaySeconds}s)`
-      );
+      log.info("Workflow skip: reentry delay", {
+        contactId,
+        workflowId,
+        reentryDelaySeconds: wf.reentryDelaySeconds,
+      });
       await incrementDroppedExecutions(workflowId);
       return;
     }
@@ -150,9 +153,10 @@ async function triggerWorkflow(
     });
 
     if (recentExecution) {
-      console.log(
-        `Skipping - contact ${contactId} in cooldown period (${wf.contactCooldownSeconds}s)`
-      );
+      log.info("Workflow skip: contact cooldown", {
+        contactId,
+        cooldownSeconds: wf.contactCooldownSeconds,
+      });
       await incrementDroppedExecutions(workflowId);
       return;
     }
@@ -171,9 +175,11 @@ async function triggerWorkflow(
       );
 
     if (count >= wf.maxConcurrentExecutions) {
-      console.log(
-        `Skipping - workflow ${workflowId} at max concurrent executions (${count}/${wf.maxConcurrentExecutions})`
-      );
+      log.info("Workflow skip: max concurrent", {
+        workflowId,
+        current: count,
+        max: wf.maxConcurrentExecutions,
+      });
       await incrementDroppedExecutions(workflowId);
       return;
     }
@@ -185,7 +191,7 @@ async function triggerWorkflow(
 
   const triggerStep = steps.find((s) => s.type === "trigger");
   if (!triggerStep) {
-    console.error(`No trigger step found in workflow ${workflowId}`);
+    log.error("No trigger step found in workflow", undefined, { workflowId });
     return;
   }
 
@@ -196,7 +202,7 @@ async function triggerWorkflow(
   const firstStepId = firstTransition?.toStepId;
 
   if (!firstStepId) {
-    console.log(`No steps after trigger in workflow ${workflowId}`);
+    log.warn("Workflow has no steps after trigger", { workflowId });
     return;
   }
 
@@ -220,9 +226,7 @@ async function triggerWorkflow(
 
   // If no row returned, a conflict occurred (contact already in workflow)
   if (!execution) {
-    console.log(
-      `Skipping - contact ${contactId} already in workflow ${workflowId} (conflict)`
-    );
+    log.info("Workflow skip: duplicate execution", { contactId, workflowId });
     await incrementDroppedExecutions(workflowId);
     return;
   }
@@ -275,31 +279,32 @@ async function processScheduleTrigger(
     .limit(1);
 
   if (!wf) {
-    console.log(
-      `[schedule-trigger] Workflow ${workflowId} not found, chain stops`
-    );
+    log.info("Schedule trigger: workflow not found, chain stops", {
+      workflowId,
+    });
     return;
   }
 
   if (wf.status !== "enabled" || wf.triggerType !== "schedule") {
-    console.log(
-      `[schedule-trigger] Workflow ${workflowId} is ${wf.status}/${wf.triggerType}, chain stops`
-    );
+    log.info("Schedule trigger: workflow not eligible, chain stops", {
+      workflowId,
+      status: wf.status,
+      triggerType: wf.triggerType,
+    });
     return;
   }
 
   const config = wf.triggerConfig as TriggerConfig;
 
   if (!config.schedule) {
-    console.log(
-      `[schedule-trigger] Workflow ${workflowId} has no cron schedule, chain stops`
-    );
+    log.info("Schedule trigger: no cron schedule, chain stops", { workflowId });
     return;
   }
 
-  console.log(
-    `[schedule-trigger] Processing workflow ${workflowId} "${wf.name}"`
-  );
+  log.info("Schedule trigger: processing workflow", {
+    workflowId,
+    workflowName: wf.name,
+  });
 
   // Get contacts to trigger for
   let contacts: { id: string }[];
@@ -320,9 +325,10 @@ async function processScheduleTrigger(
       .limit(MAX_CONTACTS_PER_TRIGGER);
   }
 
-  console.log(
-    `[schedule-trigger] Triggering workflow ${workflowId} for ${contacts.length} contacts`
-  );
+  log.info("Schedule trigger: triggering workflow for contacts", {
+    workflowId,
+    contactCount: contacts.length,
+  });
 
   // Batch enqueue trigger jobs for all contacts
   await enqueueWorkflowStepBatch(
@@ -353,9 +359,10 @@ async function processScheduleTrigger(
     timezone: config.timezone,
   });
 
-  console.log(
-    `[schedule-trigger] Complete. Triggered ${contacts.length} executions for workflow ${workflowId}, next schedule chained.`
-  );
+  log.info("Schedule trigger: complete, next schedule chained", {
+    workflowId,
+    executionsTriggered: contacts.length,
+  });
 }
 
 /**
@@ -382,9 +389,10 @@ async function getSegmentContacts(
     return [];
   }
 
-  console.log(
-    `[schedule-trigger] Evaluating segment ${segmentId} for ${allContacts.length} contacts`
-  );
+  log.info("Schedule trigger: evaluating segment", {
+    segmentId,
+    contactCount: allContacts.length,
+  });
 
   // Bulk evaluate all contacts against the segment (3 queries: segment + contacts + topics)
   const results = await evaluateContactsForSegment(
@@ -396,9 +404,10 @@ async function getSegmentContacts(
     (c) => results.get(c.id) === true
   );
 
-  console.log(
-    `[schedule-trigger] Found ${matchingContacts.length} contacts matching segment ${segmentId}`
-  );
+  log.info("Schedule trigger: segment evaluation complete", {
+    segmentId,
+    matchingCount: matchingContacts.length,
+  });
 
   return matchingContacts;
 }
@@ -413,12 +422,15 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
   });
 
   if (!execution) {
-    console.error(`Execution ${executionId} not found`);
+    log.error("Execution not found", undefined, { executionId });
     return;
   }
 
   if (execution.status === "cancelled" || execution.status === "completed") {
-    console.log(`Execution ${executionId} already ${execution.status}`);
+    log.info("Execution already completed", {
+      executionId,
+      status: execution.status,
+    });
     return;
   }
 
@@ -435,7 +447,9 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     .limit(1);
 
   if (!wf) {
-    console.error(`Workflow ${execution.workflowId} not found`);
+    log.error("Workflow not found", undefined, {
+      workflowId: execution.workflowId,
+    });
     return;
   }
 
@@ -452,7 +466,9 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     .limit(1);
 
   if (!contactRecord) {
-    console.error(`Contact ${execution.contactId} not found`);
+    log.error("Contact not found", undefined, {
+      contactId: execution.contactId,
+    });
     await failExecution(executionId, "Contact not found", stepId);
     return;
   }
@@ -461,7 +477,7 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
   const step = steps.find((s) => s.id === stepId);
 
   if (!step) {
-    console.error(`Step ${stepId} not found in workflow`);
+    log.error("Step not found in workflow", undefined, { stepId });
     await failExecution(executionId, `Step ${stepId} not found`, stepId);
     return;
   }
@@ -492,7 +508,7 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
 
   // If step was already completed, skip execution
   if (stepExec.status === "completed") {
-    console.log(`Step ${stepId} already executed for ${executionId}`);
+    log.info("Step already executed", { stepId, executionId });
     return;
   }
 
@@ -533,7 +549,7 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`Step ${stepId} failed:`, error);
+    log.error("Step failed", error, { stepId, executionId });
 
     await db
       .update(workflowStepExecution)
@@ -649,9 +665,9 @@ async function handleSendEmail(
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
   // Check contact has email
   if (!contactRecord.email) {
-    console.log(
-      `[workflow] Contact ${contactRecord.id} has no email, skipping`
-    );
+    log.info("Workflow: contact has no email, skipping", {
+      contactId: contactRecord.id,
+    });
     return {
       action: "next",
       data: {
@@ -668,9 +684,10 @@ async function handleSendEmail(
     contactRecord.emailStatus === "bounced" ||
     contactRecord.emailStatus === "complained"
   ) {
-    console.log(
-      `[workflow] Contact ${contactRecord.id} has email status ${contactRecord.emailStatus}, skipping`
-    );
+    log.info("Workflow: contact email suppressed, skipping", {
+      contactId: contactRecord.id,
+      emailStatus: contactRecord.emailStatus,
+    });
     return {
       action: "next",
       data: {
@@ -699,9 +716,9 @@ async function handleSendEmail(
     .limit(1);
 
   if (!wf?.awsAccountId) {
-    console.log(
-      `[workflow] Workflow ${execution.workflowId} has no AWS account configured, skipping email`
-    );
+    log.warn("Workflow: no AWS account configured", {
+      workflowId: execution.workflowId,
+    });
     return {
       action: "next",
       data: {
@@ -904,9 +921,10 @@ async function handleSendEmail(
       })
     );
 
-    console.log(
-      `[workflow] Sent email via SES template ${sesTemplateName} to ${contactRecord.email}`
-    );
+    log.info("Workflow: email sent via SES template", {
+      template: sesTemplateName,
+      to: contactRecord.email,
+    });
   } else {
     // Fallback: Apply variable substitution locally and send raw HTML
     const html = substituteVariables(tmpl.compiledHtml, replacementData, {
@@ -942,7 +960,7 @@ async function handleSendEmail(
       })
     );
 
-    console.log(`[workflow] Sent email via raw HTML to ${contactRecord.email}`);
+    log.info("Workflow: email sent via raw HTML", { to: contactRecord.email });
   }
 
   const messageId = result.MessageId ?? "";
@@ -1015,10 +1033,9 @@ export function substituteVariables(
     return template(data);
   } catch (error) {
     // If Handlebars fails, fall back to simple regex replacement
-    console.warn(
-      "[workflow] Handlebars compilation failed, using fallback:",
-      error
-    );
+    log.warn("Workflow: Handlebars compilation failed, using fallback", {
+      error: String(error),
+    });
     return text.replace(
       /\{\{\s*(?:contact\.)?([a-zA-Z0-9_]+)\s*\}\}/g,
       (_match, key) => {
@@ -1097,12 +1114,13 @@ async function autoPublishTemplate(
       })
       .where(eq(template.id, tmpl.id));
 
-    console.log(
-      `[workflow] Auto-published template ${tmpl.id} as ${sesTemplateName}`
-    );
+    log.info("Workflow: auto-published SES template", {
+      templateId: tmpl.id,
+      sesTemplateName,
+    });
     return sesTemplateName;
   } catch (error) {
-    console.error("[workflow] Auto-publish failed:", error);
+    log.error("Workflow: auto-publish failed", error);
     return null; // Fall back to raw HTML
   }
 }
@@ -1125,9 +1143,9 @@ async function handleSendSms(
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
   // Get the contact's phone number
   if (!contactRecord.phone) {
-    console.log(
-      `[workflow] Contact ${contactRecord.id} has no phone number, skipping SMS`
-    );
+    log.info("Workflow: contact has no phone, skipping SMS", {
+      contactId: contactRecord.id,
+    });
     return {
       action: "next",
       data: {
@@ -1140,9 +1158,10 @@ async function handleSendSms(
 
   // Validate phone number format (E.164)
   if (!isValidE164Phone(contactRecord.phone)) {
-    console.log(
-      `[workflow] Contact ${contactRecord.id} has invalid phone format: ${contactRecord.phone}, skipping SMS`
-    );
+    log.warn("Workflow: invalid phone format", {
+      contactId: contactRecord.id,
+      phone: contactRecord.phone,
+    });
     return {
       action: "next",
       data: {
@@ -1170,9 +1189,9 @@ async function handleSendSms(
     .limit(1);
 
   if (!wf?.awsAccountId) {
-    console.log(
-      `[workflow] Workflow ${execution.workflowId} has no AWS account configured, skipping SMS`
-    );
+    log.warn("Workflow: no AWS account configured for SMS", {
+      workflowId: execution.workflowId,
+    });
     return {
       action: "next",
       data: {
@@ -1210,7 +1229,7 @@ async function handleSendSms(
   // Build message body - use body from config or fetch from template
   const messageBody = config.body || "";
   if (!messageBody) {
-    console.log("[workflow] SMS step has no message body configured, skipping");
+    log.warn("Workflow: SMS step has no message body");
     return {
       action: "next",
       data: {
@@ -1235,9 +1254,10 @@ async function handleSendSms(
 
   const response = await smsClient.send(command);
 
-  console.log(
-    `[workflow] Sent SMS to ${contactRecord.phone}, messageId: ${response.MessageId}`
-  );
+  log.info("Workflow: SMS sent", {
+    to: contactRecord.phone,
+    messageId: response.MessageId,
+  });
 
   // Update contact SMS metrics
   await db
@@ -1456,7 +1476,7 @@ export function evaluateCondition(
         fieldValue === null || fieldValue === undefined || fieldValue === ""
       );
     default:
-      console.warn(`Unknown operator: ${operator}`);
+      log.warn("Unknown condition operator", { operator });
       return false;
   }
 }
@@ -1613,7 +1633,7 @@ async function handleWebhook(
       },
     };
   } catch (error) {
-    console.error("Webhook failed:", error);
+    log.error("Webhook failed", error);
     return {
       action: "next",
       data: {
@@ -1835,14 +1855,15 @@ async function resumeExecution(
   });
 
   if (!execution) {
-    console.error(`Execution ${executionId} not found`);
+    log.error("Execution not found", undefined, { executionId });
     return;
   }
 
   if (execution.status !== "waiting") {
-    console.log(
-      `Execution ${executionId} not in waiting state (${execution.status})`
-    );
+    log.warn("Execution not in waiting state", {
+      executionId,
+      status: execution.status,
+    });
     return;
   }
 
@@ -1859,7 +1880,9 @@ async function resumeExecution(
     .limit(1);
 
   if (!wf) {
-    console.error(`Workflow ${execution.workflowId} not found`);
+    log.error("Workflow not found", undefined, {
+      workflowId: execution.workflowId,
+    });
     return;
   }
 
@@ -1867,7 +1890,9 @@ async function resumeExecution(
   const currentStep = steps.find((s) => s.id === execution.currentStepId);
 
   if (!currentStep) {
-    console.error(`Current step ${execution.currentStepId} not found`);
+    log.error("Current step not found", undefined, {
+      stepId: execution.currentStepId,
+    });
     return;
   }
 

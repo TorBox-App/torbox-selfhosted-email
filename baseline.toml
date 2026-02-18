@@ -13,7 +13,7 @@
 [baseline]
 name = "wraps"
 include = ["**/*"]
-# extends = ["security", "ai-codegen"]
+extends = ["security"]
 exclude = [
   "**/node_modules/**",
   "**/dist/**",
@@ -36,7 +36,7 @@ path = "apps/website"
 
 
 # ══════════════════════════════════════════════
-# BANNED IMPORTS (replaces all 6 grit rules)
+# BANNED IMPORTS
 # ══════════════════════════════════════════════
 
 
@@ -372,5 +372,84 @@ suggest = "Prefix the resource name with wraps-email- or wraps-sms-"
 
 
 # ══════════════════════════════════════════════
-# TAILWIND DESIGN SYSTEM
+# PRESET OVER-RIDES (security preset)
 # ══════════════════════════════════════════════
+
+# Override security preset: console.log is legitimate in CLI, Lambda, API,
+# build scripts, and docs code examples. Only warn in dashboard UI code.
+[[rule]]
+id = "no-console-log"
+type = "banned-pattern"
+severity = "warning"
+pattern = "console\\.log"
+regex = true
+glob = "**/*.{ts,tsx}"
+exclude_glob = [
+  "packages/cli/**",
+  "packages/cdk/**",
+  "packages/console/**",
+  "packages/pulumi/**",
+  "**/scripts/**",
+  "**/*.config.*",
+  "**/*.test.*",
+  "**/__tests__/**",
+  "**/*.mjs",
+  "**/*.md",
+  "apps/api/src/lib/logger.ts",
+  "apps/website/src/app/docs/**",
+  "apps/website/src/app/blog/**",
+  "apps/website/src/app/inbound/**",
+  "apps/website/src/app/landing/**",
+]
+message = "Remove console.log before deploying — use a proper logger or remove debug output"
+
+# Override security preset: http:// URLs are legitimate in SVGs (xmlns),
+# DNSBL lookups, docs code examples, and localhost dev fallbacks
+[[rule]]
+id = "no-http-links"
+type = "banned-pattern"
+severity = "warning"
+pattern = "http://"
+glob = "**/*.{ts,tsx}"
+exclude_glob = [
+  "**/svgs/**",
+  "**/email-check/**",
+  "**/*-content.tsx",
+  "**/infrastructure/**",
+  "**/auth-client.ts",
+  "**/brand-kit/**",
+  "packages/auth/src/index.ts",
+  "**/scripts/**",
+  "**/console/**",
+  "packages/cli/**",
+  "apps/api/src/index.ts",
+  "apps/web/src/actions/members.ts",
+  "apps/website/src/app/landing/**",
+  "apps/website/src/app/blog/**",
+  "**/*.config.*",
+]
+message = "Insecure http:// URL — use https:// instead"
+
+# Override security preset: dangerouslySetInnerHTML used legitimately for
+# code syntax highlighting (docs/blog), email preview, and JSON-LD
+[[rule]]
+id = "no-dangerous-html"
+type = "ratchet"
+severity = "error"
+pattern = "dangerouslySetInnerHTML"
+max_count = 73
+glob = "**/*.{ts,tsx}"
+exclude_glob = ["**/node_modules/**"]
+message = "Reduce dangerouslySetInnerHTML usage — sanitize content or use safe alternatives (73 remaining, ratchet down)"
+
+# Override security preset: innerHTML used for asciinema cleanup and GTM injection
+[[rule]]
+id = "no-innerhtml"
+type = "ratchet"
+severity = "error"
+pattern = "\\.innerHTML"
+regex = true
+max_count = 4
+glob = "**/*.{ts,tsx}"
+exclude_glob = ["**/node_modules/**"]
+message = "Reduce innerHTML usage — use textContent or a sanitizer (4 remaining, ratchet down)"

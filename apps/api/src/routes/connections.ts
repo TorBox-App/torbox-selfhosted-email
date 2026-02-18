@@ -12,6 +12,7 @@ import { randomBytes } from "node:crypto";
 import { and, awsAccount, db, eq } from "@wraps/db";
 import { count } from "drizzle-orm";
 import { t } from "elysia";
+import { log } from "../lib/logger";
 import type { AuthContext } from "../middleware/auth";
 import { createAuthenticatedRoutes } from "../middleware/auth";
 
@@ -123,16 +124,12 @@ export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
         });
         connectionId = id;
 
-        console.log(
-          JSON.stringify({
-            event: "connection.created",
-            connectionId: id,
-            organizationId: authContext.organizationId,
-            accountId: body.accountId,
-            region: body.region,
-            timestamp: new Date().toISOString(),
-          })
-        );
+        log.info("Connection created", {
+          connectionId: id,
+          organizationId: authContext.organizationId,
+          accountId: body.accountId,
+          region: body.region,
+        });
       }
 
       ctx.set.status = existing ? 200 : 201;

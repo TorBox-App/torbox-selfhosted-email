@@ -6,6 +6,7 @@
  */
 
 import * as jose from "jose";
+import { log } from "./logger";
 
 // Token payload structure
 export type UnsubscribeTokenPayload = {
@@ -73,7 +74,7 @@ export async function verifyUnsubscribeToken(
       typeof payload.oid !== "string" ||
       payload.type !== "unsub"
     ) {
-      console.log("[UNSUBSCRIBE] Invalid token payload structure");
+      log.warn("Unsubscribe: invalid token payload structure");
       return null;
     }
 
@@ -85,11 +86,11 @@ export async function verifyUnsubscribeToken(
     };
   } catch (error) {
     if (error instanceof jose.errors.JWTExpired) {
-      console.log("[UNSUBSCRIBE] Token expired");
+      log.info("Unsubscribe: token expired");
     } else if (error instanceof jose.errors.JWTInvalid) {
-      console.log("[UNSUBSCRIBE] Invalid token");
+      log.warn("Unsubscribe: invalid token");
     } else {
-      console.log("[UNSUBSCRIBE] Token verification failed:", error);
+      log.error("Unsubscribe: token verification failed", error);
     }
     return null;
   }

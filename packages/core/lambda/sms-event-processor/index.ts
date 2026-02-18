@@ -3,6 +3,14 @@ import type { SQSEvent } from "aws-lambda";
 
 const dynamodb = new DynamoDBClient({});
 
+const log = (msg: string, data?: Record<string, unknown>) =>
+  console.info(JSON.stringify({ msg, ...data }));
+const logError = (
+  msg: string,
+  error: unknown,
+  data?: Record<string, unknown>
+) => console.error(JSON.stringify({ msg, error: String(error), ...data }));
+
 /**
  * Lambda handler for processing SMS events from SQS (via SNS)
  * Events come from AWS End User Messaging via SNS → SQS (raw message delivery)
@@ -20,8 +28,6 @@ const dynamodb = new DynamoDBClient({});
  * - TEXT_UNKNOWN: Unknown status
  */
 export async function handler(event: SQSEvent) {
-  console.log("Processing SMS event from SQS:", JSON.stringify(event, null, 2));
-
   const tableName = process.env.TABLE_NAME;
   if (!tableName) {
     throw new Error("TABLE_NAME environment variable not set");
@@ -51,12 +57,7 @@ export async function handler(event: SQSEvent) {
         ? new Date(detail.eventTimestamp).getTime()
         : Date.now();
 
-      console.log("Processing SMS event:", {
-        messageId,
-        eventType,
-        destinationNumber,
-        originationNumber,
-      });
+      log("Processing SMS event", { messageId, eventType });
 
       // Extract additional data based on event type
       let additionalData: Record<string, unknown> = {
@@ -127,13 +128,11 @@ export async function handler(event: SQSEvent) {
         })
       );
 
-      console.log(
-        `Stored ${eventType} event for message ${messageId}`,
-        additionalData
-      );
+      log("Stored SMS event", { eventType, messageId });
     } catch (error) {
-      console.error("Error processing record:", error);
-      console.error("Record:", JSON.stringify(record, null, 2));
+      logError("Error processing SMS record", error, {
+        recordId: record.messageId,
+      });
       // Don't throw - continue processing other records
     }
   }

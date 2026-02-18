@@ -150,8 +150,5 @@ const isLambda =
   !!process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.SST_DEV;
 
 if (!isLambda && process.env.NODE_ENV !== "production") {
-  app.listen(3002, () => {
-    console.log("Wraps API running at http://localhost:3002");
-    console.log("Swagger docs at http://localhost:3002/swagger");
-  });
+  app.listen(3002);
 }

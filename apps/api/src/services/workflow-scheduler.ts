@@ -14,6 +14,7 @@ import {
 } from "@aws-sdk/client-scheduler";
 import { Cron } from "croner";
 
+import { log } from "../lib/logger";
 import { formatScheduleExpression, type WorkflowJob } from "./workflow-queue";
 
 const scheduler = new SchedulerClient({});
@@ -53,9 +54,10 @@ export async function createNextWorkflowSchedule(params: {
   const nextRun = cron.nextRun();
 
   if (!nextRun) {
-    console.warn(
-      `[workflow-scheduler] No future run time for workflow ${workflowId} with cron "${cronExpression}". Chain ends.`
-    );
+    log.warn("Scheduler: no future run time, chain ends", {
+      workflowId,
+      cronExpression,
+    });
     return null;
   }
 
@@ -67,17 +69,20 @@ export async function createNextWorkflowSchedule(params: {
         "EventBridge Scheduler not configured for workflow schedules"
       );
     }
-    console.warn(
-      `[workflow-scheduler] Skipping schedule creation - config not set. Next run would be ${nextRun.toISOString()}`
-    );
+    log.warn("Scheduler: skipping schedule creation, config not set", {
+      workflowId,
+      nextRun: nextRun.toISOString(),
+    });
     return scheduleName;
   }
 
   const scheduleExpression = formatScheduleExpression(nextRun);
 
-  console.log(
-    `[workflow-scheduler] Creating schedule "${scheduleName}" for workflow ${workflowId} at ${nextRun.toISOString()}`
-  );
+  log.info("Scheduler: creating schedule", {
+    scheduleName,
+    workflowId,
+    nextRun: nextRun.toISOString(),
+  });
 
   await scheduler.send(
     new CreateScheduleCommand({
@@ -113,9 +118,7 @@ export async function deleteWorkflowSchedule(
 
   if (!SCHEDULER_ROLE_ARN) {
     if (!IS_PRODUCTION) {
-      console.warn(
-        "[workflow-scheduler] Skipping schedule deletion - config not set"
-      );
+      log.warn("Scheduler: skipping schedule deletion, config not set");
       return;
     }
     return;
@@ -128,9 +131,7 @@ export async function deleteWorkflowSchedule(
         GroupName: SCHEDULE_GROUP,
       })
     );
-    console.log(
-      `[workflow-scheduler] Deleted schedule "${scheduleName}" for workflow ${workflowId}`
-    );
+    log.info("Scheduler: deleted schedule", { scheduleName, workflowId });
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "ResourceNotFoundException") {
       // Schedule already fired and auto-deleted, or never existed

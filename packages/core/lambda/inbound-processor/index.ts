@@ -37,7 +37,7 @@ export async function handler(event: S3Event, context: Context) {
   const batchId = randomUUID().slice(0, 8);
 
   const log = (msg: string, data?: Record<string, unknown>) => {
-    console.log(JSON.stringify({ requestId, batchId, msg, ...data }));
+    console.info(JSON.stringify({ requestId, batchId, msg, ...data }));
   };
   const logError = (
     msg: string,

@@ -6,6 +6,14 @@ import { PostHog } from "posthog-node";
 import type Stripe from "stripe";
 import { stripeClient } from "./index";
 
+const structuredLog = (msg: string, data?: Record<string, unknown>) =>
+  console.info(JSON.stringify({ msg, ...data }));
+const structuredError = (
+  msg: string,
+  error?: unknown,
+  data?: Record<string, unknown>
+) => console.error(JSON.stringify({ msg, error: String(error), ...data }));
+
 // PostHog client for subscription tracking (lazy singleton)
 let posthogClient: PostHog | null = null;
 
@@ -90,9 +98,12 @@ export async function emitSubscriptionEvent(
     }
 
     if (data?.contactCreated) {
-      console.log(`Created contact for ${normalizedEmail}`);
+      structuredLog("Created contact", { email: normalizedEmail });
     }
-    console.log(`Emitted ${eventName} event for ${normalizedEmail}`);
+    structuredLog("Emitted subscription event", {
+      eventName,
+      email: normalizedEmail,
+    });
     return true;
   } catch (err) {
     console.error(`Error emitting ${eventName} event:`, err);
@@ -175,7 +186,7 @@ export async function handlePaymentFailed(
       : invoice.customer?.id;
 
   if (!customerId) {
-    console.error("Payment failed webhook: No customer ID found");
+    structuredError("Payment failed webhook: no customer ID");
     return { success: false, notifiedCount: 0 };
   }
 
@@ -186,21 +197,23 @@ export async function handlePaymentFailed(
   } = await getSubscriptionOrgAdmins({ stripeCustomerId: customerId });
 
   if (!sub) {
-    console.error(
-      `Payment failed webhook: No subscription found for customer ${customerId}`
-    );
+    structuredError("Payment failed webhook: no subscription", undefined, {
+      customerId,
+    });
     return { success: false, notifiedCount: 0 };
   }
 
   if (!org) {
-    console.error(
-      `Payment failed webhook: No organization found for ${sub.referenceId}`
-    );
+    structuredError("Payment failed webhook: no organization", undefined, {
+      referenceId: sub.referenceId,
+    });
     return { success: false, notifiedCount: 0 };
   }
 
   if (admins.length === 0) {
-    console.error(`Payment failed webhook: No admins found for org ${org.id}`);
+    structuredError("Payment failed webhook: no admins", undefined, {
+      orgId: org.id,
+    });
     return { success: false, notifiedCount: 0 };
   }
 
@@ -254,9 +267,10 @@ export async function handlePaymentFailed(
     }
   }
 
-  console.log(
-    `Payment failed notification sent for org ${org.id} (${org.name})`
-  );
+  structuredLog("Payment failed notification sent", {
+    orgId: org.id,
+    orgName: org.name,
+  });
   return { success: true, notifiedCount };
 }
 
@@ -279,7 +293,7 @@ export async function handleCheckoutCompleted(
       : session.customer?.id;
 
   if (!customerId) {
-    console.error("Checkout completed webhook: No customer ID found");
+    structuredError("Checkout webhook: no customer ID");
     return { success: false, eventsEmitted: 0 };
   }
 
@@ -319,9 +333,6 @@ export async function handleCheckoutCompleted(
       const interval =
         stripeSubscription.items.data[0]?.price.recurring?.interval;
       isAnnual = interval === "year";
-      console.log(
-        `Fetched subscription ${stripeSubscriptionId} from Stripe - interval: ${interval}, isAnnual: ${isAnnual}`
-      );
     } catch (err) {
       console.error("Failed to fetch subscription from Stripe:", err);
       const posthog = getPostHogClient();
@@ -346,9 +357,10 @@ export async function handleCheckoutCompleted(
     .update(schema.subscription)
     .set({ annual: isAnnual, updatedAt: new Date() })
     .where(eq(schema.subscription.id, sub.id));
-  console.log(
-    `Set subscription ${sub.id} annual flag to ${isAnnual} from checkout`
-  );
+  structuredLog("Subscription annual flag set", {
+    subscriptionId: sub.id,
+    isAnnual,
+  });
 
   // Format amount
   const amount = session.amount_total
@@ -393,9 +405,12 @@ export async function handleCheckoutCompleted(
     });
   }
 
-  console.log(
-    `Subscription activated for org ${org.id} (${org.name}) - plan: ${sub.plan}, annual: ${isAnnual}`
-  );
+  structuredLog("Subscription activated", {
+    orgId: org.id,
+    orgName: org.name,
+    plan: sub.plan,
+    isAnnual,
+  });
   return { success: true, eventsEmitted };
 }
 
@@ -467,9 +482,11 @@ export async function handleSubscriptionDeleted(
     });
   }
 
-  console.log(
-    `Subscription canceled for org ${org.id} (${org.name}) - reason: ${cancelReason}`
-  );
+  structuredLog("Subscription canceled", {
+    orgId: org.id,
+    orgName: org.name,
+    reason: cancelReason,
+  });
   return { success: true, eventsEmitted };
 }
 
@@ -571,9 +588,13 @@ export async function handleSubscriptionUpdated(
     });
   }
 
-  console.log(
-    `Subscription ${changeType} for org ${org.id} (${org.name}) - from ${previousPlan} to ${sub.plan}`
-  );
+  structuredLog("Subscription changed", {
+    changeType,
+    orgId: org.id,
+    orgName: org.name,
+    from: previousPlan,
+    to: sub.plan,
+  });
   return { success: true, eventsEmitted, changeType };
 }
 
@@ -596,9 +617,9 @@ export async function handleSubscriptionCreated(
   if (!sub) {
     // Subscription might not be in our DB yet - better-auth creates it async
     // We'll also check in handleCheckoutCompleted as a fallback
-    console.log(
-      `Subscription created webhook: Subscription ${subscription.id} not yet in DB`
-    );
+    structuredLog("Subscription not yet in DB", {
+      subscriptionId: subscription.id,
+    });
     return { success: false };
   }
 
@@ -608,9 +629,10 @@ export async function handleSubscriptionCreated(
     .set({ annual: isAnnual, updatedAt: new Date() })
     .where(eq(schema.subscription.id, sub.id));
 
-  console.log(
-    `Subscription ${subscription.id} marked as ${isAnnual ? "annual" : "monthly"}`
-  );
+  structuredLog("Subscription billing interval set", {
+    subscriptionId: subscription.id,
+    isAnnual,
+  });
   return { success: true };
 }
 

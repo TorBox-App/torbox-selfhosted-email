@@ -28,14 +28,10 @@ export const initPostHog = (): void => {
   }
 
   if (!POSTHOG_KEY) {
-    console.log(
-      "PostHog not initialized - NEXT_PUBLIC_POSTHOG_KEY environment variable not set"
-    );
     return;
   }
 
   if (!IS_PRODUCTION) {
-    console.log("PostHog not initialized - running in development mode");
     return;
   }
 
@@ -45,8 +41,6 @@ export const initPostHog = (): void => {
     capture_pageleave: true,
     persistence: "localStorage",
   });
-
-  console.log("PostHog initialized successfully");
 };
 
 /**
@@ -59,14 +53,10 @@ export const initGTM = (): void => {
   }
 
   if (!GTM_ID) {
-    console.log(
-      "GTM not initialized - NEXT_PUBLIC_GTM_ID environment variable not set"
-    );
     return;
   }
 
   if (!IS_PRODUCTION) {
-    console.log("GTM not initialized - running in development mode");
     return;
   }
 
@@ -91,8 +81,6 @@ export const initGTM = (): void => {
     height="0" width="0" style="display:none;visibility:hidden"></iframe>
   `;
   document.body.insertBefore(noscript, document.body.firstChild);
-
-  console.log("GTM initialized successfully");
 };
 
 /**

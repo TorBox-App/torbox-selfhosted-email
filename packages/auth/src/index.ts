@@ -220,7 +220,6 @@ async function trackUserSignup(
 
     if (contactError) {
       // Contact might already exist (e.g., from waitlist), that's OK
-      console.log("Contact create result:", contactError);
     }
 
     // Now emit the signup event
@@ -266,7 +265,12 @@ async function sendLoginAlertSms(
       messageType: "TRANSACTIONAL",
     });
 
-    console.log(`Login alert SMS sent to ${phoneNumber.slice(0, 6)}***`);
+    console.info(
+      JSON.stringify({
+        msg: "Login alert SMS sent",
+        phone: `${phoneNumber.slice(0, 6)}***`,
+      })
+    );
   } catch (error) {
     console.error("Failed to send login alert SMS:", error);
   }

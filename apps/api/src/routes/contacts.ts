@@ -792,10 +792,6 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             body.topicSlugs,
             authContext.organizationId
           );
-          console.log("[contacts] PATCH topics - resolved slugs:", {
-            slugs: body.topicSlugs,
-            resolvedIds,
-          });
           topicIds = [...topicIds, ...resolvedIds];
         }
 
@@ -830,13 +826,6 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         const resubscribeTopicIds = topicIds.filter(
           (id) => existingTopicIds.has(id) && !activelySubscribedIds.has(id)
         );
-
-        console.log("[contacts] PATCH topics - filtering:", {
-          topicIds,
-          activelySubscribedIds: [...activelySubscribedIds],
-          newTopicIds,
-          resubscribeTopicIds,
-        });
 
         // Re-subscribe inactive topics (with DOI check)
         if (resubscribeTopicIds.length > 0) {

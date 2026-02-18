@@ -29,6 +29,7 @@ import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, exists, isNotNull, sql } from "drizzle-orm";
 
 import { trackFirstEmailSent } from "../lib/activation-tracking";
+import { log } from "../lib/logger";
 import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 import { getCredentials } from "../services/credentials";
 import type { BatchJob } from "../services/queue";
@@ -89,13 +90,13 @@ async function processJob(job: BatchJob): Promise<void> {
     .limit(1);
 
   if (!batch) {
-    console.error(`Batch ${batchId} not found`);
+    log.error("Batch not found", undefined, { batchId });
     return;
   }
 
   // Check if batch was cancelled
   if (batch.status === "cancelled") {
-    console.log(`Batch ${batchId} was cancelled, skipping`);
+    log.info("Batch cancelled, skipping", { batchId });
     return;
   }
 
@@ -152,9 +153,10 @@ async function processJob(job: BatchJob): Promise<void> {
   try {
     const accountInfo = await sesClient.send(new GetAccountCommand({}));
     maxSendRate = accountInfo.SendQuota?.MaxSendRate ?? DEFAULT_RATE_LIMIT;
-    console.log(`SES rate limit for account: ${maxSendRate} emails/sec`);
   } catch (error) {
-    console.warn("Could not fetch SES rate limit, using default:", error);
+    log.warn("Could not fetch SES rate limit, using default", {
+      error: String(error),
+    });
   }
 
   // Calculate delay between chunks to respect rate limit

@@ -10,6 +10,7 @@
 import { contact, contactTopic, db, eq, topic } from "@wraps/db";
 import { and } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { log } from "../lib/logger";
 import { verifyUnsubscribeToken } from "../lib/unsubscribe-token";
 import { emitTopicUnsubscribed } from "../services/workflow-events";
 
@@ -106,9 +107,7 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
           );
         });
 
-        console.log(
-          `[UNSUBSCRIBE] Contact ${contactId} unsubscribed from topic ${topicId}`
-        );
+        log.info("Unsubscribe: topic unsubscribed", { contactId, topicId });
       } else {
         // Global unsubscribe - unsubscribe from all email communications
         // Get all subscribed topics before unsubscribing (for event emission)
@@ -160,9 +159,10 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
           )
         );
 
-        console.log(
-          `[UNSUBSCRIBE] Contact ${contactId} unsubscribed globally from ${subscribedTopics.length} topic(s)`
-        );
+        log.info("Unsubscribe: global unsubscribe", {
+          contactId,
+          topicCount: subscribedTopics.length,
+        });
       }
 
       // 5. Return success (no redirect per RFC 8058)

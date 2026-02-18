@@ -16,6 +16,7 @@ import {
 } from "@wraps/db";
 import { and, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { log } from "../lib/logger";
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
@@ -108,7 +109,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       .limit(1);
 
     if (!account) {
-      console.log(`[WEBHOOK] AWS account not found: ${awsAccountNumber}`);
+      log.warn("Webhook: AWS account not found", { awsAccountNumber });
       set.status = 404;
       return { error: "AWS account not found" };
     }
@@ -121,7 +122,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       secretBuffer.length !== keyBuffer.length ||
       !timingSafeEqual(secretBuffer, keyBuffer)
     ) {
-      console.log(`[WEBHOOK] Invalid API key for account: ${awsAccountNumber}`);
+      log.warn("Webhook: invalid API key", { awsAccountNumber });
       set.status = 401;
       return { error: "Invalid API key" };
     }
@@ -131,9 +132,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
     const { eventType, mail } = event.detail;
     const messageId = mail.messageId;
 
-    console.log(
-      `[WEBHOOK] Processing ${eventType} event for message: ${messageId}`
-    );
+    log.info("Webhook: processing event", { eventType, messageId });
 
     // 4. Find the messageSend record
     const [message] = await db
@@ -151,7 +150,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
 
     if (!message) {
       // Message not found - might be from a different source (transactional SDK)
-      console.log(`[WEBHOOK] Message not found: ${messageId}`);
+      log.info("Webhook: message not found", { messageId });
       return { status: "ignored", reason: "message not found" };
     }
 
@@ -193,7 +192,6 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
           break;
 
         default:
-          console.log(`[WEBHOOK] Ignoring event type: ${eventType}`);
           return {
             status: "ignored",
             reason: `unsupported event type: ${eventType}`,
@@ -279,7 +277,7 @@ async function processDelivery(
       .where(eq(batchSend.id, message.batchSendId));
   }
 
-  console.log(`[WEBHOOK] Marked message ${message.id} as delivered`);
+  log.info("Webhook: message delivered", { messageId: message.id });
 }
 
 async function processOpen(
@@ -291,7 +289,7 @@ async function processOpen(
 
   // Only record first open (idempotency)
   if (message.openedAt) {
-    console.log(`[WEBHOOK] Message ${message.id} already opened, skipping`);
+    log.info("Webhook: duplicate open, skipping", { messageId: message.id });
     return;
   }
 
@@ -328,7 +326,7 @@ async function processOpen(
     await resumeWaitingExecutions(messageId, message.contactId, "opened");
   }
 
-  console.log(`[WEBHOOK] Marked message ${message.id} as opened`);
+  log.info("Webhook: message opened", { messageId: message.id });
 }
 
 async function processClick(
@@ -340,7 +338,7 @@ async function processClick(
 
   // Only record first click (idempotency)
   if (message.clickedAt) {
-    console.log(`[WEBHOOK] Message ${message.id} already clicked, skipping`);
+    log.info("Webhook: duplicate click, skipping", { messageId: message.id });
     return;
   }
 
@@ -377,7 +375,7 @@ async function processClick(
     await resumeWaitingExecutions(messageId, message.contactId, "clicked");
   }
 
-  console.log(`[WEBHOOK] Marked message ${message.id} as clicked`);
+  log.info("Webhook: message clicked", { messageId: message.id });
 }
 
 async function processBounce(
@@ -426,9 +424,11 @@ async function processBounce(
     await resumeWaitingExecutions(messageId, message.contactId, "bounced");
   }
 
-  console.log(
-    `[WEBHOOK] Marked message ${message.id} as bounced (${bounceType}/${bounceSubType})`
-  );
+  log.info("Webhook: message bounced", {
+    messageId: message.id,
+    bounceType,
+    bounceSubType,
+  });
 }
 
 async function processComplaint(
@@ -467,7 +467,7 @@ async function processComplaint(
       .where(eq(contact.id, message.contactId));
   }
 
-  console.log(`[WEBHOOK] Marked message ${message.id} as complained`);
+  log.info("Webhook: message complained", { messageId: message.id });
 }
 
 async function processSuppression(
@@ -507,9 +507,10 @@ async function processSuppression(
       .where(eq(contact.id, message.contactId));
   }
 
-  console.log(
-    `[WEBHOOK] Marked message ${message.id} as suppressed (reason: ${suppressionReason ?? "unknown"})`
-  );
+  log.info("Webhook: message suppressed", {
+    messageId: message.id,
+    reason: suppressionReason,
+  });
 }
 
 /**
@@ -535,9 +536,10 @@ async function resumeWaitingExecutions(
     );
 
   for (const execution of waitingExecutions) {
-    console.log(
-      `[WEBHOOK] Resuming execution ${execution.id} with branch: ${branch}`
-    );
+    log.info("Webhook: resuming workflow execution", {
+      executionId: execution.id,
+      branch,
+    });
 
     // Cancel timeout scheduler
     if (execution.waitTimeoutSchedulerName) {
