@@ -119,7 +119,9 @@ export const metadata: Metadata = {
     title: "Email Templates as React, Workflows as TypeScript | Wraps",
     description:
       "Write email templates as React components and automation workflows as TypeScript with Wraps.",
-    images: ["https://wraps.dev/blog/wraps-templates-and-workflows-as-code.png"],
+    images: [
+      "https://wraps.dev/blog/wraps-templates-and-workflows-as-code.png",
+    ],
   },
   alternates: {
     canonical:

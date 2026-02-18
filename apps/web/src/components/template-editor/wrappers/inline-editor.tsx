@@ -90,7 +90,7 @@ export type InlineEditorProps = {
  *   // OR
  *   templateName="My New Template"  // Create new
  *   variableContext="broadcast"
- *   onSave={(id) => console.log('Saved:', id)}
+ *   onSave={(id) => handleSave(id)}
  *   onCancel={() => setOpen(false)}
  * />
  * ```

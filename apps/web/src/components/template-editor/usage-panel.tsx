@@ -143,13 +143,10 @@ const results = await email.sendBulkTemplate({
 });
 
 // Check results
-results.status.forEach((result, i) => {
-  if (result.status === "success") {
-    console.log(\`Email \${i + 1} sent: \${result.messageId}\`);
-  } else {
-    console.log(\`Email \${i + 1} failed: \${result.error}\`);
-  }
-});`;
+for (const [i, result] of results.status.entries()) {
+  // result.status === "success" → result.messageId
+  // result.status === "error"   → result.error
+}`;
 
   // AWS SDK examples
   const awsSdkTypescript = `import { SESClient, SendTemplatedEmailCommand } from "@aws-sdk/client-ses";
@@ -165,8 +162,7 @@ const command = new SendTemplatedEmailCommand({
   TemplateData: JSON.stringify(${templateDataIndented}),
 });
 
-const response = await ses.send(command);
-console.log("Email sent:", response.MessageId);`;
+const { MessageId } = await ses.send(command);`;
 
   const awsSdkPython = `import boto3
 import json

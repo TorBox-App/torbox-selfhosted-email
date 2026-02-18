@@ -8,6 +8,7 @@
   },
   "license": "AGPL-3.0-or-later",
   "scripts": {
+    "baseline": "pnpm dlx code-baseline@latest scan .",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
@@ -16,7 +17,7 @@
     "typecheck": "turbo run typecheck",
     "check": "npx ultracite@latest check",
     "check:errors": "npx ultracite@latest check --diagnostic-level=error",
-    "test:baseline": "vitest run --config vitest.config.ts && pnpm dlx code-baseline@latest scan .",
+    "test:baseline": "vitest run --config vitest.config.ts && pnpm baseline",
     "check:all": "pnpm check:errors && pnpm typecheck && pnpm test:baseline && pnpm build && pnpm test",
     "fix": "npx ultracite@latest fix",
     "clean": "turbo run clean && rm -rf node_modules",

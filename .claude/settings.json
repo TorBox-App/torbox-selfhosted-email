@@ -19,6 +19,20 @@
       "Bash(vercel logs*)"
     ]
   },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE_PATH=$(cat | jq -r '.tool_input.file_path // empty') && [ -n \"$FILE_PATH\" ] && pnpm dlx code-baseline@latest scan \"$FILE_PATH\" --config baseline.toml --format compact 1>&2 || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "skills": [
     {
       "name": "create-form",

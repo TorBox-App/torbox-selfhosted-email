@@ -681,7 +681,10 @@ export async function getContactsChunk(
       );
 
     if (!segmentRow) {
-      log.warn("Segment not found for batch send", { segmentId: filter.segmentId, organizationId });
+      log.warn("Segment not found for batch send", {
+        segmentId: filter.segmentId,
+        organizationId,
+      });
       return [];
     }
 

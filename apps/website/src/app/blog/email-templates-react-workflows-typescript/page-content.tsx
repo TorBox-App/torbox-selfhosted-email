@@ -325,7 +325,8 @@ export function WorkflowStepsTable() {
   const steps = [
     {
       type: "sendEmail",
-      description: "Send an email using a named template with variable substitution",
+      description:
+        "Send an email using a named template with variable substitution",
       example: `sendEmail('send-welcome', {
   template: 'welcome',
   subject: 'Welcome!', // optional override
@@ -333,7 +334,8 @@ export function WorkflowStepsTable() {
     },
     {
       type: "delay",
-      description: "Wait a duration before continuing (minutes, hours, days, weeks)",
+      description:
+        "Wait a duration before continuing (minutes, hours, days, weeks)",
       example: `delay('wait-3d', { days: 3 })
 delay('wait-2h', { hours: 2 })
 delay('short-pause', { minutes: 30 })`,
