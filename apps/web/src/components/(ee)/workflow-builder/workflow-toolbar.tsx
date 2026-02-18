@@ -3,7 +3,6 @@
 import type { Workflow } from "@wraps/db";
 import {
   AlertCircle,
-  ArrowLeft,
   Loader2,
   Pause,
   Pencil,
@@ -13,7 +12,6 @@ import {
   Settings,
   Undo2,
 } from "lucide-react";
-import Link from "next/link";
 import {
   useDeferredValue,
   useEffect,
@@ -36,6 +34,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { EnableReadinessDialog } from "./enable-readiness-dialog";
+import { UnsavedChangesGuard } from "./unsaved-changes-guard";
+import { useBeforeUnload } from "./use-before-unload";
 import {
   useCanRedo,
   useCanUndo,
@@ -86,6 +86,9 @@ export function WorkflowToolbar({
   const canRedo = useCanRedo();
   const handleUndo = () => useWorkflowStore.temporal.getState().undo();
   const handleRedo = () => useWorkflowStore.temporal.getState().redo();
+
+  // Browser tab close guard
+  useBeforeUnload();
 
   // Readiness dialog state
   const [readinessDialogOpen, setReadinessDialogOpen] = useState(false);
@@ -239,11 +242,10 @@ export function WorkflowToolbar({
   return (
     <div className="flex h-14 items-center justify-between border-b bg-background px-4">
       <div className="flex items-center gap-4">
-        <Link href={`/${orgSlug}/automations`}>
-          <Button size="icon" variant="ghost">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+        <UnsavedChangesGuard
+          href={`/${orgSlug}/automations`}
+          isDirty={isDirty}
+        />
         <div>
           <div className="flex items-center gap-2">
             {isEditingName ? (
