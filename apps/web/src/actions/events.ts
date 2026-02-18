@@ -337,15 +337,19 @@ export async function getEventAnalytics(
       ])
     );
 
-    // Use UTC dates to avoid timezone-related off-by-one issues
+    // Use UTC dates to match the SQL DATE() which returns UTC dates
     const cursor = new Date(
       Date.UTC(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate()
+        startDate.getUTCFullYear(),
+        startDate.getUTCMonth(),
+        startDate.getUTCDate()
       )
     );
-    const endUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const endUTC = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    );
 
     while (cursor.getTime() <= endUTC) {
       const dateStr = cursor.toISOString().split("T")[0];
