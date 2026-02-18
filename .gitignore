@@ -81,6 +81,7 @@ next-env.d.ts
 .claude/spikes/
 .claude/audit/
 .claude/todos/
+.claude/tdd-session
 
 # MCP configuration (may contain connection strings)
 .mcp.json
