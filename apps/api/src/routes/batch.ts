@@ -72,6 +72,25 @@ const createBatchSchema = t.Object({
   htmlContent: t.Optional(
     t.String({ description: "Raw HTML content (if not using template)" })
   ),
+  // Variable mappings for custom template variables
+  variableMappings: t.Optional(
+    t.Array(
+      t.Object({
+        variableName: t.String({ description: "Template variable name" }),
+        source: t.Union([
+          t.Object({
+            type: t.Literal("static"),
+            value: t.String({ description: "Static value" }),
+          }),
+          t.Object({
+            type: t.Literal("contact"),
+            field: t.String({ description: "Contact field name" }),
+          }),
+        ]),
+      }),
+      { description: "Variable mappings for custom template variables" }
+    )
+  ),
   // SMS-specific fields (Phase 3)
   body: t.Optional(t.String({ description: "SMS body text", maxLength: 1600 })),
   senderId: t.Optional(
@@ -184,6 +203,7 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
           replyTo: body.replyTo,
           emailTemplateId: body.templateId,
           htmlContent: body.htmlContent,
+          variableMappings: body.variableMappings,
           // SMS fields (Phase 3)
           body: body.body,
           senderId: body.senderId,

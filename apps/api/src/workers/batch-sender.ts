@@ -35,6 +35,7 @@ import { log } from "../lib/logger";
 import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 import { getCredentials } from "../services/credentials";
 import type { BatchJob } from "../services/queue";
+import { applyVariableMappings } from "./variable-mappings";
 
 /**
  * Transform variables from dot notation to SES-compatible camelCase format.
@@ -285,13 +286,20 @@ async function processJob(job: BatchJob): Promise<void> {
             }
           }
 
+          // Apply user-configured variable mappings
+          const finalData = applyVariableMappings(
+            replacementData,
+            batch.variableMappings ?? undefined,
+            recipient
+          );
+
           const entry: BulkEmailEntry = {
             Destination: {
               ToAddresses: [recipient.email!],
             },
             ReplacementEmailContent: {
               ReplacementTemplate: {
-                ReplacementTemplateData: JSON.stringify(replacementData),
+                ReplacementTemplateData: JSON.stringify(finalData),
               },
             },
           };

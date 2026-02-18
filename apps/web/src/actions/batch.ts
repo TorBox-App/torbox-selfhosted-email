@@ -450,6 +450,7 @@ export async function createBatchSend(
         replyTo: data.replyTo,
         templateId: data.templateId,
         htmlContent: data.htmlContent,
+        variableMappings: data.variableMappings,
         body: data.body,
         senderId: data.senderId,
         scheduledFor: data.scheduledFor?.toISOString(),

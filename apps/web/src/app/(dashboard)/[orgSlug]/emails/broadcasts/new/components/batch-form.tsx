@@ -419,6 +419,10 @@ export function BatchForm({
             campaignData.contentType === "html"
               ? campaignData.htmlContent || undefined
               : undefined,
+          variableMappings:
+            campaignData.variableMappings.length > 0
+              ? campaignData.variableMappings
+              : undefined,
           awsAccountId: campaignData.awsAccountId,
           recipientFilter: getCurrentFilter(),
           scheduledFor,

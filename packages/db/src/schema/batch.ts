@@ -109,6 +109,17 @@ export const batchSend = pgTable(
     htmlContent: text("html_content"),
     textContent: text("text_content"),
 
+    // Variable mappings for custom template variables
+    variableMappings: json("variable_mappings")
+      .$type<
+        Array<{
+          variableName: string;
+          source:
+            | { type: "static"; value: string }
+            | { type: "contact"; field: string };
+        }>
+      >(),
+
     // ═══════════════════════════════════════════════════════════════════════
     // SMS-SPECIFIC FIELDS (Phase 3 - nullable for now)
     // ═══════════════════════════════════════════════════════════════════════

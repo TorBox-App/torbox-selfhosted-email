@@ -106,12 +106,17 @@ const mockCompletedBatch = {
   completedAt: new Date("2024-01-01T00:05:00.000Z"),
 };
 
+// Track what was passed to the batch creation
+let lastCreatedBatchBody: Record<string, unknown> | null = null;
+
 // Create a test app with mocked middleware
 function createTestApp() {
+  lastCreatedBatchBody = null;
   return new Elysia()
     .derive(() => ({ auth: mockAuthContext }))
     .post("/v1/batch", async (ctx) => {
       const body = await ctx.request.json();
+      lastCreatedBatchBody = body;
 
       // Validate required field
       if (!body.awsAccountId) {
@@ -293,6 +298,35 @@ describe("Batch API", () => {
 
       const body = await response.json();
       expect(body.status).toBe("queued");
+    });
+
+    it("accepts variableMappings in batch creation", async () => {
+      const variableMappings = [
+        {
+          variableName: "dashboardUrl",
+          source: { type: "static", value: "https://app.example.com" },
+        },
+        {
+          variableName: "role",
+          source: { type: "contact", field: "jobTitle" },
+        },
+      ];
+
+      const response = await app.handle(
+        new Request("http://localhost/v1/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            awsAccountId: "aws-123",
+            channel: "email",
+            subject: "Welcome!",
+            variableMappings,
+          }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+      expect(lastCreatedBatchBody?.variableMappings).toEqual(variableMappings);
     });
 
     it("accepts scheduled send time", async () => {
