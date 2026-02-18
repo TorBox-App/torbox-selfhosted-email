@@ -15,12 +15,13 @@ import { describe, expect, it, vi } from "vitest";
 // Mock the Elysia app to return a 401 response
 vi.mock("../index", () => ({
   app: {
-    handle: vi.fn(async () => {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "content-type": "application/json" },
-      });
-    }),
+    handle: vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "content-type": "application/json" },
+        })
+    ),
   },
 }));
 
@@ -54,7 +55,7 @@ function createMockEvent(
       routeKey: "ANY /v1/contacts",
       stage: "$default",
       time: "01/Jan/2024:00:00:00 +0000",
-      timeEpoch: 1704067200000,
+      timeEpoch: 1_704_067_200_000,
     },
     isBase64Encoded: false,
     ...overrides,

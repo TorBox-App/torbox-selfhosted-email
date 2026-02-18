@@ -5,7 +5,14 @@
  * GET /v1/batch/:id - Get batch send status
  */
 
-import { batchSend, contact, contactTopic, db, eq } from "@wraps/db";
+import {
+  awsAccount,
+  batchSend,
+  contact,
+  contactTopic,
+  db,
+  eq,
+} from "@wraps/db";
 import { and, exists, isNotNull, sql } from "drizzle-orm";
 import { t } from "elysia";
 
@@ -111,6 +118,30 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
     async (ctx) => {
       const { body, set } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
+
+      // Validate awsAccountId belongs to the authenticated organization
+      const [account] = await db
+        .select({ id: awsAccount.id })
+        .from(awsAccount)
+        .where(
+          and(
+            eq(awsAccount.id, body.awsAccountId),
+            eq(awsAccount.organizationId, authContext.organizationId)
+          )
+        )
+        .limit(1);
+
+      if (!account) {
+        set.status = 403;
+        return {
+          id: "",
+          status: "error",
+          channel: body.channel ?? "email",
+          totalRecipients: 0,
+          createdAt: new Date().toISOString(),
+          error: "AWS account does not belong to this organization",
+        };
+      }
 
       // Use pre-counted recipients if provided, otherwise count here
       let recipientCount = body.totalRecipients;

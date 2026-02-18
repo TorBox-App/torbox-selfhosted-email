@@ -331,7 +331,7 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
     <h1>Unsubscribe</h1>
     <p>
       You are about to unsubscribe <span class="email">${maskedEmail}</span>
-      ${topicId ? ` from <span class="topic">${topicName}</span>` : " from all email communications"}.
+      ${topicId ? ` from <span class="topic">${escapeHtml(topicName)}</span>` : " from all email communications"}.
     </p>
     <form method="POST" action="/unsubscribe/${token}">
       <button type="submit">Confirm Unsubscribe</button>
@@ -339,7 +339,7 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
   </div>
   <div class="success">
     <h1>Unsubscribed</h1>
-    <p>You have been successfully unsubscribed. You will no longer receive ${topicId ? `emails about ${topicName}` : "marketing emails from us"}.</p>
+    <p>You have been successfully unsubscribed. You will no longer receive ${topicId ? `emails about ${escapeHtml(topicName)}` : "marketing emails from us"}.</p>
   </div>
   <script>
     document.querySelector('form').addEventListener('submit', async (e) => {
@@ -375,6 +375,18 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
       },
     }
   );
+
+/**
+ * Escape HTML special characters to prevent XSS
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
 
 /**
  * Mask an email address for privacy (e.g., "j***@example.com")

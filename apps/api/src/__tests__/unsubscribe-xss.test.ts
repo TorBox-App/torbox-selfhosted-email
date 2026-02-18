@@ -130,14 +130,14 @@ describe("Unsubscribe XSS Prevention", () => {
     const html = await response.text();
 
     // Extract the topic span content — find the .topic span
-    const topicMatch = html.match(
-      /<span class="topic">([\s\S]*?)<\/span>/
-    );
+    const topicMatch = html.match(/<span class="topic">([\s\S]*?)<\/span>/);
+    expect(topicMatch).not.toBeNull();
     if (topicMatch) {
       const topicContent = topicMatch[1];
       // Topic content must not contain raw < or > from user input
       expect(topicContent).not.toMatch(/<script/i);
-      expect(topicContent).not.toMatch(/alert\(/);
+      // The escaped form should be present
+      expect(topicContent).toContain("&lt;script&gt;");
     }
   });
 });
