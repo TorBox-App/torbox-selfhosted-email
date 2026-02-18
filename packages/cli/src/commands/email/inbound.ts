@@ -634,7 +634,7 @@ export async function inboundVerify(
         const records = await dns.resolveMx(receivingDomain);
         const hasSES = records.some((r) => r.exchange.includes("inbound-smtp"));
         return { found: true, hasSES, records };
-        // guardrails:allow-next-line no-swallowed-errors — DNS failure means record not found
+        // baseline:allow-next-line no-swallowed-errors — DNS failure means record not found
       } catch {
         return { found: false, hasSES: false, records: [] };
       }
@@ -667,7 +667,7 @@ export async function inboundVerify(
         const spf = flat.find((r) => r.startsWith("v=spf1"));
         const hasSES = spf?.includes("amazonses.com") ?? false;
         return { found: !!spf, hasSES, value: spf };
-        // guardrails:allow-next-line no-swallowed-errors — DNS failure means record not found
+        // baseline:allow-next-line no-swallowed-errors — DNS failure means record not found
       } catch {
         return { found: false, hasSES: false, value: null };
       }
@@ -852,7 +852,7 @@ export async function inboundTest(
           }
         }
       }
-      // guardrails:allow-next-line no-swallowed-errors — S3 polling retries on error
+      // baseline:allow-next-line no-swallowed-errors — S3 polling retries on error
     } catch {
       // S3 error, keep polling
     }

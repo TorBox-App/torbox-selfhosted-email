@@ -51,7 +51,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
         workDir: getPulumiWorkDir(),
       });
       emailStackOutputs = await emailStack.outputs();
-      // guardrails:allow-next-line no-swallowed-errors — stack may not exist
+      // baseline:allow-next-line no-swallowed-errors — stack may not exist
     } catch (_emailError: unknown) {
       // Email stack not found, continue
     }
@@ -63,7 +63,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
         workDir: getPulumiWorkDir(),
       });
       smsStackOutputs = await smsStack.outputs();
-      // guardrails:allow-next-line no-swallowed-errors — stack may not exist
+      // baseline:allow-next-line no-swallowed-errors — stack may not exist
     } catch (_smsError: unknown) {
       // SMS stack not found, continue
     }
@@ -75,7 +75,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
         workDir: getPulumiWorkDir(),
       });
       storageStackOutputs = await cdnStack.outputs();
-      // guardrails:allow-next-line no-swallowed-errors — stack may not exist
+      // baseline:allow-next-line no-swallowed-errors — stack may not exist
     } catch (_cdnError: unknown) {
       // CDN stack not found, continue
     }
@@ -88,7 +88,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
     ) {
       throw new Error("No infrastructure found");
     }
-    // guardrails:allow-next-line no-swallowed-errors — shows user-friendly message
+    // baseline:allow-next-line no-swallowed-errors — shows user-friendly message
   } catch (_error: unknown) {
     progress.stop();
     clack.log.error("No Wraps infrastructure found");
@@ -140,7 +140,7 @@ export async function dashboard(options: DashboardOptions): Promise<void> {
     if (metadata?.services?.cdn?.config?.cdn?.customDomain) {
       cdnCustomDomain = metadata.services.cdn.config.cdn.customDomain;
     }
-    // guardrails:allow-next-line no-swallowed-errors — metadata is optional, continue with defaults
+    // baseline:allow-next-line no-swallowed-errors — metadata is optional, continue with defaults
   } catch {
     // Metadata load failed, continue with defaults
   }

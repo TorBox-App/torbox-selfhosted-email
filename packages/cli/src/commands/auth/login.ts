@@ -45,7 +45,7 @@ async function fetchOrganizations(
       name: org.name,
       slug: org.slug,
     }));
-    // guardrails:allow-next-line no-swallowed-errors — org list is optional
+    // baseline:allow-next-line no-swallowed-errors — org list is optional
   } catch {
     return [];
   }
@@ -119,7 +119,7 @@ export async function login(options: LoginOptions): Promise<void> {
   try {
     await open(`${baseURL}/device?user_code=${user_code}`);
     clack.log.info("Opening browser...");
-    // guardrails:allow-next-line no-swallowed-errors — browser open is best-effort
+    // baseline:allow-next-line no-swallowed-errors — browser open is best-effort
   } catch {
     // Browser didn't open, user will navigate manually
   }

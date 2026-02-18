@@ -100,14 +100,14 @@ function findMissingScopeViolations(
       const tableName = match[1];
       if (!ORG_SCOPED_TABLES.has(tableName)) continue;
 
-      // Check if this line has a guardrail:allow-unscoped comment
+      // Check if this line has a baseline:allow-unscoped comment
       const lineStart = content.lastIndexOf("\n", match.index) + 1;
       const lineEnd = content.indexOf("\n", match.index);
       const line = content.slice(
         lineStart,
         lineEnd === -1 ? undefined : lineEnd
       );
-      if (line.includes("guardrail:allow-unscoped")) continue;
+      if (line.includes("baseline:allow-unscoped")) continue;
 
       const beforeMatch = content.slice(0, match.index);
       const lineNum = beforeMatch.split("\n").length;
@@ -153,7 +153,7 @@ describe("org-scoped queries", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 4: No private env vars in client components
-// (guardrails.toml can't handle this: Rust regex lacks lookahead for NEXT_PUBLIC_)
+// (baseline.toml can't handle this: Rust regex lacks lookahead for NEXT_PUBLIC_)
 // ─────────────────────────────────────────────────────────
 
 describe("client components do not access private env vars", () => {
@@ -214,7 +214,7 @@ describe("client components do not access private env vars", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 7: No @tanstack/react-form in server components
-// (guardrails.toml can't handle this: file_not_contains only supports one string,
+// (baseline.toml can't handle this: file_not_contains only supports one string,
 //  but files use both "use client" and 'use client')
 // ─────────────────────────────────────────────────────────
 
@@ -265,7 +265,7 @@ describe("no client-only imports in server components", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 8: No redirect() inside try/catch
-// (guardrails.toml can't handle this: needs brace-depth tracking)
+// (baseline.toml can't handle this: needs brace-depth tracking)
 // ─────────────────────────────────────────────────────────
 
 describe("no redirect() inside try/catch", () => {
@@ -330,7 +330,7 @@ describe("no redirect() inside try/catch", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 9: No console.log in web app
-// (guardrails.toml can't handle this: needs template literal awareness)
+// (baseline.toml can't handle this: needs template literal awareness)
 // ─────────────────────────────────────────────────────────
 
 describe("no console.log in web app", () => {
@@ -359,7 +359,7 @@ describe("no console.log in web app", () => {
         if (backticksBefore % 2 === 1) continue;
 
         // Skip lines with escape hatch
-        if (line.includes("guardrail:allow-console")) continue;
+        if (line.includes("baseline:allow-console")) continue;
 
         consoleLogRegex.lastIndex = 0;
         if (consoleLogRegex.test(line)) {
@@ -380,7 +380,7 @@ function getCLICommandFiles(): string[] {
 
 // ─────────────────────────────────────────────────────────
 // Test 12: No metadata save before deployment completes
-// (guardrails.toml can't handle this: needs ordering semantics within function)
+// (baseline.toml can't handle this: needs ordering semantics within function)
 // ─────────────────────────────────────────────────────────
 
 describe("metadata save order", () => {
@@ -416,7 +416,7 @@ describe("metadata save order", () => {
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        if (line.includes("guardrail:allow-early-save")) continue;
+        if (line.includes("baseline:allow-early-save")) continue;
 
         saveRegex.lastIndex = 0;
         deployRegex.lastIndex = 0;
@@ -449,7 +449,7 @@ describe("metadata save order", () => {
 
 // ─────────────────────────────────────────────────────────
 // Test 13: No duplicate infrastructure helper functions
-// (guardrails.toml can't handle this: cross-file uniqueness check)
+// (baseline.toml can't handle this: cross-file uniqueness check)
 // ─────────────────────────────────────────────────────────
 
 describe("no duplicate infrastructure helpers", () => {

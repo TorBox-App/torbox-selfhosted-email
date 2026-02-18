@@ -20,7 +20,7 @@ Run `git status` and `git diff --stat` in parallel to see what changed. If there
 
 ## Step 2: Run Checks
 
-Run `pnpm check:all`. This runs lint, typecheck, guardrails, build, and tests.
+Run `pnpm check:all`. This runs lint, typecheck, baseline, build, and tests.
 
 If checks fail:
 1. Show the user what failed

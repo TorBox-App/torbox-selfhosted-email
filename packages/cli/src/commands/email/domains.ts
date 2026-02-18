@@ -431,7 +431,7 @@ export async function verifyDomain(options: EmailVerifyOptions): Promise<void> {
           `Check #${attempt} (${elapsedStr} elapsed)`,
           async () => checkVerification(options.domain, sesClient, region)
         );
-        // guardrails:allow-next-line no-swallowed-errors — DNS/SES check failure during polling is non-fatal, will retry
+        // baseline:allow-next-line no-swallowed-errors — DNS/SES check failure during polling is non-fatal, will retry
       } catch {
         progress.stop();
         clack.log.warn(`Check #${attempt} failed, will retry...`);
@@ -907,7 +907,7 @@ export async function listDomains(): Promise<void> {
       if (metadata) {
         trackedDomains = getAllTrackedDomains(metadata);
       }
-      // guardrails:allow-next-line no-swallowed-errors — metadata unavailable is non-fatal, domains show as unmanaged
+      // baseline:allow-next-line no-swallowed-errors — metadata unavailable is non-fatal, domains show as unmanaged
     } catch {}
 
     const trackedSet = new Map(trackedDomains.map((d) => [d.domain, d]));
@@ -1151,7 +1151,7 @@ export async function removeDomain(options: {
     try {
       const awsIdentity = await validateAWSCredentials();
       metadata = await loadConnectionMetadata(awsIdentity.accountId, region);
-      // guardrails:allow-next-line no-swallowed-errors — metadata unavailable is non-fatal, proceed without guard
+      // baseline:allow-next-line no-swallowed-errors — metadata unavailable is non-fatal, proceed without guard
     } catch {}
 
     if (metadata) {

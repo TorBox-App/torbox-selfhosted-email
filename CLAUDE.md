@@ -519,7 +519,7 @@ wraps auth login           # Authenticate with Wraps Platform
 
 ### Banned Dependencies
 
-These are enforced by `guardrails.toml` and will fail CI:
+These are enforced by `baseline.toml` and will fail CI:
 - **axios** — use native `fetch()`
 - **moment** / **dayjs** — use `date-fns` or `Intl` API
 - **next/router** — use `next/navigation` (App Router)
@@ -614,7 +614,7 @@ pnpm test              # Run all tests
 pnpm test:ee           # Run enterprise edition tests
 pnpm check             # Lint check (ultracite + biome)
 pnpm fix               # Auto-fix lint issues
-pnpm check:all         # Full CI check: lint → typecheck → guardrails → build → test
+pnpm check:all         # Full CI check: lint → typecheck → baseline → build → test
 ```
 
 ## Resources

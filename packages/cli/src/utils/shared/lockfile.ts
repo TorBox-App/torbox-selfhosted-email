@@ -44,7 +44,7 @@ export async function loadLockfile(wrapsDir: string): Promise<Lockfile> {
       parsed.workflows = {};
     }
     return parsed;
-    // guardrails:allow-next-line no-swallowed-errors — corrupted lockfile returns fresh default
+    // baseline:allow-next-line no-swallowed-errors — corrupted lockfile returns fresh default
   } catch {
     return { version: "1.0.0", lastSync: "", templates: {}, workflows: {} };
   }

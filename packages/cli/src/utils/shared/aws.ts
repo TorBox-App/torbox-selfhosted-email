@@ -221,7 +221,7 @@ export async function listSESDomains(region: string): Promise<SESDomain[]> {
       domain,
       verified: attributes[domain]?.VerificationStatus === "Success",
     }));
-    // guardrails:allow-next-line no-swallowed-errors — listing SES domains may fail due to permissions, safe to return empty
+    // baseline:allow-next-line no-swallowed-errors — listing SES domains may fail due to permissions, safe to return empty
   } catch {
     return [];
   }
@@ -263,7 +263,7 @@ export async function getSESAccountStatus(
         : undefined,
       enforcementStatus: response.EnforcementStatus,
     };
-    // guardrails:allow-next-line no-swallowed-errors — SES GetAccount may fail due to permissions or throttling, default to sandbox (safer: offers extra help)
+    // baseline:allow-next-line no-swallowed-errors — SES GetAccount may fail due to permissions or throttling, default to sandbox (safer: offers extra help)
   } catch {
     return { isSandbox: true, sandboxUncertain: true };
   }

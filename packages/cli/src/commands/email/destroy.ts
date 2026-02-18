@@ -221,7 +221,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
               stackName,
               workDir: getPulumiWorkDir(),
             });
-            // guardrails:allow-next-line no-swallowed-errors — stack not found means no infrastructure to preview
+            // baseline:allow-next-line no-swallowed-errors — stack not found means no infrastructure to preview
           } catch {
             throw new Error("No email infrastructure found to preview");
           }
@@ -318,7 +318,7 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
             stackName,
             workDir: getPulumiWorkDir(),
           });
-          // guardrails:allow-next-line no-swallowed-errors — stack not found means no infrastructure to destroy
+          // baseline:allow-next-line no-swallowed-errors — stack not found means no infrastructure to destroy
         } catch {
           throw new Error("No email infrastructure found to destroy");
         }

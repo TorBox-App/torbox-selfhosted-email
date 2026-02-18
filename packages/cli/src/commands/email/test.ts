@@ -250,7 +250,7 @@ export async function emailTest(options: EmailTestOptions): Promise<void> {
         return;
       }
     }
-    // guardrails:allow-next-line no-swallowed-errors — verification check may fail due to permissions, proceed with send attempt
+    // baseline:allow-next-line no-swallowed-errors — verification check may fail due to permissions, proceed with send attempt
   } catch {
     clack.log.warn(
       "Could not check domain verification status — proceeding with send attempt"

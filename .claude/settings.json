@@ -7,7 +7,7 @@
       "Bash(pnpm test*)",
       "Bash(pnpm --filter * build*)",
       "Bash(pnpm --filter * test*)",
-      "Bash(pnpm test:guardrails)",
+      "Bash(pnpm test:baseline)",
       "Bash(npx tsc*)",
       "Bash(git status*)",
       "Bash(git diff*)",

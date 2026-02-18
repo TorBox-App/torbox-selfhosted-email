@@ -1,7 +1,7 @@
-# guardrails.toml — Fast Rust-based code quality enforcement
+# baseline.toml — Fast Rust-based code quality enforcement
 # Replaces grit rules + select architecture.test.ts checks
 #
-# Remaining tests in guardrails/architecture.test.ts:
+# Remaining tests in baseline/architecture.test.ts:
 #   T1  org-scoped queries (complex 49-table window with asymmetric search)
 #   T4  client env var isolation (needs negative lookahead for NEXT_PUBLIC_)
 #   T7  @tanstack/react-form in server (needs dual-quote 'use client' check)
@@ -10,7 +10,7 @@
 #   T12 metadata save order (needs ordering semantics within function)
 #   T13 duplicate infrastructure helpers (cross-file uniqueness)
 
-[guardrails]
+[baseline]
 name = "wraps"
 include = ["**/*"]
 # extends = ["security", "nextjs", "ai-codegen"]
@@ -328,7 +328,7 @@ suggest = "Capture the error and handle it with instanceof checks"
 id = "required-project-files"
 type = "file-presence"
 severity = "error"
-required = ["CLAUDE.md", "guardrails.toml", "turbo.json", "biome.json"]
+required = ["CLAUDE.md", "baseline.toml", "turbo.json", "biome.json"]
 message = "Critical project files must not be deleted."
 
 [[rule]]

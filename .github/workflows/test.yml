@@ -54,7 +54,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
-  guardrails:
+  baseline:
     runs-on: blacksmith-2vcpu-ubuntu-2404
 
     steps:
@@ -63,13 +63,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run guardrails (changed files only)
+      - name: Run baseline (changed files only)
         if: github.event_name == 'pull_request'
-        run: npx code-guardrails@0.5.0 scan --format github --changed-only .
+        run: pnpm dlx code-baseline@1.2.2 scan --format github --changed-only .
 
-      - name: Run guardrails (full scan)
+      - name: Run baseline (full scan)
         if: github.event_name == 'push'
-        run: npx code-guardrails@0.5.0 scan --format github .
+        run: pnpm dlx code-baseline@1.2.2 scan --format github .
 
   lint:
     runs-on: blacksmith-2vcpu-ubuntu-2404

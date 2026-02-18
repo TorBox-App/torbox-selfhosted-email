@@ -184,7 +184,7 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
               stackName,
               workDir: getPulumiWorkDir(),
             });
-            // guardrails:allow-next-line no-swallowed-errors — re-throws user-friendly message
+            // baseline:allow-next-line no-swallowed-errors — re-throws user-friendly message
           } catch (_error) {
             throw new Error("No CDN infrastructure found to preview");
           }
@@ -289,7 +289,7 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
             stackName,
             workDir: getPulumiWorkDir(),
           });
-          // guardrails:allow-next-line no-swallowed-errors — re-throws user-friendly message
+          // baseline:allow-next-line no-swallowed-errors — re-throws user-friendly message
         } catch (_error) {
           throw new Error("No CDN infrastructure found to destroy");
         }

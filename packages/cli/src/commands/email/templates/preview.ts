@@ -143,7 +143,7 @@ export async function templatesPreview(options: TemplatesPreviewOptions) {
             emailType: compiled.emailType,
             previewText: compiled.previewText,
           });
-          // guardrails:allow-next-line no-swallowed-errors — compilation error shows placeholder
+          // baseline:allow-next-line no-swallowed-errors — compilation error shows placeholder
         } catch {
           meta.push({
             slug,
@@ -380,7 +380,7 @@ function renderViewerPage(compiled: PreviewResult, allSlugs: string[]): string {
       try {
         const doc = iframe.contentDocument || iframe.contentWindow.document;
         iframe.style.height = doc.documentElement.scrollHeight + 'px';
-      } catch {} // guardrails:allow-no-swallowed-errors — cross-origin iframe resize
+      } catch {} // baseline:allow-no-swallowed-errors — cross-origin iframe resize
     }
     iframe.addEventListener('load', resizeIframe);
 
@@ -391,7 +391,7 @@ function renderViewerPage(compiled: PreviewResult, allSlugs: string[]): string {
         const data = JSON.parse(e.data);
         // Reload iframe (and toolbar metadata by reloading the page)
         iframe.src = '/${compiled.slug}/render?t=' + Date.now();
-      } catch { // guardrails:allow-no-swallowed-errors — SSE parse error is expected
+      } catch { // baseline:allow-no-swallowed-errors — SSE parse error is expected
         // "connected" message or parse error — ignore
       }
     };

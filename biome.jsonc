@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite/core"],
-  "plugins": ["./guardrails/no-redirect-in-try-catch.grit"],
+  "plugins": ["./baseline/no-redirect-in-try-catch.grit"],
   "files": {
     "ignoreUnknown": false,
     "includes": [

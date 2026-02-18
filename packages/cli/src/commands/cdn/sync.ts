@@ -144,7 +144,7 @@ export async function cdnSync(options: CdnSyncOptions): Promise<void> {
           );
         }
       }
-      // guardrails:allow-next-line no-swallowed-errors — stack may not exist yet
+      // baseline:allow-next-line no-swallowed-errors — stack may not exist yet
     } catch (_error) {
       // Stack might not exist yet, that's fine
     }
