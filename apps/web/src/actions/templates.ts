@@ -255,7 +255,12 @@ export async function publishTemplateToSES(
         compiledText: sesText,
         updatedAt: now,
       })
-      .where(eq(template.id, templateId));
+      .where(
+        and(
+          eq(template.id, templateId),
+          eq(template.organizationId, organizationId)
+        )
+      );
 
     log.info({ templateId, sesTemplateName }, "Template published to SES");
 

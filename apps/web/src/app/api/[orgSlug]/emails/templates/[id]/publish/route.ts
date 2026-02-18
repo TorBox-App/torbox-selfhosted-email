@@ -183,7 +183,12 @@ export async function POST(request: Request, context: RouteContext) {
         compiledText: sesText,
         updatedAt: now,
       })
-      .where(eq(template.id, id));
+      .where(
+        and(
+          eq(template.id, id),
+          eq(template.organizationId, orgWithMembership.id)
+        )
+      );
 
     return NextResponse.json({
       success: true,
@@ -290,7 +295,12 @@ export async function DELETE(_request: Request, context: RouteContext) {
         publishedAt: null,
         updatedAt: new Date(),
       })
-      .where(eq(template.id, id));
+      .where(
+        and(
+          eq(template.id, id),
+          eq(template.organizationId, orgWithMembership.id)
+        )
+      );
 
     return NextResponse.json({
       success: true,

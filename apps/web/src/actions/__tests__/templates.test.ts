@@ -725,3 +725,79 @@ describe("publishTemplateToSES - SMS Channel", () => {
     expect(updated?.sesTemplateName).not.toBeNull();
   });
 });
+
+describe("publishTemplateToSES - organizationId scoping", () => {
+  it("should scope the update WHERE clause by organizationId (defense-in-depth)", async () => {
+    mockUpsertSESTemplate.mockClear();
+
+    // Create template in testOrganization (org-A)
+    const id = await createTestTemplate({
+      name: "Org Scoped Publish",
+      subject: "Test Subject",
+      status: "DRAFT",
+      channel: "email",
+    });
+
+    // Read the real template data for mocking
+    const templateData = await db.query.template.findFirst({
+      where: eq(template.id, id),
+    });
+
+    // Bypass the org-scoped READ by mocking findFirst to return the template
+    // regardless of which organizationId is passed. This simulates a hypothetical
+    // read-path bypass to verify the WRITE path has its own org scoping.
+    const templateFindSpy = vi
+      .spyOn(db.query.template, "findFirst")
+      .mockResolvedValueOnce(templateData);
+    const awsFindSpy = vi
+      .spyOn(db.query.awsAccount, "findFirst")
+      .mockResolvedValueOnce(testAwsAccount as never);
+
+    // Call with WRONG organizationId — reads are bypassed, but write should be scoped
+    await publishTemplateToSES(id, "completely-wrong-org-id");
+
+    // Restore spies before querying the real DB
+    templateFindSpy.mockRestore();
+    awsFindSpy.mockRestore();
+
+    // The write WHERE clause should include organizationId = "completely-wrong-org-id"
+    // which won't match the template (actual org = testOrganization.id), so no update.
+    const afterAttempt = await db.query.template.findFirst({
+      where: eq(template.id, id),
+    });
+    expect(afterAttempt?.status).toBe("DRAFT");
+    expect(afterAttempt?.publishedAt).toBeNull();
+  });
+
+  it("should scope the SMS update WHERE clause by organizationId (defense-in-depth)", async () => {
+    // Create SMS template in testOrganization (org-A)
+    const id = await createTestTemplate({
+      name: "Org Scoped SMS",
+      status: "DRAFT",
+      channel: "sms",
+    });
+
+    // Read the real template data for mocking
+    const templateData = await db.query.template.findFirst({
+      where: eq(template.id, id),
+    });
+
+    // Bypass the org-scoped READ
+    const templateFindSpy = vi
+      .spyOn(db.query.template, "findFirst")
+      .mockResolvedValueOnce(templateData);
+
+    // Call with WRONG organizationId — SMS path doesn't need AWS account
+    await publishTemplateToSES(id, "completely-wrong-org-id");
+
+    // Restore spies
+    templateFindSpy.mockRestore();
+
+    // Template should NOT be updated
+    const afterAttempt = await db.query.template.findFirst({
+      where: eq(template.id, id),
+    });
+    expect(afterAttempt?.status).toBe("DRAFT");
+    expect(afterAttempt?.publishedAt).toBeNull();
+  });
+});
