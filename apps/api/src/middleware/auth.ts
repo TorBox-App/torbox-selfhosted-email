@@ -163,13 +163,6 @@ async function authenticate(
   const authHeader = request.headers.get("authorization");
   const orgId = request.headers.get("x-organization-id") ?? undefined;
 
-  console.log(
-    "[AUTH] Authenticating, authHeader:",
-    authHeader ? "yes" : "no",
-    "orgId:",
-    orgId
-  );
-
   if (!authHeader) {
     return { error: "Unauthorized: no auth header" };
   }
@@ -188,12 +181,9 @@ async function authenticate(
   }
 
   // Try session token auth (from Better Auth)
-  console.log("[AUTH] Trying session auth for token:", token.slice(0, 10));
   const result = await validateSessionWithReason(token, orgId);
-  console.log("[AUTH] Session result:", result.reason);
 
   if (result.auth) {
-    console.log("[AUTH] Session validated, returning auth context");
     return { auth: result.auth };
   }
 

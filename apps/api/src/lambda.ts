@@ -16,10 +16,6 @@ export async function handler(
   event: APIGatewayProxyEventV2,
   _context: Context
 ): Promise<APIGatewayProxyResultV2> {
-  // Debug: Check if auth header is present
-  const hasAuth = !!event.headers.authorization;
-  const authPrefix = event.headers.authorization?.slice(0, 20);
-
   // Convert API Gateway event to Request
   const url = new URL(
     event.rawPath + (event.rawQueryString ? `?${event.rawQueryString}` : ""),
@@ -65,25 +61,6 @@ export async function handler(
     } catch {
       body = "";
     }
-  }
-
-  // Debug: Add headers info to failed auth responses
-  if (response.status === 401) {
-    return {
-      statusCode: 401,
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        error: body,
-        debug: {
-          hasAuth,
-          authPrefix,
-          path: event.rawPath,
-          headerKeys: Object.keys(filteredHeaders),
-          hasOrgHeader: !!filteredHeaders["x-organization-id"],
-        },
-      }),
-      isBase64Encoded: false,
-    };
   }
 
   return {
