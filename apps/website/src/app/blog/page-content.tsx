@@ -2,6 +2,7 @@ import {
   ArrowRight,
   Calendar,
   Clock,
+  Code2,
   FileCheck,
   Inbox,
   Network,
@@ -33,6 +34,18 @@ type BlogPost = {
 };
 
 const posts: BlogPost[] = [
+  {
+    slug: "email-templates-react-workflows-typescript",
+    title: "Email Templates as React, Workflows as TypeScript",
+    description:
+      "Write email templates as React components and automation workflows as TypeScript. Version-controlled, type-safe, code-reviewable email infrastructure.",
+    category: "Developer Experience",
+    date: "February 2026",
+    readTime: "10 min read",
+    featured: true,
+    icon: <Code2 className="h-6 w-6" />,
+    image: "/blog/wraps-templates-and-workflows-as-code.png",
+  },
   {
     slug: "inbound-email-guide",
     title: "Receive Emails in Your AWS Account with Wraps",
