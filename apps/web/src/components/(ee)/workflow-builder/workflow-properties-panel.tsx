@@ -576,7 +576,6 @@ function SendEmailConfig({
   const hasUnverifiedDomain =
     fromDomain &&
     !domainsLoading &&
-    verifiedDomains.length > 0 &&
     !verifiedDomains.some((d) => d.identity === fromDomain);
 
   const handleFromChange = (prefix: string, domain: string) => {
@@ -699,6 +698,20 @@ function SendEmailConfig({
           </div>
         ) : domainsLoading ? (
           <p className="text-muted-foreground text-xs">Loading domains...</p>
+        ) : existingFrom ? (
+          <div className="flex items-center gap-1">
+            <Input className="flex-1" readOnly value={existingFrom} />
+            <Button
+              className="h-9 w-9 shrink-0"
+              onClick={() => onChange({ from: undefined })}
+              size="icon"
+              title="Clear from address"
+              type="button"
+              variant="ghost"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         ) : (
           <p className="text-muted-foreground text-xs">
             No verified domains. Configure in Workflow Settings.

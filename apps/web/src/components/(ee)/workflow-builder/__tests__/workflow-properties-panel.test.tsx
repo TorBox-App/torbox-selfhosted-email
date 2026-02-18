@@ -197,6 +197,127 @@ describe("WorkflowPropertiesPanel validation errors", () => {
     vi.clearAllMocks();
   });
 
+  it("should show existing from address when no verified domains exist", () => {
+    const mockState = {
+      selectNode: vi.fn(),
+      updateNodeConfig: vi.fn(),
+      updateNodeName: vi.fn(),
+      deleteNode: vi.fn(),
+      workflow: null, // no awsAccountId → skips domain fetch
+    };
+    mockUseWorkflowStore.mockImplementation(
+      (selector: (state: typeof mockState) => unknown) => selector(mockState)
+    );
+
+    mockUseSelectedNode.mockReturnValue({
+      id: "node-1",
+      data: {
+        stepId: "step-1",
+        type: "send_email",
+        name: "Send Email",
+        config: {
+          type: "send_email",
+          templateId: "tpl-1",
+          from: "hello@financeforge.com",
+        },
+        isValid: true,
+      },
+    });
+
+    mockUseValidationResult.mockReturnValue({
+      errors: [],
+      errorsByNodeId: new Map(),
+    });
+
+    render(
+      <WorkflowPropertiesPanel orgSlug="test-org" segments={[]} topics={[]} />
+    );
+
+    // The from address should be visible even with no verified domains
+    expect(
+      screen.getByDisplayValue("hello@financeforge.com")
+    ).toBeInTheDocument();
+  });
+
+  it("should show unverified domain warning when domain list is empty", () => {
+    const mockState = {
+      selectNode: vi.fn(),
+      updateNodeConfig: vi.fn(),
+      updateNodeName: vi.fn(),
+      deleteNode: vi.fn(),
+      workflow: null,
+    };
+    mockUseWorkflowStore.mockImplementation(
+      (selector: (state: typeof mockState) => unknown) => selector(mockState)
+    );
+
+    mockUseSelectedNode.mockReturnValue({
+      id: "node-1",
+      data: {
+        stepId: "step-1",
+        type: "send_email",
+        name: "Send Email",
+        config: {
+          type: "send_email",
+          templateId: "tpl-1",
+          from: "hello@financeforge.com",
+        },
+        isValid: true,
+      },
+    });
+
+    mockUseValidationResult.mockReturnValue({
+      errors: [],
+      errorsByNodeId: new Map(),
+    });
+
+    render(
+      <WorkflowPropertiesPanel orgSlug="test-org" segments={[]} topics={[]} />
+    );
+
+    expect(
+      screen.getByText(/financeforge\.com.+is not verified/i)
+    ).toBeInTheDocument();
+  });
+
+  it("should show 'No verified domains' when from is empty and no domains", () => {
+    const mockState = {
+      selectNode: vi.fn(),
+      updateNodeConfig: vi.fn(),
+      updateNodeName: vi.fn(),
+      deleteNode: vi.fn(),
+      workflow: null,
+    };
+    mockUseWorkflowStore.mockImplementation(
+      (selector: (state: typeof mockState) => unknown) => selector(mockState)
+    );
+
+    mockUseSelectedNode.mockReturnValue({
+      id: "node-1",
+      data: {
+        stepId: "step-1",
+        type: "send_email",
+        name: "Send Email",
+        config: {
+          type: "send_email",
+          templateId: "tpl-1",
+        },
+        isValid: true,
+      },
+    });
+
+    mockUseValidationResult.mockReturnValue({
+      errors: [],
+      errorsByNodeId: new Map(),
+    });
+
+    render(
+      <WorkflowPropertiesPanel orgSlug="test-org" segments={[]} topics={[]} />
+    );
+
+    expect(screen.getByText(/No verified domains/i)).toBeInTheDocument();
+  });
+
   it("should show validation errors when present", () => {
     const errorsByNodeId = new Map();
     errorsByNodeId.set("node-1", [
