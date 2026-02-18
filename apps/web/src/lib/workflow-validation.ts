@@ -202,7 +202,7 @@ function validateTrigger(
         errors.push({
           nodeId,
           field: "eventName",
-          message: "Event name is required",
+          message: "Trigger: event name is required",
           severity: "error",
         });
       }
@@ -373,7 +373,7 @@ function validateWaitForEvent(
     errors.push({
       nodeId,
       field: "eventName",
-      message: "Event name is required",
+      message: "Wait for Event: event name is required",
       severity: "error",
     });
   }

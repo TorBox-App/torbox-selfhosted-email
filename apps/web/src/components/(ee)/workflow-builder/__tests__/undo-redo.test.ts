@@ -30,8 +30,7 @@ describe("undo/redo", () => {
 
   describe("history tracking", () => {
     it("should have empty history initially", () => {
-      const { pastStates, futureStates } =
-        useWorkflowStore.temporal.getState();
+      const { pastStates, futureStates } = useWorkflowStore.temporal.getState();
       expect(pastStates).toHaveLength(0);
       expect(futureStates).toHaveLength(0);
     });
@@ -189,18 +188,14 @@ describe("undo/redo", () => {
     it("should restore previous node name", () => {
       useWorkflowStore.getState().addNode("send_email", { x: 0, y: 0 });
 
-      useWorkflowStore
-        .getState()
-        .updateNodeName("undo-uuid-1", "Custom Name");
+      useWorkflowStore.getState().updateNodeName("undo-uuid-1", "Custom Name");
       expect(useWorkflowStore.getState().nodes[0].data.name).toBe(
         "Custom Name"
       );
 
       useWorkflowStore.temporal.getState().undo();
 
-      expect(useWorkflowStore.getState().nodes[0].data.name).toBe(
-        "Send Email"
-      );
+      expect(useWorkflowStore.getState().nodes[0].data.name).toBe("Send Email");
     });
   });
 
@@ -305,8 +300,7 @@ describe("undo/redo", () => {
       useWorkflowStore.getState().selectNode("some-id");
       useWorkflowStore.getState().selectNode(null);
 
-      const countAfter =
-        useWorkflowStore.temporal.getState().pastStates.length;
+      const countAfter = useWorkflowStore.temporal.getState().pastStates.length;
       expect(countAfter).toBe(countBefore);
     });
 
@@ -318,8 +312,7 @@ describe("undo/redo", () => {
         .getState()
         .setCanvasViewport({ x: 100, y: 200, zoom: 1.5 });
 
-      const countAfter =
-        useWorkflowStore.temporal.getState().pastStates.length;
+      const countAfter = useWorkflowStore.temporal.getState().pastStates.length;
       expect(countAfter).toBe(countBefore);
     });
 
@@ -329,8 +322,7 @@ describe("undo/redo", () => {
 
       useWorkflowStore.getState().toggleSettingsPanel();
 
-      const countAfter =
-        useWorkflowStore.temporal.getState().pastStates.length;
+      const countAfter = useWorkflowStore.temporal.getState().pastStates.length;
       expect(countAfter).toBe(countBefore);
     });
 
@@ -341,8 +333,7 @@ describe("undo/redo", () => {
       useWorkflowStore.getState().setIsSaving(true);
       useWorkflowStore.getState().setIsSaving(false);
 
-      const countAfter =
-        useWorkflowStore.temporal.getState().pastStates.length;
+      const countAfter = useWorkflowStore.temporal.getState().pastStates.length;
       expect(countAfter).toBe(countBefore);
     });
   });
@@ -376,8 +367,7 @@ describe("undo/redo", () => {
       useWorkflowStore.getState().setWorkflow(mockWorkflow);
 
       // History should be cleared
-      const { pastStates, futureStates } =
-        useWorkflowStore.temporal.getState();
+      const { pastStates, futureStates } = useWorkflowStore.temporal.getState();
       expect(pastStates).toHaveLength(0);
       expect(futureStates).toHaveLength(0);
     });

@@ -320,7 +320,7 @@ describe("Workflow Validation - Trigger Config", () => {
         expect.objectContaining({
           nodeId: "trigger-1",
           field: "eventName",
-          message: "Event name is required",
+          message: "Trigger: event name is required",
         })
       );
     });
@@ -889,7 +889,7 @@ describe("Workflow Validation - Step Config", () => {
         expect.objectContaining({
           nodeId: "wait-1",
           field: "eventName",
-          message: "Event name is required",
+          message: "Wait for Event: event name is required",
         })
       );
     });

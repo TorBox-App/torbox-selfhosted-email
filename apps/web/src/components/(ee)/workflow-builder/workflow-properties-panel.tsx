@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 const TemplateEditorDialog = dynamic(
@@ -220,6 +221,7 @@ export function WorkflowPropertiesPanel({
           <TriggerConfig
             config={data.config}
             onChange={handleConfigChange}
+            orgSlug={orgSlug}
             segments={segments}
             topics={topics}
           />
@@ -351,11 +353,13 @@ function TriggerConfig({
   topics,
   segments,
   onChange,
+  orgSlug,
 }: {
   config: WorkflowStepConfig;
   topics: { id: string; name: string }[];
   segments: { id: string; name: string }[];
   onChange: (updates: Partial<WorkflowStepConfig>) => void;
+  orgSlug: string;
 }) {
   if (config.type !== "trigger") {
     return null;
@@ -409,31 +413,40 @@ function TriggerConfig({
         config.triggerType === "segment_exit") && (
         <div className="space-y-2">
           <Label>Segment</Label>
-          <Select
-            onValueChange={(value) => onChange({ segmentId: value })}
-            value={config.segmentId || ""}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a segment" />
-            </SelectTrigger>
-            <SelectContent>
-              {segments.map((segment) => (
-                <SelectItem key={segment.id} value={segment.id}>
-                  {segment.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {segments.length === 0 && (
-            <p className="text-muted-foreground text-xs">
-              No segments available. Create one in Contacts &gt; Segments.
-            </p>
+          {segments.length > 0 ? (
+            <>
+              <Select
+                onValueChange={(value) => onChange({ segmentId: value })}
+                value={config.segmentId || ""}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a segment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {segments.map((segment) => (
+                    <SelectItem key={segment.id} value={segment.id}>
+                      {segment.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {config.triggerType === "segment_entry"
+                  ? "Workflow starts when a contact enters this segment."
+                  : "Workflow starts when a contact exits this segment."}
+              </p>
+            </>
+          ) : (
+            <div className="rounded-lg border border-dashed p-3 text-center">
+              <p className="text-muted-foreground text-sm">No segments yet</p>
+              <Link
+                className="text-primary text-sm hover:underline"
+                href={`/${orgSlug}/contacts/segments`}
+              >
+                Create a segment
+              </Link>
+            </div>
           )}
-          <p className="text-muted-foreground text-xs">
-            {config.triggerType === "segment_entry"
-              ? "Workflow starts when a contact enters this segment."
-              : "Workflow starts when a contact exits this segment."}
-          </p>
         </div>
       )}
 
@@ -441,31 +454,40 @@ function TriggerConfig({
         config.triggerType === "topic_unsubscribed") && (
         <div className="space-y-2">
           <Label>Topic</Label>
-          <Select
-            onValueChange={(value) => onChange({ topicId: value })}
-            value={config.topicId || ""}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a topic" />
-            </SelectTrigger>
-            <SelectContent>
-              {topics.map((topic) => (
-                <SelectItem key={topic.id} value={topic.id}>
-                  {topic.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {topics.length === 0 && (
-            <p className="text-muted-foreground text-xs">
-              No topics available. Create one in Settings &gt; Topics.
-            </p>
+          {topics.length > 0 ? (
+            <>
+              <Select
+                onValueChange={(value) => onChange({ topicId: value })}
+                value={config.topicId || ""}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a topic" />
+                </SelectTrigger>
+                <SelectContent>
+                  {topics.map((topic) => (
+                    <SelectItem key={topic.id} value={topic.id}>
+                      {topic.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {config.triggerType === "topic_subscribed"
+                  ? "Workflow starts when a contact subscribes to this topic."
+                  : "Workflow starts when a contact unsubscribes from this topic."}
+              </p>
+            </>
+          ) : (
+            <div className="rounded-lg border border-dashed p-3 text-center">
+              <p className="text-muted-foreground text-sm">No topics yet</p>
+              <Link
+                className="text-primary text-sm hover:underline"
+                href={`/${orgSlug}/topics`}
+              >
+                Create a topic
+              </Link>
+            </div>
           )}
-          <p className="text-muted-foreground text-xs">
-            {config.triggerType === "topic_subscribed"
-              ? "Workflow starts when a contact subscribes to this topic."
-              : "Workflow starts when a contact unsubscribes from this topic."}
-          </p>
         </div>
       )}
 
