@@ -9,6 +9,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -536,10 +537,10 @@ export default function ConfigurationPresetsPageContent() {
                 See every AWS resource Wraps creates for each preset.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/infrastructure/email">
+                <Link href="/docs/infrastructure/email">
                   Infrastructure Details
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -553,10 +554,10 @@ export default function ConfigurationPresetsPageContent() {
                 Full CLI reference for all email commands.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/cli-reference/email">
+                <Link href="/docs/cli-reference/email">
                   CLI Reference
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

@@ -11,6 +11,7 @@ import {
   Shield,
   Tag,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -478,10 +479,10 @@ export default function InfrastructureCdnPageContent() {
                 All available CDN CLI commands and options.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/cli-reference/cdn">
+                <Link href="/docs/cli-reference/cdn">
                   View CLI Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -495,10 +496,10 @@ export default function InfrastructureCdnPageContent() {
                 Deploy CDN infrastructure and upload your first asset.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/quickstart/cdn">
+                <Link href="/docs/quickstart/cdn">
                   Get Started
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

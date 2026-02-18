@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -167,10 +168,10 @@ export default function QuickstartPageContent() {
             takes about 2 minutes to set up.
           </p>
           <Button asChild variant="outline">
-            <a href="/docs/quickstart/email">
+            <Link href="/docs/quickstart/email">
               Start with Email
               <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
+            </Link>
           </Button>
         </CardContent>
       </Card>

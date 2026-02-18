@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -43,10 +44,10 @@ export function DocsLayout({ children, headerActions }: DocsLayoutProps) {
           <div className="ml-auto flex items-center gap-2">
             {headerActions}
             <Button asChild variant="ghost">
-              <a href="/docs">Docs</a>
+              <Link href="/docs">Docs</Link>
             </Button>
             <Button asChild variant="ghost">
-              <a href="/">Home</a>
+              <Link href="/">Home</Link>
             </Button>
           </div>
         </div>

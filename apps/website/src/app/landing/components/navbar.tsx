@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -264,7 +265,7 @@ export function LandingNavbar() {
             </a>
           </Button>
           <Button asChild className="cursor-pointer" variant="outline">
-            <a href="/docs">Documentation</a>
+            <Link href="/docs">Documentation</Link>
           </Button>
           <Button
             asChild
@@ -505,7 +506,7 @@ export function LandingNavbar() {
                     size="lg"
                     variant="outline"
                   >
-                    <a href="/docs">Documentation</a>
+                    <Link href="/docs">Documentation</Link>
                   </Button>
                 </div>
               </div>

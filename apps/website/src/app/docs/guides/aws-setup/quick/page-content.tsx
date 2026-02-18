@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, CheckCircle2, Clock, Info } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -361,10 +362,10 @@ export default function QuickStartPageContent() {
                 Set up DKIM, SPF, and DMARC for better deliverability.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/domain-verification">
+                <Link href="/docs/guides/domain-verification">
                   Domain Setup
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -378,10 +379,10 @@ export default function QuickStartPageContent() {
                 Move out of sandbox mode to send to any recipient.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/production-access">
+                <Link href="/docs/guides/production-access">
                   Get Production Access
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

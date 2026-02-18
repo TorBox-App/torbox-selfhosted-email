@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Shield,
 } from "lucide-react";
+import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -49,10 +50,10 @@ export default function VercelSetupPageContent() {
       {/* Back Link */}
       <div className="mb-8">
         <Button asChild className="gap-2" variant="ghost">
-          <a href="/docs/guides">
+          <Link href="/docs/guides">
             <ArrowLeft className="h-4 w-4" />
             Back to Guides
-          </a>
+          </Link>
         </Button>
       </div>
 
@@ -652,10 +653,10 @@ export default function VercelSetupPageContent() {
                 reputation.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/domain-verification">
+                <Link href="/docs/guides/domain-verification">
                   Domain Verification
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -671,10 +672,10 @@ export default function VercelSetupPageContent() {
                 Move out of the SES sandbox to send emails to any address.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/production-access">
+                <Link href="/docs/guides/production-access">
                   Production Access
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

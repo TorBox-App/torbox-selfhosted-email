@@ -14,6 +14,7 @@ import {
   Settings,
   Terminal,
 } from "lucide-react";
+import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,11 +134,11 @@ export default function DocsPageContent() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <a className="flex items-center" href="/">
+            <Link className="flex items-center" href="/">
               <Logo size={28} />
-            </a>
+            </Link>
             <Button asChild variant="ghost">
-              <a href="/">Back to Home</a>
+              <Link href="/">Back to Home</Link>
             </Button>
           </div>
         </div>
@@ -205,13 +206,13 @@ export default function DocsPageContent() {
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Button asChild size="lg">
-                <a href="/docs/quickstart">
+                <Link href="/docs/quickstart">
                   Quickstart Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <a href="/docs/sdk-reference">SDK Reference</a>
+                <Link href="/docs/sdk-reference">SDK Reference</Link>
               </Button>
             </div>
           </div>

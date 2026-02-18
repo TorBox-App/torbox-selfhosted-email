@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { CopyForAIButton } from "@/components/docs/copy-for-ai-button";
 import { SectionHeading } from "@/components/docs/section-heading";
 import { DocsLayout } from "@/components/docs-layout";
@@ -475,10 +476,10 @@ export default function PageContent() {
                 permissions for Wraps.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/aws-setup">
+                <Link href="/docs/guides/aws-setup">
                   View Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -493,10 +494,10 @@ export default function PageContent() {
                 with solutions.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/reference/errors">
+                <Link href="/docs/reference/errors">
                   View Reference
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

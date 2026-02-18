@@ -9,6 +9,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
@@ -653,13 +654,13 @@ export default function Page() {
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
-                <a href="/tools/spf-builder">
+                <Link href="/tools/spf-builder">
                   Open SPF Builder
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <a href="/tools">Check Your Domain</a>
+                <Link href="/tools">Check Your Domain</Link>
               </Button>
             </div>
           </section>

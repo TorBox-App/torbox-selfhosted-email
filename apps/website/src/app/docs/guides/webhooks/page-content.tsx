@@ -11,6 +11,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -802,10 +803,10 @@ export default function WebhooksPageContent() {
                 bounces, complaints, and delivery delays.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/infrastructure/events">
+                <Link href="/docs/infrastructure/events">
                   Event Reference
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -820,10 +821,10 @@ export default function WebhooksPageContent() {
                 how to enable event tracking.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/configuration-presets">
+                <Link href="/docs/guides/configuration-presets">
                   View Presets
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export function CliCtaSection() {
@@ -18,13 +19,13 @@ export function CliCtaSection() {
             className="bg-green-500 text-white hover:bg-green-600"
             size="lg"
           >
-            <a href="/docs/quickstart">
+            <Link href="/docs/quickstart">
               Read the Quickstart
               <ArrowRight className="ml-2 size-4" />
-            </a>
+            </Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <a href="/platform">Explore the Platform</a>
+            <Link href="/platform">Explore the Platform</Link>
           </Button>
         </div>
       </div>

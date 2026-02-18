@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Terminal,
 } from "lucide-react";
+import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -68,10 +69,10 @@ export default function CLIReferencePageContent() {
                 tracking, analytics, and domain management.
               </p>
               <Button asChild className="w-full" variant="outline">
-                <a href="/docs/cli-reference/email">
+                <Link href="/docs/cli-reference/email">
                   View Email Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -89,10 +90,10 @@ export default function CLIReferencePageContent() {
                 image optimization.
               </p>
               <Button asChild className="w-full" variant="outline">
-                <a href="/docs/cli-reference/cdn">
+                <Link href="/docs/cli-reference/cdn">
                   View CDN Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -110,10 +111,10 @@ export default function CLIReferencePageContent() {
                 and marketing SMS.
               </p>
               <Button asChild className="w-full" variant="outline">
-                <a href="/docs/cli-reference/sms">
+                <Link href="/docs/cli-reference/sms">
                   View SMS Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -131,10 +132,10 @@ export default function CLIReferencePageContent() {
                 templates, and workflows.
               </p>
               <Button asChild className="w-full" variant="outline">
-                <a href="/docs/cli-reference/auth">
+                <Link href="/docs/cli-reference/auth">
                   View Auth Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -151,10 +152,10 @@ export default function CLIReferencePageContent() {
                 Set up and diagnose your AWS credentials and permissions.
               </p>
               <Button asChild className="w-full" variant="outline">
-                <a href="/docs/cli-reference/aws">
+                <Link href="/docs/cli-reference/aws">
                   View AWS Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -171,10 +172,10 @@ export default function CLIReferencePageContent() {
                 Connect your AWS infrastructure to the Wraps Platform.
               </p>
               <Button asChild className="w-full" variant="outline">
-                <a href="/docs/cli-reference/platform">
+                <Link href="/docs/cli-reference/platform">
                   View Platform Commands
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

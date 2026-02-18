@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -107,10 +108,10 @@ export default function ExpressQuickstartPageContent() {
       {/* Breadcrumb */}
       <div className="mb-6">
         <Button asChild className="gap-2" size="sm" variant="ghost">
-          <a href="/docs/quickstart/email">
+          <Link href="/docs/quickstart/email">
             <ArrowLeft className="h-4 w-4" />
             Email Quickstart
-          </a>
+          </Link>
         </Button>
       </div>
 
@@ -288,10 +289,10 @@ export default function ExpressQuickstartPageContent() {
                 features.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sdk-reference">
+                <Link href="/docs/sdk-reference">
                   View SDK Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -305,10 +306,10 @@ export default function ExpressQuickstartPageContent() {
                 Reference for all error codes and troubleshooting steps.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/reference/errors">
+                <Link href="/docs/reference/errors">
                   View Errors
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

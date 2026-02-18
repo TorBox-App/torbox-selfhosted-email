@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -416,10 +417,10 @@ export default function PlatformQuickstartPageContent() {
                 Explore all available endpoints, parameters, and response types.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/client-sdk-reference">
+                <Link href="/docs/client-sdk-reference">
                   View SDK Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -433,10 +434,10 @@ export default function PlatformQuickstartPageContent() {
                 Send emails directly through AWS SES with the Email SDK.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sdk-reference">
+                <Link href="/docs/sdk-reference">
                   View Email SDK
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

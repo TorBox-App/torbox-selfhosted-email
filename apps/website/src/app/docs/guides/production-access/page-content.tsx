@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -310,10 +311,10 @@ export default function ProductionAccessPageContent() {
                 Set up DKIM, SPF, and DMARC for better deliverability.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/domain-verification">
+                <Link href="/docs/guides/domain-verification">
                   Domain Verification
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -327,10 +328,10 @@ export default function ProductionAccessPageContent() {
                 Once approved, start sending with the Wraps SDK.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/quickstart/email">
+                <Link href="/docs/quickstart/email">
                   Email Quickstart
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

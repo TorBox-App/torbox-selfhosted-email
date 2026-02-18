@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, BookOpen, Check, MessageSquare } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const benefits = [
@@ -56,16 +57,16 @@ export function SmsCtaSection() {
                   className="bg-orange-500 hover:bg-orange-600"
                   size="lg"
                 >
-                  <a href="/docs/quickstart/sms">
+                  <Link href="/docs/quickstart/sms">
                     Get Started
                     <ArrowRight className="ml-1.5 size-4" />
-                  </a>
+                  </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
-                  <a href="/docs/cli-reference/sms">
+                  <Link href="/docs/cli-reference/sms">
                     <BookOpen className="mr-1.5 size-4" />
                     CLI Reference
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </div>

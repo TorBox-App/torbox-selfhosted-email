@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { CopyForAIButton } from "@/components/docs/copy-for-ai-button";
 import { SectionHeading } from "@/components/docs/section-heading";
 import { DocsLayout } from "@/components/docs-layout";
@@ -1016,10 +1017,10 @@ export default function PageContent() {
                 Full API reference for the @wraps.dev/email TypeScript SDK.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sdk-reference">
+                <Link href="/docs/sdk-reference">
                   View Reference
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -1033,10 +1034,10 @@ export default function PageContent() {
                 Full API reference for the @wraps.dev/sms TypeScript SDK.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sms-sdk-reference">
+                <Link href="/docs/sms-sdk-reference">
                   View Reference
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -1050,10 +1051,10 @@ export default function PageContent() {
                 Configure AWS credentials and permissions for Wraps.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/aws-setup">
+                <Link href="/docs/guides/aws-setup">
                   View Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

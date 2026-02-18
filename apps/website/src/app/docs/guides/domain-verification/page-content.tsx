@@ -8,6 +8,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -822,10 +823,10 @@ export CLOUDFLARE_ZONE_ID=your_zone_id`,
                 faster approval.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/production-access">
+                <Link href="/docs/guides/production-access">
                   Production Access
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -839,10 +840,10 @@ export CLOUDFLARE_ZONE_ID=your_zone_id`,
                 Start sending authenticated emails with the Wraps SDK.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/quickstart/email">
+                <Link href="/docs/quickstart/email">
                   Email Quickstart
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

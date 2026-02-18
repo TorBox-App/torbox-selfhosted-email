@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, CheckCircle2, Clock, Info, Terminal } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -635,10 +636,10 @@ export default function PermissionsPageContent() {
                 Now that permissions are set up, deploy your first service.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/quickstart/email">
+                <Link href="/docs/quickstart/email">
                   Deploy Email
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -652,10 +653,10 @@ export default function PermissionsPageContent() {
                 Having issues? Check common problems and solutions.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/aws-setup/troubleshooting">
+                <Link href="/docs/guides/aws-setup/troubleshooting">
                   Troubleshooting
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

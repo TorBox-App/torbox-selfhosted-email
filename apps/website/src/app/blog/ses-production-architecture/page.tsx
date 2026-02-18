@@ -6,6 +6,7 @@ import {
   Lightbulb,
 } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
@@ -804,13 +805,13 @@ resource "aws_cloudwatch_metric_alarm" "ses_complaint_rate" {
                 </p>
                 <div className="flex items-center justify-center gap-4 flex-wrap">
                   <Button asChild size="lg">
-                    <a href="/docs/quickstart/email">
+                    <Link href="/docs/quickstart/email">
                       Get Started
                       <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
+                    </Link>
                   </Button>
                   <Button asChild size="lg" variant="outline">
-                    <a href="/cli">View All Resources Deployed</a>
+                    <Link href="/cli">View All Resources Deployed</Link>
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-4">

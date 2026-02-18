@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, Terminal } from "lucide-react";
+import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +14,10 @@ export default function CLIReferencePlatformPageContent() {
       {/* Breadcrumb */}
       <div className="mb-6">
         <Button asChild className="gap-2" size="sm" variant="ghost">
-          <a href="/docs/cli-reference">
+          <Link href="/docs/cli-reference">
             <ArrowLeft className="h-4 w-4" />
             CLI Reference
-          </a>
+          </Link>
         </Button>
       </div>
 
@@ -282,16 +283,16 @@ export default function CLIReferencePlatformPageContent() {
       {/* Navigation */}
       <div className="flex justify-between">
         <Button asChild variant="outline">
-          <a href="/docs/cli-reference">
+          <Link href="/docs/cli-reference">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to CLI Reference
-          </a>
+          </Link>
         </Button>
         <Button asChild variant="outline">
-          <a href="/docs/cli-reference/auth">
+          <Link href="/docs/cli-reference/auth">
             Auth Commands
             <ArrowRight className="ml-2 h-4 w-4" />
-          </a>
+          </Link>
         </Button>
       </div>
     </DocsLayout>

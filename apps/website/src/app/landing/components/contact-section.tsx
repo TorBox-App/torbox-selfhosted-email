@@ -2,6 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { BookOpen, Github, Mail, MessageCircle } from "lucide-react";
+import Link from "next/link";
 import { memo, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -145,7 +146,7 @@ const ContactSection = memo(function ContactSection() {
                   size="sm"
                   variant="outline"
                 >
-                  <a href="/docs">View Docs</a>
+                  <Link href="/docs">View Docs</Link>
                 </Button>
               </CardContent>
             </Card>

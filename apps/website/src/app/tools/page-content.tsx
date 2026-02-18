@@ -20,6 +20,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 import Script from "next/script";
 import { parseAsString, useQueryStates } from "nuqs";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -527,10 +528,10 @@ function ToolsPageInner() {
           </a>
           <div className="flex items-center gap-3">
             <Button asChild size="sm" variant="ghost">
-              <a href="/tools/spf-builder">SPF Builder</a>
+              <Link href="/tools/spf-builder">SPF Builder</Link>
             </Button>
             <Button asChild variant="outline">
-              <a href="/">Back to Home</a>
+              <Link href="/">Back to Home</Link>
             </Button>
           </div>
         </div>
@@ -1453,10 +1454,10 @@ function ToolsPageInner() {
                       </p>
                     </div>
                     <Button asChild size="lg">
-                      <a href="/docs/quickstart">
+                      <Link href="/docs/quickstart">
                         Get Started
                         <ArrowRight className="ml-2 h-4 w-4" />
-                      </a>
+                      </Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -1547,10 +1548,10 @@ function ToolsPageInner() {
                   </p>
                 </div>
                 <Button asChild size="lg">
-                  <a href="/tools/ses-calculator">
+                  <Link href="/tools/ses-calculator">
                     Open Calculator
                     <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -1562,10 +1563,10 @@ function ToolsPageInner() {
               Want to learn more about email authentication?
             </p>
             <Button asChild variant="outline">
-              <a href="/blog/your-dmarc-policy-is-useless">
+              <Link href="/blog/your-dmarc-policy-is-useless">
                 Read: Why DMARC Is Broken
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+              </Link>
             </Button>
           </div>
         </div>

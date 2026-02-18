@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PRICING_COPY } from "@/config/pricing";
 import { PricingCards } from "./pricing-cards";
@@ -46,7 +47,7 @@ export function PricingSection() {
             keep everything.
           </p>
           <Button asChild className="cursor-pointer" variant="outline">
-            <a href="/tools/ses-calculator">Calculate Your Costs</a>
+            <Link href="/tools/ses-calculator">Calculate Your Costs</Link>
           </Button>
         </div>
       </div>

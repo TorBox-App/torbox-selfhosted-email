@@ -13,6 +13,7 @@ import {
   Shield,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
 import {
   Suspense,
@@ -653,10 +654,10 @@ function SPFBuilderInner() {
           </a>
           <div className="flex items-center gap-3">
             <Button asChild size="sm" variant="ghost">
-              <a href="/tools">Email Checker</a>
+              <Link href="/tools">Email Checker</Link>
             </Button>
             <Button asChild variant="outline">
-              <a href="/">Back to Home</a>
+              <Link href="/">Back to Home</Link>
             </Button>
           </div>
         </div>
@@ -1173,10 +1174,10 @@ function SPFBuilderInner() {
                     </p>
                   </div>
                   <Button asChild size="lg">
-                    <a href="/tools">
+                    <Link href="/tools">
                       Check Your Domain
                       <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
@@ -1197,10 +1198,10 @@ function SPFBuilderInner() {
                     </p>
                   </div>
                   <Button asChild size="lg">
-                    <a href="/tools/ses-calculator">
+                    <Link href="/tools/ses-calculator">
                       Open Calculator
                       <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
@@ -1212,10 +1213,10 @@ function SPFBuilderInner() {
                 Want to learn more about SPF and the 10-lookup problem?
               </p>
               <Button asChild variant="outline">
-                <a href="/blog/spf-guide">
+                <Link href="/blog/spf-guide">
                   Read: The SPF 10-Lookup Limit Explained
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </div>
           </div>

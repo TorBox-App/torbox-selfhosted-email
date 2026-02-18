@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -464,10 +465,10 @@ export default function OrchestrationPageContent() {
                 all step helpers.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/workflows">
+                <Link href="/docs/guides/workflows">
                   Workflow Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -481,10 +482,10 @@ export default function OrchestrationPageContent() {
                 Full reference for the Wraps client SDK and workflow API.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/client-sdk-reference">
+                <Link href="/docs/client-sdk-reference">
                   SDK Reference
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

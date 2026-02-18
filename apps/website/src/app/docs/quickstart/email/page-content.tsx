@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -316,10 +317,10 @@ export default function EmailQuickstartPageContent() {
                 features.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sdk-reference">
+                <Link href="/docs/sdk-reference">
                   View SDK Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -333,10 +334,10 @@ export default function EmailQuickstartPageContent() {
                 Explore all CLI commands for managing your infrastructure.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/cli-reference">
+                <Link href="/docs/cli-reference">
                   View CLI Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

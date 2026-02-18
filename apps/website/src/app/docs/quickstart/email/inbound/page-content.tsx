@@ -8,6 +8,7 @@ import {
   Mail,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,10 +134,10 @@ export default function InboundEmailQuickstartPageContent() {
       {/* Breadcrumb */}
       <div className="mb-6">
         <Button asChild className="gap-2" size="sm" variant="ghost">
-          <a href="/docs/quickstart/email">
+          <Link href="/docs/quickstart/email">
             <ArrowLeft className="h-4 w-4" />
             Email Quickstart
-          </a>
+          </Link>
         </Button>
       </div>
 
@@ -711,10 +712,10 @@ TTL: 300`,
                 parsing.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sdk-reference">
+                <Link href="/docs/sdk-reference">
                   View SDK Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -731,10 +732,10 @@ TTL: 300`,
                 Manage inbound infrastructure with CLI commands.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/cli-reference/email">
+                <Link href="/docs/cli-reference/email">
                   View CLI Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -403,10 +404,10 @@ npx @wraps.dev/cli cdn upgrade`,
                 sync, and destroy.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/cli-reference/cdn">
+                <Link href="/docs/cli-reference/cdn">
                   View CLI Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -420,10 +421,10 @@ npx @wraps.dev/cli cdn upgrade`,
                 Need help setting up AWS credentials? Check our setup guide.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/aws-setup">
+                <Link href="/docs/guides/aws-setup">
                   View Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

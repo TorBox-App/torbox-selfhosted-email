@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Shield, Terminal } from "lucide-react";
+import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -281,10 +282,10 @@ export default function TelemetryPageContent() {
                 Complete reference for all Wraps CLI commands.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/cli-reference">
+                <Link href="/docs/cli-reference">
                   View CLI Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -298,10 +299,10 @@ export default function TelemetryPageContent() {
                 New to Wraps? Start with our quickstart guide.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/quickstart">
+                <Link href="/docs/quickstart">
                   Get Started
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

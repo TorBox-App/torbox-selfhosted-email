@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Shield,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -106,10 +107,10 @@ export function ExistingSesSection() {
             size="sm"
             variant="link"
           >
-            <a href="/docs/cli-reference/email#connect">
+            <Link href="/docs/cli-reference/email#connect">
               Learn more about connecting existing SES
               <ArrowRight className="ml-1 size-3 transition-transform group-hover:translate-x-0.5" />
-            </a>
+            </Link>
           </Button>
         </div>
       </div>

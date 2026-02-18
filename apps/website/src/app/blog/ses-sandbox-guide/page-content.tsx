@@ -19,6 +19,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1290,13 +1291,13 @@ export default function SandboxGuideContent() {
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <a href="/docs/quickstart/email">
+              <Link href="/docs/quickstart/email">
                 Get Started Free
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+              </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <a href="/cli">Learn About Wraps CLI</a>
+              <Link href="/cli">Learn About Wraps CLI</Link>
             </Button>
           </div>
         </section>

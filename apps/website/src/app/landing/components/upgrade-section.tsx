@@ -2,6 +2,7 @@
 
 import { ArrowRight, Check, X } from "lucide-react";
 import { motion, useInView } from "motion/react";
+import Link from "next/link";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { PRICING_TIERS } from "@/config/pricing";
@@ -428,10 +429,10 @@ export function UpgradeSection() {
               className="bg-orange-500 hover:bg-orange-600"
               size="lg"
             >
-              <a href="/platform">
+              <Link href="/platform">
                 See Platform Details
                 <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
-              </a>
+              </Link>
             </Button>
           </div>
         </div>

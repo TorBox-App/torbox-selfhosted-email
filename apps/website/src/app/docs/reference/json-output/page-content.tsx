@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { CopyForAIButton } from "@/components/docs/copy-for-ai-button";
 import { SectionHeading } from "@/components/docs/section-heading";
@@ -992,16 +993,16 @@ export default function PageContent() {
       {/* Navigation */}
       <div className="flex justify-between">
         <Button asChild variant="outline">
-          <a href="/docs/reference/errors">
+          <Link href="/docs/reference/errors">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Error Codes
-          </a>
+          </Link>
         </Button>
         <Button asChild variant="outline">
-          <a href="/docs/reference/environment-variables">
+          <Link href="/docs/reference/environment-variables">
             Environment Variables
             <ArrowRight className="ml-2 h-4 w-4" />
-          </a>
+          </Link>
         </Button>
       </div>
     </DocsLayout>

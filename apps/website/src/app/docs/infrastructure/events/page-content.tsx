@@ -11,6 +11,7 @@ import {
   Shield,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -2013,10 +2014,10 @@ export default function InfrastructureEventsPageContent() {
                 See every AWS resource Wraps creates, organized by preset.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/infrastructure/email">
+                <Link href="/docs/infrastructure/email">
                   View Resources
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -2030,10 +2031,10 @@ export default function InfrastructureEventsPageContent() {
                 Send emails with the TypeScript SDK after deploying.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sdk-reference">
+                <Link href="/docs/sdk-reference">
                   View SDK Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -2047,10 +2048,10 @@ export default function InfrastructureEventsPageContent() {
                 Compare presets and customize your configuration.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/configuration-presets">
+                <Link href="/docs/guides/configuration-presets">
                   View Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

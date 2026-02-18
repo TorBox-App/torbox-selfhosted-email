@@ -9,6 +9,7 @@ import {
   Lock,
   Server,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import {
   Accordion,
@@ -94,7 +95,7 @@ export default function WhyWrapsPageContent() {
             Wraps
           </a>
           <Button asChild variant="outline">
-            <a href="/">Back to Home</a>
+            <Link href="/">Back to Home</Link>
           </Button>
         </div>
       </header>
@@ -301,13 +302,13 @@ export default function WhyWrapsPageContent() {
             </p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
-                <a href="/docs/quickstart">
+                <Link href="/docs/quickstart">
                   Get Started
                   <ArrowRight className="ml-2 size-4" />
-                </a>
+                </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <a href="/tools/ses-calculator">Calculate Your Costs</a>
+                <Link href="/tools/ses-calculator">Calculate Your Costs</Link>
               </Button>
             </div>
           </section>

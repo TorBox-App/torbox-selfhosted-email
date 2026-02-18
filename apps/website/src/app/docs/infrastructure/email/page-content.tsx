@@ -14,6 +14,7 @@ import {
   Tag,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -801,10 +802,10 @@ export default function InfrastructureEmailPageContent() {
                 All available email CLI commands and options.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/cli-reference/email">
+                <Link href="/docs/cli-reference/email">
                   View CLI Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -818,10 +819,10 @@ export default function InfrastructureEmailPageContent() {
                 Send emails with the TypeScript SDK after deploying.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sdk-reference">
+                <Link href="/docs/sdk-reference">
                   View SDK Docs
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -835,10 +836,10 @@ export default function InfrastructureEmailPageContent() {
                 Compare presets and customize your configuration.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/configuration-presets">
+                <Link href="/docs/guides/configuration-presets">
                   View Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

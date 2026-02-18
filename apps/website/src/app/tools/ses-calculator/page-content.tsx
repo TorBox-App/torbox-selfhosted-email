@@ -11,6 +11,7 @@ import {
   Plus,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import {
   parseAsBoolean,
   parseAsInteger,
@@ -433,7 +434,7 @@ function SESCalculatorInner() {
             Wraps Cost Calculator
           </a>
           <Button asChild variant="outline">
-            <a href="/">Back to Home</a>
+            <Link href="/">Back to Home</Link>
           </Button>
         </div>
       </header>
@@ -1183,7 +1184,7 @@ function SESCalculatorInner() {
                   </a>
                 </Button>
                 <Button asChild className="w-full" size="lg" variant="outline">
-                  <a href="/docs">Read Documentation</a>
+                  <Link href="/docs">Read Documentation</Link>
                 </Button>
               </div>
             </div>
@@ -1459,10 +1460,10 @@ function SESCalculatorInner() {
                     </p>
                   </div>
                   <Button asChild size="lg">
-                    <a href="/tools">
+                    <Link href="/tools">
                       Check Your Domain
                       <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </CardContent>

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import Link from "next/link";
 import { CLICommand } from "@/components/docs/cli-command";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
@@ -67,10 +68,10 @@ export default function MigrationGuidePageContent() {
       {/* Back link */}
       <div className="mb-8">
         <Button asChild size="sm" variant="ghost">
-          <a href="/docs/guides">
+          <Link href="/docs/guides">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Guides
-          </a>
+          </Link>
         </Button>
       </div>
 
@@ -459,10 +460,10 @@ export default function MigrationGuidePageContent() {
                 send your first email.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/quickstart/email">
+                <Link href="/docs/quickstart/email">
                   Get Started
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -477,10 +478,10 @@ export default function MigrationGuidePageContent() {
                 from your domain.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/domain-verification">
+                <Link href="/docs/guides/domain-verification">
                   Verify Domain
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

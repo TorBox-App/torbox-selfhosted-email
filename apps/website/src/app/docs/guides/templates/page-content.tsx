@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Upload,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -418,10 +419,10 @@ export default function TemplatesPageContent() {
                 Create automated email sequences using the Wraps workflow DSL.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/workflows">
+                <Link href="/docs/guides/workflows">
                   Workflow Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -435,10 +436,10 @@ export default function TemplatesPageContent() {
                 Full SDK reference for sending emails programmatically.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/sdk-reference">
+                <Link href="/docs/sdk-reference">
                   SDK Reference
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

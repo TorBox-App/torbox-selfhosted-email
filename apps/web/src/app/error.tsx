@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import posthog from "posthog-js";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ export default function ErrorPage({
         <div className="mt-4 flex justify-center gap-2">
           <Button onClick={reset}>Try again</Button>
           <Button asChild variant="outline">
-            <a href="/">Go Home</a>
+            <Link href="/">Go Home</Link>
           </Button>
         </div>
       </div>

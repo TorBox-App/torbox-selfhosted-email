@@ -14,6 +14,7 @@ import {
   Webhook,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { DocsLayout } from "@/components/docs-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -469,10 +470,10 @@ export default function WorkflowsPageContent() {
                 Write email templates as React components for use in workflows.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/guides/templates">
+                <Link href="/docs/guides/templates">
                   Template Guide
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -486,10 +487,10 @@ export default function WorkflowsPageContent() {
                 Full reference for the Wraps client SDK and workflow API.
               </p>
               <Button asChild variant="outline">
-                <a href="/docs/client-sdk-reference">
+                <Link href="/docs/client-sdk-reference">
                   SDK Reference
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>
