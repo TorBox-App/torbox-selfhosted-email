@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import ChangelogPageContent from "./page-content";
+import { LandingFooter } from "@/app/landing/components/footer";
+import { LandingNavbar } from "@/app/landing/components/navbar";
+import { ChangelogHeroSection } from "./components/hero-section";
+import { ChangelogReleasesSection } from "./components/releases-section";
 
 export const metadata: Metadata = {
   title: "Changelog",
@@ -22,16 +25,13 @@ export const metadata: Metadata = {
 
 export default function ChangelogPage() {
   return (
-    <>
-      {/* Server-rendered content for SEO */}
-      <article aria-hidden="true" className="sr-only">
-        <h1>Changelog</h1>
-        <p>
-          Latest updates, improvements, and releases for Wraps CLI, SDK, and
-          Platform.
-        </p>
-      </article>
-      <ChangelogPageContent />
-    </>
+    <div className="min-h-screen bg-background">
+      <LandingNavbar />
+      <main>
+        <ChangelogHeroSection />
+        <ChangelogReleasesSection />
+      </main>
+      <LandingFooter />
+    </div>
   );
 }

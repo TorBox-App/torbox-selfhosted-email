@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import SmsPageContent from "./page-content";
+import { LandingFooter } from "@/app/landing/components/footer";
+import { LandingNavbar } from "@/app/landing/components/navbar";
+import { SmsCtaSection } from "./components/cta-section";
+import { SmsFeaturesSection } from "./components/features-section";
+import { SmsHeroSection } from "./components/hero-section";
+import { SmsPricingSection } from "./components/pricing-section";
+import { SmsValuePropsSection } from "./components/value-props-section";
 
 export const metadata: Metadata = {
   title: "SMS Infrastructure",
@@ -22,19 +28,16 @@ export const metadata: Metadata = {
 
 export default function SmsPage() {
   return (
-    <>
-      {/* Server-rendered content for SEO */}
-      <article aria-hidden="true" className="sr-only">
-        <h1>SMS Infrastructure</h1>
-        <p>
-          Deploy SMS infrastructure to your AWS account with the same great DX
-          as email.
-        </p>
-        <h2>Features</h2>
-        <h2>Pricing</h2>
-        <h2>SDK</h2>
-      </article>
-      <SmsPageContent />
-    </>
+    <div className="min-h-screen bg-background">
+      <LandingNavbar />
+      <main>
+        <SmsHeroSection />
+        <SmsValuePropsSection />
+        <SmsFeaturesSection />
+        <SmsPricingSection />
+        <SmsCtaSection />
+      </main>
+      <LandingFooter />
+    </div>
   );
 }

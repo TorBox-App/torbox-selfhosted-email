@@ -1,5 +1,3 @@
-"use client";
-
 import { History } from "lucide-react";
 import { DotPattern } from "@/components/dot-pattern";
 import { Badge } from "@/components/ui/badge";

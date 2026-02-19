@@ -1,5 +1,3 @@
-"use client";
-
 import { Clock, DollarSign, Server } from "lucide-react";
 import { SectionWrapper } from "@/app/landing/components/section-card";
 

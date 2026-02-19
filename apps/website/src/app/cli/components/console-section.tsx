@@ -1,5 +1,3 @@
-"use client";
-
 export function CliConsoleSection() {
   return (
     <section className="py-16 sm:py-24" id="console">

@@ -1,5 +1,3 @@
-"use client";
-
 import { ArrowRight, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { DotPattern } from "@/components/dot-pattern";

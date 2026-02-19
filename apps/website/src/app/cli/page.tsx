@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import CliPageContent from "./page-content";
+import { LandingFooter } from "@/app/landing/components/footer";
+import { LandingNavbar } from "@/app/landing/components/navbar";
+import { CliCommandsSection } from "./components/commands-section";
+import { CliConsoleSection } from "./components/console-section";
+import { CliCtaSection } from "./components/cta-section";
+import { CliHeroSection } from "./components/hero-section";
+import { CliServicesSection } from "./components/services-section";
 
 const softwareSchema = {
   "@context": "https://schema.org",
@@ -63,19 +69,17 @@ export default function CliPage() {
         id="software-schema"
         type="application/ld+json"
       />
-      {/* Server-rendered content for SEO */}
-      <article aria-hidden="true" className="sr-only">
-        <h1>Wraps CLI & SDK</h1>
-        <p>
-          Free, open-source CLI and SDK to deploy email infrastructure to your
-          AWS account. One command deploys everything.
-        </p>
-        <h2>Installation</h2>
-        <h2>Quick Start</h2>
-        <h2>Features</h2>
-        <h2>TypeScript SDK</h2>
-      </article>
-      <CliPageContent />
+      <div className="min-h-screen bg-background">
+        <LandingNavbar />
+        <main>
+          <CliHeroSection />
+          <CliServicesSection />
+          <CliCommandsSection />
+          <CliConsoleSection />
+          <CliCtaSection />
+        </main>
+        <LandingFooter />
+      </div>
     </>
   );
 }
