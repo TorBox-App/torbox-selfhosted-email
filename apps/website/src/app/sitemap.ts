@@ -1,10 +1,10 @@
 import { globSync } from "node:fs";
-import { resolve } from "node:path";
+import { join } from "node:path";
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://wraps.dev";
-  const appDir = resolve(import.meta.dirname, ".");
+  const appDir = join(process.cwd(), "src/app");
 
   const pages = globSync("**/page.tsx", { cwd: appDir });
 
