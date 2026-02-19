@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
@@ -465,15 +466,9 @@ function TemplateEditorContent({
   }, [duplicateMutation, templateId, router, orgSlug]);
 
   // Handle delete
-  const handleDelete = useCallback(async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this template? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const handleDeleteConfirm = useCallback(async () => {
     try {
       await deleteMutation.mutateAsync(templateId);
       toast.success("Template deleted");
@@ -515,66 +510,136 @@ function TemplateEditorContent({
   }
 
   return (
-    <EditorErrorBoundary onReset={handleEditorReset}>
-      <EditorDndProvider brandKit={brandKit} editor={editor}>
-        {/* Skip navigation links for keyboard users */}
-        <a
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
-          href="#editor-canvas"
-        >
-          Skip to editor
-        </a>
-        <div
-          className={cn(
-            "flex h-[calc(100dvh-var(--header-height)-1rem)] flex-col bg-background md:h-[calc(100dvh-var(--header-height)-1.5rem)]",
-            className
-          )}
-        >
-          {/* Toolbar */}
-          <TemplateEditorToolbar
-            editor={editor}
-            emailType={emailType}
-            isPublishing={
-              publishMutation.isPending || unpublishMutation.isPending
-            }
-            isSaving={updateMutation.isPending}
-            lastSavedAt={lastSavedAt ?? undefined}
-            onDelete={handleDelete}
-            onDuplicate={handleDuplicate}
-            onImport={() => setShowImportModal(true)}
-            onPublish={handlePublish}
-            onRename={handleRename}
-            onSave={handleManualSave}
-            onSaveBlock={() => setShowSaveBlockModal(true)}
-            onSendTest={() => setShowSendTestModal(true)}
-            onSubjectChange={handleSubjectChange}
-            onUnpublish={handleUnpublish}
-            orgSlug={orgSlug}
-            previewText={previewText}
-            saveStatus={saveStatus}
-            status={template.status}
-            subject={subject}
-            templateDescription={template.description ?? undefined}
-            templateName={template.name}
-          />
-
-          {/* Main Content Area */}
-          <div
-            aria-label="Template editor workspace"
-            className="flex min-h-0 flex-1 overflow-hidden"
-            role="main"
+    <>
+      <EditorErrorBoundary onReset={handleEditorReset}>
+        <EditorDndProvider brandKit={brandKit} editor={editor}>
+          {/* Skip navigation links for keyboard users */}
+          <a
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+            href="#editor-canvas"
           >
-            {/* Left Panel - AI + Blocks tabs - with slide animation */}
+            Skip to editor
+          </a>
+          <div
+            className={cn(
+              "flex h-[calc(100dvh-var(--header-height)-1rem)] flex-col bg-background md:h-[calc(100dvh-var(--header-height)-1.5rem)]",
+              className
+            )}
+          >
+            {/* Toolbar */}
+            <TemplateEditorToolbar
+              editor={editor}
+              emailType={emailType}
+              isPublishing={
+                publishMutation.isPending || unpublishMutation.isPending
+              }
+              isSaving={updateMutation.isPending}
+              lastSavedAt={lastSavedAt ?? undefined}
+              onDelete={() => setDeleteDialogOpen(true)}
+              onDuplicate={handleDuplicate}
+              onImport={() => setShowImportModal(true)}
+              onPublish={handlePublish}
+              onRename={handleRename}
+              onSave={handleManualSave}
+              onSaveBlock={() => setShowSaveBlockModal(true)}
+              onSendTest={() => setShowSendTestModal(true)}
+              onSubjectChange={handleSubjectChange}
+              onUnpublish={handleUnpublish}
+              orgSlug={orgSlug}
+              previewText={previewText}
+              saveStatus={saveStatus}
+              status={template.status}
+              subject={subject}
+              templateDescription={template.description ?? undefined}
+              templateName={template.name}
+            />
+
+            {/* Main Content Area */}
             <div
-              className={cn(
-                "transition-all duration-300 ease-in-out",
-                showLeftPanel && view === "edit"
-                  ? "w-80 opacity-100"
-                  : "w-0 overflow-hidden opacity-0"
-              )}
+              aria-label="Template editor workspace"
+              className="flex min-h-0 flex-1 overflow-hidden"
+              role="main"
             >
-              {view === "edit" && (
-                <LeftPanel
+              {/* Left Panel - AI + Blocks tabs - with slide animation */}
+              <div
+                className={cn(
+                  "transition-all duration-300 ease-in-out",
+                  showLeftPanel && view === "edit"
+                    ? "w-80 opacity-100"
+                    : "w-0 overflow-hidden opacity-0"
+                )}
+              >
+                {view === "edit" && (
+                  <LeftPanel
+                    editor={editor}
+                    orgSlug={orgSlug}
+                    templateId={templateId}
+                  />
+                )}
+              </div>
+
+              {/* Center - Editor/Preview/Code/Usage */}
+              <div
+                aria-label="Email content editor"
+                className={cn("flex-1 overflow-auto")}
+                role="region"
+              >
+                {/* Editor - always mounted, hidden with CSS to prevent flushSync issues */}
+                <div className={cn(view !== "edit" && "hidden")}>
+                  <div className="mx-auto max-w-3xl p-6">
+                    <div
+                      className="relative min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm"
+                      id="editor-canvas"
+                      tabIndex={-1}
+                    >
+                      {/* Empty state overlay */}
+                      {showEmptyState && (
+                        <EditorEmptyState
+                          editor={editor}
+                          onOpenAI={() => {
+                            const { toggleLeftPanelWithTab } =
+                              useTemplateStore.getState().actions;
+                            toggleLeftPanelWithTab("ai");
+                            setShowEmptyState(false);
+                          }}
+                        />
+                      )}
+                      <EditorContent className="p-6" editor={editor} />
+                      {/* Bubble menu for text formatting */}
+                      <EditorBubbleMenu editor={editor} />
+                    </div>
+                  </div>
+                </div>
+
+                {view === "preview" && <PreviewPanel editor={editor} />}
+
+                {view === "code" && (
+                  <CodeView editor={editor} previewText={previewText} />
+                )}
+
+                {view === "usage" && <UsagePanel template={template} />}
+              </div>
+
+              {/* Right Panel - Properties - with slide animation */}
+              <div
+                className={cn(
+                  "transition-all duration-300 ease-in-out",
+                  view === "edit" && showPropertiesPanel
+                    ? "w-72 opacity-100"
+                    : "w-0 overflow-hidden opacity-0"
+                )}
+              >
+                {view === "edit" && <PropertiesPanel editor={editor} />}
+              </div>
+
+              {/* Right Panel - Test Data (shown when toggled) */}
+              {showTestDataPanel && (view === "edit" || view === "preview") && (
+                <TestDataPanel editor={editor} />
+              )}
+
+              {/* Right Panel - Version History (shown when toggled) */}
+              {showVersionHistory && (
+                <VersionHistoryPanel
                   editor={editor}
                   orgSlug={orgSlug}
                   templateId={templateId}
@@ -582,135 +647,76 @@ function TemplateEditorContent({
               )}
             </div>
 
-            {/* Center - Editor/Preview/Code/Usage */}
-            <div
-              aria-label="Email content editor"
-              className={cn("flex-1 overflow-auto")}
-              role="region"
-            >
-              {/* Editor - always mounted, hidden with CSS to prevent flushSync issues */}
-              <div className={cn(view !== "edit" && "hidden")}>
-                <div className="mx-auto max-w-3xl p-6">
-                  <div
-                    className="relative min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm"
-                    id="editor-canvas"
-                    tabIndex={-1}
-                  >
-                    {/* Empty state overlay */}
-                    {showEmptyState && (
-                      <EditorEmptyState
-                        editor={editor}
-                        onOpenAI={() => {
-                          const { toggleLeftPanelWithTab } =
-                            useTemplateStore.getState().actions;
-                          toggleLeftPanelWithTab("ai");
-                          setShowEmptyState(false);
-                        }}
-                      />
-                    )}
-                    <EditorContent className="p-6" editor={editor} />
-                    {/* Bubble menu for text formatting */}
-                    <EditorBubbleMenu editor={editor} />
-                  </div>
-                </div>
-              </div>
+            {/* Send Test Modal */}
+            <SendTestModal
+              defaultFrom={senderDefaults?.defaultFrom}
+              defaultFromName={senderDefaults?.defaultFromName}
+              editor={editor}
+              isOpen={showSendTestModal}
+              onClose={() => setShowSendTestModal(false)}
+              orgSlug={orgSlug}
+              templateId={templateId}
+            />
 
-              {view === "preview" && <PreviewPanel editor={editor} />}
+            {/* Save Block Modal */}
+            <SaveBlockModal
+              editor={editor}
+              isOpen={showSaveBlockModal}
+              onClose={() => setShowSaveBlockModal(false)}
+              orgSlug={orgSlug}
+            />
 
-              {view === "code" && (
-                <CodeView editor={editor} previewText={previewText} />
-              )}
+            {/* Import Modal */}
+            <ImportModal
+              editor={editor}
+              isOpen={showImportModal}
+              onClose={() => setShowImportModal(false)}
+            />
 
-              {view === "usage" && <UsagePanel template={template} />}
-            </div>
+            {/* Keyboard Shortcuts Modal */}
+            <KeyboardShortcutsModal
+              onOpenChange={setShowKeyboardShortcuts}
+              open={showKeyboardShortcuts}
+            />
 
-            {/* Right Panel - Properties - with slide animation */}
-            <div
-              className={cn(
-                "transition-all duration-300 ease-in-out",
-                view === "edit" && showPropertiesPanel
-                  ? "w-72 opacity-100"
-                  : "w-0 overflow-hidden opacity-0"
-              )}
-            >
-              {view === "edit" && <PropertiesPanel editor={editor} />}
-            </div>
-
-            {/* Right Panel - Test Data (shown when toggled) */}
-            {showTestDataPanel && (view === "edit" || view === "preview") && (
-              <TestDataPanel editor={editor} />
-            )}
-
-            {/* Right Panel - Version History (shown when toggled) */}
-            {showVersionHistory && (
-              <VersionHistoryPanel
-                editor={editor}
-                orgSlug={orgSlug}
-                templateId={templateId}
+            {/* First-time user hints */}
+            {view === "edit" && showLeftPanel && (
+              <FloatingHint
+                id="drag-blocks"
+                onDismiss={dismissHint}
+                position={{ top: 200, left: 290 }}
+                show={shouldShowHint("drag-blocks") && !showEmptyState}
               />
             )}
-          </div>
-
-          {/* Send Test Modal */}
-          <SendTestModal
-            defaultFrom={senderDefaults?.defaultFrom}
-            defaultFromName={senderDefaults?.defaultFromName}
-            editor={editor}
-            isOpen={showSendTestModal}
-            onClose={() => setShowSendTestModal(false)}
-            orgSlug={orgSlug}
-            templateId={templateId}
-          />
-
-          {/* Save Block Modal */}
-          <SaveBlockModal
-            editor={editor}
-            isOpen={showSaveBlockModal}
-            onClose={() => setShowSaveBlockModal(false)}
-            orgSlug={orgSlug}
-          />
-
-          {/* Import Modal */}
-          <ImportModal
-            editor={editor}
-            isOpen={showImportModal}
-            onClose={() => setShowImportModal(false)}
-          />
-
-          {/* Keyboard Shortcuts Modal */}
-          <KeyboardShortcutsModal
-            onOpenChange={setShowKeyboardShortcuts}
-            open={showKeyboardShortcuts}
-          />
-
-          {/* First-time user hints */}
-          {view === "edit" && showLeftPanel && (
             <FloatingHint
-              id="drag-blocks"
+              id="keyboard-shortcuts"
               onDismiss={dismissHint}
-              position={{ top: 200, left: 290 }}
-              show={shouldShowHint("drag-blocks") && !showEmptyState}
+              position={{ top: 120, left: "50%" }}
+              show={
+                shouldShowHint("keyboard-shortcuts") &&
+                !shouldShowHint("drag-blocks") &&
+                !showEmptyState
+              }
             />
-          )}
-          <FloatingHint
-            id="keyboard-shortcuts"
-            onDismiss={dismissHint}
-            position={{ top: 120, left: "50%" }}
-            show={
-              shouldShowHint("keyboard-shortcuts") &&
-              !shouldShowHint("drag-blocks") &&
-              !showEmptyState
-            }
-          />
 
-          {/* Success celebration for first publish */}
-          <SuccessCelebration
-            message="Template Published!"
-            onComplete={() => setShowCelebration(false)}
-            show={showCelebration}
-          />
-        </div>
-      </EditorDndProvider>
-    </EditorErrorBoundary>
+            {/* Success celebration for first publish */}
+            <SuccessCelebration
+              message="Template Published!"
+              onComplete={() => setShowCelebration(false)}
+              show={showCelebration}
+            />
+          </div>
+        </EditorDndProvider>
+      </EditorErrorBoundary>
+
+      <DeleteConfirmDialog
+        description="Are you sure you want to delete this template? This action cannot be undone."
+        loading={deleteMutation.isPending}
+        onConfirm={handleDeleteConfirm}
+        onOpenChange={setDeleteDialogOpen}
+        open={deleteDialogOpen}
+        title="Delete Template"
+      />
+    </>
   );
 }

@@ -28,13 +28,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   bulkDeleteTemplates,
   bulkUpdateTemplateStatus,
   bulkUpdateTemplateType,
 } from "@/actions/templates";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -919,11 +920,13 @@ function TemplateRowWithPublish({
     }
   };
 
-  const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this template?")) {
-      deleteTemplate.mutate(template.id);
-    }
-  };
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const handleDeleteConfirm = useCallback(() => {
+    deleteTemplate.mutate(template.id, {
+      onSuccess: () => setDeleteDialogOpen(false),
+    });
+  }, [deleteTemplate, template.id]);
 
   const handleDuplicate = async () => {
     const result = await duplicateTemplate.mutateAsync(template.id);
@@ -931,17 +934,27 @@ function TemplateRowWithPublish({
   };
 
   return (
-    <TemplateRow
-      isPublishing={publishMutation.isPending || unpublishMutation.isPending}
-      isSelected={isSelected}
-      onDelete={handleDelete}
-      onDuplicate={handleDuplicate}
-      onPublish={handlePublish}
-      onToggleSelect={onToggleSelect}
-      onUnpublish={handleUnpublish}
-      orgSlug={orgSlug}
-      template={template}
-    />
+    <>
+      <TemplateRow
+        isPublishing={publishMutation.isPending || unpublishMutation.isPending}
+        isSelected={isSelected}
+        onDelete={() => setDeleteDialogOpen(true)}
+        onDuplicate={handleDuplicate}
+        onPublish={handlePublish}
+        onToggleSelect={onToggleSelect}
+        onUnpublish={handleUnpublish}
+        orgSlug={orgSlug}
+        template={template}
+      />
+      <DeleteConfirmDialog
+        description="Are you sure you want to delete this template? This action cannot be undone."
+        loading={deleteTemplate.isPending}
+        onConfirm={handleDeleteConfirm}
+        onOpenChange={setDeleteDialogOpen}
+        open={deleteDialogOpen}
+        title="Delete Template"
+      />
+    </>
   );
 }
 

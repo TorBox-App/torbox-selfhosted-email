@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import {
   templateKeys,
   useDeleteTemplate,
@@ -163,15 +164,9 @@ export function CodeTemplateEditor({
   }, [duplicateMutation, templateId, router, orgSlug]);
 
   // Handle delete
-  const handleDelete = useCallback(async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this template? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const handleDeleteConfirm = useCallback(async () => {
     try {
       await deleteMutation.mutateAsync(templateId);
       toast.success("Template deleted");
@@ -255,71 +250,82 @@ export function CodeTemplateEditor({
   );
 
   return (
-    <EditorErrorBoundary>
-      <div
-        className={cn(
-          "flex h-[calc(100dvh-var(--header-height)-1rem)] flex-col bg-background md:h-[calc(100dvh-var(--header-height)-1.5rem)]",
-          className
-        )}
-      >
-        {/* Toolbar */}
-        <CodeTemplateToolbar
-          emailType={emailType}
-          isPublishing={
-            publishMutation.isPending || unpublishMutation.isPending
-          }
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
-          onPublish={handlePublish}
-          onRename={handleRename}
-          onSendTest={() => setShowSendTestModal(true)}
-          onSubjectChange={handleSubjectChange}
-          onUnpublish={handleUnpublish}
-          onViewChange={setView}
-          orgSlug={orgSlug}
-          previewText={previewText}
-          subject={subject}
-          template={template}
-          view={view}
-        />
-
-        {/* Content Area */}
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          {view === "design" && (
-            <div className="flex-1">
-              <CodeTemplateDesignView
-                compiledHtml={template.compiledHtml ?? ""}
-                currentSource={template.source ?? ""}
-                onApply={handleAIApply}
-                orgSlug={orgSlug}
-                templateId={templateId}
-              />
-            </div>
+    <>
+      <EditorErrorBoundary>
+        <div
+          className={cn(
+            "flex h-[calc(100dvh-var(--header-height)-1rem)] flex-col bg-background md:h-[calc(100dvh-var(--header-height)-1.5rem)]",
+            className
           )}
+        >
+          {/* Toolbar */}
+          <CodeTemplateToolbar
+            emailType={emailType}
+            isPublishing={
+              publishMutation.isPending || unpublishMutation.isPending
+            }
+            onDelete={() => setDeleteDialogOpen(true)}
+            onDuplicate={handleDuplicate}
+            onPublish={handlePublish}
+            onRename={handleRename}
+            onSendTest={() => setShowSendTestModal(true)}
+            onSubjectChange={handleSubjectChange}
+            onUnpublish={handleUnpublish}
+            onViewChange={setView}
+            orgSlug={orgSlug}
+            previewText={previewText}
+            subject={subject}
+            template={template}
+            view={view}
+          />
 
-          {view === "code" && (
-            <div className="flex-1">
-              <CodeTemplateCodeView
-                onSourceSaved={handleSourceSaved}
-                orgSlug={orgSlug}
-                template={template}
-                templateId={templateId}
-              />
-            </div>
-          )}
+          {/* Content Area */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {view === "design" && (
+              <div className="flex-1">
+                <CodeTemplateDesignView
+                  compiledHtml={template.compiledHtml ?? ""}
+                  currentSource={template.source ?? ""}
+                  onApply={handleAIApply}
+                  orgSlug={orgSlug}
+                  templateId={templateId}
+                />
+              </div>
+            )}
+
+            {view === "code" && (
+              <div className="flex-1">
+                <CodeTemplateCodeView
+                  onSourceSaved={handleSourceSaved}
+                  orgSlug={orgSlug}
+                  template={template}
+                  templateId={templateId}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Send Test Modal — editor=null since code templates don't use TipTap */}
+          <SendTestModal
+            defaultFrom={senderDefaults?.defaultFrom}
+            defaultFromName={senderDefaults?.defaultFromName}
+            editor={null}
+            isOpen={showSendTestModal}
+            onClose={() => setShowSendTestModal(false)}
+            orgSlug={orgSlug}
+            templateId={templateId}
+          />
         </div>
+      </EditorErrorBoundary>
 
-        {/* Send Test Modal — editor=null since code templates don't use TipTap */}
-        <SendTestModal
-          defaultFrom={senderDefaults?.defaultFrom}
-          defaultFromName={senderDefaults?.defaultFromName}
-          editor={null}
-          isOpen={showSendTestModal}
-          onClose={() => setShowSendTestModal(false)}
-          orgSlug={orgSlug}
-          templateId={templateId}
-        />
-      </div>
-    </EditorErrorBoundary>
+      <DeleteConfirmDialog
+        description="Are you sure you want to delete this template? This action cannot be undone."
+        loading={deleteMutation.isPending}
+        onConfirm={handleDeleteConfirm}
+        onOpenChange={setDeleteDialogOpen}
+        open={deleteDialogOpen}
+        title="Delete Template"
+      />
+    </>
   );
 }
