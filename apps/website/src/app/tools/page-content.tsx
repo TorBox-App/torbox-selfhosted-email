@@ -23,7 +23,7 @@ import {
 import Link from "next/link";
 import Script from "next/script";
 import { parseAsString, useQueryStates } from "nuqs";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -301,7 +301,7 @@ const checkerParsers = {
   dkim: parseAsString.withDefault(""),
 };
 
-function ToolsPageInner() {
+export default function ToolsPageContent() {
   const [{ domain, dkim }, setParams] = useQueryStates(checkerParsers, {
     shallow: false,
   });
@@ -369,11 +369,14 @@ function ToolsPageInner() {
   useEffect(() => {
     if (!(turnstileReady && window.turnstile)) return;
 
+    const sitekey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    if (!sitekey) return;
+
     const container = document.getElementById("turnstile-container");
     if (!container) return;
 
     turnstileWidgetId.current = window.turnstile.render(container, {
-      sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "",
+      sitekey,
       callback: (token: string) => {
         turnstileToken.current = token;
       },
@@ -513,1072 +516,924 @@ function ToolsPageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
       <Script
         onLoad={() => setTurnstileReady(true)}
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
       />
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <a className="flex items-center gap-2 font-bold text-xl" href="/">
-            <Shield className="size-6" />
-            Wraps Email Tools
-          </a>
-          <div className="flex items-center gap-3">
-            <Button asChild size="sm" variant="ghost">
-              <Link href="/tools/spf-builder">SPF Builder</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/">Back to Home</Link>
+
+      {/* Search Box */}
+      <Card className="mb-8">
+        <CardContent className="pt-6">
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
+              <Input
+                aria-label="Domain to check"
+                className="h-12 pl-10 text-lg"
+                disabled={isLoading}
+                onChange={(e) => setParams({ domain: e.target.value })}
+                onKeyDown={handleKeyDown}
+                placeholder="Enter your domain (e.g., example.com)"
+                value={domain}
+              />
+            </div>
+            <Button
+              className="h-12 px-6"
+              disabled={isLoading || !domain.trim()}
+              onClick={checkDomain}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Check Domain
+                </>
+              )}
             </Button>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="mx-auto max-w-4xl">
-          {/* Page Header */}
-          <div className="mb-12 text-center">
-            <Badge className="mb-4" variant="outline">
-              Free Tool
-            </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight">
-              Email Deliverability Checker
-            </h1>
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              Check your domain's email authentication setup. We analyze SPF,
-              DKIM, DMARC, and MX records to help you improve deliverability.
-            </p>
-          </div>
+          <div className="mt-3" id="turnstile-container" />
 
-          {/* Search Box */}
-          <Card className="mb-8">
-            <CardContent className="pt-6">
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    aria-label="Domain to check"
-                    className="h-12 pl-10 text-lg"
-                    disabled={isLoading}
-                    onChange={(e) => setParams({ domain: e.target.value })}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Enter your domain (e.g., example.com)"
-                    value={domain}
-                  />
-                </div>
-                <Button
-                  className="h-12 px-6"
-                  disabled={isLoading || !domain.trim()}
-                  onClick={checkDomain}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Checking...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="mr-2 h-4 w-4" />
-                      Check Domain
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="mt-3" id="turnstile-container" />
-
-              {/* Advanced Options */}
-              <Collapsible onOpenChange={setShowAdvanced} open={showAdvanced}>
-                <CollapsibleTrigger className="mt-4 flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground">
-                  <Settings2 className="h-4 w-4" />
-                  Advanced Options
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
-                  />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="mt-4 rounded-lg border bg-muted/30 p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <label
-                          className="mb-1.5 flex items-center gap-2 font-medium text-sm"
-                          htmlFor="dkim-selectors"
-                        >
-                          <Key className="h-4 w-4" />
-                          DKIM Selectors
-                        </label>
-                        <Input
-                          disabled={isLoading}
-                          id="dkim-selectors"
-                          onChange={(e) => setParams({ dkim: e.target.value })}
-                          placeholder="e.g., selector1, selector2, selector3"
-                          value={dkim}
-                        />
-                        <p className="mt-1.5 text-muted-foreground text-xs">
-                          Enter selector names separated by commas (the part
-                          before{" "}
-                          <code className="rounded bg-muted px-1">
-                            ._domainkey
-                          </code>
-                          ). AWS SES creates 3 selectors - find them in the SES
-                          console under "View DNS records" and enter all 3.
-                        </p>
-                      </div>
-                    </div>
+          {/* Advanced Options */}
+          <Collapsible onOpenChange={setShowAdvanced} open={showAdvanced}>
+            <CollapsibleTrigger className="mt-4 flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground">
+              <Settings2 className="h-4 w-4" />
+              Advanced Options
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                <div className="space-y-3">
+                  <div>
+                    <label
+                      className="mb-1.5 flex items-center gap-2 font-medium text-sm"
+                      htmlFor="dkim-selectors"
+                    >
+                      <Key className="h-4 w-4" />
+                      DKIM Selectors
+                    </label>
+                    <Input
+                      disabled={isLoading}
+                      id="dkim-selectors"
+                      onChange={(e) => setParams({ dkim: e.target.value })}
+                      placeholder="e.g., selector1, selector2, selector3"
+                      value={dkim}
+                    />
+                    <p className="mt-1.5 text-muted-foreground text-xs">
+                      Enter selector names separated by commas (the part before{" "}
+                      <code className="rounded bg-muted px-1">._domainkey</code>
+                      ). AWS SES creates 3 selectors - find them in the SES
+                      console under "View DNS records" and enter all 3.
+                    </p>
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </CardContent>
+      </Card>
+
+      {/* Error State */}
+      {error && (
+        <Card className="mb-8 border-red-500/20 bg-red-500/5" role="alert">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <p className="text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Results */}
+      {result?.success && (
+        <div className="space-y-6">
+          {/* Score Card */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
+                <div className="text-center md:text-left">
+                  <h2 className="mb-2 font-bold text-2xl">{result.domain}</h2>
+                  <p className="text-muted-foreground">
+                    Checked in {result.duration}ms
+                  </p>
+                </div>
+                <GradeDisplay
+                  grade={result.score.grade}
+                  score={result.score.score}
+                />
+              </div>
             </CardContent>
           </Card>
 
-          {/* Error State */}
-          {error && (
-            <Card className="mb-8 border-red-500/20 bg-red-500/5" role="alert">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
-                  <p className="text-red-600 dark:text-red-400">{error}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Results */}
-          {result?.success && (
-            <div className="space-y-6">
-              {/* Score Card */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between">
-                    <div className="text-center md:text-left">
-                      <h2 className="mb-2 font-bold text-2xl">
-                        {result.domain}
-                      </h2>
-                      <p className="text-muted-foreground">
-                        Checked in {result.duration}ms
-                      </p>
-                    </div>
-                    <GradeDisplay
-                      grade={result.score.grade}
-                      score={result.score.score}
-                    />
+          {/* Quick Status */}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <Card className="text-center">
+              <CardContent className="pt-4 pb-4">
+                <div className="mb-2 font-semibold text-sm">SPF</div>
+                <StatusBadge
+                  label={getStatusLabel(result.spf.exists, getSpfStatus())}
+                  status={getSpfStatus()}
+                />
+                {result.score?.breakdown && (
+                  <div className="mt-1.5 text-muted-foreground text-xs">
+                    {result.score.breakdown.spf.score}/
+                    {result.score.breakdown.spf.max} pts
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Quick Status */}
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                <Card className="text-center">
-                  <CardContent className="pt-4 pb-4">
-                    <div className="mb-2 font-semibold text-sm">SPF</div>
-                    <StatusBadge
-                      label={getStatusLabel(result.spf.exists, getSpfStatus())}
-                      status={getSpfStatus()}
-                    />
-                    {result.score?.breakdown && (
-                      <div className="mt-1.5 text-muted-foreground text-xs">
-                        {result.score.breakdown.spf.score}/
-                        {result.score.breakdown.spf.max} pts
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                <Card className="text-center">
-                  <CardContent className="pt-4 pb-4">
-                    <div className="mb-2 font-semibold text-sm">DKIM</div>
-                    <StatusBadge
-                      label={
-                        isAwsSesWithoutDkim
-                          ? "Not Verified"
-                          : getStatusLabel(
-                              !!result.dkim?.found,
-                              getDkimStatus()
-                            )
-                      }
-                      status={
-                        isAwsSesWithoutDkim
-                          ? "info"
-                          : result.dkim?.found
-                            ? getDkimStatus()
-                            : "none"
-                      }
-                    />
-                    {result.score?.breakdown && (
-                      <div className="mt-1.5 text-muted-foreground text-xs">
-                        {result.score.breakdown.dkim.score}/
-                        {result.score.breakdown.dkim.max} pts
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                <Card className="text-center">
-                  <CardContent className="pt-4 pb-4">
-                    <div className="mb-2 font-semibold text-sm">DMARC</div>
-                    <StatusBadge
-                      label={getStatusLabel(
-                        result.dmarc.exists,
-                        getDmarcStatus()
-                      )}
-                      status={getDmarcStatus()}
-                    />
-                    {result.score?.breakdown && (
-                      <div className="mt-1.5 text-muted-foreground text-xs">
-                        {result.score.breakdown.dmarc.score}/
-                        {result.score.breakdown.dmarc.max} pts
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                <Card className="text-center">
-                  <CardContent className="pt-4 pb-4">
-                    <div className="mb-2 font-semibold text-sm">MX</div>
-                    <StatusBadge
-                      label={getStatusLabel(result.mx.exists, getMxStatus())}
-                      status={getMxStatus()}
-                    />
-                    {result.score?.breakdown && (
-                      <div className="mt-1.5 text-muted-foreground text-xs">
-                        {result.score.breakdown.mx.score}/
-                        {result.score.breakdown.mx.max} pts
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* AWS SES DKIM Prompt */}
-              {isAwsSesWithoutDkim && (
-                <Card className="border-blue-500/20 bg-blue-500/5">
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                      <div className="flex items-start gap-3">
-                        <Key className="mt-0.5 h-5 w-5 text-blue-500" />
-                        <div>
-                          <h3 className="font-semibold">
-                            AWS SES Detected — DKIM Likely Configured
-                          </h3>
-                          <p className="text-muted-foreground text-sm">
-                            AWS SES automatically configures DKIM with unique
-                            selectors that we can't auto-discover. Your DKIM is
-                            most likely set up correctly. To verify, enter your
-                            3 DKIM selectors from the SES console.
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => setShowAdvanced(true)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Settings2 className="mr-2 h-4 w-4" />
-                        Enter Selectors
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Score Breakdown - only show if new API format */}
-              {result.score?.breakdown && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5" />
-                      Score Breakdown
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {[
-                        {
-                          key: "spf",
-                          label: "SPF",
-                          data: result.score.breakdown.spf,
-                        },
-                        {
-                          key: "dkim",
-                          label: "DKIM",
-                          data: result.score.breakdown.dkim,
-                        },
-                        {
-                          key: "dmarc",
-                          label: "DMARC",
-                          data: result.score.breakdown.dmarc,
-                        },
-                        {
-                          key: "mx",
-                          label: "MX",
-                          data: result.score.breakdown.mx,
-                        },
-                      ].map(({ key, label, data }) => (
-                        <div className="space-y-1" key={key}>
-                          <div className="flex items-center justify-between text-sm">
-                            <span>{label}</span>
-                            <span className="text-muted-foreground">
-                              {data.score}/{data.max}
-                            </span>
-                          </div>
-                          <div
-                            aria-label={`${label} score`}
-                            aria-valuemax={data.max}
-                            aria-valuemin={0}
-                            aria-valuenow={data.score}
-                            className="h-2 overflow-hidden rounded-full bg-muted"
-                            role="progressbar"
-                          >
-                            <div
-                              className={`h-full transition-all ${
-                                data.score === data.max
-                                  ? "bg-green-500"
-                                  : data.score >= data.max * 0.5
-                                    ? "bg-yellow-500"
-                                    : "bg-red-500"
-                              }`}
-                              style={{
-                                width: `${(data.score / data.max) * 100}%`,
-                              }}
-                            />
-                          </div>
-                          {key === "dkim" &&
-                            isAwsSesWithoutDkim &&
-                            data.score === 0 && (
-                              <p className="flex items-center gap-1 text-blue-500 text-xs">
-                                <Info className="h-3 w-3" />
-                                DKIM score may be inaccurate — AWS SES uses
-                                undiscoverable selectors
-                              </p>
-                            )}
-                        </div>
-                      ))}
-                      {result.score.breakdown.bonus.earned > 0 && (
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="flex items-center gap-1">
-                              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-                              Bonus Points
-                            </span>
-                            <span className="text-muted-foreground">
-                              +{result.score.breakdown.bonus.earned}/
-                              {result.score.breakdown.bonus.possible}
-                            </span>
-                          </div>
-                          <div
-                            aria-label="Bonus points score"
-                            aria-valuemax={
-                              result.score.breakdown.bonus.possible
-                            }
-                            aria-valuemin={0}
-                            aria-valuenow={result.score.breakdown.bonus.earned}
-                            className="h-2 overflow-hidden rounded-full bg-muted"
-                            role="progressbar"
-                          >
-                            <div
-                              className="h-full bg-purple-500 transition-all"
-                              style={{
-                                width: `${(result.score.breakdown.bonus.earned / result.score.breakdown.bonus.possible) * 100}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Issues */}
-              {result.issues.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                      Issues Found ({result.issues.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {result.issues.map((issue, i) => {
-                        const isSpfIssue = issue.check
-                          .toLowerCase()
-                          .includes("spf");
-                        const showSpfBuilderLink =
-                          isSpfIssue &&
-                          (!result.spf.exists ||
-                            result.spf.lookupCount > result.spf.lookupLimit);
-
-                        return (
-                          <div
-                            className={`rounded-lg border p-4 ${
-                              issue.severity === "critical"
-                                ? "border-red-500/20 bg-red-500/5"
-                                : issue.severity === "warning"
-                                  ? "border-yellow-500/20 bg-yellow-500/5"
-                                  : "border-blue-500/20 bg-blue-500/5"
-                            }`}
-                            key={`issue-${i}`}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex flex-1 items-start gap-2">
-                                {(() => {
-                                  const iconClass =
-                                    "mt-0.5 h-4 w-4 flex-shrink-0";
-                                  if (issue.severity === "critical") {
-                                    return (
-                                      <XCircle
-                                        className={`${iconClass} text-red-500`}
-                                      />
-                                    );
-                                  }
-                                  if (issue.severity === "warning") {
-                                    return (
-                                      <AlertTriangle
-                                        className={`${iconClass} text-yellow-500`}
-                                      />
-                                    );
-                                  }
-                                  return (
-                                    <Info
-                                      className={`${iconClass} text-blue-500`}
-                                    />
-                                  );
-                                })()}
-                                <div>
-                                  <div className="mb-1 font-medium">
-                                    {issue.check}
-                                  </div>
-                                  <p className="text-muted-foreground text-sm">
-                                    {issue.reason}
-                                    {showSpfBuilderLink && (
-                                      <>
-                                        {" "}
-                                        <a
-                                          className="inline-flex items-center gap-1 text-primary hover:underline"
-                                          href="/tools/spf-builder"
-                                        >
-                                          <ArrowRight className="h-3 w-3" />
-                                          {result.spf.exists
-                                            ? "Fix with SPF Builder"
-                                            : "Create with SPF Builder"}
-                                        </a>
-                                      </>
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-                              <Badge
-                                variant={
-                                  issue.severity === "critical"
-                                    ? "destructive"
-                                    : issue.severity === "warning"
-                                      ? "secondary"
-                                      : "outline"
-                                }
-                              >
-                                -{issue.points} pts
-                              </Badge>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Bonuses */}
-              {result.bonuses && result.bonuses.length > 0 && (
-                <Card className="border-purple-500/20 bg-purple-500/5">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-purple-500" />
-                      Bonus Points Earned ({result.bonuses.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {result.bonuses.map((bonus, i) => (
-                        <div
-                          className="flex items-center justify-between rounded-lg border border-purple-500/20 bg-background p-3"
-                          key={`bonus-${i}`}
-                        >
-                          <div>
-                            <span className="font-medium">{bonus.check}</span>
-                            <span className="text-muted-foreground">
-                              {" "}
-                              - {bonus.reason}
-                            </span>
-                          </div>
-                          <Badge
-                            className="border-purple-500/50 text-purple-600"
-                            variant="outline"
-                          >
-                            +{bonus.points} pts
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Detailed Records */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>DNS Records</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <RecordDisplay
-                    extra={
-                      result.spf.exists ? (
-                        <span
-                          className={`font-mono text-xs ${
-                            result.spf.lookupCount > result.spf.lookupLimit
-                              ? "text-red-500"
-                              : result.spf.lookupCount > 7
-                                ? "text-yellow-500"
-                                : "text-green-500"
-                          }`}
-                        >
-                          {result.spf.lookupCount}/{result.spf.lookupLimit}{" "}
-                          lookups
-                        </span>
-                      ) : undefined
-                    }
-                    label="SPF"
-                    record={result.spf.record}
-                    status={getSpfStatus()}
-                    warnings={result.spf.warnings}
-                  />
-                  <RecordDisplay
-                    label="DMARC"
-                    record={result.dmarc.record}
-                    status={getDmarcStatus()}
-                    warnings={result.dmarc.warnings}
-                  />
-                  {(result.dkim?.selectorsFound?.length ?? 0) > 0 && (
-                    <div className="rounded-lg border bg-card">
-                      <div className="flex items-center justify-between p-4">
-                        <StatusBadge label="DKIM" status={getDkimStatus()} />
-                        <span className="text-muted-foreground text-sm">
-                          {result.dkim?.selectorsFound?.length ?? 0} selector(s)
-                          found
-                        </span>
-                      </div>
-                      <div className="border-t bg-muted/30 p-4">
-                        <div className="space-y-2">
-                          {result.dkim?.selectorsFound?.map((sel) => (
-                            <div
-                              className="flex items-center justify-between rounded bg-background p-2 text-sm"
-                              key={sel.selector}
-                            >
-                              <code className="font-mono">{sel.selector}</code>
-                              <span className="text-muted-foreground">
-                                {sel.keyType} {sel.keyBits}-bit
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        {(result.dkim?.warnings?.length ?? 0) > 0 && (
-                          <div className="mt-3 space-y-2">
-                            {result.dkim.warnings.map((warning, i) => (
-                              <div
-                                className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-2.5 text-xs text-yellow-600 dark:text-yellow-400"
-                                key={`dkim-warning-${i}`}
-                              >
-                                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                                {warning}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {result.mx.records.length > 0 && (
-                    <div className="rounded-lg border bg-card">
-                      <div className="flex items-center justify-between p-4">
-                        <StatusBadge label="MX" status={getMxStatus()} />
-                        <span className="text-muted-foreground text-sm">
-                          {result.mx.records.length} record(s)
-                        </span>
-                      </div>
-                      <div className="border-t bg-muted/30 p-4">
-                        <div className="space-y-2">
-                          {result.mx.records.map((mx) => (
-                            <div
-                              className="flex items-center justify-between rounded bg-background p-2 text-sm"
-                              key={mx.exchange}
-                            >
-                              <code className="font-mono">{mx.exchange}</code>
-                              <span className="text-muted-foreground">
-                                Priority: {mx.priority}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {/* Blacklist Status */}
-                  {result.blacklist?.checked && (
-                    <div className="rounded-lg border bg-card">
-                      <div className="flex items-center justify-between p-4">
-                        <StatusBadge
-                          label="Blacklists"
-                          status={
-                            result.blacklist.overallClean ? "pass" : "fail"
-                          }
-                        />
-                        {result.blacklist.overallClean ? (
-                          <Badge variant="outline">Clean</Badge>
-                        ) : (
-                          <span className="text-red-500 text-sm">
-                            {result.blacklist.domainListings.length +
-                              result.blacklist.ipListings.length}{" "}
-                            listing(s)
-                          </span>
-                        )}
-                      </div>
-                      {!result.blacklist.overallClean && (
-                        <div className="border-t bg-muted/30 p-4">
-                          <div className="space-y-2">
-                            {result.blacklist.domainListings.map(
-                              (listing, i) => (
-                                <div
-                                  className="flex items-center justify-between rounded bg-background p-2 text-sm"
-                                  key={`domain-bl-${i}`}
-                                >
-                                  <div>
-                                    <span className="font-medium">
-                                      {listing.blacklist}
-                                    </span>
-                                    <Badge
-                                      className="ml-2"
-                                      variant={
-                                        listing.priority === "high"
-                                          ? "destructive"
-                                          : "secondary"
-                                      }
-                                    >
-                                      {listing.priority}
-                                    </Badge>
-                                  </div>
-                                  {listing.delistUrl && (
-                                    <a
-                                      className="text-primary text-xs hover:underline"
-                                      href={listing.delistUrl}
-                                      rel="noopener noreferrer"
-                                      target="_blank"
-                                    >
-                                      Delist
-                                    </a>
-                                  )}
-                                </div>
-                              )
-                            )}
-                            {result.blacklist.ipListings.map((listing, i) => (
-                              <div
-                                className="flex items-center justify-between rounded bg-background p-2 text-sm"
-                                key={`ip-bl-${i}`}
-                              >
-                                <div>
-                                  <code className="font-mono text-xs">
-                                    {listing.target}
-                                  </code>
-                                  <span className="ml-2 text-muted-foreground">
-                                    {listing.blacklist}
-                                  </span>
-                                  <Badge
-                                    className="ml-2"
-                                    variant={
-                                      listing.priority === "high"
-                                        ? "destructive"
-                                        : "secondary"
-                                    }
-                                  >
-                                    {listing.priority}
-                                  </Badge>
-                                </div>
-                                {listing.delistUrl && (
-                                  <a
-                                    className="text-primary text-xs hover:underline"
-                                    href={listing.delistUrl}
-                                    rel="noopener noreferrer"
-                                    target="_blank"
-                                  >
-                                    Delist
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* DMARC Details */}
-              {result.dmarc.exists && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5" />
-                      DMARC Policy Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <div className="mb-1 text-muted-foreground text-sm">
-                          Policy
-                        </div>
-                        <div className="font-mono text-lg">
-                          p={result.dmarc.policy || "none"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="mb-1 text-muted-foreground text-sm">
-                          Subdomain Policy
-                        </div>
-                        <div className="font-mono text-lg">
-                          sp={result.dmarc.subdomainPolicy || "inherit"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="mb-1 text-muted-foreground text-sm">
-                          Percentage
-                        </div>
-                        <div className="font-mono text-lg">
-                          pct={result.dmarc.pct ?? 100}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="mb-1 text-muted-foreground text-sm">
-                          Reporting
-                        </div>
-                        <div className="font-mono text-lg">
-                          {result.dmarc.reportingEnabled
-                            ? "Enabled"
-                            : "Disabled"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="mb-1 text-muted-foreground text-sm">
-                          SPF Alignment
-                        </div>
-                        <div className="font-mono text-lg">
-                          {result.dmarc.alignmentSpf || "relaxed"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="mb-1 text-muted-foreground text-sm">
-                          DKIM Alignment
-                        </div>
-                        <div className="font-mono text-lg">
-                          {result.dmarc.alignmentDkim || "relaxed"}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Infrastructure Details - only show if new API format */}
-              {result.domainAge && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Server className="h-5 w-5" />
-                      Infrastructure Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-6 md:grid-cols-2">
-                      {/* Domain Age */}
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 font-medium">
-                          <Calendar className="h-4 w-4" />
-                          Domain Age
-                        </div>
-                        {result.domainAge.ageInDays !== null ? (
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Age</span>
-                              <span>
-                                {result.domainAge.ageInDays > 365
-                                  ? `${Math.floor(result.domainAge.ageInDays / 365)} years`
-                                  : `${result.domainAge.ageInDays} days`}
-                              </span>
-                            </div>
-                            {result.domainAge.createdAt && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                  Created
-                                </span>
-                                <span>
-                                  {new Date(
-                                    result.domainAge.createdAt
-                                  ).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                            {result.domainAge.daysUntilExpiry !== null && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                  Expires in
-                                </span>
-                                <span
-                                  className={
-                                    result.domainAge.daysUntilExpiry < 30
-                                      ? "text-red-500"
-                                      : result.domainAge.daysUntilExpiry < 90
-                                        ? "text-yellow-500"
-                                        : ""
-                                  }
-                                >
-                                  {result.domainAge.daysUntilExpiry} days
-                                </span>
-                              </div>
-                            )}
-                            {result.domainAge.registrar && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                  Registrar
-                                </span>
-                                <span className="max-w-[180px] truncate text-right">
-                                  {result.domainAge.registrar}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-muted-foreground text-sm">
-                            {result.domainAge.privacyEnabled
-                              ? "WHOIS privacy enabled"
-                              : "Data unavailable"}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* IPv6 & Reverse DNS */}
-                      {result.ipv6 && result.reverseDns && (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 font-medium">
-                            <Globe className="h-4 w-4" />
-                            Network
-                          </div>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">
-                                IPv6 on MX
-                              </span>
-                              <StatusBadge
-                                label={
-                                  result.ipv6.mxHasIpv6 ? "Supported" : "No"
-                                }
-                                status={result.ipv6.mxHasIpv6 ? "pass" : "none"}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">
-                                IPv6 in SPF
-                              </span>
-                              <StatusBadge
-                                label={
-                                  result.ipv6.spfIncludesIpv6 ? "Yes" : "No"
-                                }
-                                status={
-                                  result.ipv6.spfIncludesIpv6 ? "pass" : "none"
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">
-                                Reverse DNS (PTR)
-                              </span>
-                              <StatusBadge
-                                label={
-                                  result.reverseDns.allHavePtr
-                                    ? result.reverseDns.allConfirm
-                                      ? "Valid"
-                                      : "Partial"
-                                    : "Missing"
-                                }
-                                status={
-                                  result.reverseDns.allHavePtr
-                                    ? result.reverseDns.allConfirm
-                                      ? "pass"
-                                      : "warn"
-                                    : "fail"
-                                }
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">
-                                MX Redundancy
-                              </span>
-                              <StatusBadge
-                                label={
-                                  result.mx.hasRedundancy ? "Yes" : "Single"
-                                }
-                                status={
-                                  result.mx.hasRedundancy ? "pass" : "warn"
-                                }
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* CTA */}
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
-                    <div className="flex-1">
-                      <h3 className="mb-2 font-bold text-xl">
-                        Need to set up email infrastructure?
-                      </h3>
-                      <p className="text-muted-foreground">
-                        Wraps deploys production-ready email infrastructure to
-                        your AWS account in under 2 minutes.
-                      </p>
-                    </div>
-                    <Button asChild size="lg">
-                      <Link href="/docs/quickstart">
-                        Get Started
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="text-center">
+              <CardContent className="pt-4 pb-4">
+                <div className="mb-2 font-semibold text-sm">DKIM</div>
+                <StatusBadge
+                  label={
+                    isAwsSesWithoutDkim
+                      ? "Not Verified"
+                      : getStatusLabel(!!result.dkim?.found, getDkimStatus())
+                  }
+                  status={
+                    isAwsSesWithoutDkim
+                      ? "info"
+                      : result.dkim?.found
+                        ? getDkimStatus()
+                        : "none"
+                  }
+                />
+                {result.score?.breakdown && (
+                  <div className="mt-1.5 text-muted-foreground text-xs">
+                    {result.score.breakdown.dkim.score}/
+                    {result.score.breakdown.dkim.max} pts
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!(result || error || isLoading) && (
-            <Card className="border-dashed">
-              <CardContent className="py-12">
-                <div className="flex flex-col items-center text-center">
-                  <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
-                  <h3 className="mb-2 font-semibold text-lg">
-                    Check Your Email Setup
-                  </h3>
-                  <p className="mb-6 max-w-md text-muted-foreground">
-                    Enter any domain above to analyze its email authentication
-                    configuration. We'll check SPF, DKIM, DMARC, and MX records.
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {["gmail.com", "microsoft.com", "stripe.com"].map((d) => (
-                      <Button
-                        key={d}
-                        onClick={() => setParams({ domain: d })}
-                        size="sm"
-                        variant="outline"
-                      >
-                        Try {d}
-                      </Button>
-                    ))}
+                )}
+              </CardContent>
+            </Card>
+            <Card className="text-center">
+              <CardContent className="pt-4 pb-4">
+                <div className="mb-2 font-semibold text-sm">DMARC</div>
+                <StatusBadge
+                  label={getStatusLabel(result.dmarc.exists, getDmarcStatus())}
+                  status={getDmarcStatus()}
+                />
+                {result.score?.breakdown && (
+                  <div className="mt-1.5 text-muted-foreground text-xs">
+                    {result.score.breakdown.dmarc.score}/
+                    {result.score.breakdown.dmarc.max} pts
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
-          )}
-
-          {/* Info Section */}
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">What is SPF?</CardTitle>
-              </CardHeader>
-              <CardContent className="text-muted-foreground text-sm">
-                Sender Policy Framework (SPF) specifies which mail servers are
-                authorized to send email on behalf of your domain.{" "}
-                <a
-                  className="text-primary underline underline-offset-2 hover:text-primary/80"
-                  href="/tools/spf-builder"
-                >
-                  Build your SPF record →
-                </a>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">What is DKIM?</CardTitle>
-              </CardHeader>
-              <CardContent className="text-muted-foreground text-sm">
-                DomainKeys Identified Mail (DKIM) adds a digital signature to
-                emails, allowing receivers to verify the message hasn't been
-                altered.
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">What is DMARC?</CardTitle>
-              </CardHeader>
-              <CardContent className="text-muted-foreground text-sm">
-                Domain-based Message Authentication (DMARC) tells receivers how
-                to handle emails that fail SPF or DKIM checks.
+            <Card className="text-center">
+              <CardContent className="pt-4 pb-4">
+                <div className="mb-2 font-semibold text-sm">MX</div>
+                <StatusBadge
+                  label={getStatusLabel(result.mx.exists, getMxStatus())}
+                  status={getMxStatus()}
+                />
+                {result.score?.breakdown && (
+                  <div className="mt-1.5 text-muted-foreground text-xs">
+                    {result.score.breakdown.mx.score}/
+                    {result.score.breakdown.mx.max} pts
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Cost Calculator CTA */}
-          <Card className="mt-8 border-primary/20 bg-primary/5">
+          {/* AWS SES DKIM Prompt */}
+          {isAwsSesWithoutDkim && (
+            <Card className="border-blue-500/20 bg-blue-500/5">
+              <CardContent className="pt-6">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-start gap-3">
+                    <Key className="mt-0.5 h-5 w-5 text-blue-500" />
+                    <div>
+                      <h3 className="font-semibold">
+                        AWS SES Detected — DKIM Likely Configured
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        AWS SES automatically configures DKIM with unique
+                        selectors that we can't auto-discover. Your DKIM is most
+                        likely set up correctly. To verify, enter your 3 DKIM
+                        selectors from the SES console.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => setShowAdvanced(true)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    Enter Selectors
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Score Breakdown - only show if new API format */}
+          {result.score?.breakdown && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Score Breakdown
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {[
+                    {
+                      key: "spf",
+                      label: "SPF",
+                      data: result.score.breakdown.spf,
+                    },
+                    {
+                      key: "dkim",
+                      label: "DKIM",
+                      data: result.score.breakdown.dkim,
+                    },
+                    {
+                      key: "dmarc",
+                      label: "DMARC",
+                      data: result.score.breakdown.dmarc,
+                    },
+                    {
+                      key: "mx",
+                      label: "MX",
+                      data: result.score.breakdown.mx,
+                    },
+                  ].map(({ key, label, data }) => (
+                    <div className="space-y-1" key={key}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span>{label}</span>
+                        <span className="text-muted-foreground">
+                          {data.score}/{data.max}
+                        </span>
+                      </div>
+                      <div
+                        aria-label={`${label} score`}
+                        aria-valuemax={data.max}
+                        aria-valuemin={0}
+                        aria-valuenow={data.score}
+                        className="h-2 overflow-hidden rounded-full bg-muted"
+                        role="progressbar"
+                      >
+                        <div
+                          className={`h-full transition-all ${
+                            data.score === data.max
+                              ? "bg-green-500"
+                              : data.score >= data.max * 0.5
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                          }`}
+                          style={{
+                            width: `${(data.score / data.max) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      {key === "dkim" &&
+                        isAwsSesWithoutDkim &&
+                        data.score === 0 && (
+                          <p className="flex items-center gap-1 text-blue-500 text-xs">
+                            <Info className="h-3 w-3" />
+                            DKIM score may be inaccurate — AWS SES uses
+                            undiscoverable selectors
+                          </p>
+                        )}
+                    </div>
+                  ))}
+                  {result.score.breakdown.bonus.earned > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                          Bonus Points
+                        </span>
+                        <span className="text-muted-foreground">
+                          +{result.score.breakdown.bonus.earned}/
+                          {result.score.breakdown.bonus.possible}
+                        </span>
+                      </div>
+                      <div
+                        aria-label="Bonus points score"
+                        aria-valuemax={result.score.breakdown.bonus.possible}
+                        aria-valuemin={0}
+                        aria-valuenow={result.score.breakdown.bonus.earned}
+                        className="h-2 overflow-hidden rounded-full bg-muted"
+                        role="progressbar"
+                      >
+                        <div
+                          className="h-full bg-purple-500 transition-all"
+                          style={{
+                            width: `${(result.score.breakdown.bonus.earned / result.score.breakdown.bonus.possible) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Issues */}
+          {result.issues.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  Issues Found ({result.issues.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {result.issues.map((issue, i) => {
+                    const isSpfIssue = issue.check
+                      .toLowerCase()
+                      .includes("spf");
+                    const showSpfBuilderLink =
+                      isSpfIssue &&
+                      (!result.spf.exists ||
+                        result.spf.lookupCount > result.spf.lookupLimit);
+
+                    return (
+                      <div
+                        className={`rounded-lg border p-4 ${
+                          issue.severity === "critical"
+                            ? "border-red-500/20 bg-red-500/5"
+                            : issue.severity === "warning"
+                              ? "border-yellow-500/20 bg-yellow-500/5"
+                              : "border-blue-500/20 bg-blue-500/5"
+                        }`}
+                        key={`issue-${i}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex flex-1 items-start gap-2">
+                            {(() => {
+                              const iconClass = "mt-0.5 h-4 w-4 flex-shrink-0";
+                              if (issue.severity === "critical") {
+                                return (
+                                  <XCircle
+                                    className={`${iconClass} text-red-500`}
+                                  />
+                                );
+                              }
+                              if (issue.severity === "warning") {
+                                return (
+                                  <AlertTriangle
+                                    className={`${iconClass} text-yellow-500`}
+                                  />
+                                );
+                              }
+                              return (
+                                <Info
+                                  className={`${iconClass} text-blue-500`}
+                                />
+                              );
+                            })()}
+                            <div>
+                              <div className="mb-1 font-medium">
+                                {issue.check}
+                              </div>
+                              <p className="text-muted-foreground text-sm">
+                                {issue.reason}
+                                {showSpfBuilderLink && (
+                                  <>
+                                    {" "}
+                                    <a
+                                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                                      href="/tools/spf-builder"
+                                    >
+                                      <ArrowRight className="h-3 w-3" />
+                                      {result.spf.exists
+                                        ? "Fix with SPF Builder"
+                                        : "Create with SPF Builder"}
+                                    </a>
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge
+                            variant={
+                              issue.severity === "critical"
+                                ? "destructive"
+                                : issue.severity === "warning"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            -{issue.points} pts
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bonuses */}
+          {result.bonuses && result.bonuses.length > 0 && (
+            <Card className="border-purple-500/20 bg-purple-500/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-500" />
+                  Bonus Points Earned ({result.bonuses.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {result.bonuses.map((bonus, i) => (
+                    <div
+                      className="flex items-center justify-between rounded-lg border border-purple-500/20 bg-background p-3"
+                      key={`bonus-${i}`}
+                    >
+                      <div>
+                        <span className="font-medium">{bonus.check}</span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          - {bonus.reason}
+                        </span>
+                      </div>
+                      <Badge
+                        className="border-purple-500/50 text-purple-600"
+                        variant="outline"
+                      >
+                        +{bonus.points} pts
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Detailed Records */}
+          <Card>
+            <CardHeader>
+              <CardTitle>DNS Records</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <RecordDisplay
+                extra={
+                  result.spf.exists ? (
+                    <span
+                      className={`font-mono text-xs ${
+                        result.spf.lookupCount > result.spf.lookupLimit
+                          ? "text-red-500"
+                          : result.spf.lookupCount > 7
+                            ? "text-yellow-500"
+                            : "text-green-500"
+                      }`}
+                    >
+                      {result.spf.lookupCount}/{result.spf.lookupLimit} lookups
+                    </span>
+                  ) : undefined
+                }
+                label="SPF"
+                record={result.spf.record}
+                status={getSpfStatus()}
+                warnings={result.spf.warnings}
+              />
+              <RecordDisplay
+                label="DMARC"
+                record={result.dmarc.record}
+                status={getDmarcStatus()}
+                warnings={result.dmarc.warnings}
+              />
+              {(result.dkim?.selectorsFound?.length ?? 0) > 0 && (
+                <div className="rounded-lg border bg-card">
+                  <div className="flex items-center justify-between p-4">
+                    <StatusBadge label="DKIM" status={getDkimStatus()} />
+                    <span className="text-muted-foreground text-sm">
+                      {result.dkim?.selectorsFound?.length ?? 0} selector(s)
+                      found
+                    </span>
+                  </div>
+                  <div className="border-t bg-muted/30 p-4">
+                    <div className="space-y-2">
+                      {result.dkim?.selectorsFound?.map((sel) => (
+                        <div
+                          className="flex items-center justify-between rounded bg-background p-2 text-sm"
+                          key={sel.selector}
+                        >
+                          <code className="font-mono">{sel.selector}</code>
+                          <span className="text-muted-foreground">
+                            {sel.keyType} {sel.keyBits}-bit
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {(result.dkim?.warnings?.length ?? 0) > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {result.dkim.warnings.map((warning, i) => (
+                          <div
+                            className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-2.5 text-xs text-yellow-600 dark:text-yellow-400"
+                            key={`dkim-warning-${i}`}
+                          >
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                            {warning}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {result.mx.records.length > 0 && (
+                <div className="rounded-lg border bg-card">
+                  <div className="flex items-center justify-between p-4">
+                    <StatusBadge label="MX" status={getMxStatus()} />
+                    <span className="text-muted-foreground text-sm">
+                      {result.mx.records.length} record(s)
+                    </span>
+                  </div>
+                  <div className="border-t bg-muted/30 p-4">
+                    <div className="space-y-2">
+                      {result.mx.records.map((mx) => (
+                        <div
+                          className="flex items-center justify-between rounded bg-background p-2 text-sm"
+                          key={mx.exchange}
+                        >
+                          <code className="font-mono">{mx.exchange}</code>
+                          <span className="text-muted-foreground">
+                            Priority: {mx.priority}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Blacklist Status */}
+              {result.blacklist?.checked && (
+                <div className="rounded-lg border bg-card">
+                  <div className="flex items-center justify-between p-4">
+                    <StatusBadge
+                      label="Blacklists"
+                      status={result.blacklist.overallClean ? "pass" : "fail"}
+                    />
+                    {result.blacklist.overallClean ? (
+                      <Badge variant="outline">Clean</Badge>
+                    ) : (
+                      <span className="text-red-500 text-sm">
+                        {result.blacklist.domainListings.length +
+                          result.blacklist.ipListings.length}{" "}
+                        listing(s)
+                      </span>
+                    )}
+                  </div>
+                  {!result.blacklist.overallClean && (
+                    <div className="border-t bg-muted/30 p-4">
+                      <div className="space-y-2">
+                        {result.blacklist.domainListings.map((listing, i) => (
+                          <div
+                            className="flex items-center justify-between rounded bg-background p-2 text-sm"
+                            key={`domain-bl-${i}`}
+                          >
+                            <div>
+                              <span className="font-medium">
+                                {listing.blacklist}
+                              </span>
+                              <Badge
+                                className="ml-2"
+                                variant={
+                                  listing.priority === "high"
+                                    ? "destructive"
+                                    : "secondary"
+                                }
+                              >
+                                {listing.priority}
+                              </Badge>
+                            </div>
+                            {listing.delistUrl && (
+                              <a
+                                className="text-primary text-xs hover:underline"
+                                href={listing.delistUrl}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                Delist
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                        {result.blacklist.ipListings.map((listing, i) => (
+                          <div
+                            className="flex items-center justify-between rounded bg-background p-2 text-sm"
+                            key={`ip-bl-${i}`}
+                          >
+                            <div>
+                              <code className="font-mono text-xs">
+                                {listing.target}
+                              </code>
+                              <span className="ml-2 text-muted-foreground">
+                                {listing.blacklist}
+                              </span>
+                              <Badge
+                                className="ml-2"
+                                variant={
+                                  listing.priority === "high"
+                                    ? "destructive"
+                                    : "secondary"
+                                }
+                              >
+                                {listing.priority}
+                              </Badge>
+                            </div>
+                            {listing.delistUrl && (
+                              <a
+                                className="text-primary text-xs hover:underline"
+                                href={listing.delistUrl}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                Delist
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* DMARC Details */}
+          {result.dmarc.exists && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" />
+                  DMARC Policy Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <div className="mb-1 text-muted-foreground text-sm">
+                      Policy
+                    </div>
+                    <div className="font-mono text-lg">
+                      p={result.dmarc.policy || "none"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1 text-muted-foreground text-sm">
+                      Subdomain Policy
+                    </div>
+                    <div className="font-mono text-lg">
+                      sp={result.dmarc.subdomainPolicy || "inherit"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1 text-muted-foreground text-sm">
+                      Percentage
+                    </div>
+                    <div className="font-mono text-lg">
+                      pct={result.dmarc.pct ?? 100}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1 text-muted-foreground text-sm">
+                      Reporting
+                    </div>
+                    <div className="font-mono text-lg">
+                      {result.dmarc.reportingEnabled ? "Enabled" : "Disabled"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1 text-muted-foreground text-sm">
+                      SPF Alignment
+                    </div>
+                    <div className="font-mono text-lg">
+                      {result.dmarc.alignmentSpf || "relaxed"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-1 text-muted-foreground text-sm">
+                      DKIM Alignment
+                    </div>
+                    <div className="font-mono text-lg">
+                      {result.dmarc.alignmentDkim || "relaxed"}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Infrastructure Details - only show if new API format */}
+          {result.domainAge && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Server className="h-5 w-5" />
+                  Infrastructure Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Domain Age */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 font-medium">
+                      <Calendar className="h-4 w-4" />
+                      Domain Age
+                    </div>
+                    {result.domainAge.ageInDays !== null ? (
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Age</span>
+                          <span>
+                            {result.domainAge.ageInDays > 365
+                              ? `${Math.floor(result.domainAge.ageInDays / 365)} years`
+                              : `${result.domainAge.ageInDays} days`}
+                          </span>
+                        </div>
+                        {result.domainAge.createdAt && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Created
+                            </span>
+                            <span>
+                              {new Date(
+                                result.domainAge.createdAt
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                        {result.domainAge.daysUntilExpiry !== null && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Expires in
+                            </span>
+                            <span
+                              className={
+                                result.domainAge.daysUntilExpiry < 30
+                                  ? "text-red-500"
+                                  : result.domainAge.daysUntilExpiry < 90
+                                    ? "text-yellow-500"
+                                    : ""
+                              }
+                            >
+                              {result.domainAge.daysUntilExpiry} days
+                            </span>
+                          </div>
+                        )}
+                        {result.domainAge.registrar && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Registrar
+                            </span>
+                            <span className="max-w-[180px] truncate text-right">
+                              {result.domainAge.registrar}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">
+                        {result.domainAge.privacyEnabled
+                          ? "WHOIS privacy enabled"
+                          : "Data unavailable"}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* IPv6 & Reverse DNS */}
+                  {result.ipv6 && result.reverseDns && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 font-medium">
+                        <Globe className="h-4 w-4" />
+                        Network
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">
+                            IPv6 on MX
+                          </span>
+                          <StatusBadge
+                            label={result.ipv6.mxHasIpv6 ? "Supported" : "No"}
+                            status={result.ipv6.mxHasIpv6 ? "pass" : "none"}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">
+                            IPv6 in SPF
+                          </span>
+                          <StatusBadge
+                            label={result.ipv6.spfIncludesIpv6 ? "Yes" : "No"}
+                            status={
+                              result.ipv6.spfIncludesIpv6 ? "pass" : "none"
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">
+                            Reverse DNS (PTR)
+                          </span>
+                          <StatusBadge
+                            label={
+                              result.reverseDns.allHavePtr
+                                ? result.reverseDns.allConfirm
+                                  ? "Valid"
+                                  : "Partial"
+                                : "Missing"
+                            }
+                            status={
+                              result.reverseDns.allHavePtr
+                                ? result.reverseDns.allConfirm
+                                  ? "pass"
+                                  : "warn"
+                                : "fail"
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">
+                            MX Redundancy
+                          </span>
+                          <StatusBadge
+                            label={result.mx.hasRedundancy ? "Yes" : "Single"}
+                            status={result.mx.hasRedundancy ? "pass" : "warn"}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* CTA */}
+          <Card className="border-primary/20 bg-primary/5">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
                 <div className="flex-1">
                   <h3 className="mb-2 font-bold text-xl">
-                    Calculate your AWS SES costs
+                    Need to set up email infrastructure?
                   </h3>
                   <p className="text-muted-foreground">
-                    See exactly what you&apos;ll pay for email sending plus the
-                    full infrastructure — EventBridge, Lambda, SQS, and
-                    DynamoDB.
+                    Wraps deploys production-ready email infrastructure to your
+                    AWS account in under 2 minutes.
                   </p>
                 </div>
                 <Button asChild size="lg">
-                  <Link href="/tools/ses-calculator">
-                    Open Calculator
+                  <Link href="/docs/quickstart">
+                    Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
-
-          {/* Learn More */}
-          <div className="mt-8 text-center">
-            <p className="mb-4 text-muted-foreground">
-              Want to learn more about email authentication?
-            </p>
-            <Button asChild variant="outline">
-              <Link href="/blog/your-dmarc-policy-is-useless">
-                Read: Why DMARC Is Broken
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
         </div>
-      </main>
-    </div>
-  );
-}
+      )}
 
-export default function ToolsPageContent() {
-  return (
-    <Suspense>
-      <ToolsPageInner />
-    </Suspense>
+      {/* Empty State */}
+      {!(result || error || isLoading) && (
+        <Card className="border-dashed">
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center text-center">
+              <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 font-semibold text-lg">
+                Check Your Email Setup
+              </h3>
+              <p className="mb-6 max-w-md text-muted-foreground">
+                Enter any domain above to analyze its email authentication
+                configuration. We'll check SPF, DKIM, DMARC, and MX records.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {["gmail.com", "microsoft.com", "stripe.com"].map((d) => (
+                  <Button
+                    key={d}
+                    onClick={() => setParams({ domain: d })}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Try {d}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 }

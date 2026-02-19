@@ -1,5 +1,11 @@
+import { ArrowRight, Shield } from "lucide-react";
 import type { Metadata } from "next";
-import SPFBuilderPageContent from "./page-content";
+import Link from "next/link";
+import { Suspense } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import SPFBuilderWidget from "./page-content";
 
 export const metadata: Metadata = {
   title: "SPF Record Builder",
@@ -56,8 +62,155 @@ export default function SPFBuilderPage() {
         suppressHydrationWarning
         type="application/ld+json"
       />
-      <h1 className="sr-only">SPF Record Builder</h1>
-      <SPFBuilderPageContent />
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b">
+          <div className="container mx-auto flex items-center justify-between px-4 py-4">
+            <a className="flex items-center gap-2 font-bold text-xl" href="/">
+              <Shield className="size-6" />
+              Wraps Email Tools
+            </a>
+            <div className="flex items-center gap-3">
+              <Button asChild size="sm" variant="ghost">
+                <Link href="/tools">Email Checker</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/">Back to Home</Link>
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="container mx-auto px-4 py-12">
+          <div className="mx-auto max-w-4xl">
+            {/* Page Header */}
+            <div className="mb-12 text-center">
+              <Badge className="mb-4" variant="outline">
+                Free Tool
+              </Badge>
+              <h1 className="mb-4 font-bold text-4xl tracking-tight">
+                SPF Record Builder
+              </h1>
+              <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+                Build valid SPF records while tracking the 10-lookup limit.
+                Select your email providers and we'll generate the correct
+                syntax.
+              </p>
+            </div>
+
+            {/* Interactive Widget */}
+            <Suspense>
+              <SPFBuilderWidget />
+            </Suspense>
+
+            {/* Info Cards */}
+            <div className="mt-6 grid gap-6 md:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    What counts as a lookup?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-muted-foreground text-sm">
+                  <code className="text-foreground">include:</code>,{" "}
+                  <code className="text-foreground">a</code>,{" "}
+                  <code className="text-foreground">mx</code>,{" "}
+                  <code className="text-foreground">ptr</code>, and{" "}
+                  <code className="text-foreground">exists</code> mechanisms all
+                  require DNS lookups.{" "}
+                  <code className="text-foreground">ip4:</code> and{" "}
+                  <code className="text-foreground">ip6:</code> do not.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Why the 10-lookup limit?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-muted-foreground text-sm">
+                  RFC 7208 limits SPF to 10 DNS lookups to prevent denial of
+                  service attacks. Exceeding this causes a PermError, which
+                  fails DMARC alignment.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    What is SPF flattening?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-muted-foreground text-sm">
+                  SPF flattening resolves includes to their IP addresses,
+                  eliminating lookups. But IPs can change, requiring regular
+                  updates or a service like Valimail.
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* CTA */}
+            <Card className="mt-6 border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
+                  <div className="flex-1">
+                    <h3 className="mb-2 font-bold text-xl">
+                      Check your full email setup
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Use our Email Deliverability Checker to verify SPF, DKIM,
+                      DMARC, and more.
+                    </p>
+                  </div>
+                  <Button asChild size="lg">
+                    <Link href="/tools">
+                      Check Your Domain
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cost Calculator CTA */}
+            <Card className="mt-6 border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
+                  <div className="flex-1">
+                    <h3 className="mb-2 font-bold text-xl">
+                      Calculate your AWS SES costs
+                    </h3>
+                    <p className="text-muted-foreground">
+                      See exactly what you&apos;ll pay for email sending plus
+                      the full infrastructure — EventBridge, Lambda, SQS, and
+                      DynamoDB.
+                    </p>
+                  </div>
+                  <Button asChild size="lg">
+                    <Link href="/tools/ses-calculator">
+                      Open Calculator
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Learn More */}
+            <div className="mt-6 text-center">
+              <p className="mb-4 text-muted-foreground">
+                Want to learn more about SPF and the 10-lookup problem?
+              </p>
+              <Button asChild variant="outline">
+                <Link href="/blog/spf-guide">
+                  Read: The SPF 10-Lookup Limit Explained
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
     </>
   );
 }

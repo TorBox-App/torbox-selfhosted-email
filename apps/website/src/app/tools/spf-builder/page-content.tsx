@@ -2,7 +2,6 @@
 
 import {
   AlertTriangle,
-  ArrowRight,
   Check,
   Copy,
   Info,
@@ -10,19 +9,10 @@ import {
   Mail,
   Plus,
   Search,
-  Shield,
   Trash2,
 } from "lucide-react";
-import Link from "next/link";
 import { parseAsString, useQueryState } from "nuqs";
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -248,7 +238,7 @@ type SpfLookupResult = {
   warnings: string[];
 };
 
-function SPFBuilderInner() {
+export default function SPFBuilderWidget() {
   const [selectedProviders, setSelectedProviders] = useState<string[]>(["ses"]);
   const [customIPs, setCustomIPs] = useState<string[]>([]);
   const [customIncludes, setCustomIncludes] = useState<CustomInclude[]>([]);
@@ -644,592 +634,427 @@ function SPFBuilderInner() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <a className="flex items-center gap-2 font-bold text-xl" href="/">
-            <Shield className="size-6" />
-            Wraps Email Tools
-          </a>
-          <div className="flex items-center gap-3">
-            <Button asChild size="sm" variant="ghost">
-              <Link href="/tools">Email Checker</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/">Back to Home</Link>
+    <>
+      {/* Current SPF Lookup */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Check Your Current SPF
+          </CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Look up your domain's existing SPF record before building a new one
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
+              <Input
+                aria-label="Domain to look up"
+                className="h-12 pl-10 text-lg"
+                disabled={lookupLoading}
+                onChange={(e) => setLookupDomain(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && lookUpSpf()}
+                placeholder="Enter your domain (e.g., example.com)"
+                value={lookupDomain}
+              />
+            </div>
+            <Button
+              className="h-12 px-6"
+              disabled={lookupLoading || !lookupDomain.trim()}
+              onClick={lookUpSpf}
+            >
+              {lookupLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Looking up...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Look Up
+                </>
+              )}
             </Button>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="mx-auto max-w-4xl">
-          {/* Page Header */}
-          <div className="mb-12 text-center">
-            <Badge className="mb-4" variant="outline">
-              Free Tool
-            </Badge>
-            <h1 className="mb-4 font-bold text-4xl tracking-tight">
-              SPF Record Builder
-            </h1>
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              Build valid SPF records while tracking the 10-lookup limit. Select
-              your email providers and we'll generate the correct syntax.
-            </p>
-          </div>
+          {lookupError && (
+            <div
+              className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-red-600 text-sm dark:text-red-400"
+              role="alert"
+            >
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              {lookupError}
+            </div>
+          )}
 
-          {/* Current SPF Lookup */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                Check Your Current SPF
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Look up your domain's existing SPF record before building a new
-                one
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    aria-label="Domain to look up"
-                    className="h-12 pl-10 text-lg"
-                    disabled={lookupLoading}
-                    onChange={(e) => setLookupDomain(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && lookUpSpf()}
-                    placeholder="Enter your domain (e.g., example.com)"
-                    value={lookupDomain}
-                  />
+          {lookupResult && (
+            <div className="mt-4 space-y-3">
+              <div>
+                <div className="mb-1.5 font-medium text-sm">
+                  Current SPF Record
                 </div>
-                <Button
-                  className="h-12 px-6"
-                  disabled={lookupLoading || !lookupDomain.trim()}
-                  onClick={lookUpSpf}
+                <code className="block overflow-x-auto whitespace-pre-wrap break-all rounded-lg border bg-muted/50 p-3 font-mono text-sm">
+                  {lookupResult.record}
+                </code>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-muted-foreground">
+                  DNS Lookups:{" "}
+                  <span
+                    className={`font-semibold ${
+                      lookupResult.lookups > 10
+                        ? "text-red-500"
+                        : lookupResult.lookups > 7
+                          ? "text-yellow-500"
+                          : "text-green-500"
+                    }`}
+                  >
+                    {lookupResult.lookups}/10
+                  </span>
+                </span>
+              </div>
+              {lookupResult.warnings.length > 0 && (
+                <div className="space-y-2">
+                  {lookupResult.warnings.map((warning) => (
+                    <div
+                      className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3 text-sm text-yellow-600 dark:text-yellow-400"
+                      key={warning}
+                    >
+                      <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                      {warning}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="space-y-6">
+        {/* Lookup Counter */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="font-medium text-muted-foreground text-sm">
+                DNS Lookups Used
+              </span>
+              <span className={`font-bold text-2xl ${getStatusColor()}`}>
+                {lookupCount} / 10
+              </span>
+            </div>
+            <div
+              aria-label="DNS lookups used"
+              aria-valuemax={10}
+              aria-valuemin={0}
+              aria-valuenow={lookupCount}
+              className="h-3 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+            >
+              <div
+                className={`h-full transition-all duration-500 ${getProgressColor()}`}
+                style={{
+                  width: `${Math.min((lookupCount / 10) * 100, 100)}%`,
+                }}
+              />
+            </div>
+            {lookupCount > 10 && (
+              <div
+                className="mt-3 flex items-start gap-2 text-red-500 text-sm"
+                role="alert"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>
+                  Exceeds 10-lookup limit! SPF will return PermError and DMARC
+                  will fail. Consider using IP addresses or SPF flattening.
+                </span>
+              </div>
+            )}
+            {lookupCount > 7 && lookupCount <= 10 && (
+              <div
+                aria-live="polite"
+                className="mt-3 flex items-start gap-2 text-yellow-500 text-sm"
+              >
+                <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>
+                  Approaching limit. Consider using ip4/ip6 mechanisms (which
+                  don't count) or SPF flattening.
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Provider Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Email Service Providers</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              Select all the services that send email on behalf of your domain
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+              {Object.entries(PROVIDERS).map(([key, provider]) => (
+                <button
+                  aria-label={`${provider.name}, ${provider.lookups} lookup${provider.lookups > 1 ? "s" : ""}`}
+                  aria-pressed={selectedProviders.includes(key)}
+                  className={`flex items-stretch gap-3 rounded-lg border text-left transition-all ${
+                    selectedProviders.includes(key)
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-muted/30 hover:border-muted-foreground/50"
+                  }`}
+                  key={key}
+                  onClick={() => toggleProvider(key)}
+                  type="button"
                 >
-                  {lookupLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Looking up...
-                    </>
+                  <div className="flex w-12 shrink-0 items-center justify-center rounded-l-lg bg-muted/50 p-2">
+                    <img
+                      alt={`${provider.name} logo`}
+                      className="h-8 w-8 object-contain grayscale"
+                      src={`/logos/${provider.logo}`}
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center py-2 pr-3">
+                    <span className="font-medium text-sm leading-tight">
+                      {provider.name}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      +{provider.lookups} lookup
+                      {provider.lookups > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Custom include input */}
+            <div className="mt-4 border-t pt-4">
+              <p className="mb-2 font-medium text-sm">Other Provider</p>
+              <div className="flex gap-2">
+                <Input
+                  aria-label="Custom SPF include domain"
+                  className="flex-1 font-mono text-sm"
+                  disabled={newIncludeLoading}
+                  onChange={(e) => setNewInclude(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addInclude()}
+                  placeholder="_spf.example.com"
+                  value={newInclude}
+                />
+                <Button
+                  aria-label="Add include"
+                  disabled={newIncludeLoading || !newInclude.trim()}
+                  onClick={addInclude}
+                  variant="secondary"
+                >
+                  {newIncludeLoading ? (
+                    <Loader2
+                      aria-hidden="true"
+                      className="h-4 w-4 animate-spin"
+                    />
                   ) : (
-                    <>
-                      <Search className="mr-2 h-4 w-4" />
-                      Look Up
-                    </>
+                    <Plus aria-hidden="true" className="h-4 w-4" />
                   )}
                 </Button>
               </div>
-
-              {lookupError && (
-                <div
-                  className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-red-600 text-sm dark:text-red-400"
-                  role="alert"
-                >
-                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                  {lookupError}
-                </div>
-              )}
-
-              {lookupResult && (
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <div className="mb-1.5 font-medium text-sm">
-                      Current SPF Record
-                    </div>
-                    <code className="block overflow-x-auto whitespace-pre-wrap break-all rounded-lg border bg-muted/50 p-3 font-mono text-sm">
-                      {lookupResult.record}
-                    </code>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-muted-foreground">
-                      DNS Lookups:{" "}
-                      <span
-                        className={`font-semibold ${
-                          lookupResult.lookups > 10
-                            ? "text-red-500"
-                            : lookupResult.lookups > 7
-                              ? "text-yellow-500"
-                              : "text-green-500"
-                        }`}
-                      >
-                        {lookupResult.lookups}/10
-                      </span>
-                    </span>
-                  </div>
-                  {lookupResult.warnings.length > 0 && (
-                    <div className="space-y-2">
-                      {lookupResult.warnings.map((warning) => (
-                        <div
-                          className="flex items-start gap-2 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3 text-sm text-yellow-600 dark:text-yellow-400"
-                          key={warning}
-                        >
-                          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                          {warning}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="space-y-6">
-            {/* Lookup Counter */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-medium text-muted-foreground text-sm">
-                    DNS Lookups Used
-                  </span>
-                  <span className={`font-bold text-2xl ${getStatusColor()}`}>
-                    {lookupCount} / 10
-                  </span>
-                </div>
-                <div
-                  aria-label="DNS lookups used"
-                  aria-valuemax={10}
-                  aria-valuemin={0}
-                  aria-valuenow={lookupCount}
-                  className="h-3 overflow-hidden rounded-full bg-muted"
-                  role="progressbar"
-                >
-                  <div
-                    className={`h-full transition-all duration-500 ${getProgressColor()}`}
-                    style={{
-                      width: `${Math.min((lookupCount / 10) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
-                {lookupCount > 10 && (
-                  <div
-                    className="mt-3 flex items-start gap-2 text-red-500 text-sm"
-                    role="alert"
-                  >
-                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <span>
-                      Exceeds 10-lookup limit! SPF will return PermError and
-                      DMARC will fail. Consider using IP addresses or SPF
-                      flattening.
-                    </span>
-                  </div>
-                )}
-                {lookupCount > 7 && lookupCount <= 10 && (
-                  <div
-                    aria-live="polite"
-                    className="mt-3 flex items-start gap-2 text-yellow-500 text-sm"
-                  >
-                    <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <span>
-                      Approaching limit. Consider using ip4/ip6 mechanisms
-                      (which don't count) or SPF flattening.
-                    </span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Provider Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Service Providers</CardTitle>
-                <p className="text-muted-foreground text-sm">
-                  Select all the services that send email on behalf of your
-                  domain
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-                  {Object.entries(PROVIDERS).map(([key, provider]) => (
-                    <button
-                      aria-label={`${provider.name}, ${provider.lookups} lookup${provider.lookups > 1 ? "s" : ""}`}
-                      aria-pressed={selectedProviders.includes(key)}
-                      className={`flex items-stretch gap-3 rounded-lg border text-left transition-all ${
-                        selectedProviders.includes(key)
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-muted/30 hover:border-muted-foreground/50"
-                      }`}
-                      key={key}
-                      onClick={() => toggleProvider(key)}
-                      type="button"
-                    >
-                      <div className="flex w-12 shrink-0 items-center justify-center rounded-l-lg bg-muted/50 p-2">
-                        <img
-                          alt={`${provider.name} logo`}
-                          className="h-8 w-8 object-contain grayscale"
-                          src={`/logos/${provider.logo}`}
-                        />
-                      </div>
-                      <div className="flex flex-col justify-center py-2 pr-3">
-                        <span className="font-medium text-sm leading-tight">
-                          {provider.name}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
-                          +{provider.lookups} lookup
-                          {provider.lookups > 1 ? "s" : ""}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Custom include input */}
-                <div className="mt-4 border-t pt-4">
-                  <p className="mb-2 font-medium text-sm">Other Provider</p>
-                  <div className="flex gap-2">
-                    <Input
-                      aria-label="Custom SPF include domain"
-                      className="flex-1 font-mono text-sm"
-                      disabled={newIncludeLoading}
-                      onChange={(e) => setNewInclude(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addInclude()}
-                      placeholder="_spf.example.com"
-                      value={newInclude}
-                    />
-                    <Button
-                      aria-label="Add include"
-                      disabled={newIncludeLoading || !newInclude.trim()}
-                      onClick={addInclude}
-                      variant="secondary"
-                    >
-                      {newIncludeLoading ? (
-                        <Loader2
-                          aria-hidden="true"
-                          className="h-4 w-4 animate-spin"
-                        />
-                      ) : (
-                        <Plus aria-hidden="true" className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="mt-1.5 text-muted-foreground text-xs">
-                    Add any SPF include mechanism. We'll resolve the actual
-                    lookup count.
-                  </p>
-                  {customIncludes.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {customIncludes.map((inc) => (
-                        <span
-                          className="inline-flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm"
-                          key={inc.domain}
-                        >
-                          <span className="font-mono">
-                            include:{inc.domain}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {inc.loading ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              `+${inc.lookups}`
-                            )}
-                          </span>
-                          <button
-                            aria-label={`Remove ${inc.domain}`}
-                            className="text-muted-foreground hover:text-red-500"
-                            onClick={() => removeInclude(inc.domain)}
-                            type="button"
-                          >
-                            <Trash2
-                              aria-hidden="true"
-                              className="h-3.5 w-3.5"
-                            />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Custom IPs */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Custom IP Addresses</CardTitle>
-                <p className="text-muted-foreground text-sm">
-                  IP mechanisms don't count toward the 10-lookup limit. Add
-                  dedicated sending IPs here.
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4 flex gap-2">
-                  <Input
-                    aria-label="Custom IP address"
-                    className="flex-1"
-                    onChange={(e) => setNewIP(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addIP()}
-                    placeholder="Enter IPv4 or IPv6 address (e.g., 192.0.2.1 or 2001:db8::1)"
-                    value={newIP}
-                  />
-                  <Button
-                    aria-label="Add IP address"
-                    onClick={addIP}
-                    variant="secondary"
-                  >
-                    <Plus aria-hidden="true" className="h-4 w-4" />
-                  </Button>
-                </div>
-                {customIPs.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {customIPs.map((ip) => (
-                      <span
-                        className="inline-flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 font-mono text-sm"
-                        key={ip}
-                      >
-                        {ip.includes(":") ? "ip6:" : "ip4:"}
-                        {ip}
-                        <button
-                          aria-label={`Remove IP ${ip}`}
-                          className="text-muted-foreground hover:text-red-500"
-                          onClick={() => removeIP(ip)}
-                          type="button"
-                        >
-                          <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Qualifier Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Catch-all Qualifier</CardTitle>
-                <p className="text-muted-foreground text-sm">
-                  What should happen to mail from unauthorized sources?
-                </p>
-              </CardHeader>
-              <CardContent>
-                <fieldset aria-label="SPF qualifier" className="space-y-2">
-                  {Object.entries(QUALIFIERS).map(([key, q]) => (
-                    <label
-                      className={`flex w-full cursor-pointer rounded-lg border p-3 text-left transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 ${
-                        qualifier === key
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-muted/30 hover:border-muted-foreground/50"
-                      }`}
-                      key={key}
-                    >
-                      <input
-                        checked={qualifier === key}
-                        className="sr-only"
-                        name="spf-qualifier"
-                        onChange={() => setQualifier(key)}
-                        type="radio"
-                        value={key}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-medium">
-                            {q.label}
-                            {q.recommended && (
-                              <Badge className="ml-2" variant="secondary">
-                                Recommended
-                              </Badge>
-                            )}
-                          </span>
-                          {qualifier === key && (
-                            <Check className="h-5 w-5 text-primary" />
-                          )}
-                        </div>
-                        <p className="mt-1 text-muted-foreground text-sm">
-                          {q.description}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </fieldset>
-              </CardContent>
-            </Card>
-
-            {/* Generated Record */}
-            <Card className="border-primary/50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Generated SPF Record</CardTitle>
-                  <Button
-                    onClick={copyToClipboard}
-                    size="sm"
-                    variant="secondary"
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    {copied ? "Copied!" : "Copy"}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto rounded-lg border bg-muted/50 p-4 font-mono text-sm">
-                  <span className="text-purple-500 dark:text-purple-400">
-                    v=spf1
-                  </span>
-                  {customIPs.map((ip) => (
-                    <span className="text-cyan-600 dark:text-cyan-400" key={ip}>
-                      {" "}
-                      {ip.includes(":") ? "ip6:" : "ip4:"}
-                      {ip}
-                    </span>
-                  ))}
-                  {selectedProviders.map((p) => (
-                    <span
-                      className="text-green-600 dark:text-green-400"
-                      key={p}
-                    >
-                      {" "}
-                      {PROVIDERS[p]?.mechanism}
-                    </span>
-                  ))}
+              <p className="mt-1.5 text-muted-foreground text-xs">
+                Add any SPF include mechanism. We'll resolve the actual lookup
+                count.
+              </p>
+              {customIncludes.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
                   {customIncludes.map((inc) => (
                     <span
-                      className="text-blue-600 dark:text-blue-400"
+                      className="inline-flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm"
                       key={inc.domain}
                     >
-                      {" "}
-                      include:{inc.domain}
+                      <span className="font-mono">include:{inc.domain}</span>
+                      <span className="text-muted-foreground">
+                        {inc.loading ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          `+${inc.lookups}`
+                        )}
+                      </span>
+                      <button
+                        aria-label={`Remove ${inc.domain}`}
+                        className="text-muted-foreground hover:text-red-500"
+                        onClick={() => removeInclude(inc.domain)}
+                        type="button"
+                      >
+                        <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                      </button>
                     </span>
                   ))}
-                  <span
-                    className={
-                      qualifier === "-all"
-                        ? "text-green-600 dark:text-green-400"
-                        : qualifier === "~all"
-                          ? "text-yellow-600 dark:text-yellow-400"
-                          : "text-muted-foreground"
-                    }
-                  >
-                    {" "}
-                    {qualifier}
-                  </span>
                 </div>
-                <p className="mt-3 text-muted-foreground text-xs">
-                  Add this as a TXT record at your domain's root (@). If you
-                  already have an SPF record, you'll need to merge them — you
-                  can only have one SPF record per domain.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Info Cards */}
-            <div className="grid gap-6 md:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    What counts as a lookup?
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  <code className="text-foreground">include:</code>,{" "}
-                  <code className="text-foreground">a</code>,{" "}
-                  <code className="text-foreground">mx</code>,{" "}
-                  <code className="text-foreground">ptr</code>, and{" "}
-                  <code className="text-foreground">exists</code> mechanisms all
-                  require DNS lookups.{" "}
-                  <code className="text-foreground">ip4:</code> and{" "}
-                  <code className="text-foreground">ip6:</code> do not.
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    Why the 10-lookup limit?
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  RFC 7208 limits SPF to 10 DNS lookups to prevent denial of
-                  service attacks. Exceeding this causes a PermError, which
-                  fails DMARC alignment.
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    What is SPF flattening?
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-muted-foreground text-sm">
-                  SPF flattening resolves includes to their IP addresses,
-                  eliminating lookups. But IPs can change, requiring regular
-                  updates or a service like Valimail.
-                </CardContent>
-              </Card>
+              )}
             </div>
+          </CardContent>
+        </Card>
 
-            {/* CTA */}
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
-                  <div className="flex-1">
-                    <h3 className="mb-2 font-bold text-xl">
-                      Check your full email setup
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Use our Email Deliverability Checker to verify SPF, DKIM,
-                      DMARC, and more.
-                    </p>
-                  </div>
-                  <Button asChild size="lg">
-                    <Link href="/tools">
-                      Check Your Domain
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Cost Calculator CTA */}
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
-                  <div className="flex-1">
-                    <h3 className="mb-2 font-bold text-xl">
-                      Calculate your AWS SES costs
-                    </h3>
-                    <p className="text-muted-foreground">
-                      See exactly what you&apos;ll pay for email sending plus
-                      the full infrastructure — EventBridge, Lambda, SQS, and
-                      DynamoDB.
-                    </p>
-                  </div>
-                  <Button asChild size="lg">
-                    <Link href="/tools/ses-calculator">
-                      Open Calculator
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Learn More */}
-            <div className="text-center">
-              <p className="mb-4 text-muted-foreground">
-                Want to learn more about SPF and the 10-lookup problem?
-              </p>
-              <Button asChild variant="outline">
-                <Link href="/blog/spf-guide">
-                  Read: The SPF 10-Lookup Limit Explained
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+        {/* Custom IPs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Custom IP Addresses</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              IP mechanisms don't count toward the 10-lookup limit. Add
+              dedicated sending IPs here.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 flex gap-2">
+              <Input
+                aria-label="Custom IP address"
+                className="flex-1"
+                onChange={(e) => setNewIP(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addIP()}
+                placeholder="Enter IPv4 or IPv6 address (e.g., 192.0.2.1 or 2001:db8::1)"
+                value={newIP}
+              />
+              <Button
+                aria-label="Add IP address"
+                onClick={addIP}
+                variant="secondary"
+              >
+                <Plus aria-hidden="true" className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
+            {customIPs.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {customIPs.map((ip) => (
+                  <span
+                    className="inline-flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 font-mono text-sm"
+                    key={ip}
+                  >
+                    {ip.includes(":") ? "ip6:" : "ip4:"}
+                    {ip}
+                    <button
+                      aria-label={`Remove IP ${ip}`}
+                      className="text-muted-foreground hover:text-red-500"
+                      onClick={() => removeIP(ip)}
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-export default function SPFBuilderPageContent() {
-  return (
-    <Suspense>
-      <SPFBuilderInner />
-    </Suspense>
+        {/* Qualifier Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Catch-all Qualifier</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              What should happen to mail from unauthorized sources?
+            </p>
+          </CardHeader>
+          <CardContent>
+            <fieldset aria-label="SPF qualifier" className="space-y-2">
+              {Object.entries(QUALIFIERS).map(([key, q]) => (
+                <label
+                  className={`flex w-full cursor-pointer rounded-lg border p-3 text-left transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 ${
+                    qualifier === key
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-muted/30 hover:border-muted-foreground/50"
+                  }`}
+                  key={key}
+                >
+                  <input
+                    checked={qualifier === key}
+                    className="sr-only"
+                    name="spf-qualifier"
+                    onChange={() => setQualifier(key)}
+                    type="radio"
+                    value={key}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-medium">
+                        {q.label}
+                        {q.recommended && (
+                          <Badge className="ml-2" variant="secondary">
+                            Recommended
+                          </Badge>
+                        )}
+                      </span>
+                      {qualifier === key && (
+                        <Check className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                    <p className="mt-1 text-muted-foreground text-sm">
+                      {q.description}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </fieldset>
+          </CardContent>
+        </Card>
+
+        {/* Generated Record */}
+        <Card className="border-primary/50">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Generated SPF Record</CardTitle>
+              <Button onClick={copyToClipboard} size="sm" variant="secondary">
+                <Copy className="mr-2 h-4 w-4" />
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto rounded-lg border bg-muted/50 p-4 font-mono text-sm">
+              <span className="text-purple-500 dark:text-purple-400">
+                v=spf1
+              </span>
+              {customIPs.map((ip) => (
+                <span className="text-cyan-600 dark:text-cyan-400" key={ip}>
+                  {" "}
+                  {ip.includes(":") ? "ip6:" : "ip4:"}
+                  {ip}
+                </span>
+              ))}
+              {selectedProviders.map((p) => (
+                <span className="text-green-600 dark:text-green-400" key={p}>
+                  {" "}
+                  {PROVIDERS[p]?.mechanism}
+                </span>
+              ))}
+              {customIncludes.map((inc) => (
+                <span
+                  className="text-blue-600 dark:text-blue-400"
+                  key={inc.domain}
+                >
+                  {" "}
+                  include:{inc.domain}
+                </span>
+              ))}
+              <span
+                className={
+                  qualifier === "-all"
+                    ? "text-green-600 dark:text-green-400"
+                    : qualifier === "~all"
+                      ? "text-yellow-600 dark:text-yellow-400"
+                      : "text-muted-foreground"
+                }
+              >
+                {" "}
+                {qualifier}
+              </span>
+            </div>
+            <p className="mt-3 text-muted-foreground text-xs">
+              Add this as a TXT record at your domain's root (@). If you already
+              have an SPF record, you'll need to merge them — you can only have
+              one SPF record per domain.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }
