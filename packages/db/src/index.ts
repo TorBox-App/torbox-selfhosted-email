@@ -11,5 +11,11 @@ export const db = drizzle(pool, { schema });
 export { and, desc, eq, or, sql as sqlExpr } from "drizzle-orm";
 // Re-export all schemas for use elsewhere
 export * from "./schema";
+// Re-export segment evaluator (SQL-based)
+export {
+  contactIdsMatchingCondition,
+  contactMatchesCondition,
+  getSegmentsByIds,
+} from "./segment-evaluator";
 // Re-export segment filter SQL builder
 export { buildConditionSQL, buildFilterSQL } from "./segment-filter";

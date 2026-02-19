@@ -5,15 +5,18 @@
  * Used for contact lifecycle events, topic subscriptions, etc.
  */
 
-import { contactEvent, db, eq, workflow, workflowExecution } from "@wraps/db";
+import {
+  contactEvent,
+  contactMatchesCondition,
+  db,
+  eq,
+  getSegmentsByIds,
+  workflow,
+  workflowExecution,
+} from "@wraps/db";
 import { and, inArray, sql } from "drizzle-orm";
 
 import { log } from "../lib/logger";
-import {
-  evaluateConditionAsync,
-  getSegmentsByIds,
-  loadContactWithTopics,
-} from "./segment-evaluator";
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
@@ -348,8 +351,8 @@ export async function emitTopicUnsubscribed(params: {
  * Check and emit segment entry events for a contact
  * Call this after a contact is created or updated
  *
- * Optimized: loads contact data once (2 queries), batch-fetches segments (1 query),
- * then evaluates in-memory. Total: 4 queries regardless of workflow count.
+ * Uses SQL-based evaluation: batch-fetches segments (1 query),
+ * then runs one SQL query per segment to check if contact matches.
  */
 export async function checkSegmentEntry(params: {
   contactId: string;
@@ -389,16 +392,10 @@ export async function checkSegmentEntry(params: {
     return { workflowsTriggered: 0 };
   }
 
-  // 3. Load contact with topics (2 queries)
-  const contactData = await loadContactWithTopics(params.contactId);
-  if (!contactData) {
-    return { workflowsTriggered: 0 };
-  }
+  // 3. Batch-fetch all segments (1 query)
+  const segmentsMap = await getSegmentsByIds(db, segmentIds);
 
-  // 4. Batch-fetch all segments (1 query)
-  const segmentsMap = await getSegmentsByIds(segmentIds);
-
-  // 5. Evaluate in-memory and collect trigger jobs
+  // 4. Evaluate via SQL and collect trigger jobs
   const jobs: WorkflowJob[] = [];
 
   for (const wf of segmentWorkflows) {
@@ -413,7 +410,12 @@ export async function checkSegmentEntry(params: {
     }
 
     try {
-      const matches = await evaluateConditionAsync(seg.condition, contactData);
+      const matches = await contactMatchesCondition(
+        db,
+        params.contactId,
+        params.organizationId,
+        seg.condition
+      );
 
       if (matches) {
         jobs.push({
@@ -441,7 +443,7 @@ export async function checkSegmentEntry(params: {
     }
   }
 
-  // 6. Batch enqueue all trigger jobs
+  // 5. Batch enqueue all trigger jobs
   if (jobs.length > 0) {
     await enqueueWorkflowStepBatch(jobs);
   }
@@ -453,8 +455,8 @@ export async function checkSegmentEntry(params: {
  * Check and emit segment exit events for a contact
  * Call this after a contact is updated
  *
- * Optimized: loads contact data once (2 queries), batch-fetches segments (1 query),
- * then evaluates in-memory. Total: 4 queries regardless of workflow count.
+ * Uses SQL-based evaluation: batch-fetches segments (1 query),
+ * then runs one SQL query per segment to check if contact no longer matches.
  */
 export async function checkSegmentExit(params: {
   contactId: string;
@@ -506,16 +508,10 @@ export async function checkSegmentExit(params: {
     return { workflowsTriggered: 0 };
   }
 
-  // 3. Load contact with topics (2 queries)
-  const contactData = await loadContactWithTopics(params.contactId);
-  if (!contactData) {
-    return { workflowsTriggered: 0 };
-  }
+  // 3. Batch-fetch all segments (1 query)
+  const segmentsMap = await getSegmentsByIds(db, segmentIds);
 
-  // 4. Batch-fetch all segments (1 query)
-  const segmentsMap = await getSegmentsByIds(segmentIds);
-
-  // 5. Evaluate in-memory and collect trigger jobs
+  // 4. Evaluate via SQL and collect trigger jobs
   const jobs: WorkflowJob[] = [];
 
   for (const wf of segmentWorkflows) {
@@ -538,8 +534,13 @@ export async function checkSegmentExit(params: {
     }
 
     try {
-      // Check if contact NO LONGER matches the segment
-      const matches = await evaluateConditionAsync(seg.condition, contactData);
+      // Check if contact NO LONGER matches the segment via SQL
+      const matches = await contactMatchesCondition(
+        db,
+        params.contactId,
+        params.organizationId,
+        seg.condition
+      );
 
       if (!matches) {
         jobs.push({
@@ -567,7 +568,7 @@ export async function checkSegmentExit(params: {
     }
   }
 
-  // 6. Batch enqueue all trigger jobs
+  // 5. Batch enqueue all trigger jobs
   if (jobs.length > 0) {
     await enqueueWorkflowStepBatch(jobs);
   }

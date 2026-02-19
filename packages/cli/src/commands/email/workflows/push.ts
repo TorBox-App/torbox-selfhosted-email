@@ -407,7 +407,12 @@ async function pushToAPI(
         }
         // Handle successes
         for (const r of data.results ?? []) {
-          results.push({ slug: r.slug, id: r.id, status: r.status, success: true });
+          results.push({
+            slug: r.slug,
+            id: r.id,
+            status: r.status,
+            success: true,
+          });
         }
         // Show summary
         const successCount = data.results?.length ?? 0;
@@ -431,7 +436,12 @@ async function pushToAPI(
           results: Array<{ slug: string; id: string; status: string }>;
         };
         for (const r of data.results) {
-          results.push({ slug: r.slug, id: r.id, status: r.status, success: true });
+          results.push({
+            slug: r.slug,
+            id: r.id,
+            status: r.status,
+            success: true,
+          });
         }
         progress.succeed(`Synced ${workflows.length} workflows to dashboard`);
       } else {
@@ -479,8 +489,17 @@ async function pushToAPI(
           `${pc.cyan(w.slug)} was edited on the dashboard since last push. Use ${pc.bold("--force")} to overwrite.`
         );
       } else if (resp.ok) {
-        const data = (await resp.json()) as { id: string; slug: string; status: string };
-        results.push({ slug: data.slug, id: data.id, status: data.status, success: true });
+        const data = (await resp.json()) as {
+          id: string;
+          slug: string;
+          status: string;
+        };
+        results.push({
+          slug: data.slug,
+          id: data.id,
+          status: data.status,
+          success: true,
+        });
         progress.succeed(`Synced ${pc.cyan(w.slug)} to dashboard`);
       } else {
         const body = await resp.text();

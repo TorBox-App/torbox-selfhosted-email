@@ -1,17 +1,8 @@
 "use server";
 
 import { auth } from "@wraps/auth";
-import { contact, contactTopic, db, segment } from "@wraps/db";
-import {
-  and,
-  desc,
-  eq,
-  exists,
-  notExists,
-  or,
-  type SQL,
-  sql,
-} from "drizzle-orm";
+import { buildConditionSQL, contact, db, segment } from "@wraps/db";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createActionLogger, serializeError } from "@/lib/logger";
@@ -23,7 +14,6 @@ import {
   type GetSegmentResult,
   type ListSegmentsResult,
   type PreviewSegmentResult,
-  type SegmentFilter,
   type UpdateSegmentResult,
   validateCondition,
 } from "@/lib/segments";
@@ -63,177 +53,6 @@ async function verifyOrgAccess(
   }
 
   return { userId: session.user.id, role: membership.role };
-}
-
-// Map of field names to SQL column references
-const COLUMN_MAP: Record<string, string> = {
-  status: "status",
-  email: "email",
-  lastActivityAt: "last_activity_at",
-  lastEmailSentAt: "last_email_sent_at",
-  lastEmailOpenedAt: "last_email_opened_at",
-  lastEmailClickedAt: "last_email_clicked_at",
-  emailsSent: "emails_sent",
-  emailsOpened: "emails_opened",
-  emailsClicked: "emails_clicked",
-  createdAt: "created_at",
-  confirmedAt: "confirmed_at",
-};
-
-/**
- * Build SQL condition from a single filter using raw SQL
- */
-function buildFilterSQL(filter: SegmentFilter): SQL | null {
-  const { field, operator, value, unit } = filter;
-
-  // Handle topic-based filters
-  if (field === "topics") {
-    const topicId = value as string;
-    const subquery = db
-      .select({ contactId: contactTopic.contactId })
-      .from(contactTopic)
-      .where(
-        and(
-          eq(contactTopic.contactId, contact.id),
-          eq(contactTopic.topicId, topicId),
-          eq(contactTopic.status, "subscribed")
-        )
-      );
-
-    if (operator === "hasTopic") {
-      return exists(subquery);
-    }
-    if (operator === "notHasTopic") {
-      return notExists(subquery);
-    }
-    return null;
-  }
-
-  // Handle custom properties (field starts with "properties.")
-  if (field.startsWith("properties.")) {
-    const propertyKey = field.replace("properties.", "");
-
-    switch (operator) {
-      case "equals":
-        return sql`properties->>${propertyKey} = ${String(value)}`;
-      case "notEquals":
-        return sql`properties->>${propertyKey} != ${String(value)}`;
-      case "contains":
-        return sql`properties->>${propertyKey} ILIKE ${`%${String(value)}%`}`;
-      case "notContains":
-        return sql`properties->>${propertyKey} NOT ILIKE ${`%${String(value)}%`}`;
-      case "exists":
-        return sql`properties ? ${propertyKey}`;
-      case "notExists":
-        return sql`NOT (properties ? ${propertyKey})`;
-      default:
-        return null;
-    }
-  }
-
-  // Handle standard contact fields
-  const columnName = COLUMN_MAP[field];
-  if (!columnName) {
-    return null;
-  }
-
-  const col = sql.raw(`"${columnName}"`);
-
-  switch (operator) {
-    case "equals":
-      return sql`${col} = ${value}`;
-    case "notEquals":
-      return sql`${col} != ${value}`;
-    case "contains":
-      return sql`${col} ILIKE ${`%${String(value)}%`}`;
-    case "notContains":
-      return sql`${col} NOT ILIKE ${`%${String(value)}%`}`;
-    case "startsWith":
-      return sql`${col} ILIKE ${`${String(value)}%`}`;
-    case "endsWith":
-      return sql`${col} ILIKE ${`%${String(value)}`}`;
-    case "greaterThan":
-      return sql`${col} > ${value}`;
-    case "lessThan":
-      return sql`${col} < ${value}`;
-    case "greaterThanOrEqual":
-      return sql`${col} >= ${value}`;
-    case "lessThanOrEqual":
-      return sql`${col} <= ${value}`;
-    case "exists":
-      return sql`${col} IS NOT NULL`;
-    case "notExists":
-      return sql`${col} IS NULL`;
-    case "inList": {
-      const values = value as string[];
-      if (values.length === 0) {
-        return sql`FALSE`;
-      }
-      return sql`${col} = ANY(${values})`;
-    }
-    case "notInList": {
-      const values = value as string[];
-      if (values.length === 0) {
-        return sql`TRUE`;
-      }
-      return sql`${col} != ALL(${values})`;
-    }
-    case "within": {
-      // Time-based filter: within X days/hours/minutes
-      const timeValue = value as number;
-      const interval =
-        unit === "hours"
-          ? `${timeValue} hours`
-          : unit === "minutes"
-            ? `${timeValue} minutes`
-            : `${timeValue} days`;
-      return sql`${col} > NOW() - INTERVAL ${interval}`;
-    }
-    default:
-      return null;
-  }
-}
-
-/**
- * Build SQL condition from FilterCondition recursively
- */
-function buildConditionSQL(condition: FilterCondition): SQL | null {
-  const groupConditions: SQL[] = [];
-
-  for (const group of condition.groups) {
-    const filterConditions: SQL[] = [];
-
-    // Build conditions for filters in this group
-    for (const filter of group.filters) {
-      const filterSQL = buildFilterSQL(filter);
-      if (filterSQL) {
-        filterConditions.push(filterSQL);
-      }
-    }
-
-    // Handle nested condition
-    if (group.nested) {
-      const nestedSQL = buildConditionSQL(group.nested);
-      if (nestedSQL) {
-        filterConditions.push(nestedSQL);
-      }
-    }
-
-    if (filterConditions.length > 0) {
-      // Combine filters within group with AND
-      groupConditions.push(and(...filterConditions)!);
-    }
-  }
-
-  if (groupConditions.length === 0) {
-    return null;
-  }
-
-  // Combine groups based on logic (AND/OR)
-  if (condition.logic === "OR") {
-    return or(...groupConditions) ?? null;
-  }
-  return and(...groupConditions) ?? null;
 }
 
 /**

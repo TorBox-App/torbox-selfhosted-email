@@ -313,6 +313,262 @@ describe("buildFilterSQL", () => {
   });
 });
 
+describe("buildFilterSQL - event operators", () => {
+  it("handles triggered operator with EXISTS subquery on contact_event", () => {
+    const filter: SegmentFilter = {
+      field: "purchase_made",
+      operator: "triggered",
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("EXISTS");
+    expect(query!.sql).toContain("contact_event");
+    expect(query!.sql).toContain("event_name");
+    expect(query!.params).toContain("purchase_made");
+  });
+
+  it("handles triggeredWithin operator with time-bounded EXISTS", () => {
+    const filter: SegmentFilter = {
+      field: "email_opened",
+      operator: "triggeredWithin",
+      value: 7,
+      unit: "days",
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("EXISTS");
+    expect(query!.sql).toContain("contact_event");
+    expect(query!.sql).toContain("event_name");
+    expect(query!.sql).toContain("created_at");
+    expect(query!.sql).toContain("INTERVAL");
+    expect(query!.params).toContain("email_opened");
+    expect(query!.params).toContain("7 days");
+  });
+
+  it("handles triggeredWithin with hours unit", () => {
+    const filter: SegmentFilter = {
+      field: "page_viewed",
+      operator: "triggeredWithin",
+      value: 24,
+      unit: "hours",
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.params).toContain("24 hours");
+  });
+
+  it("handles triggeredWithin with minutes unit", () => {
+    const filter: SegmentFilter = {
+      field: "button_clicked",
+      operator: "triggeredWithin",
+      value: 30,
+      unit: "minutes",
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.params).toContain("30 minutes");
+  });
+
+  it("handles triggeredWithin defaults to days when unit is missing", () => {
+    const filter: SegmentFilter = {
+      field: "form_submitted",
+      operator: "triggeredWithin",
+      value: 14,
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.params).toContain("14 days");
+  });
+
+  it("handles notTriggered operator with NOT EXISTS subquery", () => {
+    const filter: SegmentFilter = {
+      field: "cart_abandoned",
+      operator: "notTriggered",
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("NOT EXISTS");
+    expect(query!.sql).toContain("contact_event");
+    expect(query!.sql).toContain("event_name");
+    expect(query!.params).toContain("cart_abandoned");
+  });
+});
+
+describe("buildFilterSQL - property startsWith/endsWith", () => {
+  it("handles startsWith on property fields", () => {
+    const filter: SegmentFilter = {
+      field: "properties.company",
+      operator: "startsWith",
+      value: "Acme",
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("properties");
+    expect(query!.sql).toContain("ILIKE");
+    expect(query!.params).toContain("Acme%");
+  });
+
+  it("handles endsWith on property fields", () => {
+    const filter: SegmentFilter = {
+      field: "properties.email",
+      operator: "endsWith",
+      value: "@gmail.com",
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("properties");
+    expect(query!.sql).toContain("ILIKE");
+    expect(query!.params).toContain("%@gmail.com");
+  });
+});
+
+describe("buildFilterSQL - property numeric comparisons", () => {
+  it("handles greaterThan on property fields with numeric cast", () => {
+    const filter: SegmentFilter = {
+      field: "properties.score",
+      operator: "greaterThan",
+      value: 80,
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("properties");
+    expect(query!.sql).toContain("::numeric");
+    expect(query!.sql).toContain(">");
+  });
+
+  it("handles lessThan on property fields with numeric cast", () => {
+    const filter: SegmentFilter = {
+      field: "properties.score",
+      operator: "lessThan",
+      value: 50,
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("::numeric");
+    expect(query!.sql).toContain("<");
+  });
+
+  it("handles greaterThanOrEqual on property fields", () => {
+    const filter: SegmentFilter = {
+      field: "properties.age",
+      operator: "greaterThanOrEqual",
+      value: 18,
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("::numeric");
+    expect(query!.sql).toContain(">=");
+  });
+
+  it("handles lessThanOrEqual on property fields", () => {
+    const filter: SegmentFilter = {
+      field: "properties.age",
+      operator: "lessThanOrEqual",
+      value: 65,
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("::numeric");
+    expect(query!.sql).toContain("<=");
+  });
+});
+
+describe("buildFilterSQL - property inList/notInList", () => {
+  it("handles inList on property fields", () => {
+    const filter: SegmentFilter = {
+      field: "properties.plan",
+      operator: "inList",
+      value: ["free", "pro", "enterprise"],
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("properties");
+    expect(query!.sql).toContain("ANY");
+  });
+
+  it("handles notInList on property fields", () => {
+    const filter: SegmentFilter = {
+      field: "properties.plan",
+      operator: "notInList",
+      value: ["churned", "banned"],
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("properties");
+    expect(query!.sql).toContain("ALL");
+  });
+
+  it("handles empty inList on property fields as FALSE", () => {
+    const filter: SegmentFilter = {
+      field: "properties.plan",
+      operator: "inList",
+      value: [],
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("FALSE");
+  });
+
+  it("handles empty notInList on property fields as TRUE", () => {
+    const filter: SegmentFilter = {
+      field: "properties.plan",
+      operator: "notInList",
+      value: [],
+    };
+
+    const result = buildFilterSQL(filter);
+    expect(result).not.toBeNull();
+
+    const query = toSQL(result);
+    expect(query!.sql).toContain("TRUE");
+  });
+});
+
 describe("buildConditionSQL - nested groups", () => {
   it("handles nested conditions recursively", () => {
     const condition: FilterCondition = {

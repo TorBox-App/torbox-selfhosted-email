@@ -110,8 +110,8 @@ export const batchSend = pgTable(
     textContent: text("text_content"),
 
     // Variable mappings for custom template variables
-    variableMappings: json("variable_mappings")
-      .$type<
+    variableMappings:
+      json("variable_mappings").$type<
         Array<{
           variableName: string;
           source:

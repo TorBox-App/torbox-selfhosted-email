@@ -15,12 +15,14 @@ import {
   awsAccount,
   CASCADE_ENGAGEMENT_FIELD,
   contact,
+  contactIdsMatchingCondition,
   contactTopic,
   db,
   eq,
   messageSend,
   organization,
   type PreferredChannel,
+  segment,
   type TriggerConfig,
   template,
   type WorkflowStep,
@@ -44,7 +46,6 @@ import { log } from "../../lib/logger";
 import { generateUnsubscribeToken } from "../../lib/unsubscribe-token";
 
 import { getCredentials } from "../../services/credentials";
-import { evaluateContactsForSegment } from "../../services/segment-evaluator";
 import {
   deleteScheduledStep,
   enqueueWorkflowStep,
@@ -373,7 +374,19 @@ async function getSegmentContacts(
   segmentId: string,
   organizationId: string
 ): Promise<{ id: string }[]> {
-  // Get all active contacts in the organization
+  // 1. Fetch segment condition
+  const [seg] = await db
+    .select({ condition: segment.condition })
+    .from(segment)
+    .where(eq(segment.id, segmentId))
+    .limit(1);
+
+  if (!seg) {
+    log.warn("Schedule trigger: segment not found", { segmentId });
+    return [];
+  }
+
+  // 2. Get all active contacts in the organization
   const allContacts = await db
     .select({ id: contact.id })
     .from(contact)
@@ -394,15 +407,16 @@ async function getSegmentContacts(
     contactCount: allContacts.length,
   });
 
-  // Bulk evaluate all contacts against the segment (3 queries: segment + contacts + topics)
-  const results = await evaluateContactsForSegment(
+  // 3. SQL-based batch evaluation (1 query)
+  const matchingIds = await contactIdsMatchingCondition(
+    db,
     allContacts.map((c) => c.id),
-    segmentId
+    organizationId,
+    seg.condition
   );
 
-  const matchingContacts = allContacts.filter(
-    (c) => results.get(c.id) === true
-  );
+  const matchingIdSet = new Set(matchingIds);
+  const matchingContacts = allContacts.filter((c) => matchingIdSet.has(c.id));
 
   log.info("Schedule trigger: segment evaluation complete", {
     segmentId,

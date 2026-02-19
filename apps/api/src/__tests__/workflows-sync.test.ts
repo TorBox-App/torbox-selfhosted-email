@@ -582,7 +582,11 @@ describe("upsertWorkflowFromCli - Draft Push", () => {
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
     const { db } = await import("@wraps/db");
-    const result = await upsertWorkflowFromCli(db as never, authContext, basePushBody);
+    const result = await upsertWorkflowFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.status).toBe("enabled");
   });
@@ -597,7 +601,11 @@ describe("upsertWorkflowFromCli - Draft Push", () => {
     const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
 
     const { db } = await import("@wraps/db");
-    const result = await upsertWorkflowFromCli(db as never, authContext, basePushBody);
+    const result = await upsertWorkflowFromCli(
+      db as never,
+      authContext,
+      basePushBody
+    );
 
     expect(result.status).toBe("enabled");
   });

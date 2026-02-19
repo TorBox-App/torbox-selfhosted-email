@@ -27,6 +27,30 @@ const COLUMN_MAP: Record<string, string> = {
 export function buildFilterSQL(filter: SegmentFilter): SQL | null {
   const { field, operator, value, unit } = filter;
 
+  // Handle event-based operators (field is the event name)
+  if (
+    operator === "triggered" ||
+    operator === "triggeredWithin" ||
+    operator === "notTriggered"
+  ) {
+    const eventName = field;
+    if (operator === "triggered") {
+      return sql`EXISTS (SELECT 1 FROM "contact_event" WHERE "contact_id" = "contact"."id" AND "event_name" = ${eventName})`;
+    }
+    if (operator === "triggeredWithin") {
+      const timeValue = value as number;
+      const interval =
+        unit === "hours"
+          ? `${timeValue} hours`
+          : unit === "minutes"
+            ? `${timeValue} minutes`
+            : `${timeValue} days`;
+      return sql`EXISTS (SELECT 1 FROM "contact_event" WHERE "contact_id" = "contact"."id" AND "event_name" = ${eventName} AND "created_at" > NOW() - INTERVAL ${interval})`;
+    }
+    // notTriggered
+    return sql`NOT EXISTS (SELECT 1 FROM "contact_event" WHERE "contact_id" = "contact"."id" AND "event_name" = ${eventName})`;
+  }
+
   // Handle topic-based filters via raw SQL (no db dependency)
   if (field === "topics") {
     const topicId = value as string;
@@ -51,10 +75,32 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
         return sql`properties->>${propertyKey} ILIKE ${`%${String(value)}%`}`;
       case "notContains":
         return sql`properties->>${propertyKey} NOT ILIKE ${`%${String(value)}%`}`;
+      case "startsWith":
+        return sql`properties->>${propertyKey} ILIKE ${`${String(value)}%`}`;
+      case "endsWith":
+        return sql`properties->>${propertyKey} ILIKE ${`%${String(value)}`}`;
+      case "greaterThan":
+        return sql`(properties->>${propertyKey})::numeric > ${value}::numeric`;
+      case "lessThan":
+        return sql`(properties->>${propertyKey})::numeric < ${value}::numeric`;
+      case "greaterThanOrEqual":
+        return sql`(properties->>${propertyKey})::numeric >= ${value}::numeric`;
+      case "lessThanOrEqual":
+        return sql`(properties->>${propertyKey})::numeric <= ${value}::numeric`;
       case "exists":
         return sql`properties ? ${propertyKey}`;
       case "notExists":
         return sql`NOT (properties ? ${propertyKey})`;
+      case "inList": {
+        const values = value as string[];
+        if (values.length === 0) return sql`FALSE`;
+        return sql`properties->>${propertyKey} = ANY(${values})`;
+      }
+      case "notInList": {
+        const values = value as string[];
+        if (values.length === 0) return sql`TRUE`;
+        return sql`properties->>${propertyKey} != ALL(${values})`;
+      }
       default:
         return null;
     }

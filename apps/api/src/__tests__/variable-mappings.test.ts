@@ -7,8 +7,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { applyVariableMappings } from "../workers/variable-mappings";
 import type { VariableMapping } from "../workers/variable-mappings";
+import { applyVariableMappings } from "../workers/variable-mappings";
 
 describe("applyVariableMappings", () => {
   it("returns original data unchanged when mappings is empty", () => {
