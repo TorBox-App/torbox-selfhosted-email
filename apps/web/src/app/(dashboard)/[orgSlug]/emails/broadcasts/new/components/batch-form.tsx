@@ -42,6 +42,7 @@ import {
   getSampleContacts,
   type RecipientFilter,
 } from "@/actions/batch";
+import { SendConfirmDialog } from "@/components/send-confirm-dialog";
 import { TemplateEditorDialog } from "@/components/template-editor/wrappers";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -1398,6 +1399,8 @@ function ReviewStep({
   segments: Segment[];
   topics: Topic[];
 }) {
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
   // Fetch templates with React Query - auto-updates when templates change
   const { data: templatesData } = useTemplates(orgSlug);
   const templates: Template[] = (templatesData ?? []).map((t) => ({
@@ -1524,7 +1527,7 @@ function ReviewStep({
             recipientCount === 0 ||
             (data.scheduleType === "later" && !data.scheduledDate)
           }
-          onClick={onSend}
+          onClick={() => setShowConfirmDialog(true)}
           size="lg"
         >
           {isPending ? (
@@ -1546,6 +1549,18 @@ function ReviewStep({
           )}
         </Button>
       </div>
+
+      <SendConfirmDialog
+        loading={isPending}
+        onConfirm={() => {
+          setShowConfirmDialog(false);
+          onSend();
+        }}
+        onOpenChange={setShowConfirmDialog}
+        open={showConfirmDialog}
+        recipientCount={recipientCount ?? 0}
+        variant={data.scheduleType === "later" ? "schedule" : "send"}
+      />
     </div>
   );
 }
