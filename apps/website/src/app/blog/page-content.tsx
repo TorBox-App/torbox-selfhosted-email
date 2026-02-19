@@ -8,6 +8,7 @@ import {
   Network,
   Server,
   Shield,
+  User,
   Zap,
 } from "lucide-react";
 import { LandingFooter } from "@/app/landing/components/footer";
@@ -28,6 +29,7 @@ type BlogPost = {
   category: string;
   date: string;
   readTime: string;
+  author: string;
   featured?: boolean;
   icon?: React.ReactNode;
   image?: string;
@@ -42,6 +44,7 @@ const posts: BlogPost[] = [
     category: "Developer Experience",
     date: "February 2026",
     readTime: "10 min read",
+    author: "Wraps Team",
     featured: true,
     icon: <Code2 className="h-6 w-6" />,
     image: "/blog/wraps-templates-and-workflows-as-code.webp",
@@ -54,6 +57,7 @@ const posts: BlogPost[] = [
     category: "Engineering",
     date: "February 2026",
     readTime: "8 min read",
+    author: "Wraps Team",
     featured: true,
     icon: <Inbox className="h-6 w-6" />,
     image: "/blog/wraps-inbound.webp",
@@ -66,6 +70,7 @@ const posts: BlogPost[] = [
     category: "Security",
     date: "January 2026",
     readTime: "12 min read",
+    author: "Wraps Team",
     featured: true,
     icon: <Shield className="h-6 w-6" />,
     image: "/blog/DMARC_EXPLOITED.webp",
@@ -78,6 +83,7 @@ const posts: BlogPost[] = [
     category: "Guide",
     date: "January 2026",
     readTime: "10 min read",
+    author: "Wraps Team",
     icon: <Server className="h-6 w-6" />,
   },
   {
@@ -88,6 +94,7 @@ const posts: BlogPost[] = [
     category: "Guide",
     date: "January 2026",
     readTime: "15 min read",
+    author: "Wraps Team",
     icon: <FileCheck className="h-6 w-6" />,
     image: "/blog/get-out-of-sandbox.webp",
   },
@@ -99,6 +106,7 @@ const posts: BlogPost[] = [
     category: "Architecture",
     date: "January 2026",
     readTime: "15 min read",
+    author: "Wraps Team",
     icon: <Network className="h-6 w-6" />,
   },
   {
@@ -109,6 +117,7 @@ const posts: BlogPost[] = [
     category: "Engineering",
     date: "January 2026",
     readTime: "10 min read",
+    author: "Wraps Team",
     featured: true,
     icon: <Zap className="h-6 w-6" />,
     image: "/blog/aws-ses-simplified.webp",
@@ -121,6 +130,7 @@ const posts: BlogPost[] = [
     category: "Guide",
     date: "January 2026",
     readTime: "12 min read",
+    author: "Wraps Team",
     featured: true,
     icon: <Server className="h-6 w-6" />,
     image: "/blog/nextjs-vercel-ses-guide.webp",
@@ -185,6 +195,10 @@ export default function BlogContent() {
                               {post.category}
                             </Badge>
                             <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                              <User className="h-3 w-3" />
+                              {post.author}
+                            </span>
+                            <span className="flex items-center gap-1 text-muted-foreground text-xs">
                               <Calendar className="h-3 w-3" />
                               {post.date}
                             </span>
@@ -231,8 +245,12 @@ export default function BlogContent() {
                   >
                     <Card className="h-full transition-all hover:border-primary/50 hover:shadow-lg">
                       <CardHeader>
-                        <div className="mb-2 flex items-center gap-3">
+                        <div className="mb-2 flex flex-wrap items-center gap-3">
                           <Badge variant="secondary">{post.category}</Badge>
+                          <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                            <User className="h-3 w-3" />
+                            {post.author}
+                          </span>
                           <span className="text-muted-foreground text-xs">
                             {post.readTime}
                           </span>

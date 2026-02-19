@@ -246,6 +246,8 @@ export default function Page() {
               <span>Engineering</span>
               <span className="text-muted-foreground/50">&bull;</span>
               <span className="text-muted-foreground">10 min read</span>
+              <span className="text-muted-foreground/50">&bull;</span>
+              <span className="text-muted-foreground">Wraps Team</span>
             </div>
 
             <h1 className="mb-6 font-bold text-4xl leading-tight md:text-5xl lg:text-6xl">

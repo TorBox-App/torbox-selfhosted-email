@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { trackEvent } from "@/utils/analytics";
 
 const contactFormSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters."),
@@ -35,12 +36,17 @@ const ContactSection = memo(function ContactSection() {
     validators: {
       onSubmit: contactFormSchema,
     },
-    onSubmit: async () => {
-      // Here you would typically send the form data to your backend
-      toast.success("Message sent successfully!");
+    onSubmit: async ({ value }) => {
+      trackEvent("contact_form_submitted", {
+        email: value.email,
+        subject: value.subject,
+        firstName: value.firstName,
+        lastName: value.lastName,
+        message: value.message,
+      });
+      toast.success("Message sent! We'll get back to you soon.");
       setIsSubmitted(true);
       form.reset();
-      // Reset the submitted state after a delay
       setTimeout(() => setIsSubmitted(false), 3000);
     },
   });
@@ -86,7 +92,7 @@ const ContactSection = memo(function ContactSection() {
                   variant="outline"
                 >
                   <a
-                    href="https://discord.com/invite/XEQhPc9a6p"
+                    href="https://discord.gg/ybwvXq5d"
                     rel="noopener noreferrer"
                     target="_blank"
                   >

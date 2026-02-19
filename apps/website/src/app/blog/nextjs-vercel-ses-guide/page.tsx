@@ -223,7 +223,7 @@ export default function Page() {
               </span>
             </h1>
 
-            <p className="mx-auto mb-12 max-w-3xl text-center text-muted-foreground text-xl">
+            <p className="mx-auto mb-8 max-w-3xl text-center text-muted-foreground text-xl">
               Deploy production-ready email infrastructure to your AWS account
               in minutes.
               <br />
@@ -231,6 +231,12 @@ export default function Page() {
                 No stored credentials. No access keys. You own everything.
               </span>
             </p>
+
+            <div className="mb-12 flex items-center justify-center gap-2 text-muted-foreground text-sm">
+              <span>12 min read</span>
+              <span>&bull;</span>
+              <span>Wraps Team</span>
+            </div>
 
             {/* Terminal demo */}
             <TerminalDemo />

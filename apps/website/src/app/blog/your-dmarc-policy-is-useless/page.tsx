@@ -257,13 +257,18 @@ export default function Page() {
               Your DMARC policy is <span className="text-red-500">useless</span>
               .
             </h1>
-            <p className="mb-8 max-w-2xl text-lg text-muted-foreground md:text-xl">
+            <p className="mb-4 max-w-2xl text-lg text-muted-foreground md:text-xl">
               82% of domains have no DMARC. Of those that do, most set{" "}
               <code className="rounded bg-red-500/20 px-2 py-0.5 text-red-600 dark:text-red-400">
                 p=none
               </code>
               &mdash;which tells receivers not to enforce.
             </p>
+            <div className="mb-8 flex items-center justify-center gap-2 text-muted-foreground text-sm">
+              <span>15 min read</span>
+              <span>&bull;</span>
+              <span>Wraps Team</span>
+            </div>
             <HeroScrollButton />
           </div>
         </section>

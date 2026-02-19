@@ -182,6 +182,11 @@ export default function Page() {
               emails fail DMARC, and you're debugging DNS records at 2am. Here's
               everything you need to know.
             </p>
+            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <span>8 min read</span>
+              <span>&bull;</span>
+              <span>Wraps Team</span>
+            </div>
             <div className="mt-8 flex flex-wrap gap-8">
               <div>
                 <div className="font-mono text-2xl text-primary">10</div>

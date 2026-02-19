@@ -22,10 +22,15 @@ const footerLinks = {
     { name: "Pulumi Reference", href: "/docs/pulumi-reference" },
     { name: "llms.txt", href: "/llms.txt" },
   ],
-  resources: [
-    { name: "Email Tools", href: "/tools" },
+  company: [
+    { name: "About", href: "/about" },
+    { name: "Contact", href: "/contact" },
     { name: "Why Wraps", href: "/why-wraps" },
     { name: "Changelog", href: "/changelog" },
+  ],
+  resources: [
+    { name: "Email Tools", href: "/tools" },
+    { name: "SES Cost Calculator", href: "/tools/ses-calculator" },
     {
       name: "Community",
       href: "https://github.com/wraps-team/wraps/discussions",
@@ -36,7 +41,6 @@ const footerLinks = {
       href: "https://github.com/wraps-team/wraps/issues",
       external: true,
     },
-    { name: "SES Cost Calculator", href: "/tools/ses-calculator" },
   ],
   legal: [
     { name: "Privacy Policy", href: "/privacy" },
@@ -54,7 +58,7 @@ export function LandingFooter() {
     <footer className="border-t bg-background">
       <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-4 gap-8 lg:grid-cols-6">
+        <div className="grid grid-cols-4 gap-8 lg:grid-cols-7">
           {/* Brand Column */}
           <div className="col-span-4 max-w-2xl lg:col-span-2">
             <div className="mb-4 flex w-full items-center max-lg:justify-center">
@@ -120,6 +124,22 @@ export function LandingFooter() {
             <h4 className="mb-4 font-semibold">Developers</h4>
             <ul className="space-y-3">
               {footerLinks.developers.map((link) => (
+                <li key={link.name}>
+                  <a
+                    className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                    href={link.href}
+                  >
+                    {link.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="max-md:col-span-2 lg:col-span-1">
+            <h4 className="mb-4 font-semibold">Company</h4>
+            <ul className="space-y-3">
+              {footerLinks.company.map((link) => (
                 <li key={link.name}>
                   <a
                     className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"

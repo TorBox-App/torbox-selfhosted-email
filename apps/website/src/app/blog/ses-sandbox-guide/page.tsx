@@ -149,6 +149,11 @@ export default function Page() {
               checklists, request templates, and everything you need to escape
               the sandbox on your first try.
             </p>
+            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <span>10 min read</span>
+              <span>&bull;</span>
+              <span>Wraps Team</span>
+            </div>
             <div className="mt-8 flex flex-wrap gap-8">
               <div>
                 <div className="font-mono text-2xl text-primary">Common</div>

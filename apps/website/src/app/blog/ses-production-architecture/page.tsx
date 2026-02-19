@@ -218,6 +218,8 @@ export default function Page() {
               </span>
               <span>•</span>
               <span>Last updated January 2026</span>
+              <span>•</span>
+              <span>Wraps Team</span>
             </div>
           </div>
         </header>
