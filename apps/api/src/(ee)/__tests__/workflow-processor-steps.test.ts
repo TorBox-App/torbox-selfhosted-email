@@ -858,6 +858,35 @@ describe("handleSendSms", () => {
     expect(input.ConfigurationSetName).toBe("wraps-sms-config");
     expect(mockDbUpdate).toHaveBeenCalled();
   });
+
+  it("normalizes dot-notation variables via transformVariablesForSes", async () => {
+    const { transformVariablesForSes } = await import("@wraps/email");
+    setupSmsTest({ smsConfig: { body: "Hello {{contact.firstName}}" } });
+    await handler(makeSQSEvent(smsJob));
+    expect(smsSendCalls).toHaveLength(1);
+    expect(transformVariablesForSes).toHaveBeenCalledWith(
+      "Hello {{contact.firstName}}"
+    );
+  });
+
+  it("normalizes fallback syntax via transformVariablesForSes", async () => {
+    const { transformVariablesForSes } = await import("@wraps/email");
+    setupSmsTest({ smsConfig: { body: "Hi {{firstName|there}}" } });
+    await handler(makeSQSEvent(smsJob));
+    expect(smsSendCalls).toHaveLength(1);
+    expect(transformVariablesForSes).toHaveBeenCalledWith(
+      "Hi {{firstName|there}}"
+    );
+  });
+
+  it("normalizes mixed variable formats before substitution", async () => {
+    const { transformVariablesForSes } = await import("@wraps/email");
+    const body = "Hi {{contact.firstName|there}}, email: {{email}}";
+    setupSmsTest({ smsConfig: { body } });
+    await handler(makeSQSEvent(smsJob));
+    expect(smsSendCalls).toHaveLength(1);
+    expect(transformVariablesForSes).toHaveBeenCalledWith(body);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
