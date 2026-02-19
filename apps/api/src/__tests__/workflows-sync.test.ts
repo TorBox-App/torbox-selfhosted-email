@@ -79,6 +79,9 @@ vi.mock("@wraps/db", () => ({
 
 vi.mock("drizzle-orm", () => ({
   inArray: vi.fn(),
+  sql: (strings: TemplateStringsArray, ..._values: unknown[]) => ({
+    sql: strings.join("?"),
+  }),
 }));
 
 const authContext: AuthContext = {
