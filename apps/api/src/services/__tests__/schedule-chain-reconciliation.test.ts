@@ -190,6 +190,11 @@ vi.mock("@wraps/db", async () => {
   };
 });
 
+vi.mock("node:dns/promises", () => ({
+  default: { lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }) },
+  lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
+}));
+
 // Import handler AFTER all mocks are set up
 const { handler } = await import("../../(ee)/workers/workflow-processor");
 const { log } = await import("../../lib/logger");

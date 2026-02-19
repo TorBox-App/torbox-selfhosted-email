@@ -308,6 +308,11 @@ vi.mock("@wraps/db", async () => {
   };
 });
 
+vi.mock("node:dns/promises", () => ({
+  default: { lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }) },
+  lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
+}));
+
 vi.stubGlobal("fetch", mockFetch);
 
 // Import handler AFTER all mocks are set up

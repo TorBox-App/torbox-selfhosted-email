@@ -57,11 +57,11 @@ import {
 } from "../../services/workflow-queue";
 import { createNextWorkflowSchedule } from "../../services/workflow-scheduler";
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
-  for (const record of event.Records) {
-    const job: WorkflowJob = JSON.parse(record.body);
+export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
+  const results = await Promise.allSettled(
+    event.Records.map(async (record) => {
+      const job: WorkflowJob = JSON.parse(record.body);
 
-    try {
       switch (job.type) {
         case "execute":
           await processStep(job.executionId, job.stepId);
@@ -81,11 +81,20 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
           await processScheduleTrigger(job.workflowId, job.organizationId);
           break;
       }
-    } catch (error) {
-      log.error("Error processing workflow job", error);
-      throw error; // Re-throw to let SQS retry
-    }
-  }
+    })
+  );
+
+  const batchItemFailures = results
+    .map((result, idx) => {
+      if (result.status === "rejected") {
+        log.error("Error processing workflow job", result.reason);
+        return { itemIdentifier: event.Records[idx].messageId };
+      }
+      return null;
+    })
+    .filter((f): f is { itemIdentifier: string } => f !== null);
+
+  return { batchItemFailures };
 };
 
 /**
