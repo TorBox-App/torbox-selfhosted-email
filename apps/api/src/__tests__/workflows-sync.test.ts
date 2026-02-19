@@ -486,3 +486,137 @@ describe("Workflow Settings", () => {
     expect(lastInsertValues?.defaultFromName).toBe("My App");
   });
 });
+
+describe("upsertWorkflowFromCli - Draft Push", () => {
+  it("should insert new workflow with status=draft when draft=true", async () => {
+    mockExistingWorkflow = null;
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(db as never, authContext, {
+      ...basePushBody,
+      draft: true,
+    });
+
+    expect(result.created).toBe(true);
+    expect(lastInsertValues?.status).toBe("draft");
+  });
+
+  it("should default to status=enabled when draft not provided (insert)", async () => {
+    mockExistingWorkflow = null;
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, basePushBody);
+
+    expect(lastInsertValues?.status).toBe("enabled");
+  });
+
+  it("should default to status=enabled when draft=false (insert)", async () => {
+    mockExistingWorkflow = null;
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, {
+      ...basePushBody,
+      draft: false,
+    });
+
+    expect(lastInsertValues?.status).toBe("enabled");
+  });
+
+  it("should default to status=enabled when draft not provided (update)", async () => {
+    mockExistingWorkflow = {
+      id: "wf-1",
+      lastEditedFrom: "cli",
+      updatedAt: new Date(),
+    };
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    await upsertWorkflowFromCli(db as never, authContext, basePushBody);
+
+    expect(lastUpdateSet?.status).toBe("enabled");
+  });
+
+  it("should update existing workflow with status=draft when draft=true", async () => {
+    mockExistingWorkflow = {
+      id: "wf-1",
+      lastEditedFrom: "cli",
+      updatedAt: new Date(),
+    };
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(db as never, authContext, {
+      ...basePushBody,
+      draft: true,
+    });
+
+    expect(result.created).toBe(false);
+    expect(lastUpdateSet?.status).toBe("draft");
+  });
+
+  it("should return status=draft in result when draft=true (insert)", async () => {
+    mockExistingWorkflow = null;
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(db as never, authContext, {
+      ...basePushBody,
+      draft: true,
+    });
+
+    expect(result.status).toBe("draft");
+  });
+
+  it("should return status=enabled in result when draft not provided (insert)", async () => {
+    mockExistingWorkflow = null;
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(db as never, authContext, basePushBody);
+
+    expect(result.status).toBe("enabled");
+  });
+
+  it("should return status=enabled in result when draft not provided (update)", async () => {
+    mockExistingWorkflow = {
+      id: "wf-1",
+      lastEditedFrom: "cli",
+      updatedAt: new Date(),
+    };
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(db as never, authContext, basePushBody);
+
+    expect(result.status).toBe("enabled");
+  });
+
+  it("should return status=draft in result when draft=true (update)", async () => {
+    mockExistingWorkflow = {
+      id: "wf-1",
+      lastEditedFrom: "cli",
+      updatedAt: new Date(),
+    };
+
+    const { upsertWorkflowFromCli } = await import("../routes/workflows-sync");
+
+    const { db } = await import("@wraps/db");
+    const result = await upsertWorkflowFromCli(db as never, authContext, {
+      ...basePushBody,
+      draft: true,
+    });
+
+    expect(result.status).toBe("draft");
+  });
+});

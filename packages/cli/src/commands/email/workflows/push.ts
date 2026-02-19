@@ -9,6 +9,7 @@
  * Options:
  *   --workflow <name>  Push specific workflow
  *   --dry-run          Preview changes without pushing
+ *   --draft            Push as draft without enabling the workflow
  *   --force            Force push even if edited on dashboard
  *   --yes              Skip confirmation prompts
  *   --json             Output as JSON
@@ -47,6 +48,7 @@ import { DeploymentProgress } from "../../../utils/shared/output.js";
 type WorkflowsPushOptions = {
   workflow?: string;
   dryRun?: boolean;
+  draft?: boolean;
   force?: boolean;
   yes?: boolean;
   json?: boolean;
@@ -258,7 +260,10 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
 
   // Push to API
   const token = await resolveTokenAsync({ token: options.token });
-  const apiResults = await pushToAPI(toProcess, token, progress, options.force);
+  const apiResults = await pushToAPI(toProcess, token, progress, {
+    force: options.force,
+    draft: options.draft,
+  });
 
   // Only update lockfile for workflows that succeeded
   for (const w of toProcess) {
@@ -280,12 +285,16 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
   const pushed = apiResults.filter((r) => r.success);
   const conflicts = apiResults.filter((r) => r.conflict);
 
+  const drafts = pushed.filter((r) => r.status === "draft");
+  const enabled = pushed.filter((r) => r.status !== "draft");
+
   if (isJsonMode()) {
     if (conflicts.length === 0) {
       jsonSuccess("email.workflows.push", {
         pushed: pushed.map((r) => ({
           slug: r.slug,
           id: r.id,
+          status: r.status,
         })),
         unchanged,
         conflicts: [],
@@ -298,9 +307,14 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
     }
   } else {
     console.log();
-    if (pushed.length > 0) {
+    if (enabled.length > 0) {
       clack.log.success(
-        pc.green(`${pushed.length} workflow(s) pushed successfully`)
+        pc.green(`${enabled.length} workflow(s) pushed and enabled`)
+      );
+    }
+    if (drafts.length > 0) {
+      clack.log.success(
+        pc.green(`${drafts.length} workflow(s) pushed as draft`)
       );
     }
     if (unchanged.length > 0) {
@@ -331,6 +345,7 @@ export async function workflowsPush(options: WorkflowsPushOptions) {
 type APIPushResult = {
   slug: string;
   id?: string;
+  status?: string;
   success: boolean;
   conflict?: boolean;
 };
@@ -339,7 +354,7 @@ async function pushToAPI(
   workflows: TransformedWorkflowData[],
   token: string | null,
   progress: DeploymentProgress,
-  force?: boolean
+  options: { force?: boolean; draft?: boolean }
 ): Promise<APIPushResult[]> {
   if (!token) {
     progress.info(
@@ -375,7 +390,8 @@ async function pushToAPI(
             settings: w.transformed.settings,
             defaults: w.transformed.defaults,
             cliProjectPath: w.parsed.cliProjectPath,
-            force: force ?? false,
+            force: options.force ?? false,
+            draft: options.draft ?? false,
           })),
         }),
       });
@@ -391,7 +407,7 @@ async function pushToAPI(
         }
         // Handle successes
         for (const r of data.results ?? []) {
-          results.push({ slug: r.slug, id: r.id, success: true });
+          results.push({ slug: r.slug, id: r.id, status: r.status, success: true });
         }
         // Show summary
         const successCount = data.results?.length ?? 0;
@@ -415,7 +431,7 @@ async function pushToAPI(
           results: Array<{ slug: string; id: string; status: string }>;
         };
         for (const r of data.results) {
-          results.push({ slug: r.slug, id: r.id, success: true });
+          results.push({ slug: r.slug, id: r.id, status: r.status, success: true });
         }
         progress.succeed(`Synced ${workflows.length} workflows to dashboard`);
       } else {
@@ -452,7 +468,8 @@ async function pushToAPI(
           settings: w.transformed.settings,
           defaults: w.transformed.defaults,
           cliProjectPath: w.parsed.cliProjectPath,
-          force: force ?? false,
+          force: options.force ?? false,
+          draft: options.draft ?? false,
         }),
       });
 
@@ -462,8 +479,8 @@ async function pushToAPI(
           `${pc.cyan(w.slug)} was edited on the dashboard since last push. Use ${pc.bold("--force")} to overwrite.`
         );
       } else if (resp.ok) {
-        const data = (await resp.json()) as { id: string; slug: string };
-        results.push({ slug: data.slug, id: data.id, success: true });
+        const data = (await resp.json()) as { id: string; slug: string; status: string };
+        results.push({ slug: data.slug, id: data.id, status: data.status, success: true });
         progress.succeed(`Synced ${pc.cyan(w.slug)} to dashboard`);
       } else {
         const body = await resp.text();

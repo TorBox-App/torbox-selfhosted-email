@@ -68,7 +68,7 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
       return {
         id: result.id,
         slug: result.slug,
-        status: "enabled",
+        status: result.status,
         updatedAt: result.updatedAt,
         remoteHash: body.sourceHash,
       };
@@ -137,6 +137,11 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
             description: "Force overwrite even if edited on dashboard",
           })
         ),
+        draft: t.Optional(
+          t.Boolean({
+            description: "Push as draft without enabling the workflow",
+          })
+        ),
       }),
       detail: {
         tags: ["workflows"],
@@ -202,7 +207,7 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
             .map((r) => ({
               slug: r.slug,
               id: r.id,
-              status: "enabled" as const,
+              status: r.status,
             })),
         };
       }
@@ -211,7 +216,7 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
         results: results.map((r) => ({
           slug: r.slug,
           id: r.id,
-          status: "enabled" as const,
+          status: r.status,
         })),
       };
     },
@@ -265,6 +270,7 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
             ),
             cliProjectPath: t.Optional(t.String()),
             force: t.Optional(t.Boolean()),
+            draft: t.Optional(t.Boolean()),
           })
         ),
       }),
@@ -353,11 +359,13 @@ type PushBody = {
   };
   cliProjectPath?: string;
   force?: boolean;
+  draft?: boolean;
 };
 
 type UpsertResult = {
   id: string;
   slug: string;
+  status: "draft" | "enabled";
   updatedAt: string;
   created: boolean;
   conflict?: boolean;
@@ -430,6 +438,7 @@ export async function upsertWorkflowFromCli(
   body: PushBody
 ): Promise<UpsertResult> {
   const now = new Date();
+  const targetStatus = body.draft ? "draft" : "enabled";
 
   // Look up the org's AWS account so workflows can send emails/SMS
   const [orgAwsAccount] = await tx
@@ -460,6 +469,7 @@ export async function upsertWorkflowFromCli(
       return {
         id: existing.id,
         slug: body.slug,
+        status: targetStatus,
         updatedAt: existing.updatedAt.toISOString(),
         created: false,
         conflict: true,
@@ -487,7 +497,7 @@ export async function upsertWorkflowFromCli(
         defaultFromName: body.defaults?.fromName,
         defaultReplyTo: body.defaults?.replyTo,
         defaultSenderId: body.defaults?.senderId,
-        status: "enabled",
+        status: targetStatus,
         pushedFromCli: true,
         lastPushedAt: now,
         cliProjectPath: body.cliProjectPath,
@@ -499,6 +509,7 @@ export async function upsertWorkflowFromCli(
     return {
       id: existing.id,
       slug: body.slug,
+      status: targetStatus,
       updatedAt: now.toISOString(),
       created: false,
     };
@@ -527,7 +538,7 @@ export async function upsertWorkflowFromCli(
     defaultFromName: body.defaults?.fromName,
     defaultReplyTo: body.defaults?.replyTo,
     defaultSenderId: body.defaults?.senderId,
-    status: "enabled",
+    status: targetStatus,
     pushedFromCli: true,
     lastPushedAt: now,
     cliProjectPath: body.cliProjectPath,
@@ -538,6 +549,7 @@ export async function upsertWorkflowFromCli(
   return {
     id,
     slug: body.slug,
+    status: targetStatus,
     updatedAt: now.toISOString(),
     created: true,
   };

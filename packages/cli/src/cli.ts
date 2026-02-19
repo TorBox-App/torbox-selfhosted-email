@@ -483,6 +483,11 @@ args.options([
     defaultValue: false,
   },
   {
+    name: "draft",
+    description: "Push workflow as draft without enabling it",
+    defaultValue: false,
+  },
+  {
     name: "name",
     description: "Output file slug for generated workflow",
     defaultValue: undefined,
@@ -1016,6 +1021,7 @@ async function run() {
               await workflowsPush({
                 workflow: flags.workflow,
                 dryRun: flags.dryRun,
+                draft: flags.draft,
                 force: flags.force,
                 yes: flags.yes,
                 json: flags.json,
