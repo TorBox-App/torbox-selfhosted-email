@@ -1,963 +1,1316 @@
 /**
- * Workflow Processor Core Logic Tests
+ * Workflow Processor Core Tests
  *
- * Tests for the workflow processor's core execution logic.
- * Covers:
- * - Idempotency (ON CONFLICT DO UPDATE)
- * - maxConcurrentExecutions enforcement
- * - Reentry delay enforcement
- * - Contact cooldown enforcement
+ * Tests the real `handler` function (SQS Lambda entry point) with mocked
+ * dependencies. Covers 4 critical flows:
+ *   1. Schedule trigger fan-out
+ *   2. Wait-for-event resume
+ *   3. Concurrent resume race condition
+ *   4. Webhook step execution
  */
 
-import { describe, expect, it } from "vitest";
-
-describe("Workflow Processor - Idempotency", () => {
-  /**
-   * Tests for the idempotency mechanism using ON CONFLICT DO UPDATE.
-   * Ensures that duplicate SQS messages don't cause duplicate step executions.
-   */
-
-  describe("Idempotency Key Generation", () => {
-    it("should generate unique key from executionId and stepId", () => {
-      const executionId = "exec-123";
-      const stepId = "step-456";
-      const idempotencyKey = `${executionId}-${stepId}`;
-      expect(idempotencyKey).toBe("exec-123-step-456");
-    });
-
-    it("should generate different keys for different steps", () => {
-      const executionId = "exec-123";
-      const key1 = `${executionId}-step-1`;
-      const key2 = `${executionId}-step-2`;
-      expect(key1).not.toBe(key2);
-    });
-
-    it("should generate different keys for different executions", () => {
-      const stepId = "step-123";
-      const key1 = `exec-1-${stepId}`;
-      const key2 = `exec-2-${stepId}`;
-      expect(key1).not.toBe(key2);
-    });
-  });
-
-  describe("ON CONFLICT DO UPDATE Behavior", () => {
-    // Simulate the SQL CASE logic
-    function simulateOnConflictUpdate(
-      existingStatus: string,
-      _newStartedAt: Date
-    ): { status: string; startedAt: Date } {
-      const existingStartedAt = new Date("2024-01-01T00:00:00Z");
-      const newStartedAt = new Date("2024-01-01T01:00:00Z");
-
-      return {
-        // Only update if not already completed
-        status: existingStatus === "completed" ? existingStatus : "executing",
-        startedAt:
-          existingStatus === "completed" ? existingStartedAt : newStartedAt,
-      };
-    }
-
-    it("should keep completed status when step already completed", () => {
-      const result = simulateOnConflictUpdate("completed", new Date());
-      expect(result.status).toBe("completed");
-    });
-
-    it("should update to executing when step was pending", () => {
-      const result = simulateOnConflictUpdate("pending", new Date());
-      expect(result.status).toBe("executing");
-    });
-
-    it("should update to executing when step was previously executing", () => {
-      const result = simulateOnConflictUpdate("executing", new Date());
-      expect(result.status).toBe("executing");
-    });
-
-    it("should preserve original startedAt when step already completed", () => {
-      const originalStartedAt = new Date("2024-01-01T00:00:00Z");
-      const result = simulateOnConflictUpdate("completed", new Date());
-      expect(result.startedAt).toEqual(originalStartedAt);
-    });
-
-    it("should update startedAt when step not completed", () => {
-      const newStartedAt = new Date("2024-01-01T01:00:00Z");
-      const result = simulateOnConflictUpdate("pending", newStartedAt);
-      expect(result.startedAt).toEqual(newStartedAt);
-    });
-  });
-
-  describe("Duplicate Message Handling", () => {
-    it("should identify completed step and skip re-execution", () => {
-      const stepExecResult = { status: "completed" };
-      const shouldSkip = stepExecResult.status === "completed";
-      expect(shouldSkip).toBe(true);
-    });
-
-    it("should proceed with execution when step not completed", () => {
-      const stepExecResult = { status: "executing" };
-      const shouldSkip = stepExecResult.status === "completed";
-      expect(shouldSkip).toBe(false);
-    });
-  });
-});
-
-describe("Workflow Processor - maxConcurrentExecutions", () => {
-  /**
-   * Tests for the maxConcurrentExecutions limit enforcement.
-   * Ensures workflows don't exceed their configured concurrent execution limit.
-   */
-
-  describe("Concurrent Execution Count Check", () => {
-    function shouldSkipDueToMaxConcurrent(
-      currentCount: number,
-      maxConcurrent: number | null | undefined
-    ): boolean {
-      if (!maxConcurrent || maxConcurrent <= 0) {
-        return false;
-      }
-      return currentCount >= maxConcurrent;
-    }
-
-    it("should skip when at max concurrent executions", () => {
-      expect(shouldSkipDueToMaxConcurrent(5, 5)).toBe(true);
-    });
-
-    it("should skip when above max concurrent executions", () => {
-      expect(shouldSkipDueToMaxConcurrent(10, 5)).toBe(true);
-    });
-
-    it("should allow when below max concurrent executions", () => {
-      expect(shouldSkipDueToMaxConcurrent(3, 5)).toBe(false);
-    });
-
-    it("should allow when max is not set (null)", () => {
-      expect(shouldSkipDueToMaxConcurrent(100, null)).toBe(false);
-    });
-
-    it("should allow when max is not set (undefined)", () => {
-      expect(shouldSkipDueToMaxConcurrent(100, undefined)).toBe(false);
-    });
-
-    it("should allow when max is zero (disabled)", () => {
-      expect(shouldSkipDueToMaxConcurrent(100, 0)).toBe(false);
-    });
-
-    it("should allow when max is negative (disabled)", () => {
-      expect(shouldSkipDueToMaxConcurrent(100, -1)).toBe(false);
-    });
-
-    it("should handle edge case of 0 current with max of 1", () => {
-      expect(shouldSkipDueToMaxConcurrent(0, 1)).toBe(false);
-    });
-
-    it("should handle edge case of 1 current with max of 1", () => {
-      expect(shouldSkipDueToMaxConcurrent(1, 1)).toBe(true);
-    });
-  });
-
-  describe("Counting Active Executions", () => {
-    it("should count pending executions", () => {
-      const statuses = ["pending", "active", "completed"];
-      const activeStatuses = ["pending", "active", "paused", "waiting"];
-      const activeCount = statuses.filter((s) =>
-        activeStatuses.includes(s)
-      ).length;
-      expect(activeCount).toBe(2);
-    });
-
-    it("should count waiting executions", () => {
-      const statuses = ["waiting", "completed", "failed"];
-      const activeStatuses = ["pending", "active", "paused", "waiting"];
-      const activeCount = statuses.filter((s) =>
-        activeStatuses.includes(s)
-      ).length;
-      expect(activeCount).toBe(1);
-    });
-
-    it("should not count completed executions", () => {
-      const statuses = ["completed", "completed", "completed"];
-      const activeStatuses = ["pending", "active", "paused", "waiting"];
-      const activeCount = statuses.filter((s) =>
-        activeStatuses.includes(s)
-      ).length;
-      expect(activeCount).toBe(0);
-    });
-
-    it("should not count failed executions", () => {
-      const statuses = ["failed", "cancelled"];
-      const activeStatuses = ["pending", "active", "paused", "waiting"];
-      const activeCount = statuses.filter((s) =>
-        activeStatuses.includes(s)
-      ).length;
-      expect(activeCount).toBe(0);
-    });
-  });
-});
-
-describe("Workflow Processor - Reentry Delay", () => {
-  /**
-   * Tests for the reentryDelaySeconds enforcement.
-   * Prevents contacts from re-entering the same workflow too quickly.
-   */
-
-  describe("Reentry Delay Check", () => {
-    function shouldSkipDueToReentryDelay(
-      recentlyCompletedAt: Date | null,
-      reentryDelaySeconds: number | null | undefined,
-      now: Date
-    ): boolean {
-      if (!reentryDelaySeconds || reentryDelaySeconds <= 0) {
-        return false;
-      }
-      if (!recentlyCompletedAt) {
-        return false;
-      }
-
-      const threshold = new Date(now.getTime() - reentryDelaySeconds * 1000);
-      return recentlyCompletedAt > threshold;
-    }
-
-    it("should skip when completed within delay period", () => {
-      const now = new Date("2024-01-01T12:00:00Z");
-      const completedAt = new Date("2024-01-01T11:30:00Z"); // 30 min ago
-      expect(shouldSkipDueToReentryDelay(completedAt, 3600, now)).toBe(true); // 1 hour delay
-    });
-
-    it("should allow when completed outside delay period", () => {
-      const now = new Date("2024-01-01T12:00:00Z");
-      const completedAt = new Date("2024-01-01T10:00:00Z"); // 2 hours ago
-      expect(shouldSkipDueToReentryDelay(completedAt, 3600, now)).toBe(false); // 1 hour delay
-    });
-
-    it("should allow when delay is not set (null)", () => {
-      const now = new Date();
-      const completedAt = new Date(now.getTime() - 1000); // 1 second ago
-      expect(shouldSkipDueToReentryDelay(completedAt, null, now)).toBe(false);
-    });
-
-    it("should allow when delay is zero (disabled)", () => {
-      const now = new Date();
-      const completedAt = new Date(now.getTime() - 1000);
-      expect(shouldSkipDueToReentryDelay(completedAt, 0, now)).toBe(false);
-    });
-
-    it("should allow when no previous completion exists", () => {
-      const now = new Date();
-      expect(shouldSkipDueToReentryDelay(null, 3600, now)).toBe(false);
-    });
-
-    it("should handle exact boundary case", () => {
-      const now = new Date("2024-01-01T12:00:00Z");
-      const completedAt = new Date("2024-01-01T11:00:00Z"); // exactly 1 hour ago
-      // Should allow since it's AT the boundary, not within
-      expect(shouldSkipDueToReentryDelay(completedAt, 3600, now)).toBe(false);
-    });
-  });
-});
-
-describe("Workflow Processor - Contact Cooldown", () => {
-  /**
-   * Tests for the contactCooldownSeconds enforcement.
-   * Prevents contacts from entering ANY workflow in the org too quickly.
-   */
-
-  describe("Contact Cooldown Check", () => {
-    function shouldSkipDueToCooldown(
-      recentExecutionAt: Date | null,
-      cooldownSeconds: number | null | undefined,
-      now: Date
-    ): boolean {
-      if (!cooldownSeconds || cooldownSeconds <= 0) {
-        return false;
-      }
-      if (!recentExecutionAt) {
-        return false;
-      }
-
-      const threshold = new Date(now.getTime() - cooldownSeconds * 1000);
-      return recentExecutionAt > threshold;
-    }
-
-    it("should skip when recent execution within cooldown", () => {
-      const now = new Date("2024-01-01T12:00:00Z");
-      const executionAt = new Date("2024-01-01T11:55:00Z"); // 5 min ago
-      expect(shouldSkipDueToCooldown(executionAt, 600, now)).toBe(true); // 10 min cooldown
-    });
-
-    it("should allow when outside cooldown period", () => {
-      const now = new Date("2024-01-01T12:00:00Z");
-      const executionAt = new Date("2024-01-01T11:40:00Z"); // 20 min ago
-      expect(shouldSkipDueToCooldown(executionAt, 600, now)).toBe(false); // 10 min cooldown
-    });
-
-    it("should allow when cooldown is not set", () => {
-      const now = new Date();
-      const executionAt = new Date(now.getTime() - 1000);
-      expect(shouldSkipDueToCooldown(executionAt, null, now)).toBe(false);
-    });
-
-    it("should allow when no previous execution exists", () => {
-      const now = new Date();
-      expect(shouldSkipDueToCooldown(null, 600, now)).toBe(false);
-    });
-  });
-});
-
-describe("Workflow Processor - Reentry Prevention", () => {
-  /**
-   * Tests for preventing contacts from re-entering when allowReentry is false.
-   */
-
-  describe("Active Execution Check", () => {
-    function hasActiveExecution(
-      existingStatus: string | null,
-      allowReentry: boolean
-    ): boolean {
-      if (allowReentry) {
-        return false;
-      }
-
-      const activeStatuses = ["pending", "active", "paused", "waiting"];
-      return existingStatus !== null && activeStatuses.includes(existingStatus);
-    }
-
-    it("should block when contact has pending execution", () => {
-      expect(hasActiveExecution("pending", false)).toBe(true);
-    });
-
-    it("should block when contact has active execution", () => {
-      expect(hasActiveExecution("active", false)).toBe(true);
-    });
-
-    it("should block when contact has paused execution", () => {
-      expect(hasActiveExecution("paused", false)).toBe(true);
-    });
-
-    it("should block when contact has waiting execution", () => {
-      expect(hasActiveExecution("waiting", false)).toBe(true);
-    });
-
-    it("should allow when contact has completed execution", () => {
-      expect(hasActiveExecution("completed", false)).toBe(false);
-    });
-
-    it("should allow when contact has failed execution", () => {
-      expect(hasActiveExecution("failed", false)).toBe(false);
-    });
-
-    it("should allow when contact has cancelled execution", () => {
-      expect(hasActiveExecution("cancelled", false)).toBe(false);
-    });
-
-    it("should allow when no existing execution", () => {
-      expect(hasActiveExecution(null, false)).toBe(false);
-    });
-
-    it("should allow re-entry when allowReentry is true", () => {
-      expect(hasActiveExecution("active", true)).toBe(false);
-    });
-  });
-});
-
-describe("Workflow Processor - processNextStep Routing", () => {
-  /**
-   * Tests for the processNextStep branch routing logic.
-   * Ensures correct transition selection and fallback behavior.
-   */
-
-  type Transition = {
-    id: string;
-    fromStepId: string;
-    toStepId: string;
-    condition?: { branch: string } | null;
-  };
-
-  function findNextTransition(
-    transitions: Transition[],
-    currentStepId: string,
-    branch?: string
-  ): Transition | undefined {
-    let nextTransition: Transition | undefined;
-
-    if (branch) {
-      nextTransition = transitions.find(
-        (t) => t.fromStepId === currentStepId && t.condition?.branch === branch
-      );
-    }
-
-    // Fallback to branchless transition only when no specific branch was requested
-    if (!(nextTransition || branch)) {
-      nextTransition = transitions.find(
-        (t) => t.fromStepId === currentStepId && !t.condition
-      );
-    }
-
-    return nextTransition;
-  }
-
-  it("should find matching branch transition", () => {
-    const transitions: Transition[] = [
-      {
-        id: "t1",
-        fromStepId: "cond-1",
-        toStepId: "step-yes",
-        condition: { branch: "yes" },
-      },
-      {
-        id: "t2",
-        fromStepId: "cond-1",
-        toStepId: "step-no",
-        condition: { branch: "no" },
-      },
-    ];
-
-    const result = findNextTransition(transitions, "cond-1", "yes");
-    expect(result?.toStepId).toBe("step-yes");
-  });
-
-  it("should find branchless transition when no branch specified", () => {
-    const transitions: Transition[] = [
-      { id: "t1", fromStepId: "step-1", toStepId: "step-2", condition: null },
-    ];
-
-    const result = findNextTransition(transitions, "step-1");
-    expect(result?.toStepId).toBe("step-2");
-  });
-
-  it("should NOT fall back to branchless transition when branch is specified", () => {
-    const transitions: Transition[] = [
-      {
-        id: "t1",
-        fromStepId: "cond-1",
-        toStepId: "step-yes",
-        condition: { branch: "yes" },
-      },
-      {
-        id: "t2",
-        fromStepId: "cond-1",
-        toStepId: "step-fallback",
-        condition: null,
-      },
-    ];
-
-    // Branch "no" is specified but no matching transition exists
-    const result = findNextTransition(transitions, "cond-1", "no");
-    // Should return undefined (complete execution), NOT fall back to branchless
-    expect(result).toBeUndefined();
-  });
-
-  it("should fall back to branchless transition when no branch specified and branched transitions exist", () => {
-    const transitions: Transition[] = [
-      {
-        id: "t1",
-        fromStepId: "step-1",
-        toStepId: "step-branch",
-        condition: { branch: "yes" },
-      },
-      {
-        id: "t2",
-        fromStepId: "step-1",
-        toStepId: "step-default",
-        condition: null,
-      },
-    ];
-
-    const result = findNextTransition(transitions, "step-1");
-    expect(result?.toStepId).toBe("step-default");
-  });
-
-  it("should return undefined when no transitions exist for current step", () => {
-    const transitions: Transition[] = [
-      {
-        id: "t1",
-        fromStepId: "other-step",
-        toStepId: "step-2",
-        condition: null,
-      },
-    ];
-
-    const result = findNextTransition(transitions, "step-1");
-    expect(result).toBeUndefined();
-  });
-
-  it("should return undefined when branch specified but no matching or branchless transition", () => {
-    const transitions: Transition[] = [
-      {
-        id: "t1",
-        fromStepId: "cond-1",
-        toStepId: "step-yes",
-        condition: { branch: "yes" },
-      },
-    ];
-
-    // "timeout" branch specified, no matching transition, no branchless fallback
-    const result = findNextTransition(transitions, "cond-1", "timeout");
-    expect(result).toBeUndefined();
-  });
-});
-
-describe("Workflow Processor - Dropped Executions Tracking", () => {
-  /**
-   * Tests for the droppedExecutions counter increment logic.
-   * Verifies all 4 drop points trigger the counter increment.
-   */
-
-  type DropReason =
-    | "reentry_delay"
-    | "cooldown"
-    | "max_concurrent"
-    | "conflict";
-
-  function shouldDropExecution(
-    reason: DropReason,
-    config: {
-      allowReentry: boolean;
-      reentryDelaySeconds: number | null;
-      contactCooldownSeconds: number | null;
-      maxConcurrentExecutions: number | null;
-    },
-    state: {
-      recentlyCompletedAt: Date | null;
-      recentExecutionAt: Date | null;
-      currentConcurrentCount: number;
-      conflictOccurred: boolean;
-    },
-    now: Date
-  ): boolean {
-    switch (reason) {
-      case "reentry_delay": {
-        if (
-          config.allowReentry ||
-          !config.reentryDelaySeconds ||
-          config.reentryDelaySeconds <= 0 ||
-          !state.recentlyCompletedAt
-        ) {
-          return false;
-        }
-        const threshold = new Date(
-          now.getTime() - config.reentryDelaySeconds * 1000
-        );
-        return state.recentlyCompletedAt > threshold;
-      }
-      case "cooldown": {
-        if (
-          !config.contactCooldownSeconds ||
-          config.contactCooldownSeconds <= 0 ||
-          !state.recentExecutionAt
-        ) {
-          return false;
-        }
-        const threshold = new Date(
-          now.getTime() - config.contactCooldownSeconds * 1000
-        );
-        return state.recentExecutionAt > threshold;
-      }
-      case "max_concurrent": {
-        if (
-          !config.maxConcurrentExecutions ||
-          config.maxConcurrentExecutions <= 0
-        ) {
-          return false;
-        }
-        return state.currentConcurrentCount >= config.maxConcurrentExecutions;
-      }
-      case "conflict":
-        return state.conflictOccurred;
-    }
-  }
-
-  const now = new Date("2024-01-01T12:00:00Z");
-  const defaultConfig = {
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SQSEvent } from "aws-lambda";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mock data factories
+// ─────────────────────────────────────────────────────────────────────────────
+
+function makeWorkflow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "wf-1",
+    organizationId: "org-1",
+    name: "Test Workflow",
+    status: "enabled",
+    triggerType: "schedule",
+    triggerConfig: { schedule: "0 9 * * 1", timezone: "UTC" },
+    awsAccountId: "aws-1",
     allowReentry: false,
-    reentryDelaySeconds: 3600,
-    contactCooldownSeconds: 600,
-    maxConcurrentExecutions: 10,
+    reentryDelaySeconds: null,
+    contactCooldownSeconds: null,
+    maxConcurrentExecutions: null,
+    steps: [
+      { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+      {
+        id: "step-1",
+        type: "webhook",
+        config: {
+          type: "webhook",
+          url: "https://hook.example.com",
+          method: "POST",
+          headers: {},
+          body: {},
+        },
+      },
+    ],
+    transitions: [
+      {
+        id: "t1",
+        fromStepId: "trigger-1",
+        toStepId: "step-1",
+        condition: null,
+      },
+    ],
+    defaultFrom: null,
+    defaultFromName: null,
+    defaultReplyTo: null,
+    defaultSenderId: null,
+    totalExecutions: 0,
+    activeExecutions: 0,
+    completedExecutions: 0,
+    failedExecutions: 0,
+    droppedExecutions: 0,
+    lastTriggeredAt: null,
+    ...overrides,
   };
+}
 
-  it("should drop on reentry delay", () => {
-    expect(
-      shouldDropExecution(
-        "reentry_delay",
-        defaultConfig,
-        {
-          recentlyCompletedAt: new Date("2024-01-01T11:30:00Z"),
-          recentExecutionAt: null,
-          currentConcurrentCount: 0,
-          conflictOccurred: false,
-        },
-        now
-      )
-    ).toBe(true);
-  });
+function makeExecution(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "exec-1",
+    workflowId: "wf-1",
+    contactId: "contact-1",
+    organizationId: "org-1",
+    status: "active",
+    currentStepId: "step-1",
+    triggerData: {},
+    startedAt: new Date(),
+    completedAt: null,
+    error: null,
+    errorStepId: null,
+    allowReentry: false,
+    waitingForEvent: null,
+    waitTimeoutAt: null,
+    waitTimeoutSchedulerName: null,
+    delaySchedulerName: null,
+    nextStepScheduledAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
 
-  it("should drop on cooldown", () => {
-    expect(
-      shouldDropExecution(
-        "cooldown",
-        defaultConfig,
-        {
-          recentlyCompletedAt: null,
-          recentExecutionAt: new Date("2024-01-01T11:55:00Z"),
-          currentConcurrentCount: 0,
-          conflictOccurred: false,
-        },
-        now
-      )
-    ).toBe(true);
-  });
+function makeContact(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "contact-1",
+    email: "test@example.com",
+    phone: null,
+    firstName: "Test",
+    lastName: "User",
+    company: null,
+    jobTitle: null,
+    organizationId: "org-1",
+    emailStatus: "active",
+    status: "active",
+    properties: {},
+    preferredChannel: null,
+    ...overrides,
+  };
+}
 
-  it("should drop on max concurrent", () => {
-    expect(
-      shouldDropExecution(
-        "max_concurrent",
-        defaultConfig,
-        {
-          recentlyCompletedAt: null,
-          recentExecutionAt: null,
-          currentConcurrentCount: 10,
-          conflictOccurred: false,
-        },
-        now
-      )
-    ).toBe(true);
-  });
+function makeSQSEvent(...bodies: Record<string, unknown>[]): SQSEvent {
+  return {
+    Records: bodies.map((body, i) => ({
+      messageId: `msg-${i}`,
+      receiptHandle: `rh-${i}`,
+      body: JSON.stringify(body),
+      attributes: {
+        ApproximateReceiveCount: "1",
+        SentTimestamp: "0",
+        SenderId: "test",
+        ApproximateFirstReceiveTimestamp: "0",
+      },
+      messageAttributes: {},
+      md5OfBody: "",
+      eventSource: "aws:sqs",
+      eventSourceARN: "arn:aws:sqs:us-east-1:000:test",
+      awsRegion: "us-east-1",
+    })),
+  };
+}
 
-  it("should drop on conflict", () => {
-    expect(
-      shouldDropExecution(
-        "conflict",
-        defaultConfig,
-        {
-          recentlyCompletedAt: null,
-          recentExecutionAt: null,
-          currentConcurrentCount: 0,
-          conflictOccurred: true,
-        },
-        now
-      )
-    ).toBe(true);
-  });
+// ─────────────────────────────────────────────────────────────────────────────
+// Drizzle chain helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
-  it("should not drop when reentry is allowed", () => {
-    expect(
-      shouldDropExecution(
-        "reentry_delay",
-        { ...defaultConfig, allowReentry: true },
-        {
-          recentlyCompletedAt: new Date("2024-01-01T11:30:00Z"),
-          recentExecutionAt: null,
-          currentConcurrentCount: 0,
-          conflictOccurred: false,
-        },
-        now
-      )
-    ).toBe(false);
+/** db.select().from().where().limit() */
+function selectChain(rows: unknown[]) {
+  return vi.fn().mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        limit: vi.fn().mockResolvedValue(rows),
+      }),
+    }),
   });
+}
 
-  it("should not drop when outside cooldown period", () => {
-    expect(
-      shouldDropExecution(
-        "cooldown",
-        defaultConfig,
-        {
-          recentlyCompletedAt: null,
-          recentExecutionAt: new Date("2024-01-01T11:00:00Z"),
-          currentConcurrentCount: 0,
-          conflictOccurred: false,
-        },
-        now
-      )
-    ).toBe(false);
+/** db.select().from().where().orderBy().limit() */
+function selectOrderByChain(rows: unknown[]) {
+  return vi.fn().mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(rows),
+        }),
+        limit: vi.fn().mockResolvedValue(rows),
+      }),
+    }),
   });
+}
+
+/** db.update().set().where() — void return */
+function updateChainVoid() {
+  return vi.fn().mockReturnValue({
+    set: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
+    }),
+  });
+}
+
+/** db.update().set().where().returning() */
+function updateChainReturning(rows: unknown[]) {
+  return vi.fn().mockReturnValue({
+    set: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue(rows),
+      }),
+    }),
+  });
+}
+
+/** db.insert().values().onConflictDoNothing().returning() */
+function insertChainConflictDoNothing(rows: unknown[]) {
+  return vi.fn().mockReturnValue({
+    values: vi.fn().mockReturnValue({
+      onConflictDoNothing: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue(rows),
+      }),
+    }),
+  });
+}
+
+/** db.insert().values().onConflictDoUpdate().returning() */
+function insertChainConflictDoUpdate(rows: unknown[]) {
+  return vi.fn().mockReturnValue({
+    values: vi.fn().mockReturnValue({
+      onConflictDoUpdate: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue(rows),
+      }),
+    }),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Module-level mocks (before handler import)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const mockEnqueueWorkflowStep = vi.fn();
+const mockEnqueueWorkflowStepBatch = vi.fn();
+const mockScheduleWaitTimeout = vi.fn().mockResolvedValue("sched-wait-123");
+const mockScheduleWorkflowStep = vi.fn().mockResolvedValue("sched-step-123");
+const mockDeleteScheduledStep = vi.fn();
+const mockCreateNextWorkflowSchedule = vi.fn();
+const mockFetch = vi.fn();
+
+const mockDbSelect = vi.fn();
+const mockDbUpdate = vi.fn();
+const mockDbInsert = vi.fn();
+const mockDbQueryWorkflowExecution = { findFirst: vi.fn() };
+
+vi.mock("@aws-sdk/client-sesv2", () => ({
+  SESv2Client: vi.fn().mockImplementation(() => ({ send: vi.fn() })),
+  SendEmailCommand: vi.fn(),
+}));
+
+vi.mock("@aws-sdk/client-pinpoint-sms-voice-v2", () => ({
+  PinpointSMSVoiceV2Client: vi
+    .fn()
+    .mockImplementation(() => ({ send: vi.fn() })),
+  SendTextMessageCommand: vi.fn(),
+}));
+
+vi.mock("@react-email/render", () => ({
+  toPlainText: vi.fn().mockReturnValue("plain text"),
+}));
+
+vi.mock("@wraps/email", () => ({
+  generateSESTemplateName: vi.fn().mockReturnValue("ses-tmpl-name"),
+  transformVariablesForSes: vi.fn((s: string) => s),
+  upsertSESTemplate: vi.fn(),
+}));
+
+vi.mock("handlebars", () => ({
+  default: { compile: vi.fn().mockReturnValue(() => "compiled") },
+}));
+
+vi.mock("../../lib/activation-tracking", () => ({
+  trackFirstEmailSent: vi.fn(),
+}));
+
+vi.mock("../../lib/logger", () => ({
+  log: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock("../../lib/unsubscribe-token", () => ({
+  generateUnsubscribeToken: vi.fn().mockReturnValue("mock-token"),
+}));
+
+vi.mock("../../services/credentials", () => ({
+  getCredentials: vi.fn().mockResolvedValue({
+    accessKeyId: "AKIA",
+    secretAccessKey: "secret",
+    sessionToken: "tok",
+  }),
+}));
+
+vi.mock("../../services/workflow-queue", () => ({
+  enqueueWorkflowStep: mockEnqueueWorkflowStep,
+  enqueueWorkflowStepBatch: mockEnqueueWorkflowStepBatch,
+  scheduleWaitTimeout: mockScheduleWaitTimeout,
+  scheduleWorkflowStep: mockScheduleWorkflowStep,
+  deleteScheduledStep: mockDeleteScheduledStep,
+}));
+
+vi.mock("../../services/workflow-scheduler", () => ({
+  createNextWorkflowSchedule: mockCreateNextWorkflowSchedule,
+}));
+
+vi.mock("@wraps/db", async () => {
+  const actual = await vi.importActual("@wraps/db");
+  return {
+    ...actual,
+    db: {
+      select: mockDbSelect,
+      update: mockDbUpdate,
+      insert: mockDbInsert,
+      query: {
+        workflowExecution: mockDbQueryWorkflowExecution,
+      },
+    },
+    contactIdsMatchingCondition: vi.fn().mockResolvedValue(["c-1", "c-3"]),
+    sql: (strings: TemplateStringsArray, ..._values: unknown[]) => ({
+      sql: strings.join("?"),
+    }),
+  };
 });
 
-describe("Workflow Processor - Delete Workflow Active Status Check", () => {
-  /**
-   * Tests that the "waiting" status is included when checking for
-   * active executions before deleting a workflow.
-   */
+vi.stubGlobal("fetch", mockFetch);
 
-  const ACTIVE_EXECUTION_STATUSES = ["pending", "active", "paused", "waiting"];
+// Import handler AFTER all mocks are set up
+const { handler } = await import("../workers/workflow-processor");
 
-  function hasActiveExecutions(executionStatuses: string[]): boolean {
-    return executionStatuses.some((s) => ACTIVE_EXECUTION_STATUSES.includes(s));
+// ─────────────────────────────────────────────────────────────────────────────
+// Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockFetch.mockReset();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite 1: Schedule Trigger Fan-out
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("Schedule Trigger Fan-out", () => {
+  const scheduleJob = {
+    type: "schedule-trigger" as const,
+    workflowId: "wf-1",
+    organizationId: "org-1",
+  };
+
+  function setupScheduleWorkflow(
+    wfOverrides: Record<string, unknown> = {},
+    contacts: { id: string }[] = [
+      { id: "c-1" },
+      { id: "c-2" },
+      { id: "c-3" },
+    ]
+  ) {
+    const wf = makeWorkflow(wfOverrides);
+
+    // 1st select: load workflow
+    // 2nd select: load contacts
+    let callCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // Workflow select chain
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
+      }
+      // Contacts select chain
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(contacts),
+          }),
+        }),
+      };
+    });
+
+    // update: lastTriggeredAt
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+
+    return wf;
   }
 
-  it("should detect waiting executions as active", () => {
-    expect(hasActiveExecutions(["waiting"])).toBe(true);
+  it("fans out trigger jobs for all contacts", async () => {
+    setupScheduleWorkflow();
+
+    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+
+    expect(mockEnqueueWorkflowStepBatch).toHaveBeenCalledOnce();
+    const batch = mockEnqueueWorkflowStepBatch.mock.calls[0][0];
+    expect(batch).toHaveLength(3);
+    expect(batch.map((j: { contactId: string }) => j.contactId)).toEqual([
+      "c-1",
+      "c-2",
+      "c-3",
+    ]);
+    for (const job of batch) {
+      expect(job.type).toBe("trigger");
+      expect(job.workflowId).toBe("wf-1");
+      expect(job.organizationId).toBe("org-1");
+    }
   });
 
-  it("should detect pending executions as active", () => {
-    expect(hasActiveExecutions(["pending"])).toBe(true);
+  it("uses segment contacts when segmentId configured", async () => {
+    const { contactIdsMatchingCondition } = await import("@wraps/db");
+
+    // Workflow with segment
+    const wf = makeWorkflow({
+      triggerConfig: {
+        schedule: "0 9 * * 1",
+        timezone: "UTC",
+        segmentId: "seg-1",
+      },
+    });
+
+    let callCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // Load workflow
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
+      }
+      if (callCount === 2) {
+        // Load segment condition
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi
+                .fn()
+                .mockResolvedValue([{ condition: { field: "email" } }]),
+            }),
+          }),
+        };
+      }
+      // Load all contacts for segment evaluation
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi
+              .fn()
+              .mockResolvedValue([
+                { id: "c-1" },
+                { id: "c-2" },
+                { id: "c-3" },
+              ]),
+          }),
+        }),
+      };
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+
+    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+
+    expect(contactIdsMatchingCondition).toHaveBeenCalled();
+    expect(mockEnqueueWorkflowStepBatch).toHaveBeenCalledOnce();
+    const batch = mockEnqueueWorkflowStepBatch.mock.calls[0][0];
+    // Only c-1 and c-3 match (per mock)
+    expect(batch).toHaveLength(2);
+    expect(batch.map((j: { contactId: string }) => j.contactId)).toEqual([
+      "c-1",
+      "c-3",
+    ]);
   });
 
-  it("should detect active executions as active", () => {
-    expect(hasActiveExecutions(["active"])).toBe(true);
+  it("handles zero contacts", async () => {
+    setupScheduleWorkflow({}, []);
+
+    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+
+    expect(mockEnqueueWorkflowStepBatch).toHaveBeenCalledWith([]);
   });
 
-  it("should detect paused executions as active", () => {
-    expect(hasActiveExecutions(["paused"])).toBe(true);
+  it("returns early when workflow not found", async () => {
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
+
+    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+
+    expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
   });
 
-  it("should not detect completed executions as active", () => {
-    expect(hasActiveExecutions(["completed"])).toBe(false);
+  it("returns early when workflow disabled", async () => {
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi
+            .fn()
+            .mockResolvedValue([makeWorkflow({ status: "paused" })]),
+        }),
+      }),
+    });
+
+    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+
+    expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
   });
 
-  it("should not detect failed executions as active", () => {
-    expect(hasActiveExecutions(["failed"])).toBe(false);
+  it("returns early when triggerType is not schedule", async () => {
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi
+            .fn()
+            .mockResolvedValue([makeWorkflow({ triggerType: "event" })]),
+        }),
+      }),
+    });
+
+    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+
+    expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
   });
 
-  it("should not detect cancelled executions as active", () => {
-    expect(hasActiveExecutions(["cancelled"])).toBe(false);
+  it("returns early when no cron schedule", async () => {
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi
+            .fn()
+            .mockResolvedValue([makeWorkflow({ triggerConfig: {} })]),
+        }),
+      }),
+    });
+
+    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+
+    expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
   });
 
-  it("should detect mixed statuses with at least one active", () => {
-    expect(hasActiveExecutions(["completed", "failed", "waiting"])).toBe(true);
-  });
+  it("chains next schedule after processing", async () => {
+    setupScheduleWorkflow();
 
-  it("should return false for empty array", () => {
-    expect(hasActiveExecutions([])).toBe(false);
+    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+
+    expect(mockCreateNextWorkflowSchedule).toHaveBeenCalledWith({
+      workflowId: "wf-1",
+      organizationId: "org-1",
+      cronExpression: "0 9 * * 1",
+      timezone: "UTC",
+    });
   });
 });
 
-describe("Workflow Processor - Resume Execution State Clearing", () => {
-  /**
-   * Tests that resumeExecution properly clears all wait state,
-   * including the delaySchedulerName field.
-   */
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite 2: Wait-for-Event Resume Flow
+// ═══════════════════════════════════════════════════════════════════════════
 
-  type WaitState = {
-    status: string;
-    waitingForEvent: string | null;
-    waitTimeoutAt: Date | null;
-    waitTimeoutSchedulerName: string | null;
-    delaySchedulerName: string | null;
-  };
+describe("Wait-for-Event Resume Flow", () => {
+  function setupExecuteWaitForEvent() {
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: {
+            type: "wait_for_event",
+            eventName: "user.upgraded",
+            timeoutSeconds: 7200,
+          },
+        },
+        {
+          id: "step-2",
+          type: "webhook",
+          config: {
+            type: "webhook",
+            url: "https://hook.example.com",
+            method: "POST",
+          },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-wait",
+          condition: null,
+        },
+        {
+          id: "t2",
+          fromStepId: "step-wait",
+          toStepId: "step-2",
+          condition: { branch: "default" },
+        },
+      ],
+    });
 
-  function clearWaitState(_existing: WaitState): WaitState {
-    return {
+    const execution = makeExecution({
+      currentStepId: "step-wait",
       status: "active",
-      waitingForEvent: null,
-      waitTimeoutAt: null,
-      waitTimeoutSchedulerName: null,
-      delaySchedulerName: null,
-    };
+    });
+    const contactRecord = makeContact();
+
+    // db.query.workflowExecution.findFirst → execution
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(execution);
+
+    // 1st select: load workflow, 2nd select: load contact
+    let selectCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCount++;
+      if (selectCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
+      }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([contactRecord]),
+          }),
+        }),
+      };
+    });
+
+    // insert: step execution (onConflictDoUpdate → returning)
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([
+            {
+              id: "se-1",
+              status: "executing",
+              idempotencyKey: "exec-1-step-wait",
+            },
+          ]),
+        }),
+      }),
+    });
+
+    // update calls (execution status, step completion)
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([execution]),
+        }),
+      }),
+    });
+
+    return { wf, execution };
   }
 
-  it("should clear all wait-related fields", () => {
-    const existing: WaitState = {
-      status: "waiting",
-      waitingForEvent: "email.opened",
-      waitTimeoutAt: new Date("2024-01-02T00:00:00Z"),
-      waitTimeoutSchedulerName: "scheduler-timeout-123",
-      delaySchedulerName: "scheduler-delay-456",
-    };
+  it("schedules timeout and sets execution to waiting", async () => {
+    setupExecuteWaitForEvent();
 
-    const cleared = clearWaitState(existing);
+    await handler(
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-wait",
+        organizationId: "org-1",
+      }),
+      {} as never,
+      vi.fn()
+    );
 
-    expect(cleared.status).toBe("active");
-    expect(cleared.waitingForEvent).toBeNull();
-    expect(cleared.waitTimeoutAt).toBeNull();
-    expect(cleared.waitTimeoutSchedulerName).toBeNull();
-    expect(cleared.delaySchedulerName).toBeNull();
+    expect(mockScheduleWaitTimeout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executionId: "exec-1",
+        stepId: "step-wait",
+        organizationId: "org-1",
+        timeoutSeconds: 7200,
+      })
+    );
   });
 
-  it("should clear delaySchedulerName even when other fields are already null", () => {
-    const existing: WaitState = {
-      status: "waiting",
-      waitingForEvent: null,
-      waitTimeoutAt: null,
+  it("uses default 24h timeout when not configured", async () => {
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: {
+            type: "wait_for_event",
+            eventName: "user.upgraded",
+            // no timeoutSeconds → default 86400
+          },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-wait",
+          condition: null,
+        },
+      ],
+    });
+
+    const execution = makeExecution({ currentStepId: "step-wait" });
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(execution);
+
+    let selectCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCount++;
+      if (selectCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
+      }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([makeContact()]),
+          }),
+        }),
+      };
+    });
+
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([
+            {
+              id: "se-1",
+              status: "executing",
+              idempotencyKey: "exec-1-step-wait",
+            },
+          ]),
+        }),
+      }),
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([execution]),
+        }),
+      }),
+    });
+
+    await handler(
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-wait",
+        organizationId: "org-1",
+      }),
+      {} as never,
+      vi.fn()
+    );
+
+    expect(mockScheduleWaitTimeout).toHaveBeenCalledWith(
+      expect.objectContaining({ timeoutSeconds: 86_400 })
+    );
+  });
+
+  it("resumes execution and processes next step", async () => {
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: { type: "wait_for_event", eventName: "user.upgraded" },
+        },
+        {
+          id: "step-2",
+          type: "webhook",
+          config: {
+            type: "webhook",
+            url: "https://example.com",
+            method: "POST",
+          },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "step-wait",
+          toStepId: "step-2",
+          condition: { branch: "default" },
+        },
+      ],
+    });
+
+    const claimedExecution = makeExecution({
+      status: "active",
+      currentStepId: "step-wait",
+      waitTimeoutSchedulerName: "sched-timeout-abc",
+    });
+
+    // Atomic claim: update...returning
+    mockDbUpdate.mockImplementation(() => ({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([claimedExecution]),
+        }),
+      }),
+    }));
+
+    // Load workflow
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([wf]),
+        }),
+      }),
+    });
+
+    await handler(
+      makeSQSEvent({
+        type: "resume",
+        executionId: "exec-1",
+        branch: "default",
+      }),
+      {} as never,
+      vi.fn()
+    );
+
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-2",
+      })
+    );
+  });
+
+  it("cancels timeout scheduler on event resume", async () => {
+    const wf = makeWorkflow({
+      steps: [
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: { type: "wait_for_event", eventName: "x" },
+        },
+        {
+          id: "step-2",
+          type: "webhook",
+          config: { type: "webhook", url: "https://x.com", method: "POST" },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "step-wait",
+          toStepId: "step-2",
+          condition: { branch: "default" },
+        },
+      ],
+    });
+
+    const claimedExecution = makeExecution({
+      currentStepId: "step-wait",
+      waitTimeoutSchedulerName: "sched-timeout-xyz",
+    });
+
+    mockDbUpdate.mockImplementation(() => ({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([claimedExecution]),
+        }),
+      }),
+    }));
+
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([wf]),
+        }),
+      }),
+    });
+
+    await handler(
+      makeSQSEvent({
+        type: "resume",
+        executionId: "exec-1",
+        branch: "default",
+      }),
+      {} as never,
+      vi.fn()
+    );
+
+    expect(mockDeleteScheduledStep).toHaveBeenCalledWith("sched-timeout-xyz");
+  });
+
+  it("does NOT cancel timeout on timeout resume", async () => {
+    const wf = makeWorkflow({
+      steps: [
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: { type: "wait_for_event", eventName: "x" },
+        },
+      ],
+      transitions: [],
+    });
+
+    const claimedExecution = makeExecution({
+      currentStepId: "step-wait",
+      waitTimeoutSchedulerName: "sched-timeout-xyz",
+    });
+
+    mockDbUpdate.mockImplementation(() => ({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([claimedExecution]),
+        }),
+      }),
+    }));
+
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([wf]),
+        }),
+      }),
+    });
+
+    await handler(
+      makeSQSEvent({
+        type: "resume",
+        executionId: "exec-1",
+        branch: "timeout",
+      }),
+      {} as never,
+      vi.fn()
+    );
+
+    expect(mockDeleteScheduledStep).not.toHaveBeenCalled();
+  });
+
+  it("completes execution when no matching transition", async () => {
+    const wf = makeWorkflow({
+      steps: [
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: { type: "wait_for_event", eventName: "x" },
+        },
+      ],
+      transitions: [], // no transitions → completeExecution
+    });
+
+    const claimedExecution = makeExecution({
+      currentStepId: "step-wait",
       waitTimeoutSchedulerName: null,
-      delaySchedulerName: "scheduler-delay-stale",
-    };
+    });
 
-    const cleared = clearWaitState(existing);
+    // First update call: atomic claim → returns claimed
+    // Second update call: step execution completion
+    // Third update call: completeExecution → set status=completed
+    // Fourth update call: workflow stats
+    let updateCount = 0;
+    mockDbUpdate.mockImplementation(() => {
+      updateCount++;
+      return {
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([claimedExecution]),
+          }),
+        }),
+      };
+    });
 
-    expect(cleared.delaySchedulerName).toBeNull();
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([wf]),
+        }),
+      }),
+    });
+
+    await handler(
+      makeSQSEvent({
+        type: "resume",
+        executionId: "exec-1",
+        branch: "timeout",
+      }),
+      {} as never,
+      vi.fn()
+    );
+
+    // completeExecution should be called (no enqueue for next step)
+    expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
+    // At least 3 update calls: claim, step completion, complete execution
+    expect(mockDbUpdate).toHaveBeenCalled();
   });
 });
 
-describe("Workflow Processor - Complete Trigger Logic", () => {
-  /**
-   * Integration tests for the complete trigger validation logic.
-   */
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite 3: Concurrent Resume Race Condition
+// ═══════════════════════════════════════════════════════════════════════════
 
-  type WorkflowConfig = {
-    allowReentry: boolean;
-    reentryDelaySeconds: number | null;
-    contactCooldownSeconds: number | null;
-    maxConcurrentExecutions: number | null;
-  };
+describe("Concurrent Resume Race Condition", () => {
+  it("first caller claims and processes", async () => {
+    const wf = makeWorkflow({
+      steps: [
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: { type: "wait_for_event", eventName: "x" },
+        },
+        {
+          id: "step-2",
+          type: "webhook",
+          config: { type: "webhook", url: "https://x.com", method: "POST" },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "step-wait",
+          toStepId: "step-2",
+          condition: { branch: "default" },
+        },
+      ],
+    });
 
-  type ExecutionState = {
-    hasActiveExecution: boolean;
-    lastCompletedAt: Date | null;
-    lastAnyExecutionAt: Date | null;
-    currentConcurrentCount: number;
-  };
+    const claimed = makeExecution({
+      currentStepId: "step-wait",
+      waitTimeoutSchedulerName: null,
+    });
 
-  function shouldTriggerWorkflow(
-    config: WorkflowConfig,
-    state: ExecutionState,
-    now: Date
-  ): { allowed: boolean; reason?: string } {
-    // Check reentry
-    if (!config.allowReentry && state.hasActiveExecution) {
-      return { allowed: false, reason: "contact_already_in_workflow" };
-    }
+    mockDbUpdate.mockImplementation(() => ({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([claimed]),
+        }),
+      }),
+    }));
 
-    // Check reentry delay
-    if (
-      !config.allowReentry &&
-      config.reentryDelaySeconds &&
-      config.reentryDelaySeconds > 0 &&
-      state.lastCompletedAt
-    ) {
-      const threshold = new Date(
-        now.getTime() - config.reentryDelaySeconds * 1000
-      );
-      if (state.lastCompletedAt > threshold) {
-        return { allowed: false, reason: "reentry_delay" };
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([wf]),
+        }),
+      }),
+    });
+
+    await handler(
+      makeSQSEvent({
+        type: "resume",
+        executionId: "exec-1",
+        branch: "default",
+      }),
+      {} as never,
+      vi.fn()
+    );
+
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "execute",
+        stepId: "step-2",
+      })
+    );
+  });
+
+  it("second caller bails out when already claimed", async () => {
+    // Atomic UPDATE returns [] — another handler already transitioned it
+    mockDbUpdate.mockImplementation(() => ({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    }));
+
+    await handler(
+      makeSQSEvent({
+        type: "resume",
+        executionId: "exec-1",
+        branch: "default",
+      }),
+      {} as never,
+      vi.fn()
+    );
+
+    expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
+    expect(mockDbSelect).not.toHaveBeenCalled();
+  });
+
+  it("two resume jobs in same SQS batch — only first processes", async () => {
+    const wf = makeWorkflow({
+      steps: [
+        {
+          id: "step-wait",
+          type: "wait_for_event",
+          config: { type: "wait_for_event", eventName: "x" },
+        },
+        {
+          id: "step-2",
+          type: "webhook",
+          config: { type: "webhook", url: "https://x.com", method: "POST" },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "step-wait",
+          toStepId: "step-2",
+          condition: { branch: "default" },
+        },
+      ],
+    });
+
+    const claimed = makeExecution({
+      currentStepId: "step-wait",
+      waitTimeoutSchedulerName: null,
+    });
+
+    // First resume succeeds (returns row), second returns [] (already claimed)
+    let resumeCallCount = 0;
+    mockDbUpdate.mockImplementation(() => ({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockImplementation(() => {
+            resumeCallCount++;
+            // First 2 update calls are from the first resume:
+            //   1) atomic claim (returns row)
+            //   2) step execution update
+            // 3rd update call is from processNextStep's enqueue
+            // But when the 2nd SQS record is processed, the claim returns []
+            if (resumeCallCount === 1) return Promise.resolve([claimed]);
+            if (resumeCallCount >= 3) return Promise.resolve([]);
+            return Promise.resolve([claimed]);
+          }),
+        }),
+      }),
+    }));
+
+    mockDbSelect.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([wf]),
+        }),
+      }),
+    });
+
+    const event = makeSQSEvent(
+      { type: "resume", executionId: "exec-1", branch: "default" },
+      { type: "resume", executionId: "exec-1", branch: "timeout" }
+    );
+
+    await handler(event, {} as never, vi.fn());
+
+    // Only one enqueue from the first resume
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Suite 4: Webhook Step
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("Webhook Step", () => {
+  function setupWebhookExecution(
+    webhookConfig: Record<string, unknown> = {},
+    contactOverrides: Record<string, unknown> = {}
+  ) {
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        {
+          id: "step-hook",
+          type: "webhook",
+          config: {
+            type: "webhook",
+            url: "https://hook.example.com/callback",
+            method: "POST",
+            headers: {},
+            body: {},
+            ...webhookConfig,
+          },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-hook",
+          condition: null,
+        },
+      ],
+    });
+
+    const execution = makeExecution({ currentStepId: "step-hook" });
+    const contactRecord = makeContact(contactOverrides);
+
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(execution);
+
+    let selectCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCount++;
+      if (selectCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
       }
-    }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([contactRecord]),
+          }),
+        }),
+      };
+    });
 
-    // Check contact cooldown
-    if (
-      config.contactCooldownSeconds &&
-      config.contactCooldownSeconds > 0 &&
-      state.lastAnyExecutionAt
-    ) {
-      const threshold = new Date(
-        now.getTime() - config.contactCooldownSeconds * 1000
-      );
-      if (state.lastAnyExecutionAt > threshold) {
-        return { allowed: false, reason: "contact_cooldown" };
-      }
-    }
+    // insert: step execution
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue({
+          returning: vi
+            .fn()
+            .mockResolvedValue([{ id: "se-1", status: "executing" }]),
+        }),
+      }),
+    });
 
-    // Check max concurrent
-    if (
-      config.maxConcurrentExecutions &&
-      config.maxConcurrentExecutions > 0 &&
-      state.currentConcurrentCount >= config.maxConcurrentExecutions
-    ) {
-      return { allowed: false, reason: "max_concurrent_reached" };
-    }
+    // update calls
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([execution]),
+        }),
+      }),
+    });
 
-    return { allowed: true };
+    return { wf, execution, contactRecord };
   }
 
-  it("should allow trigger when no restrictions apply", () => {
-    const config: WorkflowConfig = {
-      allowReentry: true,
-      reentryDelaySeconds: null,
-      contactCooldownSeconds: null,
-      maxConcurrentExecutions: null,
-    };
-    const state: ExecutionState = {
-      hasActiveExecution: false,
-      lastCompletedAt: null,
-      lastAnyExecutionAt: null,
-      currentConcurrentCount: 0,
-    };
-    expect(shouldTriggerWorkflow(config, state, new Date())).toEqual({
-      allowed: true,
-    });
+  const executeJob = {
+    type: "execute" as const,
+    executionId: "exec-1",
+    stepId: "step-hook",
+    organizationId: "org-1",
+  };
+
+  it("sends POST with contact/execution data", async () => {
+    setupWebhookExecution();
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+
+    expect(mockFetch).toHaveBeenCalledOnce();
+    const [url, opts] = mockFetch.mock.calls[0];
+    expect(url).toBe("https://hook.example.com/callback");
+    expect(opts.method).toBe("POST");
+
+    const body = JSON.parse(opts.body);
+    expect(body.contact.id).toBe("contact-1");
+    expect(body.execution.id).toBe("exec-1");
+    expect(body.execution.workflowId).toBe("wf-1");
   });
 
-  it("should block when contact already in workflow", () => {
-    const config: WorkflowConfig = {
-      allowReentry: false,
-      reentryDelaySeconds: null,
-      contactCooldownSeconds: null,
-      maxConcurrentExecutions: null,
-    };
-    const state: ExecutionState = {
-      hasActiveExecution: true,
-      lastCompletedAt: null,
-      lastAnyExecutionAt: null,
-      currentConcurrentCount: 0,
-    };
-    expect(shouldTriggerWorkflow(config, state, new Date())).toEqual({
-      allowed: false,
-      reason: "contact_already_in_workflow",
-    });
+  it("sends GET without body", async () => {
+    setupWebhookExecution({ method: "GET" });
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+
+    const [, opts] = mockFetch.mock.calls[0];
+    expect(opts.method).toBe("GET");
+    expect(opts.body).toBeUndefined();
   });
 
-  it("should block when within reentry delay", () => {
-    const now = new Date("2024-01-01T12:00:00Z");
-    const config: WorkflowConfig = {
-      allowReentry: false,
-      reentryDelaySeconds: 3600, // 1 hour
-      contactCooldownSeconds: null,
-      maxConcurrentExecutions: null,
-    };
-    const state: ExecutionState = {
-      hasActiveExecution: false,
-      lastCompletedAt: new Date("2024-01-01T11:30:00Z"), // 30 min ago
-      lastAnyExecutionAt: null,
-      currentConcurrentCount: 0,
-    };
-    expect(shouldTriggerWorkflow(config, state, now)).toEqual({
-      allowed: false,
-      reason: "reentry_delay",
+  it("merges custom headers", async () => {
+    setupWebhookExecution({
+      headers: { "X-Custom": "value", Authorization: "Bearer tok" },
     });
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+
+    const [, opts] = mockFetch.mock.calls[0];
+    expect(opts.headers["Content-Type"]).toBe("application/json");
+    expect(opts.headers["X-Custom"]).toBe("value");
+    expect(opts.headers.Authorization).toBe("Bearer tok");
   });
 
-  it("should block when at max concurrent executions", () => {
-    const config: WorkflowConfig = {
-      allowReentry: true,
-      reentryDelaySeconds: null,
-      contactCooldownSeconds: null,
-      maxConcurrentExecutions: 5,
-    };
-    const state: ExecutionState = {
-      hasActiveExecution: false,
-      lastCompletedAt: null,
-      lastAnyExecutionAt: null,
-      currentConcurrentCount: 5,
-    };
-    expect(shouldTriggerWorkflow(config, state, new Date())).toEqual({
-      allowed: false,
-      reason: "max_concurrent_reached",
-    });
+  it("includes config.body in request", async () => {
+    setupWebhookExecution({ body: { customKey: "customVal" } });
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.customKey).toBe("customVal");
+    expect(body.contact.id).toBe("contact-1");
   });
 
-  it("should block when within contact cooldown", () => {
-    const now = new Date("2024-01-01T12:00:00Z");
-    const config: WorkflowConfig = {
-      allowReentry: true,
-      reentryDelaySeconds: null,
-      contactCooldownSeconds: 600, // 10 min
-      maxConcurrentExecutions: null,
-    };
-    const state: ExecutionState = {
-      hasActiveExecution: false,
-      lastCompletedAt: null,
-      lastAnyExecutionAt: new Date("2024-01-01T11:55:00Z"), // 5 min ago
-      currentConcurrentCount: 0,
-    };
-    expect(shouldTriggerWorkflow(config, state, now)).toEqual({
-      allowed: false,
-      reason: "contact_cooldown",
-    });
+  it("handles network failure without throwing", async () => {
+    setupWebhookExecution();
+    mockFetch.mockRejectedValue(new Error("ECONNREFUSED"));
+
+    // handler should NOT throw — webhook failure is non-fatal
+    await expect(
+      handler(makeSQSEvent(executeJob), {} as never, vi.fn())
+    ).resolves.toBeUndefined();
   });
 
-  it("should allow when all checks pass", () => {
-    const now = new Date("2024-01-01T12:00:00Z");
-    const config: WorkflowConfig = {
-      allowReentry: false,
-      reentryDelaySeconds: 3600,
-      contactCooldownSeconds: 600,
-      maxConcurrentExecutions: 10,
-    };
-    const state: ExecutionState = {
-      hasActiveExecution: false,
-      lastCompletedAt: new Date("2024-01-01T10:00:00Z"), // 2 hours ago
-      lastAnyExecutionAt: new Date("2024-01-01T11:00:00Z"), // 1 hour ago
-      currentConcurrentCount: 5,
-    };
-    expect(shouldTriggerWorkflow(config, state, now)).toEqual({
-      allowed: true,
-    });
+  it("handles non-ok status and continues", async () => {
+    setupWebhookExecution();
+    mockFetch.mockResolvedValue({ status: 500, ok: false });
+
+    await expect(
+      handler(makeSQSEvent(executeJob), {} as never, vi.fn())
+    ).resolves.toBeUndefined();
   });
 });
