@@ -10,9 +10,9 @@
  */
 
 import {
-  type TriggerConfig,
   db,
   eq,
+  type TriggerConfig,
   workflow,
   workflowExecution,
 } from "@wraps/db";

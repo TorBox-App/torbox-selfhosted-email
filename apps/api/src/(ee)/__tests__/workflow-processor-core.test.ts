@@ -9,8 +9,8 @@
  *   4. Webhook step execution
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SQSEvent } from "aws-lambda";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock data factories
@@ -218,13 +218,13 @@ const mockDbInsert = vi.fn();
 const mockDbTransaction = vi.fn();
 const mockDbQueryWorkflowExecution = { findFirst: vi.fn() };
 
-mockDbTransaction.mockImplementation(async (callback: Function) => {
-  return callback({
+mockDbTransaction.mockImplementation(async (callback: Function) =>
+  callback({
     select: mockDbSelect,
     update: mockDbUpdate,
     insert: mockDbInsert,
-  });
-});
+  })
+);
 
 vi.mock("@aws-sdk/client-sesv2", () => ({
   SESv2Client: vi.fn().mockImplementation(() => ({ send: vi.fn() })),
@@ -309,7 +309,9 @@ vi.mock("@wraps/db", async () => {
 });
 
 vi.mock("node:dns/promises", () => ({
-  default: { lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }) },
+  default: {
+    lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
+  },
   lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
 }));
 
@@ -325,13 +327,13 @@ const { handler } = await import("../workers/workflow-processor");
 beforeEach(() => {
   vi.clearAllMocks();
   mockFetch.mockReset();
-  mockDbTransaction.mockImplementation(async (callback: Function) => {
-    return callback({
+  mockDbTransaction.mockImplementation(async (callback: Function) =>
+    callback({
       select: mockDbSelect,
       update: mockDbUpdate,
       insert: mockDbInsert,
-    });
-  });
+    })
+  );
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -347,11 +349,7 @@ describe("Schedule Trigger Fan-out", () => {
 
   function setupScheduleWorkflow(
     wfOverrides: Record<string, unknown> = {},
-    contacts: { id: string }[] = [
-      { id: "c-1" },
-      { id: "c-2" },
-      { id: "c-3" },
-    ]
+    contacts: { id: string }[] = [{ id: "c-1" }, { id: "c-2" }, { id: "c-3" }]
   ) {
     const wf = makeWorkflow(wfOverrides);
 
@@ -453,11 +451,7 @@ describe("Schedule Trigger Fan-out", () => {
           where: vi.fn().mockReturnValue({
             limit: vi
               .fn()
-              .mockResolvedValue([
-                { id: "c-1" },
-                { id: "c-2" },
-                { id: "c-3" },
-              ]),
+              .mockResolvedValue([{ id: "c-1" }, { id: "c-2" }, { id: "c-3" }]),
           }),
         }),
       };
@@ -677,7 +671,7 @@ describe("Wait-for-Event Resume Flow", () => {
         executionId: "exec-1",
         stepId: "step-wait",
         organizationId: "org-1",
-      }),
+      })
     );
 
     expect(mockScheduleWaitTimeout).toHaveBeenCalledWith(
@@ -766,7 +760,7 @@ describe("Wait-for-Event Resume Flow", () => {
         executionId: "exec-1",
         stepId: "step-wait",
         organizationId: "org-1",
-      }),
+      })
     );
 
     expect(mockScheduleWaitTimeout).toHaveBeenCalledWith(
@@ -832,7 +826,7 @@ describe("Wait-for-Event Resume Flow", () => {
         type: "resume",
         executionId: "exec-1",
         branch: "default",
-      }),
+      })
     );
 
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
@@ -894,7 +888,7 @@ describe("Wait-for-Event Resume Flow", () => {
         type: "resume",
         executionId: "exec-1",
         branch: "default",
-      }),
+      })
     );
 
     expect(mockDeleteScheduledStep).toHaveBeenCalledWith("sched-timeout-xyz");
@@ -938,7 +932,7 @@ describe("Wait-for-Event Resume Flow", () => {
         type: "resume",
         executionId: "exec-1",
         branch: "timeout",
-      }),
+      })
     );
 
     expect(mockDeleteScheduledStep).not.toHaveBeenCalled();
@@ -990,7 +984,7 @@ describe("Wait-for-Event Resume Flow", () => {
         type: "resume",
         executionId: "exec-1",
         branch: "timeout",
-      }),
+      })
     );
 
     // completeExecution should be called (no enqueue for next step)
@@ -1055,7 +1049,7 @@ describe("Concurrent Resume Race Condition", () => {
         type: "resume",
         executionId: "exec-1",
         branch: "default",
-      }),
+      })
     );
 
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
@@ -1081,7 +1075,7 @@ describe("Concurrent Resume Race Condition", () => {
         type: "resume",
         executionId: "exec-1",
         branch: "default",
-      }),
+      })
     );
 
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();

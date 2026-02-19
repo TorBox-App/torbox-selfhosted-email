@@ -5,8 +5,8 @@
  * in the database without ever throwing (which would cause pointless SQS retries).
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SQSEvent } from "aws-lambda";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -117,9 +117,7 @@ describe("execute job", () => {
     mockDbUpdate.mockImplementation(() => {
       callCount++;
       if (callCount === 1) {
-        return updateChainReturning([
-          { id: "exec-1", workflowId: "wf-1" },
-        ])();
+        return updateChainReturning([{ id: "exec-1", workflowId: "wf-1" }])();
       }
       return updateChainVoid()();
     });
@@ -166,16 +164,16 @@ describe("execute job", () => {
 describe("resume job", () => {
   it("loads execution and marks it as failed", async () => {
     mockDbSelect.mockImplementation(() =>
-      selectChain([{ id: "exec-1", status: "waiting", currentStepId: "step-2" }])()
+      selectChain([
+        { id: "exec-1", status: "waiting", currentStepId: "step-2" },
+      ])()
     );
 
     let updateCallCount = 0;
     mockDbUpdate.mockImplementation(() => {
       updateCallCount++;
       if (updateCallCount === 1) {
-        return updateChainReturning([
-          { id: "exec-1", workflowId: "wf-1" },
-        ])();
+        return updateChainReturning([{ id: "exec-1", workflowId: "wf-1" }])();
       }
       return updateChainVoid()();
     });
@@ -195,7 +193,9 @@ describe("resume job", () => {
 
   it("skips already-completed execution", async () => {
     mockDbSelect.mockImplementation(() =>
-      selectChain([{ id: "exec-1", status: "completed", currentStepId: "step-2" }])()
+      selectChain([
+        { id: "exec-1", status: "completed", currentStepId: "step-2" },
+      ])()
     );
 
     const event = makeSQSEvent({
@@ -244,9 +244,7 @@ describe("trigger job", () => {
     mockDbUpdate.mockImplementation(() => {
       updateCallCount++;
       if (updateCallCount === 1) {
-        return updateChainReturning([
-          { id: "exec-1", workflowId: "wf-1" },
-        ])();
+        return updateChainReturning([{ id: "exec-1", workflowId: "wf-1" }])();
       }
       return updateChainVoid()();
     });
@@ -292,7 +290,10 @@ describe("schedule-trigger job", () => {
           organizationId: "org-1",
           status: "enabled",
           triggerType: "schedule",
-          triggerConfig: { schedule: "0 9 * * 1", timezone: "America/New_York" },
+          triggerConfig: {
+            schedule: "0 9 * * 1",
+            timezone: "America/New_York",
+          },
         },
       ])()
     );

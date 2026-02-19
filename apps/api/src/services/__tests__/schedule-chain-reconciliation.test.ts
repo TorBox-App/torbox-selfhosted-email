@@ -7,8 +7,8 @@
  * 2. reconcileScheduleChains exists for detecting and repairing broken chains
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SQSEvent } from "aws-lambda";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -191,7 +191,9 @@ vi.mock("@wraps/db", async () => {
 });
 
 vi.mock("node:dns/promises", () => ({
-  default: { lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }) },
+  default: {
+    lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
+  },
   lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
 }));
 
@@ -230,10 +232,9 @@ describe("Schedule chain resilience", () => {
       return {
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([
-              { id: "contact-1" },
-              { id: "contact-2" },
-            ]),
+            limit: vi
+              .fn()
+              .mockResolvedValue([{ id: "contact-1" }, { id: "contact-2" }]),
           }),
         }),
       };
@@ -307,7 +308,10 @@ describe("Schedule chain resilience", () => {
     expect(result.repaired).toBe(1);
     expect(result.details).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ workflowId: "wf-sched-001", action: "repaired" }),
+        expect.objectContaining({
+          workflowId: "wf-sched-001",
+          action: "repaired",
+        }),
       ])
     );
   });

@@ -13,7 +13,7 @@ import {
   workflow,
   workflowExecution,
 } from "@wraps/db";
-import { and, count, desc, eq, ilike, inArray } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { trackWorkflowCreated } from "@/lib/activation-tracking";
@@ -566,6 +566,13 @@ export async function updateWorkflow(
 
     if (data.transitions !== undefined) {
       updateData.transitions = data.transitions;
+    }
+
+    // Bump version when the definition (steps or transitions) changes
+    // so new executions get a fresh snapshot and existing snapshots stay valid
+    if (data.steps !== undefined || data.transitions !== undefined) {
+      (updateData as Record<string, unknown>).version =
+        sql`${workflow.version} + 1`;
     }
 
     if (data.canvasViewport !== undefined) {

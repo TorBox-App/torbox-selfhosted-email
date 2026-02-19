@@ -16,7 +16,9 @@ const testSignupOrgId = "signup-test-org-1";
 describe("Schema Signup Constraints", () => {
   beforeEach(async () => {
     // Clean up any existing test data (reverse dependency order)
-    await db.delete(subscription).where(eq(subscription.referenceId, testSignupOrgId));
+    await db
+      .delete(subscription)
+      .where(eq(subscription.referenceId, testSignupOrgId));
     await db.delete(member).where(eq(member.userId, testSignupUserId));
     await db
       .delete(organizationExtension)
@@ -29,7 +31,9 @@ describe("Schema Signup Constraints", () => {
 
   afterAll(async () => {
     // Final cleanup (reverse dependency order)
-    await db.delete(subscription).where(eq(subscription.referenceId, testSignupOrgId));
+    await db
+      .delete(subscription)
+      .where(eq(subscription.referenceId, testSignupOrgId));
     await db.delete(member).where(eq(member.userId, testSignupUserId));
     await db
       .delete(organizationExtension)

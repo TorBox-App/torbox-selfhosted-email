@@ -71,11 +71,11 @@ const mockDbSelectImpl = () => ({
 vi.mock("@wraps/db", () => ({
   db: {
     select: vi.fn().mockImplementation(mockDbSelectImpl),
-    transaction: vi.fn().mockImplementation(async (callback: Function) => {
-      return callback({
+    transaction: vi.fn().mockImplementation(async (callback: Function) =>
+      callback({
         select: vi.fn().mockImplementation(mockDbSelectImpl),
-      });
-    }),
+      })
+    ),
   },
   contact: {
     id: "id",

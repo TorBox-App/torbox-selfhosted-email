@@ -507,6 +507,7 @@ function createMockWorkflow(
     lastPushedAt: null,
     cliProjectPath: null,
     lastEditedFrom: null,
+    version: 1,
     lastTriggeredAt: null,
     createdBy: "user-1",
     createdAt: new Date(),

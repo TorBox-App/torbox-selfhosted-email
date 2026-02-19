@@ -126,9 +126,9 @@ describe("domain utils", () => {
       expect(
         areDomainsAligned("sub.example.com", "example.com", "strict")
       ).toBe(false);
-      expect(
-        areDomainsAligned("example.com", "other.com", "strict")
-      ).toBe(false);
+      expect(areDomainsAligned("example.com", "other.com", "strict")).toBe(
+        false
+      );
     });
 
     it("relaxed mode matches organizational domains", () => {
@@ -138,24 +138,24 @@ describe("domain utils", () => {
       expect(
         areDomainsAligned("a.example.com", "b.example.com", "relaxed")
       ).toBe(true);
-      expect(
-        areDomainsAligned("example.com", "other.com", "relaxed")
-      ).toBe(false);
+      expect(areDomainsAligned("example.com", "other.com", "relaxed")).toBe(
+        false
+      );
     });
 
     it("relaxed mode handles multi-part TLDs", () => {
       expect(
         areDomainsAligned("mail.example.co.uk", "example.co.uk", "relaxed")
       ).toBe(true);
-      expect(
-        areDomainsAligned("example.co.uk", "other.co.uk", "relaxed")
-      ).toBe(false);
+      expect(areDomainsAligned("example.co.uk", "other.co.uk", "relaxed")).toBe(
+        false
+      );
     });
 
     it("is case-insensitive", () => {
-      expect(
-        areDomainsAligned("EXAMPLE.COM", "example.com", "strict")
-      ).toBe(true);
+      expect(areDomainsAligned("EXAMPLE.COM", "example.com", "strict")).toBe(
+        true
+      );
       expect(
         areDomainsAligned("Mail.Example.Com", "example.com", "relaxed")
       ).toBe(true);
@@ -205,9 +205,7 @@ describe("domain utils", () => {
     it("detects valid IPv6 addresses", () => {
       expect(isIpv6("::1")).toBe(true);
       expect(isIpv6("fe80::1")).toBe(true);
-      expect(
-        isIpv6("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
-      ).toBe(true);
+      expect(isIpv6("2001:0db8:85a3:0000:0000:8a2e:0370:7334")).toBe(true);
       expect(isIpAddress("::1")).toBe(true);
     });
 
@@ -230,7 +228,9 @@ describe("domain utils", () => {
     });
 
     it("throws for IPv6 (not yet implemented)", () => {
-      expect(() => reverseIp("::1")).toThrow("IPv6 reverse not yet implemented");
+      expect(() => reverseIp("::1")).toThrow(
+        "IPv6 reverse not yet implemented"
+      );
     });
   });
 
@@ -264,9 +264,9 @@ describe("domain utils", () => {
     });
 
     it("detects reversed IP patterns", () => {
-      expect(looksGenericHostname("1.1.168.192.provider.com", "192.168.1.1")).toBe(
-        true
-      );
+      expect(
+        looksGenericHostname("1.1.168.192.provider.com", "192.168.1.1")
+      ).toBe(true);
     });
 
     it("detects common generic patterns", () => {
@@ -277,9 +277,7 @@ describe("domain utils", () => {
       expect(looksGenericHostname("dsl-line.provider.net", "1.2.3.4")).toBe(
         true
       );
-      expect(looksGenericHostname("cable-modem.isp.com", "1.2.3.4")).toBe(
-        true
-      );
+      expect(looksGenericHostname("cable-modem.isp.com", "1.2.3.4")).toBe(true);
       expect(looksGenericHostname("host42.datacenter.com", "1.2.3.4")).toBe(
         true
       );

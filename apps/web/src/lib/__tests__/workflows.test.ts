@@ -47,6 +47,7 @@ function createMockWorkflow(overrides: Partial<Workflow> = {}): Workflow {
     lastPushedAt: null,
     cliProjectPath: null,
     lastEditedFrom: null,
+    version: 1,
     lastTriggeredAt: null,
     createdBy: "user-1",
     createdAt: new Date(),

@@ -171,6 +171,16 @@ export type WorkflowTransition = {
 };
 
 /**
+ * Snapshot of workflow definition at execution creation time.
+ * Ensures in-flight executions are not corrupted by subsequent edits.
+ */
+export type WorkflowDefinitionSnapshot = {
+  steps: WorkflowStep[];
+  transitions: WorkflowTransition[];
+  workflowVersion: number;
+};
+
+/**
  * Canvas viewport for React Flow
  */
 export type CanvasViewport = {
@@ -270,6 +280,9 @@ export const workflow = pgTable(
     // ═══════════════════════════════════════════════════════════════════════
     steps: jsonb("steps").$type<WorkflowStep[]>().default([]),
     transitions: jsonb("transitions").$type<WorkflowTransition[]>().default([]),
+
+    /** Monotonically increasing version counter, bumped on every definition edit */
+    version: integer("version").default(1).notNull(),
 
     // ═══════════════════════════════════════════════════════════════════════
     // EXECUTION SETTINGS
@@ -383,6 +396,11 @@ export const workflowExecution = pgTable(
     // ═══════════════════════════════════════════════════════════════════════
     status: workflowExecutionStatusEnum("status").default("pending").notNull(),
     currentStepId: text("current_step_id"),
+
+    /** Frozen copy of workflow steps + transitions at execution creation time */
+    definitionSnapshot: jsonb(
+      "definition_snapshot"
+    ).$type<WorkflowDefinitionSnapshot>(),
 
     // Context data (persisted between steps)
     context: jsonb("context").$type<Record<string, unknown>>().default({}),

@@ -7,8 +7,8 @@
  * subscribe_topic, unsubscribe_topic.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SQSEvent } from "aws-lambda";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock data factories
@@ -85,7 +85,12 @@ function makeWorkflow(overrides: Record<string, unknown> = {}) {
       },
     ],
     transitions: [
-      { id: "t1", fromStepId: "trigger-1", toStepId: "step-1", condition: null },
+      {
+        id: "t1",
+        fromStepId: "trigger-1",
+        toStepId: "step-1",
+        condition: null,
+      },
     ],
     defaultFrom: "noreply@test.com",
     defaultFromName: "Test",
@@ -144,13 +149,13 @@ const mockDbInsert = vi.fn();
 const mockDbTransaction = vi.fn();
 const mockDbQueryWorkflowExecution = { findFirst: vi.fn() };
 
-mockDbTransaction.mockImplementation(async (callback: Function) => {
-  return callback({
+mockDbTransaction.mockImplementation(async (callback: Function) =>
+  callback({
     select: mockDbSelect,
     update: mockDbUpdate,
     insert: mockDbInsert,
-  });
-});
+  })
+);
 
 vi.mock("@aws-sdk/client-sesv2", () => {
   class MockSESv2Client {
@@ -160,7 +165,9 @@ vi.mock("@aws-sdk/client-sesv2", () => {
     }
   }
   // biome-ignore lint: constructor returns input for pass-through
-  function SendEmailCommand(this: unknown, input: unknown) { return input; }
+  function SendEmailCommand(this: unknown, input: unknown) {
+    return input;
+  }
   return { SESv2Client: MockSESv2Client, SendEmailCommand };
 });
 
@@ -172,8 +179,13 @@ vi.mock("@aws-sdk/client-pinpoint-sms-voice-v2", () => {
     }
   }
   // biome-ignore lint: constructor returns input for pass-through
-  function SendTextMessageCommand(this: unknown, input: unknown) { return input; }
-  return { PinpointSMSVoiceV2Client: MockPinpointSMSVoiceV2Client, SendTextMessageCommand };
+  function SendTextMessageCommand(this: unknown, input: unknown) {
+    return input;
+  }
+  return {
+    PinpointSMSVoiceV2Client: MockPinpointSMSVoiceV2Client,
+    SendTextMessageCommand,
+  };
 });
 
 vi.mock("@react-email/render", () => ({
@@ -191,8 +203,7 @@ vi.mock("handlebars", () => ({
     compile: vi
       .fn()
       .mockReturnValue(
-        (data: Record<string, string>) =>
-          `compiled:${JSON.stringify(data)}`
+        (data: Record<string, string>) => `compiled:${JSON.stringify(data)}`
       ),
   },
 }));
@@ -247,7 +258,9 @@ vi.mock("@wraps/db", async () => {
   };
 });
 
-const mockDnsLookup = vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 });
+const mockDnsLookup = vi
+  .fn()
+  .mockResolvedValue({ address: "93.184.216.34", family: 4 });
 vi.mock("node:dns/promises", () => ({
   default: { lookup: mockDnsLookup },
   lookup: mockDnsLookup,
@@ -341,13 +354,13 @@ beforeEach(() => {
   mockFetch.mockReset();
   sesSendCalls.length = 0;
   smsSendCalls.length = 0;
-  mockDbTransaction.mockImplementation(async (callback: Function) => {
-    return callback({
+  mockDbTransaction.mockImplementation(async (callback: Function) =>
+    callback({
       select: mockDbSelect,
       update: mockDbUpdate,
       insert: mockDbInsert,
-    });
-  });
+    })
+  );
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -452,7 +465,11 @@ describe("processStep edge cases", () => {
           {
             id: "step-1",
             type: "webhook",
-            config: { type: "webhook", url: "https://hook.example.com", method: "POST" },
+            config: {
+              type: "webhook",
+              url: "https://hook.example.com",
+              method: "POST",
+            },
           },
         ],
       },
@@ -471,7 +488,13 @@ describe("handleSendEmail", () => {
   const emailStep = {
     id: "step-email",
     type: "send_email",
-    config: { type: "send_email", templateId: "tmpl-1", from: null, fromName: null, replyTo: null },
+    config: {
+      type: "send_email",
+      templateId: "tmpl-1",
+      from: null,
+      fromName: null,
+      replyTo: null,
+    },
   };
 
   const emailJob = {
@@ -481,20 +504,32 @@ describe("handleSendEmail", () => {
     organizationId: "org-1",
   };
 
-  function setupEmailTest(opts: {
-    contact?: Record<string, unknown>;
-    execution?: Record<string, unknown>;
-    workflow?: Record<string, unknown>;
-    template?: Record<string, unknown> | null;
-  } = {}) {
-    const exec = makeExecution({ currentStepId: "step-email", ...opts.execution });
+  function setupEmailTest(
+    opts: {
+      contact?: Record<string, unknown>;
+      execution?: Record<string, unknown>;
+      workflow?: Record<string, unknown>;
+      template?: Record<string, unknown> | null;
+    } = {}
+  ) {
+    const exec = makeExecution({
+      currentStepId: "step-email",
+      ...opts.execution,
+    });
     const ct = makeContact(opts.contact);
     const wf = makeWorkflow({
       steps: [
         { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
         emailStep,
       ],
-      transitions: [{ id: "t1", fromStepId: "trigger-1", toStepId: "step-email", condition: null }],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-email",
+          condition: null,
+        },
+      ],
       ...opts.workflow,
     });
 
@@ -521,21 +556,29 @@ describe("handleSendEmail", () => {
       });
 
       switch (selectCallCount) {
-        case 1: return chain([wf]);
-        case 2: return chain([ct]);
-        case 3: return chain([{
-          awsAccountId: wf.awsAccountId,
-          defaultFrom: wf.defaultFrom,
-          defaultFromName: wf.defaultFromName,
-          defaultReplyTo: wf.defaultReplyTo,
-        }]);
-        case 4: return chain([{ region: "us-east-1" }]);
+        case 1:
+          return chain([wf]);
+        case 2:
+          return chain([ct]);
+        case 3:
+          return chain([
+            {
+              awsAccountId: wf.awsAccountId,
+              defaultFrom: wf.defaultFrom,
+              defaultFromName: wf.defaultFromName,
+              defaultReplyTo: wf.defaultReplyTo,
+            },
+          ]);
+        case 4:
+          return chain([{ region: "us-east-1" }]);
         case 5:
           return opts.template === null
             ? chain([])
             : chain([opts.template || defaultTemplate]);
-        case 6: return chain([{ name: "Test Org" }]);
-        default: return chain([]);
+        case 6:
+          return chain([{ name: "Test Org" }]);
+        default:
+          return chain([]);
       }
     });
 
@@ -547,7 +590,11 @@ describe("handleSendEmail", () => {
           values: vi.fn().mockReturnValue({
             onConflictDoUpdate: vi.fn().mockReturnValue({
               returning: vi.fn().mockResolvedValue([
-                { id: "se-1", status: "executing", idempotencyKey: "exec-1-step-email" },
+                {
+                  id: "se-1",
+                  status: "executing",
+                  idempotencyKey: "exec-1-step-email",
+                },
               ]),
             }),
           }),
@@ -616,8 +663,12 @@ describe("handleSendEmail", () => {
   it("throws when template has no compiledHtml", async () => {
     setupEmailTest({
       template: {
-        id: "tmpl-1", name: "Welcome", subject: "Hello",
-        compiledHtml: null, emailType: "marketing", sesTemplateName: null,
+        id: "tmpl-1",
+        name: "Welcome",
+        subject: "Hello",
+        compiledHtml: null,
+        emailType: "marketing",
+        sesTemplateName: null,
       },
     });
     await handler(makeSQSEvent(emailJob));
@@ -631,52 +682,70 @@ describe("handleSendEmail", () => {
     const sendInput = sesSendCalls[0][0] as Record<string, unknown>;
     const content = sendInput.Content as Record<string, unknown>;
     expect(content.Template).toBeDefined();
-    expect((content.Template as Record<string, unknown>).TemplateName).toBe("ses-tmpl-1");
+    expect((content.Template as Record<string, unknown>).TemplateName).toBe(
+      "ses-tmpl-1"
+    );
   });
 
   it("auto-publishes template then sends via SES template", async () => {
     const { upsertSESTemplate } = await import("@wraps/email");
-    (upsertSESTemplate as ReturnType<typeof vi.fn>).mockResolvedValueOnce(undefined);
+    (upsertSESTemplate as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      undefined
+    );
 
     setupEmailTest({
       template: {
-        id: "tmpl-1", name: "Welcome", subject: "Hello {{firstName}}",
+        id: "tmpl-1",
+        name: "Welcome",
+        subject: "Hello {{firstName}}",
         compiledHtml: "<h1>Hi {{firstName}}</h1>",
-        emailType: "marketing", sesTemplateName: null,
+        emailType: "marketing",
+        sesTemplateName: null,
       },
     });
 
     await handler(makeSQSEvent(emailJob));
     expect(upsertSESTemplate).toHaveBeenCalled();
     expect(sesSendCalls).toHaveLength(1);
-    const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
+    const content = (sesSendCalls[0][0] as Record<string, unknown>)
+      .Content as Record<string, unknown>;
     expect(content.Template).toBeDefined();
   });
 
   it("falls back to raw HTML when auto-publish fails", async () => {
     const { upsertSESTemplate } = await import("@wraps/email");
-    (upsertSESTemplate as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("SES error"));
+    (upsertSESTemplate as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("SES error")
+    );
 
     setupEmailTest({
       template: {
-        id: "tmpl-1", name: "Welcome", subject: "Hello {{firstName}}",
+        id: "tmpl-1",
+        name: "Welcome",
+        subject: "Hello {{firstName}}",
         compiledHtml: "<h1>Hi {{firstName}}</h1>",
-        emailType: "marketing", sesTemplateName: null,
+        emailType: "marketing",
+        sesTemplateName: null,
       },
     });
 
     await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(1);
-    const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
+    const content = (sesSendCalls[0][0] as Record<string, unknown>)
+      .Content as Record<string, unknown>;
     expect(content.Simple).toBeDefined();
   });
 
   it("adds List-Unsubscribe headers for marketing", async () => {
     setupEmailTest();
     await handler(makeSQSEvent(emailJob));
-    const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
+    const content = (sesSendCalls[0][0] as Record<string, unknown>)
+      .Content as Record<string, unknown>;
     const tmplContent = content.Template as Record<string, unknown>;
-    const headers = tmplContent.Headers as Array<{ Name: string; Value: string }>;
+    const headers = tmplContent.Headers as Array<{
+      Name: string;
+      Value: string;
+    }>;
     expect(headers).toBeDefined();
     expect(headers).toEqual(
       expect.arrayContaining([
@@ -689,12 +758,17 @@ describe("handleSendEmail", () => {
   it("no unsubscribe headers for transactional", async () => {
     setupEmailTest({
       template: {
-        id: "tmpl-1", name: "Welcome", subject: "Hello", compiledHtml: "<h1>Hi</h1>",
-        emailType: "transactional", sesTemplateName: "ses-tmpl-1",
+        id: "tmpl-1",
+        name: "Welcome",
+        subject: "Hello",
+        compiledHtml: "<h1>Hi</h1>",
+        emailType: "transactional",
+        sesTemplateName: "ses-tmpl-1",
       },
     });
     await handler(makeSQSEvent(emailJob));
-    const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
+    const content = (sesSendCalls[0][0] as Record<string, unknown>)
+      .Content as Record<string, unknown>;
     const tmplContent = content.Template as Record<string, unknown>;
     expect(tmplContent.Headers).toBeUndefined();
   });
@@ -708,12 +782,16 @@ describe("handleSendEmail", () => {
 
   it("includes trigger data and properties in replacement data", async () => {
     setupEmailTest({
-      execution: { triggerData: { source: "api", plan: "pro" }, currentStepId: "step-email" },
+      execution: {
+        triggerData: { source: "api", plan: "pro" },
+        currentStepId: "step-email",
+      },
       contact: { firstName: "Jane", properties: { tier: "gold" } },
     });
     await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(1);
-    const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
+    const content = (sesSendCalls[0][0] as Record<string, unknown>)
+      .Content as Record<string, unknown>;
     const tmplContent = content.Template as Record<string, unknown>;
     const templateData = JSON.parse(tmplContent.TemplateData as string);
     expect(templateData.firstName).toBe("Jane");
@@ -741,12 +819,17 @@ describe("handleSendSms", () => {
     organizationId: "org-1",
   };
 
-  function setupSmsTest(opts: {
-    contact?: Record<string, unknown>;
-    workflow?: Record<string, unknown>;
-    smsConfig?: Record<string, unknown>;
-  } = {}) {
-    const step = { ...smsStep, config: { ...smsStep.config, ...opts.smsConfig } };
+  function setupSmsTest(
+    opts: {
+      contact?: Record<string, unknown>;
+      workflow?: Record<string, unknown>;
+      smsConfig?: Record<string, unknown>;
+    } = {}
+  ) {
+    const step = {
+      ...smsStep,
+      config: { ...smsStep.config, ...opts.smsConfig },
+    };
     const exec = makeExecution({ currentStepId: "step-sms" });
     const ct = makeContact({ phone: "+15551234567", ...opts.contact });
     const wf = makeWorkflow({
@@ -754,7 +837,14 @@ describe("handleSendSms", () => {
         { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
         step,
       ],
-      transitions: [{ id: "t1", fromStepId: "trigger-1", toStepId: "step-sms", condition: null }],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-sms",
+          condition: null,
+        },
+      ],
       ...opts.workflow,
     });
 
@@ -771,11 +861,21 @@ describe("handleSendSms", () => {
         }),
       });
       switch (selectCallCount) {
-        case 1: return chain([wf]);
-        case 2: return chain([ct]);
-        case 3: return chain([{ awsAccountId: wf.awsAccountId, defaultSenderId: wf.defaultSenderId }]);
-        case 4: return chain([{ region: "us-east-1" }]);
-        default: return chain([]);
+        case 1:
+          return chain([wf]);
+        case 2:
+          return chain([ct]);
+        case 3:
+          return chain([
+            {
+              awsAccountId: wf.awsAccountId,
+              defaultSenderId: wf.defaultSenderId,
+            },
+          ]);
+        case 4:
+          return chain([{ region: "us-east-1" }]);
+        default:
+          return chain([]);
       }
     });
 
@@ -783,7 +883,11 @@ describe("handleSendSms", () => {
       values: vi.fn().mockReturnValue({
         onConflictDoUpdate: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([
-            { id: "se-1", status: "executing", idempotencyKey: "exec-1-step-sms" },
+            {
+              id: "se-1",
+              status: "executing",
+              idempotencyKey: "exec-1-step-sms",
+            },
           ]),
         }),
       }),
@@ -909,17 +1013,38 @@ describe("handleDelay", () => {
     };
     const transitions = hasNextStep
       ? [
-          { id: "t1", fromStepId: "trigger-1", toStepId: "step-delay", condition: null },
-          { id: "t2", fromStepId: "step-delay", toStepId: "step-next", condition: null },
+          {
+            id: "t1",
+            fromStepId: "trigger-1",
+            toStepId: "step-delay",
+            condition: null,
+          },
+          {
+            id: "t2",
+            fromStepId: "step-delay",
+            toStepId: "step-next",
+            condition: null,
+          },
         ]
-      : [{ id: "t1", fromStepId: "trigger-1", toStepId: "step-delay", condition: null }];
+      : [
+          {
+            id: "t1",
+            fromStepId: "trigger-1",
+            toStepId: "step-delay",
+            condition: null,
+          },
+        ];
 
     const exec = makeExecution({ currentStepId: "step-delay" });
     const wf = makeWorkflow({
       steps: [
         { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
         delayStep,
-        { id: "step-next", type: "webhook", config: { type: "webhook", url: "https://x.com", method: "POST" } },
+        {
+          id: "step-next",
+          type: "webhook",
+          config: { type: "webhook", url: "https://x.com", method: "POST" },
+        },
       ],
       transitions,
     });
@@ -940,10 +1065,14 @@ describe("handleDelay", () => {
         }),
       });
       switch (selectCallCount) {
-        case 1: return chain([wf]);
-        case 2: return chain([ct]);
-        case 3: return chain([wf]); // handleDelay reloads workflow
-        default: return chain([]);
+        case 1:
+          return chain([wf]);
+        case 2:
+          return chain([ct]);
+        case 3:
+          return chain([wf]); // handleDelay reloads workflow
+        default:
+          return chain([]);
       }
     });
 
@@ -951,7 +1080,11 @@ describe("handleDelay", () => {
       values: vi.fn().mockReturnValue({
         onConflictDoUpdate: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([
-            { id: "se-1", status: "executing", idempotencyKey: "exec-1-step-delay" },
+            {
+              id: "se-1",
+              status: "executing",
+              idempotencyKey: "exec-1-step-delay",
+            },
           ]),
         }),
       }),
@@ -1042,13 +1175,36 @@ describe("handleCondition", () => {
         steps: [
           { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
           condStep,
-          { id: "step-yes", type: "webhook", config: { type: "webhook", url: "https://x.com", method: "POST" } },
-          { id: "step-no", type: "webhook", config: { type: "webhook", url: "https://y.com", method: "POST" } },
+          {
+            id: "step-yes",
+            type: "webhook",
+            config: { type: "webhook", url: "https://x.com", method: "POST" },
+          },
+          {
+            id: "step-no",
+            type: "webhook",
+            config: { type: "webhook", url: "https://y.com", method: "POST" },
+          },
         ],
         transitions: [
-          { id: "t1", fromStepId: "trigger-1", toStepId: "step-cond", condition: null },
-          { id: "t2", fromStepId: "step-cond", toStepId: "step-yes", condition: { branch: "yes" } },
-          { id: "t3", fromStepId: "step-cond", toStepId: "step-no", condition: { branch: "no" } },
+          {
+            id: "t1",
+            fromStepId: "trigger-1",
+            toStepId: "step-cond",
+            condition: null,
+          },
+          {
+            id: "t2",
+            fromStepId: "step-cond",
+            toStepId: "step-yes",
+            condition: { branch: "yes" },
+          },
+          {
+            id: "t3",
+            fromStepId: "step-cond",
+            toStepId: "step-no",
+            condition: { branch: "no" },
+          },
         ],
       },
     });
@@ -1171,7 +1327,9 @@ describe("handleUpdateContact", () => {
     const ct = makeContact({ firstName: "Old" });
     const config = {
       type: "update_contact" as const,
-      updates: [{ field: "firstName", operation: "set" as const, value: "New" }],
+      updates: [
+        { field: "firstName", operation: "set" as const, value: "New" },
+      ],
     };
     mockDbUpdate.mockReturnValue({
       set: vi.fn().mockReturnValue({
@@ -1314,7 +1472,10 @@ describe("handleWaitForEmailEngagement", () => {
         where: vi.fn().mockReturnValue({
           orderBy: vi.fn().mockReturnValue({
             limit: vi.fn().mockResolvedValue([
-              { result: { messageId: "msg-abc" }, stepId: "cascade-1-send-0" },
+              {
+                result: { messageId: "msg-abc" },
+                stepId: "cascade-1-send-0",
+              },
             ]),
           }),
         }),
@@ -1333,7 +1494,10 @@ describe("handleWaitForEmailEngagement", () => {
       cascadeGroupId: "cascade-1",
     };
     const result = await handleWaitForEmailEngagement(
-      makeEngConfig() as never, exec as never, step as never, "org-1"
+      makeEngConfig() as never,
+      exec as never,
+      step as never,
+      "org-1"
     );
     expect(result.action).toBe("wait");
     expect(mockScheduleWaitTimeout).toHaveBeenCalled();
@@ -1357,9 +1521,16 @@ describe("handleWaitForEmailEngagement", () => {
       }),
     });
     const exec = makeExecution();
-    const step = { id: "step-wait", type: "wait_for_email_engagement", config: makeEngConfig() };
+    const step = {
+      id: "step-wait",
+      type: "wait_for_email_engagement",
+      config: makeEngConfig(),
+    };
     await handleWaitForEmailEngagement(
-      makeEngConfig() as never, exec as never, step as never, "org-1"
+      makeEngConfig() as never,
+      exec as never,
+      step as never,
+      "org-1"
     );
     const setCall = mockDbUpdate.mock.results[0].value.set.mock.calls[0][0];
     expect(setCall.waitingForEvent).toContain("unknown");
@@ -1381,9 +1552,16 @@ describe("handleWaitForEmailEngagement", () => {
       }),
     });
     const exec = makeExecution();
-    const step = { id: "step-wait", type: "wait_for_email_engagement", config: makeEngConfig() };
+    const step = {
+      id: "step-wait",
+      type: "wait_for_email_engagement",
+      config: makeEngConfig(),
+    };
     await handleWaitForEmailEngagement(
-      makeEngConfig() as never, exec as never, step as never, "org-1"
+      makeEngConfig() as never,
+      exec as never,
+      step as never,
+      "org-1"
     );
     expect(mockScheduleWaitTimeout).toHaveBeenCalledWith(
       expect.objectContaining({ timeoutSeconds: 259_200 })
@@ -1413,7 +1591,10 @@ describe("handleWaitForEmailEngagement", () => {
       cascadeGroupId: "cascade-5",
     };
     await handleWaitForEmailEngagement(
-      makeEngConfig() as never, exec as never, step as never, "org-1"
+      makeEngConfig() as never,
+      exec as never,
+      step as never,
+      "org-1"
     );
     expect(mockDbSelect).toHaveBeenCalled();
   });
@@ -1437,7 +1618,14 @@ describe("Topic handlers", () => {
           { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
           subscribeStep,
         ],
-        transitions: [{ id: "t1", fromStepId: "trigger-1", toStepId: "step-sub", condition: null }],
+        transitions: [
+          {
+            id: "t1",
+            fromStepId: "trigger-1",
+            toStepId: "step-sub",
+            condition: null,
+          },
+        ],
       },
     });
     let insertCallCount = 0;
@@ -1447,7 +1635,9 @@ describe("Topic handlers", () => {
         return {
           values: vi.fn().mockReturnValue({
             onConflictDoUpdate: vi.fn().mockReturnValue({
-              returning: vi.fn().mockResolvedValue([{ id: "se-1", status: "executing" }]),
+              returning: vi
+                .fn()
+                .mockResolvedValue([{ id: "se-1", status: "executing" }]),
             }),
           }),
         };
@@ -1459,7 +1649,12 @@ describe("Topic handlers", () => {
       };
     });
     await handler(
-      makeSQSEvent({ type: "execute", executionId: "exec-1", stepId: "step-sub", organizationId: "org-1" })
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-sub",
+        organizationId: "org-1",
+      })
     );
     expect(mockDbInsert).toHaveBeenCalledTimes(2);
   });
@@ -1468,7 +1663,11 @@ describe("Topic handlers", () => {
     const unsubStep = {
       id: "step-unsub",
       type: "unsubscribe_topic",
-      config: { type: "unsubscribe_topic", topicId: "topic-1", channel: "email" },
+      config: {
+        type: "unsubscribe_topic",
+        topicId: "topic-1",
+        channel: "email",
+      },
     };
     setupProcessStep({
       execution: { currentStepId: "step-unsub" },
@@ -1477,11 +1676,23 @@ describe("Topic handlers", () => {
           { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
           unsubStep,
         ],
-        transitions: [{ id: "t1", fromStepId: "trigger-1", toStepId: "step-unsub", condition: null }],
+        transitions: [
+          {
+            id: "t1",
+            fromStepId: "trigger-1",
+            toStepId: "step-unsub",
+            condition: null,
+          },
+        ],
       },
     });
     await handler(
-      makeSQSEvent({ type: "execute", executionId: "exec-1", stepId: "step-unsub", organizationId: "org-1" })
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-unsub",
+        organizationId: "org-1",
+      })
     );
     expect(mockDbUpdate).toHaveBeenCalled();
   });

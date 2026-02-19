@@ -17,7 +17,6 @@ import {
   user,
 } from "@wraps/db";
 import { inArray } from "drizzle-orm";
-import { Elysia } from "elysia";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createAuthenticatedRoutes } from "../middleware/auth";
 
@@ -165,13 +164,12 @@ const testSubscriptionOrg2 = {
 // --- Test app using the real auth middleware ---
 
 function createTestApp() {
-  return createAuthenticatedRoutes("/v1")
-    .get("/me", ({ auth }) => ({
-      organizationId: auth!.organizationId,
-      userId: auth!.userId,
-      planId: auth!.planId,
-      apiKeyId: auth!.apiKeyId,
-    }));
+  return createAuthenticatedRoutes("/v1").get("/me", ({ auth }) => ({
+    organizationId: auth!.organizationId,
+    userId: auth!.userId,
+    planId: auth!.planId,
+    apiKeyId: auth!.apiKeyId,
+  }));
 }
 
 // --- DB setup/teardown ---
@@ -247,7 +245,9 @@ afterAll(async () => {
   const userIds = [testUser1.id, testUser2.id];
   await db.delete(apiKey).where(inArray(apiKey.organizationId, orgIds));
   await db.delete(member).where(inArray(member.organizationId, orgIds));
-  await db.delete(subscription).where(inArray(subscription.referenceId, orgIds));
+  await db
+    .delete(subscription)
+    .where(inArray(subscription.referenceId, orgIds));
   await db.delete(organization).where(inArray(organization.id, orgIds));
   await db.delete(user).where(inArray(user.id, userIds));
 });
@@ -422,9 +422,7 @@ describe("Authentication", () => {
   describe("No Auth", () => {
     it("rejects requests without auth header", async () => {
       const app = createTestApp();
-      const response = await app.handle(
-        new Request("http://localhost/v1/me")
-      );
+      const response = await app.handle(new Request("http://localhost/v1/me"));
 
       expect(response.status).toBe(401);
       const body = await response.json();
@@ -454,11 +452,7 @@ describe("Authentication", () => {
         ),
       ]);
 
-      const [b1, b2, b3] = await Promise.all([
-        r1.json(),
-        r2.json(),
-        r3.json(),
-      ]);
+      const [b1, b2, b3] = await Promise.all([r1.json(), r2.json(), r3.json()]);
 
       expect(b1.organizationId).toBe(testOrg1.id);
       expect(b2.organizationId).toBe(testOrg2.id);

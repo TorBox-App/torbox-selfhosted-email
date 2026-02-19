@@ -13,7 +13,7 @@ import {
   GetScheduleCommand,
   SchedulerClient,
 } from "@aws-sdk/client-scheduler";
-import { type TriggerConfig, db, eq, workflow } from "@wraps/db";
+import { db, eq, type TriggerConfig, workflow } from "@wraps/db";
 import { Cron } from "croner";
 import { and } from "drizzle-orm";
 

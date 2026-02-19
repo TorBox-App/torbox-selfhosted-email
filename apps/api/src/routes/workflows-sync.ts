@@ -20,7 +20,7 @@ import {
   type WorkflowTriggerType,
   workflow,
 } from "@wraps/db";
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
 import type { AuthContext } from "../middleware/auth";
 import { createAuthenticatedRoutes } from "../middleware/auth";
@@ -476,7 +476,7 @@ export async function upsertWorkflowFromCli(
       };
     }
 
-    // Update existing workflow
+    // Update existing workflow (bump version since steps/transitions change)
     await tx
       .update(workflow)
       .set({
@@ -486,6 +486,7 @@ export async function upsertWorkflowFromCli(
         sourceHash: body.sourceHash,
         steps: body.steps,
         transitions: body.transitions,
+        version: sql`${workflow.version} + 1`,
         triggerType: body.triggerType as WorkflowTriggerType,
         triggerConfig: body.triggerConfig ?? {},
         awsAccountId: orgAwsAccount?.id ?? null,

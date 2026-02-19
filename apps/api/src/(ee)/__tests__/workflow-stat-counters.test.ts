@@ -215,7 +215,9 @@ vi.mock("@wraps/db", async () => {
 });
 
 vi.mock("node:dns/promises", () => ({
-  default: { lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }) },
+  default: {
+    lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
+  },
   lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
 }));
 
@@ -285,7 +287,7 @@ describe("completeExecution atomicity", () => {
         type: "resume",
         executionId: "exec-1",
         branch: "timeout",
-      }),
+      })
     );
 
     // completeExecution should use db.transaction
@@ -344,7 +346,7 @@ describe("failExecution atomicity", () => {
         executionId: "exec-1",
         stepId: "step-1",
         organizationId: "org-1",
-      }),
+      })
     );
 
     // failExecution should use db.transaction
@@ -395,7 +397,7 @@ describe("triggerWorkflow atomicity", () => {
         workflowId: "wf-1",
         contactId: "contact-1",
         organizationId: "org-1",
-      }),
+      })
     );
 
     // triggerWorkflow should use db.transaction for insert + stats

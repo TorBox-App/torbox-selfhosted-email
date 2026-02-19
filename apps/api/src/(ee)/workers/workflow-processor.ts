@@ -41,7 +41,6 @@ import {
 import type { SQSBatchResponse, SQSEvent } from "aws-lambda";
 import { and, sql } from "drizzle-orm";
 import Handlebars from "handlebars";
-import dns from "node:dns/promises";
 
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
 import { log } from "../../lib/logger";
@@ -529,7 +528,8 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
 
   // Use the frozen definition snapshot (immune to live edits) with
   // fallback to the live definition for pre-snapshot executions
-  const snapshot = execution.definitionSnapshot as WorkflowDefinitionSnapshot | null;
+  const snapshot =
+    execution.definitionSnapshot as WorkflowDefinitionSnapshot | null;
   const steps = snapshot?.steps ?? (wf.steps as WorkflowStep[]);
   const step = steps.find((s) => s.id === stepId);
 
@@ -596,7 +596,9 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
       .where(eq(workflowStepExecution.id, stepExec.id));
 
     // Handle step result — use snapshot transitions for routing
-    const snapshotWf = snapshot ? { ...wf, steps, transitions: snapshot.transitions } : wf;
+    const snapshotWf = snapshot
+      ? { ...wf, steps, transitions: snapshot.transitions }
+      : wf;
     if (result.action === "next") {
       await processNextStep(execution, step, snapshotWf, result.branch);
     } else if (result.action === "wait") {
@@ -1401,7 +1403,8 @@ async function handleDelay(
   }
 
   // Use snapshot transitions (immune to live edits) with fallback for pre-snapshot executions
-  const snapshot = execution.definitionSnapshot as WorkflowDefinitionSnapshot | null;
+  const snapshot =
+    execution.definitionSnapshot as WorkflowDefinitionSnapshot | null;
   let transitions: WorkflowTransition[] | undefined;
 
   if (snapshot) {
@@ -2078,12 +2081,17 @@ async function resumeExecution(
     log.error("Workflow not found", undefined, {
       workflowId: claimed.workflowId,
     });
-    await failExecution(executionId, "Workflow not found", claimed.currentStepId ?? "unknown");
+    await failExecution(
+      executionId,
+      "Workflow not found",
+      claimed.currentStepId ?? "unknown"
+    );
     return;
   }
 
   // Use snapshot (immune to live edits) with fallback for pre-snapshot executions
-  const snapshot = claimed.definitionSnapshot as WorkflowDefinitionSnapshot | null;
+  const snapshot =
+    claimed.definitionSnapshot as WorkflowDefinitionSnapshot | null;
   const steps = snapshot?.steps ?? (wf.steps as WorkflowStep[]);
   const currentStep = steps.find((s) => s.id === claimed.currentStepId);
 
@@ -2091,7 +2099,11 @@ async function resumeExecution(
     log.error("Current step not found", undefined, {
       stepId: claimed.currentStepId,
     });
-    await failExecution(executionId, `Step ${claimed.currentStepId} not found`, claimed.currentStepId ?? "unknown");
+    await failExecution(
+      executionId,
+      `Step ${claimed.currentStepId} not found`,
+      claimed.currentStepId ?? "unknown"
+    );
     return;
   }
 
@@ -2114,7 +2126,9 @@ async function resumeExecution(
     );
 
   // Process next step based on branch — use snapshot transitions for routing
-  const snapshotWf = snapshot ? { ...wf, steps, transitions: snapshot.transitions } : wf;
+  const snapshotWf = snapshot
+    ? { ...wf, steps, transitions: snapshot.transitions }
+    : wf;
   await processNextStep(claimed, currentStep, snapshotWf, branch);
 }
 

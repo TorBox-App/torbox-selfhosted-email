@@ -6,8 +6,8 @@
  * duplicate execution conflict, and happy-path creation + enqueue.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SQSEvent } from "aws-lambda";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock data factories
@@ -100,13 +100,13 @@ const mockDbInsert = vi.fn();
 const mockDbTransaction = vi.fn();
 const mockDbQueryWorkflowExecution = { findFirst: vi.fn() };
 
-mockDbTransaction.mockImplementation(async (callback: Function) => {
-  return callback({
+mockDbTransaction.mockImplementation(async (callback: Function) =>
+  callback({
     select: mockDbSelect,
     update: mockDbUpdate,
     insert: mockDbInsert,
-  });
-});
+  })
+);
 
 vi.mock("@aws-sdk/client-sesv2", () => ({
   SESv2Client: vi.fn().mockImplementation(() => ({ send: vi.fn() })),
@@ -191,7 +191,9 @@ vi.mock("@wraps/db", async () => {
 });
 
 vi.mock("node:dns/promises", () => ({
-  default: { lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }) },
+  default: {
+    lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
+  },
   lookup: vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 }),
 }));
 
@@ -204,13 +206,13 @@ const { handler } = await import("../workers/workflow-processor");
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockDbTransaction.mockImplementation(async (callback: Function) => {
-    return callback({
+  mockDbTransaction.mockImplementation(async (callback: Function) =>
+    callback({
       select: mockDbSelect,
       update: mockDbUpdate,
       insert: mockDbInsert,
-    });
-  });
+    })
+  );
 });
 
 const triggerJob = {
