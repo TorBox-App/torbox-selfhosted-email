@@ -1,4 +1,5 @@
 import {
+  awsAccount,
   db,
   member,
   organization,
@@ -85,6 +86,37 @@ vi.mock("@/lib/organization", () => ({
   }),
 }));
 
+// Mock AWS credential cache
+vi.mock("@/lib/aws/credential-cache", () => ({
+  getOrAssumeRole: vi.fn(async () => ({
+    accessKeyId: "test-key",
+    secretAccessKey: "test-secret",
+    sessionToken: "test-token",
+  })),
+}));
+
+// Mock SES template operations
+const { mockDeleteSESTemplate } = vi.hoisted(() => ({
+  mockDeleteSESTemplate: vi.fn(async () => {}),
+}));
+
+vi.mock("@wraps/email", () => ({
+  deleteSESTemplate: mockDeleteSESTemplate,
+}));
+
+// Test AWS account
+const testAwsAccount = {
+  id: "test-template-aws-account",
+  organizationId: testOrganization.id,
+  name: "Test AWS Account",
+  accountId: "123456789012",
+  region: "us-east-1",
+  roleArn: "arn:aws:iam::123456789012:role/test-role",
+  externalId: `test-template-external-id-${Date.now()}`,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 // Set up test database
 beforeAll(async () => {
   // Insert test user
@@ -113,6 +145,15 @@ beforeAll(async () => {
       target: member.id,
       set: { role: testMember.role },
     });
+
+  // Insert test AWS account
+  await db
+    .insert(awsAccount)
+    .values(testAwsAccount)
+    .onConflictDoUpdate({
+      target: awsAccount.id,
+      set: { updatedAt: new Date() },
+    });
 });
 
 // Clean up templates before each test
@@ -121,6 +162,7 @@ beforeEach(async () => {
   await db
     .delete(template)
     .where(eq(template.organizationId, testOrganization.id));
+  mockDeleteSESTemplate.mockClear();
 });
 
 // Clean up after all tests
@@ -128,6 +170,9 @@ afterAll(async () => {
   await db
     .delete(template)
     .where(eq(template.organizationId, testOrganization.id));
+  await db
+    .delete(awsAccount)
+    .where(eq(awsAccount.organizationId, testOrganization.id));
   await db.delete(member).where(eq(member.organizationId, testOrganization.id));
   await db.delete(organization).where(eq(organization.id, testOrganization.id));
   await db.delete(user).where(eq(user.id, testUser.id));
@@ -640,6 +685,197 @@ describe("Templates API - DELETE /api/[orgSlug]/emails/templates/[id]", () => {
 
     expect(response.status).toBe(404);
     expect(data.error).toBe("Template not found");
+  });
+});
+
+describe("Templates API - DELETE SES cleanup", () => {
+  it("should delete SES template when sesTemplateName is set", async () => {
+    // Create a published template with an SES template name
+    await db.insert(template).values({
+      id: "test-template-ses-delete",
+      organizationId: testOrganization.id,
+      name: "Published Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "PUBLISHED",
+      sesTemplateName: "wraps-test-template-ses-delete",
+      publishedAt: new Date(),
+    });
+
+    const { DELETE } = await import("../[orgSlug]/emails/templates/[id]/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-ses-delete`,
+      { method: "DELETE" }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-ses-delete",
+      }),
+    };
+
+    const response = await DELETE(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+
+    // Verify SES template was deleted
+    expect(mockDeleteSESTemplate).toHaveBeenCalledOnce();
+    expect(mockDeleteSESTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessKeyId: "test-key",
+        secretAccessKey: "test-secret",
+        sessionToken: "test-token",
+      }),
+      testAwsAccount.region,
+      "wraps-test-template-ses-delete"
+    );
+
+    // Verify template is deleted from DB
+    const deleted = await db.query.template.findFirst({
+      where: eq(template.id, "test-template-ses-delete"),
+    });
+    expect(deleted).toBeUndefined();
+  });
+
+  it("should skip SES cleanup when sesTemplateName is null (draft template)", async () => {
+    // Create a draft template with no SES template name
+    await db.insert(template).values({
+      id: "test-template-draft-delete",
+      organizationId: testOrganization.id,
+      name: "Draft Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "DRAFT",
+      sesTemplateName: null,
+    });
+
+    const { DELETE } = await import("../[orgSlug]/emails/templates/[id]/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-draft-delete`,
+      { method: "DELETE" }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-draft-delete",
+      }),
+    };
+
+    const response = await DELETE(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+
+    // SES delete should NOT be called for draft templates
+    expect(mockDeleteSESTemplate).not.toHaveBeenCalled();
+
+    // Verify template is deleted from DB
+    const deleted = await db.query.template.findFirst({
+      where: eq(template.id, "test-template-draft-delete"),
+    });
+    expect(deleted).toBeUndefined();
+  });
+
+  it("should still succeed if SES deletion fails", async () => {
+    // Create a published template
+    await db.insert(template).values({
+      id: "test-template-ses-fail",
+      organizationId: testOrganization.id,
+      name: "SES Fail Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "PUBLISHED",
+      sesTemplateName: "wraps-test-template-ses-fail",
+      publishedAt: new Date(),
+    });
+
+    // Make SES delete fail
+    mockDeleteSESTemplate.mockRejectedValueOnce(new Error("SES rate limit"));
+
+    const { DELETE } = await import("../[orgSlug]/emails/templates/[id]/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-ses-fail`,
+      { method: "DELETE" }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-ses-fail",
+      }),
+    };
+
+    const response = await DELETE(request, context);
+    const data = await response.json();
+
+    // Should still succeed despite SES failure
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+
+    // SES delete was attempted
+    expect(mockDeleteSESTemplate).toHaveBeenCalledOnce();
+
+    // Template should still be deleted from DB
+    const deleted = await db.query.template.findFirst({
+      where: eq(template.id, "test-template-ses-fail"),
+    });
+    expect(deleted).toBeUndefined();
+  });
+
+  it("should still succeed if no AWS account exists for org", async () => {
+    // Remove the AWS account for this test
+    await db
+      .delete(awsAccount)
+      .where(eq(awsAccount.organizationId, testOrganization.id));
+
+    // Create a published template
+    await db.insert(template).values({
+      id: "test-template-no-aws",
+      organizationId: testOrganization.id,
+      name: "No AWS Template",
+      content: { type: "doc", content: [] },
+      createdBy: testUser.id,
+      status: "PUBLISHED",
+      sesTemplateName: "wraps-test-template-no-aws",
+      publishedAt: new Date(),
+    });
+
+    const { DELETE } = await import("../[orgSlug]/emails/templates/[id]/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/emails/templates/test-template-no-aws`,
+      { method: "DELETE" }
+    );
+    const context = {
+      params: Promise.resolve({
+        orgSlug: testOrganization.slug,
+        id: "test-template-no-aws",
+      }),
+    };
+
+    const response = await DELETE(request, context);
+    const data = await response.json();
+
+    // Should still succeed without AWS account
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+
+    // SES delete should NOT be called (no AWS account to assume role for)
+    expect(mockDeleteSESTemplate).not.toHaveBeenCalled();
+
+    // Template should still be deleted from DB
+    const deleted = await db.query.template.findFirst({
+      where: eq(template.id, "test-template-no-aws"),
+    });
+    expect(deleted).toBeUndefined();
+
+    // Re-insert AWS account for other tests
+    await db.insert(awsAccount).values(testAwsAccount);
   });
 });
 

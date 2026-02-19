@@ -1,11 +1,13 @@
 import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
-import { brandKit, db, template, templateVersion } from "@wraps/db";
+import { awsAccount, brandKit, db, template, templateVersion } from "@wraps/db";
+import { deleteSESTemplate } from "@wraps/email";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
@@ -330,23 +332,64 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Delete template (versions will cascade)
-    const [deleted] = await db
+    // Fetch the template to check for SES template name
+    const existingTemplate = await db.query.template.findFirst({
+      where: and(
+        eq(template.id, id),
+        eq(template.organizationId, orgWithMembership.id)
+      ),
+      columns: { id: true, sesTemplateName: true },
+    });
+
+    if (!existingTemplate) {
+      return NextResponse.json(
+        { error: "Template not found" },
+        { status: 404 }
+      );
+    }
+
+    // Delete from SES if published
+    if (existingTemplate.sesTemplateName) {
+      const customerAwsAccount = await db.query.awsAccount.findFirst({
+        where: eq(awsAccount.organizationId, orgWithMembership.id),
+      });
+
+      if (customerAwsAccount) {
+        const credentials = await getOrAssumeRole({
+          roleArn: customerAwsAccount.roleArn,
+          externalId: customerAwsAccount.externalId,
+          region: customerAwsAccount.region,
+        });
+
+        try {
+          await deleteSESTemplate(
+            credentials,
+            customerAwsAccount.region,
+            existingTemplate.sesTemplateName
+          );
+        } catch (err) {
+          const log = createRequestLogger({
+            path: "/api/[orgSlug]/emails/templates/[id]",
+            method: "DELETE",
+            orgSlug,
+          });
+          log.warn(
+            { err: serializeError(err), templateId: id },
+            "Failed to delete template from SES"
+          );
+        }
+      }
+    }
+
+    // Delete template from database (versions will cascade)
+    await db
       .delete(template)
       .where(
         and(
           eq(template.id, id),
           eq(template.organizationId, orgWithMembership.id)
         )
-      )
-      .returning();
-
-    if (!deleted) {
-      return NextResponse.json(
-        { error: "Template not found" },
-        { status: 404 }
       );
-    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
