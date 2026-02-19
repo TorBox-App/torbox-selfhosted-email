@@ -1858,27 +1858,48 @@ async function processNextStep(
 }
 
 /**
- * Resume a paused/waiting execution
+ * Resume a paused/waiting execution.
+ *
+ * Uses an atomic UPDATE … WHERE status='waiting' RETURNING * to claim the
+ * execution. If another handler (engagement webhook vs timeout scheduler)
+ * already claimed it, Postgres returns zero rows and we bail out — no
+ * duplicate emails, no corrupted state.
  */
 async function resumeExecution(
   executionId: string,
   branch: WorkflowBranch
 ): Promise<void> {
-  const execution = await db.query.workflowExecution.findFirst({
-    where: eq(workflowExecution.id, executionId),
-  });
+  // Atomic claim: only one caller can transition waiting → active
+  const [claimed] = await db
+    .update(workflowExecution)
+    .set({
+      status: "active",
+      waitingForEvent: null,
+      waitTimeoutAt: null,
+      // Keep waitTimeoutSchedulerName so RETURNING gives us the old value
+      // for cancellation below. Stale name on an active execution is harmless.
+      delaySchedulerName: null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(workflowExecution.id, executionId),
+        eq(workflowExecution.status, "waiting")
+      )
+    )
+    .returning();
 
-  if (!execution) {
-    log.error("Execution not found", undefined, { executionId });
+  if (!claimed) {
+    log.info("Execution already claimed by another handler", {
+      executionId,
+      branch,
+    });
     return;
   }
 
-  if (execution.status !== "waiting") {
-    log.warn("Execution not in waiting state", {
-      executionId,
-      status: execution.status,
-    });
-    return;
+  // Cancel the timeout scheduler if we were resumed by an engagement event
+  if (branch !== "timeout" && claimed.waitTimeoutSchedulerName) {
+    await deleteScheduledStep(claimed.waitTimeoutSchedulerName);
   }
 
   // Load workflow (scoped by org for defense-in-depth)
@@ -1887,48 +1908,30 @@ async function resumeExecution(
     .from(workflow)
     .where(
       and(
-        eq(workflow.id, execution.workflowId),
-        eq(workflow.organizationId, execution.organizationId)
+        eq(workflow.id, claimed.workflowId),
+        eq(workflow.organizationId, claimed.organizationId)
       )
     )
     .limit(1);
 
   if (!wf) {
     log.error("Workflow not found", undefined, {
-      workflowId: execution.workflowId,
+      workflowId: claimed.workflowId,
     });
     return;
   }
 
   const steps = wf.steps as WorkflowStep[];
-  const currentStep = steps.find((s) => s.id === execution.currentStepId);
+  const currentStep = steps.find((s) => s.id === claimed.currentStepId);
 
   if (!currentStep) {
     log.error("Current step not found", undefined, {
-      stepId: execution.currentStepId,
+      stepId: claimed.currentStepId,
     });
     return;
   }
 
-  // Clear wait state (including stale delaySchedulerName from prior delay steps)
-  await db
-    .update(workflowExecution)
-    .set({
-      status: "active",
-      waitingForEvent: null,
-      waitTimeoutAt: null,
-      waitTimeoutSchedulerName: null,
-      delaySchedulerName: null,
-      updatedAt: new Date(),
-    })
-    .where(eq(workflowExecution.id, executionId));
-
-  // If it was a timeout, try to cancel the timeout scheduler
-  if (branch !== "timeout" && execution.waitTimeoutSchedulerName) {
-    await deleteScheduledStep(execution.waitTimeoutSchedulerName);
-  }
-
-  // Record step completion with branch
+  // Record step completion with branch (guard against already-completed)
   await db
     .update(workflowStepExecution)
     .set({
@@ -1939,12 +1942,13 @@ async function resumeExecution(
     .where(
       and(
         eq(workflowStepExecution.executionId, executionId),
-        eq(workflowStepExecution.stepId, currentStep.id)
+        eq(workflowStepExecution.stepId, currentStep.id),
+        sql`${workflowStepExecution.status} != 'completed'`
       )
     );
 
   // Process next step based on branch
-  await processNextStep(execution, currentStep, wf, branch);
+  await processNextStep(claimed, currentStep, wf, branch);
 }
 
 /**
