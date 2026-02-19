@@ -63,18 +63,6 @@ export default function CliPage() {
         id="software-schema"
         type="application/ld+json"
       />
-      {/* Server-rendered content for SEO */}
-      <article aria-hidden="true" className="sr-only">
-        <h1>Wraps CLI & SDK</h1>
-        <p>
-          Free, open-source CLI and SDK to deploy email infrastructure to your
-          AWS account. One command deploys everything.
-        </p>
-        <h2>Installation</h2>
-        <h2>Quick Start</h2>
-        <h2>Features</h2>
-        <h2>TypeScript SDK</h2>
-      </article>
       <CliPageContent />
     </>
   );

@@ -23,17 +23,6 @@ export const metadata: Metadata = {
 export default function SmsPage() {
   return (
     <>
-      {/* Server-rendered content for SEO */}
-      <article aria-hidden="true" className="sr-only">
-        <h1>SMS Infrastructure</h1>
-        <p>
-          Deploy SMS infrastructure to your AWS account with the same great DX
-          as email.
-        </p>
-        <h2>Features</h2>
-        <h2>Pricing</h2>
-        <h2>SDK</h2>
-      </article>
       <SmsPageContent />
     </>
   );
