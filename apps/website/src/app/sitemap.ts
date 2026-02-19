@@ -1,60 +1,32 @@
+import { globSync } from "node:fs";
+import { resolve } from "node:path";
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://wraps.dev";
+  const appDir = resolve(import.meta.dirname, ".");
 
-  // Static pages
-  const staticPages = [
-    "",
-    "/tools/ses-calculator",
-    "/tools",
-    "/tools/spf-builder",
-    "/why-wraps",
-    "/sms",
-    "/cli",
-    "/platform",
-    "/changelog",
-    "/privacy",
-    "/terms",
-    "/blog",
-    "/blog/your-dmarc-policy-is-useless",
-    "/blog/ses-sandbox-guide",
-    "/blog/ses-production-architecture",
-    "/blog/spf-guide",
-    "/docs",
-    "/docs/quickstart",
-    "/docs/quickstart/email",
-    "/docs/quickstart/sms",
-    "/docs/quickstart/cdn",
-    "/docs/quickstart/platform",
-    "/docs/sdk-reference",
-    "/docs/client-sdk-reference",
-    "/docs/sms-sdk-reference",
-    "/docs/cdk-reference",
-    "/docs/pulumi-reference",
-    "/docs/cli-reference",
-    "/docs/cli-reference/email",
-    "/docs/cli-reference/cdn",
-    "/docs/cli-reference/sms",
-    "/docs/guides",
-    "/docs/guides/production-access",
-    "/docs/guides/domain-verification",
-    "/docs/guides/aws-setup",
-    "/docs/guides/aws-setup/quick",
-    "/docs/guides/aws-setup/full",
-    "/docs/guides/aws-setup/permissions",
-    "/docs/guides/aws-setup/troubleshooting",
-    "/docs/telemetry",
-  ];
+  const pages = globSync("**/page.tsx", { cwd: appDir });
 
-  return staticPages.map((route) => ({
-    url: `${baseUrl}${route}`,
+  const routes = pages
+    .map((file) => {
+      const route = file
+        .replace(/\/page\.tsx$/, "")
+        .replace(/page\.tsx$/, "")
+        .replace(/\([^)]+\)\/?/g, ""); // strip route groups like (auth)/
+      return `/${route}`.replace(/\/$/, "") || "/";
+    })
+    .filter((route) => route !== "/sitemap")
+    .sort();
+
+  return routes.map((route) => ({
+    url: `${baseUrl}${route === "/" ? "" : route}`,
     lastModified: new Date(),
-    changeFrequency: route === "" ? "daily" : "weekly",
+    changeFrequency: route === "/" ? "daily" : "weekly",
     priority:
-      route === ""
+      route === "/"
         ? 1
-        : route === "/tools/ses-calculator"
+        : route.startsWith("/tools")
           ? 0.9
           : route.startsWith("/docs")
             ? 0.8
