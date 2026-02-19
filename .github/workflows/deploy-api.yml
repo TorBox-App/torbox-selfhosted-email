@@ -74,6 +74,7 @@ jobs:
           UNSUBSCRIBE_SECRET: ${{ secrets.UNSUBSCRIBE_SECRET }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
 
       - name: Print outputs
         run: |

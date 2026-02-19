@@ -97,6 +97,7 @@ batchQueue.subscribe(
 export const workflowDlq = new sst.aws.Queue("WorkflowDlq", {
   transform: {
     queue: {
+      visibilityTimeoutSeconds: 70, // Must exceed consumer Lambda timeout (60s)
       messageRetentionSeconds: 1_209_600, // 14 days
       tags: {
         ManagedBy: "sst",
@@ -105,6 +106,27 @@ export const workflowDlq = new sst.aws.Queue("WorkflowDlq", {
     },
   },
 });
+
+// Subscribe DLQ consumer to mark failed executions in DB
+workflowDlq.subscribe(
+  {
+    handler: "apps/api/src/(ee)/workers/workflow-dlq-consumer.handler",
+    runtime: "nodejs22.x",
+    timeout: "1 minute",
+    memory: "256 MB",
+    environment: {
+      DATABASE_URL: process.env.DATABASE_URL ?? "",
+    },
+    nodejs: {
+      install: ["pg"],
+    },
+  },
+  {
+    batch: {
+      size: 10,
+    },
+  }
+);
 
 // Main workflow processing queue
 export const workflowQueue = new sst.aws.Queue("WorkflowQueue", {
