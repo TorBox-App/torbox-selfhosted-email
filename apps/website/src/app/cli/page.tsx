@@ -37,7 +37,7 @@ export const metadata: Metadata = {
       "Free, open-source CLI and SDK to deploy email infrastructure to your AWS account. One command deploys everything.",
     images: [
       {
-        url: "/wraps-cli-og.png",
+        url: "/wraps-cli-og.webp",
         width: 1424,
         height: 752,
         alt: "Wraps CLI - Deploy email infrastructure with one command",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     title: "CLI & SDK | Wraps",
     description:
       "Free, open-source CLI and SDK to deploy email infrastructure to your AWS account. One command deploys everything.",
-    images: ["/wraps-cli-og.png"],
+    images: ["/wraps-cli-og.webp"],
   },
   alternates: {
     canonical: "https://wraps.dev/cli",

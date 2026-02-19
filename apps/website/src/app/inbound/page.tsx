@@ -78,7 +78,7 @@ export const metadata: Metadata = {
       "Receive emails in your AWS with EventBridge webhooks. Full parsing, attachments, and threading support.",
     images: [
       {
-        url: "/blog/wraps-inbound-og.png",
+        url: "/blog/wraps-inbound-og.webp",
         width: 1200,
         height: 630,
         alt: "Wraps Inbound Email - Receive and process emails in your AWS",
@@ -89,7 +89,7 @@ export const metadata: Metadata = {
     title: "Inbound Email | Wraps",
     description:
       "Receive emails in your AWS with EventBridge webhooks. Full parsing, attachments, and threading support.",
-    images: ["/blog/wraps-inbound-og.png"],
+    images: ["/blog/wraps-inbound-og.webp"],
   },
   alternates: {
     canonical: "https://wraps.dev/inbound",

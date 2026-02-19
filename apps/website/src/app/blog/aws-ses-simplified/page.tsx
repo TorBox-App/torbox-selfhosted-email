@@ -29,7 +29,7 @@ const articleSchema = {
   headline: "AWS SES Setup Simplified: From Hours to Minutes",
   description:
     "What should be a simple 'send email from my app' turns into a multi-day odyssey. See how one command deploys production-ready SES infrastructure.",
-  image: "https://wraps.dev/blog/aws-ses-simplified.png",
+  image: "https://wraps.dev/blog/aws-ses-simplified.webp",
   datePublished: "2026-01-29T00:00:00.000Z",
   dateModified: "2026-01-29T00:00:00.000Z",
   author: {
@@ -105,7 +105,7 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/blog/aws-ses-simplified",
     images: [
       {
-        url: "https://wraps.dev/blog/aws-ses-simplified.png",
+        url: "https://wraps.dev/blog/aws-ses-simplified.webp",
         width: 800,
         height: 421,
         alt: "AWS SES Setup Simplified",
@@ -119,7 +119,7 @@ export const metadata: Metadata = {
     title: "AWS SES Setup Simplified: From Hours to Minutes | Wraps",
     description:
       "What should be a simple 'send email from my app' turns into a multi-day odyssey. See how one command deploys production-ready SES infrastructure.",
-    images: ["https://wraps.dev/blog/aws-ses-simplified.png"],
+    images: ["https://wraps.dev/blog/aws-ses-simplified.webp"],
   },
   alternates: {
     canonical: "https://wraps.dev/blog/aws-ses-simplified",

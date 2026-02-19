@@ -65,7 +65,7 @@ const articleSchema = {
   headline: "Your DMARC Policy is Useless",
   description:
     "82% of domains have no DMARC. Of those that do, most set p=none\u2014which tells receivers not to enforce. An interactive deep-dive into email authentication.",
-  image: "https://wraps.dev/blog/dmarc-policy-is-useless.png",
+  image: "https://wraps.dev/blog/dmarc-policy-is-useless.webp",
   datePublished: "2025-01-15T00:00:00.000Z",
   dateModified: "2025-01-15T00:00:00.000Z",
   author: {
@@ -102,7 +102,7 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/blog/your-dmarc-policy-is-useless",
     images: [
       {
-        url: "https://wraps.dev/blog/dmarc-policy-is-useless.png",
+        url: "https://wraps.dev/blog/dmarc-policy-is-useless.webp",
         width: 800,
         height: 421,
         alt: "Your DMARC policy is useless",
@@ -116,7 +116,7 @@ export const metadata: Metadata = {
     title: "Your DMARC Policy is Useless | Wraps",
     description:
       "82% of domains have no DMARC. Of those that do, most set p=none. An interactive deep-dive into email authentication.",
-    images: ["https://wraps.dev/blog/dmarc-policy-is-useless.png"],
+    images: ["https://wraps.dev/blog/dmarc-policy-is-useless.webp"],
   },
   alternates: {
     canonical: "https://wraps.dev/blog/your-dmarc-policy-is-useless",

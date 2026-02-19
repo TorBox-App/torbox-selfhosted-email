@@ -11,7 +11,7 @@ export const metadata: Metadata = {
       "Templates, broadcasts, contacts, and analytics. The premium layer on top of your AWS infrastructure.",
     images: [
       {
-        url: "/wraps-platform-og.png",
+        url: "/wraps-platform-og.webp",
         width: 1424,
         height: 752,
         alt: "Wraps Platform - Templates, broadcasts, contacts, and analytics",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     title: "Wraps Platform | Wraps",
     description:
       "Templates, broadcasts, contacts, and analytics. The premium layer on top of your AWS infrastructure.",
-    images: ["/wraps-platform-og.png"],
+    images: ["/wraps-platform-og.webp"],
   },
   alternates: {
     canonical: "https://wraps.dev/platform",

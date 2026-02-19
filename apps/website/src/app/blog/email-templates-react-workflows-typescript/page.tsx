@@ -29,7 +29,7 @@ const articleSchema = {
   headline: "Email Templates as React Components, Workflows as TypeScript",
   description:
     "Write email templates as React components and automation workflows as TypeScript. Version-controlled, type-safe, code-reviewable email infrastructure.",
-  image: "https://wraps.dev/blog/wraps-templates-and-workflows-as-code.png",
+  image: "https://wraps.dev/blog/wraps-templates-and-workflows-as-code.webp",
   datePublished: "2026-02-18T00:00:00.000Z",
   dateModified: "2026-02-18T00:00:00.000Z",
   author: {
@@ -105,7 +105,7 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/blog/email-templates-react-workflows-typescript",
     images: [
       {
-        url: "https://wraps.dev/blog/wraps-templates-and-workflows-as-code.png",
+        url: "https://wraps.dev/blog/wraps-templates-and-workflows-as-code.webp",
         width: 1200,
         height: 630,
         alt: "Email Templates as React, Workflows as TypeScript",
@@ -120,7 +120,7 @@ export const metadata: Metadata = {
     description:
       "Write email templates as React components and automation workflows as TypeScript with Wraps.",
     images: [
-      "https://wraps.dev/blog/wraps-templates-and-workflows-as-code.png",
+      "https://wraps.dev/blog/wraps-templates-and-workflows-as-code.webp",
     ],
   },
   alternates: {

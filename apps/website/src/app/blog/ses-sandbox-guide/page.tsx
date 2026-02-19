@@ -58,7 +58,7 @@ const articleSchema = {
   headline: "How to Get Out of AWS SES Sandbox",
   description:
     "The complete guide to SES production access approval. Interactive checklists, request templates, and everything you need to escape the sandbox on your first try.",
-  image: "https://wraps.dev/blog/get-out-of-sandbox.png",
+  image: "https://wraps.dev/blog/get-out-of-sandbox.webp",
   datePublished: "2026-01-10T00:00:00.000Z",
   dateModified: "2026-01-10T00:00:00.000Z",
   author: {
@@ -95,7 +95,7 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/blog/ses-sandbox-guide",
     images: [
       {
-        url: "https://wraps.dev/blog/get-out-of-sandbox.png",
+        url: "https://wraps.dev/blog/get-out-of-sandbox.webp",
         width: 800,
         height: 421,
         alt: "How to Get Out of AWS SES Sandbox",
@@ -109,7 +109,7 @@ export const metadata: Metadata = {
     title: "How to Get Out of AWS SES Sandbox | Wraps",
     description:
       "The complete guide to SES production access approval. Checklists, templates, and everything you need.",
-    images: ["https://wraps.dev/blog/get-out-of-sandbox.png"],
+    images: ["https://wraps.dev/blog/get-out-of-sandbox.webp"],
   },
   alternates: {
     canonical: "https://wraps.dev/blog/ses-sandbox-guide",

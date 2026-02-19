@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.webp",
         width: 712,
         height: 376,
         alt: "Wraps - AWS Infrastructure Wrappers Platform",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     title: "Wraps - AWS Email Pricing with Modern Developer Experience",
     description:
       "Email shouldn't cost $4/1K. SES shouldn't take hours to configure. Wraps gives you AWS pricing ($0.10/1K emails) with the SDK and dashboard you actually want. One command deploys everything.",
-    images: ["/og-image.png"],
+    images: ["/og-image.webp"],
   },
   icons: {
     icon: [

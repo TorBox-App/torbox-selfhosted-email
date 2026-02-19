@@ -44,7 +44,7 @@ const posts: BlogPost[] = [
     readTime: "10 min read",
     featured: true,
     icon: <Code2 className="h-6 w-6" />,
-    image: "/blog/wraps-templates-and-workflows-as-code.png",
+    image: "/blog/wraps-templates-and-workflows-as-code.webp",
   },
   {
     slug: "inbound-email-guide",
@@ -56,7 +56,7 @@ const posts: BlogPost[] = [
     readTime: "8 min read",
     featured: true,
     icon: <Inbox className="h-6 w-6" />,
-    image: "/blog/wraps-inbound.png",
+    image: "/blog/wraps-inbound.webp",
   },
   {
     slug: "your-dmarc-policy-is-useless",
@@ -68,7 +68,7 @@ const posts: BlogPost[] = [
     readTime: "12 min read",
     featured: true,
     icon: <Shield className="h-6 w-6" />,
-    image: "/blog/DMARC_EXPLOITED.png",
+    image: "/blog/DMARC_EXPLOITED.webp",
   },
   {
     slug: "spf-guide",
@@ -89,7 +89,7 @@ const posts: BlogPost[] = [
     date: "January 2026",
     readTime: "15 min read",
     icon: <FileCheck className="h-6 w-6" />,
-    image: "/blog/get-out-of-sandbox.png",
+    image: "/blog/get-out-of-sandbox.webp",
   },
   {
     slug: "ses-production-architecture",
@@ -111,7 +111,7 @@ const posts: BlogPost[] = [
     readTime: "10 min read",
     featured: true,
     icon: <Zap className="h-6 w-6" />,
-    image: "/blog/aws-ses-simplified.png",
+    image: "/blog/aws-ses-simplified.webp",
   },
   {
     slug: "nextjs-vercel-ses-guide",
@@ -123,7 +123,7 @@ const posts: BlogPost[] = [
     readTime: "12 min read",
     featured: true,
     icon: <Server className="h-6 w-6" />,
-    image: "/blog/nextjs-vercel-ses-guide.png",
+    image: "/blog/nextjs-vercel-ses-guide.webp",
   },
 ];
 

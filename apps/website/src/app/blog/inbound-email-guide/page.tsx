@@ -19,7 +19,7 @@ const articleSchema = {
   headline: "Receive Emails in Your AWS Account with Wraps",
   description:
     "Build support inboxes, automate order processing, and create email-to-ticket workflows. All in your AWS account with EventBridge webhooks.",
-  image: "https://wraps.dev/blog/wraps-inbound-og.png",
+  image: "https://wraps.dev/blog/wraps-inbound-og.webp",
   datePublished: "2026-02-03T00:00:00.000Z",
   dateModified: "2026-02-03T00:00:00.000Z",
   author: {
@@ -95,7 +95,7 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/blog/inbound-email-guide",
     images: [
       {
-        url: "https://wraps.dev/blog/wraps-inbound-og.png",
+        url: "https://wraps.dev/blog/wraps-inbound-og.webp",
         width: 1200,
         height: 630,
         alt: "Wraps Inbound Email Guide",
@@ -109,7 +109,7 @@ export const metadata: Metadata = {
     title: "Receive Emails in Your AWS Account | Wraps",
     description:
       "Build support inboxes, automate order processing, and create email-to-ticket workflows with Wraps inbound email.",
-    images: ["https://wraps.dev/blog/wraps-inbound-og.png"],
+    images: ["https://wraps.dev/blog/wraps-inbound-og.webp"],
   },
   alternates: {
     canonical: "https://wraps.dev/blog/inbound-email-guide",

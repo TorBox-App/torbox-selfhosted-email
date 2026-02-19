@@ -12,7 +12,7 @@ const articleSchema = {
   headline: "Next.js + Vercel + AWS SES: The Complete Email Guide",
   description:
     "Deploy production-ready email infrastructure to your AWS account in minutes. No stored credentials, zero access keys.",
-  image: "https://wraps.dev/blog/nextjs-vercel-ses-guide.png",
+  image: "https://wraps.dev/blog/nextjs-vercel-ses-guide.webp",
   datePublished: "2026-01-29T00:00:00.000Z",
   dateModified: "2026-01-29T00:00:00.000Z",
   author: {
@@ -88,7 +88,7 @@ export const metadata: Metadata = {
     url: "https://wraps.dev/blog/nextjs-vercel-ses-guide",
     images: [
       {
-        url: "https://wraps.dev/blog/nextjs-vercel-ses-guide.png",
+        url: "https://wraps.dev/blog/nextjs-vercel-ses-guide.webp",
         width: 800,
         height: 421,
         alt: "Next.js + Vercel + AWS SES Guide",
@@ -102,7 +102,7 @@ export const metadata: Metadata = {
     title: "Next.js + Vercel + AWS SES: The Complete Email Guide | Wraps",
     description:
       "Deploy production-ready email infrastructure to your AWS account in minutes. No stored credentials, zero access keys.",
-    images: ["https://wraps.dev/blog/nextjs-vercel-ses-guide.png"],
+    images: ["https://wraps.dev/blog/nextjs-vercel-ses-guide.webp"],
   },
   alternates: {
     canonical: "https://wraps.dev/blog/nextjs-vercel-ses-guide",
