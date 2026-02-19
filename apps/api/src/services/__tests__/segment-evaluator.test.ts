@@ -1,7 +1,7 @@
 /**
  * Segment Evaluator Tests
  *
- * Tests for the segment filter evaluation logic.
+ * Tests for the segment filter evaluation logic using the REAL module.
  * Covers:
  * - Basic filter operators (equals, contains, exists, etc.)
  * - Nested property access (properties.plan, etc.)
@@ -13,275 +13,91 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the database
-const _mockDbSelect = vi.fn();
-const _mockDbFrom = vi.fn();
-const _mockDbWhere = vi.fn();
-const mockDbLimit = vi.fn();
-
 vi.mock("@wraps/db", () => ({
   db: {
     select: () => ({
-      from: (_table: unknown) => ({
-        where: (_condition: unknown) => ({
-          limit: (n: number) => mockDbLimit(n),
+      from: () => ({
+        where: () => ({
+          limit: () => [],
         }),
       }),
     }),
   },
   contact: { id: "id" },
+  contactEvent: {
+    id: "id",
+    contactId: "contact_id",
+    eventName: "event_name",
+    createdAt: "created_at",
+  },
   contactTopic: {
     contactId: "contact_id",
     topicId: "topic_id",
     status: "status",
   },
   segment: { id: "id" },
-  eq: vi.fn((a, b) => ({ eq: [a, b] })),
+  eq: vi.fn(),
 }));
 
-// Import after mocking
 import type { FilterCondition, FilterGroup, SegmentFilter } from "@wraps/db";
+import {
+  evaluateCondition,
+  evaluateFilter,
+  evaluateGroup,
+  type ContactWithTopics,
+} from "../segment-evaluator";
 
-// Test the filter evaluation logic directly
-// We'll create a test version of the evaluator functions
-
-type ContactWithTopics = {
-  id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  company: string | null;
-  emailStatus: string | null;
-  properties: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
-  topicIds: string[];
-};
-
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  const parts = path.split(".");
-  let current: unknown = obj;
-
-  for (const part of parts) {
-    if (current === null || current === undefined) {
-      return;
-    }
-    if (typeof current === "object" && current !== null) {
-      current = (current as Record<string, unknown>)[part];
-    } else {
-      return;
-    }
-  }
-
-  return current;
-}
-
-function getThresholdDate(
-  now: Date,
-  value: number,
-  unit: "days" | "hours" | "minutes"
-): Date {
-  const threshold = new Date(now);
-
-  switch (unit) {
-    case "days":
-      threshold.setDate(threshold.getDate() - value);
-      break;
-    case "hours":
-      threshold.setHours(threshold.getHours() - value);
-      break;
-    case "minutes":
-      threshold.setMinutes(threshold.getMinutes() - value);
-      break;
-  }
-
-  return threshold;
-}
-
-function evaluateFilter(
-  filter: SegmentFilter,
-  contactData: ContactWithTopics
-): boolean {
-  const { field, operator, value, unit } = filter;
-
-  let actualValue: unknown;
-
-  if (field.startsWith("properties.")) {
-    const propPath = field.substring("properties.".length);
-    actualValue = getNestedValue(contactData.properties || {}, propPath);
-  } else if (field === "topics") {
-    actualValue = contactData.topicIds;
-  } else {
-    actualValue = contactData[field as keyof typeof contactData];
-  }
-
-  switch (operator) {
-    case "equals":
-      return actualValue === value;
-
-    case "notEquals":
-      return actualValue !== value;
-
-    case "contains":
-      if (typeof actualValue === "string" && typeof value === "string") {
-        return actualValue.toLowerCase().includes(value.toLowerCase());
-      }
-      return false;
-
-    case "notContains":
-      if (typeof actualValue === "string" && typeof value === "string") {
-        return !actualValue.toLowerCase().includes(value.toLowerCase());
-      }
-      return true;
-
-    case "startsWith":
-      if (typeof actualValue === "string" && typeof value === "string") {
-        return actualValue.toLowerCase().startsWith(value.toLowerCase());
-      }
-      return false;
-
-    case "endsWith":
-      if (typeof actualValue === "string" && typeof value === "string") {
-        return actualValue.toLowerCase().endsWith(value.toLowerCase());
-      }
-      return false;
-
-    case "greaterThan":
-      if (typeof actualValue === "number" && typeof value === "number") {
-        return actualValue > value;
-      }
-      return false;
-
-    case "lessThan":
-      if (typeof actualValue === "number" && typeof value === "number") {
-        return actualValue < value;
-      }
-      return false;
-
-    case "greaterThanOrEqual":
-      if (typeof actualValue === "number" && typeof value === "number") {
-        return actualValue >= value;
-      }
-      return false;
-
-    case "lessThanOrEqual":
-      if (typeof actualValue === "number" && typeof value === "number") {
-        return actualValue <= value;
-      }
-      return false;
-
-    case "exists":
-      return (
-        actualValue !== null && actualValue !== undefined && actualValue !== ""
-      );
-
-    case "notExists":
-      return (
-        actualValue === null || actualValue === undefined || actualValue === ""
-      );
-
-    case "inList":
-      if (Array.isArray(value)) {
-        return value.includes(actualValue);
-      }
-      return false;
-
-    case "notInList":
-      if (Array.isArray(value)) {
-        return !value.includes(actualValue);
-      }
-      return true;
-
-    case "within":
-      if (actualValue instanceof Date && typeof value === "number" && unit) {
-        const now = new Date();
-        const threshold = getThresholdDate(now, value, unit);
-        return actualValue >= threshold;
-      }
-      if (
-        typeof actualValue === "string" &&
-        typeof value === "number" &&
-        unit
-      ) {
-        const dateValue = new Date(actualValue);
-        if (!Number.isNaN(dateValue.getTime())) {
-          const now = new Date();
-          const threshold = getThresholdDate(now, value, unit);
-          return dateValue >= threshold;
-        }
-      }
-      return false;
-
-    case "hasTopic":
-      if (Array.isArray(actualValue) && typeof value === "string") {
-        return actualValue.includes(value);
-      }
-      return false;
-
-    case "notHasTopic":
-      if (Array.isArray(actualValue) && typeof value === "string") {
-        return !actualValue.includes(value);
-      }
-      return true;
-
-    default:
-      return false;
-  }
-}
-
-function evaluateGroup(
-  group: FilterGroup,
-  contactData: ContactWithTopics
-): boolean {
-  for (const filter of group.filters) {
-    if (!evaluateFilter(filter, contactData)) {
-      return false;
-    }
-  }
-
-  if (group.nested) {
-    return evaluateCondition(group.nested, contactData);
-  }
-
-  return true;
-}
-
-function evaluateCondition(
-  condition: FilterCondition,
-  contactData: ContactWithTopics
-): boolean {
-  if (condition.groups.length === 0) {
-    return true;
-  }
-
-  if (condition.logic === "AND") {
-    return condition.groups.every((group) => evaluateGroup(group, contactData));
-  }
-
-  return condition.groups.some((group) => evaluateGroup(group, contactData));
-}
+const baseContact = {
+  id: "contact-123",
+  organizationId: "org-1",
+  email: "test@example.com",
+  emailHash: null,
+  firstName: "John",
+  lastName: "Doe",
+  company: "Acme Inc",
+  jobTitle: null,
+  preferredChannel: null,
+  status: "active",
+  emailStatus: "active" as const,
+  smsStatus: null,
+  phone: null,
+  phoneHash: null,
+  properties: {
+    plan: "pro",
+    country: "US",
+    score: 85,
+    nested: { value: "deep" },
+  },
+  emailsSent: 10,
+  emailsOpened: 5,
+  emailsClicked: 2,
+  smsSent: 0,
+  smsClicked: 0,
+  lastActivityAt: null,
+  lastEmailSentAt: null,
+  lastEmailOpenedAt: null,
+  lastEmailClickedAt: null,
+  lastSmsSentAt: null,
+  lastSmsClickedAt: null,
+  emailVerifiedAt: null,
+  emailUnsubscribedAt: null,
+  emailBouncedAt: null,
+  emailComplainedAt: null,
+  emailSuppressedAt: null,
+  smsConsentedAt: null,
+  smsOptedOutAt: null,
+  smsInvalidAt: null,
+  confirmedAt: null,
+  unsubscribedAt: null,
+  bouncedAt: null,
+  complainedAt: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  createdBy: null,
+  topicIds: ["topic-1", "topic-2"],
+} satisfies ContactWithTopics;
 
 describe("Segment Evaluator", () => {
-  const baseContact: ContactWithTopics = {
-    id: "contact-123",
-    email: "test@example.com",
-    firstName: "John",
-    lastName: "Doe",
-    company: "Acme Inc",
-    emailStatus: "active",
-    properties: {
-      plan: "pro",
-      country: "US",
-      score: 85,
-      nested: {
-        value: "deep",
-      },
-    },
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    topicIds: ["topic-1", "topic-2"],
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -435,7 +251,7 @@ describe("Segment Evaluator", () => {
         expect(evaluateFilter(filter, contactWithNull)).toBe(false);
       });
 
-      it("should not match when field is empty string", () => {
+      it("should match when field is empty string (aligns with SQL IS NOT NULL)", () => {
         const contactWithEmpty = {
           ...baseContact,
           firstName: "" as string | null,
@@ -444,7 +260,8 @@ describe("Segment Evaluator", () => {
           field: "firstName",
           operator: "exists",
         };
-        expect(evaluateFilter(filter, contactWithEmpty)).toBe(false);
+        // SQL: "" IS NOT NULL → true
+        expect(evaluateFilter(filter, contactWithEmpty)).toBe(true);
       });
     });
 
@@ -676,7 +493,7 @@ describe("Segment Evaluator", () => {
       it("should match when date is within threshold (days)", () => {
         const recentContact = {
           ...baseContact,
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
         };
         const filter: SegmentFilter = {
           field: "createdAt",
@@ -690,7 +507,7 @@ describe("Segment Evaluator", () => {
       it("should not match when date is outside threshold", () => {
         const oldContact = {
           ...baseContact,
-          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+          createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         };
         const filter: SegmentFilter = {
           field: "createdAt",
@@ -704,7 +521,7 @@ describe("Segment Evaluator", () => {
       it("should handle hours unit", () => {
         const recentContact = {
           ...baseContact,
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
         };
         const filter: SegmentFilter = {
           field: "createdAt",
@@ -718,7 +535,7 @@ describe("Segment Evaluator", () => {
       it("should handle minutes unit", () => {
         const recentContact = {
           ...baseContact,
-          createdAt: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
+          createdAt: new Date(Date.now() - 10 * 60 * 1000),
         };
         const filter: SegmentFilter = {
           field: "createdAt",
@@ -918,12 +735,6 @@ describe("Segment Evaluator", () => {
   });
 
   describe("Event-Based Operators", () => {
-    /**
-     * Tests for the async event-based operators.
-     * These operators check the contact_event table for event history.
-     */
-
-    // Helper to check if an operator is async (event-based)
     function isAsyncOperator(operator: string): boolean {
       return ["triggered", "triggeredWithin", "notTriggered"].includes(
         operator
@@ -952,26 +763,17 @@ describe("Segment Evaluator", () => {
       });
     });
 
-    describe("triggered Operator", () => {
+    describe("Filter Structure", () => {
       it("should have correct filter structure for triggered", () => {
         const filter: SegmentFilter = {
-          field: "purchase_made", // event name
+          field: "purchase_made",
           operator: "triggered",
         };
         expect(filter.field).toBe("purchase_made");
         expect(filter.operator).toBe("triggered");
-      });
-
-      it("should not require value for triggered", () => {
-        const filter: SegmentFilter = {
-          field: "signup_completed",
-          operator: "triggered",
-        };
         expect(filter.value).toBeUndefined();
       });
-    });
 
-    describe("triggeredWithin Operator", () => {
       it("should have correct filter structure for triggeredWithin", () => {
         const filter: SegmentFilter = {
           field: "email_opened",
@@ -979,104 +781,30 @@ describe("Segment Evaluator", () => {
           value: 7,
           unit: "days",
         };
-        expect(filter.field).toBe("email_opened");
-        expect(filter.operator).toBe("triggeredWithin");
         expect(filter.value).toBe(7);
         expect(filter.unit).toBe("days");
       });
 
-      it("should support hours unit", () => {
-        const filter: SegmentFilter = {
-          field: "page_viewed",
-          operator: "triggeredWithin",
-          value: 24,
-          unit: "hours",
-        };
-        expect(filter.unit).toBe("hours");
-      });
-
-      it("should support minutes unit", () => {
-        const filter: SegmentFilter = {
-          field: "form_submitted",
-          operator: "triggeredWithin",
-          value: 30,
-          unit: "minutes",
-        };
-        expect(filter.unit).toBe("minutes");
-      });
-    });
-
-    describe("notTriggered Operator", () => {
       it("should have correct filter structure for notTriggered", () => {
         const filter: SegmentFilter = {
           field: "cart_abandoned",
-          operator: "notTriggered",
-        };
-        expect(filter.field).toBe("cart_abandoned");
-        expect(filter.operator).toBe("notTriggered");
-      });
-
-      it("should be useful for targeting contacts without activity", () => {
-        // This operator is useful for re-engagement campaigns
-        const filter: SegmentFilter = {
-          field: "purchase_made",
-          operator: "notTriggered",
-        };
-        expect(filter.operator).toBe("notTriggered");
-      });
-    });
-
-    describe("Behavioral Segment Use Cases", () => {
-      it("should support purchase history segmentation", () => {
-        // Segment: Customers who made a purchase
-        const filter: SegmentFilter = {
-          field: "purchase_made",
-          operator: "triggered",
-        };
-        expect(isAsyncOperator(filter.operator)).toBe(true);
-      });
-
-      it("should support recent engagement segmentation", () => {
-        // Segment: Users who logged in within the last 30 days
-        const filter: SegmentFilter = {
-          field: "user_login",
-          operator: "triggeredWithin",
-          value: 30,
-          unit: "days",
-        };
-        expect(filter.value).toBe(30);
-        expect(filter.unit).toBe("days");
-      });
-
-      it("should support inactive user segmentation", () => {
-        // Segment: Users who have never made a purchase
-        const filter: SegmentFilter = {
-          field: "purchase_made",
           operator: "notTriggered",
         };
         expect(filter.operator).toBe("notTriggered");
       });
 
       it("should support combining event and property filters", () => {
-        // Complex segment: Pro users who haven't purchased in 30 days
         const condition: FilterCondition = {
           logic: "AND",
           groups: [
             {
               filters: [
-                {
-                  field: "properties.plan",
-                  operator: "equals",
-                  value: "pro",
-                },
+                { field: "properties.plan", operator: "equals", value: "pro" },
               ],
             },
             {
               filters: [
-                {
-                  field: "purchase_made",
-                  operator: "notTriggered",
-                },
+                { field: "purchase_made", operator: "notTriggered" },
               ],
             },
           ],
@@ -1088,166 +816,83 @@ describe("Segment Evaluator", () => {
   });
 
   describe("Email Status Filtering", () => {
-    describe("suppressed status", () => {
-      it("should match contacts with suppressed emailStatus", () => {
-        const suppressedContact = {
-          ...baseContact,
-          emailStatus: "suppressed",
-        };
+    const emailStatuses = [
+      "active",
+      "unsubscribed",
+      "bounced",
+      "complained",
+      "suppressed",
+    ] as const;
+
+    it.each(emailStatuses)(
+      "should correctly filter by emailStatus: %s",
+      (status) => {
+        const contactWithStatus = { ...baseContact, emailStatus: status };
         const filter: SegmentFilter = {
           field: "emailStatus",
           operator: "equals",
-          value: "suppressed",
+          value: status,
         };
-        expect(evaluateFilter(filter, suppressedContact)).toBe(true);
-      });
+        expect(evaluateFilter(filter, contactWithStatus)).toBe(true);
+      }
+    );
 
-      it("should exclude suppressed contacts from active filter", () => {
-        const suppressedContact = {
+    it("should identify deliverable contacts (active only)", () => {
+      const condition: FilterCondition = {
+        logic: "AND",
+        groups: [
+          {
+            filters: [
+              { field: "emailStatus", operator: "equals", value: "active" },
+            ],
+          },
+        ],
+      };
+
+      expect(evaluateCondition(condition, baseContact)).toBe(true);
+      expect(
+        evaluateCondition(condition, { ...baseContact, emailStatus: "bounced" })
+      ).toBe(false);
+      expect(
+        evaluateCondition(condition, {
           ...baseContact,
           emailStatus: "suppressed",
-        };
-        const filter: SegmentFilter = {
-          field: "emailStatus",
-          operator: "equals",
-          value: "active",
-        };
-        expect(evaluateFilter(filter, suppressedContact)).toBe(false);
-      });
-
-      it("should match suppressed in notEquals active filter", () => {
-        const suppressedContact = {
-          ...baseContact,
-          emailStatus: "suppressed",
-        };
-        const filter: SegmentFilter = {
-          field: "emailStatus",
-          operator: "notEquals",
-          value: "active",
-        };
-        expect(evaluateFilter(filter, suppressedContact)).toBe(true);
-      });
-
-      it("should match suppressed in inList filter", () => {
-        const suppressedContact = {
-          ...baseContact,
-          emailStatus: "suppressed",
-        };
-        const filter: SegmentFilter = {
-          field: "emailStatus",
-          operator: "inList",
-          value: ["bounced", "complained", "suppressed"],
-        };
-        expect(evaluateFilter(filter, suppressedContact)).toBe(true);
-      });
-
-      it("should exclude suppressed from deliverable contacts list", () => {
-        const suppressedContact = {
-          ...baseContact,
-          emailStatus: "suppressed",
-        };
-        const filter: SegmentFilter = {
-          field: "emailStatus",
-          operator: "notInList",
-          value: ["bounced", "complained", "suppressed", "unsubscribed"],
-        };
-        expect(evaluateFilter(filter, suppressedContact)).toBe(false);
-      });
+        })
+      ).toBe(false);
     });
 
-    describe("all email statuses", () => {
-      const emailStatuses = [
-        "active",
-        "unsubscribed",
-        "bounced",
-        "complained",
-        "suppressed",
-      ];
+    it("should identify undeliverable contacts", () => {
+      const condition: FilterCondition = {
+        logic: "OR",
+        groups: [
+          {
+            filters: [
+              { field: "emailStatus", operator: "equals", value: "bounced" },
+            ],
+          },
+          {
+            filters: [
+              { field: "emailStatus", operator: "equals", value: "complained" },
+            ],
+          },
+          {
+            filters: [
+              { field: "emailStatus", operator: "equals", value: "suppressed" },
+            ],
+          },
+        ],
+      };
 
-      it.each(emailStatuses)(
-        "should correctly filter by emailStatus: %s",
-        (status) => {
-          const contactWithStatus = {
-            ...baseContact,
-            emailStatus: status,
-          };
-          const filter: SegmentFilter = {
-            field: "emailStatus",
-            operator: "equals",
-            value: status,
-          };
-          expect(evaluateFilter(filter, contactWithStatus)).toBe(true);
-        }
-      );
-
-      it("should identify deliverable contacts (active only)", () => {
-        const condition: FilterCondition = {
-          logic: "AND",
-          groups: [
-            {
-              filters: [
-                { field: "emailStatus", operator: "equals", value: "active" },
-              ],
-            },
-          ],
-        };
-
-        // Active contacts should match
-        expect(evaluateCondition(condition, baseContact)).toBe(true);
-
-        // Non-active contacts should not match
-        const bouncedContact = { ...baseContact, emailStatus: "bounced" };
-        expect(evaluateCondition(condition, bouncedContact)).toBe(false);
-
-        const suppressedContact = { ...baseContact, emailStatus: "suppressed" };
-        expect(evaluateCondition(condition, suppressedContact)).toBe(false);
-
-        const complainedContact = { ...baseContact, emailStatus: "complained" };
-        expect(evaluateCondition(condition, complainedContact)).toBe(false);
-      });
-
-      it("should identify undeliverable contacts for re-engagement exclusion", () => {
-        // Contacts with delivery issues should be excluded from broadcasts
-        const condition: FilterCondition = {
-          logic: "OR",
-          groups: [
-            {
-              filters: [
-                { field: "emailStatus", operator: "equals", value: "bounced" },
-              ],
-            },
-            {
-              filters: [
-                {
-                  field: "emailStatus",
-                  operator: "equals",
-                  value: "complained",
-                },
-              ],
-            },
-            {
-              filters: [
-                {
-                  field: "emailStatus",
-                  operator: "equals",
-                  value: "suppressed",
-                },
-              ],
-            },
-          ],
-        };
-
-        // Active contacts should not match undeliverable segment
-        expect(evaluateCondition(condition, baseContact)).toBe(false);
-
-        // Bounced should match
-        const bouncedContact = { ...baseContact, emailStatus: "bounced" };
-        expect(evaluateCondition(condition, bouncedContact)).toBe(true);
-
-        // Suppressed should match
-        const suppressedContact = { ...baseContact, emailStatus: "suppressed" };
-        expect(evaluateCondition(condition, suppressedContact)).toBe(true);
-      });
+      expect(evaluateCondition(condition, baseContact)).toBe(false);
+      expect(
+        evaluateCondition(condition, { ...baseContact, emailStatus: "bounced" })
+      ).toBe(true);
+      expect(
+        evaluateCondition(condition, {
+          ...baseContact,
+          emailStatus: "suppressed",
+        })
+      ).toBe(true);
     });
   });
 
@@ -1311,7 +956,7 @@ describe("Segment Evaluator", () => {
     it("should match: new users (created within 7 days) with complete profile", () => {
       const newContact = {
         ...baseContact,
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
       };
       const condition: FilterCondition = {
         logic: "AND",

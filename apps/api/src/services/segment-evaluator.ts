@@ -24,7 +24,7 @@ export type ContactWithTopics = typeof contact.$inferSelect & {
 /**
  * Evaluate a single filter against contact data
  */
-function evaluateFilter(
+export function evaluateFilter(
   filter: SegmentFilter,
   contactData: ContactWithTopics
 ): boolean {
@@ -32,8 +32,9 @@ function evaluateFilter(
 
   // Get the actual value from contact
   let actualValue: unknown;
+  const isProperty = field.startsWith("properties.");
 
-  if (field.startsWith("properties.")) {
+  if (isProperty) {
     // Custom property access
     const propPath = field.substring("properties.".length);
     actualValue = getNestedValue(contactData.properties || {}, propPath);
@@ -48,9 +49,16 @@ function evaluateFilter(
   // Evaluate based on operator
   switch (operator) {
     case "equals":
+      // For properties, SQL uses ->> (text extraction) so both sides are strings
+      if (isProperty && actualValue != null && value != null) {
+        return String(actualValue) === String(value);
+      }
       return actualValue === value;
 
     case "notEquals":
+      if (isProperty && actualValue != null && value != null) {
+        return String(actualValue) !== String(value);
+      }
       return actualValue !== value;
 
     case "contains":
@@ -77,45 +85,55 @@ function evaluateFilter(
       }
       return false;
 
-    case "greaterThan":
+    case "greaterThan": {
       if (typeof actualValue === "number" && typeof value === "number") {
         return actualValue > value;
       }
-      if (actualValue instanceof Date && value instanceof Date) {
-        return actualValue > value;
-      }
+      const gtActual = toDate(actualValue);
+      const gtValue = toDate(value);
+      if (gtActual && gtValue) return gtActual > gtValue;
       return false;
+    }
 
-    case "lessThan":
+    case "lessThan": {
       if (typeof actualValue === "number" && typeof value === "number") {
         return actualValue < value;
       }
-      if (actualValue instanceof Date && value instanceof Date) {
-        return actualValue < value;
-      }
+      const ltActual = toDate(actualValue);
+      const ltValue = toDate(value);
+      if (ltActual && ltValue) return ltActual < ltValue;
       return false;
+    }
 
-    case "greaterThanOrEqual":
+    case "greaterThanOrEqual": {
       if (typeof actualValue === "number" && typeof value === "number") {
         return actualValue >= value;
       }
+      const gteActual = toDate(actualValue);
+      const gteValue = toDate(value);
+      if (gteActual && gteValue) return gteActual >= gteValue;
       return false;
+    }
 
-    case "lessThanOrEqual":
+    case "lessThanOrEqual": {
       if (typeof actualValue === "number" && typeof value === "number") {
         return actualValue <= value;
       }
+      const lteActual = toDate(actualValue);
+      const lteValue = toDate(value);
+      if (lteActual && lteValue) return lteActual <= lteValue;
       return false;
+    }
 
     case "exists":
-      return (
-        actualValue !== null && actualValue !== undefined && actualValue !== ""
-      );
+      // For properties, SQL uses `?` which checks key existence (even null values)
+      // For standard fields, SQL uses IS NOT NULL
+      if (isProperty) return actualValue !== undefined;
+      return actualValue !== null && actualValue !== undefined;
 
     case "notExists":
-      return (
-        actualValue === null || actualValue === undefined || actualValue === ""
-      );
+      if (isProperty) return actualValue === undefined;
+      return actualValue === null || actualValue === undefined;
 
     case "inList":
       if (Array.isArray(value)) {
@@ -129,27 +147,18 @@ function evaluateFilter(
       }
       return true;
 
-    case "within":
+    case "within": {
       // Time-based: check if date is within X days/hours/minutes
-      if (actualValue instanceof Date && typeof value === "number" && unit) {
+      // Default to days when unit is missing (matches SQL engine behavior)
+      const withinUnit = unit || "days";
+      const actualDate = toDate(actualValue);
+      if (actualDate && typeof value === "number") {
         const now = new Date();
-        const threshold = getThresholdDate(now, value, unit);
-        return actualValue >= threshold;
-      }
-      // Also handle string dates
-      if (
-        typeof actualValue === "string" &&
-        typeof value === "number" &&
-        unit
-      ) {
-        const dateValue = new Date(actualValue);
-        if (!Number.isNaN(dateValue.getTime())) {
-          const now = new Date();
-          const threshold = getThresholdDate(now, value, unit);
-          return dateValue >= threshold;
-        }
+        const threshold = getThresholdDate(now, value, withinUnit);
+        return actualDate >= threshold;
       }
       return false;
+    }
 
     case "hasTopic":
       // Check if contact is subscribed to the topic
@@ -180,6 +189,19 @@ function evaluateFilter(
       console.warn(`[segment-evaluator] Unknown operator: ${operator}`);
       return false;
   }
+}
+
+/**
+ * Try to coerce a value to a Date for comparison.
+ * Handles Date objects, ISO strings, and numeric timestamps.
+ */
+function toDate(val: unknown): Date | null {
+  if (val instanceof Date) return val;
+  if (typeof val === "string") {
+    const d = new Date(val);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return null;
 }
 
 /**
@@ -379,7 +401,7 @@ export async function evaluateConditionAsync(
  * Evaluate a filter group (all filters within a group are ANDed)
  * Sync version - does not support event-based operators
  */
-function evaluateGroup(
+export function evaluateGroup(
   group: FilterGroup,
   contactData: ContactWithTopics
 ): boolean {
@@ -402,7 +424,7 @@ function evaluateGroup(
  * Evaluate a filter condition (groups combined with AND/OR logic)
  * Sync version - does not support event-based operators
  */
-function evaluateCondition(
+export function evaluateCondition(
   condition: FilterCondition,
   contactData: ContactWithTopics
 ): boolean {
