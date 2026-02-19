@@ -407,7 +407,10 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
             eq(workflow.organizationId, auth.organizationId),
             eq(workflow.status, "enabled"),
             eq(workflow.triggerType, "event"),
-            sql`${workflow.triggerConfig}->>'eventName' = ANY(${uniqueEventNames})`
+            inArray(
+              sql`${workflow.triggerConfig}->>'eventName'`,
+              uniqueEventNames
+            )
           )
         );
 

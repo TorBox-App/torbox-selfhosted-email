@@ -16,16 +16,14 @@ const mockStsSend = vi.fn().mockResolvedValue({
   },
 });
 
-vi.mock("@aws-sdk/client-sts", () => {
-  return {
-    STSClient: class MockSTSClient {
-      send = mockStsSend;
-    },
-    AssumeRoleCommand: class MockAssumeRoleCommand {
-      constructor(public input: unknown) {}
-    },
-  };
-});
+vi.mock("@aws-sdk/client-sts", () => ({
+  STSClient: class MockSTSClient {
+    send = mockStsSend;
+  },
+  AssumeRoleCommand: class MockAssumeRoleCommand {
+    constructor(public input: unknown) {}
+  },
+}));
 
 vi.mock("@wraps/db", () => {
   const mockLimit = vi.fn();

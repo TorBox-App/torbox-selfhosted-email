@@ -37,16 +37,14 @@ vi.mock("@aws-sdk/client-sesv2", () => {
   };
 });
 
-vi.mock("@aws-sdk/client-sqs", () => {
-  return {
-    SQSClient: class MockSQSClient {
-      send = vi.fn().mockResolvedValue({});
-    },
-    SendMessageCommand: class {
-      constructor(public input: unknown) {}
-    },
-  };
-});
+vi.mock("@aws-sdk/client-sqs", () => ({
+  SQSClient: class MockSQSClient {
+    send = vi.fn().mockResolvedValue({});
+  },
+  SendMessageCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
 
 vi.mock("@react-email/render", () => ({
   toPlainText: vi.fn().mockReturnValue("plain text"),
