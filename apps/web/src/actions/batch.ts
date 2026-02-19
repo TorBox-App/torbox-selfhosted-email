@@ -546,8 +546,8 @@ export async function cancelBatchSend(
       return { success: false, error: "Batch not found" };
     }
 
-    // Check if batch can be cancelled (only scheduled/queued)
-    if (!["scheduled", "queued"].includes(batch.status)) {
+    // Check if batch can be cancelled (scheduled, queued, or processing)
+    if (!["scheduled", "queued", "processing"].includes(batch.status)) {
       return {
         success: false,
         error: `Cannot cancel batch with status "${batch.status}"`,

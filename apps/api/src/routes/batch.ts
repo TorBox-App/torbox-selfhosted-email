@@ -340,11 +340,11 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
         throw new Error("Batch not found");
       }
 
-      // Can only cancel scheduled or queued batches
-      if (!["scheduled", "queued"].includes(batch.status)) {
+      // Can only cancel scheduled, queued, or processing batches
+      if (!["scheduled", "queued", "processing"].includes(batch.status)) {
         set.status = 400;
         throw new Error(
-          `Cannot cancel batch in '${batch.status}' status. Only scheduled or queued batches can be cancelled.`
+          `Cannot cancel batch in '${batch.status}' status. Only scheduled, queued, or processing batches can be cancelled.`
         );
       }
 
