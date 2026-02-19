@@ -2,7 +2,7 @@
 
 import { auth } from "@wraps/auth";
 import { contactTopic, db, topic } from "@wraps/db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createActionLogger, serializeError } from "@/lib/logger";
@@ -81,15 +81,24 @@ export async function listTopics(
       orderBy: [desc(topic.createdAt)],
     });
 
-    // Get subscriber counts using SQL COUNT
-    const subscriberCounts = await db
-      .select({
-        topicId: contactTopic.topicId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(contactTopic)
-      .where(eq(contactTopic.status, "subscribed"))
-      .groupBy(contactTopic.topicId);
+    // Get subscriber counts scoped to this org's topics
+    const topicIds = topics.map((t) => t.id);
+    const subscriberCounts =
+      topicIds.length > 0
+        ? await db
+            .select({
+              topicId: contactTopic.topicId,
+              count: sql<number>`count(*)::int`,
+            })
+            .from(contactTopic)
+            .where(
+              and(
+                inArray(contactTopic.topicId, topicIds),
+                eq(contactTopic.status, "subscribed")
+              )
+            )
+            .groupBy(contactTopic.topicId)
+        : [];
 
     const countMap = new Map(subscriberCounts.map((c) => [c.topicId, c.count]));
 
