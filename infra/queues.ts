@@ -211,7 +211,8 @@ workflowQueue.subscribe(
   },
   {
     batch: {
-      size: 1, // Process one workflow job at a time
+      size: 10,
+      partialResponses: true,
     },
   }
 );

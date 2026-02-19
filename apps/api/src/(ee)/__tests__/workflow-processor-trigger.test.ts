@@ -97,7 +97,16 @@ const mockCreateNextWorkflowSchedule = vi.fn();
 const mockDbSelect = vi.fn();
 const mockDbUpdate = vi.fn();
 const mockDbInsert = vi.fn();
+const mockDbTransaction = vi.fn();
 const mockDbQueryWorkflowExecution = { findFirst: vi.fn() };
+
+mockDbTransaction.mockImplementation(async (callback: Function) => {
+  return callback({
+    select: mockDbSelect,
+    update: mockDbUpdate,
+    insert: mockDbInsert,
+  });
+});
 
 vi.mock("@aws-sdk/client-sesv2", () => ({
   SESv2Client: vi.fn().mockImplementation(() => ({ send: vi.fn() })),
@@ -169,6 +178,7 @@ vi.mock("@wraps/db", async () => {
       select: mockDbSelect,
       update: mockDbUpdate,
       insert: mockDbInsert,
+      transaction: mockDbTransaction,
       query: {
         workflowExecution: mockDbQueryWorkflowExecution,
       },
@@ -189,6 +199,13 @@ const { handler } = await import("../workers/workflow-processor");
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockDbTransaction.mockImplementation(async (callback: Function) => {
+    return callback({
+      select: mockDbSelect,
+      update: mockDbUpdate,
+      insert: mockDbInsert,
+    });
+  });
 });
 
 const triggerJob = {

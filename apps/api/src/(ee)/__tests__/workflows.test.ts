@@ -49,26 +49,33 @@ const mockContacts: Record<
 > = {};
 
 // Mock database
+const mockDbSelectImpl = () => ({
+  from: vi.fn().mockImplementation(() => ({
+    where: vi.fn().mockImplementation(() => ({
+      limit: vi.fn().mockImplementation((n) => {
+        // Return based on what's in our mock data
+        const workflows = Object.values(mockWorkflows);
+        const contacts = Object.values(mockContacts);
+        if (workflows.length > 0) {
+          return Promise.resolve(workflows.slice(0, n));
+        }
+        if (contacts.length > 0) {
+          return Promise.resolve(contacts.slice(0, n));
+        }
+        return Promise.resolve([]);
+      }),
+    })),
+  })),
+});
+
 vi.mock("@wraps/db", () => ({
   db: {
-    select: vi.fn().mockImplementation(() => ({
-      from: vi.fn().mockImplementation(() => ({
-        where: vi.fn().mockImplementation(() => ({
-          limit: vi.fn().mockImplementation((n) => {
-            // Return based on what's in our mock data
-            const workflows = Object.values(mockWorkflows);
-            const contacts = Object.values(mockContacts);
-            if (workflows.length > 0) {
-              return Promise.resolve(workflows.slice(0, n));
-            }
-            if (contacts.length > 0) {
-              return Promise.resolve(contacts.slice(0, n));
-            }
-            return Promise.resolve([]);
-          }),
-        })),
-      })),
-    })),
+    select: vi.fn().mockImplementation(mockDbSelectImpl),
+    transaction: vi.fn().mockImplementation(async (callback: Function) => {
+      return callback({
+        select: vi.fn().mockImplementation(mockDbSelectImpl),
+      });
+    }),
   },
   contact: {
     id: "id",

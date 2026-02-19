@@ -10,9 +10,12 @@
 import {
   CreateScheduleCommand,
   DeleteScheduleCommand,
+  GetScheduleCommand,
   SchedulerClient,
 } from "@aws-sdk/client-scheduler";
+import { type TriggerConfig, db, eq, workflow } from "@wraps/db";
 import { Cron } from "croner";
+import { and } from "drizzle-orm";
 
 import { log } from "../lib/logger";
 import { formatScheduleExpression, type WorkflowJob } from "./workflow-queue";
@@ -139,4 +142,108 @@ export async function deleteWorkflowSchedule(
     }
     throw error;
   }
+}
+
+/**
+ * Reconcile schedule chains for all enabled scheduled workflows.
+ *
+ * Checks EventBridge for each workflow's expected schedule. If missing
+ * (ResourceNotFoundException), re-creates the next schedule to repair the chain.
+ */
+export async function reconcileScheduleChains(): Promise<{
+  checked: number;
+  repaired: number;
+  errors: number;
+  details: Array<{ workflowId: string; action: string; error?: string }>;
+}> {
+  const details: Array<{
+    workflowId: string;
+    action: string;
+    error?: string;
+  }> = [];
+
+  if (!(SCHEDULER_ROLE_ARN && WORKFLOW_QUEUE_ARN)) {
+    if (!IS_PRODUCTION) {
+      log.warn("Reconciliation: skipping, scheduler not configured");
+      return { checked: 0, repaired: 0, errors: 0, details };
+    }
+    throw new Error(
+      "EventBridge Scheduler not configured for workflow schedules"
+    );
+  }
+
+  const workflows = await db
+    .select({
+      id: workflow.id,
+      organizationId: workflow.organizationId,
+      triggerConfig: workflow.triggerConfig,
+    })
+    .from(workflow)
+    .where(
+      and(eq(workflow.status, "enabled"), eq(workflow.triggerType, "schedule"))
+    );
+
+  let repaired = 0;
+  let errors = 0;
+
+  for (const wf of workflows) {
+    const config = wf.triggerConfig as TriggerConfig;
+    if (!config.schedule) continue;
+
+    const scheduleName = getScheduleName(wf.id);
+
+    try {
+      await scheduler.send(
+        new GetScheduleCommand({
+          Name: scheduleName,
+          GroupName: SCHEDULE_GROUP,
+        })
+      );
+      details.push({ workflowId: wf.id, action: "healthy" });
+    } catch (error: unknown) {
+      if (
+        error instanceof Error &&
+        error.name === "ResourceNotFoundException"
+      ) {
+        try {
+          await createNextWorkflowSchedule({
+            workflowId: wf.id,
+            organizationId: wf.organizationId,
+            cronExpression: config.schedule,
+            timezone: config.timezone,
+          });
+          repaired++;
+          details.push({ workflowId: wf.id, action: "repaired" });
+          log.info("Reconciliation: repaired broken chain", {
+            workflowId: wf.id,
+          });
+        } catch (repairError) {
+          errors++;
+          details.push({
+            workflowId: wf.id,
+            action: "repair_failed",
+            error:
+              repairError instanceof Error
+                ? repairError.message
+                : String(repairError),
+          });
+        }
+      } else {
+        errors++;
+        details.push({
+          workflowId: wf.id,
+          action: "check_failed",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  log.info("Reconciliation: complete", {
+    checked: workflows.length,
+    repaired,
+    errors,
+  });
+
+  return { checked: workflows.length, repaired, errors, details };
 }

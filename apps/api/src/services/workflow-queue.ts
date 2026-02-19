@@ -121,19 +121,24 @@ export async function enqueueWorkflowStepBatch(
     return;
   }
 
-  // SQS SendMessageBatch supports max 10 messages per call
+  // SQS SendMessageBatch supports max 10 messages per call — fire all chunks in parallel
+  const chunks: WorkflowJob[][] = [];
   for (let i = 0; i < jobs.length; i += 10) {
-    const chunk = jobs.slice(i, i + 10);
-    await sqs.send(
-      new SendMessageBatchCommand({
-        QueueUrl: WORKFLOW_QUEUE_URL,
-        Entries: chunk.map((job, idx) => ({
-          Id: String(i + idx),
-          MessageBody: JSON.stringify(job),
-        })),
-      })
-    );
+    chunks.push(jobs.slice(i, i + 10));
   }
+  await Promise.all(
+    chunks.map((chunk, chunkIdx) =>
+      sqs.send(
+        new SendMessageBatchCommand({
+          QueueUrl: WORKFLOW_QUEUE_URL,
+          Entries: chunk.map((job, idx) => ({
+            Id: String(chunkIdx * 10 + idx),
+            MessageBody: JSON.stringify(job),
+          })),
+        })
+      )
+    )
+  );
 }
 
 /**

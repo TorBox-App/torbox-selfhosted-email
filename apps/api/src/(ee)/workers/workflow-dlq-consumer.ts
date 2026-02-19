@@ -10,6 +10,7 @@
  */
 
 import {
+  type TriggerConfig,
   db,
   eq,
   workflow,
@@ -20,6 +21,7 @@ import { and, sql } from "drizzle-orm";
 
 import { log } from "../../lib/logger";
 import type { WorkflowJob } from "../../services/workflow-queue";
+import { createNextWorkflowSchedule } from "../../services/workflow-scheduler";
 
 const TERMINAL_STATUSES = new Set(["completed", "cancelled", "failed"]);
 
@@ -45,9 +47,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
           await handleTrigger(job);
           break;
         case "schedule-trigger":
-          log.warn("DLQ: schedule-trigger failed, next schedule run will re-trigger", {
-            workflowId: job.workflowId,
-          });
+          await handleScheduleTrigger(job);
           break;
       }
     } catch (error) {
@@ -132,6 +132,55 @@ async function handleTrigger(job: Extract<WorkflowJob, { type: "trigger" }>) {
     workflowId: job.workflowId,
     contactId: job.contactId,
   });
+}
+
+async function handleScheduleTrigger(
+  job: Extract<WorkflowJob, { type: "schedule-trigger" }>
+) {
+  const [wf] = await db
+    .select({
+      id: workflow.id,
+      organizationId: workflow.organizationId,
+      status: workflow.status,
+      triggerType: workflow.triggerType,
+      triggerConfig: workflow.triggerConfig,
+    })
+    .from(workflow)
+    .where(eq(workflow.id, job.workflowId))
+    .limit(1);
+
+  if (!wf || wf.status !== "enabled" || wf.triggerType !== "schedule") {
+    log.warn("DLQ: schedule-trigger — workflow not eligible for chain repair", {
+      workflowId: job.workflowId,
+      status: wf?.status,
+      triggerType: wf?.triggerType,
+    });
+    return;
+  }
+
+  const config = wf.triggerConfig as TriggerConfig;
+  if (!config.schedule) {
+    log.warn("DLQ: schedule-trigger — no cron expression", {
+      workflowId: job.workflowId,
+    });
+    return;
+  }
+
+  try {
+    await createNextWorkflowSchedule({
+      workflowId: wf.id,
+      organizationId: wf.organizationId,
+      cronExpression: config.schedule,
+      timezone: config.timezone,
+    });
+    log.info("DLQ: schedule-trigger — chain repaired", {
+      workflowId: wf.id,
+    });
+  } catch (error) {
+    log.error("DLQ: schedule-trigger — chain repair failed", error, {
+      workflowId: wf.id,
+    });
+  }
 }
 
 /**

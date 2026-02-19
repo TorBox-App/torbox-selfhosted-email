@@ -141,7 +141,16 @@ const smsSendCalls: unknown[][] = [];
 const mockDbSelect = vi.fn();
 const mockDbUpdate = vi.fn();
 const mockDbInsert = vi.fn();
+const mockDbTransaction = vi.fn();
 const mockDbQueryWorkflowExecution = { findFirst: vi.fn() };
+
+mockDbTransaction.mockImplementation(async (callback: Function) => {
+  return callback({
+    select: mockDbSelect,
+    update: mockDbUpdate,
+    insert: mockDbInsert,
+  });
+});
 
 vi.mock("@aws-sdk/client-sesv2", () => {
   class MockSESv2Client {
@@ -228,6 +237,7 @@ vi.mock("@wraps/db", async () => {
       select: mockDbSelect,
       update: mockDbUpdate,
       insert: mockDbInsert,
+      transaction: mockDbTransaction,
       query: { workflowExecution: mockDbQueryWorkflowExecution },
     },
     contactIdsMatchingCondition: vi.fn().mockResolvedValue([]),
@@ -236,6 +246,12 @@ vi.mock("@wraps/db", async () => {
     }),
   };
 });
+
+const mockDnsLookup = vi.fn().mockResolvedValue({ address: "93.184.216.34", family: 4 });
+vi.mock("node:dns/promises", () => ({
+  default: { lookup: mockDnsLookup },
+  lookup: mockDnsLookup,
+}));
 
 vi.stubGlobal("fetch", mockFetch);
 
@@ -325,6 +341,13 @@ beforeEach(() => {
   mockFetch.mockReset();
   sesSendCalls.length = 0;
   smsSendCalls.length = 0;
+  mockDbTransaction.mockImplementation(async (callback: Function) => {
+    return callback({
+      select: mockDbSelect,
+      update: mockDbUpdate,
+      insert: mockDbInsert,
+    });
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -822,13 +845,16 @@ describe("handleSendSms", () => {
     expect(input.OriginationIdentity).toBe("MyBrand");
   });
 
-  it("happy path: sends and updates metrics", async () => {
+  it("happy path: sends with variable substitution and updates metrics", async () => {
     setupSmsTest();
     await handler(makeSQSEvent(smsJob), {} as never, vi.fn());
     expect(smsSendCalls).toHaveLength(1);
     const input = smsSendCalls[0][0] as Record<string, unknown>;
     expect(input.DestinationPhoneNumber).toBe("+15551234567");
-    expect(input.MessageBody).toBe("Hello from Wraps!");
+    // Body passed through Handlebars substituteVariables (mock returns "compiled:...")
+    const body = input.MessageBody as string;
+    expect(body).toContain("test@example.com");
+    expect(body).toContain("Test"); // firstName
     expect(input.ConfigurationSetName).toBe("wraps-sms-config");
     expect(mockDbUpdate).toHaveBeenCalled();
   });

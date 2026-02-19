@@ -215,7 +215,16 @@ const mockFetch = vi.fn();
 const mockDbSelect = vi.fn();
 const mockDbUpdate = vi.fn();
 const mockDbInsert = vi.fn();
+const mockDbTransaction = vi.fn();
 const mockDbQueryWorkflowExecution = { findFirst: vi.fn() };
+
+mockDbTransaction.mockImplementation(async (callback: Function) => {
+  return callback({
+    select: mockDbSelect,
+    update: mockDbUpdate,
+    insert: mockDbInsert,
+  });
+});
 
 vi.mock("@aws-sdk/client-sesv2", () => ({
   SESv2Client: vi.fn().mockImplementation(() => ({ send: vi.fn() })),
@@ -287,6 +296,7 @@ vi.mock("@wraps/db", async () => {
       select: mockDbSelect,
       update: mockDbUpdate,
       insert: mockDbInsert,
+      transaction: mockDbTransaction,
       query: {
         workflowExecution: mockDbQueryWorkflowExecution,
       },
@@ -310,6 +320,13 @@ const { handler } = await import("../workers/workflow-processor");
 beforeEach(() => {
   vi.clearAllMocks();
   mockFetch.mockReset();
+  mockDbTransaction.mockImplementation(async (callback: Function) => {
+    return callback({
+      select: mockDbSelect,
+      update: mockDbUpdate,
+      insert: mockDbInsert,
+    });
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1300,17 +1317,15 @@ describe("Webhook Step", () => {
     mockFetch.mockRejectedValue(new Error("ECONNREFUSED"));
 
     // handler should NOT throw — webhook failure is non-fatal
-    await expect(
-      handler(makeSQSEvent(executeJob), {} as never, vi.fn())
-    ).resolves.toBeUndefined();
+    const result = await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+    expect(result.batchItemFailures).toEqual([]);
   });
 
   it("handles non-ok status and continues", async () => {
     setupWebhookExecution();
     mockFetch.mockResolvedValue({ status: 500, ok: false });
 
-    await expect(
-      handler(makeSQSEvent(executeJob), {} as never, vi.fn())
-    ).resolves.toBeUndefined();
+    const result = await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+    expect(result.batchItemFailures).toEqual([]);
   });
 });

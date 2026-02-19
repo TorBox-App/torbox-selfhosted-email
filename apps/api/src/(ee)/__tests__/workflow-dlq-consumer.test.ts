@@ -70,6 +70,11 @@ function selectChain(rows: unknown[]) {
 
 const mockDbSelect = vi.fn();
 const mockDbUpdate = vi.fn();
+const mockCreateNextWorkflowSchedule = vi.fn();
+
+vi.mock("../../services/workflow-scheduler", () => ({
+  createNextWorkflowSchedule: mockCreateNextWorkflowSchedule,
+}));
 
 vi.mock("../../lib/logger", () => ({
   log: {
@@ -279,7 +284,21 @@ describe("trigger job", () => {
 });
 
 describe("schedule-trigger job", () => {
-  it("logs only, no DB writes", async () => {
+  it("loads workflow and re-creates schedule chain", async () => {
+    mockDbSelect.mockImplementation(() =>
+      selectChain([
+        {
+          id: "wf-1",
+          organizationId: "org-1",
+          status: "enabled",
+          triggerType: "schedule",
+          triggerConfig: { schedule: "0 9 * * 1", timezone: "America/New_York" },
+        },
+      ])()
+    );
+
+    mockCreateNextWorkflowSchedule.mockResolvedValue("wraps-wf-sched-wf-1");
+
     const event = makeSQSEvent({
       type: "schedule-trigger",
       workflowId: "wf-1",
@@ -288,10 +307,77 @@ describe("schedule-trigger job", () => {
 
     await handler(event, {} as never, () => {});
 
-    expect(mockDbUpdate).not.toHaveBeenCalled();
-    expect(mockDbSelect).not.toHaveBeenCalled();
+    expect(mockDbSelect).toHaveBeenCalled();
+    expect(mockCreateNextWorkflowSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflowId: "wf-1",
+        cronExpression: "0 9 * * 1",
+        timezone: "America/New_York",
+      })
+    );
+    expect(log.info).toHaveBeenCalledWith(
+      "DLQ: schedule-trigger — chain repaired",
+      expect.objectContaining({ workflowId: "wf-1" })
+    );
+  });
+
+  it("skips chain repair when workflow not enabled", async () => {
+    mockDbSelect.mockImplementation(() =>
+      selectChain([
+        {
+          id: "wf-1",
+          organizationId: "org-1",
+          status: "disabled",
+          triggerType: "schedule",
+          triggerConfig: { schedule: "0 9 * * 1" },
+        },
+      ])()
+    );
+
+    const event = makeSQSEvent({
+      type: "schedule-trigger",
+      workflowId: "wf-1",
+      organizationId: "org-1",
+    });
+
+    await handler(event, {} as never, () => {});
+
+    expect(mockCreateNextWorkflowSchedule).not.toHaveBeenCalled();
     expect(log.warn).toHaveBeenCalledWith(
-      "DLQ: schedule-trigger failed, next schedule run will re-trigger",
+      "DLQ: schedule-trigger — workflow not eligible for chain repair",
+      expect.objectContaining({ workflowId: "wf-1", status: "disabled" })
+    );
+  });
+
+  it("catches chain repair failure without throwing", async () => {
+    mockDbSelect.mockImplementation(() =>
+      selectChain([
+        {
+          id: "wf-1",
+          organizationId: "org-1",
+          status: "enabled",
+          triggerType: "schedule",
+          triggerConfig: { schedule: "0 9 * * 1" },
+        },
+      ])()
+    );
+
+    mockCreateNextWorkflowSchedule.mockRejectedValueOnce(
+      new Error("Scheduler throttled")
+    );
+
+    const event = makeSQSEvent({
+      type: "schedule-trigger",
+      workflowId: "wf-1",
+      organizationId: "org-1",
+    });
+
+    // Should not throw
+    await handler(event, {} as never, () => {});
+
+    expect(log.error).toHaveBeenCalledWith(
+      "DLQ: schedule-trigger — chain repair failed",
+      expect.any(Error),
       expect.objectContaining({ workflowId: "wf-1" })
     );
   });

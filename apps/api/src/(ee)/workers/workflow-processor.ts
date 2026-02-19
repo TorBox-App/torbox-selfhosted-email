@@ -37,9 +37,10 @@ import {
   transformVariablesForSes,
   upsertSESTemplate,
 } from "@wraps/email";
-import type { SQSEvent, SQSHandler } from "aws-lambda";
+import type { SQSBatchResponse, SQSEvent } from "aws-lambda";
 import { and, sql } from "drizzle-orm";
 import Handlebars from "handlebars";
+import dns from "node:dns/promises";
 
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
 import { log } from "../../lib/logger";
@@ -207,23 +208,38 @@ async function triggerWorkflow(
     return;
   }
 
-  // Create execution record atomically
-  // Uses ON CONFLICT DO NOTHING with partial unique index to prevent race conditions
-  // when allowReentry=false. The index only applies to active statuses.
-  const [execution] = await db
-    .insert(workflowExecution)
-    .values({
-      workflowId,
-      contactId,
-      organizationId,
-      allowReentry: wf.allowReentry, // Denormalized for partial unique index
-      status: "active",
-      currentStepId: firstStepId,
-      triggerData: eventData ?? {},
-      startedAt: new Date(),
-    })
-    .onConflictDoNothing()
-    .returning();
+  // Create execution + update stats in a transaction to prevent counter drift
+  const execution = await db.transaction(async (tx) => {
+    // Uses ON CONFLICT DO NOTHING with partial unique index to prevent race conditions
+    // when allowReentry=false. The index only applies to active statuses.
+    const [row] = await tx
+      .insert(workflowExecution)
+      .values({
+        workflowId,
+        contactId,
+        organizationId,
+        allowReentry: wf.allowReentry, // Denormalized for partial unique index
+        status: "active",
+        currentStepId: firstStepId,
+        triggerData: eventData ?? {},
+        startedAt: new Date(),
+      })
+      .onConflictDoNothing()
+      .returning();
+
+    if (!row) return null;
+
+    await tx
+      .update(workflow)
+      .set({
+        totalExecutions: sql`${workflow.totalExecutions} + 1`,
+        activeExecutions: sql`${workflow.activeExecutions} + 1`,
+        lastTriggeredAt: new Date(),
+      })
+      .where(eq(workflow.id, workflowId));
+
+    return row;
+  });
 
   // If no row returned, a conflict occurred (contact already in workflow)
   if (!execution) {
@@ -231,16 +247,6 @@ async function triggerWorkflow(
     await incrementDroppedExecutions(workflowId);
     return;
   }
-
-  // Update workflow stats
-  await db
-    .update(workflow)
-    .set({
-      totalExecutions: sql`${workflow.totalExecutions} + 1`,
-      activeExecutions: sql`${workflow.activeExecutions} + 1`,
-      lastTriggeredAt: new Date(),
-    })
-    .where(eq(workflow.id, workflowId));
 
   // Process first step
   await enqueueWorkflowStep({
@@ -353,17 +359,33 @@ async function processScheduleTrigger(
     .where(eq(workflow.id, workflowId));
 
   // Chain: create the next schedule
-  await createNextWorkflowSchedule({
-    workflowId,
-    organizationId,
-    cronExpression: config.schedule,
-    timezone: config.timezone,
-  });
-
-  log.info("Schedule trigger: complete, next schedule chained", {
-    workflowId,
-    executionsTriggered: contacts.length,
-  });
+  // Isolated in try/catch — failure must NOT propagate to SQS retry,
+  // which would duplicate the contact fan-out that already succeeded above.
+  try {
+    await createNextWorkflowSchedule({
+      workflowId,
+      organizationId,
+      cronExpression: config.schedule,
+      timezone: config.timezone,
+    });
+    log.info("Schedule trigger: complete, next schedule chained", {
+      workflowId,
+      executionsTriggered: contacts.length,
+    });
+  } catch (chainError) {
+    log.error(
+      "Schedule trigger: CHAIN BROKEN — failed to create next schedule",
+      chainError,
+      {
+        workflowId,
+        organizationId,
+        cronExpression: config.schedule,
+        chainBroken: true,
+      }
+    );
+    // Do NOT re-throw. Contact fan-out and lastTriggeredAt already succeeded.
+    // The DLQ handler and reconciliation job will detect and repair broken chains.
+  }
 }
 
 /**
@@ -1240,9 +1262,9 @@ async function handleSendSms(
     },
   });
 
-  // Build message body - use body from config or fetch from template
-  const messageBody = config.body || "";
-  if (!messageBody) {
+  // Build message body with variable substitution
+  const rawBody = config.body || "";
+  if (!rawBody) {
     log.warn("Workflow: SMS step has no message body");
     return {
       action: "next",
@@ -1253,6 +1275,45 @@ async function handleSendSms(
       },
     };
   }
+
+  // Build replacement data (same pattern as handleSendEmail)
+  const replacementData: Record<string, string> = {};
+
+  const addIfPresent = (key: string, value: string | null | undefined) => {
+    if (value) replacementData[key] = value;
+  };
+
+  addIfPresent("email", contactRecord.email);
+  addIfPresent("contactEmail", contactRecord.email);
+  addIfPresent("firstName", contactRecord.firstName);
+  addIfPresent("lastName", contactRecord.lastName);
+  addIfPresent("company", contactRecord.company);
+  addIfPresent("jobTitle", contactRecord.jobTitle);
+  addIfPresent("contactFirstName", contactRecord.firstName);
+  addIfPresent("contactLastName", contactRecord.lastName);
+  addIfPresent("contactCompany", contactRecord.company);
+  addIfPresent("contactJobTitle", contactRecord.jobTitle);
+  addIfPresent("phone", contactRecord.phone);
+
+  // Add contact properties
+  const properties = contactRecord.properties as Record<string, unknown> | null;
+  if (properties) {
+    for (const [key, value] of Object.entries(properties)) {
+      const strValue = value != null ? String(value) : null;
+      if (strValue) replacementData[key] = strValue;
+    }
+  }
+
+  // Add trigger data
+  const triggerData = execution.triggerData as Record<string, unknown> | null;
+  if (triggerData) {
+    for (const [key, value] of Object.entries(triggerData)) {
+      const strValue = value != null ? String(value) : null;
+      if (strValue) replacementData[key] = strValue;
+    }
+  }
+
+  const messageBody = substituteVariables(rawBody, replacementData);
 
   // Build sender ID (step config > workflow default)
   const senderId = config.senderId || wf.defaultSenderId;
@@ -1610,11 +1671,67 @@ export async function handleUpdateContact(
   };
 }
 
+const BLOCKED_IPV4_RANGES = [
+  { prefix: "127.", label: "loopback" },
+  { prefix: "10.", label: "private (10/8)" },
+  { prefix: "169.254.", label: "link-local/IMDS" },
+  { prefix: "0.", label: "unspecified" },
+] as const;
+
+function isBlockedIp(ip: string): string | null {
+  for (const range of BLOCKED_IPV4_RANGES) {
+    if (ip.startsWith(range.prefix)) return range.label;
+  }
+  // 172.16.0.0/12
+  if (ip.startsWith("172.")) {
+    const second = Number.parseInt(ip.split(".")[1], 10);
+    if (second >= 16 && second <= 31) return "private (172.16/12)";
+  }
+  // 192.168.0.0/16
+  if (ip.startsWith("192.168.")) return "private (192.168/16)";
+  // IPv6
+  if (ip === "::1" || ip === "::") return "loopback";
+  if (ip.startsWith("fe80:")) return "link-local";
+  if (ip.startsWith("fd") || ip.startsWith("fc")) return "private (ULA)";
+  return null;
+}
+
+/** @exported for testing */
+export async function validateWebhookUrl(url: string): Promise<void> {
+  const parsed = new URL(url);
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error(`Webhook URL must use http(s), got ${parsed.protocol}`);
+  }
+
+  const dns = await import("node:dns/promises");
+  const { address } = await dns.lookup(parsed.hostname);
+  const blockedReason = isBlockedIp(address);
+  if (blockedReason) {
+    throw new Error(
+      `Webhook URL resolves to blocked address (${blockedReason}): ${parsed.hostname} -> ${address}`
+    );
+  }
+}
+
 async function handleWebhook(
   config: Extract<WorkflowStepConfig, { type: "webhook" }>,
   contactRecord: typeof contact.$inferSelect,
   execution: typeof workflowExecution.$inferSelect
 ): Promise<{ action: "next"; data: Record<string, unknown> }> {
+  try {
+    await validateWebhookUrl(config.url);
+  } catch (error) {
+    log.error("Webhook SSRF blocked", error, { url: config.url });
+    return {
+      action: "next",
+      data: {
+        error: error instanceof Error ? error.message : "Invalid webhook URL",
+        blocked: true,
+      },
+    };
+  }
+
   const body = {
     contact: {
       id: contactRecord.id,
@@ -1637,6 +1754,7 @@ async function handleWebhook(
         ...(config.headers || {}),
       },
       body: config.method !== "GET" ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(10_000),
     });
 
     return {
@@ -1957,25 +2075,27 @@ async function resumeExecution(
  * Mark execution as completed
  */
 async function completeExecution(executionId: string): Promise<void> {
-  const [execution] = await db
-    .update(workflowExecution)
-    .set({
-      status: "completed",
-      completedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(workflowExecution.id, executionId))
-    .returning();
-
-  if (execution) {
-    await db
-      .update(workflow)
+  await db.transaction(async (tx) => {
+    const [execution] = await tx
+      .update(workflowExecution)
       .set({
-        activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - 1)`,
-        completedExecutions: sql`${workflow.completedExecutions} + 1`,
+        status: "completed",
+        completedAt: new Date(),
+        updatedAt: new Date(),
       })
-      .where(eq(workflow.id, execution.workflowId));
-  }
+      .where(eq(workflowExecution.id, executionId))
+      .returning();
+
+    if (execution) {
+      await tx
+        .update(workflow)
+        .set({
+          activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - 1)`,
+          completedExecutions: sql`${workflow.completedExecutions} + 1`,
+        })
+        .where(eq(workflow.id, execution.workflowId));
+    }
+  });
 }
 
 /**
@@ -1998,25 +2118,27 @@ async function failExecution(
   error: string,
   stepId: string
 ): Promise<void> {
-  const [execution] = await db
-    .update(workflowExecution)
-    .set({
-      status: "failed",
-      error,
-      errorStepId: stepId,
-      completedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(workflowExecution.id, executionId))
-    .returning();
-
-  if (execution) {
-    await db
-      .update(workflow)
+  await db.transaction(async (tx) => {
+    const [execution] = await tx
+      .update(workflowExecution)
       .set({
-        activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - 1)`,
-        failedExecutions: sql`${workflow.failedExecutions} + 1`,
+        status: "failed",
+        error,
+        errorStepId: stepId,
+        completedAt: new Date(),
+        updatedAt: new Date(),
       })
-      .where(eq(workflow.id, execution.workflowId));
-  }
+      .where(eq(workflowExecution.id, executionId))
+      .returning();
+
+    if (execution) {
+      await tx
+        .update(workflow)
+        .set({
+          activeExecutions: sql`GREATEST(0, ${workflow.activeExecutions} - 1)`,
+          failedExecutions: sql`${workflow.failedExecutions} + 1`,
+        })
+        .where(eq(workflow.id, execution.workflowId));
+    }
+  });
 }
