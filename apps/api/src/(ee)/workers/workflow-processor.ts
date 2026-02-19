@@ -1510,14 +1510,21 @@ async function handleCondition(
   const properties = contactRecord.properties as Record<string, unknown> | null;
   const triggerData = execution.triggerData as Record<string, unknown> | null;
 
+  // Strip "properties." prefix — the editor generates field values like
+  // "properties.plan" for custom properties, but the actual key in the
+  // properties object is just "plan".
+  const field = config.field.startsWith("properties.")
+    ? config.field.slice("properties.".length)
+    : config.field;
+
   // Try contact fields first, then contact.properties, then trigger data
   let fieldValue: unknown;
-  if (config.field in contactRecord) {
-    fieldValue = contactRecord[config.field as keyof typeof contactRecord];
-  } else if (properties && config.field in properties) {
-    fieldValue = properties[config.field];
-  } else if (triggerData && config.field in triggerData) {
-    fieldValue = triggerData[config.field];
+  if (field in contactRecord) {
+    fieldValue = contactRecord[field as keyof typeof contactRecord];
+  } else if (properties && field in properties) {
+    fieldValue = properties[field];
+  } else if (triggerData && field in triggerData) {
+    fieldValue = triggerData[field];
   }
 
   // Evaluate condition

@@ -1232,6 +1232,28 @@ describe("handleCondition", () => {
     );
   });
 
+  it("strips properties. prefix when looking up custom properties", async () => {
+    setupConditionTest(
+      { field: "properties.plan", operator: "equals", value: "pro" },
+      { properties: { plan: "pro" } }
+    );
+    await handler(makeSQSEvent(conditionJob));
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: "step-yes" })
+    );
+  });
+
+  it("strips properties. prefix and takes no branch when value differs", async () => {
+    setupConditionTest(
+      { field: "properties.plan", operator: "equals", value: "enterprise" },
+      { properties: { plan: "pro" } }
+    );
+    await handler(makeSQSEvent(conditionJob));
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: "step-no" })
+    );
+  });
+
   it("reads from triggerData", async () => {
     setupConditionTest(
       { field: "source", operator: "equals", value: "api" },

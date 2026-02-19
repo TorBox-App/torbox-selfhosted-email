@@ -374,7 +374,7 @@ type UpsertResult = {
 /**
  * Resolve template slug references to UUIDs.
  *
- * In the CLI, send_email steps use template slugs (e.g., "welcome").
+ * In the CLI, send_email and send_sms steps use template slugs (e.g., "welcome").
  * The API needs to resolve these to actual template UUIDs.
  */
 export async function resolveTemplateReferences(
@@ -385,7 +385,7 @@ export async function resolveTemplateReferences(
   // Collect all template slugs referenced in steps
   const templateSlugs = new Set<string>();
   for (const step of steps) {
-    if (step.config.type === "send_email") {
+    if (step.config.type === "send_email" || step.config.type === "send_sms") {
       const config = step.config as { templateId?: string; template?: string };
       const slug = config.templateId || config.template;
       if (slug) {
@@ -415,7 +415,7 @@ export async function resolveTemplateReferences(
 
   // Replace slugs with IDs in step configs
   return steps.map((step) => {
-    if (step.config.type === "send_email") {
+    if (step.config.type === "send_email" || step.config.type === "send_sms") {
       const config = step.config as { templateId?: string; template?: string };
       const slug = config.templateId || config.template;
       if (slug && slugToId.has(slug)) {

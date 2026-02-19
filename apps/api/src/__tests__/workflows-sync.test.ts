@@ -448,6 +448,44 @@ describe("resolveTemplateReferences", () => {
     // Should keep the original slug if not found (API will fail later with better error)
     expect((resolved[0].config as any).templateId).toBe("nonexistent");
   });
+
+  it("should resolve send_sms template slugs to UUIDs", async () => {
+    mockTemplates = [
+      { id: "tmpl-uuid-1", slug: "welcome" },
+      { id: "tmpl-uuid-3", slug: "sms-reminder" },
+    ];
+
+    const { resolveTemplateReferences } = await import(
+      "../routes/workflows-sync"
+    );
+
+    const steps = [
+      {
+        id: "email-1",
+        type: "send_email",
+        name: "Send welcome",
+        position: { x: 0, y: 200 },
+        config: { type: "send_email", templateId: "welcome" },
+      },
+      {
+        id: "sms-1",
+        type: "send_sms",
+        name: "Send reminder",
+        position: { x: 0, y: 400 },
+        config: { type: "send_sms", templateId: "sms-reminder" },
+      },
+    ];
+
+    const { db } = await import("@wraps/db");
+    const resolved = await resolveTemplateReferences(
+      db as never,
+      "org-1",
+      steps as any
+    );
+
+    expect((resolved[0].config as any).templateId).toBe("tmpl-uuid-1");
+    expect((resolved[1].config as any).templateId).toBe("tmpl-uuid-3");
+  });
 });
 
 describe("Workflow Settings", () => {
