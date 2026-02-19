@@ -49,7 +49,7 @@ export default function SMSSDKReferencePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>SMS SDK Reference</h1>
+        <h2>SMS SDK Reference</h2>
         <p>Complete reference for @wraps.dev/sms TypeScript SDK.</p>
         <h2>Installation</h2>
         <h2>Configuration</h2>

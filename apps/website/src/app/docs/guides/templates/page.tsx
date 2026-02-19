@@ -58,7 +58,7 @@ export default function TemplatesPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Templates as Code</h1>
+        <h2>Templates as Code</h2>
         <p>
           Write email templates as React components, preview them locally, and
           push to SES and the Wraps dashboard.

@@ -52,7 +52,7 @@ export default function SDKReferencePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Email SDK Reference</h1>
+        <h2>Email SDK Reference</h2>
         <p>Complete reference for @wraps.dev/email TypeScript SDK.</p>
         <h2>Installation</h2>
         <h2>Configuration</h2>

@@ -64,7 +64,7 @@ export default function NextjsQuickstartPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Send Email from Next.js</h1>
+        <h2>Send Email from Next.js</h2>
         <p>
           Deploy email infrastructure and send your first email from a Next.js
           application in under 5 minutes.

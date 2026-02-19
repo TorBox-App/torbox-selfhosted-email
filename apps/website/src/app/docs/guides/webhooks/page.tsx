@@ -58,7 +58,7 @@ export default function WebhooksPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Webhooks Guide</h1>
+        <h2>Webhooks Guide</h2>
         <p>
           Receive real-time SES email events at your HTTPS endpoint. Set up
           webhook delivery, authenticate requests, and handle events.

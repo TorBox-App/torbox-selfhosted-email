@@ -58,7 +58,7 @@ export default function InfrastructureSmsPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>What Gets Deployed: SMS</h1>
+        <h2>What Gets Deployed: SMS</h2>
         <p>Every AWS resource Wraps creates when you run wraps sms init.</p>
         <h2>Overview</h2>
         <h2>Core Resources</h2>

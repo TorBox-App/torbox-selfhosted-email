@@ -58,7 +58,7 @@ export default function InfrastructureCdnPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>What Gets Deployed: CDN</h1>
+        <h2>What Gets Deployed: CDN</h2>
         <p>Every AWS resource Wraps creates when you run wraps cdn init.</p>
         <h2>Overview</h2>
         <h2>Core Resources</h2>

@@ -49,7 +49,7 @@ export default function ClientSDKReferencePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Platform SDK Reference</h1>
+        <h2>Platform SDK Reference</h2>
         <p>Complete reference for @wraps.dev/client Platform API SDK.</p>
         <h2>Installation</h2>
         <h2>Authentication</h2>

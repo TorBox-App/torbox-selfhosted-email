@@ -58,7 +58,7 @@ export default function EnvironmentVariablesPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Environment Variables</h1>
+        <h2>Environment Variables</h2>
         <p>All environment variables used by the Wraps CLI and SDKs.</p>
         <h2>Wraps Configuration</h2>
         <h2>AWS Credentials</h2>

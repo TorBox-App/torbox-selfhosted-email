@@ -57,7 +57,7 @@ export default function MigrationGuidePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Migration Guide</h1>
+        <h2>Migration Guide</h2>
         <p>Switch from SendGrid, Postmark, or Resend to Wraps.</p>
         <h2>Why Migrate to Wraps</h2>
         <h2>Migrating from SendGrid</h2>

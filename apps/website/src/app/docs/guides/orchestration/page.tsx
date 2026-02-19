@@ -58,7 +58,7 @@ export default function OrchestrationPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Cross-Channel Orchestration</h1>
+        <h2>Cross-Channel Orchestration</h2>
         <p>
           Build cascading notification flows that try email first and fall back
           to SMS using the cascade() helper.

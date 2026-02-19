@@ -52,7 +52,7 @@ export default function QuickstartPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Wraps Quickstart Guide</h1>
+        <h2>Wraps Quickstart Guide</h2>
         <p>
           Deploy your first email infrastructure in 2 minutes with the Wraps
           CLI.

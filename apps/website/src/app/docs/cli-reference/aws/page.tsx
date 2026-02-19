@@ -58,7 +58,7 @@ export default function CLIReferenceAWSPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>AWS CLI Commands</h1>
+        <h2>AWS CLI Commands</h2>
         <p>
           Set up and diagnose your AWS credentials and permissions for Wraps.
         </p>

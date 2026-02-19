@@ -58,7 +58,7 @@ export default function ConfigurationPresetsPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Configuration Presets</h1>
+        <h2>Configuration Presets</h2>
         <p>
           Understanding Wraps email configuration presets — features, costs, and
           how to choose the right one.

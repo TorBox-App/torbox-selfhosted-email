@@ -58,7 +58,7 @@ export default function CLIReferenceAuthPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Auth CLI Commands</h1>
+        <h2>Auth CLI Commands</h2>
         <p>
           Authenticate with the Wraps Platform for dashboard access, templates,
           and workflows.

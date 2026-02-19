@@ -61,7 +61,7 @@ export default function FullGuidePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Full AWS Setup</h1>
+        <h2>Full AWS Setup</h2>
         <p>Complete AWS setup guide for Wraps with detailed explanations.</p>
       </article>
       <FullGuidePageContent />

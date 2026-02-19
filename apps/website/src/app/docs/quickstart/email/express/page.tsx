@@ -64,7 +64,7 @@ export default function ExpressQuickstartPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Send Email from Express</h1>
+        <h2>Send Email from Express</h2>
         <p>
           Deploy email infrastructure and send your first email from an Express
           application.

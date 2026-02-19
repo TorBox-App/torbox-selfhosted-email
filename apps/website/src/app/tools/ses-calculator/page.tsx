@@ -109,6 +109,7 @@ export default function SESCalculatorPage() {
         suppressHydrationWarning
         type="application/ld+json"
       />
+      <h1 className="sr-only">AWS SES Cost Calculator</h1>
       <SESCalculatorPageContent />
     </>
   );

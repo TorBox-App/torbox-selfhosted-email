@@ -49,7 +49,7 @@ export default function CDKReferencePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>CDK Construct Reference</h1>
+        <h2>CDK Construct Reference</h2>
         <p>Deploy Wraps infrastructure with AWS CDK.</p>
         <h2>Installation</h2>
         <h2>Usage</h2>

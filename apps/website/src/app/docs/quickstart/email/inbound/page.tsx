@@ -63,7 +63,7 @@ export default function InboundEmailQuickstartPage() {
         type="application/ld+json"
       />
       <article aria-hidden="true" className="sr-only">
-        <h1>Inbound Email Quickstart</h1>
+        <h2>Inbound Email Quickstart</h2>
         <p>
           Set up inbound email receiving with AWS SES in under 5 minutes. Parse
           incoming emails, extract attachments, and build automated workflows.

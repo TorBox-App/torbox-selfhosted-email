@@ -58,7 +58,7 @@ export default function InfrastructureEventsPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>EventBridge Events</h1>
+        <h2>EventBridge Events</h2>
         <p>
           Every email event flows through your AWS account's EventBridge bus.
           Create custom rules for alerts, analytics, and workflows.

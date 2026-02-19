@@ -55,7 +55,7 @@ export default function DomainVerificationPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Domain Verification Guide</h1>
+        <h2>Domain Verification Guide</h2>
         <p>Set up DKIM, SPF, and DMARC for your domain.</p>
         <h2>DKIM Setup</h2>
         <h2>SPF Configuration</h2>

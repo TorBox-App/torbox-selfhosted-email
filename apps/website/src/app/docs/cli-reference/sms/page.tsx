@@ -55,7 +55,7 @@ export default function CLIReferenceSMSPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>SMS CLI Commands</h1>
+        <h2>SMS CLI Commands</h2>
         <p>CLI commands for managing SMS infrastructure.</p>
         <h2>wraps sms init</h2>
         <h2>wraps sms status</h2>

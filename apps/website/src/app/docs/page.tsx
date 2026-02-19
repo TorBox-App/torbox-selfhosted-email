@@ -46,7 +46,7 @@ export default function DocsPage() {
       />
       {/* Server-rendered content for SEO - visually hidden but accessible to crawlers */}
       <nav aria-hidden="true" className="sr-only">
-        <h1>Wraps Documentation</h1>
+        <h2>Wraps Documentation</h2>
         <p>
           Deploy production-ready email infrastructure to your AWS account in
           minutes. Learn how to use the CLI, SDK, and console.

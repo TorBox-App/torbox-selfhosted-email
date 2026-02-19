@@ -58,7 +58,7 @@ export default function ErrorsReferencePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Error Codes & Troubleshooting</h1>
+        <h2>Error Codes & Troubleshooting</h2>
         <p>
           Complete reference for all CLI error codes and SDK error classes, with
           solutions for each.

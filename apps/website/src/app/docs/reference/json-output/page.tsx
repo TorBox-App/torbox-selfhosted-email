@@ -58,7 +58,7 @@ export default function JSONOutputReferencePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>JSON Output Reference</h1>
+        <h2>JSON Output Reference</h2>
         <p>Machine-readable output schemas for every CLI command.</p>
         <h2>Envelope Format</h2>
         <h2>Usage</h2>

@@ -52,7 +52,7 @@ export default function GuidesPage() {
       />
       {/* Server-rendered content for SEO */}
       <nav aria-hidden="true" className="sr-only">
-        <h1>Wraps Guides</h1>
+        <h2>Wraps Guides</h2>
         <p>
           In-depth guides for production access, domain verification, and AWS
           setup.

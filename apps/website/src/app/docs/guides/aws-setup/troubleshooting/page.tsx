@@ -61,7 +61,7 @@ export default function TroubleshootingPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>AWS Troubleshooting</h1>
+        <h2>AWS Troubleshooting</h2>
         <p>Troubleshoot common AWS setup issues.</p>
       </article>
       <TroubleshootingPageContent />

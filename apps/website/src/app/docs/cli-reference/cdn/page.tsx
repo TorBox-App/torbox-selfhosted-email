@@ -55,7 +55,7 @@ export default function CLIReferenceCdnPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>CDN CLI Commands</h1>
+        <h2>CDN CLI Commands</h2>
         <p>CLI commands for managing CDN infrastructure.</p>
         <h2>wraps cdn init</h2>
         <h2>wraps cdn status</h2>

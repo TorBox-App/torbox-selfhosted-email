@@ -64,7 +64,7 @@ export default function PermissionsPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>IAM Permissions</h1>
+        <h2>IAM Permissions</h2>
         <p>Required AWS IAM permissions for deploying Wraps infrastructure.</p>
       </article>
       <PermissionsPageContent />

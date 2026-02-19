@@ -58,7 +58,7 @@ export default function EmailQuickstartPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Email Quickstart</h1>
+        <h2>Email Quickstart</h2>
         <p>Send your first email with Wraps in under 2 minutes.</p>
         <h2>Prerequisites</h2>
         <h2>Step 1: Deploy Infrastructure</h2>

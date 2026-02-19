@@ -57,7 +57,7 @@ export default function VercelSetupPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Vercel Setup Guide</h1>
+        <h2>Vercel Setup Guide</h2>
         <p>Deploy email infrastructure with Vercel OIDC federation.</p>
         <h2>Overview</h2>
         <h2>Prerequisites</h2>

@@ -56,6 +56,7 @@ export default function SPFBuilderPage() {
         suppressHydrationWarning
         type="application/ld+json"
       />
+      <h1 className="sr-only">SPF Record Builder</h1>
       <SPFBuilderPageContent />
     </>
   );

@@ -55,7 +55,7 @@ export default function CLIReferenceEmailPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Email CLI Commands</h1>
+        <h2>Email CLI Commands</h2>
         <p>CLI commands for managing email infrastructure.</p>
         <h2>wraps email init</h2>
         <h2>wraps email status</h2>

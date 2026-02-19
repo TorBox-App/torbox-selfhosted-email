@@ -58,7 +58,7 @@ export default function WorkflowsPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Building Workflows</h1>
+        <h2>Building Workflows</h2>
         <p>
           Create automated email and SMS sequences using the Wraps workflow DSL.
         </p>

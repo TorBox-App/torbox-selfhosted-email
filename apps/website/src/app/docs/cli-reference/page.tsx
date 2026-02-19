@@ -49,7 +49,7 @@ export default function CLIReferencePage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Wraps CLI Reference</h1>
+        <h2>Wraps CLI Reference</h2>
         <p>Complete reference for all Wraps CLI commands.</p>
         <h2>Installation</h2>
         <h2>Email Commands</h2>

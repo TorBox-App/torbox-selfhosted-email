@@ -58,7 +58,7 @@ export default function InfrastructureEmailPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>What Gets Deployed: Email</h1>
+        <h2>What Gets Deployed: Email</h2>
         <p>
           Every AWS resource Wraps creates when you run wraps email init,
           organized by configuration preset.

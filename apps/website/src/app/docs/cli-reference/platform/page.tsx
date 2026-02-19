@@ -58,7 +58,7 @@ export default function CLIReferencePlatformPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Platform CLI Commands</h1>
+        <h2>Platform CLI Commands</h2>
         <p>
           Connect your AWS infrastructure to the Wraps Platform for dashboards,
           templates, and workflows.

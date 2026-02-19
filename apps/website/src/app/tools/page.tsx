@@ -56,6 +56,7 @@ export default function ToolsPage() {
         suppressHydrationWarning
         type="application/ld+json"
       />
+      <h1 className="sr-only">Email Deliverability Checker</h1>
       <ToolsPageContent />
     </>
   );

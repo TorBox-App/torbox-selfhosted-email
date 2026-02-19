@@ -55,7 +55,7 @@ export default function AWSSetupPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>AWS Setup Guide</h1>
+        <h2>AWS Setup Guide</h2>
         <p>Configure your AWS account for Wraps.</p>
         <h2>Quick Setup</h2>
         <h2>Full Setup</h2>

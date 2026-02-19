@@ -55,7 +55,7 @@ export default function SmsQuickstartPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>SMS Quickstart</h1>
+        <h2>SMS Quickstart</h2>
         <p>Send SMS messages through AWS with the Wraps SMS SDK.</p>
         <h2>Prerequisites</h2>
         <h2>Step 1: Deploy Infrastructure</h2>

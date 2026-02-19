@@ -58,7 +58,7 @@ export default function ProductionAccessPage() {
       />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
-        <h1>Production Access Guide</h1>
+        <h2>Production Access Guide</h2>
         <p>How to get AWS SES production access approval.</p>
         <h2>Prerequisites</h2>
         <h2>Request Process</h2>
