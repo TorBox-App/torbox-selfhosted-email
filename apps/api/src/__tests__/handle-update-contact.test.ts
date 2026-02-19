@@ -84,10 +84,6 @@ vi.mock("../services/credentials", () => ({
   getCredentials: vi.fn(),
 }));
 
-vi.mock("../services/segment-evaluator", () => ({
-  evaluateContactsForSegment: vi.fn(),
-}));
-
 vi.mock("../services/workflow-queue", () => ({
   deleteScheduledStep: vi.fn(),
   enqueueWorkflowStep: vi.fn(),

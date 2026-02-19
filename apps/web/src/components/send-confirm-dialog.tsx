@@ -32,6 +32,10 @@ export function SendConfirmDialog({
 }: SendConfirmDialogProps) {
   const formattedCount = recipientCount.toLocaleString();
 
+  const scheduleDescription = scheduledDate
+    ? `This will schedule emails to ${formattedCount} contacts for ${scheduledDate.toLocaleDateString(undefined, { dateStyle: "medium" })} at ${scheduledDate.toLocaleTimeString(undefined, { timeStyle: "short" })}.`
+    : `This will schedule emails to ${formattedCount} contacts.`;
+
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
@@ -41,7 +45,7 @@ export function SendConfirmDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>
             {variant === "schedule"
-              ? `This will schedule emails to ${formattedCount} contacts.`
+              ? scheduleDescription
               : `This will immediately send emails to ${formattedCount} contacts. This action cannot be undone.`}
           </AlertDialogDescription>
         </AlertDialogHeader>

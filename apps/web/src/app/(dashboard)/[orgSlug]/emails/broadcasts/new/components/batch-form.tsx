@@ -1559,6 +1559,7 @@ function ReviewStep({
         onOpenChange={setShowConfirmDialog}
         open={showConfirmDialog}
         recipientCount={recipientCount ?? 0}
+        scheduledDate={data.scheduledDate}
         variant={data.scheduleType === "later" ? "schedule" : "send"}
       />
     </div>

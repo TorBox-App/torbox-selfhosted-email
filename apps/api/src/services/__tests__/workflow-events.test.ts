@@ -31,13 +31,8 @@ vi.mock("../workflow-queue", () => ({
   }),
 }));
 
-// Mock segment evaluator
-vi.mock("../segment-evaluator", () => ({
-  contactMatchesSegment: vi.fn().mockImplementation((_contactId, segmentId) => {
-    // Default: contact matches segment if segmentId ends with "-match"
-    return Promise.resolve(segmentId.endsWith("-match"));
-  }),
-}));
+// Note: segment evaluation now uses SQL-based functions from @wraps/db
+// (contactMatchesCondition, getSegmentsByIds) which are mocked below in the @wraps/db mock.
 
 // Mock database
 const mockWorkflows: Array<{
@@ -82,6 +77,7 @@ vi.mock("@wraps/db", () => ({
     })),
   },
   contact: { id: "id" },
+  contactEvent: {},
   segment: { id: "id", name: "name" },
   workflow: {
     id: "id",
@@ -102,6 +98,21 @@ vi.mock("@wraps/db", () => ({
   and: vi.fn((...args) => ({ and: args })),
   inArray: vi.fn((field, values) => ({ inArray: [field, values] })),
   sql: vi.fn((template) => template),
+  // SQL-based segment evaluation functions
+  contactMatchesCondition: vi
+    .fn()
+    .mockImplementation((_db, _contactId, _orgId, _condition) =>
+      Promise.resolve(false)
+    ),
+  getSegmentsByIds: vi.fn().mockImplementation((_db, segmentIds) => {
+    const result = new Map();
+    for (const seg of mockSegments) {
+      if (segmentIds.includes(seg.id)) {
+        result.set(seg.id, seg);
+      }
+    }
+    return Promise.resolve(result);
+  }),
 }));
 
 // Import after mocking

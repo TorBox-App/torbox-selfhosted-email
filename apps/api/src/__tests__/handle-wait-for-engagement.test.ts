@@ -96,10 +96,6 @@ vi.mock("../services/credentials", () => ({
   getCredentials: vi.fn(),
 }));
 
-vi.mock("../services/segment-evaluator", () => ({
-  evaluateContactsForSegment: vi.fn(),
-}));
-
 // Mock paths relative to THIS test file (src/__tests__/) to reach src/services/
 vi.mock("../services/workflow-queue", () => ({
   deleteScheduledStep: vi.fn(),
