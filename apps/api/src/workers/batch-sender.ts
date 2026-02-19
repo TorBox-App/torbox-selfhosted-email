@@ -141,14 +141,14 @@ async function processJob(job: BatchJob): Promise<void> {
   // Get customer AWS credentials
   const credentials = await getCredentials(awsAccountId);
 
-  // Create SES v2 client with customer credentials (for bulk sending)
+  // Create SES v2 client with customer credentials and their SES region
   const sesClient = new SESv2Client({
     credentials: {
       accessKeyId: credentials.accessKeyId,
       secretAccessKey: credentials.secretAccessKey,
       sessionToken: credentials.sessionToken,
     },
-    region: process.env.AWS_REGION ?? "us-east-1",
+    region: credentials.region,
   });
 
   // Fetch customer's SES rate limit

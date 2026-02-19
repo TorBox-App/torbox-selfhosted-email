@@ -15,6 +15,7 @@ export type AwsCredentials = {
   secretAccessKey: string;
   sessionToken: string;
   expiration: Date;
+  region: string;
 };
 
 // Cache credentials by account ID
@@ -33,11 +34,12 @@ export async function getCredentials(
     return cached.credentials;
   }
 
-  // Look up AWS account to get role ARN
+  // Look up AWS account to get role ARN and region
   const [account] = await db
     .select({
       roleArn: awsAccount.roleArn,
       externalId: awsAccount.externalId,
+      region: awsAccount.region,
     })
     .from(awsAccount)
     .where(eq(awsAccount.id, awsAccountId))
@@ -66,6 +68,7 @@ export async function getCredentials(
     secretAccessKey: result.Credentials.SecretAccessKey!,
     sessionToken: result.Credentials.SessionToken!,
     expiration: result.Credentials.Expiration!,
+    region: account.region,
   };
 
   // Cache credentials
@@ -84,6 +87,7 @@ export async function getCredentials(
 export async function assumeRoleForValidation(params: {
   roleArn: string;
   externalId: string;
+  region: string;
 }): Promise<AwsCredentials> {
   const result = await stsClient.send(
     new AssumeRoleCommand({
@@ -103,5 +107,6 @@ export async function assumeRoleForValidation(params: {
     secretAccessKey: result.Credentials.SecretAccessKey!,
     sessionToken: result.Credentials.SessionToken!,
     expiration: result.Credentials.Expiration!,
+    region: params.region,
   };
 }
