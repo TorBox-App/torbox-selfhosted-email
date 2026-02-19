@@ -58,9 +58,9 @@ const ContactSection = memo(function ContactSection() {
           <Badge className="mb-4" variant="outline">
             Get In Touch
           </Badge>
-          <h1 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
+          <h2 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
             Need help or have questions?
-          </h1>
+          </h2>
           <p className="text-lg text-muted-foreground">
             Our team is here to help you get the most out of Wraps. Choose the
             best way to reach out to us.

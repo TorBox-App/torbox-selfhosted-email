@@ -23,6 +23,14 @@ export const metadata: Metadata = {
 export default function ChangelogPage() {
   return (
     <>
+      {/* Server-rendered content for SEO */}
+      <article aria-hidden="true" className="sr-only">
+        <h1>Changelog</h1>
+        <p>
+          Latest updates, improvements, and releases for Wraps CLI, SDK, and
+          Platform.
+        </p>
+      </article>
       <ChangelogPageContent />
     </>
   );

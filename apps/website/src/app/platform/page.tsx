@@ -32,6 +32,18 @@ export const metadata: Metadata = {
 export default function DashboardPage() {
   return (
     <>
+      {/* Server-rendered content for SEO */}
+      <article aria-hidden="true" className="sr-only">
+        <h1>Wraps Platform</h1>
+        <p>
+          Templates, broadcasts, contacts, and analytics. The premium layer on
+          top of your AWS infrastructure.
+        </p>
+        <h2>Template Builder</h2>
+        <h2>Broadcast Campaigns</h2>
+        <h2>Contact Management</h2>
+        <h2>Analytics Dashboard</h2>
+      </article>
       <DashboardPageContent />
     </>
   );

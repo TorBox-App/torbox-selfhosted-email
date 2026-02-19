@@ -129,6 +129,22 @@ export default function Page() {
         id="faq-schema"
         type="application/ld+json"
       />
+      {/* Server-rendered content for SEO */}
+      <article aria-hidden="true" className="sr-only">
+        <h1>Receive Emails in Your AWS Account with Wraps</h1>
+        <p>
+          Build support inboxes, automate order processing, and create
+          email-to-ticket workflows. All infrastructure deploys to your AWS
+          account with EventBridge webhooks for real-time processing.
+        </p>
+        <h2>Why Inbound Email?</h2>
+        <h2>Use Cases</h2>
+        <h2>Architecture</h2>
+        <h2>Getting Started</h2>
+        <h2>SDK Examples</h2>
+        <h2>EventBridge Webhooks</h2>
+      </article>
+
       <div className="min-h-screen bg-background text-foreground">
         <LandingNavbar />
 

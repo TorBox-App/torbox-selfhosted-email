@@ -205,6 +205,33 @@ export default function Page() {
         id="faq-schema"
         type="application/ld+json"
       />
+      {/* Server-rendered content for SEO - visually hidden but accessible to crawlers */}
+      <article aria-hidden="true" className="sr-only">
+        <h1>AWS SES Setup Simplified: From Hours to Minutes</h1>
+        <p>
+          If you&apos;ve ever tried to set up AWS SES from scratch, you know the
+          pain. What should be a simple &quot;send email from my app&quot; turns
+          into a multi-day odyssey through IAM policies, sandbox approvals, DKIM
+          configuration, and prayers to the DNS propagation gods. We built Wraps
+          because this experience is broken&mdash;and because you shouldn&apos;t
+          have to choose between AWS economics and developer sanity.
+        </p>
+        <h2>The Problem: SES Setup is a Nightmare</h2>
+        <h2>The Solution: Infrastructure as Code, Zero Console</h2>
+        <h2>See It In Action</h2>
+        <h2>Option 1: The CLI Path (Fastest)</h2>
+        <h2>Manual vs Wraps</h2>
+        <h2>Option 2: Understanding the IaC (What Gets Deployed)</h2>
+        <h2>Configuration Presets</h2>
+        <h2>Sending Emails with the SDK</h2>
+        <h2>Vercel OIDC Integration</h2>
+        <h2>Connecting Existing SES</h2>
+        <h2>Troubleshooting</h2>
+        <h2>What You&apos;re Not Paying For</h2>
+        <h2>Design Principles</h2>
+        <h2>Getting Started</h2>
+      </article>
+
       <div className="min-h-screen bg-background text-foreground">
         <LandingNavbar />
 

@@ -142,6 +142,25 @@ export default function Page() {
         id="faq-schema"
         type="application/ld+json"
       />
+      {/* Server-rendered content for SEO */}
+      <article aria-hidden="true" className="sr-only">
+        <h1>Email Templates as React Components, Workflows as TypeScript</h1>
+        <p>
+          Write email templates as React components and automation workflows as
+          TypeScript. Version-controlled, type-safe, code-reviewable email
+          infrastructure deployed to your AWS account.
+        </p>
+        <h2>The Problem with GUI-Only Email Tooling</h2>
+        <h2>Templates as React Components</h2>
+        <h2>How Template Compilation Works</h2>
+        <h2>Workflows as TypeScript</h2>
+        <h2>The Cascade Primitive</h2>
+        <h2>Code and Dashboard Stay in Sync</h2>
+        <h2>Send with the SDK</h2>
+        <h2>Why This Matters</h2>
+        <h2>Getting Started</h2>
+      </article>
+
       <div className="min-h-screen bg-background text-foreground">
         <LandingNavbar />
 
