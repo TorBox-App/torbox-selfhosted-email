@@ -21,6 +21,7 @@ import {
 import {
   createSegment,
   deleteSegment,
+  getPropertyKeys,
   getSegment,
   listSegments,
   previewSegment,
@@ -737,6 +738,133 @@ describe("Segments Server Actions", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.segment.memberCount).toBe(2);
+      }
+    });
+  });
+
+  describe("getPropertyKeys", () => {
+    it("should return distinct property keys from contacts", async () => {
+      const crypto = await import("node:crypto");
+      await db.insert(contact).values([
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "props1@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("props1@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { plan: "pro", country: "US" },
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "props2@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("props2@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { role: "admin", country: "UK" },
+        },
+      ]);
+
+      const result = await getPropertyKeys(testOrganization.id);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.keys).toEqual(["country", "plan", "role"]);
+      }
+    });
+
+    it("should deduplicate keys shared across multiple contacts", async () => {
+      const crypto = await import("node:crypto");
+      await db.insert(contact).values([
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "dup1@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("dup1@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { plan: "pro", source: "web" },
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "dup2@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("dup2@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { plan: "free", source: "api" },
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "dup3@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("dup3@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: { plan: "enterprise" },
+        },
+      ]);
+
+      const result = await getPropertyKeys(testOrganization.id);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.keys).toEqual(["plan", "source"]);
+      }
+    });
+
+    it("should return empty array when no contacts exist", async () => {
+      const result = await getPropertyKeys(testOrganization.id);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.keys).toEqual([]);
+      }
+    });
+
+    it("should return empty array when all contacts have empty properties", async () => {
+      const crypto = await import("node:crypto");
+      await db.insert(contact).values([
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "empty1@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("empty1@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: {},
+        },
+        {
+          id: crypto.randomUUID(),
+          organizationId: testOrganization.id,
+          email: "empty2@example.com",
+          emailHash: crypto
+            .createHash("sha256")
+            .update("empty2@example.com")
+            .digest("hex"),
+          status: "active",
+          properties: {},
+        },
+      ]);
+
+      const result = await getPropertyKeys(testOrganization.id);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.keys).toEqual([]);
       }
     });
   });

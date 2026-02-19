@@ -686,22 +686,16 @@ export async function getPropertyKeys(
       };
     }
 
-    // Fetch contacts and extract property keys in JS to avoid raw SQL issues
-    const contacts = await db
-      .select({ properties: contact.properties })
-      .from(contact)
-      .where(eq(contact.organizationId, organizationId));
+    const rows = await db.execute<{ key: string }>(
+      sql`SELECT DISTINCT json_object_keys(${contact.properties}) AS key
+          FROM ${contact}
+          WHERE ${contact.organizationId} = ${organizationId}
+            AND ${contact.properties} IS NOT NULL`
+    );
 
-    const keys = new Set<string>();
-    for (const c of contacts) {
-      if (c.properties && typeof c.properties === "object") {
-        for (const key of Object.keys(c.properties)) {
-          keys.add(key);
-        }
-      }
-    }
+    const keys = rows.rows.map((r) => r.key).sort();
 
-    return { success: true, keys: Array.from(keys).sort() };
+    return { success: true, keys };
   } catch (error) {
     const log = createActionLogger("getPropertyKeys", {
       orgSlug: organizationId,
