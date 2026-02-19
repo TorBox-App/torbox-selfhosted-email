@@ -1,372 +1,307 @@
 /**
  * Authentication & Authorization Tests
  *
- * Tests for:
- * 1. API key authentication
- * 2. Session token authentication
- * 3. Tenant isolation (org-based access control)
- * 4. Unauthorized access prevention
+ * Integration tests for the real auth middleware against a real database.
+ * Tests API key auth, session auth, tenant isolation, and edge cases.
  */
 
+import { createHash } from "node:crypto";
+import {
+  apiKey,
+  db,
+  eq,
+  member,
+  organization,
+  session,
+  subscription,
+  user,
+} from "@wraps/db";
+import { inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createAuthenticatedRoutes } from "../middleware/auth";
 
-// Mock crypto for API key hashing
-vi.mock("node:crypto", () => ({
-  createHash: vi.fn(() => ({
-    update: vi.fn(() => ({
-      digest: vi.fn((_encoding) => {
-        // Return predictable hashes for testing
-        return "mocked-hash";
-      }),
-    })),
-  })),
-}));
+const TEST_PREFIX = "auth-test";
 
-// Test data
-const ORG_1 = {
-  id: "org-tenant-1",
-  name: "Tenant One",
+// --- Test data ---
+
+const testUser1 = {
+  id: `${TEST_PREFIX}-user-1`,
+  email: `${TEST_PREFIX}-1@example.com`,
+  name: "Auth Test User 1",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
 };
 
-const ORG_2 = {
-  id: "org-tenant-2",
-  name: "Tenant Two",
+const testUser2 = {
+  id: `${TEST_PREFIX}-user-2`,
+  email: `${TEST_PREFIX}-2@example.com`,
+  name: "Auth Test User 2",
+  emailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  image: null,
+  twoFactorEnabled: false,
+  stripeCustomerId: null,
 };
 
-const API_KEY_ORG_1 = {
-  id: "key-org1",
-  key: "wraps_live_org1key123",
-  keyHash: "hash-org1",
-  organizationId: ORG_1.id,
-  createdBy: "user-1",
-  expiresAt: null as Date | null,
+const testOrg1 = {
+  id: `${TEST_PREFIX}-org-1`,
+  name: "Auth Test Org 1",
+  slug: `${TEST_PREFIX}-org-1`,
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
 };
 
-const API_KEY_ORG_2 = {
-  id: "key-org2",
-  key: "wraps_live_org2key456",
-  keyHash: "hash-org2",
-  organizationId: ORG_2.id,
-  createdBy: "user-2",
-  expiresAt: null as Date | null,
+const testOrg2 = {
+  id: `${TEST_PREFIX}-org-2`,
+  name: "Auth Test Org 2",
+  slug: `${TEST_PREFIX}-org-2`,
+  createdAt: new Date(),
+  logo: null,
+  metadata: null,
 };
 
-const EXPIRED_API_KEY = {
-  id: "key-expired",
-  key: "wraps_live_expiredkey",
-  keyHash: "hash-expired",
-  organizationId: ORG_1.id,
-  createdBy: "user-1",
-  expiresAt: new Date("2020-01-01") as Date | null, // In the past
-};
+// Pre-compute API key hashes
+const RAW_KEY_ORG1 = "wraps_live_authtest_org1_key";
+const RAW_KEY_ORG2 = "wraps_live_authtest_org2_key";
+const RAW_KEY_EXPIRED = "wraps_live_authtest_expired_key";
 
-const SESSION_ORG_1 = {
-  id: "session-1",
-  token: "session-token-org1",
-  userId: "user-1",
-  activeOrganizationId: ORG_1.id,
-  expiresAt: new Date(Date.now() + 86_400_000), // 24 hours from now
-};
-
-// API key type
-type MockApiKey = {
-  id: string;
-  key: string;
-  keyHash: string;
-  organizationId: string;
-  createdBy: string;
-  expiresAt: Date | null;
-};
-
-// Mock database responses
-const mockApiKeys = new Map<string, MockApiKey>([
-  ["hash-org1", API_KEY_ORG_1],
-  ["hash-org2", API_KEY_ORG_2],
-  ["hash-expired", EXPIRED_API_KEY],
-]);
-
-const mockSessions = new Map([["session-token-org1", SESSION_ORG_1]]);
-
-const mockMembers = new Map([
-  [`${SESSION_ORG_1.userId}:${ORG_1.id}`, { role: "owner" }],
-]);
-
-const mockSubscriptions = new Map([
-  [ORG_1.id, { plan: "starter", status: "active" }],
-  [ORG_2.id, { plan: "pro", status: "active" }],
-]);
-
-// Contacts per organization (for tenant isolation tests)
-const mockContacts = new Map([
-  [
-    ORG_1.id,
-    [
-      {
-        id: "contact-1-org1",
-        email: "user1@tenant1.com",
-        organizationId: ORG_1.id,
-      },
-      {
-        id: "contact-2-org1",
-        email: "user2@tenant1.com",
-        organizationId: ORG_1.id,
-      },
-    ],
-  ],
-  [
-    ORG_2.id,
-    [
-      {
-        id: "contact-1-org2",
-        email: "user1@tenant2.com",
-        organizationId: ORG_2.id,
-      },
-    ],
-  ],
-]);
-
-// Mock database
-vi.mock("@wraps/db", () => ({
-  db: {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(() => ({
-          limit: vi.fn(() => []),
-        })),
-      })),
-    })),
-    update: vi.fn(() => ({
-      set: vi.fn(() => ({
-        where: vi.fn(() => ({
-          catch: vi.fn(),
-        })),
-      })),
-    })),
-  },
-  apiKey: {
-    id: "id",
-    keyHash: "key_hash",
-    organizationId: "organization_id",
-    createdBy: "created_by",
-    expiresAt: "expires_at",
-    lastUsedAt: "last_used_at",
-  },
-  session: {
-    id: "id",
-    token: "token",
-    userId: "user_id",
-    expiresAt: "expires_at",
-    activeOrganizationId: "active_organization_id",
-  },
-  member: {
-    userId: "user_id",
-    organizationId: "organization_id",
-    role: "role",
-  },
-  subscription: {
-    referenceId: "reference_id",
-    plan: "plan",
-    status: "status",
-  },
-  eq: vi.fn((a, b) => ({ eq: [a, b] })),
-  and: vi.fn((...args) => ({ and: args })),
-}));
-
-// Helper to create hash for a specific key
-function getHashForKey(key: string): string {
-  if (key === API_KEY_ORG_1.key) {
-    return "hash-org1";
-  }
-  if (key === API_KEY_ORG_2.key) {
-    return "hash-org2";
-  }
-  if (key === EXPIRED_API_KEY.key) {
-    return "hash-expired";
-  }
-  return "unknown-hash";
+function hashKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
 }
 
-// Auth context type
-type AuthContext = {
-  apiKeyId: string | null;
-  organizationId: string;
-  userId: string | null;
-  planId: string | null;
+const testApiKeyOrg1 = {
+  id: `${TEST_PREFIX}-apikey-org1`,
+  organizationId: testOrg1.id,
+  name: "Test Key Org 1",
+  keyHash: hashKey(RAW_KEY_ORG1),
+  prefix: "wraps_live_auth",
+  permissions: [],
+  expiresAt: null,
+  createdBy: testUser1.id,
+  createdAt: new Date(),
 };
 
-// Create a test app that mimics the real auth middleware behavior
-function createAuthTestApp() {
-  return (
-    new Elysia()
-      .derive(async ({ request }) => {
-        const authHeader = request.headers.get("authorization");
-        const orgIdHeader = request.headers.get("x-organization-id");
+const testApiKeyOrg2 = {
+  id: `${TEST_PREFIX}-apikey-org2`,
+  organizationId: testOrg2.id,
+  name: "Test Key Org 2",
+  keyHash: hashKey(RAW_KEY_ORG2),
+  prefix: "wraps_live_auth",
+  permissions: [],
+  expiresAt: null,
+  createdBy: testUser2.id,
+  createdAt: new Date(),
+};
 
-        if (!authHeader) {
-          return {
-            auth: null as AuthContext | null,
-            authError: "Unauthorized: no auth header",
-          };
-        }
+const testApiKeyExpired = {
+  id: `${TEST_PREFIX}-apikey-expired`,
+  organizationId: testOrg1.id,
+  name: "Expired Key",
+  keyHash: hashKey(RAW_KEY_EXPIRED),
+  prefix: "wraps_live_auth",
+  permissions: [],
+  expiresAt: new Date("2020-01-01"),
+  createdBy: testUser1.id,
+  createdAt: new Date(),
+};
 
-        const token = authHeader.startsWith("Bearer ")
-          ? authHeader.slice(7)
-          : authHeader;
+const SESSION_TOKEN_ORG1 = `${TEST_PREFIX}-session-token-1`;
 
-        // API Key auth
-        if (token.startsWith("wraps_")) {
-          const keyHash = getHashForKey(token);
-          const keyRecord = mockApiKeys.get(keyHash);
+const testSessionOrg1 = {
+  id: `${TEST_PREFIX}-session-1`,
+  token: SESSION_TOKEN_ORG1,
+  userId: testUser1.id,
+  activeOrganizationId: testOrg1.id,
+  expiresAt: new Date(Date.now() + 86_400_000),
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  ipAddress: null,
+  userAgent: null,
+};
 
-          if (!keyRecord) {
-            return {
-              auth: null as AuthContext | null,
-              authError: "Unauthorized: invalid API key",
-            };
-          }
+const SESSION_TOKEN_EXPIRED = `${TEST_PREFIX}-session-token-expired`;
 
-          if (keyRecord.expiresAt && keyRecord.expiresAt < new Date()) {
-            return {
-              auth: null as AuthContext | null,
-              authError: "Unauthorized: API key expired",
-            };
-          }
+const testSessionExpired = {
+  id: `${TEST_PREFIX}-session-expired`,
+  token: SESSION_TOKEN_EXPIRED,
+  userId: testUser1.id,
+  activeOrganizationId: testOrg1.id,
+  expiresAt: new Date("2020-01-01"),
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  ipAddress: null,
+  userAgent: null,
+};
 
-          const sub = mockSubscriptions.get(keyRecord.organizationId);
-          return {
-            auth: {
-              apiKeyId: keyRecord.id,
-              organizationId: keyRecord.organizationId,
-              userId: keyRecord.createdBy,
-              planId: sub?.plan || null,
-            } as AuthContext,
-            authError: null as string | null,
-          };
-        }
+const testSubscriptionOrg1 = {
+  id: `${TEST_PREFIX}-sub-1`,
+  plan: "starter",
+  referenceId: testOrg1.id,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  status: "active",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
-        // Session auth
-        const sessionRecord = mockSessions.get(token);
-        if (!sessionRecord) {
-          return {
-            auth: null as AuthContext | null,
-            authError: "Unauthorized: session not found",
-          };
-        }
+const testSubscriptionOrg2 = {
+  id: `${TEST_PREFIX}-sub-2`,
+  plan: "growth",
+  referenceId: testOrg2.id,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  status: "active",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
-        if (sessionRecord.expiresAt < new Date()) {
-          return {
-            auth: null as AuthContext | null,
-            authError: "Unauthorized: session expired",
-          };
-        }
+// --- Test app using the real auth middleware ---
 
-        const orgId = orgIdHeader || sessionRecord.activeOrganizationId;
-        if (!orgId) {
-          return {
-            auth: null as AuthContext | null,
-            authError: "Unauthorized: no org id",
-          };
-        }
-
-        const memberKey = `${sessionRecord.userId}:${orgId}`;
-        const memberRecord = mockMembers.get(memberKey);
-        if (!memberRecord) {
-          return {
-            auth: null as AuthContext | null,
-            authError: "Unauthorized: user not member of org",
-          };
-        }
-
-        const sub = mockSubscriptions.get(orgId);
-        return {
-          auth: {
-            apiKeyId: null,
-            organizationId: orgId,
-            userId: sessionRecord.userId,
-            planId: sub?.plan || null,
-          } as AuthContext,
-          authError: null as string | null,
-        };
-      })
-      .onBeforeHandle(({ auth, authError, set }) => {
-        if (authError || !auth) {
-          set.status = 401;
-          return { error: authError || "Unauthorized" };
-        }
-      })
-      // Test endpoints
-      .get("/v1/contacts", ({ auth }) => {
-        const contacts = mockContacts.get(auth?.organizationId ?? "") || [];
-        return { contacts, organizationId: auth?.organizationId };
-      })
-      .get("/v1/contacts/:id", ({ auth, params, set }) => {
-        const contacts = mockContacts.get(auth?.organizationId ?? "") || [];
-        const contact = contacts.find((c) => c.id === params.id);
-
-        if (!contact) {
-          set.status = 404;
-          return { error: "Contact not found" };
-        }
-
-        return contact;
-      })
-      .post("/v1/contacts", async ({ auth, request }) => {
-        const body = await request.json();
-        return {
-          id: "new-contact",
-          ...body,
-          organizationId: auth?.organizationId,
-        };
-      })
-      .get("/v1/me", ({ auth }) => ({
-        organizationId: auth?.organizationId,
-        userId: auth?.userId,
-        planId: auth?.planId,
-        apiKeyId: auth?.apiKeyId,
-      }))
-  );
+function createTestApp() {
+  return createAuthenticatedRoutes("/v1")
+    .get("/me", ({ auth }) => ({
+      organizationId: auth.organizationId,
+      userId: auth.userId,
+      planId: auth.planId,
+      apiKeyId: auth.apiKeyId,
+    }));
 }
+
+// --- DB setup/teardown ---
+
+beforeAll(async () => {
+  // Insert users
+  await db
+    .insert(user)
+    .values([testUser1, testUser2])
+    .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
+
+  // Insert orgs
+  await db
+    .insert(organization)
+    .values([testOrg1, testOrg2])
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: testOrg1.name },
+    });
+
+  // Insert memberships
+  await db
+    .insert(member)
+    .values([
+      {
+        id: `${TEST_PREFIX}-member-1`,
+        organizationId: testOrg1.id,
+        userId: testUser1.id,
+        role: "owner",
+        createdAt: new Date(),
+      },
+      {
+        id: `${TEST_PREFIX}-member-2`,
+        organizationId: testOrg2.id,
+        userId: testUser2.id,
+        role: "owner",
+        createdAt: new Date(),
+      },
+    ])
+    .onConflictDoUpdate({ target: member.id, set: { role: "owner" } });
+
+  // Insert subscriptions
+  await db
+    .insert(subscription)
+    .values([testSubscriptionOrg1, testSubscriptionOrg2])
+    .onConflictDoUpdate({
+      target: subscription.id,
+      set: { updatedAt: new Date() },
+    });
+
+  // Insert API keys
+  await db
+    .insert(apiKey)
+    .values([testApiKeyOrg1, testApiKeyOrg2, testApiKeyExpired])
+    .onConflictDoUpdate({
+      target: apiKey.id,
+      set: { createdAt: new Date() },
+    });
+
+  // Insert sessions
+  await db
+    .insert(session)
+    .values([testSessionOrg1, testSessionExpired])
+    .onConflictDoUpdate({
+      target: session.id,
+      set: { updatedAt: new Date() },
+    });
+});
+
+afterAll(async () => {
+  await db.delete(session).where(eq(session.userId, testUser1.id));
+  const orgIds = [testOrg1.id, testOrg2.id];
+  const userIds = [testUser1.id, testUser2.id];
+  await db.delete(apiKey).where(inArray(apiKey.organizationId, orgIds));
+  await db.delete(member).where(inArray(member.organizationId, orgIds));
+  await db.delete(subscription).where(inArray(subscription.referenceId, orgIds));
+  await db.delete(organization).where(inArray(organization.id, orgIds));
+  await db.delete(user).where(inArray(user.id, userIds));
+});
+
+// --- Tests ---
 
 describe("Authentication", () => {
-  let app: ReturnType<typeof createAuthTestApp>;
-
-  beforeEach(() => {
-    app = createAuthTestApp();
-  });
-
   describe("API Key Authentication", () => {
     it("authenticates with valid API key", async () => {
+      const app = createTestApp();
       const response = await app.handle(
         new Request("http://localhost/v1/me", {
-          headers: {
-            Authorization: `Bearer ${API_KEY_ORG_1.key}`,
-          },
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG1}` },
         })
       );
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(body.organizationId).toBe(ORG_1.id);
-      expect(body.apiKeyId).toBe(API_KEY_ORG_1.id);
+      expect(body.organizationId).toBe(testOrg1.id);
+      expect(body.apiKeyId).toBe(testApiKeyOrg1.id);
+      expect(body.userId).toBe(testUser1.id);
     });
 
-    it("rejects requests without auth header", async () => {
+    it("returns plan from subscription", async () => {
+      const app = createTestApp();
       const response = await app.handle(
-        new Request("http://localhost/v1/contacts")
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG1}` },
+        })
       );
 
-      expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("Unauthorized");
+      expect(body.planId).toBe("starter");
+    });
+
+    it("different org gets different plan", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG2}` },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.organizationId).toBe(testOrg2.id);
+      expect(body.planId).toBe("growth");
     });
 
     it("rejects invalid API key", async () => {
+      const app = createTestApp();
       const response = await app.handle(
-        new Request("http://localhost/v1/contacts", {
-          headers: {
-            Authorization: "Bearer wraps_live_invalidkey",
-          },
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: "Bearer wraps_live_doesnotexist" },
         })
       );
 
@@ -376,69 +311,75 @@ describe("Authentication", () => {
     });
 
     it("rejects expired API key", async () => {
+      const app = createTestApp();
       const response = await app.handle(
-        new Request("http://localhost/v1/contacts", {
-          headers: {
-            Authorization: `Bearer ${EXPIRED_API_KEY.key}`,
-          },
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_EXPIRED}` },
         })
       );
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("expired");
-    });
-
-    it("rejects malformed API key (wrong prefix)", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/contacts", {
-          headers: {
-            Authorization: "Bearer invalid_prefix_key",
-          },
-        })
-      );
-
-      expect(response.status).toBe(401);
+      expect(body.error).toContain("invalid API key");
     });
 
     it("handles API key without Bearer prefix", async () => {
+      const app = createTestApp();
       const response = await app.handle(
         new Request("http://localhost/v1/me", {
-          headers: {
-            Authorization: API_KEY_ORG_1.key,
-          },
+          headers: { Authorization: RAW_KEY_ORG1 },
         })
       );
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(body.organizationId).toBe(ORG_1.id);
+      expect(body.organizationId).toBe(testOrg1.id);
+    });
+
+    it("updates lastUsedAt on successful auth", async () => {
+      const app = createTestApp();
+      const before = new Date();
+
+      await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${RAW_KEY_ORG1}` },
+        })
+      );
+
+      const [updatedKey] = await db
+        .select({ lastUsedAt: apiKey.lastUsedAt })
+        .from(apiKey)
+        .where(eq(apiKey.id, testApiKeyOrg1.id))
+        .limit(1);
+
+      expect(updatedKey.lastUsedAt).toBeInstanceOf(Date);
+      expect(updatedKey.lastUsedAt!.getTime()).toBeGreaterThanOrEqual(
+        before.getTime() - 1000
+      );
     });
   });
 
   describe("Session Authentication", () => {
     it("authenticates with valid session token", async () => {
+      const app = createTestApp();
       const response = await app.handle(
         new Request("http://localhost/v1/me", {
-          headers: {
-            Authorization: `Bearer ${SESSION_ORG_1.token}`,
-          },
+          headers: { Authorization: `Bearer ${SESSION_TOKEN_ORG1}` },
         })
       );
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(body.organizationId).toBe(ORG_1.id);
-      expect(body.userId).toBe(SESSION_ORG_1.userId);
+      expect(body.organizationId).toBe(testOrg1.id);
+      expect(body.userId).toBe(testUser1.id);
       expect(body.apiKeyId).toBeNull();
     });
 
     it("rejects invalid session token", async () => {
+      const app = createTestApp();
       const response = await app.handle(
-        new Request("http://localhost/v1/contacts", {
-          headers: {
-            Authorization: "Bearer invalid-session-token",
-          },
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: "Bearer invalid-session-token" },
         })
       );
 
@@ -447,13 +388,27 @@ describe("Authentication", () => {
       expect(body.error).toContain("session not found");
     });
 
-    it("rejects session for non-member organization", async () => {
+    it("rejects expired session", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${SESSION_TOKEN_EXPIRED}` },
+        })
+      );
+
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      expect(body.error).toContain("session expired");
+    });
+
+    it("rejects session for non-member org via X-Organization-Id header", async () => {
+      const app = createTestApp();
       // User 1 trying to access Org 2 (they're not a member)
       const response = await app.handle(
-        new Request("http://localhost/v1/contacts", {
+        new Request("http://localhost/v1/me", {
           headers: {
-            Authorization: `Bearer ${SESSION_ORG_1.token}`,
-            "X-Organization-Id": ORG_2.id,
+            Authorization: `Bearer ${SESSION_TOKEN_ORG1}`,
+            "X-Organization-Id": testOrg2.id,
           },
         })
       );
@@ -464,259 +419,114 @@ describe("Authentication", () => {
     });
   });
 
-  describe("Tenant Isolation", () => {
-    it("org 1 can only see org 1 contacts", async () => {
+  describe("No Auth", () => {
+    it("rejects requests without auth header", async () => {
+      const app = createTestApp();
       const response = await app.handle(
-        new Request("http://localhost/v1/contacts", {
-          headers: {
-            Authorization: `Bearer ${API_KEY_ORG_1.key}`,
-          },
-        })
+        new Request("http://localhost/v1/me")
       );
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.organizationId).toBe(ORG_1.id);
-      expect(body.contacts).toHaveLength(2);
-      expect(
-        body.contacts.every(
-          (c: { organizationId: string }) => c.organizationId === ORG_1.id
-        )
-      ).toBe(true);
+      expect(body.error).toContain("no auth header");
     });
+  });
 
-    it("org 2 can only see org 2 contacts", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/contacts", {
-          headers: {
-            Authorization: `Bearer ${API_KEY_ORG_2.key}`,
-          },
-        })
-      );
+  describe("Concurrent Requests", () => {
+    it("isolates auth context across concurrent requests", async () => {
+      const app = createTestApp();
 
-      expect(response.status).toBe(200);
-      const body = await response.json();
-      expect(body.organizationId).toBe(ORG_2.id);
-      expect(body.contacts).toHaveLength(1);
-      expect(
-        body.contacts.every(
-          (c: { organizationId: string }) => c.organizationId === ORG_2.id
-        )
-      ).toBe(true);
-    });
-
-    it("org 1 cannot access org 2 contact by ID", async () => {
-      // Org 1 trying to access a contact that belongs to Org 2
-      const response = await app.handle(
-        new Request("http://localhost/v1/contacts/contact-1-org2", {
-          headers: {
-            Authorization: `Bearer ${API_KEY_ORG_1.key}`,
-          },
-        })
-      );
-
-      expect(response.status).toBe(404);
-      const body = await response.json();
-      expect(body.error).toBe("Contact not found");
-    });
-
-    it("org 2 cannot access org 1 contact by ID", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/contacts/contact-1-org1", {
-          headers: {
-            Authorization: `Bearer ${API_KEY_ORG_2.key}`,
-          },
-        })
-      );
-
-      expect(response.status).toBe(404);
-      const body = await response.json();
-      expect(body.error).toBe("Contact not found");
-    });
-
-    it("created contacts belong to authenticated org", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/contacts", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${API_KEY_ORG_1.key}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email: "new@example.com" }),
-        })
-      );
-
-      expect(response.status).toBe(200);
-      const body = await response.json();
-      expect(body.organizationId).toBe(ORG_1.id);
-    });
-
-    it("different API keys get different contexts", async () => {
-      const [response1, response2] = await Promise.all([
+      const [r1, r2, r3] = await Promise.all([
         app.handle(
           new Request("http://localhost/v1/me", {
-            headers: { Authorization: `Bearer ${API_KEY_ORG_1.key}` },
+            headers: { Authorization: `Bearer ${RAW_KEY_ORG1}` },
           })
         ),
         app.handle(
           new Request("http://localhost/v1/me", {
-            headers: { Authorization: `Bearer ${API_KEY_ORG_2.key}` },
+            headers: { Authorization: `Bearer ${RAW_KEY_ORG2}` },
+          })
+        ),
+        app.handle(
+          new Request("http://localhost/v1/me", {
+            headers: { Authorization: `Bearer ${SESSION_TOKEN_ORG1}` },
           })
         ),
       ]);
 
-      const body1 = await response1.json();
-      const body2 = await response2.json();
-
-      expect(body1.organizationId).toBe(ORG_1.id);
-      expect(body2.organizationId).toBe(ORG_2.id);
-      expect(body1.organizationId).not.toBe(body2.organizationId);
-    });
-  });
-
-  describe("Plan/Subscription Access", () => {
-    it("includes plan information in auth context", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/me", {
-          headers: {
-            Authorization: `Bearer ${API_KEY_ORG_1.key}`,
-          },
-        })
-      );
-
-      expect(response.status).toBe(200);
-      const body = await response.json();
-      expect(body.planId).toBe("starter");
-    });
-
-    it("different orgs have different plans", async () => {
-      const response = await app.handle(
-        new Request("http://localhost/v1/me", {
-          headers: {
-            Authorization: `Bearer ${API_KEY_ORG_2.key}`,
-          },
-        })
-      );
-
-      expect(response.status).toBe(200);
-      const body = await response.json();
-      expect(body.planId).toBe("pro");
-    });
-  });
-
-  describe("Multiple Concurrent Requests", () => {
-    it("handles concurrent requests with different auth contexts", async () => {
-      // Simulate multiple concurrent requests from different tenants
-      const responses = await Promise.all([
-        app.handle(
-          new Request("http://localhost/v1/contacts", {
-            headers: { Authorization: `Bearer ${API_KEY_ORG_1.key}` },
-          })
-        ),
-        app.handle(
-          new Request("http://localhost/v1/contacts", {
-            headers: { Authorization: `Bearer ${API_KEY_ORG_2.key}` },
-          })
-        ),
-        app.handle(
-          new Request("http://localhost/v1/contacts", {
-            headers: { Authorization: `Bearer ${API_KEY_ORG_1.key}` },
-          })
-        ),
+      const [b1, b2, b3] = await Promise.all([
+        r1.json(),
+        r2.json(),
+        r3.json(),
       ]);
 
-      const bodies = await Promise.all(responses.map((r) => r.json()));
+      expect(b1.organizationId).toBe(testOrg1.id);
+      expect(b2.organizationId).toBe(testOrg2.id);
+      expect(b3.organizationId).toBe(testOrg1.id);
 
-      // Verify each request got the correct tenant context
-      expect(bodies[0].organizationId).toBe(ORG_1.id);
-      expect(bodies[1].organizationId).toBe(ORG_2.id);
-      expect(bodies[2].organizationId).toBe(ORG_1.id);
-
-      // Verify tenant isolation
-      expect(bodies[0].contacts.length).toBe(2); // Org 1 has 2 contacts
-      expect(bodies[1].contacts.length).toBe(1); // Org 2 has 1 contact
+      // API key vs session auth
+      expect(b1.apiKeyId).toBe(testApiKeyOrg1.id);
+      expect(b3.apiKeyId).toBeNull();
     });
   });
-});
 
-describe("Security Edge Cases", () => {
-  let app: ReturnType<typeof createAuthTestApp>;
+  describe("Security Edge Cases", () => {
+    it("rejects empty authorization header", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: "" },
+        })
+      );
 
-  beforeEach(() => {
-    app = createAuthTestApp();
-  });
+      expect(response.status).toBe(401);
+    });
 
-  it("prevents auth header injection via other headers", async () => {
-    // Attempt to bypass auth by putting credentials in wrong header
-    const response = await app.handle(
-      new Request("http://localhost/v1/contacts", {
-        headers: {
-          "X-Authorization": `Bearer ${API_KEY_ORG_1.key}`,
-        },
-      })
-    );
+    it("rejects Bearer with no token", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: "Bearer " },
+        })
+      );
 
-    expect(response.status).toBe(401);
-  });
+      expect(response.status).toBe(401);
+    });
 
-  it("handles empty authorization header", async () => {
-    const response = await app.handle(
-      new Request("http://localhost/v1/contacts", {
-        headers: {
-          Authorization: "",
-        },
-      })
-    );
+    it("rejects non-wraps_ prefix tokens as invalid sessions", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: "Bearer some_random_token" },
+        })
+      );
 
-    expect(response.status).toBe(401);
-  });
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      expect(body.error).toContain("session not found");
+    });
 
-  it("handles whitespace-only authorization header", async () => {
-    const response = await app.handle(
-      new Request("http://localhost/v1/contacts", {
-        headers: {
-          Authorization: "   ",
-        },
-      })
-    );
+    it("handles very long API keys gracefully", async () => {
+      const app = createTestApp();
+      const longKey = `wraps_live_${"a".repeat(10_000)}`;
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { Authorization: `Bearer ${longKey}` },
+        })
+      );
 
-    expect(response.status).toBe(401);
-  });
+      expect(response.status).toBe(401);
+    });
 
-  it("handles Bearer with no token", async () => {
-    const response = await app.handle(
-      new Request("http://localhost/v1/contacts", {
-        headers: {
-          Authorization: "Bearer ",
-        },
-      })
-    );
+    it("prevents auth header injection via wrong header name", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/me", {
+          headers: { "X-Authorization": `Bearer ${RAW_KEY_ORG1}` },
+        })
+      );
 
-    expect(response.status).toBe(401);
-  });
-
-  it("handles very long API keys gracefully", async () => {
-    const longKey = `wraps_live_${"a".repeat(10_000)}`;
-    const response = await app.handle(
-      new Request("http://localhost/v1/contacts", {
-        headers: {
-          Authorization: `Bearer ${longKey}`,
-        },
-      })
-    );
-
-    expect(response.status).toBe(401);
-  });
-
-  it("handles special characters in token", async () => {
-    const response = await app.handle(
-      new Request("http://localhost/v1/contacts", {
-        headers: {
-          Authorization: "Bearer wraps_live_<script>alert(1)</script>",
-        },
-      })
-    );
-
-    expect(response.status).toBe(401);
+      expect(response.status).toBe(401);
+    });
   });
 });

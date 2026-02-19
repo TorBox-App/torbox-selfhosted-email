@@ -13,9 +13,10 @@ const testSignupEmail = "signup-integration-test@example.com";
 const testSignupUserId = "signup-test-user-1";
 const testSignupOrgId = "signup-test-org-1";
 
-describe("Signup Flow Integration Tests", () => {
+describe("Schema Signup Constraints", () => {
   beforeEach(async () => {
-    // Clean up any existing test data
+    // Clean up any existing test data (reverse dependency order)
+    await db.delete(subscription).where(eq(subscription.referenceId, testSignupOrgId));
     await db.delete(member).where(eq(member.userId, testSignupUserId));
     await db
       .delete(organizationExtension)
@@ -27,7 +28,8 @@ describe("Signup Flow Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Final cleanup
+    // Final cleanup (reverse dependency order)
+    await db.delete(subscription).where(eq(subscription.referenceId, testSignupOrgId));
     await db.delete(member).where(eq(member.userId, testSignupUserId));
     await db
       .delete(organizationExtension)
