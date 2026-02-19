@@ -25,6 +25,7 @@ import {
   segment,
   type TriggerConfig,
   template,
+  type WorkflowDefinitionSnapshot,
   type WorkflowStep,
   type WorkflowStepConfig,
   type WorkflowTransition,
@@ -217,6 +218,13 @@ async function triggerWorkflow(
     return;
   }
 
+  // Snapshot the definition so in-flight executions are immune to edits
+  const definitionSnapshot: WorkflowDefinitionSnapshot = {
+    steps,
+    transitions,
+    workflowVersion: wf.version,
+  };
+
   // Create execution + update stats in a transaction to prevent counter drift
   const execution = await db.transaction(async (tx) => {
     // Uses ON CONFLICT DO NOTHING with partial unique index to prevent race conditions
@@ -230,6 +238,7 @@ async function triggerWorkflow(
         allowReentry: wf.allowReentry, // Denormalized for partial unique index
         status: "active",
         currentStepId: firstStepId,
+        definitionSnapshot,
         triggerData: eventData ?? {},
         startedAt: new Date(),
       })
@@ -518,7 +527,10 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     return;
   }
 
-  const steps = wf.steps as WorkflowStep[];
+  // Use the frozen definition snapshot (immune to live edits) with
+  // fallback to the live definition for pre-snapshot executions
+  const snapshot = execution.definitionSnapshot as WorkflowDefinitionSnapshot | null;
+  const steps = snapshot?.steps ?? (wf.steps as WorkflowStep[]);
   const step = steps.find((s) => s.id === stepId);
 
   if (!step) {
@@ -583,9 +595,10 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
       })
       .where(eq(workflowStepExecution.id, stepExec.id));
 
-    // Handle step result
+    // Handle step result — use snapshot transitions for routing
+    const snapshotWf = snapshot ? { ...wf, steps, transitions: snapshot.transitions } : wf;
     if (result.action === "next") {
-      await processNextStep(execution, step, wf, result.branch);
+      await processNextStep(execution, step, snapshotWf, result.branch);
     } else if (result.action === "wait") {
       // Step is waiting (e.g., delay scheduled, waiting for event)
       // Execution status already updated by the step handler
@@ -1322,7 +1335,8 @@ async function handleSendSms(
     }
   }
 
-  const messageBody = substituteVariables(rawBody, replacementData);
+  const normalizedBody = transformVariablesForSes(rawBody);
+  const messageBody = substituteVariables(normalizedBody, replacementData);
 
   // Build sender ID (step config > workflow default)
   const senderId = config.senderId || wf.defaultSenderId;
@@ -1386,19 +1400,26 @@ async function handleDelay(
       break;
   }
 
-  // Find the next step after delay (scoped by org for defense-in-depth)
-  const [wf] = await db
-    .select()
-    .from(workflow)
-    .where(
-      and(
-        eq(workflow.id, execution.workflowId),
-        eq(workflow.organizationId, organizationId)
-      )
-    )
-    .limit(1);
+  // Use snapshot transitions (immune to live edits) with fallback for pre-snapshot executions
+  const snapshot = execution.definitionSnapshot as WorkflowDefinitionSnapshot | null;
+  let transitions: WorkflowTransition[] | undefined;
 
-  const transitions = wf?.transitions as WorkflowTransition[] | undefined;
+  if (snapshot) {
+    transitions = snapshot.transitions;
+  } else {
+    const [wf] = await db
+      .select()
+      .from(workflow)
+      .where(
+        and(
+          eq(workflow.id, execution.workflowId),
+          eq(workflow.organizationId, organizationId)
+        )
+      )
+      .limit(1);
+    transitions = wf?.transitions as WorkflowTransition[] | undefined;
+  }
+
   const nextTransition = transitions?.find((t) => t.fromStepId === stepId);
 
   if (!nextTransition) {
@@ -1687,9 +1708,21 @@ const BLOCKED_IPV4_RANGES = [
   { prefix: "0.", label: "unspecified" },
 ] as const;
 
-function isBlockedIp(ip: string): string | null {
+/** @exported for testing */
+export function isBlockedIp(ip: string): string | null {
+  // IPv4-mapped IPv6 (::ffff:1.2.3.4) — extract the IPv4 and re-check
+  if (ip.startsWith("::ffff:")) {
+    const v4 = ip.slice(7);
+    if (v4.includes(".")) return isBlockedIp(v4);
+  }
+
   for (const range of BLOCKED_IPV4_RANGES) {
     if (ip.startsWith(range.prefix)) return range.label;
+  }
+  // 100.64.0.0/10 (Carrier-grade NAT / AWS VPC)
+  if (ip.startsWith("100.")) {
+    const second = Number.parseInt(ip.split(".")[1], 10);
+    if (second >= 64 && second <= 127) return "private (100.64/10 CGN)";
   }
   // 172.16.0.0/12
   if (ip.startsWith("172.")) {
@@ -2029,7 +2062,7 @@ async function resumeExecution(
     await deleteScheduledStep(claimed.waitTimeoutSchedulerName);
   }
 
-  // Load workflow (scoped by org for defense-in-depth)
+  // Load workflow for infrastructure config (awsAccountId, sender defaults)
   const [wf] = await db
     .select()
     .from(workflow)
@@ -2045,16 +2078,20 @@ async function resumeExecution(
     log.error("Workflow not found", undefined, {
       workflowId: claimed.workflowId,
     });
+    await failExecution(executionId, "Workflow not found", claimed.currentStepId ?? "unknown");
     return;
   }
 
-  const steps = wf.steps as WorkflowStep[];
+  // Use snapshot (immune to live edits) with fallback for pre-snapshot executions
+  const snapshot = claimed.definitionSnapshot as WorkflowDefinitionSnapshot | null;
+  const steps = snapshot?.steps ?? (wf.steps as WorkflowStep[]);
   const currentStep = steps.find((s) => s.id === claimed.currentStepId);
 
   if (!currentStep) {
     log.error("Current step not found", undefined, {
       stepId: claimed.currentStepId,
     });
+    await failExecution(executionId, `Step ${claimed.currentStepId} not found`, claimed.currentStepId ?? "unknown");
     return;
   }
 
@@ -2076,8 +2113,9 @@ async function resumeExecution(
       )
     );
 
-  // Process next step based on branch
-  await processNextStep(claimed, currentStep, wf, branch);
+  // Process next step based on branch — use snapshot transitions for routing
+  const snapshotWf = snapshot ? { ...wf, steps, transitions: snapshot.transitions } : wf;
+  await processNextStep(claimed, currentStep, snapshotWf, branch);
 }
 
 /**
