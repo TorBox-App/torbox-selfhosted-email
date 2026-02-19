@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LandingFooter } from "@/app/landing/components/footer";
+import { LandingNavbar } from "@/app/landing/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CopyLinkButton } from "./components/copy-link-button";
@@ -59,19 +61,9 @@ const lockInPoints = [
 export default function WhyWrapsPage() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <a className="flex items-center gap-2 font-bold text-xl" href="/">
-            Wraps
-          </a>
-          <Button asChild variant="outline">
-            <Link href="/">Back to Home</Link>
-          </Button>
-        </div>
-      </header>
+      <LandingNavbar />
 
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 pt-24 pb-12">
         <div className="mx-auto max-w-4xl">
           {/* Page Header */}
           <div className="mb-12">
@@ -259,6 +251,8 @@ export default function WhyWrapsPage() {
           </section>
         </div>
       </main>
+
+      <LandingFooter />
     </div>
   );
 }

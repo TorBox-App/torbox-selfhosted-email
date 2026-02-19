@@ -1,7 +1,9 @@
-import { ArrowRight, Shield } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { LandingFooter } from "@/app/landing/components/footer";
+import { LandingNavbar } from "@/app/landing/components/navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,26 +65,10 @@ export default function ToolsPage() {
         type="application/ld+json"
       />
       <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="border-b">
-          <div className="container mx-auto flex items-center justify-between px-4 py-4">
-            <a className="flex items-center gap-2 font-bold text-xl" href="/">
-              <Shield className="size-6" />
-              Wraps Email Tools
-            </a>
-            <div className="flex items-center gap-3">
-              <Button asChild size="sm" variant="ghost">
-                <Link href="/tools/spf-builder">SPF Builder</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/">Back to Home</Link>
-              </Button>
-            </div>
-          </div>
-        </header>
+        <LandingNavbar />
 
         {/* Main Content */}
-        <main className="container mx-auto px-4 py-12">
+        <main className="container mx-auto px-4 pt-24 pb-12">
           <div className="mx-auto max-w-4xl">
             {/* Page Header */}
             <div className="mb-12 text-center">
@@ -179,6 +165,8 @@ export default function ToolsPage() {
             </div>
           </div>
         </main>
+
+        <LandingFooter />
       </div>
     </>
   );
