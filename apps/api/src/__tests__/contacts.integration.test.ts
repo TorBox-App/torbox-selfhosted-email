@@ -159,7 +159,7 @@ beforeEach(async () => {
 
 // Clean up after all tests
 afterAll(async () => {
-  await db.delete(contactTopic).where(eq(contactTopic.contactId, testOrg.id));
+  // contactTopic rows cascade-delete when contacts are deleted
   await db.delete(contact).where(eq(contact.organizationId, testOrg.id));
   await db.delete(topic).where(eq(topic.organizationId, testOrg.id));
   await db.delete(member).where(eq(member.organizationId, testOrg.id));

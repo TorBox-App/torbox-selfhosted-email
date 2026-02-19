@@ -908,21 +908,27 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
     });
 
     afterAll(async () => {
-      // Clean up workflows and executions
-      for (const workflowId of createdWorkflowIds) {
+      // Clean up step executions via actual execution IDs
+      const executions = await db
+        .select({ id: workflowExecution.id })
+        .from(workflowExecution)
+        .where(eq(workflowExecution.organizationId, testOrg.id));
+
+      for (const exec of executions) {
         await db
           .delete(workflowStepExecution)
-          .where(eq(workflowStepExecution.executionId, workflowId));
-        await db
-          .delete(workflowExecution)
-          .where(eq(workflowExecution.workflowId, workflowId));
-        await db.delete(workflow).where(eq(workflow.id, workflowId));
+          .where(eq(workflowStepExecution.executionId, exec.id));
       }
 
       // Clean up all executions for test org
       await db
         .delete(workflowExecution)
         .where(eq(workflowExecution.organizationId, testOrg.id));
+
+      // Clean up workflows
+      for (const workflowId of createdWorkflowIds) {
+        await db.delete(workflow).where(eq(workflow.id, workflowId));
+      }
 
       // Clean up contact topic subscriptions
       await db
@@ -1552,6 +1558,76 @@ describe.skipIf(!existsSync(resolve(process.cwd(), "../../.sst/outputs.json")))(
           );
 
           expect(completedExecution?.status).toBe("completed");
+        }
+      );
+
+      it(
+        "should only process one resume when engagement and timeout fire simultaneously (atomic claim)",
+        { timeout: 45_000 },
+        async () => {
+          // This test verifies the fix for the dual-resume race condition where
+          // an engagement event (open/click) and a timeout fire near-simultaneously.
+          // The atomic UPDATE...WHERE status='waiting' ensures only one wins.
+          const wf = createWaitForEmailEngagementWorkflow();
+          await db.insert(workflow).values(wf as typeof workflow.$inferInsert);
+          createdWorkflowIds.push(wf.id);
+
+          // Trigger workflow
+          await sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+            type: "trigger",
+            workflowId: wf.id,
+            contactId: testContact.id,
+            organizationId: testOrg.id,
+          });
+
+          // Wait for execution to enter waiting state
+          const execution = await waitForExecutionCreated(
+            wf.id,
+            testContact.id
+          );
+          expect(execution).not.toBeNull();
+
+          await waitForExecutionStatus(execution!.id, "waiting", 15_000);
+
+          // Fire both "opened" and "timeout" resume messages simultaneously
+          await Promise.all([
+            sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+              type: "resume",
+              executionId: execution!.id,
+              branch: "opened",
+              organizationId: testOrg.id,
+            }),
+            sendWorkflowJob(sstOutputs.workflowQueueUrl, {
+              type: "resume",
+              executionId: execution!.id,
+              branch: "timeout",
+              organizationId: testOrg.id,
+            }),
+          ]);
+
+          // Wait for execution to complete
+          const completedExecution = await waitForExecutionStatus(
+            execution!.id,
+            "completed",
+            20_000
+          );
+
+          expect(completedExecution?.status).toBe("completed");
+
+          // Verify only ONE exit step was executed (not two)
+          const stepExecs = await getStepExecutions(execution!.id);
+          const exitSteps = stepExecs.filter((s) => s.stepType === "exit");
+          expect(exitSteps).toHaveLength(1);
+
+          // The wait step should have exactly one completed record
+          const waitSteps = stepExecs.filter(
+            (s) => s.stepType === "wait_for_email_engagement"
+          );
+          expect(waitSteps).toHaveLength(1);
+          expect(waitSteps[0].status).toBe("completed");
+
+          // The winning branch should be either "opened" or "timeout" (not both)
+          expect(["opened", "timeout"]).toContain(waitSteps[0].branch);
         }
       );
     });

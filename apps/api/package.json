@@ -16,7 +16,7 @@
     "test": "vitest run --exclude='**/*.integration.test.ts'",
     "test:ee": "vitest run --testNamePattern='.*' src/\\(ee\\) --exclude='**/*.integration.test.ts'",
     "test:watch": "vitest --exclude='**/*.integration.test.ts'",
-    "test:integration": "vitest run 'src/(ee)/__tests__/*.integration.test.ts'",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {

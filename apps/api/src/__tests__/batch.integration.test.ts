@@ -470,8 +470,7 @@ describe("Batch API Integration", () => {
         new Request("http://localhost/v1/batch/non-existent-id")
       );
 
-      // The route throws an error for not found
-      expect(response.status).toBe(500); // Error is thrown, not 404
+      expect(response.status).toBe(404);
     });
   });
 });

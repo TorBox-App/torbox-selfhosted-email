@@ -50,6 +50,9 @@
     "test:ee": {
       "cache": false
     },
+    "test:integration": {
+      "cache": false
+    },
     "test:coverage": {
       "cache": false,
       "outputs": ["coverage/**"]

@@ -1931,7 +1931,10 @@ async function resumeExecution(
     return;
   }
 
-  // Record step completion with branch (guard against already-completed)
+  // Record step completion with branch
+  // Note: wait steps are already marked "completed" (with branch=null) when the
+  // wait state is entered. This UPDATE overwrites the branch with the actual
+  // resume reason. The atomic claim above is the real race-condition gate.
   await db
     .update(workflowStepExecution)
     .set({
@@ -1942,8 +1945,7 @@ async function resumeExecution(
     .where(
       and(
         eq(workflowStepExecution.executionId, executionId),
-        eq(workflowStepExecution.stepId, currentStep.id),
-        sql`${workflowStepExecution.status} != 'completed'`
+        eq(workflowStepExecution.stepId, currentStep.id)
       )
     );
 
