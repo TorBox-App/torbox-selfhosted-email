@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface SendConfirmDialogProps {
+type SendConfirmDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
@@ -19,7 +19,7 @@ interface SendConfirmDialogProps {
   variant: "send" | "schedule";
   scheduledDate?: Date;
   loading?: boolean;
-}
+};
 
 export function SendConfirmDialog({
   open,
