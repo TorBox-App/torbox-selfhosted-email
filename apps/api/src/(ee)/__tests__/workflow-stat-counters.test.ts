@@ -286,8 +286,6 @@ describe("completeExecution atomicity", () => {
         executionId: "exec-1",
         branch: "timeout",
       }),
-      {} as never,
-      vi.fn()
     );
 
     // completeExecution should use db.transaction
@@ -347,8 +345,6 @@ describe("failExecution atomicity", () => {
         stepId: "step-1",
         organizationId: "org-1",
       }),
-      {} as never,
-      vi.fn()
     );
 
     // failExecution should use db.transaction
@@ -400,8 +396,6 @@ describe("triggerWorkflow atomicity", () => {
         contactId: "contact-1",
         organizationId: "org-1",
       }),
-      {} as never,
-      vi.fn()
     );
 
     // triggerWorkflow should use db.transaction for insert + stats

@@ -364,7 +364,7 @@ describe("processStep edge cases", () => {
 
   it("returns early when execution not found", async () => {
     mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(null);
-    await handler(makeSQSEvent(executeJob()), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob()));
     expect(mockDbSelect).not.toHaveBeenCalled();
   });
 
@@ -372,7 +372,7 @@ describe("processStep edge cases", () => {
     mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(
       makeExecution({ status: "completed" })
     );
-    await handler(makeSQSEvent(executeJob()), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob()));
     expect(mockDbSelect).not.toHaveBeenCalled();
   });
 
@@ -380,7 +380,7 @@ describe("processStep edge cases", () => {
     mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(
       makeExecution({ status: "cancelled" })
     );
-    await handler(makeSQSEvent(executeJob()), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob()));
     expect(mockDbSelect).not.toHaveBeenCalled();
   });
 
@@ -413,19 +413,19 @@ describe("processStep edge cases", () => {
         }),
       }),
     });
-    await handler(makeSQSEvent(executeJob()), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob()));
     expect(mockDbUpdate).toHaveBeenCalled();
   });
 
   it("fails execution when step not in workflow", async () => {
     setupProcessStep({});
-    await handler(makeSQSEvent(executeJob("nonexistent-step")), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob("nonexistent-step")));
     expect(mockDbUpdate).toHaveBeenCalled();
   });
 
   it("skips when step already completed (idempotency)", async () => {
     setupProcessStep({ stepExecStatus: "completed" });
-    await handler(makeSQSEvent(executeJob()), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob()));
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
   });
 
@@ -439,7 +439,7 @@ describe("processStep edge cases", () => {
       },
       execution: { currentStepId: "step-1" },
     });
-    await handler(makeSQSEvent(executeJob()), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob()));
     expect(mockDbUpdate).toHaveBeenCalled();
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
   });
@@ -458,7 +458,7 @@ describe("processStep edge cases", () => {
       },
     });
     mockFetch.mockRejectedValue(new Error("Network error"));
-    await handler(makeSQSEvent(executeJob()), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob()));
     expect(mockFetch).toHaveBeenCalled();
   });
 });
@@ -569,19 +569,19 @@ describe("handleSendEmail", () => {
 
   it("skips when contact has no email", async () => {
     setupEmailTest({ contact: { email: null } });
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(0);
   });
 
   it("skips when contact bounced", async () => {
     setupEmailTest({ contact: { emailStatus: "bounced" } });
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(0);
   });
 
   it("skips when contact unsubscribed", async () => {
     setupEmailTest({ contact: { emailStatus: "unsubscribed" } });
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(0);
   });
 
@@ -603,13 +603,13 @@ describe("handleSendEmail", () => {
       }
       return origImpl(...args);
     });
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(0);
   });
 
   it("throws when template not found", async () => {
     setupEmailTest({ template: null });
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(mockDbUpdate).toHaveBeenCalled();
   });
 
@@ -620,13 +620,13 @@ describe("handleSendEmail", () => {
         compiledHtml: null, emailType: "marketing", sesTemplateName: null,
       },
     });
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(mockDbUpdate).toHaveBeenCalled();
   });
 
   it("sends via SES template when sesTemplateName exists", async () => {
     setupEmailTest();
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(1);
     const sendInput = sesSendCalls[0][0] as Record<string, unknown>;
     const content = sendInput.Content as Record<string, unknown>;
@@ -646,7 +646,7 @@ describe("handleSendEmail", () => {
       },
     });
 
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(upsertSESTemplate).toHaveBeenCalled();
     expect(sesSendCalls).toHaveLength(1);
     const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
@@ -665,7 +665,7 @@ describe("handleSendEmail", () => {
       },
     });
 
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(1);
     const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
     expect(content.Simple).toBeDefined();
@@ -673,7 +673,7 @@ describe("handleSendEmail", () => {
 
   it("adds List-Unsubscribe headers for marketing", async () => {
     setupEmailTest();
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
     const tmplContent = content.Template as Record<string, unknown>;
     const headers = tmplContent.Headers as Array<{ Name: string; Value: string }>;
@@ -693,7 +693,7 @@ describe("handleSendEmail", () => {
         emailType: "transactional", sesTemplateName: "ses-tmpl-1",
       },
     });
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
     const tmplContent = content.Template as Record<string, unknown>;
     expect(tmplContent.Headers).toBeUndefined();
@@ -701,7 +701,7 @@ describe("handleSendEmail", () => {
 
   it("records messageSend and updates contact metrics", async () => {
     setupEmailTest();
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(mockDbInsert).toHaveBeenCalledTimes(2);
     expect(mockDbUpdate).toHaveBeenCalled();
   });
@@ -711,7 +711,7 @@ describe("handleSendEmail", () => {
       execution: { triggerData: { source: "api", plan: "pro" }, currentStepId: "step-email" },
       contact: { firstName: "Jane", properties: { tier: "gold" } },
     });
-    await handler(makeSQSEvent(emailJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(emailJob));
     expect(sesSendCalls).toHaveLength(1);
     const content = (sesSendCalls[0][0] as Record<string, unknown>).Content as Record<string, unknown>;
     const tmplContent = content.Template as Record<string, unknown>;
@@ -800,13 +800,13 @@ describe("handleSendSms", () => {
 
   it("skips when no phone", async () => {
     setupSmsTest({ contact: { phone: null } });
-    await handler(makeSQSEvent(smsJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(smsJob));
     expect(smsSendCalls).toHaveLength(0);
   });
 
   it("skips when invalid E.164", async () => {
     setupSmsTest({ contact: { phone: "555-bad" } });
-    await handler(makeSQSEvent(smsJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(smsJob));
     expect(smsSendCalls).toHaveLength(0);
   });
 
@@ -827,19 +827,19 @@ describe("handleSendSms", () => {
       }
       return origImpl(...args);
     });
-    await handler(makeSQSEvent(smsJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(smsJob));
     expect(smsSendCalls).toHaveLength(0);
   });
 
   it("skips when no message body", async () => {
     setupSmsTest({ smsConfig: { body: "" } });
-    await handler(makeSQSEvent(smsJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(smsJob));
     expect(smsSendCalls).toHaveLength(0);
   });
 
   it("sends with senderId from config", async () => {
     setupSmsTest({ smsConfig: { senderId: "MyBrand" } });
-    await handler(makeSQSEvent(smsJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(smsJob));
     expect(smsSendCalls).toHaveLength(1);
     const input = smsSendCalls[0][0] as Record<string, unknown>;
     expect(input.OriginationIdentity).toBe("MyBrand");
@@ -847,7 +847,7 @@ describe("handleSendSms", () => {
 
   it("happy path: sends with variable substitution and updates metrics", async () => {
     setupSmsTest();
-    await handler(makeSQSEvent(smsJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(smsJob));
     expect(smsSendCalls).toHaveLength(1);
     const input = smsSendCalls[0][0] as Record<string, unknown>;
     expect(input.DestinationPhoneNumber).toBe("+15551234567");
@@ -939,7 +939,7 @@ describe("handleDelay", () => {
 
   it("converts minutes to seconds", async () => {
     setupDelayTest("minutes", 5);
-    await handler(makeSQSEvent(delayJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(delayJob));
     expect(mockScheduleWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ delaySeconds: 300 })
     );
@@ -947,7 +947,7 @@ describe("handleDelay", () => {
 
   it("converts hours to seconds", async () => {
     setupDelayTest("hours", 2);
-    await handler(makeSQSEvent(delayJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(delayJob));
     expect(mockScheduleWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ delaySeconds: 7200 })
     );
@@ -955,7 +955,7 @@ describe("handleDelay", () => {
 
   it("converts days to seconds", async () => {
     setupDelayTest("days", 1);
-    await handler(makeSQSEvent(delayJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(delayJob));
     expect(mockScheduleWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ delaySeconds: 86_400 })
     );
@@ -963,14 +963,14 @@ describe("handleDelay", () => {
 
   it("completes execution when no next transition", async () => {
     setupDelayTest("minutes", 5, false);
-    await handler(makeSQSEvent(delayJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(delayJob));
     expect(mockScheduleWorkflowStep).not.toHaveBeenCalled();
     expect(mockDbUpdate).toHaveBeenCalled();
   });
 
   it("schedules next step and pauses execution", async () => {
     setupDelayTest("hours", 1);
-    await handler(makeSQSEvent(delayJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(delayJob));
     expect(mockScheduleWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({
         executionId: "exec-1",
@@ -1030,7 +1030,7 @@ describe("handleCondition", () => {
       { field: "firstName", operator: "equals", value: "Jane" },
       { firstName: "Jane" }
     );
-    await handler(makeSQSEvent(conditionJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(conditionJob));
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ stepId: "step-yes" })
     );
@@ -1041,7 +1041,7 @@ describe("handleCondition", () => {
       { field: "tier", operator: "equals", value: "gold" },
       { properties: { tier: "gold" } }
     );
-    await handler(makeSQSEvent(conditionJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(conditionJob));
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ stepId: "step-yes" })
     );
@@ -1053,7 +1053,7 @@ describe("handleCondition", () => {
       {},
       { triggerData: { source: "api" } }
     );
-    await handler(makeSQSEvent(conditionJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(conditionJob));
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ stepId: "step-yes" })
     );
@@ -1064,7 +1064,7 @@ describe("handleCondition", () => {
       { field: "nonexistent", operator: "equals", value: "anything" },
       {}
     );
-    await handler(makeSQSEvent(conditionJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(conditionJob));
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ stepId: "step-no" })
     );
@@ -1095,7 +1095,7 @@ describe("handleCondition", () => {
       }
       return origImpl(...args);
     });
-    await handler(makeSQSEvent(conditionJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(conditionJob));
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ stepId: "step-yes" })
     );
@@ -1126,7 +1126,7 @@ describe("handleCondition", () => {
       }
       return origImpl(...args);
     });
-    await handler(makeSQSEvent(conditionJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(conditionJob));
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ stepId: "step-no" })
     );
@@ -1430,8 +1430,7 @@ describe("Topic handlers", () => {
       };
     });
     await handler(
-      makeSQSEvent({ type: "execute", executionId: "exec-1", stepId: "step-sub", organizationId: "org-1" }),
-      {} as never, vi.fn()
+      makeSQSEvent({ type: "execute", executionId: "exec-1", stepId: "step-sub", organizationId: "org-1" })
     );
     expect(mockDbInsert).toHaveBeenCalledTimes(2);
   });
@@ -1453,8 +1452,7 @@ describe("Topic handlers", () => {
       },
     });
     await handler(
-      makeSQSEvent({ type: "execute", executionId: "exec-1", stepId: "step-unsub", organizationId: "org-1" }),
-      {} as never, vi.fn()
+      makeSQSEvent({ type: "execute", executionId: "exec-1", stepId: "step-unsub", organizationId: "org-1" })
     );
     expect(mockDbUpdate).toHaveBeenCalled();
   });

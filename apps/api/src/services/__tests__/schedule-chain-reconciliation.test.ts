@@ -265,7 +265,7 @@ describe("Schedule chain resilience", () => {
     });
 
     // Handler catches the chain error internally — does NOT throw
-    await handler(event, {} as never, vi.fn());
+    await handler(event);
 
     // Contact fan-out still succeeded (not duplicated by SQS retry)
     expect(mockEnqueueWorkflowStepBatch).toHaveBeenCalledTimes(1);

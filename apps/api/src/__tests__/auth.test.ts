@@ -167,10 +167,10 @@ const testSubscriptionOrg2 = {
 function createTestApp() {
   return createAuthenticatedRoutes("/v1")
     .get("/me", ({ auth }) => ({
-      organizationId: auth.organizationId,
-      userId: auth.userId,
-      planId: auth.planId,
-      apiKeyId: auth.apiKeyId,
+      organizationId: auth!.organizationId,
+      userId: auth!.userId,
+      planId: auth!.planId,
+      apiKeyId: auth!.apiKeyId,
     }));
 }
 

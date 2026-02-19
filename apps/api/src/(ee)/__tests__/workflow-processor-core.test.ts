@@ -393,7 +393,7 @@ describe("Schedule Trigger Fan-out", () => {
   it("fans out trigger jobs for all contacts", async () => {
     setupScheduleWorkflow();
 
-    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(scheduleJob));
 
     expect(mockEnqueueWorkflowStepBatch).toHaveBeenCalledOnce();
     const batch = mockEnqueueWorkflowStepBatch.mock.calls[0][0];
@@ -469,7 +469,7 @@ describe("Schedule Trigger Fan-out", () => {
       }),
     });
 
-    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(scheduleJob));
 
     expect(contactIdsMatchingCondition).toHaveBeenCalled();
     expect(mockEnqueueWorkflowStepBatch).toHaveBeenCalledOnce();
@@ -485,7 +485,7 @@ describe("Schedule Trigger Fan-out", () => {
   it("handles zero contacts", async () => {
     setupScheduleWorkflow({}, []);
 
-    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(scheduleJob));
 
     expect(mockEnqueueWorkflowStepBatch).toHaveBeenCalledWith([]);
   });
@@ -499,7 +499,7 @@ describe("Schedule Trigger Fan-out", () => {
       }),
     });
 
-    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(scheduleJob));
 
     expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
   });
@@ -515,7 +515,7 @@ describe("Schedule Trigger Fan-out", () => {
       }),
     });
 
-    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(scheduleJob));
 
     expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
   });
@@ -531,7 +531,7 @@ describe("Schedule Trigger Fan-out", () => {
       }),
     });
 
-    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(scheduleJob));
 
     expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
   });
@@ -547,7 +547,7 @@ describe("Schedule Trigger Fan-out", () => {
       }),
     });
 
-    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(scheduleJob));
 
     expect(mockEnqueueWorkflowStepBatch).not.toHaveBeenCalled();
   });
@@ -555,7 +555,7 @@ describe("Schedule Trigger Fan-out", () => {
   it("chains next schedule after processing", async () => {
     setupScheduleWorkflow();
 
-    await handler(makeSQSEvent(scheduleJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(scheduleJob));
 
     expect(mockCreateNextWorkflowSchedule).toHaveBeenCalledWith({
       workflowId: "wf-1",
@@ -678,8 +678,6 @@ describe("Wait-for-Event Resume Flow", () => {
         stepId: "step-wait",
         organizationId: "org-1",
       }),
-      {} as never,
-      vi.fn()
     );
 
     expect(mockScheduleWaitTimeout).toHaveBeenCalledWith(
@@ -769,8 +767,6 @@ describe("Wait-for-Event Resume Flow", () => {
         stepId: "step-wait",
         organizationId: "org-1",
       }),
-      {} as never,
-      vi.fn()
     );
 
     expect(mockScheduleWaitTimeout).toHaveBeenCalledWith(
@@ -837,8 +833,6 @@ describe("Wait-for-Event Resume Flow", () => {
         executionId: "exec-1",
         branch: "default",
       }),
-      {} as never,
-      vi.fn()
     );
 
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
@@ -901,8 +895,6 @@ describe("Wait-for-Event Resume Flow", () => {
         executionId: "exec-1",
         branch: "default",
       }),
-      {} as never,
-      vi.fn()
     );
 
     expect(mockDeleteScheduledStep).toHaveBeenCalledWith("sched-timeout-xyz");
@@ -947,8 +939,6 @@ describe("Wait-for-Event Resume Flow", () => {
         executionId: "exec-1",
         branch: "timeout",
       }),
-      {} as never,
-      vi.fn()
     );
 
     expect(mockDeleteScheduledStep).not.toHaveBeenCalled();
@@ -1001,8 +991,6 @@ describe("Wait-for-Event Resume Flow", () => {
         executionId: "exec-1",
         branch: "timeout",
       }),
-      {} as never,
-      vi.fn()
     );
 
     // completeExecution should be called (no enqueue for next step)
@@ -1068,8 +1056,6 @@ describe("Concurrent Resume Race Condition", () => {
         executionId: "exec-1",
         branch: "default",
       }),
-      {} as never,
-      vi.fn()
     );
 
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
@@ -1096,8 +1082,6 @@ describe("Concurrent Resume Race Condition", () => {
         executionId: "exec-1",
         branch: "default",
       }),
-      {} as never,
-      vi.fn()
     );
 
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
@@ -1166,7 +1150,7 @@ describe("Concurrent Resume Race Condition", () => {
       { type: "resume", executionId: "exec-1", branch: "timeout" }
     );
 
-    await handler(event, {} as never, vi.fn());
+    await handler(event);
 
     // Only one enqueue from the first resume
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledTimes(1);
@@ -1268,7 +1252,7 @@ describe("Webhook Step", () => {
     setupWebhookExecution();
     mockFetch.mockResolvedValue({ status: 200, ok: true });
 
-    await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob));
 
     expect(mockFetch).toHaveBeenCalledOnce();
     const [url, opts] = mockFetch.mock.calls[0];
@@ -1285,7 +1269,7 @@ describe("Webhook Step", () => {
     setupWebhookExecution({ method: "GET" });
     mockFetch.mockResolvedValue({ status: 200, ok: true });
 
-    await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob));
 
     const [, opts] = mockFetch.mock.calls[0];
     expect(opts.method).toBe("GET");
@@ -1298,7 +1282,7 @@ describe("Webhook Step", () => {
     });
     mockFetch.mockResolvedValue({ status: 200, ok: true });
 
-    await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob));
 
     const [, opts] = mockFetch.mock.calls[0];
     expect(opts.headers["Content-Type"]).toBe("application/json");
@@ -1310,7 +1294,7 @@ describe("Webhook Step", () => {
     setupWebhookExecution({ body: { customKey: "customVal" } });
     mockFetch.mockResolvedValue({ status: 200, ok: true });
 
-    await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(executeJob));
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.customKey).toBe("customVal");
@@ -1322,7 +1306,7 @@ describe("Webhook Step", () => {
     mockFetch.mockRejectedValue(new Error("ECONNREFUSED"));
 
     // handler should NOT throw — webhook failure is non-fatal
-    const result = await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+    const result = await handler(makeSQSEvent(executeJob));
     expect(result.batchItemFailures).toEqual([]);
   });
 
@@ -1330,7 +1314,7 @@ describe("Webhook Step", () => {
     setupWebhookExecution();
     mockFetch.mockResolvedValue({ status: 500, ok: false });
 
-    const result = await handler(makeSQSEvent(executeJob), {} as never, vi.fn());
+    const result = await handler(makeSQSEvent(executeJob));
     expect(result.batchItemFailures).toEqual([]);
   });
 });

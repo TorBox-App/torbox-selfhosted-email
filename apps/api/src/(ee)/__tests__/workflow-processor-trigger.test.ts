@@ -230,7 +230,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     expect(mockDbInsert).not.toHaveBeenCalled();
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
@@ -247,7 +247,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     expect(mockDbInsert).not.toHaveBeenCalled();
   });
@@ -280,7 +280,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     // Should increment dropped, not create execution
     expect(mockDbUpdate).toHaveBeenCalled();
@@ -321,7 +321,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     expect(mockDbInsert).toHaveBeenCalled();
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
@@ -356,7 +356,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     expect(mockDbInsert).not.toHaveBeenCalled();
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
@@ -392,7 +392,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     expect(mockDbInsert).not.toHaveBeenCalled();
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
@@ -417,7 +417,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     expect(mockDbInsert).not.toHaveBeenCalled();
   });
@@ -433,7 +433,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     expect(mockDbInsert).not.toHaveBeenCalled();
   });
@@ -463,7 +463,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
     // Should have called update for incrementDroppedExecutions
@@ -497,7 +497,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(triggerJob), {} as never, vi.fn());
+    await handler(makeSQSEvent(triggerJob));
 
     // Should insert execution
     expect(mockDbInsert).toHaveBeenCalled();
@@ -543,7 +543,7 @@ describe("triggerWorkflow", () => {
       }),
     });
 
-    await handler(makeSQSEvent(jobWithEvent), {} as never, vi.fn());
+    await handler(makeSQSEvent(jobWithEvent));
 
     const insertedValues = insertValuesSpy.mock.calls[0][0];
     expect(insertedValues.triggerData).toEqual({
