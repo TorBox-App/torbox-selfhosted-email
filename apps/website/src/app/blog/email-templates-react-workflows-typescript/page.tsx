@@ -596,7 +596,7 @@ npx @wraps.dev/cli email workflows push`}
             <div className="grid gap-4 sm:grid-cols-2">
               <a
                 className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
-                href="/docs/quickstart/email/templates"
+                href="/docs/guides/templates"
               >
                 <h3 className="font-semibold group-hover:text-primary">
                   Templates Quickstart
@@ -607,7 +607,7 @@ npx @wraps.dev/cli email workflows push`}
               </a>
               <a
                 className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
-                href="/docs/quickstart/email/workflows"
+                href="/docs/guides/workflows"
               >
                 <h3 className="font-semibold group-hover:text-primary">
                   Workflows Quickstart
@@ -658,7 +658,7 @@ npx @wraps.dev/cli email workflows push`}
                 </div>
                 <a
                   className="flex items-center gap-2 rounded-xl bg-violet-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-violet-400"
-                  href="/docs/quickstart/email/templates"
+                  href="/docs/guides/templates"
                 >
                   Get Started
                   <ChevronRight size={18} />
