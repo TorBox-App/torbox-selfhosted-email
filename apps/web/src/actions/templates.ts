@@ -268,7 +268,7 @@ export async function publishTemplateToSES(
     try {
       const session = await auth.api.getSession({ headers: await headers() });
       if (session?.user?.email) {
-        trackTemplatePublished(session.user.email, organizationId);
+        await trackTemplatePublished(session.user.email, organizationId);
       }
     } catch {
       // tracking should never fail the publish
@@ -301,9 +301,6 @@ export async function bulkDeleteTemplates(
   organizationId: string,
   templateIds: string[]
 ): Promise<BulkDeleteResult> {
-  let orgSlug: string | undefined;
-  const log = createActionLogger("bulkDeleteTemplates", { orgSlug });
-
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -312,7 +309,9 @@ export async function bulkDeleteTemplates(
         error: "You don't have access to this organization",
       };
     }
-    orgSlug = access.orgSlug;
+    const log = createActionLogger("bulkDeleteTemplates", {
+      orgSlug: access.orgSlug,
+    });
 
     // Only owners and admins can bulk delete
     if (!["owner", "admin"].includes(access.role)) {
@@ -388,10 +387,13 @@ export async function bulkDeleteTemplates(
       );
 
     // Revalidate
-    revalidateTemplates(orgSlug);
+    revalidateTemplates(access.orgSlug);
 
     return { success: true, count: templateIds.length };
   } catch (error) {
+    const log = createActionLogger("bulkDeleteTemplates", {
+      orgSlug: organizationId,
+    });
     log.error(
       { err: serializeError(error), count: templateIds.length },
       "Failed to bulk delete templates"
@@ -408,7 +410,6 @@ export async function bulkUpdateTemplateType(
   templateIds: string[],
   emailType: EmailType
 ): Promise<BulkUpdateTypeResult> {
-  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -417,7 +418,6 @@ export async function bulkUpdateTemplateType(
         error: "You don't have access to this organization",
       };
     }
-    orgSlug = access.orgSlug;
 
     if (templateIds.length === 0) {
       return { success: false, error: "No templates selected" };
@@ -443,11 +443,13 @@ export async function bulkUpdateTemplateType(
       );
 
     // Revalidate
-    revalidateTemplates(orgSlug);
+    revalidateTemplates(access.orgSlug);
 
     return { success: true, count: templateIds.length };
   } catch (error) {
-    const log = createActionLogger("bulkUpdateTemplateType", { orgSlug });
+    const log = createActionLogger("bulkUpdateTemplateType", {
+      orgSlug: organizationId,
+    });
     log.error(
       { err: serializeError(error), count: templateIds.length, emailType },
       "Failed to bulk update template type"
@@ -467,7 +469,6 @@ export async function bulkUpdateTemplateStatus(
   templateIds: string[],
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
 ): Promise<BulkUpdateStatusResult> {
-  let orgSlug: string | undefined;
   try {
     const access = await verifyOrgAccess(organizationId);
     if (!access) {
@@ -476,7 +477,6 @@ export async function bulkUpdateTemplateStatus(
         error: "You don't have access to this organization",
       };
     }
-    orgSlug = access.orgSlug;
 
     if (templateIds.length === 0) {
       return {
@@ -505,7 +505,7 @@ export async function bulkUpdateTemplateStatus(
           )
         );
 
-      revalidateTemplates(orgSlug);
+      revalidateTemplates(access.orgSlug);
 
       return {
         success: true,
@@ -573,7 +573,7 @@ export async function bulkUpdateTemplateStatus(
       }
     }
 
-    revalidateTemplates(orgSlug);
+    revalidateTemplates(access.orgSlug);
 
     return {
       success: true,
@@ -583,7 +583,9 @@ export async function bulkUpdateTemplateStatus(
       errors,
     };
   } catch (error) {
-    const log = createActionLogger("bulkUpdateTemplateStatus", { orgSlug });
+    const log = createActionLogger("bulkUpdateTemplateStatus", {
+      orgSlug: organizationId,
+    });
     log.error(
       { err: serializeError(error), count: templateIds.length, status },
       "Failed to bulk update template status"

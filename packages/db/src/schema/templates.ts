@@ -86,9 +86,9 @@ export const template = pgTable(
     status: templateStatusEnum("status").default("DRAFT").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    createdBy: text("created_by")
-      .references(() => user.id, { onDelete: "set null" })
-      .notNull(),
+    createdBy: text("created_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
     lastEditedBy: text("last_edited_by").references(() => user.id, {
       onDelete: "set null",
     }),
@@ -96,12 +96,15 @@ export const template = pgTable(
     // Templates-as-code (CLI push)
     slug: text("slug"),
     source: text("source"), // React Email TSX source
-    sourceFormat: text("source_format").default("tiptap").notNull(), // "react-email" | "tiptap"
+    sourceFormat: text("source_format")
+      .$type<"tiptap" | "react-email">()
+      .default("tiptap")
+      .notNull(),
     sourceHash: text("source_hash"), // SHA256 for change detection
     pushedFromCli: boolean("pushed_from_cli").default(false).notNull(),
     lastPushedAt: timestamp("last_pushed_at"),
     cliProjectPath: text("cli_project_path"), // e.g. "templates/welcome.tsx"
-    lastEditedFrom: text("last_edited_from"), // "cli" | "dashboard" | null
+    lastEditedFrom: text("last_edited_from").$type<"cli" | "dashboard">(),
   },
   (table) => [
     index("template_org_idx").on(table.organizationId),

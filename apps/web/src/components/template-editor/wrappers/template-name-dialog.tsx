@@ -1,8 +1,7 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +13,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -111,11 +108,18 @@ export function TemplateNameDialog({
   namePlaceholder = "e.g., Welcome Email, Newsletter Header",
   submitLabel = "Create & Edit",
 }: TemplateNameDialogProps) {
-  const form = useForm<TemplateNameFormValues>({
-    resolver: zodResolver(templateNameSchema),
+  const form = useForm({
     defaultValues: {
       name: defaultName,
       description: defaultDescription,
+    } as TemplateNameFormValues,
+    validators: {
+      onSubmit: templateNameSchema,
+    },
+    onSubmit: ({ value }) => {
+      onConfirm(value.name, value.description);
+      form.reset();
+      onOpenChange(false);
     },
   });
 
@@ -128,12 +132,6 @@ export function TemplateNameDialog({
       });
     }
   }, [open, defaultName, defaultDescription, form]);
-
-  const handleSubmit = (values: TemplateNameFormValues) => {
-    onConfirm(values.name, values.description);
-    form.reset();
-    onOpenChange(false);
-  };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -150,59 +148,87 @@ export function TemplateNameDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form
-            className="space-y-4"
-            onSubmit={form.handleSubmit(handleSubmit)}
-          >
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Template Name</FormLabel>
-                  <FormControl>
-                    <Input autoFocus placeholder={namePlaceholder} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <form.Field name="name">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              const errors = field.state.meta.errors.map((error) => ({
+                message: String(error),
+              }));
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>Template Name</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      aria-invalid={isInvalid}
+                      autoFocus
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder={namePlaceholder}
+                      value={field.state.value}
+                    />
+                    {isInvalid && <FieldError errors={errors} />}
+                  </FieldContent>
+                </Field>
+              );
+            }}
+          </form.Field>
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (optional)</FormLabel>
-                  <FormControl>
+          <form.Field name="description">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              const errors = field.state.meta.errors.map((error) => ({
+                message: String(error),
+              }));
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>
+                    Description (optional)
+                  </FieldLabel>
+                  <FieldContent>
                     <Textarea
+                      aria-invalid={isInvalid}
                       className="resize-none"
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="Brief description of what this template is for..."
                       rows={2}
-                      {...field}
+                      value={field.state.value ?? ""}
                     />
-                  </FormControl>
-                  <FormDescription>
-                    This will also be used as the email preview text.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FieldDescription>
+                      This will also be used as the email preview text.
+                    </FieldDescription>
+                    {isInvalid && <FieldError errors={errors} />}
+                  </FieldContent>
+                </Field>
+              );
+            }}
+          </form.Field>
 
-            <DialogFooter>
-              <Button
-                onClick={() => handleOpenChange(false)}
-                type="button"
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <Button type="submit">{submitLabel}</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          <DialogFooter>
+            <Button
+              onClick={() => handleOpenChange(false)}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button type="submit">{submitLabel}</Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

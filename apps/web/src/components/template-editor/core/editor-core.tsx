@@ -3,7 +3,7 @@
 import type { Editor, JSONContent } from "@tiptap/core";
 import { EditorContent } from "@tiptap/react";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
-import { useBrandKits } from "@/hooks/use-brand-kit-queries";
+import { useActiveBrandKit } from "@/hooks/use-brand-kit-queries";
 import { cn } from "@/lib/utils";
 import { useTemplateStore } from "@/stores/template-store";
 import { CodeView } from "../code-view";
@@ -143,17 +143,8 @@ export function EditorCore({
       variableContext,
     });
 
-  // Fetch brand kits for DnD context
-  const { data: brandKits } = useBrandKits(orgSlug);
-  const brandKit = useMemo(() => {
-    if (!brandKits?.length) {
-      return null;
-    }
-    if (selectedBrandKitId) {
-      return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
-    }
-    return brandKits.find((kit) => kit.isDefault) ?? brandKits[0] ?? null;
-  }, [brandKits, selectedBrandKitId]);
+  // Fetch active brand kit for DnD context
+  const brandKit = useActiveBrandKit(orgSlug, selectedBrandKitId);
 
   // Handle editor reset
   const handleEditorReset = () => {

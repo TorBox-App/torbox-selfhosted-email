@@ -5,12 +5,12 @@ import { EditorContent } from "@tiptap/react";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import { useBrandKits } from "@/hooks/use-brand-kit-queries";
+import { useActiveBrandKit } from "@/hooks/use-brand-kit-queries";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
   useDeleteTemplate,
@@ -212,11 +212,13 @@ function TemplateEditorContent({
     null
   );
   useEffect(() => {
-    getSenderDefaultsAction(orgSlug).then((result) => {
-      if (result.success) {
-        setSenderDefaults(result.defaults);
-      }
-    });
+    getSenderDefaultsAction(orgSlug)
+      .then((result) => {
+        if (result.success) {
+          setSenderDefaults(result.defaults);
+        }
+      })
+      .catch(() => {});
   }, [orgSlug]);
 
   // Keyboard shortcuts modal
@@ -291,17 +293,8 @@ function TemplateEditorContent({
     },
   });
 
-  // Fetch brand kits for DnD context
-  const { data: brandKits } = useBrandKits(orgSlug);
-  const brandKit = useMemo(() => {
-    if (!brandKits?.length) {
-      return null;
-    }
-    if (selectedBrandKitId) {
-      return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
-    }
-    return brandKits.find((kit) => kit.isDefault) ?? brandKits[0] ?? null;
-  }, [brandKits, selectedBrandKitId]);
+  // Fetch active brand kit for DnD context
+  const brandKit = useActiveBrandKit(orgSlug, selectedBrandKitId);
 
   // Update store with template metadata
   useEffect(() => {

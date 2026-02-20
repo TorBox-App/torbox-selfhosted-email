@@ -1,11 +1,10 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import type { Editor } from "@tiptap/react";
 import { escape as escapeHTML } from "he";
 import { AlertCircle, Loader2, Mail, Send, User } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,13 +18,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -95,13 +92,64 @@ export function SendTestModal({
 
   type FormValues = z.infer<typeof formSchema>;
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm({
     defaultValues: {
       from: defaultFrom || "",
       to: "",
       subject: "",
       ...Object.fromEntries(variables.map((v) => [v, ""])),
+    } as FormValues,
+    validators: {
+      onSubmit: formSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setIsSending(true);
+
+      try {
+        // Build testData object from variables
+        const testData: Record<string, string> = {};
+        for (const variable of variables) {
+          testData[variable] = String(
+            value[variable as keyof FormValues] ?? ""
+          );
+        }
+
+        const response = await fetch(
+          `/api/${orgSlug}/emails/templates/${templateId}/send-test`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipients: [value.to],
+              subject: value.subject,
+              from: value.from,
+              testData,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to send test email");
+        }
+
+        if (data.success) {
+          toast.success("Test email sent!", {
+            description: `Email sent to ${value.to}`,
+          });
+          onClose();
+        } else if (data.failed > 0) {
+          const failedDetails = data.details?.failed?.[0];
+          throw new Error(failedDetails?.error || "Failed to send test email");
+        }
+      } catch (error) {
+        toast.error("Failed to send test email", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      } finally {
+        setIsSending(false);
+      }
     },
   });
 
@@ -113,7 +161,7 @@ export function SendTestModal({
         to: "",
         subject: "",
         ...Object.fromEntries(variables.map((v) => [v, ""])),
-      });
+      } as FormValues);
       setPreviewHtml(null);
       setActiveTab("form");
     }
@@ -122,13 +170,13 @@ export function SendTestModal({
   // Fill recipient with user's email
   const handleSendToSelf = useCallback(() => {
     if (userEmail) {
-      form.setValue("to", userEmail);
+      form.setFieldValue("to", userEmail);
     }
   }, [form, userEmail]);
 
   // Generate preview HTML with variables replaced
   const generatePreview = useCallback(() => {
-    const values = form.getValues();
+    const values = form.state.values;
     let html = templateContent;
 
     // Replace variables
@@ -144,54 +192,6 @@ export function SendTestModal({
     setPreviewHtml(html);
     setActiveTab("preview");
   }, [form, templateContent, variables]);
-
-  const onSubmit = async (values: FormValues) => {
-    setIsSending(true);
-
-    try {
-      // Build testData object from variables
-      const testData: Record<string, string> = {};
-      for (const variable of variables) {
-        testData[variable] = String(values[variable as keyof FormValues] ?? "");
-      }
-
-      const response = await fetch(
-        `/api/${orgSlug}/emails/templates/${templateId}/send-test`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            recipients: [values.to],
-            subject: values.subject,
-            from: values.from,
-            testData,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send test email");
-      }
-
-      if (data.success) {
-        toast.success("Test email sent!", {
-          description: `Email sent to ${values.to}`,
-        });
-        onClose();
-      } else if (data.failed > 0) {
-        const failedDetails = data.details?.failed?.[0];
-        throw new Error(failedDetails?.error || "Failed to send test email");
-      }
-    } catch (error) {
-      toast.error("Failed to send test email", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   return (
     <Dialog onOpenChange={(open) => !open && onClose()} open={isOpen}>
@@ -217,36 +217,53 @@ export function SendTestModal({
           </TabsList>
 
           <TabsContent className="mt-4" value="form">
-            <Form {...form}>
-              <form
-                className="space-y-4"
-                onSubmit={form.handleSubmit(onSubmit)}
-              >
-                <FormField
-                  control={form.control}
-                  name="from"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>From</FormLabel>
-                      <FormControl>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.handleSubmit();
+              }}
+            >
+              <form.Field name="from">
+                {(field) => {
+                  const isInvalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid;
+                  const errors = field.state.meta.errors.map((error) => ({
+                    message: String(error),
+                  }));
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>From</FieldLabel>
+                      <FieldContent>
                         <Input
+                          aria-invalid={isInvalid}
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
                           placeholder="hello@yourdomain.com"
                           type="email"
-                          {...field}
+                          value={field.state.value}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        {isInvalid && <FieldError errors={errors} />}
+                      </FieldContent>
+                    </Field>
+                  );
+                }}
+              </form.Field>
 
-                <FormField
-                  control={form.control}
-                  name="to"
-                  render={({ field }) => (
-                    <FormItem>
+              <form.Field name="to">
+                {(field) => {
+                  const isInvalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid;
+                  const errors = field.state.meta.errors.map((error) => ({
+                    message: String(error),
+                  }));
+                  return (
+                    <Field data-invalid={isInvalid}>
                       <div className="flex items-center justify-between">
-                        <FormLabel>To</FormLabel>
+                        <FieldLabel htmlFor={field.name}>To</FieldLabel>
                         {userEmail && (
                           <Button
                             className="h-auto p-0 text-xs"
@@ -259,97 +276,131 @@ export function SendTestModal({
                           </Button>
                         )}
                       </div>
-                      <FormControl>
+                      <FieldContent>
                         <Input
+                          aria-invalid={isInvalid}
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
                           placeholder="test@example.com"
                           type="email"
-                          {...field}
+                          value={field.state.value}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        {isInvalid && <FieldError errors={errors} />}
+                      </FieldContent>
+                    </Field>
+                  );
+                }}
+              </form.Field>
 
-                <FormField
-                  control={form.control}
-                  name="subject"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subject Line</FormLabel>
-                      <FormControl>
+              <form.Field name="subject">
+                {(field) => {
+                  const isInvalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid;
+                  const errors = field.state.meta.errors.map((error) => ({
+                    message: String(error),
+                  }));
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>Subject Line</FieldLabel>
+                      <FieldContent>
                         <Input
+                          aria-invalid={isInvalid}
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
                           placeholder="Welcome to our service!"
-                          {...field}
+                          value={field.state.value}
                         />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        {isInvalid && <FieldError errors={errors} />}
+                      </FieldContent>
+                    </Field>
+                  );
+                }}
+              </form.Field>
 
-                {variables.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="mb-3 font-medium text-sm">
-                        Template Variables
-                      </h4>
-                      <p className="mb-4 text-muted-foreground text-xs">
-                        Fill in values for the variables used in your template.
-                      </p>
-                      <div className="space-y-3">
-                        {variables.map((variable) => (
-                          <FormField
-                            control={form.control}
-                            key={variable}
-                            name={variable as keyof FormValues}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="font-mono text-xs">
+              {variables.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="mb-3 font-medium text-sm">
+                      Template Variables
+                    </h4>
+                    <p className="mb-4 text-muted-foreground text-xs">
+                      Fill in values for the variables used in your template.
+                    </p>
+                    <div className="space-y-3">
+                      {variables.map((variable) => (
+                        <form.Field
+                          key={variable}
+                          name={variable as keyof FormValues}
+                        >
+                          {(field) => {
+                            const isInvalid =
+                              field.state.meta.isTouched &&
+                              !field.state.meta.isValid;
+                            const errors = field.state.meta.errors.map(
+                              (error) => ({
+                                message: String(error),
+                              })
+                            );
+                            return (
+                              <Field data-invalid={isInvalid}>
+                                <FieldLabel
+                                  className="font-mono text-xs"
+                                  htmlFor={field.name}
+                                >
                                   {`{{${variable}}}`}
-                                </FormLabel>
-                                <FormControl>
+                                </FieldLabel>
+                                <FieldContent>
                                   <Input
+                                    aria-invalid={isInvalid}
+                                    id={field.name}
+                                    name={field.name}
+                                    onBlur={field.handleBlur}
+                                    onChange={(e) =>
+                                      field.handleChange(e.target.value)
+                                    }
                                     placeholder={`Value for ${variable}`}
-                                    {...field}
-                                    value={String(field.value ?? "")}
+                                    value={String(field.state.value ?? "")}
                                   />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
+                                  {isInvalid && <FieldError errors={errors} />}
+                                </FieldContent>
+                              </Field>
+                            );
+                          }}
+                        </form.Field>
+                      ))}
                     </div>
-                  </>
-                )}
+                  </div>
+                </>
+              )}
 
-                <DialogFooter className="gap-2 pt-4">
-                  <Button
-                    onClick={generatePreview}
-                    type="button"
-                    variant="outline"
-                  >
-                    Preview
-                  </Button>
-                  <Button disabled={isSending} type="submit">
-                    {isSending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Send Test Email
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
+              <DialogFooter className="gap-2 pt-4">
+                <Button
+                  onClick={generatePreview}
+                  type="button"
+                  variant="outline"
+                >
+                  Preview
+                </Button>
+                <Button disabled={isSending} type="submit">
+                  {isSending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Test Email
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           </TabsContent>
 
           <TabsContent className="mt-4" value="preview">
@@ -379,10 +430,7 @@ export function SendTestModal({
               >
                 Back to Form
               </Button>
-              <Button
-                disabled={isSending}
-                onClick={form.handleSubmit(onSubmit)}
-              >
+              <Button disabled={isSending} onClick={() => form.handleSubmit()}>
                 {isSending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

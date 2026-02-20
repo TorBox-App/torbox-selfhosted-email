@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { BrandKit } from "@wraps/db";
+import { useMemo } from "react";
 
 // Query Keys
 export const brandKitKeys = {
@@ -176,6 +177,20 @@ export function useExtractBrandKit(orgSlug: string) {
       }>;
     },
   });
+}
+
+// Resolve the active brand kit: selected > default > first
+export function useActiveBrandKit(
+  orgSlug: string,
+  selectedBrandKitId: string | null
+) {
+  const { data: brandKits } = useBrandKits(orgSlug);
+  return useMemo(() => {
+    if (!brandKits?.length) return null;
+    if (selectedBrandKitId)
+      return brandKits.find((kit) => kit.id === selectedBrandKitId) ?? null;
+    return brandKits.find((kit) => kit.isDefault) ?? brandKits[0] ?? null;
+  }, [brandKits, selectedBrandKitId]);
 }
 
 // Extract brand kit from template mutation

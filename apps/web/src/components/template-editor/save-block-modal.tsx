@@ -1,11 +1,10 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import type { JSONContent } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
 import { Loader2, Package, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -18,13 +17,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -54,11 +51,9 @@ const blockCategories = [
 
 const formSchema = z.object({
   name: z.string().min(1, "Block name is required").max(100),
-  description: z.string().max(500).optional(),
+  description: z.string().max(500),
   category: z.string().min(1, "Category is required"),
 });
-
-type FormValues = z.infer<typeof formSchema>;
 
 export function SaveBlockModal({
   editor,
@@ -71,12 +66,38 @@ export function SaveBlockModal({
     null
   );
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm({
     defaultValues: {
       name: "",
       description: "",
       category: "custom",
+    },
+    validators: {
+      onSubmit: formSchema,
+    },
+    onSubmit: async ({ value }) => {
+      if (!selectedContent) {
+        toast.error("No content selected to save");
+        return;
+      }
+
+      try {
+        await createBlock.mutateAsync({
+          name: value.name,
+          description: value.description,
+          category: value.category,
+          content: selectedContent,
+        });
+
+        toast.success("Block saved!", {
+          description: `"${value.name}" has been added to your block library`,
+        });
+        onClose();
+      } catch (error) {
+        toast.error("Failed to save block", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
     },
   });
 
@@ -98,38 +119,9 @@ export function SaveBlockModal({
         setSelectedContent(editor.getJSON());
       }
 
-      form.reset({
-        name: "",
-        description: "",
-        category: "custom",
-      });
+      form.reset();
     }
   }, [isOpen, editor, form]);
-
-  const onSubmit = async (values: FormValues) => {
-    if (!selectedContent) {
-      toast.error("No content selected to save");
-      return;
-    }
-
-    try {
-      await createBlock.mutateAsync({
-        name: values.name,
-        description: values.description,
-        category: values.category,
-        content: selectedContent,
-      });
-
-      toast.success("Block saved!", {
-        description: `"${values.name}" has been added to your block library`,
-      });
-      onClose();
-    } catch (error) {
-      toast.error("Failed to save block", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  };
 
   const hasSelection = editor
     ? editor.state.selection.from !== editor.state.selection.to
@@ -150,87 +142,124 @@ export function SaveBlockModal({
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Block Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Welcome Header" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            form.handleSubmit();
+          }}
+        >
+          <form.Field name="name">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              const errors = field.state.meta.errors.map((error) => ({
+                message: String(error),
+              }));
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>Block Name</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      aria-invalid={isInvalid}
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="e.g., Welcome Header"
+                      value={field.state.value}
+                    />
+                    {isInvalid && <FieldError errors={errors} />}
+                  </FieldContent>
+                </Field>
+              );
+            }}
+          </form.Field>
 
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select
-                    defaultValue={field.value}
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
+          <form.Field name="category">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              const errors = field.state.meta.errors.map((error) => ({
+                message: String(error),
+              }));
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>Category</FieldLabel>
+                  <FieldContent>
+                    <Select
+                      onValueChange={(value) => field.handleChange(value)}
+                      value={field.state.value}
+                    >
+                      <SelectTrigger aria-invalid={isInvalid} id={field.name}>
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {blockCategories.map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                      <SelectContent>
+                        {blockCategories.map((category) => (
+                          <SelectItem
+                            key={category.value}
+                            value={category.value}
+                          >
+                            {category.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {isInvalid && <FieldError errors={errors} />}
+                  </FieldContent>
+                </Field>
+              );
+            }}
+          </form.Field>
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (optional)</FormLabel>
-                  <FormControl>
+          <form.Field name="description">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              const errors = field.state.meta.errors.map((error) => ({
+                message: String(error),
+              }));
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>
+                    Description (optional)
+                  </FieldLabel>
+                  <FieldContent>
                     <Textarea
+                      aria-invalid={isInvalid}
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="Describe what this block contains..."
-                      {...field}
+                      value={field.state.value}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    {isInvalid && <FieldError errors={errors} />}
+                  </FieldContent>
+                </Field>
+              );
+            }}
+          </form.Field>
 
-            <DialogFooter>
-              <Button onClick={onClose} type="button" variant="outline">
-                Cancel
-              </Button>
-              <Button disabled={createBlock.isPending} type="submit">
-                {createBlock.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Block
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          <DialogFooter>
+            <Button onClick={onClose} type="button" variant="outline">
+              Cancel
+            </Button>
+            <Button disabled={createBlock.isPending} type="submit">
+              {createBlock.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Block
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

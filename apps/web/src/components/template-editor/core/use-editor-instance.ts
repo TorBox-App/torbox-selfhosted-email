@@ -273,12 +273,6 @@ export function useEditorInstance({
         saveDebouncer.maybeExecute(editorContent);
       }
     },
-
-    onSelectionUpdate: ({ editor: _editorInstance }) => {
-      // Could emit selected node info here for properties panel
-      // const { from, to } = editorInstance.state.selection;
-      // const node = editorInstance.state.doc.nodeAt(from);
-    },
   });
 
   // Initialize lastSavedContentRef when editor is ready

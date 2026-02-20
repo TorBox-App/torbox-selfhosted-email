@@ -63,11 +63,13 @@ export function CodeTemplateEditor({
     null
   );
   useEffect(() => {
-    getSenderDefaultsAction(orgSlug).then((result) => {
-      if (result.success) {
-        setSenderDefaults(result.defaults);
-      }
-    });
+    getSenderDefaultsAction(orgSlug)
+      .then((result) => {
+        if (result.success) {
+          setSenderDefaults(result.defaults);
+        }
+      })
+      .catch(() => {});
   }, [orgSlug]);
 
   // Mutations
@@ -234,7 +236,7 @@ export function CodeTemplateEditor({
                   source,
                   compiledHtml,
                   lastEditedFrom: "dashboard",
-                  updatedAt: new Date().toISOString(),
+                  updatedAt: new Date(),
                 }
               : old
         );

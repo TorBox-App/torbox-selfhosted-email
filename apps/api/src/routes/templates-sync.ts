@@ -358,7 +358,7 @@ export async function upsertTemplateFromCli(
     lastPushedAt: now,
     cliProjectPath: body.cliProjectPath,
     lastEditedFrom: "cli",
-    createdBy: authContext.userId ?? "cli",
+    createdBy: authContext.userId ?? null,
   });
 
   return {
