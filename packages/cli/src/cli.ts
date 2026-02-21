@@ -46,7 +46,6 @@ import { templatesPreview } from "./commands/email/templates/preview.js";
 import { templatesPush } from "./commands/email/templates/push.js";
 import { emailTest } from "./commands/email/test.js";
 import { upgrade } from "./commands/email/upgrade.js";
-import { workflowsGenerate } from "./commands/email/workflows/generate.js";
 import { workflowsInit } from "./commands/email/workflows/init.js";
 import { workflowsPush } from "./commands/email/workflows/push.js";
 import { workflowsValidate } from "./commands/email/workflows/validate.js";
@@ -196,10 +195,7 @@ function showHelp() {
     `  ${pc.cyan("email workflows validate")}  Validate workflow files`
   );
   console.log(
-    `  ${pc.cyan("email workflows push")}      Push workflows to dashboard`
-  );
-  console.log(
-    `  ${pc.cyan("email workflows generate")} Generate workflow from template\n`
+    `  ${pc.cyan("email workflows push")}      Push workflows to dashboard\n`
   );
   console.log("SMS Commands:");
   console.log(`  ${pc.cyan("sms init")}             Deploy SMS infrastructure`);
@@ -486,11 +482,6 @@ args.options([
     name: "draft",
     description: "Push workflow as draft without enabling it",
     defaultValue: false,
-  },
-  {
-    name: "name",
-    description: "Output file slug for generated workflow",
-    defaultValue: undefined,
   },
   {
     name: "noExample",
@@ -1029,21 +1020,12 @@ async function run() {
               });
               break;
 
-            case "generate":
-              await workflowsGenerate({
-                template: flags.template,
-                name: flags.name,
-                force: flags.force,
-                json: flags.json,
-              });
-              break;
-
             default:
               clack.log.error(
                 `Unknown workflows command: ${workflowsSubCommand || "(none)"}`
               );
               console.log(
-                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("validate")}, ${pc.cyan("push")}, ${pc.cyan("generate")}\n`
+                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("validate")}, ${pc.cyan("push")}\n`
               );
               throw new Error(
                 `Unknown workflows command: ${workflowsSubCommand || "(none)"}`

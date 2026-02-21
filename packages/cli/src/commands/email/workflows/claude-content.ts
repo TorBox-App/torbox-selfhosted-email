@@ -14,8 +14,6 @@ Workflow automation files live at \`wraps/workflows/*.ts\` and are written using
 
 - \`wraps email workflows validate\` — Validate workflow files locally
 - \`wraps email workflows push\` — Push workflows to the Wraps dashboard
-- \`wraps email workflows generate --template <name>\` — Generate from a built-in template
-- \`wraps email workflows generate "description"\` — Generate from a natural language description
 
 ### Quick Reference
 
@@ -349,7 +347,5 @@ export default defineWorkflow({
 wraps email workflows validate                     # Validate all workflow files
 wraps email workflows validate --workflow welcome   # Validate a specific workflow
 wraps email workflows push                         # Push workflows to dashboard
-wraps email workflows generate --template welcome  # Generate from built-in template
-wraps email workflows generate "description..."    # Generate from AI description
 \`\`\`
 `;

@@ -176,6 +176,32 @@ wraps/                            # Monorepo root
 
 **SES Event Types**: SEND, DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT, REJECT, RENDERING_FAILURE, DELIVERY_DELAY, SUBSCRIPTION
 
+**Multi-Channel**: The system supports email (SES) and SMS (AWS End User Messaging) channels. Templates, workflows, and contacts are multi-channel — workflow steps can send via either channel. The DB schema supports cascade nodes for multi-step, multi-channel sequences.
+
+## Workflow Engine Architecture
+
+The workflow engine executes multi-step automations (email sequences, delays, conditions, webhooks, SMS) triggered by contact events or cron schedules.
+
+**Execution Flow**: Event → Match workflows (org + status=enabled) → Batch enqueue SQS jobs → Processor executes steps → Route via transitions
+
+**Key Architectural Patterns**:
+- **Definition Snapshots**: At execution creation, freeze `definitionSnapshot` (steps + transitions + version) into JSONB. In-flight executions are immune to live dashboard edits. Access via `snapshot?.steps ?? wf.steps` fallback for pre-snapshot executions.
+- **Atomic Idempotency**: Use `ON CONFLICT DO UPDATE` with idempotency keys on step execution inserts to prevent duplicate sends.
+- **EventBridge One-Time Schedules**: Delays and cron chaining use `at(yyyy-MM-ddTHH:mm:ss)` schedules with `ActionAfterCompletion: "DELETE"`. Schedule names must fit 64 chars: `wraps-wf-{execId8}-{stepId8}`.
+- **Cron Schedule Chaining**: One pending schedule per workflow at a time. After `schedule-trigger` fires, `createNextWorkflowSchedule()` chains the next. Use `croner` for timezone-aware cron evaluation.
+- **DLQ Consumer**: Failed SQS messages (3 retries) go to DLQ → Lambda marks executions as failed. **Must never throw** (no DLQ-of-DLQ). Repairs broken cron chains via `createNextWorkflowSchedule()`.
+- **Reconciliation**: `reconcileScheduleChains()` checks EventBridge for each schedule-triggered workflow, recreates missing schedules. `reconcileWorkflowStats()` detects counter drift and optionally repairs.
+- **Wait State Claims**: Atomic `UPDATE … WHERE status='waiting'` ensures only one handler (webhook vs timeout) claims a paused execution.
+- **Reentry Prevention**: Partial unique index on `(workflowId, contactId) WHERE status IN (active states)` when `allowReentry=false`.
+
+**Key Files**:
+- `apps/api/src/services/workflow-events.ts` — Event triggering and workflow matching
+- `apps/api/src/services/workflow-queue.ts` — SQS enqueueing and EventBridge scheduling
+- `apps/api/src/services/workflow-scheduler.ts` — Cron schedule creation and chaining
+- `apps/api/src/(ee)/workers/workflow-processor.ts` — SQS handler: step execution, transitions, sends
+- `apps/api/src/(ee)/workers/workflow-dlq-consumer.ts` — DLQ handler: failure recovery
+- `apps/api/src/(ee)/workers/workflow-stats.ts` — Stats reconciliation
+
 ## Metadata System
 
 Deployment metadata stored in `~/.wraps/connections/{accountId}-{region}.json` (versioned, auto-migrating).
@@ -270,6 +296,8 @@ wraps auth login           # Authenticate with Wraps Platform
 - `-d, --domain` - Domain name
 - `-y, --yes` - Skip confirmation for non-destructive operations
 - `-f, --force` - Force operation without confirmation (destructive operations)
+- `--json` - Output structured JSON (all commands support this)
+- `--draft` - Push workflows in draft mode (workflows push only)
 
 ## Critical Design Principles
 
@@ -335,6 +363,19 @@ wraps auth login           # Authenticate with Wraps Platform
 - No `catch (e: any)` — use `catch (e)` with `instanceof` type guards
 - No swallowed errors (`catch (_e)`) in CLI commands — handle specifically
 
+### Structured Logging
+
+- `apps/web`: Pino logger at `src/lib/logger.ts`. Use `logger.info({ data }, 'message')`. Use `createRequestLogger()` for API routes, `createActionLogger()` for server actions, `serializeError()` for Error objects.
+- `apps/api`: Custom JSON logger at `src/lib/logger.ts`. Use `log.info(msg, data?)`, `log.error(msg, error?, data?)`.
+- Never use `console.log` in production code paths — use the structured logger.
+
+### Security Patterns
+
+- **SSRF Validation**: Webhook URLs must call `validateWebhookUrl()` before HTTP requests. Blocks loopback, link-local, private networks, IPv4-mapped IPv6, and AWS VPC ranges.
+- **Timing-Safe Secrets**: Use `timingSafeEqual()` for webhook secrets, API keys, and tokens. Never use `===` for secret comparison.
+- **Cross-Org IDOR Prevention**: All DB queries must scope by `organizationId` from `authContext`. Use `and(eq(resource.id, id), eq(resource.organizationId, authContext.organizationId))` — never query by ID alone.
+- **Resource Ownership Validation**: Before using a user-provided `awsAccountId`, verify it belongs to the authenticated org via explicit DB query. Return 403 if no match.
+
 ### Banned Dependencies
 
 These are enforced by `baseline.toml` and will fail CI:
@@ -352,7 +393,7 @@ These are enforced by `baseline.toml` and will fail CI:
 
 ## Key Files Reference
 
-- **THESIS.md**: Business strategy, product vision, go-to-market plan
+- **ai-notes/CONTEXT/THESIS.md**: Business strategy, product vision, go-to-market plan
 - **packages/cli/src/cli.ts**: CLI entry point (args-based multi-service router)
 - **packages/cli/src/infrastructure/email-stack.ts**: Email Pulumi stack
 - **packages/cli/src/infrastructure/sms-stack.ts**: SMS Pulumi stack
@@ -361,7 +402,12 @@ These are enforced by `baseline.toml` and will fail CI:
 - **packages/cli/src/utils/shared/config.ts**: Centralized API/app URL helpers
 - **packages/db/src/schema/**: All database table definitions
 - **apps/api/src/routes/**: API route handlers
-- **apps/api/src/services/workflow-events.ts**: Workflow event emission
+- **apps/api/src/services/workflow-events.ts**: Workflow event triggering and matching
+- **apps/api/src/services/workflow-queue.ts**: SQS enqueueing and EventBridge scheduling
+- **apps/api/src/services/workflow-scheduler.ts**: Cron schedule creation and chaining
+- **apps/api/src/(ee)/workers/workflow-processor.ts**: Step execution, transitions, sends
+- **apps/api/src/(ee)/workers/workflow-dlq-consumer.ts**: DLQ failure recovery
+- **apps/api/src/lib/logger.ts**: Structured JSON logger (API)
 - **apps/web/src/actions/**: Next.js server actions
 - **apps/web/src/components/(ee)/workflow-builder/**: Workflow builder (React Flow)
 - **apps/web/src/components/template-editor/**: Email template editor (TipTap)
