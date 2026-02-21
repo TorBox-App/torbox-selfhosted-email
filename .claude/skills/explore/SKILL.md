@@ -26,9 +26,9 @@ Use this skill BEFORE implementing any non-trivial feature or fix. Do NOT write 
 | CLI commands | `packages/cli/src/commands/`, `packages/cli/src/infrastructure/`, `packages/cli/src/utils/` |
 | Database | `packages/db/src/schema/`, `packages/db/src/migrations/` |
 | Workflows | `apps/web/src/components/(ee)/workflow-builder/`, `apps/web/src/lib/workflow-validation.ts` |
-| Templates | `apps/web/src/components/template-editor/`, `apps/web/src/lib/ses-variables.ts` |
-| Auth | `packages/auth/src/`, `apps/web/src/lib/auth.ts` |
-| Lambda | `packages/core/src/lambda/`, `packages/cli/lambda/` |
+| Templates | `apps/web/src/components/template-editor/`, `apps/web/src/lib/serializers/tiptap-to-react-email.tsx` |
+| Auth | `packages/auth/src/`, `apps/web/src/lib/organization.ts` |
+| Lambda | `packages/cli/lambda/`, `apps/api/src/(ee)/workers/` |
 
 ## Rules
 

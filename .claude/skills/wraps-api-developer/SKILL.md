@@ -84,6 +84,7 @@ apps/api/src/
 import { t } from "elysia";
 import { createAuthenticatedRoutes } from "../middleware/auth";
 import { db, someTable, eq, and } from "@wraps/db";
+import { log } from "../lib/logger";
 
 export const myRoutes = createAuthenticatedRoutes("/v1/my-resource")
   .get(
@@ -135,7 +136,7 @@ export const myRoutes = createAuthenticatedRoutes("/v1/my-resource")
         resourceId: created.id,
         organizationId: authContext.organizationId,
       }).catch((err) => {
-        console.error("[my-resource] Failed to emit event:", err);
+        log.error("[my-resource] Failed to emit event", err);
       });
 
       ctx.set.status = 201;
@@ -188,7 +189,7 @@ await emitContactCreated({
   organizationId: authContext.organizationId,
   contactData: { ... },
 }).catch((err) => {
-  console.error("[contacts] Failed to emit contact_created:", err);
+  log.error("[contacts] Failed to emit contact_created", err);
 });
 
 // Multiple events - await all in parallel
@@ -196,7 +197,7 @@ await Promise.all([
   emitContactCreated({ ... }),
   checkSegmentEntry({ ... }),
 ]).catch((err) => {
-  console.error("[contacts] Failed to emit events:", err);
+  log.error("[contacts] Failed to emit events", err);
 });
 
 // Multiple items - map and await all
@@ -208,7 +209,7 @@ await Promise.all(
       topicId,
       topicName: topicMap.get(topicId),
     }).catch((err) => {
-      console.error("[contacts] Failed to emit topic_subscribed:", err);
+      log.error("[contacts] Failed to emit topic_subscribed", err);
     })
   )
 );
@@ -286,9 +287,10 @@ return { error: "Failed to process request" };
 ### Logging Errors
 
 ```typescript
+import { log } from "../lib/logger";
+
 // Log with context for debugging
-console.error("[contacts] Failed to create contact:", {
-  error: err,
+log.error("[contacts] Failed to create contact", err, {
   email: body.email,
   organizationId: authContext.organizationId,
 });
@@ -413,7 +415,7 @@ ctx.set.status = 400;
 return { error: "Message" };
 
 // Await events
-await emitEvent({ ... }).catch(console.error);
+await emitEvent({ ... }).catch((err) => log.error("Failed to emit event", err));
 
 // Parallel awaits
 await Promise.all([...promises]);

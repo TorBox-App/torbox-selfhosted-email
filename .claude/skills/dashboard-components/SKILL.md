@@ -107,6 +107,7 @@ export default async function MyPage({ params, searchParams }: PageProps) {
 
 import { revalidatePath } from "next/cache";
 import { db, myTable, eq, and } from "@wraps/db";
+import { createActionLogger, serializeError } from "@/lib/logger";
 
 type CreateResult = { success: true; data: MyData } | { success: false; error: string };
 
@@ -142,7 +143,8 @@ export async function createItem(
 
     return { success: true, data: result };
   } catch (error) {
-    console.error("[createItem]", error);
+    const log = createActionLogger("createItem", { organizationId });
+    log.error({ err: serializeError(error) }, "Failed to create item");
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
