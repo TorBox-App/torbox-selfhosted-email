@@ -54,7 +54,7 @@ SES uses flat variable names. The system automatically transforms:
 "{{contact.firstName|there}}" → "{{#if contactFirstName}}{{contactFirstName}}{{else}}there{{/if}}"
 ```
 
-**Location**: `apps/web/src/lib/ses-variables.ts`
+**Location**: `@wraps/email` package (exported from `packages/email/`)
 
 ## Unsubscribe Links
 
@@ -103,7 +103,7 @@ const text = toPlainText(html);
 
 ### 3. SES Variable Transform
 ```typescript
-import { transformVariablesForSes } from "@/lib/ses-variables";
+import { transformVariablesForSes } from "@wraps/email";
 
 const sesHtml = transformVariablesForSes(html);
 const sesSubject = transformVariablesForSes(subject);
@@ -177,7 +177,7 @@ await wraps.send({
 | File | Purpose |
 |------|---------|
 | `lib/serializers/tiptap-to-react-email.tsx` | TipTap → React Email |
-| `lib/ses-variables.ts` | Variable transformation |
+| `@wraps/email` (`transformVariablesForSes`) | Variable transformation |
 | `lib/unsubscribe-token.ts` | JWT tokens |
 | `components/template-editor/` | Editor UI |
 | `components/template-editor/variables/variable-definitions.ts` | Available variables |

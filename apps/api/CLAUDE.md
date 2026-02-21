@@ -66,6 +66,24 @@ pnpm --filter @wraps/api test
 pnpm --filter @wraps/api test:coverage src/__tests__/my-test.test.ts
 ```
 
+## Auth Middleware
+
+Two auth methods, both via `Authorization: Bearer <token>`:
+
+1. **API Keys** (`wraps_*` prefix) — SHA256 hashed in DB, checked against `api_key` table
+2. **Session Tokens** — better-auth session lookup with org membership JOIN
+
+```typescript
+type AuthContext = {
+  apiKeyId: string | null;      // Set if API key auth
+  organizationId: string;        // Always set
+  userId: string | null;         // null for API keys, set for sessions
+  planId: string | null;         // null if no valid subscription
+};
+```
+
+Access via `ctx.auth` in authenticated routes. Use `createAuthenticatedRoutes()` to create route groups with auth middleware.
+
 ## Key Files
 
 - `src/routes/` - API route handlers

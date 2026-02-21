@@ -51,18 +51,18 @@ type FormValues = z.infer<typeof formSchema>
 import { useForm } from '@tanstack/react-form'
 import { zodValidator } from '@tanstack/zod-form-adapter'
 
-const form = useForm<FormValues>({
+const form = useForm({
   defaultValues: {
     title: '',
     description: '',
     email: '',
   },
+  validatorAdapter: zodValidator(),
   validators: {
-    onSubmit: formSchema,
+    onChange: formSchema,
   },
   onSubmit: async ({ value }) => {
-    // Handle form submission
-    console.log('Form values:', value)
+    // Handle form submission — call server action or mutation
   },
 })
 ```
@@ -447,15 +447,16 @@ const contactSchema = z.object({
 type ContactFormValues = z.infer<typeof contactSchema>
 
 export function ContactForm() {
-  const form = useForm<ContactFormValues>({
+  const form = useForm({
     defaultValues: {
       name: '',
       email: '',
       subject: undefined,
       message: '',
-    },
+    } satisfies ContactFormValues,
+    validatorAdapter: zodValidator(),
     validators: {
-      onSubmit: contactSchema,
+      onChange: contactSchema,
     },
     onSubmit: async ({ value }) => {
       // Submit to API

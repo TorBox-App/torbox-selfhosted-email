@@ -26,7 +26,7 @@ Launch parallel Task agents to gather all context:
 - For every external API call the feature will make (AWS SDK, fetch, etc.):
   - List every possible error type
   - List every possible response shape
-  - Check `MEMORY.md` for known quirks
+  - Check CLAUDE.md and relevant skills for known patterns and gotchas
 - Document rate limits, retries, and timeout considerations
 
 **Gate**: Present discovery findings to user. Do NOT proceed until user confirms.

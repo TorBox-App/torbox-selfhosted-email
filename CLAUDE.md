@@ -29,11 +29,6 @@ When implementing multi-step features (e.g., create resource → save state → 
 - We provide tooling, dashboard, and great DX
 - No vendor lock-in (infrastructure stays if they churn)
 
-### Why This Matters
-- **Great Developer Experience**: Beautiful DX with TypeScript SDK, dashboards, 30-second setup
-- **Full Ownership**: Infrastructure in your AWS account, no vendor lock-in, data residency control
-- **Cost-Effective**: Pay AWS directly ($0.10 per 1,000 emails), transparent pricing, scale affordably
-
 ## Architecture
 
 ### Tech Stack
@@ -228,76 +223,7 @@ wraps cdn init             # Deploy CDN infrastructure
 wraps auth login           # Authenticate with Wraps Platform
 ```
 
-### Service Commands
-
-#### Email (`wraps email ...`)
-| Command | Description |
-|---------|-------------|
-| `init` | Deploy new email infrastructure (SES, IAM, DynamoDB, Lambda, EventBridge, SQS) |
-| `connect` | Connect existing SES (non-destructive, creates `wraps-email-` prefixed resources) |
-| `status` | Show current email setup, resources, and links |
-| `check` | Check email deliverability for a domain |
-| `config` | Email configuration management |
-| `test` | Send a test email |
-| `upgrade` | Add features (dedicated IP, SMTP credentials, custom tracking domain, etc.) |
-| `restore` | Restore infrastructure from saved metadata |
-| `destroy` | Remove all email infrastructure |
-| `domains add/list/get-dkim/verify/remove` | Domain management for SES |
-| `inbound init/status/verify/test/destroy` | Inbound email receiving (MailManager + S3) |
-| `templates init/push/preview` | Templates-as-code management |
-| `workflows push/validate` | Workflow automation management |
-
-#### SMS (`wraps sms ...`)
-| Command | Description |
-|---------|-------------|
-| `init` | Deploy SMS infrastructure (AWS End User Messaging / Pinpoint) |
-| `status` | Show SMS setup |
-| `sync` | Apply config changes |
-| `test` | Send a test SMS |
-| `upgrade` | Add features |
-| `register` | Register phone number |
-| `verify-number` | Verify phone number |
-| `destroy` | Remove SMS infrastructure |
-
-#### CDN (`wraps cdn ...`)
-| Command | Description |
-|---------|-------------|
-| `init` | Deploy CDN infrastructure (S3 + CloudFront) |
-| `status` | Show CDN setup |
-| `sync` | Apply config changes |
-| `verify` | Verify domain DNS |
-| `upgrade` | Add features |
-| `destroy` | Remove CDN infrastructure |
-
-#### Platform (`wraps platform ...`)
-| Command | Description |
-|---------|-------------|
-| `connect` | Connect AWS account to Wraps Platform |
-| `update-role` | Update platform IAM permissions |
-
-#### Auth (`wraps auth ...`)
-| Command | Description |
-|---------|-------------|
-| `login` | Authenticate via device flow |
-| `status` | Show auth state |
-| `logout` | Sign out |
-
-#### AWS (`wraps aws ...`)
-| Command | Description |
-|---------|-------------|
-| `doctor` | AWS account diagnostics |
-| `setup` | AWS CLI setup guide |
-
-### CLI Flag Conventions
-
-**Common Flags:**
-- `-p, --provider` - Hosting provider (vercel, aws, railway, other)
-- `-r, --region` - AWS region
-- `-d, --domain` - Domain name
-- `-y, --yes` - Skip confirmation for non-destructive operations
-- `-f, --force` - Force operation without confirmation (destructive operations)
-- `--json` - Output structured JSON (all commands support this)
-- `--draft` - Push workflows in draft mode (workflows push only)
+For detailed command reference, see the `cli-commands` skill.
 
 ## Critical Design Principles
 
@@ -320,25 +246,6 @@ wraps auth login           # Authenticate with Wraps Platform
 - All stacks use inline Pulumi programs (no separate stack files)
 - Lambda functions bundled on-the-fly using esbuild
 - Deployment state stored in `~/.wraps/` directory
-
-#### Infrastructure Resources (`packages/cli/src/infrastructure/resources/`)
-| Resource | Description |
-|----------|-------------|
-| `iam.ts` | IAM role definitions (OIDC, service roles) |
-| `ses.ts` | SES configuration (identities, config sets) |
-| `dynamodb.ts` | DynamoDB tables (email history) |
-| `lambda.ts` | Lambda functions (event processing) |
-| `lambda-inbound.ts` | Lambda for inbound email processing |
-| `sqs.ts` / `sqs-inbound.ts` | SQS queues + DLQ |
-| `eventbridge.ts` | EventBridge rules (outbound events) |
-| `eventbridge-inbound.ts` | EventBridge for inbound email events |
-| `eventbridge-user-webhook.ts` | User webhook events |
-| `mail-manager.ts` | AWS MailManager (email archives) |
-| `s3-cdn.ts` / `s3-inbound.ts` | S3 buckets (CDN, inbound emails) |
-| `cloudfront.ts` | CloudFront distribution |
-| `acm.ts` | ACM certificates |
-| `alerting.ts` | CloudWatch alerting |
-| `smtp-credentials.ts` | SMTP authentication |
 
 #### Resource Naming
 - All resources: `wraps-{service}-{resource}`
@@ -480,58 +387,6 @@ pnpm check             # Lint check (ultracite + biome)
 pnpm fix               # Auto-fix lint issues
 pnpm check:all         # Full CI check: lint → typecheck → baseline → build → test
 ```
-
-## Resources
-
-- **Pulumi Docs**: https://www.pulumi.com/docs/
-- **AWS SDK v3**: https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/
-- **Elysia.js**: https://elysiajs.com/
-- **Drizzle ORM**: https://orm.drizzle.team/
-- **Next.js**: https://nextjs.org/docs
-- **SST**: https://sst.dev/docs
-- **@clack/prompts**: https://github.com/bombshell-dev/clack
-- **better-auth**: https://www.better-auth.com/
-
-## Notes for Claude
-
-- Follow the established patterns in existing code
-- Prioritize user experience (clear errors, beautiful output)
-- Never modify existing AWS resources (non-destructive principle)
-- Namespace everything with `wraps-{email|sms|cdn}-` prefix
-- Write tests for new features
-- Use TypeScript strict mode
-- Keep CLI commands simple and focused
-- Run `pnpm check:all` before committing
-- You can use `pnpm check` and `pnpm fix` from the root of the repo
-- Enterprise features go in `(ee)/` directories
-
-## Skills (Auto-Trigger Rules)
-
-Claude MUST automatically apply these skills when the task matches:
-
-### Forms (`.claude/skills/create-form/SKILL.md`)
-**Trigger when**: Creating, editing, or refactoring any form component
-**Key rules**:
-- ALWAYS use `@tanstack/react-form` - NEVER use `react-hook-form`
-- Use shadcn/ui Field components (`Field`, `FieldLabel`, `FieldContent`, `FieldError`)
-- Zod validation with type inference
-- Server actions for form submissions (see server action skill)
-
-### Server Actions (`.claude/skills/create-server-action/SKILL.md`)
-**Trigger when**: Creating form submission handlers or API mutations from client components
-**Key rules**:
-- Use `@tanstack/react-form/nextjs` utilities (`createServerValidate`, `ServerValidateError`)
-- Share validation logic between client and server via `formOpts`
-- Always catch `ServerValidateError` and return `e.formState`
-- Return structured responses with `success` flag
-
-### API Routes (`.claude/skills/wraps-api-developer/SKILL.md`)
-**Trigger when**: Creating or editing API routes in `apps/api/`
-**Key rules**:
-- ALWAYS await async operations (Lambda terminates when handler returns)
-- No fire-and-forget promises
-- Scope all queries by `organizationId`
-- Use correct REST semantics (PATCH adds, PUT replaces)
 
 ### Migration Backlog (Forms to Migrate)
 These files still use `react-hook-form` and should be migrated to `@tanstack/react-form` when touched:
