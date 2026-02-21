@@ -55,8 +55,12 @@ type WorkflowStep = {
   name: string;
   position: { x: number; y: number };
   config: WorkflowStepConfig;
+  cascadeGroupId?: string; // If this step belongs to a cascade group
 };
 ```
+
+### Cascade Nodes (UI-only virtual type)
+Cascade nodes are a UI abstraction — a single canvas node that expands to multiple primitive steps (send + condition + wait) on save. The canvas type is `CanvasNodeType = WorkflowStepType | "cascade"`. Steps with a `cascadeGroupId` are collapsed back into cascade nodes when loading.
 
 ### WorkflowTransition
 ```typescript
@@ -84,7 +88,7 @@ export type WorkflowStepConfig =
 
 ### 2. Create Node Component
 ```typescript
-// apps/web/src/components/workflow-builder/nodes/my-new-step-node.tsx
+// apps/web/src/components/(ee)/workflow-builder/nodes/my-new-step-node.tsx
 export function MyNewStepNode({ id, data, selected }: NodeProps) {
   const { isValid, errorMessage } = useNodeValidation(id);
 
@@ -180,7 +184,7 @@ function validateMyNewStep(nodeId: string, config: WorkflowStepConfig): Validati
 | File | Purpose |
 |------|---------|
 | `packages/db/src/schema/workflows.ts` | Types & schema |
-| `apps/web/src/components/workflow-builder/` | All UI |
+| `apps/web/src/components/(ee)/workflow-builder/` | All UI |
 | `use-workflow-store.ts` | Zustand state |
 | `apps/web/src/lib/workflow-validation.ts` | Validation |
 | `apps/web/src/actions/workflows.ts` | Server actions |

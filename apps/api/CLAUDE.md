@@ -4,7 +4,7 @@ Elysia.js API running on AWS Lambda.
 
 ## Required Reading
 
-**Before writing any API code, read:** `/.claude/skills/wraps-api-developer.md`
+**Before writing any API code, read:** `/.claude/skills/wraps-api-developer/SKILL.md`
 
 ## Critical Rules
 

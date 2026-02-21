@@ -58,11 +58,19 @@ await Promise.all(items.map(item =>
 ### Project Structure
 ```
 apps/api/src/
-├── routes/           # API route handlers
-│   ├── contacts.ts   # Contact CRUD + workflow triggers
-│   ├── topics.ts     # Topic management
-│   ├── workflows.ts  # Workflow management
-│   └── events.ts     # Custom event emission
+├── routes/                    # API route handlers
+│   ├── batch.ts               # Batch email/SMS sending
+│   ├── connections.ts         # AWS account connections
+│   ├── contacts.ts            # Contact CRUD + workflow triggers
+│   ├── events.ts              # Custom event emission
+│   ├── health.ts              # Health check
+│   ├── preference-events.ts   # Email preference events
+│   ├── templates-sync.ts      # Template sync from CLI
+│   ├── tools.ts               # AI tools
+│   ├── unsubscribe.ts         # Unsubscribe handling
+│   ├── webhooks.ts            # Webhook delivery (SSRF-validated)
+│   ├── workflow-schedules.ts  # Cron-triggered workflows
+│   └── workflows-sync.ts     # Workflow sync from CLI
 ├── services/         # Business logic
 │   ├── workflow-events.ts  # Workflow trigger helpers
 │   └── ...
@@ -369,6 +377,26 @@ const existing = await db.select().from(topics).where(...);
 const newOnly = topicIds.filter(id => !existing.has(id));
 await db.insert(topics).values(newOnly);
 ```
+
+## Security & Reliability Patterns
+
+### Webhook SSRF Validation
+All outbound webhook URLs must be validated against SSRF attacks before calling:
+```typescript
+// BAD - calling user-provided URL without validation
+await fetch(webhookUrl, { method: "POST", body: payload });
+
+// GOOD - validate URL first (blocks internal IPs, localhost, metadata endpoints)
+import { validateWebhookUrl } from "../services/webhook-validation";
+validateWebhookUrl(webhookUrl); // throws on invalid
+await fetch(webhookUrl, { method: "POST", body: payload });
+```
+
+### Workflow Snapshot Protection
+When executing workflows, snapshot the definition at execution start. Never read the live workflow definition during execution — it may change mid-flight.
+
+### DLQ Consumers
+All SQS queues must have dead letter queues with consumers. Failed messages must be logged and optionally retried.
 
 ## Quick Reference
 

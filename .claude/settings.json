@@ -37,42 +37,42 @@
     {
       "name": "create-form",
       "description": "Create forms using TanStack Form and shadcn/ui Field components",
-      "path": ".claude/skills/create-form.md"
+      "path": ".claude/skills/create-form/SKILL.md"
     },
     {
       "name": "create-server-action",
       "description": "Create Next.js server actions with TanStack Form validation",
-      "path": ".claude/skills/create-server-action.md"
+      "path": ".claude/skills/create-server-action/SKILL.md"
     },
     {
       "name": "api",
       "description": "Build API routes for Lambda/Elysia with proper async handling",
-      "path": ".claude/skills/wraps-api-developer.md"
+      "path": ".claude/skills/wraps-api-developer/SKILL.md"
     },
     {
       "name": "drizzle",
       "description": "Create and modify Drizzle ORM schemas and migrations",
-      "path": ".claude/skills/drizzle-migrations.md"
+      "path": ".claude/skills/drizzle-migrations/SKILL.md"
     },
     {
       "name": "workflow",
       "description": "Build workflow automation nodes and triggers",
-      "path": ".claude/skills/workflow-builder.md"
+      "path": ".claude/skills/workflow-builder/SKILL.md"
     },
     {
       "name": "email-template",
       "description": "Work with TipTap email templates and SES rendering",
-      "path": ".claude/skills/email-templates.md"
+      "path": ".claude/skills/email-templates/SKILL.md"
     },
     {
       "name": "cli",
       "description": "Build CLI commands with Clack prompts and Pulumi",
-      "path": ".claude/skills/cli-commands.md"
+      "path": ".claude/skills/cli-commands/SKILL.md"
     },
     {
       "name": "test",
       "description": "Write Vitest tests with mocking and database integration",
-      "path": ".claude/skills/testing-patterns.md"
+      "path": ".claude/skills/testing-patterns/SKILL.md"
     },
     {
       "name": "debug",
@@ -87,12 +87,32 @@
     {
       "name": "dashboard",
       "description": "Build dashboard pages with server components and data tables",
-      "path": ".claude/skills/dashboard-components.md"
+      "path": ".claude/skills/dashboard-components/SKILL.md"
     },
     {
       "name": "preflight",
       "description": "Pre-flight validation pipeline: discovery, contracts, plan, then incremental implementation",
       "path": ".claude/skills/preflight/SKILL.md"
+    },
+    {
+      "name": "context-engineer",
+      "description": "Audit and improve project context (CLAUDE.md, skills, agents) for higher quality agent output",
+      "path": ".claude/skills/context-engineer/SKILL.md"
+    },
+    {
+      "name": "commit",
+      "description": "Run checks and commit using conventional commits",
+      "path": ".claude/skills/commit/SKILL.md"
+    },
+    {
+      "name": "code-review",
+      "description": "Review code for quality, architecture, and pattern consistency",
+      "path": ".claude/skills/code-review/SKILL.md"
+    },
+    {
+      "name": "docs-pages",
+      "description": "Create and normalize documentation pages for the Wraps website",
+      "path": ".claude/skills/docs-pages/SKILL.md"
     }
   ]
 }

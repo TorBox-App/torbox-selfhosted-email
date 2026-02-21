@@ -170,207 +170,25 @@ wraps/                            # Monorepo root
 
 ## Configuration System
 
-### Feature-Based Configuration
-Wraps uses a feature-based configuration system with transparent cost calculations:
+**Presets**: Starter, Production, Enterprise, Custom — each enables progressively more SES event types and infrastructure.
 
-**Configuration Presets:**
-- **Starter** (~$0.05/mo): Minimal tracking for low-volume senders
-  - Open & click tracking
-  - Bounce/complaint suppression
-  - Perfect for MVPs and side projects
+**Event Processing Pipeline**: `SES → EventBridge → SQS + DLQ → Lambda → DynamoDB`
 
-- **Production** (~$2-5/mo): Recommended for most applications
-  - Everything in Starter
-  - Real-time event tracking (EventBridge)
-  - 90-day email history storage
-  - Reputation metrics dashboard
+**SES Event Types**: SEND, DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT, REJECT, RENDERING_FAILURE, DELIVERY_DELAY, SUBSCRIPTION
 
-- **Enterprise** (~$50-100/mo): High-volume senders
-  - Everything in Production
-  - Dedicated IP address
-  - 1-year email history retention
-  - All 10 SES event types tracked
+## Metadata System
 
-- **Custom**: Configure each feature individually
+Deployment metadata stored in `~/.wraps/connections/{accountId}-{region}.json` (versioned, auto-migrating).
 
-**Event Processing Architecture:**
-```
-SES → EventBridge → SQS + DLQ → Lambda → DynamoDB
-```
+- **Format**: v1.0.0 multi-service — supports `email`, `sms`, `cdn` per account/region
+- **Code**: `packages/cli/src/utils/shared/metadata.ts` (`loadConnectionMetadata`, `saveConnectionMetadata`)
+- **Migrations**: Auto-applied on load. To add: bump `CURRENT_VERSION`, write migration function, add to chain, test in `metadata.test.ts`
 
-**Supported SES Event Types:**
-- SEND, DELIVERY, OPEN, CLICK
-- BOUNCE, COMPLAINT, REJECT
-- RENDERING_FAILURE, DELIVERY_DELAY, SUBSCRIPTION
+## TypeScript SDKs
 
-## Metadata & Migration System
-
-Wraps uses a versioned metadata system to store deployment configuration and enable seamless migrations as the CLI evolves.
-
-### Metadata Structure
-
-All deployment metadata is stored in `~/.wraps/connections/{accountId}-{region}.json`:
-
-```typescript
-{
-  "version": "1.0.0",              // Metadata format version
-  "accountId": "123456789012",
-  "region": "us-east-1",
-  "provider": "vercel",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "vercel": {                      // Provider-specific config
-    "teamSlug": "my-team",
-    "projectName": "my-project"
-  },
-  "services": {
-    "email": {                     // Service-specific config
-      "preset": "production",
-      "config": {
-        "tracking": { "enabled": true },
-        "sendingEnabled": true
-      },
-      "pulumiStackName": "wraps-email-123-us-east-1",
-      "deployedAt": "2024-01-01T00:00:00.000Z"
-    }
-  }
-}
-```
-
-### Automatic Migrations
-
-The metadata system automatically migrates old formats to new versions when loading:
-
-**Location**: `packages/cli/src/utils/shared/metadata.ts`
-
-```typescript
-export async function loadConnectionMetadata(
-  accountId: string,
-  region: string
-): Promise<ConnectionMetadata | null> {
-  const data = JSON.parse(content);
-
-  // 1. Migrate legacy format (pre-multi-service)
-  if (isLegacyMetadata(data)) {
-    const migrated = migrateLegacyMetadata(data);
-    await saveConnectionMetadata(migrated);  // Auto-save
-    return migrated;
-  }
-
-  // 2. Add version if missing
-  if (!data.version) {
-    data.version = "1.0.0";
-    await saveConnectionMetadata(data);
-  }
-
-  return data;
-}
-```
-
-### Benefits
-
-1. **Zero User Intervention**: Migrations happen automatically on load
-2. **Backward Compatible**: Old metadata files are seamlessly upgraded
-3. **Safe Upgrades**: Migrated data is saved for faster future loads
-4. **Future-Proof**: Easy to add new versions and migration paths
-5. **Testable**: Each migration function can be unit tested
-
-### Adding New Migrations
-
-When making breaking changes to metadata structure:
-
-1. **Bump Version**: Increment `CURRENT_VERSION` (e.g., "1.0.0" → "1.1.0")
-
-2. **Create Migration Function**:
-   ```typescript
-   function migrateV1ToV1_1(data: any): ConnectionMetadata {
-     return {
-       ...data,
-       version: "1.1.0",
-       newField: data.oldField || "default",  // Add new field
-     };
-   }
-   ```
-
-3. **Add to Migration Chain**:
-   ```typescript
-   if (data.version === "1.0.0") {
-     data = migrateV1ToV1_1(data);
-     await saveConnectionMetadata(data);
-   }
-   ```
-
-4. **Write Tests**: Add tests for the migration in `metadata.test.ts`
-
-### Example: Real Migration
-
-The CLI already successfully migrated from legacy format to v1.0.0:
-
-**Before** (legacy - no services):
-```json
-{
-  "accountId": "123456789012",
-  "emailConfig": { ... },
-  "preset": "production"
-}
-```
-
-**After** (v1.0.0 - multi-service):
-```json
-{
-  "version": "1.0.0",
-  "accountId": "123456789012",
-  "services": {
-    "email": {
-      "config": { ... },
-      "preset": "production"
-    }
-  }
-}
-```
-
-This migration happens **transparently** - users never need to manually update their metadata files!
-
-### Multi-Service Architecture
-
-The current v1.0.0 metadata format supports multiple services per AWS account/region:
-
-- **Email**: AWS SES configuration
-- **SMS**: AWS End User Messaging / Pinpoint SMS
-- **CDN**: S3 + CloudFront
-
-Each service maintains its own configuration, preset, and deployment timestamp while sharing the same AWS account credentials.
-
-## TypeScript SDK
-
-After deploying infrastructure with the CLI, developers use the [`@wraps.dev/email`](https://github.com/wraps-team/wraps-js) SDK to send emails:
-
-```typescript
-import { Wraps } from '@wraps.dev/email';
-
-const wraps = new Wraps();
-
-const result = await wraps.emails.send({
-  from: 'hello@yourapp.com',
-  to: 'user@example.com',
-  subject: 'Welcome!',
-  html: '<h1>Hello from Wraps!</h1>',
-});
-
-if (result.success) {
-  console.log('Email sent:', result.data.messageId);
-}
-```
-
-**Key Features:**
-- TypeScript-first with full type safety
-- Automatic AWS credential handling (OIDC, IAM roles, or environment variables)
-- Simple, intuitive API that makes sending emails delightful
-- Built on top of AWS SES for reliability and cost-effectiveness
-
-**Package Details:**
-- npm: `@wraps.dev/email`
-- GitHub: https://github.com/wraps-team/wraps-js
-- Namespace: All future SDKs will use `@wraps.dev` (e.g., `@wraps.dev/sms`, `@wraps.dev/queue`)
+- [`@wraps.dev/email`](https://github.com/wraps-team/wraps-js) — Email SDK (separate repo: `wraps-js`)
+- `@wraps.dev/sms` — SMS SDK
+- Namespace: all SDKs under `@wraps.dev`
 
 ## Commands
 
@@ -671,10 +489,6 @@ Claude MUST automatically apply these skills when the task matches:
 
 ### Migration Backlog (Forms to Migrate)
 These files still use `react-hook-form` and should be migrated to `@tanstack/react-form` when touched:
-- `apps/web/src/components/template-editor/new-template-form.tsx`
-- `apps/web/src/components/template-editor/save-block-modal.tsx`
-- `apps/web/src/components/template-editor/send-test-modal.tsx`
-- `apps/web/src/components/template-editor/wrappers/template-name-dialog.tsx`
 - `apps/web/src/app/(dashboard)/[orgSlug]/topics/components/preference-center-settings.tsx`
 - `apps/web/src/app/(dashboard)/[orgSlug]/topics/components/double-opt-in-settings.tsx`
 
