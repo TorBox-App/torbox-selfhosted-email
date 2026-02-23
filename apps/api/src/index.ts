@@ -9,7 +9,9 @@ import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { workflowsRoutes } from "./(ee)/routes/workflows";
+import { log } from "./lib/logger";
 import { getPostHogClient } from "./lib/posthog";
+import type { AuthContext } from "./middleware/auth";
 import { batchRoutes } from "./routes/batch";
 import { connectionsRoutes } from "./routes/connections";
 import { contactsRoutes } from "./routes/contacts";
@@ -101,6 +103,24 @@ const openApiDocumentation = {
 };
 
 export const app = new Elysia()
+  .derive(() => ({ startTime: performance.now() }))
+  .onAfterResponse(({ request, startTime, set, ...ctx }) => {
+    const auth = (ctx as unknown as { auth?: AuthContext }).auth;
+    if (!auth) return;
+
+    const url = new URL(request.url);
+    log.info("api.request", {
+      method: request.method,
+      path: url.pathname,
+      status: set.status ?? 200,
+      durationMs: Math.round(performance.now() - startTime),
+      organizationId: auth.organizationId,
+      apiKeyId: auth.apiKeyId,
+      userId: auth.userId,
+      planId: auth.planId,
+      authMethod: auth.apiKeyId ? "api_key" : "session",
+    });
+  })
   .onError(({ error, request }) => {
     const posthog = getPostHogClient();
     posthog.captureException(
