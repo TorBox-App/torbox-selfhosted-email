@@ -7,6 +7,7 @@
 
 import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { Elysia } from "elysia";
+import { log } from "../lib/logger";
 
 // Rate limits for public endpoints
 const PUBLIC_LIMITS = {
@@ -73,7 +74,7 @@ async function incrementCounter(
     return Number(result.Attributes?.count?.N ?? 1);
   } catch (error) {
     // Fail open - if DynamoDB is down, allow the request
-    console.error("Rate limit check failed:", error);
+    log.error("Rate limit check failed", error);
     return 0;
   }
 }

@@ -169,7 +169,7 @@ export const eventLimitMiddleware = new Elysia({ name: "event-limit" }).derive(
       }
 
       // Log other errors but fail open
-      console.error("[EVENT-LIMIT] Error checking event limit:", error);
+      log.error("Event limit check failed", error, { organizationId });
     }
 
     return {};

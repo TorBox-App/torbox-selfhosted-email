@@ -8,6 +8,7 @@
 import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { Elysia } from "elysia";
 
+import { log } from "../lib/logger";
 import type { AuthContext } from "./auth";
 
 // Plan rate limits (requests)
@@ -87,7 +88,7 @@ export const rateLimitMiddleware = new Elysia({ name: "rate-limit" }).derive(
         !error.message.includes("Rate limit exceeded") &&
         !error.message.includes("Daily limit exceeded")
       ) {
-        console.error("Rate limit check failed:", error);
+        log.error("Rate limit check failed", error, { organizationId });
       } else {
         throw error;
       }

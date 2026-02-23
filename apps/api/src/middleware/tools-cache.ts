@@ -10,6 +10,7 @@ import {
   GetItemCommand,
   PutItemCommand,
 } from "@aws-sdk/client-dynamodb";
+import { log } from "../lib/logger";
 
 // DynamoDB client (reuse across invocations)
 const dynamoClient = new DynamoDBClient({});
@@ -45,7 +46,7 @@ export async function getCached<T>(key: string): Promise<T | null> {
 
     return JSON.parse(result.Item.data.S) as T;
   } catch (error) {
-    console.error("Cache get failed:", error);
+    log.error("Cache get failed", error);
     return null;
   }
 }
@@ -74,7 +75,7 @@ export async function setCache<T>(
     );
   } catch (error) {
     // Don't fail the request if caching fails
-    console.error("Cache set failed:", error);
+    log.error("Cache set failed", error);
   }
 }
 

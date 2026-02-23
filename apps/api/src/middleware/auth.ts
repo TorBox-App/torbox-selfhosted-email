@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 import { and, apiKey, db, eq, member, session, subscription } from "@wraps/db";
 import { sql } from "drizzle-orm";
 import { Elysia } from "elysia";
+import { log } from "../lib/logger";
 
 export type AuthContext = {
   apiKeyId: string | null;
@@ -148,7 +149,7 @@ async function validateSessionWithReason(
       reason: "ok",
     };
   } catch (error) {
-    console.error("[AUTH] Error validating session:", error);
+    log.error("Session validation failed", error);
     return {
       auth: null,
       reason: `error: ${error instanceof Error ? error.message : String(error)}`,
@@ -247,7 +248,7 @@ export const authMiddleware = new Elysia({ name: "auth" })
         authError: null as string | null,
       };
     } catch (error) {
-      console.error("[AUTH MIDDLEWARE] Exception in derive:", error);
+      log.error("Auth middleware exception", error);
       return {
         auth: null as AuthContext | null,
         authError: "Internal auth error",
