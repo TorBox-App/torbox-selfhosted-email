@@ -121,7 +121,31 @@ export const app = new Elysia()
       authMethod: auth.apiKeyId ? "api_key" : "session",
     });
   })
-  .onError(({ error, request }) => {
+  .onError(({ error, request, code, set, ...ctx }) => {
+    const auth = (ctx as unknown as { auth?: AuthContext }).auth;
+    const url = new URL(request.url);
+    const status =
+      code === "NOT_FOUND"
+        ? 404
+        : code === "VALIDATION"
+          ? 400
+          : ((set.status as number) ?? 500);
+
+    log.error(
+      "api.error",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        method: request.method,
+        path: url.pathname,
+        status,
+        code,
+        organizationId: auth?.organizationId,
+        apiKeyId: auth?.apiKeyId,
+        userId: auth?.userId,
+        authMethod: auth?.apiKeyId ? "api_key" : auth ? "session" : undefined,
+      }
+    );
+
     const posthog = getPostHogClient();
     posthog.captureException(
       error instanceof Error ? error : new Error(String(error)),
