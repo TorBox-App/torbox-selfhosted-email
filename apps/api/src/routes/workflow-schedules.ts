@@ -11,6 +11,7 @@ import { db, eq, workflow } from "@wraps/db";
 import { and } from "drizzle-orm";
 import { t } from "elysia";
 
+import { log } from "../lib/logger";
 import {
   type AuthContext,
   createAuthenticatedRoutes,
@@ -78,10 +79,7 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
 
         return { success: true, scheduleName };
       } catch (error) {
-        console.error(
-          `[workflow-schedules] Failed to enable schedule for ${params.workflowId}:`,
-          error
-        );
+        log.error("Failed to enable workflow schedule", error, { workflowId: params.workflowId, organizationId: auth.organizationId });
         set.status = 500;
         return {
           success: false,
@@ -130,10 +128,7 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
         await deleteWorkflowSchedule(params.workflowId);
         return { success: true };
       } catch (error) {
-        console.error(
-          `[workflow-schedules] Failed to disable schedule for ${params.workflowId}:`,
-          error
-        );
+        log.error("Failed to disable workflow schedule", error, { workflowId: params.workflowId, organizationId: auth.organizationId });
         set.status = 500;
         return {
           success: false,
@@ -188,10 +183,7 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
 
         return { success: true, scheduleName };
       } catch (error) {
-        console.error(
-          `[workflow-schedules] Failed to update schedule for ${params.workflowId}:`,
-          error
-        );
+        log.error("Failed to update workflow schedule", error, { workflowId: params.workflowId, organizationId: auth.organizationId });
         set.status = 500;
         return {
           success: false,

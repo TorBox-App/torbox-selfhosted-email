@@ -2,6 +2,7 @@ import { db, messageSend } from "@wraps/db";
 import { createPlatformClient } from "@wraps.dev/client";
 import { and, count, eq } from "drizzle-orm";
 import { PostHog } from "posthog-node";
+import { log } from "./logger";
 
 let posthogClient: PostHog | null = null;
 
@@ -46,10 +47,10 @@ async function emit(
       body: { name: event, contactEmail, properties },
     });
     if (error) {
-      console.error(`[activation-tracking] emit ${event} failed:`, error);
+      log.error("Activation event emit failed", error, { event, contactEmail });
     }
   } catch (err) {
-    console.error(`[activation-tracking] emit ${event} threw:`, err);
+    log.error("Activation event emit threw", err, { event, contactEmail });
   }
 }
 

@@ -200,7 +200,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
 
       return { status: "processed", eventType, messageId };
     } catch (error) {
-      console.error("[WEBHOOK] Error processing event:", error);
+      log.error("Webhook event processing failed", error, { eventType, messageId });
       set.status = 500;
       return {
         error: "Failed to process event",

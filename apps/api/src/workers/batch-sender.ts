@@ -389,10 +389,7 @@ async function processJob(job: BatchJob): Promise<void> {
             });
             sent++;
           } else {
-            console.error(
-              `Failed to send to ${recipient.email}:`,
-              bulkResult?.Error
-            );
+            log.error("Bulk send failed for recipient", bulkResult?.Error, { email: recipient.email, batchId, organizationId });
             sendRecords.push({
               organizationId,
               contactId: recipient.id,
@@ -437,7 +434,7 @@ async function processJob(job: BatchJob): Promise<void> {
         }
 
         // Non-throttle error: mark recipients as failed
-        console.error(`Bulk send failed for batch starting at ${i}:`, error);
+        log.error("Bulk send failed for chunk", error, { batchId, chunkOffset: i, organizationId });
         const errorMessage =
           error instanceof Error ? error.message : "Bulk send failed";
         const failedRecords = recipientBatch.map((recipient) => ({
@@ -557,7 +554,7 @@ async function processJob(job: BatchJob): Promise<void> {
           });
           sent++;
         } else {
-          console.error(`Failed to send to ${recipient.email}:`, result.reason);
+          log.error("Individual send failed", result.reason, { email: recipient.email, batchId, organizationId });
           sendRecords.push({
             organizationId,
             contactId: recipient.id,
@@ -592,7 +589,7 @@ async function processJob(job: BatchJob): Promise<void> {
     await trackFirstEmailSent(organizationId, {
       channel: "email",
       source: "broadcast",
-    }).catch(console.error);
+    }).catch((err) => log.error("Activation tracking failed", err, { organizationId }));
   }
 
   // Update batch progress
