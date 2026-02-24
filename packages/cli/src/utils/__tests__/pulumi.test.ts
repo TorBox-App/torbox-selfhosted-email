@@ -28,6 +28,11 @@ import {
   ensurePulumiInstalled,
 } from "../shared/pulumi.js";
 
+const mockPulumiCmd = {
+  command: "/home/user/.pulumi/versions/3.216.0/bin/pulumi",
+  version: null,
+};
+
 describe("pulumi utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -102,7 +107,9 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked(PulumiCommand.install).mockResolvedValue({} as any);
+      vi.mocked(PulumiCommand.install).mockResolvedValue(
+        mockPulumiCmd as any
+      );
 
       const result = await ensurePulumiInstalled();
 
@@ -110,17 +117,26 @@ describe("pulumi utilities", () => {
       expect(PulumiCommand.install).toHaveBeenCalled();
     });
 
-    it("should return true when auto-install succeeds", async () => {
+    it("should add installed binary to PATH", async () => {
+      const originalPath = process.env.PATH;
+
       vi.mocked(exec).mockImplementation((_cmd, callback: any) => {
         callback(new Error("Command not found"), { stdout: "", stderr: "" });
         return {} as any;
       });
 
-      vi.mocked(PulumiCommand.install).mockResolvedValue({} as any);
+      vi.mocked(PulumiCommand.install).mockResolvedValue(
+        mockPulumiCmd as any
+      );
 
-      const result = await ensurePulumiInstalled();
+      await ensurePulumiInstalled();
 
-      expect(result).toBe(true);
+      expect(process.env.PATH).toContain(
+        "/home/user/.pulumi/versions/3.216.0/bin"
+      );
+
+      // Restore
+      process.env.PATH = originalPath;
     });
 
     it("should throw helpful error if auto-install fails", async () => {
@@ -151,7 +167,7 @@ describe("pulumi utilities", () => {
 
       vi.mocked(PulumiCommand.install).mockImplementation(async () => {
         calls.push("install");
-        return {} as any;
+        return mockPulumiCmd as any;
       });
 
       await ensurePulumiInstalled();
@@ -165,7 +181,9 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked(PulumiCommand.install).mockResolvedValue({} as any);
+      vi.mocked(PulumiCommand.install).mockResolvedValue(
+        mockPulumiCmd as any
+      );
 
       await expect(ensurePulumiInstalled()).resolves.toBe(true);
     });
@@ -176,7 +194,9 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked(PulumiCommand.install).mockResolvedValue({} as any);
+      vi.mocked(PulumiCommand.install).mockResolvedValue(
+        mockPulumiCmd as any
+      );
 
       const result = await ensurePulumiInstalled();
 

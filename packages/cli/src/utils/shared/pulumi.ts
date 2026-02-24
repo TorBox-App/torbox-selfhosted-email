@@ -1,4 +1,5 @@
 import { exec } from "node:child_process";
+import { dirname } from "node:path";
 import { promisify } from "node:util";
 import type {
   EngineEvent,
@@ -24,7 +25,8 @@ export async function checkPulumiInstalled(): Promise<boolean> {
 }
 
 /**
- * Ensure Pulumi CLI is installed, auto-install if missing
+ * Ensure Pulumi CLI is installed, auto-install if missing.
+ * When auto-installed, adds the binary to PATH so LocalWorkspace can find it.
  * @returns true if Pulumi was auto-installed, false if it was already installed
  */
 export async function ensurePulumiInstalled(): Promise<boolean> {
@@ -33,7 +35,11 @@ export async function ensurePulumiInstalled(): Promise<boolean> {
   if (!isInstalled) {
     try {
       // Auto-install Pulumi CLI matching the SDK version
-      await PulumiCommand.install();
+      const cmd = await PulumiCommand.install();
+      // Add installed binary to PATH so LocalWorkspace.createOrSelectStack
+      // (which internally calls PulumiCommand.get()) can find it
+      const binDir = dirname(cmd.command);
+      process.env.PATH = `${binDir}:${process.env.PATH}`;
       return true; // Was auto-installed
     } catch (_error) {
       // If auto-install fails, throw helpful error
