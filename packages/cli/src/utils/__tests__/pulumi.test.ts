@@ -107,9 +107,7 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked(PulumiCommand.install).mockResolvedValue(
-        mockPulumiCmd as any
-      );
+      vi.mocked(PulumiCommand.install).mockResolvedValue(mockPulumiCmd as any);
 
       const result = await ensurePulumiInstalled();
 
@@ -125,9 +123,7 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked(PulumiCommand.install).mockResolvedValue(
-        mockPulumiCmd as any
-      );
+      vi.mocked(PulumiCommand.install).mockResolvedValue(mockPulumiCmd as any);
 
       await ensurePulumiInstalled();
 
@@ -181,9 +177,7 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked(PulumiCommand.install).mockResolvedValue(
-        mockPulumiCmd as any
-      );
+      vi.mocked(PulumiCommand.install).mockResolvedValue(mockPulumiCmd as any);
 
       await expect(ensurePulumiInstalled()).resolves.toBe(true);
     });
@@ -194,9 +188,7 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked(PulumiCommand.install).mockResolvedValue(
-        mockPulumiCmd as any
-      );
+      vi.mocked(PulumiCommand.install).mockResolvedValue(mockPulumiCmd as any);
 
       const result = await ensurePulumiInstalled();
 

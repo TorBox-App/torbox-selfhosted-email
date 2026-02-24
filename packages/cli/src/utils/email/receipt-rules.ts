@@ -313,9 +313,7 @@ export async function removeDomainFromReceiptRule(
 /**
  * Get the current list of domains in the receipt rule.
  */
-export async function getReceiptRuleDomains(
-  region: string
-): Promise<string[]> {
+export async function getReceiptRuleDomains(region: string): Promise<string[]> {
   const ses = createSESClient(region);
 
   try {

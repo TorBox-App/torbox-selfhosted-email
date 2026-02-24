@@ -495,7 +495,7 @@ export async function querySMSEvents(
 
   try {
     const result = await docClient.send(new QueryCommand(queryParams));
-    const items = (result.Items || []) as Array<Record<string, unknown>>;
+    const items = (result.Items || []) as Record<string, unknown>[];
 
     // Normalize: the Lambda processor writes eventType (e.g. TEXT_DELIVERED)
     // but not eventStatus. Derive eventStatus from eventType when missing.

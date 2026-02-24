@@ -79,7 +79,10 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
 
         return { success: true, scheduleName };
       } catch (error) {
-        log.error("Failed to enable workflow schedule", error, { workflowId: params.workflowId, organizationId: auth.organizationId });
+        log.error("Failed to enable workflow schedule", error, {
+          workflowId: params.workflowId,
+          organizationId: auth.organizationId,
+        });
         set.status = 500;
         return {
           success: false,
@@ -128,7 +131,10 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
         await deleteWorkflowSchedule(params.workflowId);
         return { success: true };
       } catch (error) {
-        log.error("Failed to disable workflow schedule", error, { workflowId: params.workflowId, organizationId: auth.organizationId });
+        log.error("Failed to disable workflow schedule", error, {
+          workflowId: params.workflowId,
+          organizationId: auth.organizationId,
+        });
         set.status = 500;
         return {
           success: false,
@@ -183,7 +189,10 @@ export const workflowScheduleRoutes = createAuthenticatedRoutes(
 
         return { success: true, scheduleName };
       } catch (error) {
-        log.error("Failed to update workflow schedule", error, { workflowId: params.workflowId, organizationId: auth.organizationId });
+        log.error("Failed to update workflow schedule", error, {
+          workflowId: params.workflowId,
+          organizationId: auth.organizationId,
+        });
         set.status = 500;
         return {
           success: false,

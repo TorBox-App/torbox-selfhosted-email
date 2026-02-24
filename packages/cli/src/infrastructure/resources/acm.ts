@@ -180,8 +180,7 @@ export async function getCertificateValidationRecords(
     })
   );
 
-  const options =
-    describeResponse.Certificate?.DomainValidationOptions ?? [];
+  const options = describeResponse.Certificate?.DomainValidationOptions ?? [];
 
   return options
     .filter((opt) => opt.ResourceRecord?.Name && opt.ResourceRecord?.Value)

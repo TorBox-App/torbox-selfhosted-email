@@ -176,9 +176,7 @@ export const columns: ColumnDef<SMSListItem>[] = [
         return <span className="text-muted-foreground text-sm">-</span>;
       }
       return (
-        <span className="font-mono text-sm">
-          {formatPhoneNumber(from)}
-        </span>
+        <span className="font-mono text-sm">{formatPhoneNumber(from)}</span>
       );
     },
     enableColumnFilter: false,

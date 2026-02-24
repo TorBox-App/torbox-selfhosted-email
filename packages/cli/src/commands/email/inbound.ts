@@ -21,8 +21,8 @@ import {
   deleteReceiptRule,
   deleteReceiptRuleSet,
   getActiveReceiptRuleSet,
-  removeDomainFromReceiptRule,
   RULE_SET_NAME,
+  removeDomainFromReceiptRule,
   setActiveReceiptRuleSet,
 } from "../../utils/email/receipt-rules.js";
 import {
@@ -597,9 +597,7 @@ export async function inboundStatus(
   console.log(pc.bold("  Inbound Email Configuration"));
   console.log();
   if (domainList.length === 1) {
-    console.log(
-      `  ${pc.dim("Receiving domain:")}  ${pc.cyan(domainList[0])}`
-    );
+    console.log(`  ${pc.dim("Receiving domain:")}  ${pc.cyan(domainList[0])}`);
   } else {
     console.log(`  ${pc.dim("Receiving domains:")}`);
     for (const d of domainList) {
@@ -669,7 +667,10 @@ export async function inboundVerify(
   let allPassed = true;
   const domainChecks: Record<
     string,
-    { mx: { found: boolean; verified: boolean }; spf: { found: boolean; verified: boolean } }
+    {
+      mx: { found: boolean; verified: boolean };
+      spf: { found: boolean; verified: boolean };
+    }
   > = {};
 
   // 4. Check MX + SPF for each domain
@@ -995,9 +996,7 @@ export async function inboundAdd(
 
   if (!metadata?.services?.email?.config?.inbound?.enabled) {
     clack.log.error("Inbound email infrastructure is not deployed.");
-    console.log(
-      `\nDeploy first: ${pc.cyan("wraps email inbound init")}\n`
-    );
+    console.log(`\nDeploy first: ${pc.cyan("wraps email inbound init")}\n`);
     process.exit(1);
   }
 
@@ -1039,9 +1038,7 @@ export async function inboundAdd(
   // 7. Prompt for subdomain
   const subdomain =
     options.subdomain ||
-    (options.yes
-      ? "inbound"
-      : await promptInboundSubdomain(parentDomain));
+    (options.yes ? "inbound" : await promptInboundSubdomain(parentDomain));
   const receivingDomain = `${subdomain}.${parentDomain}`;
 
   // 8. Check not already tracked
@@ -1091,7 +1088,9 @@ export async function inboundAdd(
     );
     progress.stop();
 
-    dnsProvider = options.yes ? "manual" : await promptDNSProvider(parentDomain, availableProviders);
+    dnsProvider = options.yes
+      ? "manual"
+      : await promptDNSProvider(parentDomain, availableProviders);
   }
 
   if (dnsProvider !== "manual") {
@@ -1205,16 +1204,12 @@ export async function inboundAdd(
     `${pc.bold("Added inbound domain:")} ${pc.cyan(receivingDomain)}`
   );
   console.log();
-  if (!dnsAutoCreated) {
-    console.log(
-      `  ${pc.dim("1.")} Add DNS records above to your DNS provider`
-    );
+  if (dnsAutoCreated) {
+    console.log(`  Verify: ${pc.cyan("wraps email inbound verify")}`);
+  } else {
+    console.log(`  ${pc.dim("1.")} Add DNS records above to your DNS provider`);
     console.log(
       `  ${pc.dim("2.")} Verify: ${pc.cyan("wraps email inbound verify")}`
-    );
-  } else {
-    console.log(
-      `  Verify: ${pc.cyan("wraps email inbound verify")}`
     );
   }
   console.log();
@@ -1246,9 +1241,7 @@ export async function inboundRemove(
 
   if (!metadata?.services?.email?.config?.inbound?.enabled) {
     clack.log.error("Inbound email infrastructure is not deployed.");
-    console.log(
-      `\nDeploy first: ${pc.cyan("wraps email inbound init")}\n`
-    );
+    console.log(`\nDeploy first: ${pc.cyan("wraps email inbound init")}\n`);
     process.exit(1);
   }
 

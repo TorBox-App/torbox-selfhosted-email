@@ -35,11 +35,41 @@ export const metadata: Metadata = {
 };
 
 const costComparison = [
-  { volume: "1K/mo", saas: "$20-40", wrapsPlatform: "Free", trackedEvents: "5K/mo", awsCost: "~$0.10" },
-  { volume: "10K/mo", saas: "$40-80", wrapsPlatform: "Free", trackedEvents: "5K/mo", awsCost: "~$1" },
-  { volume: "50K/mo", saas: "$150-300", wrapsPlatform: "$19", trackedEvents: "50K/mo", awsCost: "~$5" },
-  { volume: "100K/mo", saas: "$300-500", wrapsPlatform: "$79", trackedEvents: "250K/mo", awsCost: "~$10" },
-  { volume: "500K/mo", saas: "$700-1,200", wrapsPlatform: "$199", trackedEvents: "1M/mo", awsCost: "~$50" },
+  {
+    volume: "1K/mo",
+    saas: "$20-40",
+    wrapsPlatform: "Free",
+    trackedEvents: "5K/mo",
+    awsCost: "~$0.10",
+  },
+  {
+    volume: "10K/mo",
+    saas: "$40-80",
+    wrapsPlatform: "Free",
+    trackedEvents: "5K/mo",
+    awsCost: "~$1",
+  },
+  {
+    volume: "50K/mo",
+    saas: "$150-300",
+    wrapsPlatform: "$19",
+    trackedEvents: "50K/mo",
+    awsCost: "~$5",
+  },
+  {
+    volume: "100K/mo",
+    saas: "$300-500",
+    wrapsPlatform: "$79",
+    trackedEvents: "250K/mo",
+    awsCost: "~$10",
+  },
+  {
+    volume: "500K/mo",
+    saas: "$700-1,200",
+    wrapsPlatform: "$199",
+    trackedEvents: "1M/mo",
+    awsCost: "~$50",
+  },
 ];
 
 const securityPoints = [

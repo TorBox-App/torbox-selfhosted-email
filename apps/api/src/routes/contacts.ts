@@ -594,7 +594,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                     organizationId: authContext.organizationId,
                   });
                 } catch (err) {
-                  log.error("Failed to send confirmation email", err, { topicId, organizationId: authContext.organizationId });
+                  log.error("Failed to send confirmation email", err, {
+                    topicId,
+                    organizationId: authContext.organizationId,
+                  });
                 }
               }
             })
@@ -616,7 +619,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           preferredChannel: newContact.preferredChannel,
         },
       }).catch((err) => {
-        log.error("Failed to emit contact_created event", err, { organizationId: authContext.organizationId });
+        log.error("Failed to emit contact_created event", err, {
+          organizationId: authContext.organizationId,
+        });
       });
 
       // Check segment entry triggers
@@ -624,7 +629,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         contactId: newContact.id,
         organizationId: authContext.organizationId,
       }).catch((err) => {
-        log.error("Failed to check segment entry", err, { organizationId: authContext.organizationId });
+        log.error("Failed to check segment entry", err, {
+          organizationId: authContext.organizationId,
+        });
       });
 
       // Emit topic subscription events for immediate subscriptions (non-pending)
@@ -649,7 +656,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
               topicId,
               topicName: topicNameMap.get(topicId),
             }).catch((err) => {
-              log.error("Failed to emit topic_subscribed event", err, { organizationId: authContext.organizationId });
+              log.error("Failed to emit topic_subscribed event", err, {
+                organizationId: authContext.organizationId,
+              });
             })
           )
         );
@@ -881,7 +890,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                   topicId,
                   topicName: resubTopicMap.get(topicId)?.name,
                 }).catch((err) => {
-                  log.error("Failed to emit topic_subscribed event", err, { organizationId: authContext.organizationId });
+                  log.error("Failed to emit topic_subscribed event", err, {
+                    organizationId: authContext.organizationId,
+                  });
                 })
               )
             );
@@ -919,7 +930,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                         organizationId: authContext.organizationId,
                       });
                     } catch (err) {
-                      log.error("Failed to send confirmation email", err, { topicId, organizationId: authContext.organizationId });
+                      log.error("Failed to send confirmation email", err, {
+                        topicId,
+                        organizationId: authContext.organizationId,
+                      });
                     }
                   }
                 })
@@ -994,7 +1008,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                       organizationId: authContext.organizationId,
                     });
                   } catch (err) {
-                    log.error("Failed to send confirmation email", err, { topicId, organizationId: authContext.organizationId });
+                    log.error("Failed to send confirmation email", err, {
+                      topicId,
+                      organizationId: authContext.organizationId,
+                    });
                   }
                 }
               })
@@ -1015,7 +1032,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                 topicId,
                 topicName: topicInfo?.name,
               }).catch((err) => {
-                log.error("Failed to emit topic_subscribed event", err, { organizationId: authContext.organizationId });
+                log.error("Failed to emit topic_subscribed event", err, {
+                  organizationId: authContext.organizationId,
+                });
               });
             })
           );
@@ -1040,7 +1059,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           preferredChannel: updated.preferredChannel,
         },
       }).catch((err) => {
-        log.error("Failed to emit contact_updated event", err, { organizationId: authContext.organizationId });
+        log.error("Failed to emit contact_updated event", err, {
+          organizationId: authContext.organizationId,
+        });
       });
 
       // Check segment entry triggers (contact may now match a segment)
@@ -1048,7 +1069,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         contactId: params.id,
         organizationId: authContext.organizationId,
       }).catch((err) => {
-        log.error("Failed to check segment entry", err, { organizationId: authContext.organizationId });
+        log.error("Failed to check segment entry", err, {
+          organizationId: authContext.organizationId,
+        });
       });
 
       // Check segment exit triggers (contact may no longer match a segment)
@@ -1056,7 +1079,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         contactId: params.id,
         organizationId: authContext.organizationId,
       }).catch((err) => {
-        log.error("Failed to check segment exit", err, { organizationId: authContext.organizationId });
+        log.error("Failed to check segment exit", err, {
+          organizationId: authContext.organizationId,
+        });
       });
 
       return {
@@ -1241,7 +1266,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                     organizationId: authContext.organizationId,
                   });
                 } catch (err) {
-                  log.error("Failed to send confirmation email", err, { topicId, organizationId: authContext.organizationId });
+                  log.error("Failed to send confirmation email", err, {
+                    topicId,
+                    organizationId: authContext.organizationId,
+                  });
                 }
               }
             })
@@ -1262,7 +1290,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
               topicId,
               topicName: topicInfo?.name,
             }).catch((err) => {
-              log.error("Failed to emit topic_subscribed event", err, { organizationId: authContext.organizationId });
+              log.error("Failed to emit topic_subscribed event", err, {
+                organizationId: authContext.organizationId,
+              });
             });
           })
         );
@@ -1282,7 +1312,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
               topicId: t.topicId,
               topicName: t.topicName,
             }).catch((err) => {
-              log.error("Failed to emit topic_unsubscribed event", err, { organizationId: authContext.organizationId });
+              log.error("Failed to emit topic_unsubscribed event", err, {
+                organizationId: authContext.organizationId,
+              });
             })
           )
         );
@@ -1294,13 +1326,17 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
           contactId: params.id,
           organizationId: authContext.organizationId,
         }).catch((err) => {
-          log.error("Failed to check segment entry", err, { organizationId: authContext.organizationId });
+          log.error("Failed to check segment entry", err, {
+            organizationId: authContext.organizationId,
+          });
         }),
         checkSegmentExit({
           contactId: params.id,
           organizationId: authContext.organizationId,
         }).catch((err) => {
-          log.error("Failed to check segment exit", err, { organizationId: authContext.organizationId });
+          log.error("Failed to check segment exit", err, {
+            organizationId: authContext.organizationId,
+          });
         }),
       ]);
 

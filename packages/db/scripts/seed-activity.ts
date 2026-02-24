@@ -136,7 +136,15 @@ const smsEventTypeMap: Record<string, string> = {
 // --- Email lifecycle ---
 
 type EmailLifecycle = {
-  status: "sent" | "delivered" | "opened" | "clicked" | "bounced" | "complained" | "suppressed" | "failed";
+  status:
+    | "sent"
+    | "delivered"
+    | "opened"
+    | "clicked"
+    | "bounced"
+    | "complained"
+    | "suppressed"
+    | "failed";
   events: (sentAt: Date) => Array<{ eventType: string; timestamp: Date }>;
   bounceType?: string;
   bounceSubType?: string;
@@ -188,7 +196,7 @@ function randomEmailLifecycle(): EmailLifecycle {
       },
     };
   }
-  if (roll < 0.90) {
+  if (roll < 0.9) {
     return {
       status: "sent",
       events: (sentAt) => [{ eventType: "Send", timestamp: sentAt }],
@@ -216,7 +224,7 @@ function randomEmailLifecycle(): EmailLifecycle {
       status: "complained",
       events: (sentAt) => {
         const deliveredAt = afterDate(sentAt, 500, 5000);
-        const complainedAt = afterDate(deliveredAt, 3600_000, 172_800_000);
+        const complainedAt = afterDate(deliveredAt, 3_600_000, 172_800_000);
         return [
           { eventType: "Send", timestamp: sentAt },
           { eventType: "Delivery", timestamp: deliveredAt },
@@ -253,7 +261,7 @@ type SmsLifecycle = {
 function randomSmsLifecycle(): SmsLifecycle {
   const roll = Math.random();
 
-  if (roll < 0.70) {
+  if (roll < 0.7) {
     return {
       status: "delivered",
       events: (sentAt) => {
@@ -266,7 +274,7 @@ function randomSmsLifecycle(): SmsLifecycle {
       },
     };
   }
-  if (roll < 0.80) {
+  if (roll < 0.8) {
     return {
       status: "clicked",
       events: (sentAt) => {
@@ -334,7 +342,7 @@ function randomSmsLifecycle(): SmsLifecycle {
 async function writeDynamoBatch(
   dynamoClient: DynamoDBClient,
   tableName: string,
-  items: Record<string, unknown>[],
+  items: Record<string, unknown>[]
 ): Promise<number> {
   // DynamoDB BatchWriteItem limit is 25
   let written = 0;
@@ -348,7 +356,7 @@ async function writeDynamoBatch(
       await dynamoClient.send(
         new BatchWriteItemCommand({
           RequestItems: { [tableName]: requestItems },
-        }),
+        })
       );
       written += chunk.length;
     } catch (error) {
@@ -356,7 +364,9 @@ async function writeDynamoBatch(
         error instanceof Error &&
         error.name === "ResourceNotFoundException"
       ) {
-        console.error(`\n  Table "${tableName}" not found. Has infrastructure been deployed?`);
+        console.error(
+          `\n  Table "${tableName}" not found. Has infrastructure been deployed?`
+        );
         return 0;
       }
       throw error;
@@ -395,22 +405,24 @@ async function main() {
     process.exit(1);
   }
   console.log(`Using AWS account: ${account.name} (${account.id})`);
-  console.log(`  AWS Account ID: ${account.accountId}, Region: ${account.region}`);
+  console.log(
+    `  AWS Account ID: ${account.accountId}, Region: ${account.region}`
+  );
 
   // Set up DynamoDB client (uses ambient credentials — same AWS account as CLI)
   let dynamoClient: DynamoDBClient | null = null;
-  if (!skipDynamo) {
+  if (skipDynamo) {
+    console.log("  DynamoDB: SKIPPED (SKIP_DYNAMO=true)");
+  } else {
     dynamoClient = new DynamoDBClient({ region: account.region });
     console.log(`  DynamoDB: writing to ${account.region}`);
-  } else {
-    console.log("  DynamoDB: SKIPPED (SKIP_DYNAMO=true)");
   }
 
   // Get contacts
   const emailContacts = await db.query.contact.findMany({
     where: and(
       eq(schema.contact.organizationId, organizationId),
-      isNotNull(schema.contact.email),
+      isNotNull(schema.contact.email)
     ),
     limit: 500,
   });
@@ -418,7 +430,7 @@ async function main() {
   const smsContacts = await db.query.contact.findMany({
     where: and(
       eq(schema.contact.organizationId, organizationId),
-      isNotNull(schema.contact.phone),
+      isNotNull(schema.contact.phone)
     ),
     limit: 500,
   });
@@ -428,7 +440,9 @@ async function main() {
     limit: 20,
   });
 
-  console.log(`\nFound ${emailContacts.length} email contacts, ${smsContacts.length} SMS contacts`);
+  console.log(
+    `\nFound ${emailContacts.length} email contacts, ${smsContacts.length} SMS contacts`
+  );
   console.log(`Found ${batches.length} existing batch sends`);
   console.log(`Generating activity for last ${daysBack} days`);
   console.log(`Creating ${messageCount} messages...\n`);
@@ -466,27 +480,34 @@ async function main() {
         let batchSendId: string | null = null;
         let emailMeta: { subject: string; from: string };
 
-        if (sourceRoll < 0.40) {
+        if (sourceRoll < 0.4) {
           sourceType = "transactional";
           emailMeta = randomChoice(transactionalSubjects);
-        } else if (sourceRoll < 0.80) {
+        } else if (sourceRoll < 0.8) {
           sourceType = "batch";
           emailMeta = randomChoice(batchSubjects);
           if (batches.length > 0) {
-            const linkedBatch = randomChoice(batches.filter((b) => b.channel === "email"));
+            const linkedBatch = randomChoice(
+              batches.filter((b) => b.channel === "email")
+            );
             if (linkedBatch) batchSendId = linkedBatch.id;
           }
         } else {
           sourceType = "workflow";
-          emailMeta = randomChoice([...transactionalSubjects, ...batchSubjects]);
+          emailMeta = randomChoice([
+            ...transactionalSubjects,
+            ...batchSubjects,
+          ]);
         }
 
         const domain = randomChoice(fromDomains);
         const fromAddr = `${emailMeta.from}${domain}`;
-        const lastEvent = events[events.length - 1];
+        const lastEvent = events.at(-1)!;
 
-        stats.email[lifecycle.status] = (stats.email[lifecycle.status] || 0) + 1;
-        stats.sourceTypes[sourceType] = (stats.sourceTypes[sourceType] || 0) + 1;
+        stats.email[lifecycle.status] =
+          (stats.email[lifecycle.status] || 0) + 1;
+        stats.sourceTypes[sourceType] =
+          (stats.sourceTypes[sourceType] || 0) + 1;
 
         // Postgres record
         pgBatch.push({
@@ -503,12 +524,15 @@ async function main() {
           messageId,
           status: lifecycle.status,
           sentAt: events.find((e) => e.eventType === "Send")?.timestamp,
-          deliveredAt: events.find((e) => e.eventType === "Delivery")?.timestamp,
+          deliveredAt: events.find((e) => e.eventType === "Delivery")
+            ?.timestamp,
           openedAt: events.find((e) => e.eventType === "Open")?.timestamp,
           clickedAt: events.find((e) => e.eventType === "Click")?.timestamp,
           bouncedAt: events.find((e) => e.eventType === "Bounce")?.timestamp,
-          complainedAt: events.find((e) => e.eventType === "Complaint")?.timestamp,
-          suppressedAt: events.find((e) => e.eventType === "Suppressed")?.timestamp,
+          complainedAt: events.find((e) => e.eventType === "Complaint")
+            ?.timestamp,
+          suppressedAt: events.find((e) => e.eventType === "Suppressed")
+            ?.timestamp,
           bounceType: lifecycle.bounceType ?? null,
           bounceSubType: lifecycle.bounceSubType ?? null,
           error: lifecycle.error ?? null,
@@ -538,13 +562,16 @@ async function main() {
                 "https://example.com/blog/latest",
                 "https://example.com/unsubscribe",
               ]);
-              additionalData.userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
+              additionalData.userAgent =
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
             }
 
             if (event.eventType === "Bounce") {
               additionalData.bounceType = lifecycle.bounceType;
               additionalData.bounceSubType = lifecycle.bounceSubType;
-              additionalData.bouncedRecipients = [{ emailAddress: contact.email }];
+              additionalData.bouncedRecipients = [
+                { emailAddress: contact.email },
+              ];
             }
 
             if (event.eventType === "Delivery") {
@@ -553,7 +580,9 @@ async function main() {
             }
 
             if (event.eventType === "Complaint") {
-              additionalData.complainedRecipients = [{ emailAddress: contact.email }];
+              additionalData.complainedRecipients = [
+                { emailAddress: contact.email },
+              ];
               additionalData.complaintFeedbackType = "abuse";
             }
 
@@ -577,7 +606,11 @@ async function main() {
       await db.insert(schema.messageSend).values(pgBatch);
 
       if (dynamoClient && dynamoBatch.length > 0) {
-        const written = await writeDynamoBatch(dynamoClient, "wraps-email-history", dynamoBatch);
+        const written = await writeDynamoBatch(
+          dynamoClient,
+          "wraps-email-history",
+          dynamoBatch
+        );
         stats.dynamoEmail += written;
         if (written === 0 && i === 0) {
           // Table doesn't exist, skip remaining DynamoDB writes for email
@@ -595,7 +628,9 @@ async function main() {
 
   // --- Seed SMS messages ---
   // Re-create client if it was nulled due to missing email table
-  let smsDynamoClient = skipDynamo ? null : new DynamoDBClient({ region: account.region });
+  let smsDynamoClient = skipDynamo
+    ? null
+    : new DynamoDBClient({ region: account.region });
 
   if (smsContacts.length > 0) {
     for (let i = 0; i < smsCount; i += pgBatchSize) {
@@ -616,12 +651,14 @@ async function main() {
         let sourceType: "transactional" | "batch" | "workflow";
         let batchSendId: string | null = null;
 
-        if (sourceRoll < 0.60) {
+        if (sourceRoll < 0.6) {
           sourceType = "transactional";
-        } else if (sourceRoll < 0.80) {
+        } else if (sourceRoll < 0.8) {
           sourceType = "batch";
           if (batches.length > 0) {
-            const linkedBatch = randomChoice(batches.filter((b) => b.channel === "sms"));
+            const linkedBatch = randomChoice(
+              batches.filter((b) => b.channel === "sms")
+            );
             if (linkedBatch) batchSendId = linkedBatch.id;
           }
         } else {
@@ -629,7 +666,8 @@ async function main() {
         }
 
         stats.sms[lifecycle.status] = (stats.sms[lifecycle.status] || 0) + 1;
-        stats.sourceTypes[sourceType] = (stats.sourceTypes[sourceType] || 0) + 1;
+        stats.sourceTypes[sourceType] =
+          (stats.sourceTypes[sourceType] || 0) + 1;
 
         // Postgres
         pgBatch.push({
@@ -645,14 +683,19 @@ async function main() {
           smsSegmentCount: segments,
           messageId,
           status: lifecycle.status,
-          sentAt: events.find((e) => e.eventType === "TEXT_SENT" || e.eventType === "TEXT_QUEUED")?.timestamp,
-          deliveredAt: events.find((e) => e.eventType === "TEXT_DELIVERED")?.timestamp,
-          clickedAt: lifecycle.status === "clicked"
-            ? afterDate(events[events.length - 1].timestamp, 10_000, 600_000)
-            : undefined,
-          optedOutAt: lifecycle.status === "opted_out"
-            ? afterDate(events[events.length - 1].timestamp, 30_000, 300_000)
-            : undefined,
+          sentAt: events.find(
+            (e) => e.eventType === "TEXT_SENT" || e.eventType === "TEXT_QUEUED"
+          )?.timestamp,
+          deliveredAt: events.find((e) => e.eventType === "TEXT_DELIVERED")
+            ?.timestamp,
+          clickedAt:
+            lifecycle.status === "clicked"
+              ? afterDate(events.at(-1)!.timestamp, 10_000, 600_000)
+              : undefined,
+          optedOutAt:
+            lifecycle.status === "opted_out"
+              ? afterDate(events.at(-1)!.timestamp, 30_000, 300_000)
+              : undefined,
           error: lifecycle.error ?? null,
           createdAt: sentAt,
         });
@@ -667,7 +710,10 @@ async function main() {
 
             if (event.eventType === "TEXT_DELIVERED") {
               additionalData.carrierName = randomChoice([
-                "AT&T", "T-Mobile", "Verizon", "US Cellular",
+                "AT&T",
+                "T-Mobile",
+                "Verizon",
+                "US Cellular",
               ]);
               additionalData.deliveryTimestamp = event.timestamp.toISOString();
             }
@@ -697,7 +743,11 @@ async function main() {
       await db.insert(schema.messageSend).values(pgBatch);
 
       if (smsDynamoClient && dynamoBatch.length > 0) {
-        const written = await writeDynamoBatch(smsDynamoClient, "wraps-sms-history", dynamoBatch);
+        const written = await writeDynamoBatch(
+          smsDynamoClient,
+          "wraps-sms-history",
+          dynamoBatch
+        );
         stats.dynamoSms += written;
         if (written === 0 && i === 0) {
           smsDynamoClient = null;
@@ -713,27 +763,35 @@ async function main() {
   }
 
   console.log("\n📊 Email status distribution:");
-  for (const [status, count] of Object.entries(stats.email).sort((a, b) => b[1] - a[1])) {
+  for (const [status, count] of Object.entries(stats.email).sort(
+    (a, b) => b[1] - a[1]
+  )) {
     console.log(`  ${status}: ${count}`);
   }
 
   console.log("\n📊 SMS status distribution:");
-  for (const [status, count] of Object.entries(stats.sms).sort((a, b) => b[1] - a[1])) {
+  for (const [status, count] of Object.entries(stats.sms).sort(
+    (a, b) => b[1] - a[1]
+  )) {
     console.log(`  ${status}: ${count}`);
   }
 
   console.log("\n📊 Source types:");
-  for (const [type, count] of Object.entries(stats.sourceTypes).sort((a, b) => b[1] - a[1])) {
+  for (const [type, count] of Object.entries(stats.sourceTypes).sort(
+    (a, b) => b[1] - a[1]
+  )) {
     console.log(`  ${type}: ${count}`);
   }
 
   if (stats.dynamoEmail > 0 || stats.dynamoSms > 0) {
-    console.log(`\n📊 DynamoDB items written:`);
+    console.log("\n📊 DynamoDB items written:");
     console.log(`  wraps-email-history: ${stats.dynamoEmail}`);
     console.log(`  wraps-sms-history: ${stats.dynamoSms}`);
   }
 
-  console.log(`\n✅ Created ${messageCount} demo messages (${emailCount} email, ${smsCount} SMS)!\n`);
+  console.log(
+    `\n✅ Created ${messageCount} demo messages (${emailCount} email, ${smsCount} SMS)!\n`
+  );
 }
 
 main().catch(console.error);

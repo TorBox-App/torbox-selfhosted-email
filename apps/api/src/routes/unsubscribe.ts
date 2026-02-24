@@ -101,7 +101,10 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
           topicId,
           topicName: topicRecord?.name,
         }).catch((err) => {
-          log.error("Failed to emit topic_unsubscribed event", err, { contactId, topicId });
+          log.error("Failed to emit topic_unsubscribed event", err, {
+            contactId,
+            topicId,
+          });
         });
 
         log.info("Unsubscribe: topic unsubscribed", { contactId, topicId });
@@ -148,7 +151,10 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
               topicId: t.topicId,
               topicName: t.topicName,
             }).catch((err) => {
-              log.error("Failed to emit topic_unsubscribed event", err, { contactId, topicId: t.topicId });
+              log.error("Failed to emit topic_unsubscribed event", err, {
+                contactId,
+                topicId: t.topicId,
+              });
             })
           )
         );

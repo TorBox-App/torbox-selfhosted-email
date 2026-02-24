@@ -25,7 +25,6 @@ export type {
 export type {
   AdditionalDomain,
   AlertConfig,
-  InboundDomain,
   AlertSeverity,
   AlertThresholds,
   DomainPurpose,
@@ -48,6 +47,7 @@ export type {
   EmailUpdateOptions,
   EmailUpgradeOptions,
   EmailVerifyOptions,
+  InboundDomain,
   SESEventType,
   SESReceivingRegion,
   SuppressionReason,

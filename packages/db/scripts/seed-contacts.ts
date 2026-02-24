@@ -39,48 +39,188 @@ const db = drizzle(sql, { schema });
 // --- Name pools ---
 
 const firstNames = [
-  "Emma", "Liam", "Olivia", "Noah", "Ava", "Elijah", "Sophia", "James",
-  "Isabella", "William", "Mia", "Benjamin", "Charlotte", "Lucas", "Amelia",
-  "Henry", "Harper", "Alexander", "Evelyn", "Sebastian", "Abigail", "Jack",
-  "Emily", "Daniel", "Elizabeth", "Michael", "Sofia", "Owen", "Avery", "Ethan",
-  "Ella", "Jacob", "Scarlett", "Logan", "Grace", "Jackson", "Chloe", "Aiden",
-  "Victoria", "Samuel", "Riley", "Mateo", "Aria", "David", "Luna", "Joseph",
-  "Zoey", "Carter", "Penelope", "Luke",
+  "Emma",
+  "Liam",
+  "Olivia",
+  "Noah",
+  "Ava",
+  "Elijah",
+  "Sophia",
+  "James",
+  "Isabella",
+  "William",
+  "Mia",
+  "Benjamin",
+  "Charlotte",
+  "Lucas",
+  "Amelia",
+  "Henry",
+  "Harper",
+  "Alexander",
+  "Evelyn",
+  "Sebastian",
+  "Abigail",
+  "Jack",
+  "Emily",
+  "Daniel",
+  "Elizabeth",
+  "Michael",
+  "Sofia",
+  "Owen",
+  "Avery",
+  "Ethan",
+  "Ella",
+  "Jacob",
+  "Scarlett",
+  "Logan",
+  "Grace",
+  "Jackson",
+  "Chloe",
+  "Aiden",
+  "Victoria",
+  "Samuel",
+  "Riley",
+  "Mateo",
+  "Aria",
+  "David",
+  "Luna",
+  "Joseph",
+  "Zoey",
+  "Carter",
+  "Penelope",
+  "Luke",
 ];
 
 const lastNames = [
-  "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
-  "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez",
-  "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin",
-  "Lee", "Perez", "Thompson", "White", "Harris", "Sanchez", "Clark",
-  "Ramirez", "Lewis", "Robinson", "Walker", "Young", "Allen", "King",
-  "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores", "Green",
-  "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell",
-  "Carter", "Roberts",
+  "Smith",
+  "Johnson",
+  "Williams",
+  "Brown",
+  "Jones",
+  "Garcia",
+  "Miller",
+  "Davis",
+  "Rodriguez",
+  "Martinez",
+  "Hernandez",
+  "Lopez",
+  "Gonzalez",
+  "Wilson",
+  "Anderson",
+  "Thomas",
+  "Taylor",
+  "Moore",
+  "Jackson",
+  "Martin",
+  "Lee",
+  "Perez",
+  "Thompson",
+  "White",
+  "Harris",
+  "Sanchez",
+  "Clark",
+  "Ramirez",
+  "Lewis",
+  "Robinson",
+  "Walker",
+  "Young",
+  "Allen",
+  "King",
+  "Wright",
+  "Scott",
+  "Torres",
+  "Nguyen",
+  "Hill",
+  "Flores",
+  "Green",
+  "Adams",
+  "Nelson",
+  "Baker",
+  "Hall",
+  "Rivera",
+  "Campbell",
+  "Mitchell",
+  "Carter",
+  "Roberts",
 ];
 
 const companies = [
-  "Acme Corp", "Globex", "Initech", "Hooli", "Pied Piper", "Umbrella Corp",
-  "Stark Industries", "Wayne Enterprises", "Dunder Mifflin", "Sterling Cooper",
-  "Weyland-Yutani", "Cyberdyne Systems", "Massive Dynamic", "Tyrell Corp",
-  "Oscorp", "LexCorp", "Wonka Industries", "Prestige Worldwide", "Bluth Company",
-  "InGen", "Soylent Corp", "Rekall", "Aperture Science", "Black Mesa",
-  null, null, null, null, null, null, // ~20% no company
+  "Acme Corp",
+  "Globex",
+  "Initech",
+  "Hooli",
+  "Pied Piper",
+  "Umbrella Corp",
+  "Stark Industries",
+  "Wayne Enterprises",
+  "Dunder Mifflin",
+  "Sterling Cooper",
+  "Weyland-Yutani",
+  "Cyberdyne Systems",
+  "Massive Dynamic",
+  "Tyrell Corp",
+  "Oscorp",
+  "LexCorp",
+  "Wonka Industries",
+  "Prestige Worldwide",
+  "Bluth Company",
+  "InGen",
+  "Soylent Corp",
+  "Rekall",
+  "Aperture Science",
+  "Black Mesa",
+  null,
+  null,
+  null,
+  null,
+  null,
+  null, // ~20% no company
 ];
 
 const jobTitles = [
-  "Software Engineer", "Product Manager", "Designer", "Marketing Manager",
-  "CEO", "CTO", "VP Engineering", "Data Scientist", "DevOps Engineer",
-  "Frontend Developer", "Backend Developer", "Full Stack Developer",
-  "Growth Lead", "Head of Marketing", "Sales Director", "Customer Success",
-  "Engineering Manager", "Technical Lead", "UX Researcher", "Content Writer",
-  null, null, null, null, null, // ~20% no title
+  "Software Engineer",
+  "Product Manager",
+  "Designer",
+  "Marketing Manager",
+  "CEO",
+  "CTO",
+  "VP Engineering",
+  "Data Scientist",
+  "DevOps Engineer",
+  "Frontend Developer",
+  "Backend Developer",
+  "Full Stack Developer",
+  "Growth Lead",
+  "Head of Marketing",
+  "Sales Director",
+  "Customer Success",
+  "Engineering Manager",
+  "Technical Lead",
+  "UX Researcher",
+  "Content Writer",
+  null,
+  null,
+  null,
+  null,
+  null, // ~20% no title
 ];
 
 const emailDomains = [
-  "gmail.com", "outlook.com", "yahoo.com", "hey.com", "proton.me",
-  "icloud.com", "fastmail.com", "zoho.com", "tutanota.com", "pm.me",
-  "company.com", "startup.io", "agency.co", "corp.net", "tech.dev",
+  "gmail.com",
+  "outlook.com",
+  "yahoo.com",
+  "hey.com",
+  "proton.me",
+  "icloud.com",
+  "fastmail.com",
+  "zoho.com",
+  "tutanota.com",
+  "pm.me",
+  "company.com",
+  "startup.io",
+  "agency.co",
+  "corp.net",
+  "tech.dev",
 ];
 
 // --- Helpers ---
@@ -114,13 +254,18 @@ function randomPhone(): string {
   return `+1${area}${prefix}${line}`;
 }
 
-function generateEmail(firstName: string, lastName: string, index: number): string {
+function generateEmail(
+  firstName: string,
+  lastName: string,
+  index: number
+): string {
   const domain = randomChoice(emailDomains);
   const patterns = [
     () => `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
     () => `${firstName.toLowerCase()}${lastName.toLowerCase()}@${domain}`,
     () => `${firstName[0].toLowerCase()}${lastName.toLowerCase()}@${domain}`,
-    () => `${firstName.toLowerCase()}.${lastName.toLowerCase()}${randomInt(1, 99)}@${domain}`,
+    () =>
+      `${firstName.toLowerCase()}.${lastName.toLowerCase()}${randomInt(1, 99)}@${domain}`,
     () => `${firstName.toLowerCase()}${index}@${domain}`,
   ];
   return randomChoice(patterns)();
@@ -128,23 +273,30 @@ function generateEmail(firstName: string, lastName: string, index: number): stri
 
 // --- Weighted status distribution ---
 
-function randomEmailStatus(): { status: EmailStatus; timestamps: Record<string, Date | undefined> } {
+function randomEmailStatus(): {
+  status: EmailStatus;
+  timestamps: Record<string, Date | undefined>;
+} {
   const roll = Math.random();
   const createdAt = randomDate(180);
 
-  if (roll < 0.80) {
+  if (roll < 0.8) {
     return {
       status: "active",
       timestamps: {
-        emailVerifiedAt: new Date(createdAt.getTime() + randomInt(0, 3600_000)),
+        emailVerifiedAt: new Date(
+          createdAt.getTime() + randomInt(0, 3_600_000)
+        ),
       },
     };
   }
-  if (roll < 0.90) {
+  if (roll < 0.9) {
     return {
       status: "unsubscribed",
       timestamps: {
-        emailVerifiedAt: new Date(createdAt.getTime() + randomInt(0, 3600_000)),
+        emailVerifiedAt: new Date(
+          createdAt.getTime() + randomInt(0, 3_600_000)
+        ),
         emailUnsubscribedAt: randomDate(30),
       },
     };
@@ -159,7 +311,9 @@ function randomEmailStatus(): { status: EmailStatus; timestamps: Record<string, 
     return {
       status: "complained",
       timestamps: {
-        emailVerifiedAt: new Date(createdAt.getTime() + randomInt(0, 3600_000)),
+        emailVerifiedAt: new Date(
+          createdAt.getTime() + randomInt(0, 3_600_000)
+        ),
         emailComplainedAt: randomDate(30),
       },
     };
@@ -170,16 +324,19 @@ function randomEmailStatus(): { status: EmailStatus; timestamps: Record<string, 
   };
 }
 
-function randomSmsStatus(): { status: SmsStatus; timestamps: Record<string, Date | undefined> } {
+function randomSmsStatus(): {
+  status: SmsStatus;
+  timestamps: Record<string, Date | undefined>;
+} {
   const roll = Math.random();
 
-  if (roll < 0.60) {
+  if (roll < 0.6) {
     return {
       status: "opted_in",
       timestamps: { smsConsentedAt: randomDate(120) },
     };
   }
-  if (roll < 0.80) {
+  if (roll < 0.8) {
     return {
       status: "pending_consent",
       timestamps: {},
@@ -221,9 +378,25 @@ function randomEngagement(status: EmailStatus) {
 
 function randomProperties(): Record<string, unknown> {
   const props: Record<string, unknown> = {};
-  if (Math.random() < 0.4) props.plan = randomChoice(["free", "starter", "pro", "enterprise"]);
-  if (Math.random() < 0.3) props.source = randomChoice(["website", "import", "api", "referral", "event"]);
-  if (Math.random() < 0.2) props.city = randomChoice(["San Francisco", "New York", "Austin", "London", "Berlin", "Tokyo"]);
+  if (Math.random() < 0.4)
+    props.plan = randomChoice(["free", "starter", "pro", "enterprise"]);
+  if (Math.random() < 0.3)
+    props.source = randomChoice([
+      "website",
+      "import",
+      "api",
+      "referral",
+      "event",
+    ]);
+  if (Math.random() < 0.2)
+    props.city = randomChoice([
+      "San Francisco",
+      "New York",
+      "Austin",
+      "London",
+      "Berlin",
+      "Tokyo",
+    ]);
   if (Math.random() < 0.15) props.lifetime_value = randomInt(0, 5000);
   return props;
 }
@@ -265,7 +438,7 @@ async function main() {
       // Channel distribution: 60% email-only, 15% SMS-only, 25% both
       const channelRoll = Math.random();
       const hasEmail = channelRoll < 0.85; // 60% email-only + 25% both
-      const hasSms = channelRoll >= 0.60; // 15% SMS-only + 25% both
+      const hasSms = channelRoll >= 0.6; // 15% SMS-only + 25% both
 
       if (hasEmail && hasSms) stats.both++;
       else if (hasEmail) stats.email++;
@@ -273,19 +446,23 @@ async function main() {
 
       const email = hasEmail ? generateEmail(firstName, lastName, j) : null;
       const emailResult = hasEmail ? randomEmailStatus() : null;
-      const engagement = hasEmail && emailResult ? randomEngagement(emailResult.status) : {};
+      const engagement =
+        hasEmail && emailResult ? randomEngagement(emailResult.status) : {};
 
       const phone = hasSms ? randomPhone() : null;
       const smsResult = hasSms ? randomSmsStatus() : null;
-      const smsEngagement = hasSms && smsResult?.status === "opted_in"
-        ? { smsSent: randomInt(0, 20), smsClicked: randomInt(0, 5) }
-        : {};
+      const smsEngagement =
+        hasSms && smsResult?.status === "opted_in"
+          ? { smsSent: randomInt(0, 20), smsClicked: randomInt(0, 5) }
+          : {};
 
       if (emailResult) {
-        statusCounts[`email:${emailResult.status}`] = (statusCounts[`email:${emailResult.status}`] || 0) + 1;
+        statusCounts[`email:${emailResult.status}`] =
+          (statusCounts[`email:${emailResult.status}`] || 0) + 1;
       }
       if (smsResult) {
-        statusCounts[`sms:${smsResult.status}`] = (statusCounts[`sms:${smsResult.status}`] || 0) + 1;
+        statusCounts[`sms:${smsResult.status}`] =
+          (statusCounts[`sms:${smsResult.status}`] || 0) + 1;
       }
 
       batch.push({
@@ -294,9 +471,12 @@ async function main() {
         lastName,
         company: randomChoice(companies),
         jobTitle: randomChoice(jobTitles),
-        preferredChannel: (hasEmail && hasSms
-          ? randomChoice(["email", "sms"] as const)
-          : hasEmail ? "email" as const : "sms" as const),
+        preferredChannel:
+          hasEmail && hasSms
+            ? randomChoice(["email", "sms"] as const)
+            : hasEmail
+              ? ("email" as const)
+              : ("sms" as const),
         properties: randomProperties(),
         lastActivityAt: randomDate(30),
         createdAt,
@@ -334,7 +514,9 @@ async function main() {
   console.log(`  Both: ${stats.both}`);
 
   console.log("\n📊 Status distribution:");
-  for (const [key, count] of Object.entries(statusCounts).sort((a, b) => b[1] - a[1])) {
+  for (const [key, count] of Object.entries(statusCounts).sort(
+    (a, b) => b[1] - a[1]
+  )) {
     console.log(`  ${key}: ${count}`);
   }
 
