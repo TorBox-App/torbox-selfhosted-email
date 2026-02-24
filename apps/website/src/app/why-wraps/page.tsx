@@ -35,19 +35,19 @@ export const metadata: Metadata = {
 };
 
 const costComparison = [
-  { volume: "1K/mo", saas: "$20-40", aws: "~$0.10", total: "Free" },
-  { volume: "10K/mo", saas: "$40-80", aws: "~$1", total: "~$30" },
-  { volume: "50K/mo", saas: "$150-300", aws: "~$5", total: "~$104" },
-  { volume: "250K/mo", saas: "$400-800", aws: "~$25", total: "~$274" },
-  { volume: "500K/mo", saas: "$700-1,200", aws: "~$50", total: "~$549" },
+  { volume: "1K/mo", saas: "$20-40", wrapsPlatform: "Free", trackedEvents: "5K/mo", awsCost: "~$0.10" },
+  { volume: "10K/mo", saas: "$40-80", wrapsPlatform: "Free", trackedEvents: "5K/mo", awsCost: "~$1" },
+  { volume: "50K/mo", saas: "$150-300", wrapsPlatform: "$19", trackedEvents: "50K/mo", awsCost: "~$5" },
+  { volume: "100K/mo", saas: "$300-500", wrapsPlatform: "$79", trackedEvents: "250K/mo", awsCost: "~$10" },
+  { volume: "500K/mo", saas: "$700-1,200", wrapsPlatform: "$199", trackedEvents: "1M/mo", awsCost: "~$50" },
 ];
 
 const securityPoints = [
-  "Zero stored credentials - we use OIDC and IAM roles",
-  "Infrastructure runs in your AWS account",
+  "Zero stored credentials — temporary access via OIDC and IAM roles, no API keys to rotate",
+  "Infrastructure runs in your AWS account, not ours",
   "Your data stays in your account (data residency)",
-  "Open source - audit the code yourself",
-  "Inherits your AWS compliance (SOC2, HIPAA, etc.)",
+  "Open source — audit the code yourself",
+  "Inherits your existing AWS compliance (SOC2, HIPAA, etc.)",
 ];
 
 const lockInPoints = [
@@ -55,7 +55,7 @@ const lockInPoints = [
   "If you stop using Wraps, everything keeps running",
   "Standard AWS services underneath (SES, DynamoDB, Lambda)",
   "Export data anytime - it's in your DynamoDB",
-  "CLI and SDK are open source (AGPLv3)",
+  "CLI and SDK are open source (AGPLv3 — does not affect your application code)",
 ];
 
 export default function WhyWrapsPage() {
@@ -90,14 +90,19 @@ export default function WhyWrapsPage() {
                     <thead>
                       <tr className="border-b bg-muted/50">
                         <th className="p-4 text-left font-medium">
-                          Monthly Volume
+                          Send Volume
+                        </th>
+                        <th className="p-4 text-left font-medium text-primary">
+                          Tracked Events
                         </th>
                         <th className="p-4 text-left font-medium">
                           Email SaaS
                         </th>
-                        <th className="p-4 text-left font-medium">AWS Only</th>
                         <th className="p-4 text-left font-medium text-primary">
-                          Wraps Total
+                          Wraps Platform
+                        </th>
+                        <th className="p-4 text-left font-medium text-muted-foreground">
+                          + AWS Cost
                         </th>
                       </tr>
                     </thead>
@@ -107,12 +112,15 @@ export default function WhyWrapsPage() {
                           <td className="p-4 text-muted-foreground">
                             {row.volume}
                           </td>
-                          <td className="p-4">{row.saas}</td>
-                          <td className="p-4 text-muted-foreground">
-                            {row.aws}
+                          <td className="p-4 text-primary">
+                            {row.trackedEvents}
                           </td>
+                          <td className="p-4">{row.saas}</td>
                           <td className="p-4 font-medium text-primary">
-                            {row.total}
+                            {row.wrapsPlatform}
+                          </td>
+                          <td className="p-4 text-muted-foreground">
+                            {row.awsCost}
                           </td>
                         </tr>
                       ))}
@@ -122,10 +130,12 @@ export default function WhyWrapsPage() {
               </CardContent>
             </Card>
             <p className="mt-4 text-muted-foreground text-sm">
-              AWS costs: SES at $0.10/1K emails. Wraps Total includes platform
-              fee ($0-249/mo) plus message overages ($1-2/1K).{" "}
+              Email SaaS examples: Mailchimp, Resend, SendGrid, Postmark,
+              Customer.io. Wraps Platform is a flat fee for tooling (dashboard,
+              workflows, templates, analytics) — not based on email volume. You
+              pay AWS directly for sending at $0.10/1K emails.{" "}
               <a className="text-primary underline" href="/platform#pricing">
-                See pricing tiers
+                See what each tier includes
               </a>
             </p>
           </section>
@@ -209,8 +219,8 @@ export default function WhyWrapsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm">
-                    Free local console for development. Wraps Platform is
-                    optional.
+                    Free local console for development. Upgrade to the hosted
+                    platform for workflows, templates, and analytics.
                   </p>
                 </CardContent>
               </Card>

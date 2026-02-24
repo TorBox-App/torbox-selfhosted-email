@@ -12,13 +12,13 @@ const faqItems = [
     id: "cost",
     question: "What's the total cost of ownership?",
     answer:
-      "AWS costs: $0.10/1K emails + ~$2-5/mo infrastructure. There's a free tier with 1,000 messages/month and hosted dashboard. Paid plans start at $29/mo for 10,000 messages with usage-based overages. No hidden fees, no per-seat pricing.",
+      "Two costs: a Wraps Platform fee (Free, $19, $79, or $199/mo depending on features) and AWS sending at $0.10/1K emails paid directly to AWS. No per-seat pricing, no per-contact pricing. The Free tier includes 5K tracked events/mo and a hosted dashboard.",
   },
   {
     id: "support",
     question: "What support is available?",
     answer:
-      "Free tier: GitHub issues and community Discord. Paid dashboard: 48-hour email support. Enterprise: Dedicated support and SLAs available on request.",
+      "Free: community support via GitHub and Discord. Starter ($19/mo): email support. Growth ($79/mo): priority support with 24-hour response. Scale ($199/mo): priority support with SLA.",
   },
   {
     id: "compare",
