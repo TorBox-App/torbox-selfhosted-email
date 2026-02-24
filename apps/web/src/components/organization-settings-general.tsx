@@ -4,8 +4,20 @@ import { useForm } from "@tanstack/react-form";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { updateOrganizationAction } from "@/actions/organizations";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,6 +30,7 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { authClient } from "@/lib/auth-client";
 import {
   type UpdateOrganizationInput,
   updateOrganizationSchema,
@@ -39,8 +52,27 @@ export function OrganizationSettingsGeneral({
 }: OrganizationSettingsGeneralProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  async function handleDeleteOrganization() {
+    setIsDeleting(true);
+    try {
+      const { error } = await authClient.organization.delete({
+        organizationId: organization.id,
+      });
+      if (error) {
+        toast.error(error.message || "Failed to delete organization");
+        return;
+      }
+      window.location.href = "/";
+    } catch {
+      toast.error("Failed to delete organization. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   const form = useForm({
     defaultValues: {
@@ -226,14 +258,42 @@ export function OrganizationSettingsGeneral({
                   Permanently delete this organization and all associated data.
                 </p>
               </div>
-              <Button
-                className="cursor-pointer"
-                disabled={userRole !== "owner"}
-                type="button"
-                variant="destructive"
-              >
-                Delete Organization
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    className="cursor-pointer"
+                    disabled={userRole !== "owner"}
+                    type="button"
+                    variant="destructive"
+                  >
+                    Delete Organization
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Delete this organization?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      the organization, all members, templates, contacts,
+                      workflows, and associated data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={isDeleting}
+                      onClick={handleDeleteOrganization}
+                      variant="destructive"
+                    >
+                      {isDeleting ? "Deleting..." : "Delete Organization"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardContent>
         </Card>
