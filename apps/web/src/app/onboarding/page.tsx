@@ -1,12 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { CreateOrganizationForm } from "@/components/forms/create-organization-form";
 import Loader from "@/components/loader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -18,6 +33,7 @@ export default function OnboardingPage() {
   const plan = searchParams.get("plan");
   const interval = searchParams.get("interval");
   const { data: session, isPending } = authClient.useSession();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Redirect to auth if not logged in
   if (!(isPending || session)) {
@@ -58,6 +74,69 @@ export default function OnboardingPage() {
         <CardContent>
           <CreateOrganizationForm onSuccess={handleSuccess} />
         </CardContent>
+
+        <CardFooter className="flex flex-col items-center gap-3 border-t pt-6">
+          <Button
+            className="text-muted-foreground"
+            onClick={async () => {
+              await authClient.signOut();
+              router.push("/");
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            Sign out
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                className="text-muted-foreground text-xs hover:text-destructive"
+                type="button"
+              >
+                Delete account
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete your
+                  account and remove all associated data from our servers.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={isDeleting}
+                  onClick={async () => {
+                    setIsDeleting(true);
+                    try {
+                      const { error } = await authClient.deleteUser();
+                      if (error) {
+                        toast.error(
+                          error.message || "Failed to delete account"
+                        );
+                        return;
+                      }
+                      window.location.href = "/";
+                    } catch {
+                      toast.error(
+                        "Failed to delete account. Please try again."
+                      );
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
+                  variant="destructive"
+                >
+                  {isDeleting ? "Deleting..." : "Delete Account"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardFooter>
       </Card>
     </div>
   );
