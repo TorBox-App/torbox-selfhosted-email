@@ -606,6 +606,7 @@ export async function init(options: InitOptions): Promise<void> {
                   domain: outputs.domain,
                   dkimTokens: outputs.dkimTokens,
                   mailFromDomain: outputs.mailFromDomain,
+                  customTrackingDomain: outputs.customTrackingDomain,
                   region,
                 },
                 selectedCategories as Set<any>
@@ -639,6 +640,7 @@ export async function init(options: InitOptions): Promise<void> {
             domain: outputs.domain,
             dkimTokens: outputs.dkimTokens,
             mailFromDomain: outputs.mailFromDomain,
+            customTrackingDomain: outputs.customTrackingDomain,
             region,
           };
 

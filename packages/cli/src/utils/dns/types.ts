@@ -11,6 +11,7 @@ export type EmailDNSRecordData = {
   domain: string;
   dkimTokens: string[];
   mailFromDomain?: string;
+  customTrackingDomain?: string;
   region: string;
 };
 

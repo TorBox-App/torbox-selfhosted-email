@@ -170,7 +170,8 @@ export class VercelDNSClient implements DNSProviderClient {
   async createEmailRecords(
     data: EmailDNSRecordData
   ): Promise<DNSCreationResult> {
-    const { domain, dkimTokens, mailFromDomain, region } = data;
+    const { domain, dkimTokens, mailFromDomain, customTrackingDomain, region } =
+      data;
     const errors: string[] = [];
     let recordsCreated = 0;
 
@@ -212,6 +213,22 @@ export class VercelDNSClient implements DNSProviderClient {
         recordsCreated++;
       } else {
         errors.push(`Failed to create DMARC record for ${domain}`);
+      }
+
+      // Custom tracking domain CNAME (if configured)
+      if (customTrackingDomain) {
+        const trackingSuccess = await this.createRecord(
+          customTrackingDomain,
+          "CNAME",
+          `r.${region}.awstrack.me`
+        );
+        if (trackingSuccess) {
+          recordsCreated++;
+        } else {
+          errors.push(
+            `Failed to create tracking CNAME for ${customTrackingDomain}`
+          );
+        }
       }
 
       // MAIL FROM domain records (if configured)

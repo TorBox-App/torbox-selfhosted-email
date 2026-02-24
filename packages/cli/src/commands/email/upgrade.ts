@@ -1993,6 +1993,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
           domain: outputs.domain!,
           dkimTokens: outputs.dkimTokens!,
           mailFromDomain,
+          customTrackingDomain: outputs.customTrackingDomain,
           region,
         };
 
@@ -2052,6 +2053,7 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         domain: outputs.domain!,
         dkimTokens: outputs.dkimTokens!,
         mailFromDomain,
+        customTrackingDomain: outputs.customTrackingDomain,
         region,
       };
       const dnsRecords = buildEmailDNSRecords(dnsData);

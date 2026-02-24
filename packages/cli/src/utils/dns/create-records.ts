@@ -40,7 +40,8 @@ export type DNSRecordInfo = {
 export function buildEmailDNSRecords(
   data: EmailDNSRecordData
 ): DNSRecordInfo[] {
-  const { domain, dkimTokens, mailFromDomain, region } = data;
+  const { domain, dkimTokens, mailFromDomain, customTrackingDomain, region } =
+    data;
   const records: DNSRecordInfo[] = [];
 
   // DKIM CNAME records (3 records)
@@ -69,6 +70,16 @@ export function buildEmailDNSRecords(
     value: `v=DMARC1; p=quarantine; rua=mailto:postmaster@${dmarcRuaDomain}`,
     category: "dmarc",
   });
+
+  // Custom tracking domain CNAME (if configured)
+  if (customTrackingDomain) {
+    records.push({
+      name: customTrackingDomain,
+      type: "CNAME",
+      value: `r.${region}.awstrack.me`,
+      category: "tracking",
+    });
+  }
 
   // MAIL FROM domain records (if configured)
   if (mailFromDomain) {
@@ -165,7 +176,7 @@ export async function createDNSRecordsForProvider(
           data.dkimTokens,
           data.region,
           categories,
-          undefined, // customTrackingDomain - not used here
+          data.customTrackingDomain,
           data.mailFromDomain
         );
 
