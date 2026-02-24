@@ -409,6 +409,7 @@ export type SMSEvent = {
   priceInUsd?: number;
   createdAt: number;
   expiresAt?: number;
+  additionalData?: string;
   metadata?: Record<string, unknown>;
 };
 
@@ -418,6 +419,27 @@ type QuerySMSEventsParams = {
   endTime: Date;
   limit?: number;
 };
+
+/**
+ * Derives a human-readable eventStatus from the AWS eventType.
+ * The SMS Lambda processor writes eventType (e.g. TEXT_DELIVERED) but not
+ * a separate eventStatus field. This normalizes for all consumers.
+ */
+function normalizeEventStatus(eventType: string): string {
+  const mapping: Record<string, string> = {
+    TEXT_QUEUED: "queued",
+    TEXT_SENT: "sent",
+    TEXT_PENDING: "pending",
+    TEXT_DELIVERED: "delivered",
+    TEXT_SUCCESSFUL: "delivered",
+    TEXT_INVALID: "invalid",
+    TEXT_CARRIER_UNREACHABLE: "carrier_unreachable",
+    TEXT_TTL_EXPIRED: "ttl_expired",
+    TEXT_BLOCKED: "blocked",
+    TEXT_UNKNOWN: "failed",
+  };
+  return mapping[eventType] || eventType;
+}
 
 /**
  * Queries SMS events from DynamoDB for a specific AWS account.
@@ -473,7 +495,16 @@ export async function querySMSEvents(
 
   try {
     const result = await docClient.send(new QueryCommand(queryParams));
-    return (result.Items as SMSEvent[]) || [];
+    const items = (result.Items || []) as Array<Record<string, unknown>>;
+
+    // Normalize: the Lambda processor writes eventType (e.g. TEXT_DELIVERED)
+    // but not eventStatus. Derive eventStatus from eventType when missing.
+    return items.map((item) => ({
+      ...item,
+      eventStatus:
+        (item.eventStatus as string) ||
+        normalizeEventStatus(item.eventType as string),
+    })) as SMSEvent[];
   } catch (error) {
     // Handle case where DynamoDB table doesn't exist (user hasn't deployed history tracking)
     if (

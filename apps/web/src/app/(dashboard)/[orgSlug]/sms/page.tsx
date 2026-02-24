@@ -100,20 +100,7 @@ async function fetchSMSMessages(
     );
 
     // Group events by messageId to get unique messages
-    const messagesMap = new Map<
-      string,
-      {
-        id: string;
-        messageId: string;
-        destinationNumber: string;
-        originationNumber?: string;
-        messageBody?: string;
-        status: SMSStatus;
-        sentAt: number;
-        segments?: number;
-        priceInUsd?: number;
-      }
-    >();
+    const messagesMap = new Map<string, SMSListItem>();
 
     for (const events of allEvents) {
       for (const event of events) {
@@ -143,22 +130,14 @@ async function fetchSMSMessages(
           if (newPriority < currentPriority) {
             existing.status = newStatus;
           }
-
-          // Update price if available
-          if (event.priceInUsd && !existing.priceInUsd) {
-            existing.priceInUsd = event.priceInUsd;
-          }
         } else {
           messagesMap.set(event.messageId, {
             id: event.messageId,
             messageId: event.messageId,
             destinationNumber: event.destinationNumber,
             originationNumber: event.originationNumber,
-            messageBody: event.messageBody,
             status: mapEventTypeToStatus(event.eventType, event.eventStatus),
             sentAt: event.sentAt,
-            segments: event.segments,
-            priceInUsd: event.priceInUsd,
           });
         }
       }

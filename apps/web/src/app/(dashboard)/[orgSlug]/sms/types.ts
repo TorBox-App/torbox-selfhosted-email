@@ -20,11 +20,8 @@ export type SMS = {
   messageId: string;
   destinationNumber: string;
   originationNumber?: string;
-  messageBody?: string;
   status: SMSStatus;
   sentAt: number;
-  segments?: number;
-  priceInUsd?: number;
   events: SMSEvent[];
   metadata?: Record<string, unknown>;
 };
@@ -34,9 +31,6 @@ export type SMSListItem = {
   messageId: string;
   destinationNumber: string;
   originationNumber?: string;
-  messageBody?: string;
   status: SMSStatus;
   sentAt: number;
-  segments?: number;
-  priceInUsd?: number;
 };

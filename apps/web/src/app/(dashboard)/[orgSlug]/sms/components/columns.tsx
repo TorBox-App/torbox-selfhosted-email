@@ -121,13 +121,6 @@ function formatPhoneNumber(phone: string): string {
   return phone;
 }
 
-function formatCurrency(amount?: number): string {
-  if (amount === undefined || amount === null) {
-    return "-";
-  }
-  return `$${amount.toFixed(4)}`;
-}
-
 export const columns: ColumnDef<SMSListItem>[] = [
   {
     id: "select",
@@ -172,28 +165,24 @@ export const columns: ColumnDef<SMSListItem>[] = [
     enableColumnFilter: true,
   },
   {
-    id: "messageBody",
-    accessorKey: "messageBody",
+    id: "originationNumber",
+    accessorKey: "originationNumber",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Message" />
+      <DataTableColumnHeader column={column} label="From" />
     ),
     cell: ({ row }) => {
-      const body = row.original.messageBody;
-      if (!body) {
-        return <span className="text-muted-foreground text-sm">(no body)</span>;
+      const from = row.original.originationNumber;
+      if (!from) {
+        return <span className="text-muted-foreground text-sm">-</span>;
       }
       return (
-        <div className="max-w-[300px] truncate text-sm" title={body}>
-          {body}
-        </div>
+        <span className="font-mono text-sm">
+          {formatPhoneNumber(from)}
+        </span>
       );
     },
-    meta: {
-      label: "Message",
-      placeholder: "Search messages...",
-      variant: "text",
-    },
-    enableColumnFilter: true,
+    enableColumnFilter: false,
+    enableSorting: false,
   },
   {
     id: "status",
@@ -223,34 +212,6 @@ export const columns: ColumnDef<SMSListItem>[] = [
       })),
     },
     enableColumnFilter: true,
-    enableSorting: true,
-  },
-  {
-    id: "segments",
-    accessorKey: "segments",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Segments" />
-    ),
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {row.original.segments || 1}
-      </span>
-    ),
-    enableColumnFilter: false,
-    enableSorting: true,
-  },
-  {
-    id: "priceInUsd",
-    accessorKey: "priceInUsd",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} label="Cost" />
-    ),
-    cell: ({ row }) => (
-      <span className="text-muted-foreground text-sm">
-        {formatCurrency(row.original.priceInUsd)}
-      </span>
-    ),
-    enableColumnFilter: false,
     enableSorting: true,
   },
   {

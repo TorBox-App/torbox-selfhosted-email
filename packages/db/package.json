@@ -21,10 +21,14 @@
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "seed:activity": "tsx scripts/seed-activity.ts",
+    "seed:contacts": "tsx scripts/seed-contacts.ts",
     "seed:demo": "tsx scripts/seed-demo-batches.ts",
     "seed:events": "tsx scripts/seed-events.ts"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "3.996.0",
+    "@aws-sdk/util-dynamodb": "3.996.0",
     "drizzle-kit": "^0.31.2",
     "tsdown": "catalog:",
     "tsx": "^4.20.6"
@@ -33,9 +37,9 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "drizzle-orm": "^0.44.2",
     "@neondatabase/serverless": "^1.0.1",
     "dotenv": "catalog:",
+    "drizzle-orm": "^0.44.2",
     "zod": "catalog:"
   }
 }

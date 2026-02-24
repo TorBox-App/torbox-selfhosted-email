@@ -92,19 +92,10 @@ export function SMSTable({ data, orgSlug, days }: SMSTableProps) {
     globalFilterFn: (row, _columnId, filterValue) => {
       const search = filterValue.toLowerCase();
 
-      // Search in phone number
-      const phone = row.original.destinationNumber?.toLowerCase() ?? "";
-      if (phone.includes(search)) {
-        return true;
-      }
-
-      // Search in message body
-      const body = row.original.messageBody?.toLowerCase() ?? "";
-      if (body.includes(search)) {
-        return true;
-      }
-
-      return false;
+      const dest = row.original.destinationNumber?.toLowerCase() ?? "";
+      if (dest.includes(search)) return true;
+      const from = row.original.originationNumber?.toLowerCase() ?? "";
+      return from.includes(search);
     },
     state: {
       sorting,

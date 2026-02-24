@@ -20,10 +20,7 @@ export const emailCSVColumns: CSVColumnDef<EmailListItem>[] = [
 export const smsCSVColumns: CSVColumnDef<SMSListItem>[] = [
   { header: "Destination Number", accessor: (r) => r.destinationNumber },
   { header: "Origination Number", accessor: (r) => r.originationNumber },
-  { header: "Message Body", accessor: (r) => r.messageBody },
   { header: "Status", accessor: (r) => r.status },
-  { header: "Segments", accessor: (r) => r.segments },
-  { header: "Price (USD)", accessor: (r) => r.priceInUsd },
   { header: "Sent At", accessor: (r) => new Date(r.sentAt).toISOString() },
 ];
 
