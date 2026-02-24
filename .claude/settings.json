@@ -90,24 +90,9 @@
       "path": ".claude/skills/dashboard-components/SKILL.md"
     },
     {
-      "name": "preflight",
-      "description": "Pre-flight validation pipeline: discovery, contracts, plan, then incremental implementation",
-      "path": ".claude/skills/preflight/SKILL.md"
-    },
-    {
-      "name": "context-engineer",
-      "description": "Audit and improve project context (CLAUDE.md, skills, agents) for higher quality agent output",
-      "path": ".claude/skills/context-engineer/SKILL.md"
-    },
-    {
       "name": "commit",
       "description": "Run checks and commit using conventional commits",
       "path": ".claude/skills/commit/SKILL.md"
-    },
-    {
-      "name": "code-review",
-      "description": "Review code for quality, architecture, and pattern consistency",
-      "path": ".claude/skills/code-review/SKILL.md"
     },
     {
       "name": "docs-pages",
