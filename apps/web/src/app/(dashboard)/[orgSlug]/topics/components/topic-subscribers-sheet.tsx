@@ -221,9 +221,9 @@ function QuickStartSnippets({ slug }: { slug: string }) {
   const codes = useMemo(
     () => ({
       typescript: {
-        "@wraps.dev/client": `import { createClient } from "@wraps.dev/client";
+        "@wraps.dev/client": `import { createPlatformClient } from "@wraps.dev/client";
 
-const client = createClient({ apiKey: "wraps_..." });
+const client = createPlatformClient({ apiKey: "wraps_..." });
 
 // Subscribe a contact to this topic
 await client.POST("/v1/contacts/", {
