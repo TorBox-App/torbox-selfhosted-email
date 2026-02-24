@@ -12,7 +12,10 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Area, AreaChart } from "recharts";
+import { useVolumeData } from "@/app/(dashboard)/[orgSlug]/emails/analytics/hooks/use-analytics";
 import { toast } from "sonner";
 import {
   createApiKey,
@@ -105,6 +108,10 @@ export function OrganizationSettingsApiKeys({
   organization,
   userRole,
 }: OrganizationSettingsApiKeysProps) {
+  const { orgSlug } = useParams<{ orgSlug: string }>();
+  const { data: volumeData } = useVolumeData(orgSlug, 30);
+  const sparkData = volumeData?.map((d) => ({ v: d.sent })) ?? [];
+
   const [apiKeys, setApiKeys] = useState<ApiKeyWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -633,28 +640,71 @@ export function OrganizationSettingsApiKeys({
                       </p>
                     </div>
                   </div>
-                  {canEdit && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditDialog(key)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDeleteApiKey(key.id)}
+                  <div className="flex items-center gap-2">
+                    {sparkData.length > 0 && (
+                      <div className="hidden h-10 w-24 md:block">
+                        <AreaChart
+                          data={sparkData}
+                          height={40}
+                          width={96}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                          <defs>
+                            <linearGradient
+                              id={`spark-${key.id}`}
+                              x1="0"
+                              x2="0"
+                              y1="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="currentColor"
+                                stopOpacity={0.15}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="currentColor"
+                                stopOpacity={0}
+                              />
+                            </linearGradient>
+                          </defs>
+                          <Area
+                            dataKey="v"
+                            fill={`url(#spark-${key.id})`}
+                            isAnimationActive={false}
+                            stroke="currentColor"
+                            strokeOpacity={0.3}
+                            strokeWidth={1.5}
+                            type="monotone"
+                          />
+                        </AreaChart>
+                      </div>
+                    )}
+                    {canEdit && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="icon" variant="ghost">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => openEditDialog(key)}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDeleteApiKey(key.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
