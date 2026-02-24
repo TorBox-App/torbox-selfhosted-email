@@ -1,10 +1,16 @@
 "use client";
 
-import { Pencil, Trash2, Users } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
+import { ChevronRight, Code2, Pencil, Trash2, Users } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { getTopicSubscribers } from "@/actions/topics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { CodeTabs } from "@/components/ui/shadcn-io/code-tabs";
 import {
   Sheet,
   SheetContent,
@@ -118,6 +124,9 @@ export function TopicSubscribersSheet({
             <p className="text-muted-foreground text-sm">{topic.description}</p>
           )}
 
+          {/* Quick Start */}
+          <QuickStartSnippets slug={topic.slug} />
+
           {/* Subscribers List */}
           <div className="rounded-md border">
             <Table>
@@ -203,5 +212,52 @@ export function TopicSubscribersSheet({
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function QuickStartSnippets({ slug }: { slug: string }) {
+  const [open, setOpen] = useState(false);
+
+  const codes = useMemo(
+    () => ({
+      typescript: {
+        "@wraps.dev/client": `import { createClient } from "@wraps.dev/client";
+
+const client = createClient({ apiKey: "wraps_..." });
+
+// Subscribe a contact to this topic
+await client.POST("/v1/contacts/", {
+  body: {
+    email: "user@example.com",
+    topicSlugs: ["${slug}"],
+  },
+});`,
+      },
+      curl: {
+        cURL: `curl -X POST https://api.wraps.dev/v1/contacts/ \\
+  -H "Authorization: Bearer wraps_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"user@example.com","topicSlugs":["${slug}"]}'`,
+      },
+    }),
+    [slug]
+  );
+
+  return (
+    <Collapsible onOpenChange={setOpen} open={open}>
+      <CollapsibleTrigger asChild>
+        <Button className="gap-1.5" size="sm" variant="ghost">
+          <Code2 className="h-4 w-4" />
+          Quick start
+          <ChevronRight
+            className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-90" : ""}`}
+          />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-2 pt-2">
+        <CodeTabs codes={codes.typescript} lang="typescript" />
+        <CodeTabs codes={codes.curl} lang="bash" />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
