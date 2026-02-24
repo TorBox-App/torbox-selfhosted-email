@@ -5,14 +5,11 @@ import type {
   PreviewResult,
   Stack,
 } from "@pulumi/pulumi/automation/index.js";
-import * as automation from "@pulumi/pulumi/automation/index.js";
+import { PulumiCommand } from "@pulumi/pulumi/automation/index.js";
 import { errors } from "./errors.js";
 import type { ResourceChange, ResourceOperation } from "./output.js";
 
 const execAsync = promisify(exec);
-
-// Extract installPulumiCli from the automation module
-const installPulumiCli = (automation as any).installPulumiCli;
 
 /**
  * Check if Pulumi CLI is installed
@@ -35,8 +32,8 @@ export async function ensurePulumiInstalled(): Promise<boolean> {
 
   if (!isInstalled) {
     try {
-      // Try to auto-install Pulumi CLI using Automation API
-      await installPulumiCli();
+      // Auto-install Pulumi CLI matching the SDK version
+      await PulumiCommand.install();
       return true; // Was auto-installed
     } catch (_error) {
       // If auto-install fails, throw helpful error

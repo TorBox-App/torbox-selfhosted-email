@@ -8,7 +8,9 @@ vi.mock("node:child_process", () => ({
 
 // Mock @pulumi/pulumi/automation
 vi.mock("@pulumi/pulumi/automation/index.js", () => ({
-  installPulumiCli: vi.fn(),
+  PulumiCommand: {
+    install: vi.fn(),
+  },
 }));
 
 // Mock errors
@@ -19,7 +21,7 @@ vi.mock("../shared/errors.js", () => ({
 }));
 
 // Import after mocks
-import * as automation from "@pulumi/pulumi/automation/index.js";
+import { PulumiCommand } from "@pulumi/pulumi/automation/index.js";
 import { errors } from "../shared/errors.js";
 import {
   checkPulumiInstalled,
@@ -91,7 +93,7 @@ describe("pulumi utilities", () => {
       const result = await ensurePulumiInstalled();
 
       expect(result).toBe(false);
-      expect((automation as any).installPulumiCli).not.toHaveBeenCalled();
+      expect(PulumiCommand.install).not.toHaveBeenCalled();
     });
 
     it("should auto-install pulumi if not installed", async () => {
@@ -100,14 +102,12 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked((automation as any).installPulumiCli).mockResolvedValue(
-        undefined
-      );
+      vi.mocked(PulumiCommand.install).mockResolvedValue({} as any);
 
       const result = await ensurePulumiInstalled();
 
       expect(result).toBe(true);
-      expect((automation as any).installPulumiCli).toHaveBeenCalled();
+      expect(PulumiCommand.install).toHaveBeenCalled();
     });
 
     it("should return true when auto-install succeeds", async () => {
@@ -116,9 +116,7 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked((automation as any).installPulumiCli).mockResolvedValue(
-        undefined
-      );
+      vi.mocked(PulumiCommand.install).mockResolvedValue({} as any);
 
       const result = await ensurePulumiInstalled();
 
@@ -131,7 +129,7 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked((automation as any).installPulumiCli).mockRejectedValue(
+      vi.mocked(PulumiCommand.install).mockRejectedValue(
         new Error("Installation failed")
       );
 
@@ -151,11 +149,10 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked((automation as any).installPulumiCli).mockImplementation(
-        async () => {
-          calls.push("install");
-        }
-      );
+      vi.mocked(PulumiCommand.install).mockImplementation(async () => {
+        calls.push("install");
+        return {} as any;
+      });
 
       await ensurePulumiInstalled();
 
@@ -168,9 +165,7 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked((automation as any).installPulumiCli).mockResolvedValue(
-        undefined
-      );
+      vi.mocked(PulumiCommand.install).mockResolvedValue({} as any);
 
       await expect(ensurePulumiInstalled()).resolves.toBe(true);
     });
@@ -181,14 +176,12 @@ describe("pulumi utilities", () => {
         return {} as any;
       });
 
-      vi.mocked((automation as any).installPulumiCli).mockResolvedValue(
-        undefined
-      );
+      vi.mocked(PulumiCommand.install).mockResolvedValue({} as any);
 
       const result = await ensurePulumiInstalled();
 
       expect(result).toBe(true);
-      expect((automation as any).installPulumiCli).toHaveBeenCalled();
+      expect(PulumiCommand.install).toHaveBeenCalled();
     });
   });
 });
