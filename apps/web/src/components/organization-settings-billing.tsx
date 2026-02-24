@@ -131,10 +131,9 @@ export function OrganizationSettingsBilling({
   });
 
   const cancelMutation = useMutation({
-    mutationFn: async (subscriptionId: string) =>
+    mutationFn: async () =>
       authClient.subscription.cancel({
         referenceId: organization.id,
-        subscriptionId,
         returnUrl: `${window.location.origin}/${organization.slug}/settings/billing`,
       }),
     onSuccess: () => {
@@ -150,10 +149,9 @@ export function OrganizationSettingsBilling({
   });
 
   const restoreMutation = useMutation({
-    mutationFn: async (subscriptionId: string) =>
+    mutationFn: async () =>
       authClient.subscription.restore({
         referenceId: organization.id,
-        subscriptionId,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -247,7 +245,7 @@ export function OrganizationSettingsBilling({
               <Button
                 disabled={!canManageBilling}
                 loading={restoreMutation.isPending}
-                onClick={() => restoreMutation.mutate(activeSubscription.id)}
+                onClick={() => restoreMutation.mutate()}
                 size="sm"
                 variant="outline"
               >
@@ -615,10 +613,7 @@ export function OrganizationSettingsBilling({
             </Button>
             <Button
               loading={cancelMutation.isPending}
-              onClick={() =>
-                activeSubscription?.id &&
-                cancelMutation.mutate(activeSubscription.id)
-              }
+              onClick={() => cancelMutation.mutate()}
               variant="destructive"
             >
               Yes, Cancel
