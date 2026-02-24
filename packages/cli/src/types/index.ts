@@ -25,6 +25,7 @@ export type {
 export type {
   AdditionalDomain,
   AlertConfig,
+  InboundDomain,
   AlertSeverity,
   AlertThresholds,
   DomainPurpose,
@@ -32,8 +33,10 @@ export type {
   EmailConfigPreset,
   EmailConnectOptions,
   EmailFeatureCostBreakdown,
+  EmailInboundAddOptions,
   EmailInboundDestroyOptions,
   EmailInboundInitOptions,
+  EmailInboundRemoveOptions,
   EmailInboundStatusOptions,
   EmailInboundTestOptions,
   EmailInboundVerifyOptions,

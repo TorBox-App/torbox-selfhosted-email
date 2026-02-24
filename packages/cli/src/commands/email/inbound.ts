@@ -5,19 +5,23 @@ import * as pulumi from "@pulumi/pulumi";
 import pc from "picocolors";
 import { deployEmailStack } from "../../infrastructure/email-stack.js";
 import type {
+  EmailInboundAddOptions,
   EmailInboundDestroyOptions,
   EmailInboundInitOptions,
+  EmailInboundRemoveOptions,
   EmailInboundStatusOptions,
   EmailInboundTestOptions,
   EmailInboundVerifyOptions,
 } from "../../types/index.js";
 import { SES_RECEIVING_REGIONS } from "../../types/index.js";
 import {
+  addDomainToReceiptRule,
   createReceiptRule,
   createReceiptRuleSet,
   deleteReceiptRule,
   deleteReceiptRuleSet,
   getActiveReceiptRuleSet,
+  removeDomainFromReceiptRule,
   RULE_SET_NAME,
   setActiveReceiptRuleSet,
 } from "../../utils/email/receipt-rules.js";
@@ -32,8 +36,10 @@ import {
 } from "../../utils/shared/fs.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import {
+  addInboundDomainToMetadata,
   buildEmailStackConfig,
   loadConnectionMetadata,
+  removeInboundDomainFromMetadata,
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
@@ -159,6 +165,14 @@ export async function inboundInit(
       webhookUrl,
       webhookSecret,
     },
+    inboundDomains: [
+      {
+        subdomain,
+        receivingDomain,
+        parentDomain: domain,
+        addedAt: new Date().toISOString(),
+      },
+    ],
   };
 
   const stackConfig = buildEmailStackConfig(metadata, region, {
@@ -459,6 +473,7 @@ export async function inboundDestroy(
   const updatedEmailConfig = {
     ...emailService.config,
     inbound: undefined,
+    inboundDomains: undefined,
   };
 
   const stackConfig = buildEmailStackConfig(metadata, region, {
@@ -547,18 +562,28 @@ export async function inboundStatus(
     return;
   }
 
-  const inbound = metadata.services.email.config.inbound;
+  const emailConfig = metadata.services.email.config;
+  // biome-ignore lint/style/noNonNullAssertion: validated by enabled check above
+  const inbound = emailConfig.inbound!;
+  const inboundDomains = emailConfig.inboundDomains ?? [];
 
   // 4. Check receipt rule status
   const activeRuleSet = await getActiveReceiptRuleSet(region);
-  const receivingDomain =
-    inbound.receivingDomain ||
-    `${inbound.subdomain}.${metadata.services.email.config.domain}`;
+
+  // Build domain list — prefer inboundDomains, fallback to single domain
+  const domainList =
+    inboundDomains.length > 0
+      ? inboundDomains.map((d) => d.receivingDomain)
+      : [
+          inbound.receivingDomain ||
+            `${inbound.subdomain}.${emailConfig.domain}`,
+        ];
 
   if (isJsonMode()) {
     jsonSuccess("email.inbound.status", {
       enabled: true,
-      receivingDomain,
+      receivingDomains: domainList,
+      receivingDomain: domainList[0],
       bucketName: inbound.bucketName || "",
       region,
       webhookUrl: inbound.webhookUrl || null,
@@ -571,7 +596,16 @@ export async function inboundStatus(
   console.log();
   console.log(pc.bold("  Inbound Email Configuration"));
   console.log();
-  console.log(`  ${pc.dim("Receiving domain:")}  ${pc.cyan(receivingDomain)}`);
+  if (domainList.length === 1) {
+    console.log(
+      `  ${pc.dim("Receiving domain:")}  ${pc.cyan(domainList[0])}`
+    );
+  } else {
+    console.log(`  ${pc.dim("Receiving domains:")}`);
+    for (const d of domainList) {
+      console.log(`    ${pc.cyan(d)}`);
+    }
+  }
   console.log(
     `  ${pc.dim("S3 bucket:")}         ${pc.cyan(inbound.bucketName || "")}`
   );
@@ -618,75 +652,100 @@ export async function inboundVerify(
     process.exit(1);
   }
 
-  const inbound = metadata.services.email.config.inbound;
-  const receivingDomain =
-    inbound.receivingDomain ||
-    `${inbound.subdomain}.${metadata.services.email.config.domain}`;
+  const emailConfig = metadata.services.email.config;
+  // biome-ignore lint/style/noNonNullAssertion: validated by enabled check above
+  const inbound = emailConfig.inbound!;
+  const inboundDomains = emailConfig.inboundDomains ?? [];
+
+  // Build domain list — prefer inboundDomains, fallback to single domain
+  const domainList =
+    inboundDomains.length > 0
+      ? inboundDomains.map((d) => d.receivingDomain)
+      : [
+          inbound.receivingDomain ||
+            `${inbound.subdomain}.${emailConfig.domain}`,
+        ];
 
   let allPassed = true;
+  const domainChecks: Record<
+    string,
+    { mx: { found: boolean; verified: boolean }; spf: { found: boolean; verified: boolean } }
+  > = {};
 
-  // 4. Check MX record
+  // 4. Check MX + SPF for each domain
   console.log();
-  const mxResult = await progress.execute(
-    `Checking MX record for ${receivingDomain}`,
-    async () => {
-      try {
-        const records = await dns.resolveMx(receivingDomain);
-        const hasSES = records.some((r) => r.exchange.includes("inbound-smtp"));
-        return { found: true, hasSES, records };
-        // baseline:allow-next-line no-swallowed-errors — DNS failure means record not found
-      } catch {
-        return { found: false, hasSES: false, records: [] };
-      }
+  for (const receivingDomain of domainList) {
+    if (domainList.length > 1) {
+      clack.log.info(pc.bold(`Checking ${pc.cyan(receivingDomain)}`));
     }
-  );
 
-  if (mxResult.hasSES) {
-    clack.log.success(
-      `MX record: ${pc.green("verified")} → inbound-smtp.${region}.amazonaws.com`
+    const mxResult = await progress.execute(
+      `Checking MX record for ${receivingDomain}`,
+      async () => {
+        try {
+          const records = await dns.resolveMx(receivingDomain);
+          const hasSES = records.some((r) =>
+            r.exchange.includes("inbound-smtp")
+          );
+          return { found: true, hasSES, records };
+          // baseline:allow-next-line no-swallowed-errors — DNS failure means record not found
+        } catch {
+          return { found: false, hasSES: false, records: [] };
+        }
+      }
     );
-  } else if (mxResult.found) {
-    clack.log.warn(
-      `MX record found but not pointing to SES. Expected: ${pc.cyan(`10 inbound-smtp.${region}.amazonaws.com`)}`
+
+    if (mxResult.hasSES) {
+      clack.log.success(
+        `MX record: ${pc.green("verified")} → inbound-smtp.${region}.amazonaws.com`
+      );
+    } else if (mxResult.found) {
+      clack.log.warn(
+        `MX record found but not pointing to SES. Expected: ${pc.cyan(`10 inbound-smtp.${region}.amazonaws.com`)}`
+      );
+      allPassed = false;
+    } else {
+      clack.log.error(
+        `MX record: ${pc.red("not found")}. Add: ${pc.cyan(`${receivingDomain} MX 10 inbound-smtp.${region}.amazonaws.com`)}`
+      );
+      allPassed = false;
+    }
+
+    const spfResult = await progress.execute(
+      `Checking SPF record for ${receivingDomain}`,
+      async () => {
+        try {
+          const records = await dns.resolveTxt(receivingDomain);
+          const flat = records.map((r) => r.join(""));
+          const spf = flat.find((r) => r.startsWith("v=spf1"));
+          const hasSES = spf?.includes("amazonses.com") ?? false;
+          return { found: !!spf, hasSES, value: spf };
+          // baseline:allow-next-line no-swallowed-errors — DNS failure means record not found
+        } catch {
+          return { found: false, hasSES: false, value: null };
+        }
+      }
     );
-    allPassed = false;
-  } else {
-    clack.log.error(
-      `MX record: ${pc.red("not found")}. Add: ${pc.cyan(`${receivingDomain} MX 10 inbound-smtp.${region}.amazonaws.com`)}`
-    );
-    allPassed = false;
+
+    if (spfResult.hasSES) {
+      clack.log.success(`SPF record: ${pc.green("verified")}`);
+    } else if (spfResult.found) {
+      clack.log.warn("SPF record exists but missing amazonses.com include");
+      allPassed = false;
+    } else {
+      clack.log.error(
+        `SPF record: ${pc.red("not found")}. Add TXT: ${pc.cyan("v=spf1 include:amazonses.com ~all")}`
+      );
+      allPassed = false;
+    }
+
+    domainChecks[receivingDomain] = {
+      mx: { found: mxResult.found, verified: mxResult.hasSES },
+      spf: { found: spfResult.found, verified: spfResult.hasSES },
+    };
   }
 
-  // 5. Check SPF record
-  const spfResult = await progress.execute(
-    `Checking SPF record for ${receivingDomain}`,
-    async () => {
-      try {
-        const records = await dns.resolveTxt(receivingDomain);
-        const flat = records.map((r) => r.join(""));
-        const spf = flat.find((r) => r.startsWith("v=spf1"));
-        const hasSES = spf?.includes("amazonses.com") ?? false;
-        return { found: !!spf, hasSES, value: spf };
-        // baseline:allow-next-line no-swallowed-errors — DNS failure means record not found
-      } catch {
-        return { found: false, hasSES: false, value: null };
-      }
-    }
-  );
-
-  if (spfResult.hasSES) {
-    clack.log.success(`SPF record: ${pc.green("verified")}`);
-  } else if (spfResult.found) {
-    clack.log.warn("SPF record exists but missing amazonses.com include");
-    allPassed = false;
-  } else {
-    clack.log.error(
-      `SPF record: ${pc.red("not found")}. Add TXT: ${pc.cyan("v=spf1 include:amazonses.com ~all")}`
-    );
-    allPassed = false;
-  }
-
-  // 6. Check receipt rule is active
+  // 5. Check receipt rule is active
   const activeRuleSet = await getActiveReceiptRuleSet(region);
   if (activeRuleSet === RULE_SET_NAME) {
     clack.log.success(`Receipt rule set: ${pc.green("active")}`);
@@ -699,13 +758,11 @@ export async function inboundVerify(
 
   if (isJsonMode()) {
     jsonSuccess("email.inbound.verify", {
-      receivingDomain,
+      receivingDomains: domainList,
+      receivingDomain: domainList[0],
       allPassed,
-      checks: {
-        mx: { found: mxResult.found, verified: mxResult.hasSES },
-        spf: { found: spfResult.found, verified: spfResult.hasSES },
-        receiptRuleSet: { active: activeRuleSet === RULE_SET_NAME },
-      },
+      domainChecks,
+      receiptRuleSet: { active: activeRuleSet === RULE_SET_NAME },
     });
     return;
   }
@@ -900,5 +957,392 @@ export async function inboundTest(
 
   console.log();
   clack.log.success(pc.bold("Inbound email is working correctly!"));
+  console.log();
+}
+
+/**
+ * Inbound Add command - Add an inbound receiving domain
+ */
+export async function inboundAdd(
+  options: EmailInboundAddOptions
+): Promise<void> {
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Add Inbound Receiving Domain"));
+  }
+
+  const progress = new DeploymentProgress();
+
+  // 1. Validate AWS credentials
+  const identity = await progress.execute(
+    "Validating AWS credentials",
+    async () => validateAWSCredentials()
+  );
+
+  // 2. Get region
+  const region = options.region || (await getAWSRegion());
+
+  // 3. Validate region supports SES receiving
+  if (
+    !SES_RECEIVING_REGIONS.includes(
+      region as (typeof SES_RECEIVING_REGIONS)[number]
+    )
+  ) {
+    throw errors.inboundRegionNotSupported(region);
+  }
+
+  // 4. Load metadata — require inbound infra deployed
+  const metadata = await loadConnectionMetadata(identity.accountId, region);
+
+  if (!metadata?.services?.email?.config?.inbound?.enabled) {
+    clack.log.error("Inbound email infrastructure is not deployed.");
+    console.log(
+      `\nDeploy first: ${pc.cyan("wraps email inbound init")}\n`
+    );
+    process.exit(1);
+  }
+
+  const emailConfig = metadata.services.email.config;
+  const primaryDomain = emailConfig.domain || "";
+
+  // 5. Build list of verified parent domains to offer
+  const allDomains = [primaryDomain];
+  for (const d of emailConfig.additionalDomains ?? []) {
+    if (!allDomains.includes(d.domain)) {
+      allDomains.push(d.domain);
+    }
+  }
+
+  // 6. Prompt for parent domain
+  let parentDomain = options.domain;
+  if (!parentDomain) {
+    if (options.yes) {
+      parentDomain = primaryDomain;
+    } else if (allDomains.length === 1) {
+      parentDomain = allDomains[0];
+    } else {
+      const selected = await clack.select({
+        message: "Which domain should the inbound subdomain be under?",
+        options: allDomains.map((d) => ({
+          value: d,
+          label: d,
+          hint: d === primaryDomain ? "primary" : undefined,
+        })),
+      });
+      if (clack.isCancel(selected)) {
+        clack.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+      parentDomain = selected as string;
+    }
+  }
+
+  // 7. Prompt for subdomain
+  const subdomain =
+    options.subdomain ||
+    (options.yes
+      ? "inbound"
+      : await promptInboundSubdomain(parentDomain));
+  const receivingDomain = `${subdomain}.${parentDomain}`;
+
+  // 8. Check not already tracked
+  const existingDomains = emailConfig.inboundDomains ?? [];
+  if (existingDomains.some((d) => d.receivingDomain === receivingDomain)) {
+    clack.log.warn(
+      `${pc.cyan(receivingDomain)} is already configured as an inbound domain.`
+    );
+    return;
+  }
+
+  clack.log.info(`Adding receiving domain: ${pc.cyan(receivingDomain)}`);
+
+  // 9. Update SES receipt rule
+  const bucketName =
+    emailConfig.inbound?.bucketName ||
+    `wraps-inbound-${identity.accountId}-${region}`;
+
+  await progress.execute("Updating SES receipt rule", async () => {
+    await addDomainToReceiptRule(region, receivingDomain, bucketName);
+  });
+
+  // 10. DNS automation
+  let dnsAutoCreated = false;
+
+  const {
+    detectAvailableDNSProviders,
+    getDNSCredentials,
+    createInboundDNSRecordsForProvider,
+    getDNSProviderDisplayName,
+    getDNSProviderTokenUrl,
+    buildInboundDNSRecords: buildRecords,
+    formatDNSRecordsForDisplay: formatRecords,
+  } = await import("../../utils/dns/index.js");
+  const { promptDNSProvider, promptContinueManualDNS } = await import(
+    "../../utils/shared/prompts.js"
+  );
+
+  const existingDnsProvider = metadata.services.email.dnsProvider;
+  let dnsProvider = existingDnsProvider;
+
+  if (!dnsProvider || dnsProvider === "manual") {
+    progress.start("Detecting DNS providers");
+    const availableProviders = await detectAvailableDNSProviders(
+      parentDomain,
+      region
+    );
+    progress.stop();
+
+    dnsProvider = options.yes ? "manual" : await promptDNSProvider(parentDomain, availableProviders);
+  }
+
+  if (dnsProvider !== "manual") {
+    progress.start(
+      `Validating ${getDNSProviderDisplayName(dnsProvider)} credentials`
+    );
+    const credentialResult = await getDNSCredentials(
+      dnsProvider,
+      parentDomain,
+      region
+    );
+    progress.stop();
+
+    if (credentialResult.valid && credentialResult.credentials) {
+      const records = buildRecords(receivingDomain, region);
+      clack.log.info(pc.bold("DNS records to create:"));
+      for (const record of records) {
+        const value = record.priority
+          ? `${record.priority} ${record.value}`
+          : record.value;
+        clack.log.info(pc.dim(`  ${record.type} ${record.name} → ${value}`));
+      }
+
+      progress.start(
+        `Creating DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
+      );
+      const result = await createInboundDNSRecordsForProvider(
+        credentialResult.credentials,
+        receivingDomain,
+        region,
+        parentDomain
+      );
+
+      if (result.success && result.recordsCreated > 0) {
+        progress.succeed(
+          `Created ${result.recordsCreated} DNS records in ${getDNSProviderDisplayName(dnsProvider)}`
+        );
+        dnsAutoCreated = true;
+      } else {
+        progress.fail("Failed to create some DNS records");
+        if (result.errors) {
+          for (const err of result.errors) {
+            clack.log.warn(err);
+          }
+        }
+      }
+    } else {
+      clack.log.warn(
+        credentialResult.error || "Could not validate credentials"
+      );
+
+      if (dnsProvider === "vercel" || dnsProvider === "cloudflare") {
+        clack.log.info(
+          `Set the ${dnsProvider === "vercel" ? "VERCEL_TOKEN" : "CLOUDFLARE_API_TOKEN"} environment variable to enable automatic DNS management.`
+        );
+        clack.log.info(
+          `You can create a token at: ${pc.cyan(getDNSProviderTokenUrl(dnsProvider))}`
+        );
+      }
+
+      if (!options.yes) {
+        const continueManual = await promptContinueManualDNS();
+        if (continueManual) {
+          dnsProvider = "manual";
+        }
+      }
+    }
+  }
+
+  // Show manual DNS instructions if auto-creation was skipped or failed
+  if (!dnsAutoCreated) {
+    const dnsRecords = buildRecords(receivingDomain, region);
+    const formattedRecords = formatRecords(dnsRecords);
+
+    console.log();
+    clack.log.info(pc.bold("DNS Records Required"));
+    console.log(
+      `  Add these records to your DNS provider for ${pc.cyan(receivingDomain)}:\n`
+    );
+
+    for (const record of formattedRecords) {
+      console.log(`  ${pc.dim(record.type.padEnd(6))} ${record.name}`);
+      console.log(`  ${pc.dim("→")} ${pc.green(record.value)}\n`);
+    }
+  }
+
+  // 11. Save to metadata
+  await progress.execute("Saving configuration", async () => {
+    addInboundDomainToMetadata(metadata, {
+      subdomain,
+      receivingDomain,
+      parentDomain,
+      addedAt: new Date().toISOString(),
+    });
+    await saveConnectionMetadata(metadata);
+  });
+
+  if (isJsonMode()) {
+    jsonSuccess("email.inbound.add", {
+      receivingDomain,
+      subdomain,
+      parentDomain,
+      dnsAutoCreated,
+      region,
+    });
+    return;
+  }
+
+  console.log();
+  clack.log.success(
+    `${pc.bold("Added inbound domain:")} ${pc.cyan(receivingDomain)}`
+  );
+  console.log();
+  if (!dnsAutoCreated) {
+    console.log(
+      `  ${pc.dim("1.")} Add DNS records above to your DNS provider`
+    );
+    console.log(
+      `  ${pc.dim("2.")} Verify: ${pc.cyan("wraps email inbound verify")}`
+    );
+  } else {
+    console.log(
+      `  Verify: ${pc.cyan("wraps email inbound verify")}`
+    );
+  }
+  console.log();
+}
+
+/**
+ * Inbound Remove command - Remove an inbound receiving domain
+ */
+export async function inboundRemove(
+  options: EmailInboundRemoveOptions
+): Promise<void> {
+  if (!isJsonMode()) {
+    clack.intro(pc.bold("Remove Inbound Receiving Domain"));
+  }
+
+  const progress = new DeploymentProgress();
+
+  // 1. Validate AWS credentials
+  const identity = await progress.execute(
+    "Validating AWS credentials",
+    async () => validateAWSCredentials()
+  );
+
+  // 2. Get region
+  const region = options.region || (await getAWSRegion());
+
+  // 3. Load metadata
+  const metadata = await loadConnectionMetadata(identity.accountId, region);
+
+  if (!metadata?.services?.email?.config?.inbound?.enabled) {
+    clack.log.error("Inbound email infrastructure is not deployed.");
+    console.log(
+      `\nDeploy first: ${pc.cyan("wraps email inbound init")}\n`
+    );
+    process.exit(1);
+  }
+
+  const emailConfig = metadata.services.email.config;
+  const inboundDomains = emailConfig.inboundDomains ?? [];
+
+  if (inboundDomains.length === 0) {
+    clack.log.warn("No inbound domains configured.");
+    return;
+  }
+
+  // 4. Select domain to remove
+  let domainToRemove = options.domain;
+
+  if (!domainToRemove) {
+    if (inboundDomains.length === 1) {
+      domainToRemove = inboundDomains[0].receivingDomain;
+    } else {
+      const selected = await clack.select({
+        message: "Which inbound domain do you want to remove?",
+        options: inboundDomains.map((d) => ({
+          value: d.receivingDomain,
+          label: d.receivingDomain,
+          hint: `added ${d.addedAt.split("T")[0]}`,
+        })),
+      });
+      if (clack.isCancel(selected)) {
+        clack.cancel("Operation cancelled.");
+        process.exit(0);
+      }
+      domainToRemove = selected as string;
+    }
+  }
+
+  // 5. Validate domain exists
+  if (!inboundDomains.some((d) => d.receivingDomain === domainToRemove)) {
+    clack.log.error(
+      `${pc.cyan(domainToRemove)} is not in the inbound domains list.`
+    );
+    return;
+  }
+
+  // 6. Guard: can't remove last domain
+  if (inboundDomains.length === 1) {
+    clack.log.error(
+      "Cannot remove the last inbound domain. Use " +
+        pc.cyan("wraps email inbound destroy") +
+        " to remove all inbound infrastructure."
+    );
+    return;
+  }
+
+  // 7. Confirm
+  if (!options.yes) {
+    const confirmed = await clack.confirm({
+      message: `Remove inbound domain ${pc.cyan(domainToRemove)}?`,
+      initialValue: false,
+    });
+
+    if (clack.isCancel(confirmed) || !confirmed) {
+      clack.cancel("Operation cancelled.");
+      process.exit(0);
+    }
+  }
+
+  // 8. Remove from SES receipt rule
+  await progress.execute("Updating SES receipt rule", async () => {
+    await removeDomainFromReceiptRule(region, domainToRemove);
+  });
+
+  // 9. Remove from metadata
+  await progress.execute("Saving configuration", async () => {
+    removeInboundDomainFromMetadata(metadata, domainToRemove);
+    await saveConnectionMetadata(metadata);
+  });
+
+  if (isJsonMode()) {
+    jsonSuccess("email.inbound.remove", {
+      removedDomain: domainToRemove,
+      remainingDomains: (emailConfig.inboundDomains ?? []).map(
+        (d) => d.receivingDomain
+      ),
+      region,
+    });
+    return;
+  }
+
+  console.log();
+  clack.log.success(
+    `${pc.bold("Removed inbound domain:")} ${pc.cyan(domainToRemove)}`
+  );
+  console.log();
+  console.log(
+    `  ${pc.dim("Remember to remove the MX and SPF DNS records for")} ${pc.cyan(domainToRemove)}`
+  );
   console.log();
 }

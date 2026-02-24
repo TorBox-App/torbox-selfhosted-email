@@ -165,9 +165,14 @@ export async function handler(event: S3Event, context: Context) {
           }
         : { address: "", name: "" };
 
+      // Derive receiving domain from first to: address
+      const receivingDomain =
+        toAddresses[0]?.address?.split("@")[1] || null;
+
       const parsedEmail = {
         emailId,
         messageId: parsed.messageId || s3Key.replace("raw/", ""),
+        receivingDomain,
         from: fromAddress,
         to: toAddresses,
         cc: parsed.cc

@@ -1,4 +1,8 @@
-import { ACMClient, DescribeCertificateCommand } from "@aws-sdk/client-acm";
+import {
+  ACMClient,
+  DescribeCertificateCommand,
+  ListCertificatesCommand,
+} from "@aws-sdk/client-acm";
 import * as aws from "@pulumi/aws";
 import type * as pulumi from "@pulumi/pulumi";
 
@@ -14,7 +18,6 @@ export async function checkCertificateValidation(
     const acm = new ACMClient({ region: "us-east-1" });
 
     // List certificates to find one matching our domain
-    const { ListCertificatesCommand } = await import("@aws-sdk/client-acm");
     const listResponse = await acm.send(
       new ListCertificatesCommand({
         CertificateStatuses: ["ISSUED"],
@@ -145,4 +148,46 @@ export async function createACMCertificate(
     certificateValidation,
     validationRecords,
   };
+}
+
+/**
+ * Fetch ACM certificate validation DNS records directly from AWS SDK.
+ * Used as a fallback when Pulumi stack outputs don't contain the records
+ * (e.g. the Output resolved before AWS returned domainValidationOptions).
+ */
+export async function getCertificateValidationRecords(
+  domain: string
+): Promise<Array<{ name: string; type: string; value: string }>> {
+  const acm = new ACMClient({ region: "us-east-1" });
+
+  const listResponse = await acm.send(
+    new ListCertificatesCommand({
+      CertificateStatuses: ["PENDING_VALIDATION", "ISSUED"],
+    })
+  );
+
+  const cert = listResponse.CertificateSummaryList?.find(
+    (c) => c.DomainName === domain
+  );
+
+  if (!cert?.CertificateArn) {
+    return [];
+  }
+
+  const describeResponse = await acm.send(
+    new DescribeCertificateCommand({
+      CertificateArn: cert.CertificateArn,
+    })
+  );
+
+  const options =
+    describeResponse.Certificate?.DomainValidationOptions ?? [];
+
+  return options
+    .filter((opt) => opt.ResourceRecord?.Name && opt.ResourceRecord?.Value)
+    .map((opt) => ({
+      name: opt.ResourceRecord!.Name!,
+      type: opt.ResourceRecord!.Type ?? "CNAME",
+      value: opt.ResourceRecord!.Value!,
+    }));
 }

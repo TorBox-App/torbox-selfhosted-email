@@ -7,6 +7,7 @@ import type {
   CdnConfigPreset,
   EmailConfigPreset,
   EmailStackConfig,
+  InboundDomain,
   Provider,
   ServiceType,
   SMSConfigPreset,
@@ -187,6 +188,11 @@ export async function loadConnectionMetadata(
           await saveConnectionMetadataLocal(data);
         }
         localData = data as ConnectionMetadata;
+      }
+
+      // Migrate single-domain inbound to multi-domain inboundDomains
+      if (localData && migrateInboundToMultiDomain(localData)) {
+        await saveConnectionMetadataLocal(localData);
       }
     } catch (error) {
       console.error(
@@ -875,4 +881,103 @@ export function getAllTrackedDomains(
   }
 
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Inbound domain helpers (for `wraps email inbound add/remove`)
+// ---------------------------------------------------------------------------
+
+/**
+ * Migrate single-domain inbound config to multi-domain inboundDomains array.
+ * Detects inbound.enabled === true with no inboundDomains and populates from
+ * the existing inbound.receivingDomain. Returns true if migration was applied.
+ */
+export function migrateInboundToMultiDomain(
+  metadata: ConnectionMetadata
+): boolean {
+  const emailConfig = metadata.services.email?.config;
+  if (!emailConfig?.inbound?.enabled) {
+    return false;
+  }
+
+  if (emailConfig.inboundDomains && emailConfig.inboundDomains.length > 0) {
+    return false;
+  }
+
+  const inbound = emailConfig.inbound;
+  const receivingDomain =
+    inbound.receivingDomain ||
+    (inbound.subdomain && emailConfig.domain
+      ? `${inbound.subdomain}.${emailConfig.domain}`
+      : null);
+
+  if (!receivingDomain) {
+    return false;
+  }
+
+  const parentDomain = emailConfig.domain || "";
+  const subdomain = inbound.subdomain || "inbound";
+
+  emailConfig.inboundDomains = [
+    {
+      subdomain,
+      receivingDomain,
+      parentDomain,
+      addedAt: metadata.services.email?.deployedAt || new Date().toISOString(),
+    },
+  ];
+
+  return true;
+}
+
+/**
+ * Add an inbound domain to metadata.
+ * If the domain already exists it is replaced; otherwise it is appended.
+ * Mutates metadata in place (caller should save afterwards).
+ */
+export function addInboundDomainToMetadata(
+  metadata: ConnectionMetadata,
+  entry: InboundDomain
+): void {
+  if (!metadata.services.email) {
+    throw new Error("Email service not configured in metadata");
+  }
+
+  const config = metadata.services.email.config;
+  const existing = config.inboundDomains ?? [];
+
+  const idx = existing.findIndex(
+    (d) => d.receivingDomain === entry.receivingDomain
+  );
+  if (idx >= 0) {
+    existing[idx] = entry;
+  } else {
+    existing.push(entry);
+  }
+
+  config.inboundDomains = existing;
+  metadata.timestamp = new Date().toISOString();
+}
+
+/**
+ * Remove an inbound domain from metadata by receiving domain name.
+ * No-op if the domain is not tracked.
+ */
+export function removeInboundDomainFromMetadata(
+  metadata: ConnectionMetadata,
+  receivingDomain: string
+): void {
+  if (!metadata.services.email) {
+    return;
+  }
+
+  const config = metadata.services.email.config;
+  if (!config.inboundDomains) {
+    return;
+  }
+
+  config.inboundDomains = config.inboundDomains.filter(
+    (d) => d.receivingDomain !== receivingDomain
+  );
+  metadata.timestamp = new Date().toISOString();
 }

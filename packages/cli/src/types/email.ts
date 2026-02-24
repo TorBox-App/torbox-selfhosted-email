@@ -25,6 +25,16 @@ export type AdditionalDomain = {
 };
 
 /**
+ * An inbound receiving domain managed via `wraps email inbound add`
+ */
+export type InboundDomain = {
+  subdomain: string; // e.g., "inbound", "support"
+  receivingDomain: string; // e.g., "inbound.example.com"
+  parentDomain: string; // e.g., "example.com"
+  addedAt: string; // ISO timestamp
+};
+
+/**
  * AWS regions that support SES email receiving (Receipt Rules)
  */
 export const SES_RECEIVING_REGIONS = [
@@ -118,6 +128,9 @@ export type WrapsEmailConfig = {
     webhookUrl?: string; // user's webhook endpoint for email.received
     webhookSecret?: string; // generated API key for webhook auth
   };
+
+  // Inbound receiving domains (multi-domain support)
+  inboundDomains?: InboundDomain[];
 
   // Additional domains managed via `wraps email domains add`
   additionalDomains?: AdditionalDomain[];
@@ -422,6 +435,27 @@ export type EmailInboundStatusOptions = {
  */
 export type EmailInboundVerifyOptions = {
   region?: string;
+  json?: boolean;
+};
+
+/**
+ * Command options for email inbound add
+ */
+export type EmailInboundAddOptions = {
+  region?: string;
+  subdomain?: string;
+  domain?: string; // parent domain
+  yes?: boolean;
+  json?: boolean;
+};
+
+/**
+ * Command options for email inbound remove
+ */
+export type EmailInboundRemoveOptions = {
+  region?: string;
+  domain?: string; // receiving domain to remove
+  yes?: boolean;
   json?: boolean;
 };
 

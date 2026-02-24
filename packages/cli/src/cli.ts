@@ -31,8 +31,10 @@ import {
   verifyDomain,
 } from "./commands/email/domains.js";
 import {
+  inboundAdd,
   inboundDestroy,
   inboundInit,
+  inboundRemove,
   inboundStatus,
   inboundTest,
   inboundVerify,
@@ -498,6 +500,11 @@ args.options([
     description: "Organization slug",
     defaultValue: undefined,
   },
+  {
+    name: "subdomain",
+    description: "Subdomain for inbound email (e.g., inbound, support)",
+    defaultValue: undefined,
+  },
 ]);
 
 // Get command and flags
@@ -854,12 +861,31 @@ async function run() {
               });
               break;
 
+            case "add":
+              await inboundAdd({
+                region: flags.region,
+                subdomain: flags.subdomain,
+                domain: flags.domain,
+                yes: flags.yes,
+                json: flags.json,
+              });
+              break;
+
+            case "remove":
+              await inboundRemove({
+                region: flags.region,
+                domain: flags.domain,
+                yes: flags.yes,
+                json: flags.json,
+              });
+              break;
+
             default:
               clack.log.error(
                 `Unknown inbound command: ${inboundSubCommand || "(none)"}`
               );
               console.log(
-                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("destroy")}, ${pc.cyan("status")}, ${pc.cyan("verify")}, ${pc.cyan("test")}\n`
+                `\nAvailable commands: ${pc.cyan("init")}, ${pc.cyan("destroy")}, ${pc.cyan("status")}, ${pc.cyan("verify")}, ${pc.cyan("test")}, ${pc.cyan("add")}, ${pc.cyan("remove")}\n`
               );
               throw new Error(
                 `Unknown inbound command: ${inboundSubCommand || "(none)"}`

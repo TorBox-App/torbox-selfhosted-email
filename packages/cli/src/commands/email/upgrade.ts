@@ -2108,6 +2108,21 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     acmValidationRecords.push(...outputs.acmCertificateValidationRecords);
   }
 
+  // Fallback: fetch ACM validation records directly from AWS if Pulumi output was empty
+  if (
+    acmValidationRecords.length === 0 &&
+    outputs.httpsTrackingPending &&
+    outputs.customTrackingDomain
+  ) {
+    const { getCertificateValidationRecords } = await import(
+      "../../infrastructure/resources/acm.js"
+    );
+    const directRecords = await getCertificateValidationRecords(
+      outputs.customTrackingDomain
+    );
+    acmValidationRecords.push(...directRecords);
+  }
+
   // Try to create ACM validation DNS records automatically via DNS provider
   let acmDnsAutoCreated = false;
   if (

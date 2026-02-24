@@ -14,6 +14,7 @@ import {
   DescribeReceiptRuleCommand,
   SESClient,
   SetActiveReceiptRuleSetCommand,
+  UpdateReceiptRuleCommand,
 } from "@aws-sdk/client-ses";
 
 const RULE_SET_NAME = "wraps-inbound-rules";
@@ -199,6 +200,140 @@ export async function deleteReceiptRuleSet(region: string): Promise<void> {
       error.name === "RuleSetDoesNotExistException"
     ) {
       return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Add a domain to the existing receipt rule's Recipients list.
+ * If the rule or rule set doesn't exist, creates them with this domain.
+ */
+export async function addDomainToReceiptRule(
+  region: string,
+  domain: string,
+  s3BucketName: string
+): Promise<void> {
+  const ses = createSESClient(region);
+
+  try {
+    const response = await ses.send(
+      new DescribeReceiptRuleCommand({
+        RuleSetName: RULE_SET_NAME,
+        RuleName: RULE_NAME,
+      })
+    );
+
+    const existingRecipients = response.Rule?.Recipients ?? [];
+    if (existingRecipients.includes(domain)) {
+      return; // Already present
+    }
+
+    await ses.send(
+      new UpdateReceiptRuleCommand({
+        RuleSetName: RULE_SET_NAME,
+        Rule: {
+          Name: RULE_NAME,
+          Enabled: response.Rule?.Enabled,
+          ScanEnabled: response.Rule?.ScanEnabled,
+          TlsPolicy: response.Rule?.TlsPolicy,
+          Actions: response.Rule?.Actions,
+          Recipients: [...existingRecipients, domain],
+        },
+      })
+    );
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      (error.name === "RuleDoesNotExistException" ||
+        error.name === "RuleSetDoesNotExistException")
+    ) {
+      // Rule/set doesn't exist — create from scratch
+      await createReceiptRuleSet(region);
+      await createReceiptRule(region, domain, s3BucketName);
+      await setActiveReceiptRuleSet(region, RULE_SET_NAME);
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Remove a domain from the receipt rule's Recipients list.
+ * If no domains remain after removal, deletes the rule entirely.
+ */
+export async function removeDomainFromReceiptRule(
+  region: string,
+  domain: string
+): Promise<void> {
+  const ses = createSESClient(region);
+
+  try {
+    const response = await ses.send(
+      new DescribeReceiptRuleCommand({
+        RuleSetName: RULE_SET_NAME,
+        RuleName: RULE_NAME,
+      })
+    );
+
+    const existingRecipients = response.Rule?.Recipients ?? [];
+    const updated = existingRecipients.filter((r) => r !== domain);
+
+    if (updated.length === 0) {
+      // No domains left — delete the rule
+      await deleteReceiptRule(region);
+      return;
+    }
+
+    await ses.send(
+      new UpdateReceiptRuleCommand({
+        RuleSetName: RULE_SET_NAME,
+        Rule: {
+          Name: RULE_NAME,
+          Enabled: response.Rule?.Enabled,
+          ScanEnabled: response.Rule?.ScanEnabled,
+          TlsPolicy: response.Rule?.TlsPolicy,
+          Actions: response.Rule?.Actions,
+          Recipients: updated,
+        },
+      })
+    );
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      (error.name === "RuleDoesNotExistException" ||
+        error.name === "RuleSetDoesNotExistException")
+    ) {
+      return; // Nothing to remove
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get the current list of domains in the receipt rule.
+ */
+export async function getReceiptRuleDomains(
+  region: string
+): Promise<string[]> {
+  const ses = createSESClient(region);
+
+  try {
+    const response = await ses.send(
+      new DescribeReceiptRuleCommand({
+        RuleSetName: RULE_SET_NAME,
+        RuleName: RULE_NAME,
+      })
+    );
+
+    return response.Rule?.Recipients ?? [];
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      (error.name === "RuleDoesNotExistException" ||
+        error.name === "RuleSetDoesNotExistException")
+    ) {
+      return [];
     }
     throw error;
   }
