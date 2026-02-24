@@ -33,8 +33,6 @@ export type TierLimits = {
   contacts: "unlimited";
   workflows: number | "unlimited";
   workflowsDisplay: string;
-  retention: string;
-  retentionDays: number;
   aiGenerations: number;
   awsAccounts: number | "unlimited";
   awsAccountsDisplay: string;
@@ -107,8 +105,6 @@ export const TIER_LIMITS: Record<TierId, TierLimits> = {
     contacts: "unlimited",
     workflows: 1,
     workflowsDisplay: "1",
-    retention: "7 days",
-    retentionDays: 7,
     aiGenerations: 10,
     awsAccounts: 1,
     awsAccountsDisplay: "1",
@@ -122,8 +118,6 @@ export const TIER_LIMITS: Record<TierId, TierLimits> = {
     contacts: "unlimited",
     workflows: "unlimited",
     workflowsDisplay: "Unlimited",
-    retention: "30 days",
-    retentionDays: 30,
     aiGenerations: 50,
     awsAccounts: 1,
     awsAccountsDisplay: "1",
@@ -137,8 +131,6 @@ export const TIER_LIMITS: Record<TierId, TierLimits> = {
     contacts: "unlimited",
     workflows: "unlimited",
     workflowsDisplay: "Unlimited",
-    retention: "90 days",
-    retentionDays: 90,
     aiGenerations: 250,
     awsAccounts: 3,
     awsAccountsDisplay: "3",
@@ -152,8 +144,6 @@ export const TIER_LIMITS: Record<TierId, TierLimits> = {
     contacts: "unlimited",
     workflows: "unlimited",
     workflowsDisplay: "Unlimited",
-    retention: "1 year",
-    retentionDays: 365,
     aiGenerations: 1000,
     awsAccounts: "unlimited",
     awsAccountsDisplay: "Unlimited",
@@ -183,11 +173,9 @@ export const PRICING_TIERS: PricingTier[] = [
       "Hosted dashboard",
       "5K tracked events/mo",
       "1 workflow",
-      "7-day history",
       "Unlimited contacts",
-      "CLI & SDK access",
-      "10 AI generations/mo",
-      "Community support",
+      "CLI + TypeScript SDK",
+      "10 AI template generations/mo",
     ],
   },
   {
@@ -205,8 +193,7 @@ export const PRICING_TIERS: PricingTier[] = [
       "50K tracked events/mo",
       "Unlimited workflows",
       "Topics, segments & broadcasts",
-      "30-day history",
-      "50 AI generations/mo",
+      "Event tracking & campaigns",
       "Unlimited team members",
       "Email support",
     ],
@@ -217,7 +204,7 @@ export const PRICING_TIERS: PricingTier[] = [
     price: 79,
     annualPrice: 799,
     period: "/mo",
-    description: "For growing startups",
+    description: "For teams shipping production email",
     highlight: true,
     cta: "Subscribe",
     ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=growth",
@@ -226,9 +213,8 @@ export const PRICING_TIERS: PricingTier[] = [
       "250K tracked events/mo",
       "Then $0.50/1K tracked events",
       "Everything in Starter",
-      "90-day history",
-      "250 AI generations/mo",
       "3 AWS accounts",
+      "250 AI generations/mo",
       "Priority support (24hr)",
     ],
   },
@@ -238,7 +224,7 @@ export const PRICING_TIERS: PricingTier[] = [
     price: 199,
     annualPrice: 1999,
     period: "/mo",
-    description: "For scaling companies",
+    description: "For high-volume senders",
     highlight: false,
     cta: "Subscribe",
     ctaLink: "https://app.wraps.dev/auth?mode=signup&plan=scale",
@@ -248,7 +234,6 @@ export const PRICING_TIERS: PricingTier[] = [
       "Then $0.15/1K tracked events",
       "Everything in Growth",
       "Behavioral segments",
-      "1-year history",
       "1K AI generations/mo",
       "Unlimited AWS accounts",
       "Priority support + SLA",
@@ -443,13 +428,6 @@ export const FEATURE_COMPARISON: FeatureComparison[] = [
     scale: "Unlimited",
   },
   {
-    name: "History retention",
-    free: "7 days",
-    starter: "30 days",
-    growth: "90 days",
-    scale: "1 year",
-  },
-  {
     name: "AI generations",
     free: "10/mo",
     starter: "50/mo",
@@ -533,9 +511,9 @@ export const FEATURE_COMPARISON: FeatureComparison[] = [
 // =============================================================================
 
 export const PRICING_COPY = {
-  headline: "Platform Fee for Email Infrastructure You Own",
+  headline: "Email Infrastructure You Own. Pricing You Control.",
   subheadline:
-    "Start free with 5K tracked events/mo. Unlimited contacts. Pay AWS directly for sending.",
+    "Start free. Pay AWS directly for sending — $0.10/1K emails. Scale when you're ready.",
   awsNote:
     "AWS costs are separate. You pay AWS directly for sending at $0.10 per 1,000 emails. Your sending infrastructure stays in your account — leave anytime, keep everything.",
   enterpriseNote:
@@ -547,4 +525,13 @@ export const PRICING_COPY = {
     "Your logo on our website",
     "Locked-in pricing for life",
   ],
+  freeHeroHeadline: "Start Free. Deploy in 60 Seconds.",
+  freeHeroSubline:
+    "No credit card. No time limit. Your AWS account, your data.",
+  trackedEventsHeadline: "Powered by Tracked Events",
+  trackedEventsSubline:
+    "One API call triggers workflows, builds segments, and drives personalization.",
+  paidTiersHeadline: "Outgrowing the free tier?",
+  paidTiersSubline:
+    "Event tracking, segments, broadcasts, unlimited workflows, and team access — starting at $19/mo.",
 } as const;

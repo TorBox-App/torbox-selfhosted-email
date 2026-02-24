@@ -12,11 +12,12 @@ import { log } from "../lib/logger";
 import type { AuthContext } from "./auth";
 
 // Plan rate limits (requests)
+// Aligned with apps/web/src/lib/plans.ts
 const PLAN_LIMITS = {
+  free: { daily: 1000, minute: 50 },
   starter: { daily: 50_000, minute: 500 },
-  pro: { daily: 200_000, minute: 2000 },
-  growth: { daily: 500_000, minute: 5000 },
-  scale: { daily: 1_000_000, minute: 10_000 },
+  growth: { daily: 200_000, minute: 2000 },
+  scale: { daily: 500_000, minute: 5000 },
 } as const;
 
 // DynamoDB client (reuse across invocations)
@@ -36,7 +37,7 @@ export const rateLimitMiddleware = new Elysia({ name: "rate-limit" }).derive(
 
     const { organizationId, planId } = authContext;
     const limits =
-      PLAN_LIMITS[planId as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.starter;
+      PLAN_LIMITS[planId as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.free;
 
     const now = new Date();
     const minuteKey = formatMinuteKey(now);

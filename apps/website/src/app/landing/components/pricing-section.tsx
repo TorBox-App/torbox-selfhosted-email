@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PRICING_COPY } from "@/config/pricing";
+import { PRICING_COPY, PRICING_TIERS } from "@/config/pricing";
+import { FreeHero } from "./free-hero";
 import { PricingCards } from "./pricing-cards";
+import { TrackedEventsExplainer } from "./tracked-events-explainer";
+
+const paidTiers = PRICING_TIERS.filter((t) => t.id !== "free");
 
 export function PricingSection() {
   return (
     <section className="py-24" id="pricing">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        {/* Section header - static, server rendered */}
+        {/* Section header */}
         <div className="mb-12 text-center animate-fade-in-up">
           <span className="mb-4 inline-block rounded-full border px-3 py-1 font-medium text-xs bg-background text-muted-foreground border-border">
             Pricing
@@ -20,10 +24,28 @@ export function PricingSection() {
           </p>
         </div>
 
-        {/* Interactive pricing cards - client component */}
-        <PricingCards />
+        {/* Free hero card */}
+        <FreeHero />
 
-        {/* Enterprise note - static */}
+        {/* Tracked events explainer */}
+        <div className="my-16">
+          <TrackedEventsExplainer />
+        </div>
+
+        {/* Paid tiers sub-header */}
+        <div className="mb-8 text-center">
+          <h3 className="mb-2 font-bold text-2xl tracking-tight">
+            {PRICING_COPY.paidTiersHeadline}
+          </h3>
+          <p className="text-muted-foreground">
+            {PRICING_COPY.paidTiersSubline}
+          </p>
+        </div>
+
+        {/* Paid pricing cards (Starter, Growth, Scale) */}
+        <PricingCards tiers={paidTiers} />
+
+        {/* Enterprise note */}
         <p className="mb-8 text-center text-muted-foreground text-sm">
           {PRICING_COPY.enterpriseNote.split("Contact us")[0]}
           <a
@@ -34,7 +56,7 @@ export function PricingSection() {
           </a>
         </p>
 
-        {/* AWS Cost Note - static */}
+        {/* AWS Cost Note */}
         <div className="rounded-xl border bg-muted/30 p-6">
           <p className="mb-2 font-semibold text-foreground">
             AWS costs are separate

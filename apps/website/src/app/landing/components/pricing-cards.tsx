@@ -9,6 +9,7 @@ import {
   getCtaLink,
   getDisplayPrice,
   PRICING_TIERS,
+  type PricingTier,
 } from "@/config/pricing";
 import { BillingToggle } from "./billing-toggle";
 
@@ -37,7 +38,12 @@ function FeatureText({ text }: { text: string }) {
   );
 }
 
-export const PricingCards = memo(function PricingCards() {
+export const PricingCards = memo(function PricingCards({
+  tiers,
+}: {
+  tiers?: PricingTier[];
+}) {
+  const plans = tiers ?? PRICING_TIERS;
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("monthly");
 
@@ -49,8 +55,10 @@ export const PricingCards = memo(function PricingCards() {
       </div>
 
       {/* Pricing Cards */}
-      <div className="mb-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {PRICING_TIERS.map((plan) => (
+      <div
+        className={`mb-12 grid gap-6 md:grid-cols-2 ${plans.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}
+      >
+        {plans.map((plan) => (
           <div
             className={`relative overflow-hidden rounded-2xl border bg-background ${plan.highlight ? "border-2 border-orange-500" : ""}`}
             key={plan.name}

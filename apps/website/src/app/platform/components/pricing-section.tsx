@@ -124,12 +124,6 @@ export function DashboardPricingSection() {
                       </span>
                       workflows
                     </div>
-                    <div>
-                      <span className="block font-medium text-foreground">
-                        {tier.limits.retention}
-                      </span>
-                      history
-                    </div>
                   </div>
                   <p className="mt-3 text-muted-foreground text-sm">
                     {tier.description}

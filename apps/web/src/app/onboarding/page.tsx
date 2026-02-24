@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 import { CreateOrganizationForm } from "@/components/forms/create-organization-form";
 import Loader from "@/components/loader";
@@ -100,8 +100,8 @@ export default function OnboardingPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your
-                  account and remove all associated data from our servers.
+                  This action cannot be undone. This will permanently delete
+                  your account and remove all associated data from our servers.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

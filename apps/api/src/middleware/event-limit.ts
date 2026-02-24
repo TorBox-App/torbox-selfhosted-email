@@ -17,11 +17,12 @@ import { log } from "../lib/logger";
 import type { AuthContext } from "./auth";
 
 // Tracked event limits per plan (tracked events per month)
+// Aligned with apps/web/src/lib/plans.ts
 const EVENT_LIMITS = {
+  free: 5000,
   starter: 50_000,
-  pro: 250_000, // Growth tier (now named "pro" in DB)
-  growth: 1_000_000, // Scale tier (now named "growth" in DB)
-  scale: -1, // Enterprise: unlimited
+  growth: 250_000,
+  scale: 1_000_000,
 } as const;
 
 /**
@@ -109,15 +110,9 @@ export const eventLimitMiddleware = new Elysia({ name: "event-limit" }).derive(
     const { set } = ctx;
     const { organizationId, planId } = auth;
 
-    // Get limit for this plan
+    // Get limit for this plan (fallback to free tier)
     const limit =
-      EVENT_LIMITS[planId as keyof typeof EVENT_LIMITS] ?? EVENT_LIMITS.starter;
-
-    // Unlimited plans skip the check
-    if (limit === -1) {
-      set.headers["X-Event-Limit"] = "unlimited";
-      return {};
-    }
+      EVENT_LIMITS[planId as keyof typeof EVENT_LIMITS] ?? EVENT_LIMITS.free;
 
     try {
       const currentUsage = await getEventUsageCount(organizationId);

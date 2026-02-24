@@ -7,26 +7,25 @@
 import { Elysia } from "elysia";
 import type { AuthContext } from "./auth";
 
-// Feature to minimum plan mapping
-// Note: workflows are available from Starter with quantity limits (5 → 25 → unlimited)
+// Feature to minimum plan mapping (aligned with apps/web/src/lib/plans.ts)
 const FEATURE_PLANS = {
   batch: "starter", // Starter+
-  topics: "pro", // Growth+
-  segments: "pro", // Growth+
-  campaigns: "pro", // Growth+
-  workflows: "starter", // Starter+ (with limits: 5/25/unlimited)
-  events: "growth", // Scale+
-  advancedSegments: "growth", // Scale+
-  customRetention: "scale", // Enterprise+
-  prioritySLA: "scale", // Enterprise+
+  topics: "starter", // Starter+
+  segments: "starter", // Starter+
+  campaigns: "starter", // Starter+
+  workflows: "free", // All tiers (quantity limited: 1/unlimited by tier)
+  events: "starter", // Starter+
+  advancedSegments: "scale", // Scale+
+  customRetention: "scale", // Scale+
+  prioritySLA: "scale", // Scale+
 } as const;
 
 type Feature = keyof typeof FEATURE_PLANS;
 
 // Plan hierarchy for comparison
 const PLAN_HIERARCHY = {
-  starter: 0,
-  pro: 1,
+  free: 0,
+  starter: 1,
   growth: 2,
   scale: 3,
 } as const;
