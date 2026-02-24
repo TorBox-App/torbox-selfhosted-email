@@ -89,6 +89,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const hasTrackedStart = useRef(false);
   const previousStep = useRef<number | null>(null);
   const hasRedirected = useRef(false);
+  const userAdvancedPastBilling = useRef(false);
 
   // EFFECT 1: Initialize orgSlug, step, and URL params together
   // Consolidates: orgSlug resolution, step initialization, plan/interval storage
@@ -180,7 +181,8 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     if (
       !(isInitialized && onboardingStatus) ||
       hasAdjustedBillingStep.current ||
-      hasShownSubscribedToast.current
+      hasShownSubscribedToast.current ||
+      userAdvancedPastBilling.current
     ) {
       return;
     }
@@ -283,6 +285,11 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
 
   const handleNext = () => {
     if (currentStep < STEPS.length) {
+      // If advancing past billing step, prevent Effect 3 from resetting
+      // back to step 2 before the onboarding-status query refreshes
+      if (currentStep === 2) {
+        userAdvancedPastBilling.current = true;
+      }
       setCurrentStep(currentStep + 1);
     }
   };
