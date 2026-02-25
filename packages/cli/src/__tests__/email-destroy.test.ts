@@ -75,6 +75,7 @@ vi.mock("../utils/route53.js", () => ({
 vi.mock("../utils/shared/fs.js", () => ({
   ensurePulumiWorkDir: vi.fn().mockResolvedValue(undefined),
   getPulumiWorkDir: vi.fn().mockReturnValue("/tmp/wraps-test/pulumi"),
+  clearLocalStackLocks: vi.fn().mockResolvedValue(0),
 }));
 
 // Mock metadata utilities
@@ -139,10 +140,14 @@ vi.mock("../utils/shared/timeout.js", () => ({
   withTimeout: vi.fn(async (promise: Promise<any>) => promise),
 }));
 
-// Mock the pulumi utility
-vi.mock("../utils/shared/pulumi.js", () => ({
-  previewWithResourceChanges: vi.fn(),
-}));
+// Mock the pulumi utility - pass through withLockRetry so lock retry logic works
+vi.mock("../utils/shared/pulumi.js", async () => {
+  const actual = (await vi.importActual("../utils/shared/pulumi.js")) as any;
+  return {
+    previewWithResourceChanges: vi.fn(),
+    withLockRetry: actual.withLockRetry,
+  };
+});
 
 // Mock errors module
 vi.mock("../utils/shared/errors.js", async () => {
@@ -239,17 +244,23 @@ describe("wraps email destroy - exit code 255 bug", () => {
     );
   });
 
-  it("should still throw for stack lock errors", async () => {
+  it("should attempt lock clear and retry for stack lock errors", async () => {
     const lockError = new Error("the stack is currently locked by 1 lock(s)");
     mockStackDestroy.mockRejectedValue(lockError);
 
     const { emailDestroy } = await import("../commands/email/destroy.js");
 
-    await expect(
-      emailDestroy({ force: true, region: "us-east-1" })
-    ).rejects.toThrow();
+    // With --force, withLockRetry auto-clears and retries once.
+    // If retry also fails, destroy treats it as a partial failure and still cleans metadata.
+    await emailDestroy({ force: true, region: "us-east-1" });
 
-    // Metadata should NOT be cleaned up for lock errors (infrastructure still exists)
-    expect(mockDeleteConnectionMetadata).not.toHaveBeenCalled();
+    // destroy() was called twice: original + retry after lock clear
+    expect(mockStackDestroy).toHaveBeenCalledTimes(2);
+
+    // Metadata is cleaned up even on persistent lock failure (partial failure path)
+    expect(mockDeleteConnectionMetadata).toHaveBeenCalledWith(
+      "123456789012",
+      "us-east-1"
+    );
   });
 });

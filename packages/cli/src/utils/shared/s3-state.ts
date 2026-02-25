@@ -190,6 +190,43 @@ export async function deleteMetadata(
 }
 
 /**
+ * Clear Pulumi stack lock files from S3 backend.
+ * Lists and deletes all objects under .pulumi/locks/ in the state bucket.
+ * Returns the number of locks cleared.
+ */
+export async function clearS3StackLocks(
+  accountId: string,
+  region: string
+): Promise<number> {
+  const { S3Client, ListObjectsV2Command, DeleteObjectCommand } = await import(
+    "@aws-sdk/client-s3"
+  );
+
+  const client = new S3Client({ region });
+  const bucketName = getStateBucketName(accountId, region);
+  const prefix = ".pulumi/locks/";
+
+  const response = await client.send(
+    new ListObjectsV2Command({ Bucket: bucketName, Prefix: prefix })
+  );
+
+  const lockObjects = response.Contents ?? [];
+  if (lockObjects.length === 0) {
+    return 0;
+  }
+
+  for (const obj of lockObjects) {
+    if (obj.Key) {
+      await client.send(
+        new DeleteObjectCommand({ Bucket: bucketName, Key: obj.Key })
+      );
+    }
+  }
+
+  return lockObjects.length;
+}
+
+/**
  * Download connection metadata from S3
  * Returns null if the key doesn't exist
  */

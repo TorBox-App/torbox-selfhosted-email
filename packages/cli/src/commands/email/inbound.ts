@@ -47,7 +47,10 @@ import {
   promptInboundSubdomain,
   promptWebhookUrl,
 } from "../../utils/shared/prompts.js";
-import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
+import {
+  ensurePulumiInstalled,
+  withLockRetry,
+} from "../../utils/shared/pulumi.js";
 import {
   DEFAULT_PULUMI_TIMEOUT_MS,
   withTimeout,
@@ -109,11 +112,12 @@ export async function inboundInit(
     throw errors.inboundRequiresOutbound();
   }
 
-  // 6. Prompt for subdomain
-  const subdomain =
-    options.subdomain ||
-    (options.yes ? "inbound" : await promptInboundSubdomain(domain));
-  const receivingDomain = `${subdomain}.${domain}`;
+  // 6. Prompt for subdomain (or root domain)
+  const subdomain = options.root
+    ? ""
+    : (options.subdomain ??
+      (options.yes ? "inbound" : await promptInboundSubdomain(domain)));
+  const receivingDomain = subdomain ? `${subdomain}.${domain}` : domain;
 
   clack.log.info(`Receiving domain: ${pc.cyan(receivingDomain)}`);
 
@@ -198,23 +202,27 @@ export async function inboundInit(
     await stack.setConfig("aws:region", { value: region });
 
     const pulumiOutput: string[] = [];
-    await withTimeout(
-      stack.up({
-        onOutput: (msg) => {
-          pulumiOutput.push(msg);
-        },
-      }),
-      DEFAULT_PULUMI_TIMEOUT_MS,
-      "Pulumi deployment"
-    ).catch((error: unknown) => {
-      // Log full Pulumi output for debugging
-      if (pulumiOutput.length > 0) {
-        const fullOutput = pulumiOutput.join("");
-        clack.log.error("Pulumi deployment output:");
-        console.error(fullOutput);
-      }
-      throw error;
-    });
+    await withLockRetry(
+      () =>
+        withTimeout(
+          stack.up({
+            onOutput: (msg) => {
+              pulumiOutput.push(msg);
+            },
+          }),
+          DEFAULT_PULUMI_TIMEOUT_MS,
+          "Pulumi deployment"
+        ).catch((error: unknown) => {
+          // Log full Pulumi output for debugging
+          if (pulumiOutput.length > 0) {
+            const fullOutput = pulumiOutput.join("");
+            clack.log.error("Pulumi deployment output:");
+            console.error(fullOutput);
+          }
+          throw error;
+        }),
+      { accountId: identity.accountId, region, autoConfirm: options.yes }
+    );
   });
 
   // 14. Create SES Receipt Rules via AWS SDK
@@ -497,10 +505,14 @@ export async function inboundDestroy(
 
     await stack.setConfig("aws:region", { value: region });
 
-    await withTimeout(
-      stack.up({ onOutput: () => {} }),
-      DEFAULT_PULUMI_TIMEOUT_MS,
-      "Pulumi deployment"
+    await withLockRetry(
+      () =>
+        withTimeout(
+          stack.up({ onOutput: () => {} }),
+          DEFAULT_PULUMI_TIMEOUT_MS,
+          "Pulumi deployment"
+        ),
+      { accountId: identity.accountId, region, autoConfirm: options.force }
     );
   });
 
@@ -576,7 +588,9 @@ export async function inboundStatus(
       ? inboundDomains.map((d) => d.receivingDomain)
       : [
           inbound.receivingDomain ||
-            `${inbound.subdomain}.${emailConfig.domain}`,
+            (inbound.subdomain
+              ? `${inbound.subdomain}.${emailConfig.domain}`
+              : emailConfig.domain || ""),
         ];
 
   if (isJsonMode()) {
@@ -661,7 +675,9 @@ export async function inboundVerify(
       ? inboundDomains.map((d) => d.receivingDomain)
       : [
           inbound.receivingDomain ||
-            `${inbound.subdomain}.${emailConfig.domain}`,
+            (inbound.subdomain
+              ? `${inbound.subdomain}.${emailConfig.domain}`
+              : emailConfig.domain || ""),
         ];
 
   let allPassed = true;
@@ -811,7 +827,10 @@ export async function inboundTest(
   // biome-ignore lint/style/noNonNullAssertion: validated by enabled check above
   const inbound = emailConfig.inbound!;
   const receivingDomain =
-    inbound.receivingDomain || `${inbound.subdomain}.${emailConfig.domain}`;
+    inbound.receivingDomain ||
+    (inbound.subdomain
+      ? `${inbound.subdomain}.${emailConfig.domain}`
+      : emailConfig.domain || "");
   const bucketName =
     inbound.bucketName || `wraps-inbound-${identity.accountId}-${region}`;
 
@@ -1035,11 +1054,14 @@ export async function inboundAdd(
     }
   }
 
-  // 7. Prompt for subdomain
-  const subdomain =
-    options.subdomain ||
-    (options.yes ? "inbound" : await promptInboundSubdomain(parentDomain));
-  const receivingDomain = `${subdomain}.${parentDomain}`;
+  // 7. Prompt for subdomain (or root domain)
+  const subdomain = options.root
+    ? ""
+    : (options.subdomain ??
+      (options.yes ? "inbound" : await promptInboundSubdomain(parentDomain)));
+  const receivingDomain = subdomain
+    ? `${subdomain}.${parentDomain}`
+    : parentDomain;
 
   // 8. Check not already tracked
   const existingDomains = emailConfig.inboundDomains ?? [];

@@ -57,6 +57,7 @@ import {
 import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
+  withLockRetry,
 } from "../../utils/shared/pulumi.js";
 import {
   DEFAULT_PULUMI_TIMEOUT_MS,
@@ -395,11 +396,19 @@ export async function init(options: InitOptions): Promise<void> {
         // Set AWS region
         await stack.setConfig("aws:region", { value: region });
 
-        // Run the deployment with timeout protection
-        const upResult = await withTimeout(
-          stack.up({ onOutput: () => {} }), // Suppress Pulumi output
-          DEFAULT_PULUMI_TIMEOUT_MS,
-          "Pulumi deployment"
+        // Run the deployment with timeout protection and lock retry
+        const upResult = await withLockRetry(
+          () =>
+            withTimeout(
+              stack.up({ onOutput: () => {} }), // Suppress Pulumi output
+              DEFAULT_PULUMI_TIMEOUT_MS,
+              "Pulumi deployment"
+            ),
+          {
+            accountId: identity.accountId,
+            region,
+            autoConfirm: options.yes || options.quick,
+          }
         );
 
         // Get outputs
@@ -442,12 +451,6 @@ export async function init(options: InitOptions): Promise<void> {
       region,
       duration_ms: Date.now() - startTime,
     });
-
-    // Check if it's a lock file error
-    if (msg.includes("stack is currently locked")) {
-      trackError("STACK_LOCKED", "email:init", { step: "deploy" });
-      throw errors.stackLocked();
-    }
 
     // Check for IAM permission errors in Pulumi deployment
     if (isPulumiError(error)) {

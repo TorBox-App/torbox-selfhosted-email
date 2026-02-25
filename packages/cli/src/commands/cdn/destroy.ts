@@ -7,7 +7,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { errors, WrapsError } from "../../utils/shared/errors.js";
+import { WrapsError } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -23,7 +23,10 @@ import {
   DeploymentProgress,
   displayPreview,
 } from "../../utils/shared/output.js";
-import { previewWithResourceChanges } from "../../utils/shared/pulumi.js";
+import {
+  previewWithResourceChanges,
+  withLockRetry,
+} from "../../utils/shared/pulumi.js";
 
 /**
  * Storage destroy command options
@@ -294,8 +297,12 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
           throw new Error("No CDN infrastructure found to destroy");
         }
 
-        // Run destroy
-        await stack.destroy({ onOutput: () => {} });
+        // Run destroy with lock retry
+        await withLockRetry(() => stack.destroy({ onOutput: () => {} }), {
+          accountId: identity.accountId,
+          region,
+          autoConfirm: options.force,
+        });
 
         // Remove the stack from workspace
         await stack.workspace.removeStack(stackName);
@@ -312,11 +319,6 @@ export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
         await saveConnectionMetadata(metadata);
       }
       process.exit(0);
-    }
-    // Check if it's a lock file error
-    if (msg.includes("stack is currently locked")) {
-      trackError("STACK_LOCKED", "storage destroy", { step: "destroy" });
-      throw errors.stackLocked();
     }
     trackError("DESTROY_FAILED", "storage destroy", { step: "destroy" });
     clack.log.error("CDN infrastructure destruction failed");

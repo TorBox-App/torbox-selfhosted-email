@@ -49,6 +49,7 @@ import {
 import {
   ensurePulumiInstalled,
   previewWithResourceChanges,
+  withLockRetry,
 } from "../../utils/shared/pulumi.js";
 
 /**
@@ -621,8 +622,11 @@ export async function init(options: CdnInitOptions): Promise<void> {
         // Set AWS region
         await stack.setConfig("aws:region", { value: region });
 
-        // Run the deployment
-        const upResult = await stack.up({ onOutput: () => {} });
+        // Run the deployment with lock retry
+        const upResult = await withLockRetry(
+          () => stack.up({ onOutput: () => {} }),
+          { accountId: identity.accountId, region, autoConfirm: options.yes }
+        );
 
         // Get outputs
         const pulumiOutputs = upResult.outputs;
@@ -663,12 +667,6 @@ export async function init(options: CdnInitOptions): Promise<void> {
       region,
       duration_ms: Date.now() - startTime,
     });
-
-    // Check if it's a lock file error
-    if (msg.includes("stack is currently locked")) {
-      trackError("STACK_LOCKED", "storage:init", { step: "deploy" });
-      throw errors.stackLocked();
-    }
 
     trackError("DEPLOYMENT_FAILED", "storage:init", { step: "deploy" });
     throw new Error(`Pulumi deployment failed: ${msg}`);

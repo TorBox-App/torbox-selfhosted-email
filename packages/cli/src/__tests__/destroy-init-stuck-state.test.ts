@@ -95,6 +95,7 @@ vi.mock("../utils/route53.js", () => ({
 vi.mock("../utils/shared/fs.js", () => ({
   ensurePulumiWorkDir: vi.fn().mockResolvedValue(undefined),
   getPulumiWorkDir: vi.fn().mockReturnValue("/tmp/wraps-test/pulumi"),
+  clearLocalStackLocks: vi.fn().mockResolvedValue(0),
 }));
 
 // Mock SES v2 client
@@ -118,11 +119,15 @@ vi.mock("../utils/shared/timeout.js", () => ({
   withTimeout: vi.fn(async (promise: Promise<any>) => promise),
 }));
 
-// Mock the pulumi utility
-vi.mock("../utils/shared/pulumi.js", () => ({
-  previewWithResourceChanges: vi.fn(),
-  ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
-}));
+// Mock the pulumi utility - pass through withLockRetry so lock retry logic works
+vi.mock("../utils/shared/pulumi.js", async () => {
+  const actual = (await vi.importActual("../utils/shared/pulumi.js")) as any;
+  return {
+    previewWithResourceChanges: vi.fn(),
+    ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
+    withLockRetry: actual.withLockRetry,
+  };
+});
 
 // Mock errors module
 vi.mock("../utils/shared/errors.js", async () => {

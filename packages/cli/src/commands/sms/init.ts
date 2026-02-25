@@ -24,7 +24,6 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import { errors } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -42,7 +41,10 @@ import {
   promptRegion,
   promptVercelConfig,
 } from "../../utils/shared/prompts.js";
-import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
+import {
+  ensurePulumiInstalled,
+  withLockRetry,
+} from "../../utils/shared/pulumi.js";
 import { getSMSCostSummary } from "../../utils/sms/costs.js";
 import { getSMSPreset, validateSMSConfig } from "../../utils/sms/presets.js";
 
@@ -387,7 +389,10 @@ export async function init(options: SMSInitOptions): Promise<void> {
           );
 
         await stack.setConfig("aws:region", { value: region });
-        const upResult = await stack.up({ onOutput: console.log });
+        const upResult = await withLockRetry(
+          () => stack.up({ onOutput: console.log }),
+          { accountId: identity.accountId, region, autoConfirm: options.yes }
+        );
         const pulumiOutputs = upResult.outputs;
 
         return {
@@ -495,11 +500,6 @@ export async function init(options: SMSInitOptions): Promise<void> {
     });
 
     const errorMessage = error instanceof Error ? error.message : String(error);
-
-    if (errorMessage.includes("stack is currently locked")) {
-      trackError("STACK_LOCKED", "sms:init", { step: "deploy" });
-      throw errors.stackLocked();
-    }
 
     trackError("DEPLOYMENT_FAILED", "sms:init", { step: "deploy" });
     throw new Error(`SMS deployment failed: ${errorMessage}`);

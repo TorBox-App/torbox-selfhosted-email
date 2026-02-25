@@ -8,11 +8,7 @@ import {
   getAWSRegion,
   validateAWSCredentials,
 } from "../../utils/shared/aws.js";
-import {
-  errors,
-  isAWSNotFoundError,
-  WrapsError,
-} from "../../utils/shared/errors.js";
+import { isAWSNotFoundError, WrapsError } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -27,7 +23,10 @@ import {
   DeploymentProgress,
   displayPreview,
 } from "../../utils/shared/output.js";
-import { previewWithResourceChanges } from "../../utils/shared/pulumi.js";
+import {
+  previewWithResourceChanges,
+  withLockRetry,
+} from "../../utils/shared/pulumi.js";
 import {
   DEFAULT_PULUMI_TIMEOUT_MS,
   withTimeout,
@@ -327,12 +326,16 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
         // This prevents failures when resources were manually deleted or drifted.
         await stack.refresh({ onOutput: () => {} });
 
-        // Run destroy with timeout protection.
+        // Run destroy with timeout protection and lock retry.
         // continueOnError ensures partial deletes don't abort the entire operation.
-        await withTimeout(
-          stack.destroy({ onOutput: () => {}, continueOnError: true }),
-          DEFAULT_PULUMI_TIMEOUT_MS,
-          "Pulumi destroy"
+        await withLockRetry(
+          () =>
+            withTimeout(
+              stack.destroy({ onOutput: () => {}, continueOnError: true }),
+              DEFAULT_PULUMI_TIMEOUT_MS,
+              "Pulumi destroy"
+            ),
+          { accountId: identity.accountId, region, autoConfirm: options.force }
         );
 
         // Remove the stack from workspace
@@ -347,11 +350,6 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
       // Still delete metadata if it exists
       await deleteConnectionMetadata(identity.accountId, region);
       process.exit(0);
-    }
-    // Check if it's a lock file error
-    if (msg.includes("stack is currently locked")) {
-      trackError("STACK_LOCKED", "email destroy", { step: "destroy" });
-      throw errors.stackLocked();
     }
     trackError("DESTROY_FAILED", "email destroy", { step: "destroy" });
     clack.log.error("Email infrastructure destruction failed");

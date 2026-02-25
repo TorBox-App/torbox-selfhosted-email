@@ -20,7 +20,15 @@ vi.mock("@clack/prompts");
 vi.mock("node:fs");
 vi.mock("node:path");
 vi.mock("../../utils/shared/aws.js");
-vi.mock("../../utils/shared/pulumi.js");
+vi.mock("../../utils/shared/pulumi.js", async () => {
+  const actual = (await vi.importActual("../../utils/shared/pulumi.js")) as any;
+  return {
+    checkPulumiInstalled: vi.fn().mockResolvedValue(true),
+    ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
+    previewWithResourceChanges: vi.fn(),
+    withLockRetry: actual.withLockRetry,
+  };
+});
 vi.mock("../../utils/shared/fs.js");
 vi.mock("../../utils/shared/metadata.js");
 vi.mock("../../utils/shared/iam-check.js");

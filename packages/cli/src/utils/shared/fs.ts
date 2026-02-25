@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readdir, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -25,6 +25,36 @@ export async function ensureWrapsDir(): Promise<void> {
   if (!existsSync(wrapsDir)) {
     await mkdir(wrapsDir, { recursive: true });
   }
+}
+
+/**
+ * Clear Pulumi stack lock files from the local backend.
+ * Recursively finds and deletes .json files under ~/.wraps/pulumi/.pulumi/locks/.
+ * Returns the number of locks cleared.
+ */
+export async function clearLocalStackLocks(): Promise<number> {
+  const locksDir = join(getPulumiWorkDir(), ".pulumi", "locks");
+  if (!existsSync(locksDir)) {
+    return 0;
+  }
+
+  let count = 0;
+
+  async function walkAndDelete(dir: string): Promise<void> {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walkAndDelete(fullPath);
+      } else if (entry.name.endsWith(".json")) {
+        await rm(fullPath);
+        count++;
+      }
+    }
+  }
+
+  await walkAndDelete(locksDir);
+  return count;
 }
 
 /**
