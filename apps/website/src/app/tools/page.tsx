@@ -75,10 +75,10 @@ export default function ToolsPage() {
               <Badge className="mb-4" variant="outline">
                 Free Tool
               </Badge>
-              <h1 className="mb-4 font-bold text-4xl tracking-tight">
+              <h1 className="mb-4 font-bold text-2xl tracking-tight sm:text-4xl">
                 Email Deliverability Checker
               </h1>
-              <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+              <p className="mx-auto max-w-2xl text-base text-muted-foreground sm:text-lg">
                 Check your domain's email authentication setup. We analyze SPF,
                 DKIM, DMARC, and MX records to help you improve deliverability.
               </p>

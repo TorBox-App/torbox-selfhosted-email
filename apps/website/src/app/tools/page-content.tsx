@@ -526,12 +526,12 @@ export default function ToolsPageContent() {
       {/* Search Box */}
       <Card className="mb-8">
         <CardContent className="pt-6">
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
               <Mail className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 text-muted-foreground" />
               <Input
                 aria-label="Domain to check"
-                className="h-12 pl-10 text-lg"
+                className="h-12 pl-10 text-base sm:text-lg"
                 disabled={isLoading}
                 onChange={(e) => setParams({ domain: e.target.value })}
                 onKeyDown={handleKeyDown}
@@ -540,7 +540,7 @@ export default function ToolsPageContent() {
               />
             </div>
             <Button
-              className="h-12 px-6"
+              className="h-12 w-full px-6 sm:w-auto"
               disabled={isLoading || !domain.trim()}
               onClick={checkDomain}
             >
