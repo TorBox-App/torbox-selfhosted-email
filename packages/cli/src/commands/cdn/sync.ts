@@ -20,6 +20,7 @@ import {
   loadConnectionMetadata,
 } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 /**
  * Storage sync command options
@@ -32,6 +33,7 @@ export type CdnSyncOptions = {
  * Storage Sync command - Update infrastructure to match current configuration
  */
 export async function cdnSync(options: CdnSyncOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

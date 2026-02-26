@@ -18,7 +18,10 @@ import {
   DeploymentProgress,
   displayPreview,
 } from "../../utils/shared/output.js";
-import { previewWithResourceChanges } from "../../utils/shared/pulumi.js";
+import {
+  ensurePulumiInstalled,
+  previewWithResourceChanges,
+} from "../../utils/shared/pulumi.js";
 
 /**
  * Restore command - Remove Wraps infrastructure (alias for destroy)
@@ -57,6 +60,8 @@ export async function restore(options: EmailRestoreOptions): Promise<void> {
   }
 
   const progress = new DeploymentProgress();
+
+  await ensurePulumiInstalled();
 
   // 1. Validate AWS credentials
   const identity = await progress.execute(

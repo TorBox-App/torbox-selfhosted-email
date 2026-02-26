@@ -14,6 +14,7 @@ import {
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { findConnectionsWithService } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 /**
  * Storage verify command options
@@ -112,6 +113,7 @@ async function checkDistributionStatus(
  * Storage Verify command - Check DNS and certificate status
  */
 export async function cdnVerify(options: CdnVerifyOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

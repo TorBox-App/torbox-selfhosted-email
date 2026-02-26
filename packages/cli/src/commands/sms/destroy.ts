@@ -28,7 +28,10 @@ import {
   DeploymentProgress,
   displayPreview,
 } from "../../utils/shared/output.js";
-import { previewWithResourceChanges } from "../../utils/shared/pulumi.js";
+import {
+  ensurePulumiInstalled,
+  previewWithResourceChanges,
+} from "../../utils/shared/pulumi.js";
 import {
   DEFAULT_PULUMI_TIMEOUT_MS,
   withTimeout,
@@ -38,6 +41,7 @@ import {
  * SMS Destroy command - Remove SMS infrastructure
  */
 export async function smsDestroy(options: SMSDestroyOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
 
   // JSON mode requires --force for destructive operations

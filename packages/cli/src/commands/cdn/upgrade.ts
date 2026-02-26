@@ -25,11 +25,13 @@ import {
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 /**
  * Storage Upgrade command - Add custom domain to CloudFront after certificate validation
  */
 export async function cdnUpgrade(options: CdnUpgradeOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

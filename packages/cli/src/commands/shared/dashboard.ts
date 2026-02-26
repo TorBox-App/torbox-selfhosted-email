@@ -17,11 +17,13 @@ import {
 } from "../../utils/shared/fs.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 /**
  * Dashboard command - Start local web dashboard
  */
 export async function dashboard(options: DashboardOptions): Promise<void> {
+  await ensurePulumiInstalled();
   clack.intro(pc.bold("Wraps Dashboard"));
 
   const progress = new DeploymentProgress();

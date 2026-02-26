@@ -24,11 +24,13 @@ import {
   DeploymentProgress,
   displayStatus,
 } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 /**
  * Email Status command - Show current email infrastructure setup
  */
 export async function emailStatus(options: StatusOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

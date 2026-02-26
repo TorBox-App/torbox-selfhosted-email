@@ -14,6 +14,7 @@ import {
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { loadConnectionMetadata } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 /**
  * Display SMS status in a formatted box
@@ -83,6 +84,7 @@ function displaySMSStatus(options: {
  * SMS Status command - Show current SMS infrastructure setup
  */
 export async function smsStatus(_options: SMSStatusOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

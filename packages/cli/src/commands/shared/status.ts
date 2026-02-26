@@ -13,11 +13,13 @@ import {
 } from "../../utils/shared/fs.js";
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 /**
  * Global Status command - Show overview of all deployed infrastructure
  */
 export async function status(_options: StatusOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

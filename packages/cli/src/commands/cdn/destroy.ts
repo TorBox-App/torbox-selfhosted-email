@@ -24,6 +24,7 @@ import {
   displayPreview,
 } from "../../utils/shared/output.js";
 import {
+  ensurePulumiInstalled,
   previewWithResourceChanges,
   withLockRetry,
 } from "../../utils/shared/pulumi.js";
@@ -42,6 +43,7 @@ export type CdnDestroyOptions = {
  * Storage Destroy command - Remove CDN infrastructure
  */
 export async function cdnDestroy(options: CdnDestroyOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
 
   // JSON mode requires --force for destructive operations

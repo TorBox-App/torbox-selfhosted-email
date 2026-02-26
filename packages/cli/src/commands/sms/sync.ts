@@ -24,6 +24,7 @@ import {
   saveConnectionMetadata,
 } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 export type SMSSyncOptions = {
   region?: string;
@@ -38,6 +39,7 @@ export type SMSSyncOptions = {
  * - Recreating SDK resources if they were accidentally deleted
  */
 export async function smsSync(options: SMSSyncOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
 
   if (!isJsonMode()) {

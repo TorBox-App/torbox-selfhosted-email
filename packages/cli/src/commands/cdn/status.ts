@@ -14,6 +14,7 @@ import {
 import { isJsonMode, jsonSuccess } from "../../utils/shared/json-output.js";
 import { findConnectionsWithService } from "../../utils/shared/metadata.js";
 import { DeploymentProgress } from "../../utils/shared/output.js";
+import { ensurePulumiInstalled } from "../../utils/shared/pulumi.js";
 
 /**
  * Storage status command options
@@ -27,6 +28,7 @@ export type CdnStatusOptions = {
  * Storage Status command - Show current CDN infrastructure setup
  */
 export async function cdnStatus(options: CdnStatusOptions): Promise<void> {
+  await ensurePulumiInstalled();
   const startTime = Date.now();
   const progress = new DeploymentProgress();
 

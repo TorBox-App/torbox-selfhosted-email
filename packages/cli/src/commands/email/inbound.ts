@@ -421,6 +421,9 @@ export async function inboundDestroy(
 
   const progress = new DeploymentProgress();
 
+  // 0. Ensure Pulumi CLI is installed
+  await ensurePulumiInstalled();
+
   // 1. Validate AWS credentials
   const identity = await progress.execute(
     "Validating AWS credentials",
