@@ -505,6 +505,11 @@ args.options([
     description: "Subdomain for inbound email (e.g., inbound, support)",
     defaultValue: undefined,
   },
+  {
+    name: "root",
+    description: "Use root domain for inbound email (no subdomain)",
+    defaultValue: false,
+  },
 ]);
 
 // Get command and flags
@@ -826,6 +831,7 @@ async function run() {
               await inboundInit({
                 region: flags.region,
                 subdomain: flags.domain, // reuse --domain flag for subdomain
+                root: flags.root,
                 yes: flags.yes,
                 preview: flags.preview,
                 json: flags.json,
@@ -865,6 +871,7 @@ async function run() {
               await inboundAdd({
                 region: flags.region,
                 subdomain: flags.subdomain,
+                root: flags.root,
                 domain: flags.domain,
                 yes: flags.yes,
                 json: flags.json,

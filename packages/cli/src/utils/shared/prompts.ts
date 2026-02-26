@@ -1078,9 +1078,35 @@ export async function promptDNSProvider(
 }
 
 /**
- * Prompt for inbound email subdomain
+ * Prompt for inbound email subdomain (or root domain)
+ * Returns "" for root domain, or a subdomain string like "inbound"
  */
 export async function promptInboundSubdomain(domain: string): Promise<string> {
+  const choice = await clack.select({
+    message: `Where should ${pc.cyan(domain)} receive inbound email?`,
+    options: [
+      {
+        value: "",
+        label: `${domain} (root domain)`,
+        hint: `e.g., support@${domain}`,
+      },
+      {
+        value: "__subdomain__",
+        label: "Use a subdomain",
+        hint: `e.g., inbound.${domain}`,
+      },
+    ],
+  });
+
+  if (clack.isCancel(choice)) {
+    clack.cancel("Operation cancelled.");
+    process.exit(0);
+  }
+
+  if (choice === "") {
+    return "";
+  }
+
   const subdomain = await clack.text({
     message: `Subdomain for receiving emails (e.g., inbound → inbound.${domain}):`,
     placeholder: "inbound",

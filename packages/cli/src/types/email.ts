@@ -28,8 +28,8 @@ export type AdditionalDomain = {
  * An inbound receiving domain managed via `wraps email inbound add`
  */
 export type InboundDomain = {
-  subdomain: string; // e.g., "inbound", "support"
-  receivingDomain: string; // e.g., "inbound.example.com"
+  subdomain: string; // e.g., "inbound", "support", or "" for root domain
+  receivingDomain: string; // e.g., "inbound.example.com" or "example.com" for root
   parentDomain: string; // e.g., "example.com"
   addedAt: string; // ISO timestamp
 };
@@ -407,6 +407,7 @@ export type EmailRestoreOptions = {
 export type EmailInboundInitOptions = {
   region?: string;
   subdomain?: string;
+  root?: boolean;
   webhookUrl?: string;
   yes?: boolean;
   preview?: boolean;
@@ -444,6 +445,7 @@ export type EmailInboundVerifyOptions = {
 export type EmailInboundAddOptions = {
   region?: string;
   subdomain?: string;
+  root?: boolean;
   domain?: string; // parent domain
   yes?: boolean;
   json?: boolean;

@@ -907,16 +907,16 @@ export function migrateInboundToMultiDomain(
   const inbound = emailConfig.inbound;
   const receivingDomain =
     inbound.receivingDomain ||
-    (inbound.subdomain && emailConfig.domain
+    (inbound.subdomain
       ? `${inbound.subdomain}.${emailConfig.domain}`
-      : null);
+      : emailConfig.domain || null);
 
   if (!receivingDomain) {
     return false;
   }
 
   const parentDomain = emailConfig.domain || "";
-  const subdomain = inbound.subdomain || "inbound";
+  const subdomain = inbound.subdomain ?? "";
 
   emailConfig.inboundDomains = [
     {
