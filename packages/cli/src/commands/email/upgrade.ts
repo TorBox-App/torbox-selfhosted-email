@@ -311,6 +311,13 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       hint: metadata.services.email?.smtpCredentials?.enabled
         ? "Rotate or disable credentials"
         : "Generate credentials for PHP, WordPress, etc.",
+    },
+    {
+      value: "hosting-provider",
+      label: "Change hosting provider",
+      hint: metadata.provider === "vercel"
+        ? `Currently: Vercel (${metadata.vercel?.teamSlug || "configured"})`
+        : `Currently: ${metadata.provider} → Switch to Vercel OIDC, etc.`,
     }
   );
 
@@ -1581,6 +1588,54 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         },
       };
       newPreset = undefined;
+      break;
+    }
+
+    case "hosting-provider": {
+      const newProvider = await clack.select({
+        message: "Where is your app hosted?",
+        options: [
+          {
+            value: "aws",
+            label: "AWS (Lambda/ECS/EC2)",
+            hint: "Uses IAM roles automatically",
+          },
+          {
+            value: "vercel",
+            label: "Vercel",
+            hint: "Uses OIDC (no AWS credentials needed)",
+          },
+          {
+            value: "railway",
+            label: "Railway",
+            hint: "Requires AWS credentials",
+          },
+          {
+            value: "other",
+            label: "Other",
+            hint: "Will use AWS access keys",
+          },
+        ],
+      });
+
+      if (clack.isCancel(newProvider)) {
+        clack.cancel("Upgrade cancelled.");
+        process.exit(0);
+      }
+
+      if (newProvider === metadata.provider) {
+        clack.log.info("Provider unchanged — no changes needed.");
+        process.exit(0);
+      }
+
+      metadata.provider = newProvider as typeof metadata.provider;
+
+      if (newProvider === "vercel") {
+        metadata.vercel = await promptVercelConfig();
+      } else {
+        metadata.vercel = undefined;
+      }
+
       break;
     }
   }
