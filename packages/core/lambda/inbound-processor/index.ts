@@ -78,16 +78,34 @@ export async function handler(event: S3Event, context: Context) {
       // Generate email ID
       const emailId = `inb_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
 
-      // 3. Extract headers as lowercase key-value pairs
-      const headers: Record<string, string> = {};
+      // 3. Extract headers as key-value pairs
+      // mailparser returns most headers as strings, but some (list, received,
+      // references) are complex objects. We preserve objects as-is so downstream
+      // consumers can access nested fields like list.unsubscribe.
+      const headers: Record<string, unknown> = {};
       if (parsed.headers) {
         for (const [key, value] of parsed.headers) {
-          const headerValue =
-            typeof value === "object" && value !== null && "text" in value
-              ? (value as { text: string }).text
-              : String(value);
-          if (headers[key]) {
-            headers[key] = `${headers[key]}, ${headerValue}`;
+          let headerValue: unknown;
+          if (typeof value === "string") {
+            headerValue = value;
+          } else if (
+            typeof value === "object" &&
+            value !== null &&
+            "text" in value
+          ) {
+            headerValue = (value as { text: string }).text;
+          } else if (typeof value === "object" && value !== null) {
+            // Preserve nested objects (e.g. list.unsubscribe, list.post)
+            headerValue = value;
+          } else {
+            headerValue = String(value);
+          }
+
+          if (headers[key] != null) {
+            // Multiple values for same header — combine strings, keep first object
+            if (typeof headers[key] === "string" && typeof headerValue === "string") {
+              headers[key] = `${headers[key]}, ${headerValue}`;
+            }
           } else {
             headers[key] = headerValue;
           }
