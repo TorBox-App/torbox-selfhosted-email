@@ -315,9 +315,10 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     {
       value: "hosting-provider",
       label: "Change hosting provider",
-      hint: metadata.provider === "vercel"
-        ? `Currently: Vercel (${metadata.vercel?.teamSlug || "configured"})`
-        : `Currently: ${metadata.provider} → Switch to Vercel OIDC, etc.`,
+      hint:
+        metadata.provider === "vercel"
+          ? `Currently: Vercel (${metadata.vercel?.teamSlug || "configured"})`
+          : `Currently: ${metadata.provider} → Switch to Vercel OIDC, etc.`,
     }
   );
 

@@ -19,6 +19,9 @@ vi.mock("open");
 vi.mock("../../console/server.js");
 vi.mock("../../utils/shared/aws.js");
 vi.mock("../../utils/shared/fs.js");
+vi.mock("../../utils/shared/pulumi.js", () => ({
+  ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
+}));
 
 import * as prompts from "@clack/prompts";
 import getPort from "get-port";

@@ -18,6 +18,9 @@ vi.mock("@clack/prompts");
 vi.mock("../../utils/shared/aws.js");
 vi.mock("../../utils/shared/fs.js");
 vi.mock("../../utils/shared/metadata.js");
+vi.mock("../../utils/shared/pulumi.js", () => ({
+  ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
+}));
 
 import * as prompts from "@clack/prompts";
 import * as aws from "../../utils/shared/aws.js";

@@ -28,6 +28,10 @@ vi.mock("@pulumi/pulumi", async () => {
   };
 });
 
+vi.mock("../../utils/shared/pulumi.js", () => ({
+  ensurePulumiInstalled: vi.fn().mockResolvedValue(false),
+}));
+
 // Mock aws-detection to prevent real filesystem reads (SSO cache, AWS config)
 vi.mock("../../utils/shared/aws-detection.js", () => ({
   detectAWSState: vi.fn().mockResolvedValue({

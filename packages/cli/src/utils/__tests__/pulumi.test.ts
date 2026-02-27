@@ -1,10 +1,21 @@
 import { exec } from "node:child_process";
+import { existsSync, readdirSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock node:child_process
 vi.mock("node:child_process", () => ({
   exec: vi.fn(),
 }));
+
+// Mock node:fs for SDK install detection
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    existsSync: vi.fn().mockReturnValue(false),
+    readdirSync: vi.fn().mockReturnValue([]),
+  };
+});
 
 // Mock @pulumi/pulumi/automation
 vi.mock("@pulumi/pulumi/automation/index.js", () => ({
@@ -36,6 +47,9 @@ const mockPulumiCmd = {
 describe("pulumi utilities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: no SDK-installed Pulumi found
+    vi.mocked(existsSync).mockReturnValue(false);
+    vi.mocked(readdirSync).mockReturnValue([]);
   });
 
   describe("checkPulumiInstalled", () => {
@@ -85,6 +99,33 @@ describe("pulumi utilities", () => {
       const result = await checkPulumiInstalled();
 
       expect(result).toBe(false);
+    });
+
+    it("should find SDK-installed pulumi when not in PATH", async () => {
+      vi.mocked(exec).mockImplementation((_cmd, callback: any) => {
+        callback(new Error("Command not found"), { stdout: "", stderr: "" });
+        return {} as any;
+      });
+
+      vi.mocked(existsSync).mockImplementation((p) => {
+        const path = String(p);
+        if (path.endsWith(".pulumi/versions")) return true;
+        if (path.endsWith("3.224.0/bin/pulumi")) return true;
+        return false;
+      });
+
+      vi.mocked(readdirSync).mockReturnValue([
+        { name: "3.216.0", isDirectory: () => true },
+        { name: "3.224.0", isDirectory: () => true },
+      ] as any);
+
+      const originalPath = process.env.PATH;
+      const result = await checkPulumiInstalled();
+
+      expect(result).toBe(true);
+      expect(process.env.PATH).toContain("3.224.0/bin");
+
+      process.env.PATH = originalPath;
     });
   });
 

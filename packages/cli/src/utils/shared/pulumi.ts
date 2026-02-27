@@ -1,5 +1,7 @@
 import { exec } from "node:child_process";
-import { dirname } from "node:path";
+import { existsSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import type {
   EngineEvent,
@@ -13,13 +15,44 @@ import type { ResourceChange, ResourceOperation } from "./output.js";
 const execAsync = promisify(exec);
 
 /**
- * Check if Pulumi CLI is installed
+ * Find Pulumi binary installed by the SDK in ~/.pulumi/versions/.
+ * Returns the bin directory path if found, undefined otherwise.
+ */
+function findSdkInstalledPulumi(): string | undefined {
+  const versionsDir = join(homedir(), ".pulumi", "versions");
+  if (!existsSync(versionsDir)) return;
+
+  // List version directories, pick the latest (highest semver)
+  const versions = readdirSync(versionsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort()
+    .reverse();
+
+  for (const version of versions) {
+    const binPath = join(versionsDir, version, "bin", "pulumi");
+    if (existsSync(binPath)) return dirname(binPath);
+  }
+
+  return;
+}
+
+/**
+ * Check if Pulumi CLI is installed — checks PATH first,
+ * then falls back to the SDK install location (~/.pulumi/versions/).
+ * If found via SDK install, adds it to PATH for the current process.
  */
 export async function checkPulumiInstalled(): Promise<boolean> {
   try {
     await execAsync("pulumi version");
     return true;
-  } catch (_error) {
+  } catch {
+    // Not in PATH — check SDK install location
+    const binDir = findSdkInstalledPulumi();
+    if (binDir) {
+      process.env.PATH = `${binDir}:${process.env.PATH}`;
+      return true;
+    }
     return false;
   }
 }
