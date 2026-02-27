@@ -30,6 +30,38 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+// Mock fetch globally to prevent real HTTP calls to the preference-events API
+const originalFetchGlobal = globalThis.fetch;
+beforeAll(() => {
+  vi.stubGlobal(
+    "fetch",
+    (url: string | URL | Request, options?: RequestInit) => {
+      const urlStr =
+        typeof url === "string"
+          ? url
+          : url instanceof URL
+            ? url.toString()
+            : url.url;
+      if (urlStr.includes("/v1/preference-events")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ success: true, subscribed: 0, unsubscribed: 0 }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          )
+        );
+      }
+      return originalFetchGlobal(url as RequestInfo, options);
+    }
+  );
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
+
 // Mock the subscriptions module to avoid actual AWS calls
 vi.mock("@wraps/email", () => ({
   determineSubscriptionStatus: vi.fn(async (params) => {
