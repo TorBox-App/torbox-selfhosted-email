@@ -15,7 +15,6 @@ import {
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Area, AreaChart } from "recharts";
-import { useVolumeData } from "@/app/(dashboard)/[orgSlug]/emails/analytics/hooks/use-analytics";
 import { toast } from "sonner";
 import {
   createApiKey,
@@ -23,6 +22,7 @@ import {
   listApiKeys,
   updateApiKey,
 } from "@/actions/api-keys";
+import { useVolumeData } from "@/app/(dashboard)/[orgSlug]/emails/analytics/hooks/use-analytics";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -643,11 +643,7 @@ export function OrganizationSettingsApiKeys({
                   <div className="flex items-center gap-2">
                     {sparkData.length > 0 && (
                       <div className="hidden h-10 w-24 md:block">
-                        <AreaChart
-                          data={sparkData}
-                          height={40}
-                          width={96}
-                        >
+                        <AreaChart data={sparkData} height={40} width={96}>
                           <defs>
                             <linearGradient
                               id={`spark-${key.id}`}
@@ -688,9 +684,7 @@ export function OrganizationSettingsApiKeys({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => openEditDialog(key)}
-                          >
+                          <DropdownMenuItem onClick={() => openEditDialog(key)}>
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
