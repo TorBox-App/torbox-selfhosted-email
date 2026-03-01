@@ -103,7 +103,10 @@ export async function handler(event: S3Event, context: Context) {
 
           if (headers[key] != null) {
             // Multiple values for same header — combine strings, keep first object
-            if (typeof headers[key] === "string" && typeof headerValue === "string") {
+            if (
+              typeof headers[key] === "string" &&
+              typeof headerValue === "string"
+            ) {
               headers[key] = `${headers[key]}, ${headerValue}`;
             }
           } else {

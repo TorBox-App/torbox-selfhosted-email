@@ -1,22 +1,28 @@
 import {
   Blocks,
   Cloud,
+  Gauge,
   Gift,
   HardDrive,
   Inbox,
   Layers,
+  LayoutDashboard,
   LayoutTemplate,
   Lightbulb,
+  Lock,
   type LucideIcon,
   MessageSquare,
+  Package,
   Rocket,
   Send,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Tags,
   Terminal,
   Users,
   Workflow,
+  Wrench,
   Zap,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -37,6 +43,151 @@ const Code = ({ children }: { children: ReactNode }) => (
 );
 
 const releases: Release[] = [
+  {
+    version: "CLI v2.14–2.17",
+    date: "February 2026",
+    icon: Terminal,
+    iconColor:
+      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    title: "CLI Polish & Multi-Domain Management",
+    items: [
+      <>
+        <Code>--json</Code> output on all commands for CI/CD integration
+      </>,
+      "Guided multi-domain management with subdomain suggestions for reputation isolation",
+      "Root domain support for inbound email receiving",
+      "Auto-clear Pulumi stack locks on deploy retry",
+      "Hosting provider change in the upgrade menu",
+      "Pulumi detection fix for SDK-installed binaries",
+      <>
+        <Code>wraps email templates preview</Code> with live reload via SSE
+      </>,
+      "Terminal dashboard UI (TUI) with email init wizard",
+    ],
+  },
+  {
+    version: "Platform v0.15.0",
+    date: "February 2026",
+    icon: LayoutDashboard,
+    iconColor:
+      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    title: "Dashboard Overhaul",
+    items: [
+      "Unified overview page with channel-granular health monitoring",
+      <>
+        Universal <Code>Cmd-K</Code> command palette with server-side search
+      </>,
+      "Analytics charts on contacts, events, emails, and inbound pages",
+      "CSV import with column mapping and custom properties",
+      "CSV export on all dashboard tables",
+      "Bulk template actions — select multiple to delete, publish, or change type",
+      <>
+        Natural language date input for broadcast scheduling (e.g.{" "}
+        <Code>next Tuesday at 9am</Code>)
+      </>,
+      "Send volume sparklines on API key cards",
+      "Undo/redo in the visual workflow builder",
+      "Pre-enable readiness checks that validate workflows before going live",
+      "Searchable condition combobox replacing free-text input",
+      "Unsaved changes guard in the workflow builder",
+      <>SDK quick start snippets in topic subscribers sheet</>,
+    ],
+  },
+  {
+    version: "SDK v0.10.0",
+    date: "February 2026",
+    icon: Package,
+    iconColor:
+      "border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    title: "Zero-Config Vercel OIDC & Config Helpers",
+    items: [
+      <>
+        Zero-config Vercel OIDC — SDK auto-detects <Code>AWS_ROLE_ARN</Code>{" "}
+        from env, no secrets or env vars needed
+      </>,
+      <>
+        <Code>defineConfig</Code> and <Code>defineBrand</Code> helpers for
+        templates-as-code
+      </>,
+      "Workflow definition helpers for workflows-as-code",
+      <>
+        <Code>inbox.forward()</Code> and <Code>inbox.reply()</Code> for inbound
+        email
+      </>,
+      "Security patch for fast-xml-parser (CVE override)",
+    ],
+  },
+  {
+    version: "SMS v0.1.2",
+    date: "February 2026",
+    icon: Smartphone,
+    iconColor:
+      "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    title: "Multi-Channel SMS Launch",
+    items: [
+      "SMS moved from waitlist to generally available",
+      "Multi-channel database schema — templates, contacts, and workflows support both email and SMS",
+      "Cascade nodes in the workflow builder for multi-step, multi-channel sequences",
+      "SMS dashboard cleanup with correct event status mapping",
+      "SMS SDK v0.1.2 with proper error type mapping",
+    ],
+  },
+  {
+    version: "Workflow Engine",
+    date: "February 2026",
+    icon: Wrench,
+    iconColor: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
+    title: "Workflow Reliability Hardening",
+    items: [
+      "DLQ consumer with CloudWatch alarms for failed workflow and batch messages",
+      "Fixed dual-resume race condition in the workflow processor",
+      "Definition snapshots — in-flight executions are immune to live dashboard edits",
+      "Repaired broken EventBridge schedule chains with reconciliation watchdog",
+      "Hardened webhook SSRF validation — blocks loopback, link-local, and private networks",
+      "8 critical and high severity workflow bugs resolved in one pass",
+      "Atomic idempotency keys on step execution inserts to prevent duplicate sends",
+    ],
+  },
+  {
+    version: "Security & Observability",
+    date: "February 2026",
+    icon: Lock,
+    iconColor:
+      "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    title: "Security Patches & Structured Logging",
+    items: [
+      "Patched XSS, cross-org IDOR, and RCE vulnerabilities",
+      "Timing-safe secret comparison across all auth paths",
+      "Resolved 22 Dependabot alerts via dependency upgrades and pnpm overrides",
+      "Migrated entire API from console.log to structured JSON logging",
+      "Canonical log lines per authenticated request for debugging and analytics",
+      "PostHog error tracking on API and Stripe webhooks",
+      <>
+        Cross-org IDOR prevention: all queries scoped by{" "}
+        <Code>organizationId</Code> from auth context
+      </>,
+      "Guardrail system with Biome GritQL plugins and architecture tests",
+    ],
+  },
+  {
+    version: "Website",
+    date: "February 2026",
+    icon: Gauge,
+    iconColor:
+      "border-teal-500/30 bg-teal-500/10 text-teal-600 dark:text-teal-400",
+    title: "14 New Doc Pages & Performance",
+    items: [
+      "14 new documentation pages: inbound email, EventBridge events, Vercel setup, webhooks, and migration guide",
+      "Redesigned pricing comparison with scroll-driven tabs",
+      "New about and contact pages with author bylines",
+      "Inbound email marketing page",
+      "SEO-optimized SES cost calculator",
+      "Converted 13 large PNGs to WebP — 95% size reduction (30MB → 1.3MB)",
+      "Auto-discovering sitemap replacing hardcoded page list",
+      "Vercel Speed Insights integration",
+      <>SSR static content on tools pages for SEO</>,
+    ],
+  },
   {
     version: "CLI v2.13.0",
     date: "February 2026",
