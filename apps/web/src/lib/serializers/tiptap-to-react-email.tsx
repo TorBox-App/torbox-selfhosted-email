@@ -30,7 +30,7 @@ import type { JSONContent } from "@tiptap/core";
 import type { ReactElement } from "react";
 import { getImageWithPlaceholder } from "@/lib/brand-kit/placeholders";
 
-type BrandKitColors = {
+export type BrandKitColors = {
   primaryColor?: string;
   secondaryColor?: string;
   backgroundColor?: string;
@@ -44,6 +44,29 @@ type BrandKitColors = {
   darkBackgroundColor?: string;
   darkTextColor?: string;
 };
+
+export function toBrandKitColors(
+  kit: {
+    primaryColor: string;
+    secondaryColor: string;
+    backgroundColor: string;
+    textColor: string;
+    fontFamily: string;
+    headingFontFamily: string | null;
+    buttonRadius: string;
+  } | null | undefined
+): BrandKitColors | undefined {
+  if (!kit) return undefined;
+  return {
+    primaryColor: kit.primaryColor,
+    secondaryColor: kit.secondaryColor,
+    backgroundColor: kit.backgroundColor,
+    textColor: kit.textColor,
+    fontFamily: kit.fontFamily,
+    headingFontFamily: kit.headingFontFamily ?? undefined,
+    buttonRadius: kit.buttonRadius,
+  };
+}
 
 type SerializerOptions = {
   previewText?: string;

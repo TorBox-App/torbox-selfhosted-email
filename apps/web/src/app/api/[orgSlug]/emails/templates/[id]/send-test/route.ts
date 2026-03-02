@@ -17,7 +17,10 @@ import { NextResponse } from "next/server";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
-import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
+import {
+  tiptapToReactEmail,
+  toBrandKitColors,
+} from "@/lib/serializers/tiptap-to-react-email";
 import {
   generatePreferencesUrl,
   generateUnsubscribeUrl,
@@ -158,18 +161,7 @@ export async function POST(request: Request, context: RouteContext) {
 
       const emailComponent = tiptapToReactEmail(templateContent, data, {
         previewText,
-        brandKit: selectedBrandKit
-          ? {
-              primaryColor: selectedBrandKit.primaryColor,
-              secondaryColor: selectedBrandKit.secondaryColor,
-              backgroundColor: selectedBrandKit.backgroundColor,
-              textColor: selectedBrandKit.textColor,
-              fontFamily: selectedBrandKit.fontFamily,
-              headingFontFamily:
-                selectedBrandKit.headingFontFamily ?? undefined,
-              buttonRadius: selectedBrandKit.buttonRadius,
-            }
-          : undefined,
+        brandKit: toBrandKitColors(selectedBrandKit),
       });
       const html = await render(emailComponent);
       return { html, text: toPlainText(html) };

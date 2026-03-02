@@ -309,6 +309,13 @@
       "when": 1771610069070,
       "tag": "0043_curved_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1772471464340,
+      "tag": "0044_clean_iceman",
+      "breakpoints": true
     }
   ]
 }

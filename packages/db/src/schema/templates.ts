@@ -98,7 +98,7 @@ export const template = pgTable(
     source: text("source"), // React Email TSX source
     sourceFormat: text("source_format")
       .$type<"tiptap" | "react-email">()
-      .default("tiptap")
+      .default("react-email")
       .notNull(),
     sourceHash: text("source_hash"), // SHA256 for change detection
     pushedFromCli: boolean("pushed_from_cli").default(false).notNull(),

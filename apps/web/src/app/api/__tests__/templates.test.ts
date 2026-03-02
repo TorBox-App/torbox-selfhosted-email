@@ -1250,16 +1250,9 @@ describe("Templates API - POST SMS channel support", () => {
 
     expect(response.status).toBe(201);
     expect(data.channel).toBe("email");
-    // Email templates get TipTap content with placeholder text
-    expect(data.content).toEqual({
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: "Start editing your template..." }],
-        },
-      ],
-    });
+    // Email templates default to react-email with empty content (AI generates)
+    expect(data.content).toEqual({});
+    expect(data.sourceFormat).toBe("react-email");
   });
 
   it("should default to 'email' channel when no channel is provided", async () => {

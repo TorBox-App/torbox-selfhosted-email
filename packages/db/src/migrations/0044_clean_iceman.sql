@@ -1,0 +1,1 @@
+ALTER TABLE "template" ALTER COLUMN "source_format" SET DEFAULT 'react-email';

@@ -183,21 +183,11 @@ export async function POST(request: Request, context: RouteContext) {
     // Determine channel (default to email)
     const templateChannel = channel === "sms" ? "sms" : "email";
 
-    // SMS templates use plain text content, email templates use TipTap
+    // SMS templates use plain text content, email react-email templates start empty (AI generates)
     const defaultContent =
       templateChannel === "sms"
         ? { type: "doc", content: [] }
-        : {
-            type: "doc",
-            content: [
-              {
-                type: "paragraph",
-                content: [
-                  { type: "text", text: "Start editing your template..." },
-                ],
-              },
-            ],
-          };
+        : {};
 
     // Create template with empty content
     const [newTemplate] = await db
@@ -209,6 +199,7 @@ export async function POST(request: Request, context: RouteContext) {
         subject: templateChannel === "sms" ? null : subject?.trim() || null,
         channel: templateChannel,
         content: defaultContent,
+        sourceFormat: templateChannel === "sms" ? "tiptap" : "react-email",
         createdBy: session.user.id,
         status: "DRAFT",
       })

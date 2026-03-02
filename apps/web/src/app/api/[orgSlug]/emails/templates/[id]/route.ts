@@ -10,7 +10,10 @@ import { z } from "zod";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
-import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
+import {
+  tiptapToReactEmail,
+  toBrandKitColors,
+} from "@/lib/serializers/tiptap-to-react-email";
 
 const updateTemplateSchema = z
   .object({
@@ -164,56 +167,53 @@ export async function PUT(request: Request, context: RouteContext) {
     if (content !== undefined) {
       updateData.content = content;
 
-      // Auto-compile HTML for broadcasts (without pushing to SES)
-      try {
-        // Fetch default brand kit for styling
-        const defaultBrandKit = await db.query.brandKit.findFirst({
-          where: and(
-            eq(brandKit.organizationId, orgWithMembership.id),
-            eq(brandKit.isDefault, true)
-          ),
-        });
+      // Only auto-compile for TipTap templates (react-email compiles via save-source)
+      const existing = await db.query.template.findFirst({
+        where: and(eq(template.id, id), eq(template.organizationId, orgWithMembership.id)),
+        columns: { sourceFormat: true },
+      });
 
-        // Convert TipTap content to React Email component
-        const emailComponent = tiptapToReactEmail(
-          content as JSONContent,
-          {}, // Empty data - variables stay as placeholders
-          {
-            keepVariablesAsPlaceholders: true,
-            brandKit: defaultBrandKit
-              ? {
-                  primaryColor: defaultBrandKit.primaryColor,
-                  secondaryColor: defaultBrandKit.secondaryColor,
-                  backgroundColor: defaultBrandKit.backgroundColor,
-                  textColor: defaultBrandKit.textColor,
-                  fontFamily: defaultBrandKit.fontFamily,
-                  headingFontFamily:
-                    defaultBrandKit.headingFontFamily ?? undefined,
-                  buttonRadius: defaultBrandKit.buttonRadius,
-                }
-              : undefined,
-          }
-        );
+      if (existing?.sourceFormat !== "react-email") {
+        // Auto-compile HTML for broadcasts (without pushing to SES)
+        try {
+          // Fetch default brand kit for styling
+          const defaultBrandKit = await db.query.brandKit.findFirst({
+            where: and(
+              eq(brandKit.organizationId, orgWithMembership.id),
+              eq(brandKit.isDefault, true)
+            ),
+          });
 
-        // Render to HTML
-        const compiledHtml = await render(emailComponent);
+          // Convert TipTap content to React Email component
+          const emailComponent = tiptapToReactEmail(
+            content as JSONContent,
+            {},
+            {
+              keepVariablesAsPlaceholders: true,
+              brandKit: toBrandKitColors(defaultBrandKit),
+            }
+          );
 
-        // Generate plain text version using react-email's robust converter
-        const generatedText = toPlainText(compiledHtml);
+          // Render to HTML
+          const compiledHtml = await render(emailComponent);
 
-        updateData.compiledHtml = compiledHtml;
-        updateData.compiledText = generatedText;
-      } catch (compileError) {
-        // Log but don't fail the save - template content is still saved
-        const log = createRequestLogger({
-          path: "/api/[orgSlug]/emails/templates/[id]",
-          method: "PUT",
-          orgSlug,
-        });
-        log.warn(
-          { err: serializeError(compileError) },
-          "Failed to compile template HTML"
-        );
+          // Generate plain text version using react-email's robust converter
+          const generatedText = toPlainText(compiledHtml);
+
+          updateData.compiledHtml = compiledHtml;
+          updateData.compiledText = generatedText;
+        } catch (compileError) {
+          // Log but don't fail the save - template content is still saved
+          const log = createRequestLogger({
+            path: "/api/[orgSlug]/emails/templates/[id]",
+            method: "PUT",
+            orgSlug,
+          });
+          log.warn(
+            { err: serializeError(compileError) },
+            "Failed to compile template HTML"
+          );
+        }
       }
     }
     if (name !== undefined) {

@@ -2,6 +2,7 @@
 
 import type { JSONContent } from "@tiptap/core";
 import { EditorContent } from "@tiptap/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -9,10 +10,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
+import { convertTiptapTemplate } from "@/actions/templates";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useActiveBrandKit } from "@/hooks/use-brand-kit-queries";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
+  templateKeys,
   useDeleteTemplate,
   useDuplicateTemplate,
   usePublishTemplate,
@@ -156,7 +159,7 @@ export function TemplateEditor({
     );
   }
 
-  // Code templates (pushed via CLI) get a dedicated editor experience
+  // React Email templates — AI + Code editor (default for new templates)
   if (template.sourceFormat === "react-email") {
     return (
       <CodeTemplateEditor
@@ -169,8 +172,20 @@ export function TemplateEditor({
     );
   }
 
-  // TipTap templates get the full visual editor
-  // Key forces complete remount when navigating between templates
+  // Legacy TipTap email templates — convert to react-email on open
+  if (template.channel === "email" && template.sourceFormat === "tiptap") {
+    return (
+      <TiptapMigrationLoader
+        className={className}
+        key={template.id}
+        orgSlug={orgSlug}
+        template={template}
+        templateId={templateId}
+      />
+    );
+  }
+
+  // TipTap editor fallback (conversion failure or future edge cases)
   return (
     <TemplateEditorContent
       className={className}
@@ -179,6 +194,68 @@ export function TemplateEditor({
       template={template}
       templateId={templateId}
     />
+  );
+}
+
+type TiptapMigrationLoaderProps = {
+  orgSlug: string;
+  templateId: string;
+  template: NonNullable<ReturnType<typeof useTemplate>["data"]>;
+  className?: string;
+};
+
+/**
+ * Converts a legacy TipTap email template to react-email on open.
+ * Shows a brief loading state, then the parent re-renders with CodeTemplateEditor.
+ * Falls back to TipTap editor if conversion fails.
+ */
+function TiptapMigrationLoader({
+  orgSlug,
+  templateId,
+  template,
+  className,
+}: TiptapMigrationLoaderProps) {
+  const queryClient = useQueryClient();
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    convertTiptapTemplate(template.organizationId, templateId)
+      .then((result) => {
+        if (result.success) {
+          queryClient.invalidateQueries({
+            queryKey: templateKeys.detail(orgSlug, templateId),
+          });
+        } else {
+          setFailed(true);
+        }
+      })
+      .catch(() => setFailed(true));
+  }, [templateId, template.organizationId, orgSlug, queryClient]);
+
+  if (failed) {
+    return (
+      <TemplateEditorContent
+        className={className}
+        key={template.id}
+        orgSlug={orgSlug}
+        template={template}
+        templateId={templateId}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex h-[calc(100dvh-var(--header-height)-1rem)] items-center justify-center md:h-[calc(100dvh-var(--header-height)-1.5rem)]",
+        className
+      )}
+    >
+      <div className="text-center">
+        <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-muted-foreground">Upgrading template...</p>
+      </div>
+    </div>
   );
 }
 

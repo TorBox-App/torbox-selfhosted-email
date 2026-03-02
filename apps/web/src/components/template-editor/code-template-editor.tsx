@@ -50,7 +50,7 @@ export function CodeTemplateEditor({
 }: CodeTemplateEditorProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [view, setView] = useState<CodeTemplateView>("code");
+  const [view, setView] = useState<CodeTemplateView>("design");
   const [showSendTestModal, setShowSendTestModal] = useState(false);
   const [subject, setSubject] = useState(template.subject ?? "");
   const [previewText, setPreviewText] = useState(template.description ?? "");
