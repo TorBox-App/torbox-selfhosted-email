@@ -33,6 +33,8 @@ export function EmailPreviewCarousel({
   const [templateContent, setTemplateContent] = useState<JSONContent | null>(
     null
   );
+  const [compiledHtml, setCompiledHtml] = useState<string | null>(null);
+  const [sourceFormat, setSourceFormat] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [htmlContent, setHtmlContent] = useState<string>("");
@@ -52,6 +54,8 @@ export function EmailPreviewCarousel({
       }
       if (templateResult.success) {
         setTemplateContent(templateResult.content as JSONContent);
+        setCompiledHtml(templateResult.compiledHtml);
+        setSourceFormat(templateResult.sourceFormat);
       }
 
       setLoading(false);
@@ -111,6 +115,12 @@ export function EmailPreviewCarousel({
 
   // Render HTML when template or test data changes
   useEffect(() => {
+    // For code-pushed templates, use pre-compiled HTML directly
+    if (sourceFormat === "react-email" && compiledHtml) {
+      setHtmlContent(compiledHtml);
+      return;
+    }
+
     if (!templateContent) {
       return;
     }
@@ -135,7 +145,7 @@ export function EmailPreviewCarousel({
     return () => {
       cancelled = true;
     };
-  }, [templateContent, testData]);
+  }, [templateContent, testData, sourceFormat, compiledHtml]);
 
   const currentContact = contacts[currentIndex];
 

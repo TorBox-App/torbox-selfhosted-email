@@ -1238,7 +1238,13 @@ export async function getTemplateContent(
   organizationId: string,
   templateId: string
 ): Promise<
-  | { success: true; content: unknown; subject: string | null }
+  | {
+      success: true;
+      content: unknown;
+      subject: string | null;
+      compiledHtml: string | null;
+      sourceFormat: string | null;
+    }
   | { success: false; error: string }
 > {
   try {
@@ -1256,6 +1262,8 @@ export async function getTemplateContent(
       columns: {
         content: true,
         subject: true,
+        compiledHtml: true,
+        sourceFormat: true,
       },
     });
 
@@ -1267,6 +1275,8 @@ export async function getTemplateContent(
       success: true,
       content: templateData.content,
       subject: templateData.subject,
+      compiledHtml: templateData.compiledHtml,
+      sourceFormat: templateData.sourceFormat,
     };
   } catch (error) {
     const log = createActionLogger("getTemplateContent", {
