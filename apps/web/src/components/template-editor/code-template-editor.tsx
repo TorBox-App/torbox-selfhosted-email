@@ -10,6 +10,11 @@ import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import {
   templateKeys,
   useDeleteTemplate,
   useDuplicateTemplate,
@@ -18,7 +23,8 @@ import {
   useUpdateTemplate,
 } from "@/hooks/use-template-queries";
 import { cn } from "@/lib/utils";
-import { CodeTemplateDesignView } from "./code-template-design-view";
+import { CodeTemplateAIPanel } from "./code-template-ai-panel";
+import { CodeTemplatePreview } from "./code-template-preview";
 import {
   CodeTemplateToolbar,
   type CodeTemplateView,
@@ -57,6 +63,14 @@ export function CodeTemplateEditor({
   const [emailType, setEmailType] = useState<EmailType>(
     template.emailType ?? "marketing"
   );
+
+  // Shared preview HTML state — stays mounted across tab switches
+  const [previewHtml, setPreviewHtml] = useState(template.compiledHtml ?? "");
+
+  // Sync preview when template data changes externally (e.g. AI apply updates cache)
+  useEffect(() => {
+    setPreviewHtml(template.compiledHtml ?? "");
+  }, [template.compiledHtml]);
 
   // Sender defaults for test email modal
   const [senderDefaults, setSenderDefaults] = useState<SenderDefaults | null>(
@@ -281,30 +295,36 @@ export function CodeTemplateEditor({
             view={view}
           />
 
-          {/* Content Area */}
-          <div className="flex min-h-0 flex-1 overflow-hidden">
-            {view === "design" && (
-              <div className="flex-1">
-                <CodeTemplateDesignView
-                  compiledHtml={template.compiledHtml ?? ""}
-                  currentSource={template.source ?? ""}
-                  onApply={handleAIApply}
-                  orgSlug={orgSlug}
-                  templateId={templateId}
-                />
-              </div>
-            )}
+          {/* Content Area: left panel swaps, right panel (preview) stays mounted */}
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ResizablePanelGroup direction="horizontal">
+              {/* Left Panel: AI chat or Monaco editor */}
+              <ResizablePanel defaultSize={50} minSize={30}>
+                {view === "design" ? (
+                  <CodeTemplateAIPanel
+                    currentSource={template.source ?? ""}
+                    onApply={handleAIApply}
+                    orgSlug={orgSlug}
+                    templateId={templateId}
+                  />
+                ) : (
+                  <CodeTemplateCodeView
+                    onPreviewUpdate={setPreviewHtml}
+                    onSourceSaved={handleSourceSaved}
+                    orgSlug={orgSlug}
+                    template={template}
+                    templateId={templateId}
+                  />
+                )}
+              </ResizablePanel>
 
-            {view === "code" && (
-              <div className="flex-1">
-                <CodeTemplateCodeView
-                  onSourceSaved={handleSourceSaved}
-                  orgSlug={orgSlug}
-                  template={template}
-                  templateId={templateId}
-                />
-              </div>
-            )}
+              <ResizableHandle withHandle />
+
+              {/* Right Panel: always-mounted preview */}
+              <ResizablePanel defaultSize={50} minSize={30}>
+                <CodeTemplatePreview html={previewHtml} />
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </div>
 
           {/* Send Test Modal — editor=null since code templates don't use TipTap */}
