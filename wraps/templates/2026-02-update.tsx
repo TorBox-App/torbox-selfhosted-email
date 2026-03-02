@@ -370,7 +370,7 @@ export default function FebruaryUpdateEmail({
             <Section className="mt-5">
               <Button
                 className="rounded-md border border-solid border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 no-underline"
-                href="https://wraps.dev/docs/guides/vercel"
+                href="https://wraps.dev/docs/guides/vercel-setup"
               >
                 Vercel OIDC Guide
               </Button>
