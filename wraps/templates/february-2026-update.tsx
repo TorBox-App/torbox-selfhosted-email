@@ -19,10 +19,10 @@ import {
 // ── Metadata ──
 
 export const subject =
-  "February Update — Inbound Email, Workflows as Code, SMS & more";
+  "February Update — Inbound Email, Automations as Code, SMS & more";
 export const emailType = "marketing" as const;
 export const previewText =
-  "Our biggest month yet: inbound email receiving, workflows as code, multi-channel SMS, and 8 CLI releases.";
+  "Our biggest month yet: inbound email receiving, automations as code, multi-channel SMS, and 8 CLI releases.";
 
 // ── Test Data (for preview) ──
 
@@ -135,13 +135,13 @@ export default function FebruaryUpdateEmail({
             <Section className="mt-5">
               <Button
                 className="rounded-md border border-solid border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 no-underline"
-                href="https://wraps.dev/docs/guides/inbound"
+                href="https://wraps.dev/docs/quickstart/email/inbound"
               >
                 Inbound Docs
               </Button>
             </Section>
 
-            {/* ── Workflows as Code ── */}
+            {/* ── Automations as Code ── */}
 
             <Hr className="my-8 border-gray-200" />
 
@@ -149,17 +149,17 @@ export default function FebruaryUpdateEmail({
               as="h2"
               className="m-0 mb-4 text-[22px] font-bold leading-tight text-gray-900"
             >
-              Workflows as Code
+              Automations as Code
             </Heading>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
-              Define multi-step automation workflows in TypeScript and push them
-              with the CLI. New SDK helpers make it easy to compose steps,
-              conditions, and delays programmatically. Run{" "}
+              Define multi-step automations in TypeScript and push them with the
+              CLI. New SDK helpers make it easy to compose steps, conditions,
+              and delays programmatically. Run{" "}
               <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
-                wraps email workflows generate
+                wraps email workflows init
               </code>{" "}
-              to scaffold a workflow file with the right types, then{" "}
+              to scaffold an automation file with the right types, then{" "}
               <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
                 wraps email workflows push
               </code>{" "}
@@ -167,10 +167,10 @@ export default function FebruaryUpdateEmail({
             </Text>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
-              The visual workflow builder also got a big upgrade: undo/redo
-              support, pre-enable readiness checks that validate your workflow
+              The visual automation builder also got a big upgrade: undo/redo
+              support, pre-enable readiness checks that validate your automation
               before going live, a searchable condition combobox, an unsaved
-              changes guard, and auto-open settings for new workflows.
+              changes guard, and auto-open settings for new automations.
             </Text>
 
             <Section className="mt-5">
@@ -178,11 +178,11 @@ export default function FebruaryUpdateEmail({
                 className="rounded-md border border-solid border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 no-underline"
                 href="https://wraps.dev/docs/guides/workflows"
               >
-                Workflows Docs
+                Automations Docs
               </Button>
             </Section>
 
-            {/* ── Workflow Engine ── */}
+            {/* ── Automation Engine ── */}
 
             <Hr className="my-8 border-gray-200" />
 
@@ -190,21 +190,21 @@ export default function FebruaryUpdateEmail({
               as="h2"
               className="m-0 mb-4 text-[22px] font-bold leading-tight text-gray-900"
             >
-              Workflow Engine Hardening
+              Automation Engine Hardening
             </Heading>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
               Major reliability work under the hood. We resolved 8 critical and
-              high severity workflow bugs in a single pass, including:
+              high severity automation bugs in a single pass, including:
             </Text>
 
             <Section className="mb-4">
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
                 &bull;&ensp;DLQ consumer with CloudWatch alarms for failed
-                workflow and batch messages
+                automation and batch messages
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
-                &bull;&ensp;Fixed a dual-resume race condition in the workflow
+                &bull;&ensp;Fixed a dual-resume race condition in the automation
                 processor
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
@@ -235,7 +235,7 @@ export default function FebruaryUpdateEmail({
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
               SMS is no longer a waitlist &mdash; it&apos;s launched. The
               database schema now supports multi-channel templates, contacts,
-              and workflows. Cascade nodes in the workflow builder enable
+              and automations. Cascade nodes in the automation builder enable
               multi-step, multi-channel sequences (email &rarr; wait &rarr; SMS,
               or any combination). The SMS SDK hit v0.1.2, and the SMS dashboard
               got a cleanup pass.
@@ -358,7 +358,7 @@ export default function FebruaryUpdateEmail({
               helpers for templates-as-code
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Workflow definition helpers for workflows-as-code
+              &bull;&ensp;Automation definition helpers for automations-as-code
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
               &bull;&ensp;Inbound email methods (forward, reply)
@@ -432,51 +432,49 @@ export default function FebruaryUpdateEmail({
 
             {/* ── By the Numbers ── */}
 
-            <Hr className="my-8 border-gray-200" />
-
-            <Heading
-              as="h2"
-              className="m-0 mb-6 text-center text-[22px] font-bold leading-tight text-gray-900"
-            >
-              By the numbers
-            </Heading>
-
-            <Row>
-              <Column align="center" className="w-1/3">
-                <Text className="m-0 text-center text-3xl font-bold text-indigo-500">
-                  80+
-                </Text>
-                <Text className="m-0 text-center text-xs text-gray-400">
-                  commits shipped
-                </Text>
-              </Column>
-              <Column align="center" className="w-1/3">
-                <Text className="m-0 text-center text-3xl font-bold text-indigo-500">
-                  8
-                </Text>
-                <Text className="m-0 text-center text-xs text-gray-400">
-                  CLI releases
-                </Text>
-              </Column>
-              <Column align="center" className="w-1/3">
-                <Text className="m-0 text-center text-3xl font-bold text-indigo-500">
-                  14
-                </Text>
-                <Text className="m-0 text-center text-xs text-gray-400">
-                  new doc pages
-                </Text>
-              </Column>
-            </Row>
-
-            {/* ── CTA ── */}
-
-            <Section className="mt-8 text-center">
-              <Button
-                className="rounded-md bg-indigo-500 px-8 py-3 text-sm font-semibold text-white no-underline"
-                href="https://wraps.dev/changelog"
+            <Section className="mt-8 rounded-lg bg-gray-900 px-6 py-8">
+              <Heading
+                as="h2"
+                className="m-0 mb-6 text-center text-[22px] font-bold leading-tight text-white"
               >
-                Read the full changelog
-              </Button>
+                By the numbers
+              </Heading>
+
+              <Row>
+                <Column align="center" className="w-1/3">
+                  <Text className="m-0 text-center text-3xl font-bold text-white">
+                    80+
+                  </Text>
+                  <Text className="m-0 text-center text-xs text-gray-400">
+                    commits shipped
+                  </Text>
+                </Column>
+                <Column align="center" className="w-1/3">
+                  <Text className="m-0 text-center text-3xl font-bold text-white">
+                    8
+                  </Text>
+                  <Text className="m-0 text-center text-xs text-gray-400">
+                    CLI releases
+                  </Text>
+                </Column>
+                <Column align="center" className="w-1/3">
+                  <Text className="m-0 text-center text-3xl font-bold text-white">
+                    14
+                  </Text>
+                  <Text className="m-0 text-center text-xs text-gray-400">
+                    new doc pages
+                  </Text>
+                </Column>
+              </Row>
+
+              <Section className="mt-6 text-center">
+                <Button
+                  className="rounded-md bg-white px-8 py-3 text-sm font-semibold text-gray-900 no-underline"
+                  href="https://wraps.dev/changelog"
+                >
+                  Read the full changelog
+                </Button>
+              </Section>
             </Section>
 
             {/* ── Closing ── */}
