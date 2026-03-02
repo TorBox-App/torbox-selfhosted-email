@@ -57,6 +57,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const versions = await db.query.templateVersion.findMany({
       where: eq(templateVersion.templateId, id),
       orderBy: [desc(templateVersion.version)],
+      limit: 100,
       with: {
         createdByUser: {
           columns: {
@@ -141,6 +142,8 @@ export async function POST(request: Request, context: RouteContext) {
       .values({
         templateId: id,
         content: existingTemplate.content,
+        source: existingTemplate.source,
+        compiledHtml: existingTemplate.compiledHtml,
         version: nextVersion,
         createdBy: session.user.id,
         changeNote: changeNote?.trim() || null,

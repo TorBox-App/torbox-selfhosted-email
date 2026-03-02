@@ -8,11 +8,10 @@ import {
   Copy,
   Download,
   Loader2,
-  Pencil,
   RotateCcw,
   Save,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +20,27 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { compileTemplate } from "@/lib/compile-template";
+import { configureMonacoForReactEmail } from "./monaco-react-email";
+
+const STARTER_SOURCE = `import { Body, Container, Head, Html, Tailwind, Text } from "@react-email/components";
+
+export default function Email() {
+  return (
+    <Html>
+      <Head />
+      <Tailwind>
+        <Body className="bg-background font-sans">
+          <Container className="mx-auto max-w-[600px] py-10">
+            <Text className="text-foreground text-base">
+              Start writing your email here.
+            </Text>
+          </Container>
+        </Body>
+      </Tailwind>
+    </Html>
+  );
+}
+`;
 
 type CodeTemplateCodeViewProps = {
   template: Template;
@@ -38,21 +58,21 @@ export function CodeTemplateCodeView({
   onPreviewUpdate,
 }: CodeTemplateCodeViewProps) {
   const [copied, setCopied] = useState(false);
-
-  // Edit mode state
-  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [editedSource, setEditedSource] = useState("");
+  const [editedSource, setEditedSource] = useState(
+    template.source ?? STARTER_SOURCE
+  );
   const [compileError, setCompileError] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const originalSource = template.source ?? "";
+  const originalSource = template.source ?? STARTER_SOURCE;
   const filePath = template.cliProjectPath ?? "template.tsx";
 
-  const hasChanges = isEditing && editedSource !== originalSource;
+  const hasChanges = editedSource !== originalSource;
 
   // Copy source to clipboard
   const handleCopy = async () => {
-    const textToCopy = isEditing ? editedSource : originalSource;
+    const textToCopy = editedSource || originalSource;
     try {
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
@@ -66,7 +86,7 @@ export function CodeTemplateCodeView({
   // Download source file
   const handleDownload = () => {
     const filename = filePath.split("/").pop() ?? "template.tsx";
-    const textToDownload = isEditing ? editedSource : originalSource;
+    const textToDownload = editedSource || originalSource;
     const blob = new Blob([textToDownload], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -79,18 +99,11 @@ export function CodeTemplateCodeView({
     toast.success(`Downloaded ${filename}`);
   };
 
-  // Enter edit mode
-  const handleStartEdit = () => {
-    setEditedSource(originalSource);
-    setIsEditing(true);
-    setCompileError(null);
-  };
-
   // Discard changes
   const handleDiscard = () => {
-    setIsEditing(false);
-    setEditedSource("");
+    setEditedSource(originalSource);
     setCompileError(null);
+    setPreviewError(null);
     onPreviewUpdate(template.compiledHtml ?? "");
   };
 
@@ -132,10 +145,6 @@ export function CodeTemplateCodeView({
       // Update preview via parent
       onPreviewUpdate(compiled.compiledHtml);
 
-      // Exit edit mode
-      setIsEditing(false);
-      setEditedSource("");
-
       toast.success("Template saved");
 
       // Notify parent
@@ -159,10 +168,6 @@ export function CodeTemplateCodeView({
 
   // Cmd+S keyboard shortcut
   useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -172,30 +177,41 @@ export function CodeTemplateCodeView({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isEditing, handleSave]);
+  }, [handleSave]);
 
-  // Error state: missing source
-  if (!originalSource) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="max-w-md text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-7 w-7 text-destructive" />
-          </div>
-          <h3 className="mb-2 font-semibold text-lg">
-            Template source not available
-          </h3>
-          <p className="text-muted-foreground text-sm">
-            This template&apos;s source code is missing. Re-push from your CLI
-            project:
-          </p>
-          <code className="mt-3 inline-block rounded bg-muted px-3 py-1.5 font-mono text-sm">
-            wraps email templates push --force
-          </code>
-        </div>
-      </div>
-    );
-  }
+  // Live preview: debounced compile as you type
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    if (!editedSource) return;
+
+    clearTimeout(previewTimerRef.current);
+    previewTimerRef.current = setTimeout(async () => {
+      try {
+        const compiled = await compileTemplate(editedSource);
+        onPreviewUpdate(compiled.compiledHtml);
+        setPreviewError(null);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Compile error";
+        setPreviewError(message);
+      }
+    }, 1000);
+
+    return () => clearTimeout(previewTimerRef.current);
+  }, [editedSource, onPreviewUpdate]);
+
+  // Auto-save: 1 minute after last source change
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    if (!hasChanges || isSaving) return;
+
+    clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      handleSave();
+    }, 60_000);
+
+    return () => clearTimeout(autoSaveTimerRef.current);
+  }, [editedSource, hasChanges, isSaving, handleSave]);
 
   return (
     <div className="flex h-full flex-col">
@@ -210,58 +226,41 @@ export function CodeTemplateCodeView({
           )}
         </div>
         <div className="flex items-center gap-1">
-          {isEditing ? (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    className="h-8"
-                    disabled={!hasChanges || isSaving}
-                    onClick={handleSave}
-                    size="sm"
-                    variant="default"
-                  >
-                    {isSaving ? (
-                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Save className="mr-1 h-3.5 w-3.5" />
-                    )}
-                    Save
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Save changes (Cmd+S)</TooltipContent>
-              </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className="h-8"
+                disabled={!hasChanges || isSaving}
+                onClick={handleSave}
+                size="sm"
+                variant="default"
+              >
+                {isSaving ? (
+                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Save className="mr-1 h-3.5 w-3.5" />
+                )}
+                Save
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Save changes (Cmd+S)</TooltipContent>
+          </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    className="h-8"
-                    disabled={isSaving}
-                    onClick={handleDiscard}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                    Discard
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Discard changes</TooltipContent>
-              </Tooltip>
-            </>
-          ) : (
+          {hasChanges && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   className="h-8"
-                  onClick={handleStartEdit}
+                  disabled={isSaving}
+                  onClick={handleDiscard}
                   size="sm"
                   variant="outline"
                 >
-                  <Pencil className="mr-1 h-3.5 w-3.5" />
-                  Edit
+                  <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                  Discard
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Edit source code</TooltipContent>
+              <TooltipContent>Discard changes</TooltipContent>
             </Tooltip>
           )}
 
@@ -301,7 +300,7 @@ export function CodeTemplateCodeView({
         </div>
       </div>
 
-      {/* Compile Error Banner */}
+      {/* Compile Error Banner (save errors — red) */}
       {compileError && (
         <div className="flex items-start gap-2 border-b bg-destructive/10 px-3 py-2">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
@@ -309,14 +308,23 @@ export function CodeTemplateCodeView({
         </div>
       )}
 
+      {/* Preview Error Banner (live preview errors — amber) */}
+      {previewError && !compileError && (
+        <div className="flex items-start gap-2 border-b bg-amber-500/10 px-3 py-2">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+          <p className="text-amber-600 text-xs">{previewError}</p>
+        </div>
+      )}
+
       {/* Monaco Editor */}
       <div className="flex-1 overflow-hidden">
         <MonacoEditor
+          beforeMount={configureMonacoForReactEmail}
           defaultLanguage="typescript"
           height="100%"
           language="typescript"
           onChange={(value) => {
-            if (isEditing && value !== undefined) {
+            if (value !== undefined) {
               setEditedSource(value);
             }
           }}
@@ -327,36 +335,28 @@ export function CodeTemplateCodeView({
             lineNumbers: "on",
             minimap: { enabled: false },
             padding: { top: 16, bottom: 16 },
-            readOnly: !isEditing,
+            readOnly: false,
             scrollBeyondLastLine: false,
             wordWrap: "on",
             tabSize: 2,
-            renderLineHighlight: isEditing ? "line" : "none",
-            cursorStyle: isEditing ? "line" : "line-thin",
-            cursorBlinking: isEditing ? "blink" : "solid",
+            renderLineHighlight: "line",
+            cursorStyle: "line",
+            cursorBlinking: "blink",
           }}
+          path="template.tsx"
           theme="vs-dark"
-          value={isEditing ? editedSource : originalSource}
+          value={editedSource}
         />
       </div>
 
       {/* Footer */}
       <div className="border-t bg-muted/30 px-3 py-2">
         <p className="text-muted-foreground text-xs">
-          {isEditing ? (
-            <>
-              Editing — press{" "}
-              <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">
-                Cmd+S
-              </kbd>{" "}
-              to save
-            </>
-          ) : (
-            <>
-              Click <span className="font-medium text-foreground">Edit</span> to
-              modify this template
-            </>
-          )}
+          Press{" "}
+          <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">
+            Cmd+S
+          </kbd>{" "}
+          to save
         </p>
       </div>
     </div>

@@ -1,0 +1,2 @@
+ALTER TABLE "template" ADD COLUMN "brand_kit_id" text;--> statement-breakpoint
+ALTER TABLE "template" ADD CONSTRAINT "template_brand_kit_id_brand_kit_id_fk" FOREIGN KEY ("brand_kit_id") REFERENCES "public"."brand_kit"("id") ON DELETE set null ON UPDATE no action;

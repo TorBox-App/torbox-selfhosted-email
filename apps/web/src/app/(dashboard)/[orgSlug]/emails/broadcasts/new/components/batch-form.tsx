@@ -8,12 +8,9 @@ import {
   ChevronDown,
   Clock,
   Code,
-  Copy,
   FileText,
   Filter,
   Lock,
-  Pencil,
-  Plus,
   RefreshCw,
   Send,
   Tag,
@@ -43,15 +40,7 @@ import {
   type RecipientFilter,
 } from "@/actions/batch";
 import { SendConfirmDialog } from "@/components/send-confirm-dialog";
-import { TemplateEditorDialog } from "@/components/template-editor/wrappers";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { TemplateSelector } from "@/components/template-editor/template-selector";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -83,10 +72,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useNaturalDateParser } from "@/hooks/use-natural-date-parser";
-import {
-  useDuplicateTemplate,
-  useTemplates,
-} from "@/hooks/use-template-queries";
+import { useTemplates } from "@/hooks/use-template-queries";
 import type { SampleContact, VariableMapping } from "@/lib/batch";
 import { cn } from "@/lib/utils";
 import { EmailPreviewCarousel } from "./email-preview-carousel";
@@ -838,83 +824,7 @@ function ContentStep({
   organizationId: string;
   orgSlug: string;
 }) {
-  // Fetch templates with React Query - auto-updates when new templates are created
-  const { data: templatesData } = useTemplates(orgSlug);
-  const templates: Template[] = (templatesData ?? []).map((t) => ({
-    id: t.id,
-    name: t.name,
-    subject: t.subject,
-    previewText: t.previewText ?? null,
-  }));
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(data.contentType === "html");
-  const [showEditChoiceDialog, setShowEditChoiceDialog] = useState(false);
-  const [isDuplicating, setIsDuplicating] = useState(false);
-
-  const duplicateMutation = useDuplicateTemplate(orgSlug);
-
-  // Find selected template's full data for preview
-  const selectedTemplate = templatesData?.find((t) => t.id === data.templateId);
-
-  // Handle creating a new template - go straight to editor
-  const handleCreateNew = () => {
-    setShowCreateDialog(true);
-  };
-
-  // Handle "Edit" button - show choice dialog
-  const handleEditClick = () => {
-    setShowEditChoiceDialog(true);
-  };
-
-  // Open the template editor page in a new tab
-  const openTemplateInNewTab = (templateId: string) => {
-    window.open(`/${orgSlug}/emails/templates/${templateId}`, "_blank");
-  };
-
-  // Edit in place - open template editor in new tab
-  const handleEditInPlace = () => {
-    setShowEditChoiceDialog(false);
-    openTemplateInNewTab(data.templateId);
-  };
-
-  // Duplicate & edit - duplicate the template, then open editor in new tab
-  const handleDuplicateAndEdit = async () => {
-    setIsDuplicating(true);
-    try {
-      const duplicated = await duplicateMutation.mutateAsync(data.templateId);
-      onChange({ templateId: duplicated.id, variableMappings: [] });
-      setShowEditChoiceDialog(false);
-      openTemplateInNewTab(duplicated.id);
-    } catch (error) {
-      toast.error("Failed to duplicate template", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
-    } finally {
-      setIsDuplicating(false);
-    }
-  };
-
-  // Handle template selection from create-new editor
-  const handleTemplateSelect = (templateId: string) => {
-    const newTemplate = templatesData?.find((t) => t.id === templateId);
-    const updates: Partial<CampaignData> = {
-      templateId,
-      contentType: "template",
-      variableMappings: [],
-    };
-    if (newTemplate?.subject) {
-      updates.subject = newTemplate.subject;
-    }
-    if (newTemplate?.previewText) {
-      updates.previewText = newTemplate.previewText;
-    }
-    onChange(updates);
-    setShowCreateDialog(false);
-  };
-
-  // Use broadcast name as template name, or generate a default
-  const templateName =
-    data.name || `Broadcast ${new Date().toLocaleDateString()}`;
 
   return (
     <div className="space-y-6">
@@ -953,82 +863,23 @@ function ContentStep({
                     Select from your saved email templates or create a new one
                   </p>
                   {data.contentType === "template" && (
-                    <div className="space-y-3">
-                      {templates.length > 0 ? (
-                        <>
-                          <Select
-                            onValueChange={(v) => {
-                              const tmpl = templatesData?.find(
-                                (t) => t.id === v
-                              );
-                              const updates: Partial<CampaignData> = {
-                                templateId: v,
-                                variableMappings: [],
-                              };
-                              if (tmpl?.subject) {
-                                updates.subject = tmpl.subject;
-                              }
-                              if (tmpl?.previewText) {
-                                updates.previewText = tmpl.previewText;
-                              }
-                              onChange(updates);
-                            }}
-                            value={data.templateId}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a template" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {templates.map((template) => (
-                                <SelectItem
-                                  key={template.id}
-                                  value={template.id}
-                                >
-                                  {template.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-
-                          {/* Template preview when selected */}
-                          {data.templateId && selectedTemplate && (
-                            <TemplatePreviewCard
-                              onEdit={handleEditClick}
-                              template={selectedTemplate}
-                            />
-                          )}
-
-                          {/* Action buttons */}
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              onClick={handleCreateNew}
-                              size="sm"
-                              type="button"
-                              variant="outline"
-                            >
-                              <Plus className="mr-1 h-3.5 w-3.5" />
-                              Create New
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="rounded-lg border border-dashed p-4 text-center">
-                          <p className="text-muted-foreground text-sm">
-                            No templates yet
-                          </p>
-                          <Button
-                            className="mt-2"
-                            onClick={handleCreateNew}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            <Plus className="mr-1 h-3.5 w-3.5" />
-                            Create Your First Template
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    <TemplateSelector
+                      onTemplateChange={(templateId, tmpl) => {
+                        const updates: Partial<CampaignData> = {
+                          templateId,
+                          variableMappings: [],
+                        };
+                        if (tmpl?.subject) {
+                          updates.subject = tmpl.subject;
+                        }
+                        if (tmpl?.previewText) {
+                          updates.previewText = tmpl.previewText;
+                        }
+                        onChange(updates);
+                      }}
+                      orgSlug={orgSlug}
+                      selectedTemplateId={data.templateId || undefined}
+                    />
                   )}
                 </div>
               </div>
@@ -1154,124 +1005,6 @@ function ContentStep({
           organizationId={organizationId}
           templateId={data.templateId}
         />
-      )}
-
-      {/* Edit Choice Dialog */}
-      <AlertDialog
-        onOpenChange={setShowEditChoiceDialog}
-        open={showEditChoiceDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Edit Template</AlertDialogTitle>
-            <AlertDialogDescription>
-              How would you like to edit this template?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex flex-col gap-2">
-            <Button
-              className="justify-start"
-              disabled={isDuplicating}
-              onClick={handleEditInPlace}
-              variant="outline"
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit Original
-              <span className="ml-auto text-muted-foreground text-xs">
-                Changes affect all broadcasts using this template
-              </span>
-            </Button>
-            <Button
-              className="justify-start"
-              disabled={isDuplicating}
-              onClick={handleDuplicateAndEdit}
-              variant="outline"
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              {isDuplicating ? "Duplicating..." : "Duplicate & Edit"}
-              <span className="ml-auto text-muted-foreground text-xs">
-                Create a copy for this broadcast only
-              </span>
-            </Button>
-          </div>
-          <AlertDialogFooter>
-            <Button
-              disabled={isDuplicating}
-              onClick={() => setShowEditChoiceDialog(false)}
-              variant="ghost"
-            >
-              Cancel
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Template Editor Dialog - only used for Create New */}
-      <TemplateEditorDialog
-        initialPreviewText={data.previewText}
-        initialSubject={data.subject}
-        onOpenChange={setShowCreateDialog}
-        onTemplateSelect={handleTemplateSelect}
-        open={showCreateDialog}
-        orgSlug={orgSlug}
-        templateName={templateName}
-        title="Create Template"
-        variableContext="broadcast"
-      />
-    </div>
-  );
-}
-
-// Template preview card shown when a template is selected
-function TemplatePreviewCard({
-  template,
-  onEdit,
-}: {
-  template: {
-    name: string;
-    subject: string | null;
-    compiledHtml: string | null;
-    sourceFormat: string | null;
-  };
-  onEdit: () => void;
-}) {
-  return (
-    <div className="rounded-lg border bg-muted/30 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-sm">{template.name}</p>
-          {template.subject && (
-            <p className="truncate text-muted-foreground text-xs">
-              Subject: {template.subject}
-            </p>
-          )}
-          {template.sourceFormat === "react-email" && (
-            <p className="mt-0.5 text-xs">
-              <Code className="mr-1 inline h-3 w-3" />
-              <span className="text-muted-foreground">Code template</span>
-            </p>
-          )}
-        </div>
-        <Button
-          className="ml-2 shrink-0"
-          onClick={onEdit}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <Pencil className="mr-1 h-3.5 w-3.5" />
-          Edit
-        </Button>
-      </div>
-      {template.compiledHtml && (
-        <div className="overflow-hidden rounded border bg-background">
-          <iframe
-            className="pointer-events-none h-[200px] w-full origin-top-left"
-            sandbox=""
-            srcDoc={template.compiledHtml}
-            title="Template preview"
-          />
-        </div>
       )}
     </div>
   );

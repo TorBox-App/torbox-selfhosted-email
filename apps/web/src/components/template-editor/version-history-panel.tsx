@@ -103,14 +103,13 @@ export function VersionHistoryPanel({
   };
 
   const handlePreviewVersion = (version: TemplateVersionWithUser) => {
-    if (editor && version.content) {
-      // Store current content before preview
+    if (version.content) {
       setSelectedVersion(version);
     }
   };
 
   return (
-    <div className="flex h-full w-80 flex-col border-l bg-background">
+    <div className="flex h-full flex-col border-l bg-background">
       {/* Header */}
       <div className="flex items-center justify-between border-b p-4">
         <div className="flex items-center gap-2">

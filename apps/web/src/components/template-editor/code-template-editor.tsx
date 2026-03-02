@@ -23,6 +23,7 @@ import {
   useUpdateTemplate,
 } from "@/hooks/use-template-queries";
 import { cn } from "@/lib/utils";
+import { useTemplateStore } from "@/stores/template-store";
 import { CodeTemplateAIPanel } from "./code-template-ai-panel";
 import { CodeTemplatePreview } from "./code-template-preview";
 import {
@@ -30,6 +31,8 @@ import {
   type CodeTemplateView,
 } from "./code-template-toolbar";
 import { EditorErrorBoundary } from "./editor-error-boundary";
+import type { SaveStatus } from "./save-status-indicator";
+import { VersionHistoryPanel } from "./version-history-panel";
 
 const CodeTemplateCodeView = dynamic(
   () => import("./code-template-code-view").then((m) => m.CodeTemplateCodeView),
@@ -38,6 +41,11 @@ const CodeTemplateCodeView = dynamic(
 
 const SendTestModal = dynamic(
   () => import("./send-test-modal").then((m) => m.SendTestModal),
+  { ssr: false }
+);
+
+const SuccessCelebration = dynamic(
+  () => import("./success-celebration").then((m) => m.SuccessCelebration),
   { ssr: false }
 );
 
@@ -58,11 +66,23 @@ export function CodeTemplateEditor({
   const queryClient = useQueryClient();
   const [view, setView] = useState<CodeTemplateView>("design");
   const [showSendTestModal, setShowSendTestModal] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | undefined>(undefined);
   const [subject, setSubject] = useState(template.subject ?? "");
-  const [previewText, setPreviewText] = useState(template.description ?? "");
+  const [previewText, setPreviewText] = useState(template.previewText ?? "");
   const [emailType, setEmailType] = useState<EmailType>(
     template.emailType ?? "marketing"
   );
+
+  // Initialize brand kit selection from persisted template data
+  const { setSelectedBrandKitId } = useTemplateStore((state) => state.actions);
+  useEffect(() => {
+    if (template.brandKitId) {
+      setSelectedBrandKitId(template.brandKitId);
+    }
+  }, [template.brandKitId, setSelectedBrandKitId]);
 
   // Shared preview HTML state — stays mounted across tab switches
   const [previewHtml, setPreviewHtml] = useState(template.compiledHtml ?? "");
@@ -102,14 +122,14 @@ export function CodeTemplateEditor({
 
       const updates: {
         subject?: string;
-        description?: string;
+        previewText?: string;
         emailType?: EmailType;
       } = {};
       if (newSubject !== template.subject) {
         updates.subject = newSubject;
       }
-      if (newPreviewText !== template.description) {
-        updates.description = newPreviewText;
+      if (newPreviewText !== template.previewText) {
+        updates.previewText = newPreviewText;
       }
       if (newEmailType !== template.emailType) {
         updates.emailType = newEmailType;
@@ -118,11 +138,12 @@ export function CodeTemplateEditor({
         updateMutation.mutate(updates);
       }
     },
-    [template.subject, template.description, template.emailType, updateMutation]
+    [template.subject, template.previewText, template.emailType, updateMutation]
   );
 
   // Handle publish
   const handlePublish = useCallback(async () => {
+    const isFirstPublish = template.status === "DRAFT";
     try {
       // Save subject first if changed
       if (subject !== template.subject) {
@@ -132,11 +153,15 @@ export function CodeTemplateEditor({
       const result = await publishMutation.mutateAsync({});
 
       toast.success(
-        template.status === "PUBLISHED"
-          ? "Template updated on AWS SES"
-          : "Template published to AWS SES",
+        isFirstPublish
+          ? "Template published to AWS SES"
+          : "Template updated on AWS SES",
         { description: result.message }
       );
+
+      if (isFirstPublish) {
+        setShowCelebration(true);
+      }
     } catch (error) {
       toast.error("Failed to publish template", {
         description: error instanceof Error ? error.message : "Unknown error",
@@ -215,11 +240,14 @@ export function CodeTemplateEditor({
     queryClient.invalidateQueries({
       queryKey: templateKeys.detail(orgSlug, templateId),
     });
+    setSaveStatus("saved");
+    setLastSavedAt(new Date());
   }, [queryClient, orgSlug, templateId]);
 
   // Handle AI "Apply" — save source and update preview
   const handleAIApply = useCallback(
     async (source: string, compiledHtml: string) => {
+      setSaveStatus("saving");
       try {
         const resp = await fetch(
           `/api/${orgSlug}/emails/templates/${templateId}/save-source`,
@@ -255,8 +283,11 @@ export function CodeTemplateEditor({
               : old
         );
 
+        setSaveStatus("saved");
+        setLastSavedAt(new Date());
         toast.success("Template applied");
       } catch (error) {
+        setSaveStatus("error");
         toast.error("Failed to apply template", {
           description: error instanceof Error ? error.message : "Unknown error",
         });
@@ -280,28 +311,33 @@ export function CodeTemplateEditor({
             isPublishing={
               publishMutation.isPending || unpublishMutation.isPending
             }
+            lastSavedAt={lastSavedAt}
             onDelete={() => setDeleteDialogOpen(true)}
             onDuplicate={handleDuplicate}
             onPublish={handlePublish}
             onRename={handleRename}
             onSendTest={() => setShowSendTestModal(true)}
             onSubjectChange={handleSubjectChange}
+            onToggleVersionHistory={() => setShowVersionHistory((v) => !v)}
             onUnpublish={handleUnpublish}
             onViewChange={setView}
             orgSlug={orgSlug}
             previewText={previewText}
+            saveStatus={saveStatus}
+            showVersionHistory={showVersionHistory}
             subject={subject}
             template={template}
             view={view}
           />
 
           {/* Content Area: left panel swaps, right panel (preview) stays mounted */}
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <ResizablePanelGroup direction="horizontal">
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <ResizablePanelGroup className="flex-1" direction="horizontal">
               {/* Left Panel: AI chat or Monaco editor */}
               <ResizablePanel defaultSize={50} minSize={30}>
                 {view === "design" ? (
                   <CodeTemplateAIPanel
+                    aiConversationId={template.aiConversationId ?? null}
                     currentSource={template.source ?? ""}
                     onApply={handleAIApply}
                     orgSlug={orgSlug}
@@ -321,10 +357,21 @@ export function CodeTemplateEditor({
               <ResizableHandle withHandle />
 
               {/* Right Panel: always-mounted preview */}
-              <ResizablePanel defaultSize={50} minSize={30}>
+              <ResizablePanel defaultSize={50} minSize={25}>
                 <CodeTemplatePreview html={previewHtml} />
               </ResizablePanel>
             </ResizablePanelGroup>
+
+            {/* Version History Sidebar — outside ResizablePanelGroup to avoid dynamic panel issues */}
+            {showVersionHistory && (
+              <div className="h-full w-72 shrink-0 overflow-y-auto">
+                <VersionHistoryPanel
+                  editor={null}
+                  orgSlug={orgSlug}
+                  templateId={templateId}
+                />
+              </div>
+            )}
           </div>
 
           {/* Send Test Modal — editor=null since code templates don't use TipTap */}
@@ -347,6 +394,12 @@ export function CodeTemplateEditor({
         onOpenChange={setDeleteDialogOpen}
         open={deleteDialogOpen}
         title="Delete Template"
+      />
+
+      <SuccessCelebration
+        message="Template published!"
+        onComplete={() => setShowCelebration(false)}
+        show={showCelebration}
       />
     </>
   );

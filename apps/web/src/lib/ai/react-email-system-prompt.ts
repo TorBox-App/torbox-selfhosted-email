@@ -107,6 +107,8 @@ All styling uses Tailwind CSS classes via the \`<Tailwind>\` wrapper. Common pat
 - Border: \`rounded-lg\`, \`rounded-md\`, \`border-gray-200\`
 - Effects: \`no-underline\`, \`underline\`
 
+**CRITICAL: Do NOT use pseudo-class or responsive Tailwind classes** such as \`hover:\`, \`focus:\`, \`active:\`, \`group-hover:\`, \`sm:\`, \`md:\`, \`lg:\`, etc. These cannot be inlined by React Email and will cause compilation errors. Email clients do not support CSS pseudo-classes or media queries reliably. Use only static utility classes.
+
 ## Variable Syntax
 Props are passed to the component function. When rendered, they produce \`{{variableName}}\` handlebars placeholders for AWS SES.
 

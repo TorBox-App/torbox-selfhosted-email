@@ -9,6 +9,7 @@ import {
   Copy,
   FileSignature,
   Globe,
+  History,
   Loader2,
   MoreHorizontal,
   Send,
@@ -36,6 +37,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { type SaveStatus, SaveStatusIndicator } from "./save-status-indicator";
 import { SubjectEditDialog } from "./subject-edit-dialog";
 import { TemplateNameDialog } from "./wrappers/template-name-dialog";
 
@@ -50,6 +52,10 @@ type CodeTemplateToolbarProps = {
   previewText: string;
   emailType: EmailType;
   isPublishing: boolean;
+  saveStatus: SaveStatus;
+  lastSavedAt?: Date;
+  showVersionHistory: boolean;
+  onToggleVersionHistory: () => void;
   onSendTest: () => void;
   onSubjectChange: (
     subject: string,
@@ -87,6 +93,10 @@ export function CodeTemplateToolbar({
   previewText,
   emailType,
   isPublishing,
+  saveStatus,
+  lastSavedAt,
+  showVersionHistory,
+  onToggleVersionHistory,
   onSendTest,
   onSubjectChange,
   onPublish,
@@ -177,6 +187,12 @@ export function CodeTemplateToolbar({
             </TooltipContent>
           </Tooltip>
 
+          <SaveStatusIndicator
+            className="shrink-0"
+            lastSavedAt={lastSavedAt}
+            status={saveStatus}
+          />
+
           <Separator className="h-5" orientation="vertical" />
 
           {/* Status Badge */}
@@ -212,6 +228,26 @@ export function CodeTemplateToolbar({
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {/* Version History Toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className={cn(
+                  "h-8 w-8 p-0",
+                  showVersionHistory && "bg-accent text-accent-foreground"
+                )}
+                onClick={onToggleVersionHistory}
+                size="sm"
+                variant="ghost"
+              >
+                <History className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {showVersionHistory ? "Hide version history" : "Version history"}
+            </TooltipContent>
+          </Tooltip>
 
           {/* More Menu */}
           <DropdownMenu>

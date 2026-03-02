@@ -15,17 +15,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-
-const TemplateEditorDialog = dynamic(
-  () =>
-    import("@/components/template-editor/wrappers/template-editor-dialog").then(
-      (m) => m.TemplateEditorDialog
-    ),
-  { ssr: false }
-);
 
 import {
   getVerifiedDomains,
@@ -130,29 +121,14 @@ export function WorkflowPropertiesPanel({
     }
   }, [awsAccountId, fetchDomains]);
 
-  // Template editor dialog state
-  const [showEditorDialog, setShowEditorDialog] = useState(false);
-  const [editingTemplateId, setEditingTemplateId] = useState<
-    string | undefined
-  >();
-
   const handleCreateNewTemplate = () => {
-    setEditingTemplateId(undefined);
-    setShowEditorDialog(true);
+    window.open(`/${orgSlug}/emails/templates/new`, "_blank");
   };
 
   const handleEditTemplate = (templateId: string) => {
-    setEditingTemplateId(templateId);
-    setShowEditorDialog(true);
+    window.open(`/${orgSlug}/emails/templates/${templateId}`, "_blank");
   };
 
-  const handleTemplateSelect = (templateId: string) => {
-    // Update the node config with the new/edited template
-    if (selectedNode) {
-      updateNodeConfig(selectedNode.id, { templateId });
-    }
-    setShowEditorDialog(false);
-  };
   const deleteNode = useWorkflowStore((state) => state.deleteNode);
   const validationResult = useValidationResult();
 
@@ -329,20 +305,6 @@ export function WorkflowPropertiesPanel({
           </div>
         )}
       </div>
-
-      {/* Template Editor Dialog */}
-      <TemplateEditorDialog
-        onOpenChange={setShowEditorDialog}
-        onTemplateSelect={handleTemplateSelect}
-        open={showEditorDialog}
-        orgSlug={orgSlug}
-        templateId={editingTemplateId}
-        templateName={
-          editingTemplateId ? undefined : `${selectedNode.data.name} Email`
-        }
-        title={editingTemplateId ? "Edit Template" : "Create Template"}
-        variableContext="automation"
-      />
     </div>
   );
 }

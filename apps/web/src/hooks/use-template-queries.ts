@@ -24,6 +24,8 @@ export const templateKeys = {
     [...templateKeys.details(), orgSlug, id] as const,
   versions: (orgSlug: string, id: string) =>
     [...templateKeys.detail(orgSlug, id), "versions"] as const,
+  conversation: (orgSlug: string, id: string) =>
+    [...templateKeys.detail(orgSlug, id), "conversation"] as const,
 };
 
 // Fetch single template
@@ -69,9 +71,11 @@ export function useUpdateTemplate(orgSlug: string, templateId: string) {
       name?: string;
       description?: string;
       subject?: string;
+      previewText?: string;
       emailType?: "marketing" | "transactional";
       status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
       compiledText?: string;
+      brandKitId?: string | null;
     }) => {
       const response = await fetch(
         `/api/${orgSlug}/emails/templates/${templateId}`,

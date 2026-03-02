@@ -79,6 +79,11 @@ export const template = pgTable(
     aiGenerated: boolean("ai_generated").default(false).notNull(),
     aiConversationId: text("ai_conversation_id"),
 
+    // Brand kit preference
+    brandKitId: text("brand_kit_id").references(() => brandKit.id, {
+      onDelete: "set null",
+    }),
+
     // SES publishing
     sesTemplateName: text("ses_template_name"), // Name of template in AWS SES (e.g., "wraps-{id}")
     publishedAt: timestamp("published_at"), // When last published to SES
@@ -129,6 +134,8 @@ export const templateVersion = pgTable(
       .references(() => template.id, { onDelete: "cascade" }),
 
     content: jsonb("content").$type<Record<string, unknown>>().notNull(),
+    source: text("source"),
+    compiledHtml: text("compiled_html"),
     version: integer("version").notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -332,6 +339,10 @@ export const templateRelations = relations(template, ({ one, many }) => ({
   aiConversation: one(aiConversation, {
     fields: [template.aiConversationId],
     references: [aiConversation.id],
+  }),
+  brandKitRef: one(brandKit, {
+    fields: [template.brandKitId],
+    references: [brandKit.id],
   }),
 }));
 

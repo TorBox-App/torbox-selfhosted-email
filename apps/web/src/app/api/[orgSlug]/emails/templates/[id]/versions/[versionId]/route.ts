@@ -155,6 +155,8 @@ export async function POST(_request: Request, context: RouteContext) {
     await db.insert(templateVersion).values({
       templateId: id,
       content: existingTemplate.content,
+      source: existingTemplate.source,
+      compiledHtml: existingTemplate.compiledHtml,
       version: nextVersion,
       createdBy: session.user.id,
       changeNote: `Backup before restoring to v${versionToRestore.version}`,
@@ -165,6 +167,8 @@ export async function POST(_request: Request, context: RouteContext) {
       .update(template)
       .set({
         content: versionToRestore.content,
+        source: versionToRestore.source,
+        compiledHtml: versionToRestore.compiledHtml,
         updatedAt: new Date(),
         lastEditedBy: session.user.id,
       })
@@ -180,6 +184,8 @@ export async function POST(_request: Request, context: RouteContext) {
     await db.insert(templateVersion).values({
       templateId: id,
       content: versionToRestore.content,
+      source: versionToRestore.source,
+      compiledHtml: versionToRestore.compiledHtml,
       version: nextVersion + 1,
       createdBy: session.user.id,
       changeNote: `Restored from v${versionToRestore.version}`,

@@ -1,10 +1,8 @@
 import { createHash } from "node:crypto";
-import { render, toPlainText } from "@react-email/render";
-import type { JSONContent } from "@tiptap/core";
+import { toPlainText } from "@react-email/render";
 import { auth } from "@wraps/auth";
 import {
   awsAccount,
-  brandKit,
   contact,
   db,
   organizationExtension,
@@ -17,10 +15,6 @@ import { NextResponse } from "next/server";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
-import {
-  tiptapToReactEmail,
-  toBrandKitColors,
-} from "@/lib/serializers/tiptap-to-react-email";
 import {
   generatePreferencesUrl,
   generateUnsubscribeUrl,
@@ -64,15 +58,11 @@ export async function POST(request: Request, context: RouteContext) {
       subject,
       testData = {},
       from,
-      previewText,
-      brandKitId,
     } = body as {
       recipients: string[];
       subject: string;
       testData?: Record<string, unknown>;
       from?: string;
-      previewText?: string;
-      brandKitId?: string;
     };
 
     // Validate required fields
@@ -125,45 +115,30 @@ export async function POST(request: Request, context: RouteContext) {
 
     const isMarketing = templateData.emailType === "marketing";
     const orgId = orgWithMembership.id;
-    const templateContent = templateData.content as JSONContent;
-    const sourceFormat = templateData.sourceFormat;
+
+    if (!templateData.compiledHtml) {
+      return NextResponse.json(
+        {
+          error:
+            "Template must be compiled before sending a test. Open it in the editor first.",
+        },
+        { status: 400 }
+      );
+    }
+
     const compiledHtml = templateData.compiledHtml;
 
-    // Fetch brand kit (use specified one or default for org)
-    const selectedBrandKit = brandKitId
-      ? await db.query.brandKit.findFirst({
-          where: and(
-            eq(brandKit.id, brandKitId),
-            eq(brandKit.organizationId, orgId)
-          ),
-        })
-      : await db.query.brandKit.findFirst({
-          where: and(
-            eq(brandKit.organizationId, orgId),
-            eq(brandKit.isDefault, true)
-          ),
-        });
-
-    // Render HTML from template + test data (marketing URLs injected per-recipient below)
-    async function renderTemplate(
-      data: Record<string, unknown>
-    ): Promise<{ html: string; text: string }> {
-      if (sourceFormat === "react-email" && compiledHtml) {
-        let html = compiledHtml;
-        for (const [key, value] of Object.entries(data)) {
-          html = html.replace(
-            new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-            String(value)
-          );
-        }
-        return { html, text: toPlainText(html) };
+    function renderTemplate(data: Record<string, unknown>): {
+      html: string;
+      text: string;
+    } {
+      let html = compiledHtml;
+      for (const [key, value] of Object.entries(data)) {
+        html = html.replace(
+          new RegExp(`\\{\\{${key}\\}\\}`, "g"),
+          String(value)
+        );
       }
-
-      const emailComponent = tiptapToReactEmail(templateContent, data, {
-        previewText,
-        brandKit: toBrandKitColors(selectedBrandKit),
-      });
-      const html = await render(emailComponent);
       return { html, text: toPlainText(html) };
     }
 
@@ -267,7 +242,7 @@ export async function POST(request: Request, context: RouteContext) {
           }
         }
 
-        const { html, text } = await renderTemplate(recipientData);
+        const { html, text } = renderTemplate(recipientData);
 
         const fromAddress = senderName
           ? `${senderName} <${senderEmail}>`

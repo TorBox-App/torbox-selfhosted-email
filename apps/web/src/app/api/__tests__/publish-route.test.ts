@@ -129,13 +129,7 @@ vi.mock("@wraps/email", () => ({
 }));
 
 vi.mock("@react-email/render", () => ({
-  render: vi.fn(async () => "<html><body>Test</body></html>"),
   toPlainText: vi.fn(() => "Test"),
-}));
-
-vi.mock("@/lib/serializers/tiptap-to-react-email", () => ({
-  tiptapToReactEmail: vi.fn(() => null),
-  toBrandKitColors: vi.fn(() => {}),
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -241,6 +235,8 @@ describe("POST /publish - organizationId scoping", () => {
       subject: "Test Subject",
       status: "DRAFT",
       channel: "email",
+      sourceFormat: "react-email",
+      compiledHtml: "<html><body>Test</body></html>",
     });
 
     // Read the real template for mocking the findFirst bypass

@@ -1,7 +1,6 @@
-import { render, toPlainText } from "@react-email/render";
-import type { JSONContent } from "@tiptap/core";
+import { toPlainText } from "@react-email/render";
 import { auth } from "@wraps/auth";
-import { awsAccount, brandKit, db, template } from "@wraps/db";
+import { awsAccount, db, template } from "@wraps/db";
 import {
   deleteSESTemplate,
   generateSESTemplateName,
@@ -14,10 +13,6 @@ import { NextResponse } from "next/server";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
-import {
-  tiptapToReactEmail,
-  toBrandKitColors,
-} from "@/lib/serializers/tiptap-to-react-email";
 
 type RouteContext = {
   params: Promise<{
@@ -27,7 +22,7 @@ type RouteContext = {
 };
 
 // POST /api/[orgSlug]/emails/templates/[id]/publish - Publish template to SES
-export async function POST(request: Request, context: RouteContext) {
+export async function POST(_request: Request, context: RouteContext) {
   try {
     const { orgSlug, id } = await context.params;
 
@@ -48,15 +43,6 @@ export async function POST(request: Request, context: RouteContext) {
 
     if (!orgWithMembership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Parse optional request body for brand kit selection
-    let brandKitId: string | undefined;
-    try {
-      const body = await request.json();
-      brandKitId = body.brandKitId;
-    } catch {
-      // No body provided, that's fine
     }
 
     // Fetch template
@@ -107,49 +93,18 @@ export async function POST(request: Request, context: RouteContext) {
       region: customerAwsAccount.region,
     });
 
-    // Fetch brand kit (use specified one or default for org)
-    let selectedBrandKit = null;
-    if (brandKitId) {
-      selectedBrandKit = await db.query.brandKit.findFirst({
-        where: and(
-          eq(brandKit.id, brandKitId),
-          eq(brandKit.organizationId, orgWithMembership.id)
-        ),
-      });
-    } else {
-      selectedBrandKit = await db.query.brandKit.findFirst({
-        where: and(
-          eq(brandKit.organizationId, orgWithMembership.id),
-          eq(brandKit.isDefault, true)
-        ),
-      });
-    }
-
-    // Build HTML and text from the appropriate source format
-    let rawHtml: string;
-    let rawText: string;
-
-    if (
-      templateData.sourceFormat === "react-email" &&
-      templateData.compiledHtml
-    ) {
-      // React-email templates already have compiled HTML from save-source or CLI push
-      rawHtml = templateData.compiledHtml;
-      rawText = templateData.compiledText ?? toPlainText(rawHtml);
-    } else {
-      // TipTap templates need on-the-fly serialization
-      const emailComponent = tiptapToReactEmail(
-        templateData.content as JSONContent,
-        {},
+    if (!templateData.compiledHtml) {
+      return NextResponse.json(
         {
-          keepVariablesAsPlaceholders: true,
-          brandKit: toBrandKitColors(selectedBrandKit),
-        }
+          error:
+            "Template must be compiled before publishing. Open it in the editor first.",
+        },
+        { status: 400 }
       );
-
-      rawHtml = await render(emailComponent);
-      rawText = toPlainText(rawHtml);
     }
+
+    const rawHtml = templateData.compiledHtml;
+    const rawText = templateData.compiledText ?? toPlainText(rawHtml);
 
     // Transform variables for SES compatibility
     // {{contact.email}} → {{contactEmail}}

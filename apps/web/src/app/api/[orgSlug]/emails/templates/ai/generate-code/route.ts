@@ -1,15 +1,22 @@
 import { gateway } from "@ai-sdk/gateway";
 import { auth } from "@wraps/auth";
-import { aiConversation, brandKit, db, templateVariable } from "@wraps/db";
+import {
+  aiConversation,
+  brandKit,
+  db,
+  template,
+  templateVariable,
+} from "@wraps/db";
 import {
   convertToModelMessages,
   streamText,
   type UIMessage,
   type UserContent,
 } from "ai";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { fetchAndProcessImage } from "@/lib/ai/image-utils";
 import { buildReactEmailSystemPrompt } from "@/lib/ai/react-email-system-prompt";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -61,30 +68,46 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    const rawBody = await request.json();
+
+    const bodySchema = z.object({
+      messages: z.array(z.any()).min(1, "Messages are required"),
+      templateId: z.string().optional(),
+      conversationId: z.string().uuid().optional(),
+      brandKitId: z.string().optional(),
+      existingSource: z.string().optional(),
+      imageUrl: z.string().url().optional(),
+      imageBase64: z.string().optional(),
+      imageMediaType: z.string().optional(),
+    });
+
+    const parsed = bodySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid request body", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
     const {
       messages,
       templateId,
+      conversationId,
       brandKitId,
       existingSource,
       imageUrl,
       imageBase64,
       imageMediaType,
-    }: {
+    } = parsed.data as {
       messages: UIMessage[];
       templateId?: string;
+      conversationId?: string;
       brandKitId?: string;
       existingSource?: string;
       imageUrl?: string;
       imageBase64?: string;
       imageMediaType?: string;
-    } = await request.json();
-
-    if (!(messages && Array.isArray(messages)) || messages.length === 0) {
-      return NextResponse.json(
-        { error: "Messages are required" },
-        { status: 400 }
-      );
-    }
+    };
 
     // Convert UI messages to model messages for the AI SDK
     const modelMessages = convertToModelMessages(messages);
@@ -205,42 +228,53 @@ export async function POST(request: Request, context: RouteContext) {
           thinking: { type: "enabled", budgetTokens: 10_000 },
         },
       },
-      onFinish: async ({ usage }) => {
+      onFinish: async ({ text, usage }) => {
         const log = createRequestLogger({
           path: "/api/[orgSlug]/emails/templates/ai/generate-code",
           method: "POST",
           orgSlug,
         });
 
-        // Track usage for billing/limits
-        trackAiRequest({
-          organizationId: orgWithMembership.id,
-          userId: session.user.id,
-          featureType: "ai_chat",
-          templateId,
-          inputTokens: usage?.inputTokens,
-          outputTokens: usage?.outputTokens,
-          totalTokens: usage?.totalTokens,
-          model: MODEL_ID,
-        }).catch((error) => {
-          log.error(
-            { err: serializeError(error) },
-            "Failed to track AI request"
-          );
-        });
+        // Append assistant response so full conversation is saved
+        const messagesWithResponse: UIMessage[] = [
+          ...messages,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            parts: [{ type: "text", text }],
+          },
+        ];
 
-        // Track conversation in database
-        trackConversation({
-          organizationId: orgWithMembership.id,
-          templateId,
-          messages,
-          userId: session.user.id,
-        }).catch((error) => {
-          log.error(
-            { err: serializeError(error) },
-            "Failed to track conversation"
-          );
-        });
+        // Await both tracking operations to ensure they complete before the
+        // serverless function terminates
+        const results = await Promise.allSettled([
+          trackAiRequest({
+            organizationId: orgWithMembership.id,
+            userId: session.user.id,
+            featureType: "ai_chat",
+            templateId,
+            inputTokens: usage?.inputTokens,
+            outputTokens: usage?.outputTokens,
+            totalTokens: usage?.totalTokens,
+            model: MODEL_ID,
+          }),
+          trackConversation({
+            organizationId: orgWithMembership.id,
+            templateId,
+            conversationId,
+            messages: messagesWithResponse,
+            userId: session.user.id,
+          }),
+        ]);
+
+        for (const result of results) {
+          if (result.status === "rejected") {
+            log.error(
+              { err: serializeError(result.reason) },
+              "Failed to track AI usage or conversation"
+            );
+          }
+        }
       },
     });
 
@@ -266,10 +300,11 @@ export async function POST(request: Request, context: RouteContext) {
   }
 }
 
-// Track conversation for history and analytics
+// Upsert conversation — update existing or create new, link to template
 async function trackConversation(data: {
   organizationId: string;
   templateId?: string;
+  conversationId?: string;
   messages: UIMessage[];
   userId: string;
 }): Promise<void> {
@@ -288,12 +323,74 @@ async function trackConversation(data: {
         .join(""),
     }));
 
-    await db.insert(aiConversation).values({
-      organizationId: data.organizationId,
-      templateId: data.templateId || null,
-      messages: simplifiedMessages,
-      createdBy: data.userId,
-    });
+    if (data.conversationId) {
+      // Update existing conversation
+      await db
+        .update(aiConversation)
+        .set({
+          messages: simplifiedMessages,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(aiConversation.id, data.conversationId),
+            eq(aiConversation.organizationId, data.organizationId)
+          )
+        );
+    } else {
+      // Insert new conversation and link to template in a transaction
+      // to prevent orphaned conversations from concurrent first messages
+      await db.transaction(async (tx) => {
+        // Re-check if template already has a conversation (race guard)
+        if (data.templateId) {
+          const existing = await tx.query.template.findFirst({
+            where: and(
+              eq(template.id, data.templateId),
+              eq(template.organizationId, data.organizationId)
+            ),
+            columns: { aiConversationId: true },
+          });
+
+          if (existing?.aiConversationId) {
+            // Another request already created a conversation — update it instead
+            await tx
+              .update(aiConversation)
+              .set({
+                messages: simplifiedMessages,
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(aiConversation.id, existing.aiConversationId),
+                  eq(aiConversation.organizationId, data.organizationId)
+                )
+              );
+            return;
+          }
+        }
+
+        const [row] = await tx
+          .insert(aiConversation)
+          .values({
+            organizationId: data.organizationId,
+            templateId: data.templateId || null,
+            messages: simplifiedMessages,
+            createdBy: data.userId,
+          })
+          .returning({ id: aiConversation.id });
+
+        if (row && data.templateId) {
+          // Use raw SQL with WHERE ... IS NULL for atomic claim
+          await tx.execute(
+            sql`UPDATE ${template}
+                SET ai_conversation_id = ${row.id}
+                WHERE id = ${data.templateId}
+                  AND organization_id = ${data.organizationId}
+                  AND ai_conversation_id IS NULL`
+          );
+        }
+      });
+    }
   } catch (error) {
     log.error(
       { err: serializeError(error) },

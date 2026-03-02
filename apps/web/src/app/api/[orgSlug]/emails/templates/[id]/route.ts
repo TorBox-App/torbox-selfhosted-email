@@ -1,7 +1,5 @@
-import { render, toPlainText } from "@react-email/render";
-import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
-import { awsAccount, brandKit, db, template, templateVersion } from "@wraps/db";
+import { awsAccount, db, template, templateVersion } from "@wraps/db";
 import { deleteSESTemplate } from "@wraps/email";
 import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -10,10 +8,6 @@ import { z } from "zod";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
-import {
-  tiptapToReactEmail,
-  toBrandKitColors,
-} from "@/lib/serializers/tiptap-to-react-email";
 
 const updateTemplateSchema = z
   .object({
@@ -21,12 +15,14 @@ const updateTemplateSchema = z
     name: z.string().max(255).optional(),
     description: z.string().max(1000).nullable().optional(),
     subject: z.string().max(500).nullable().optional(),
+    previewText: z.string().max(500).nullable().optional(),
     emailType: z.enum(["marketing", "transactional"]).optional(),
     status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
     variables: z.array(z.record(z.string(), z.unknown())).optional(),
     testData: z.record(z.string(), z.unknown()).optional(),
     compiledText: z.string().max(10_000).optional(),
     createVersion: z.boolean().optional(),
+    brandKitId: z.string().nullable().optional(),
   })
   .strict();
 
@@ -150,12 +146,14 @@ export async function PUT(request: Request, context: RouteContext) {
       name,
       description,
       subject,
+      previewText,
       emailType,
       status,
       variables,
       testData,
       compiledText,
       createVersion,
+      brandKitId,
     } = parsed.data;
 
     // Build update object
@@ -166,58 +164,6 @@ export async function PUT(request: Request, context: RouteContext) {
 
     if (content !== undefined) {
       updateData.content = content;
-
-      // Only auto-compile for TipTap templates (react-email compiles via save-source)
-      const existing = await db.query.template.findFirst({
-        where: and(
-          eq(template.id, id),
-          eq(template.organizationId, orgWithMembership.id)
-        ),
-        columns: { sourceFormat: true },
-      });
-
-      if (existing?.sourceFormat !== "react-email") {
-        // Auto-compile HTML for broadcasts (without pushing to SES)
-        try {
-          // Fetch default brand kit for styling
-          const defaultBrandKit = await db.query.brandKit.findFirst({
-            where: and(
-              eq(brandKit.organizationId, orgWithMembership.id),
-              eq(brandKit.isDefault, true)
-            ),
-          });
-
-          // Convert TipTap content to React Email component
-          const emailComponent = tiptapToReactEmail(
-            content as JSONContent,
-            {},
-            {
-              keepVariablesAsPlaceholders: true,
-              brandKit: toBrandKitColors(defaultBrandKit),
-            }
-          );
-
-          // Render to HTML
-          const compiledHtml = await render(emailComponent);
-
-          // Generate plain text version using react-email's robust converter
-          const generatedText = toPlainText(compiledHtml);
-
-          updateData.compiledHtml = compiledHtml;
-          updateData.compiledText = generatedText;
-        } catch (compileError) {
-          // Log but don't fail the save - template content is still saved
-          const log = createRequestLogger({
-            path: "/api/[orgSlug]/emails/templates/[id]",
-            method: "PUT",
-            orgSlug,
-          });
-          log.warn(
-            { err: serializeError(compileError) },
-            "Failed to compile template HTML"
-          );
-        }
-      }
     }
     if (name !== undefined) {
       updateData.name = name.trim();
@@ -227,6 +173,9 @@ export async function PUT(request: Request, context: RouteContext) {
     }
     if (subject !== undefined) {
       updateData.subject = subject?.trim() || null;
+    }
+    if (previewText !== undefined) {
+      updateData.previewText = previewText?.trim() || null;
     }
     if (emailType !== undefined) {
       updateData.emailType = emailType;
@@ -242,6 +191,9 @@ export async function PUT(request: Request, context: RouteContext) {
     }
     if (compiledText !== undefined && typeof compiledText === "string") {
       updateData.compiledText = compiledText;
+    }
+    if (brandKitId !== undefined) {
+      updateData.brandKitId = brandKitId;
     }
 
     // Update template

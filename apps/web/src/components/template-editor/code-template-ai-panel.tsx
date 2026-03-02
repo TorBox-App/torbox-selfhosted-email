@@ -2,14 +2,15 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useThrottler } from "@tanstack/react-pacer";
-import { useQueryClient } from "@tanstack/react-query";
-import { DefaultChatTransport } from "ai";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { DefaultChatTransport, type UIMessage } from "ai";
 import {
   AlertTriangle,
   Bot,
   Check,
   Heart,
   Loader2,
+  MessageSquarePlus,
   Palette,
   RefreshCw,
   Send,
@@ -39,6 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getAiUsageQueryKey, useAiUsage } from "@/hooks/use-ai-usage";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 import { useBrandKits } from "@/hooks/use-brand-kit-queries";
+import { templateKeys } from "@/hooks/use-template-queries";
 import { extractTsxCode } from "@/lib/ai/extract-tsx-code";
 import { compileTemplate } from "@/lib/compile-template";
 import { cn } from "@/lib/utils";
@@ -52,6 +54,7 @@ import {
 type CodeTemplateAIPanelProps = {
   orgSlug: string;
   templateId: string;
+  aiConversationId: string | null;
   currentSource: string;
   onApply: (source: string, compiledHtml: string) => void;
 };
@@ -125,6 +128,7 @@ function useFavoritePrompts() {
 export function CodeTemplateAIPanel({
   orgSlug,
   templateId,
+  aiConversationId,
   currentSource,
   onApply,
 }: CodeTemplateAIPanelProps) {
@@ -133,6 +137,8 @@ export function CodeTemplateAIPanel({
     useState<ImageAttachment | null>(null);
   const [pendingSource, setPendingSource] = useState<string | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
+  const [autoFixAttempted, setAutoFixAttempted] = useState(false);
+  const lastAppliedSourceRef = useRef<string | null>(null);
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -142,6 +148,35 @@ export function CodeTemplateAIPanel({
   });
   const queryClient = useQueryClient();
 
+  // Track current conversationId — loaded from API or set after first message
+  const [conversationId, setConversationId] = useState<string | null>(
+    aiConversationId
+  );
+
+  // Sync conversationId when template cache updates (e.g. after first AI message)
+  useEffect(() => {
+    if (aiConversationId) {
+      setConversationId(aiConversationId);
+    }
+  }, [aiConversationId]);
+
+  // Load saved conversation messages
+  const { data: savedConversation } = useQuery<{
+    conversationId?: string;
+    messages: UIMessage[];
+  }>({
+    queryKey: templateKeys.conversation(orgSlug, templateId),
+    queryFn: async () => {
+      const resp = await fetch(
+        `/api/${orgSlug}/emails/templates/${templateId}/conversation`
+      );
+      if (!resp.ok) return { messages: [] };
+      return resp.json();
+    },
+    enabled: !!aiConversationId,
+    staleTime: 60_000,
+  });
+
   // Fetch AI usage
   const { data: aiUsage, refetch: refetchUsage } = useAiUsage(orgSlug);
 
@@ -149,8 +184,33 @@ export function CodeTemplateAIPanel({
   const { favorites, saveFavorite, removeFavorite } = useFavoritePrompts();
 
   const { selectedBrandKitId } = useTemplateStore((state) => state.localState);
-  const { setSelectedBrandKitId } = useTemplateStore((state) => state.actions);
+  const { setSelectedBrandKitId: setStoreKitId } = useTemplateStore(
+    (state) => state.actions
+  );
   const { data: brandKits } = useBrandKits(orgSlug);
+
+  // Persist brand kit to template when changed
+  const prevBrandKitRef = useRef<string | null>(selectedBrandKitId);
+  const setSelectedBrandKitId = useCallback(
+    (id: string | null) => {
+      const prevId = prevBrandKitRef.current;
+      prevBrandKitRef.current = id;
+      setStoreKitId(id);
+      fetch(`/api/${orgSlug}/emails/templates/${templateId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandKitId: id === "none" ? null : id }),
+      }).catch((err) => {
+        // Revert to previous value on failure
+        prevBrandKitRef.current = prevId;
+        setStoreKitId(prevId);
+        toast.error("Failed to save brand kit selection", {
+          description: err instanceof Error ? err.message : undefined,
+        });
+      });
+    },
+    [setStoreKitId, orgSlug, templateId]
+  );
 
   const selectedBrandKit = useMemo(() => {
     if (!brandKits?.length || selectedBrandKitId === "none") {
@@ -164,11 +224,20 @@ export function CodeTemplateAIPanel({
   }, [brandKits, selectedBrandKitId]);
 
   // Use the AI SDK's useChat hook
-  const { messages, sendMessage, status, stop, regenerate, error } = useChat({
+  const {
+    messages,
+    setMessages,
+    sendMessage,
+    status,
+    stop,
+    regenerate,
+    error,
+  } = useChat({
     transport: new DefaultChatTransport({
       api: `/api/${orgSlug}/emails/templates/ai/generate-code`,
       body: {
         templateId,
+        conversationId,
         brandKitId: selectedBrandKit?.id,
         existingSource: currentSource || undefined,
         imageUrl: imageAttachment?.url,
@@ -192,8 +261,28 @@ export function CodeTemplateAIPanel({
     },
     onFinish: () => {
       queryClient.invalidateQueries({ queryKey: getAiUsageQueryKey(orgSlug) });
+      // Refresh template cache so aiConversationId is picked up
+      queryClient.invalidateQueries({
+        queryKey: templateKeys.detail(orgSlug, templateId),
+      });
     },
   });
+
+  // Hydrate chat with saved messages once loaded
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (
+      savedConversation?.messages?.length &&
+      !hydratedRef.current &&
+      messages.length === 0
+    ) {
+      setMessages(savedConversation.messages);
+      if (savedConversation.conversationId) {
+        setConversationId(savedConversation.conversationId);
+      }
+      hydratedRef.current = true;
+    }
+  }, [savedConversation, messages.length, setMessages]);
 
   const isLoading = status === "streaming" || status === "submitted";
 
@@ -217,6 +306,7 @@ export function CodeTemplateAIPanel({
   }, [aiUsage?.warning, hasShownWarningToast]);
 
   // Extract TSX from the latest assistant message
+  // If auto-fix was attempted, try compiling automatically
   useEffect(() => {
     const lastMessage = messages.at(-1);
     if (lastMessage?.role === "assistant" && !isLoading) {
@@ -228,11 +318,35 @@ export function CodeTemplateAIPanel({
         .join("");
 
       const code = extractTsxCode(textContent);
-      if (code) {
-        setPendingSource(code);
+      if (code && code !== lastAppliedSourceRef.current) {
+        if (autoFixAttempted) {
+          // Auto-fix response — try compiling directly
+          setIsCompiling(true);
+          compileTemplate(code)
+            .then(({ compiledHtml }) => {
+              lastAppliedSourceRef.current = code;
+              onApply(code, compiledHtml);
+              setPendingSource(null);
+              setAutoFixAttempted(false);
+              toast.success("AI fixed the code successfully");
+            })
+            .catch((err) => {
+              // Auto-fix failed too — show error, let user decide
+              setPendingSource(code);
+              setAutoFixAttempted(false);
+              const msg =
+                err instanceof Error ? err.message : "Compilation failed";
+              toast.error("Auto-fix failed to compile", {
+                description: msg,
+              });
+            })
+            .finally(() => setIsCompiling(false));
+        } else {
+          setPendingSource(code);
+        }
       }
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, autoFixAttempted, onApply]);
 
   // Auto-scroll
   useEffect(() => {
@@ -246,7 +360,7 @@ export function CodeTemplateAIPanel({
     }
   }, []);
 
-  // Apply: compile first, then call onApply
+  // Apply: compile first, then call onApply. On failure, ask AI to fix (once).
   const handleApply = useCallback(async () => {
     if (!pendingSource) {
       return;
@@ -254,20 +368,32 @@ export function CodeTemplateAIPanel({
 
     setIsCompiling(true);
     try {
-      // Compile in-browser (no server-side code execution)
       const { compiledHtml } = await compileTemplate(pendingSource);
+      lastAppliedSourceRef.current = pendingSource;
       onApply(pendingSource, compiledHtml);
       setPendingSource(null);
+      setAutoFixAttempted(false);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Compilation failed";
-      toast.error("Failed to compile generated code", {
-        description: message,
-      });
+
+      if (autoFixAttempted) {
+        toast.error("Failed to compile generated code", {
+          description: message,
+        });
+      } else {
+        // Ask the AI to fix the compilation error (one attempt)
+        setAutoFixAttempted(true);
+        setPendingSource(null);
+        toast.info("Compilation failed — asking AI to fix it...");
+        sendMessage({
+          text: `The code you generated failed to compile with this error:\n\n${message}\n\nPlease fix the code and output the complete corrected TSX file.`,
+        });
+      }
     } finally {
       setIsCompiling(false);
     }
-  }, [pendingSource, orgSlug, templateId, onApply]);
+  }, [pendingSource, onApply, autoFixAttempted, sendMessage]);
 
   const handleReject = useCallback(() => {
     setPendingSource(null);
@@ -319,17 +445,67 @@ export function CodeTemplateAIPanel({
             </span>
           )}
         </div>
-        {isLoading && (
-          <Button
-            className="h-8 w-8 p-0"
-            onClick={stop}
-            size="sm"
-            title="Stop generating"
-            variant="ghost"
-          >
-            <Square className="h-3.5 w-3.5" />
-          </Button>
-        )}
+        <div className="flex items-center gap-0.5">
+          {messages.length > 0 && !isLoading && (
+            <Button
+              className="h-8 w-8 p-0"
+              onClick={async () => {
+                // Snapshot current state for rollback
+                const prevMessages = [...messages];
+                const prevConversationId = conversationId;
+                const prevPendingSource = pendingSource;
+
+                // Optimistically clear UI
+                setMessages([]);
+                setPendingSource(null);
+                setConversationId(null);
+                setAutoFixAttempted(false);
+                lastAppliedSourceRef.current = null;
+                hydratedRef.current = false;
+                queryClient.setQueryData(
+                  templateKeys.conversation(orgSlug, templateId),
+                  { messages: [] }
+                );
+
+                try {
+                  const resp = await fetch(
+                    `/api/${orgSlug}/emails/templates/${templateId}/conversation`,
+                    { method: "DELETE" }
+                  );
+                  if (!resp.ok) throw new Error("Delete failed");
+                  queryClient.invalidateQueries({
+                    queryKey: templateKeys.detail(orgSlug, templateId),
+                  });
+                } catch {
+                  // Restore previous state on failure
+                  setMessages(prevMessages);
+                  setConversationId(prevConversationId);
+                  setPendingSource(prevPendingSource);
+                  queryClient.invalidateQueries({
+                    queryKey: templateKeys.conversation(orgSlug, templateId),
+                  });
+                  toast.error("Failed to clear conversation");
+                }
+              }}
+              size="sm"
+              title="New chat"
+              variant="ghost"
+            >
+              <MessageSquarePlus className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {isLoading && (
+            <Button
+              className="h-8 w-8 p-0"
+              onClick={stop}
+              size="sm"
+              title="Stop generating"
+              variant="ghost"
+            >
+              <Square className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Usage Warning */}
@@ -484,7 +660,10 @@ export function CodeTemplateAIPanel({
                                 className="inline-block max-w-full rounded-lg bg-muted px-2.5 py-1.5 text-xs"
                                 key={`${message.id}-${partIndex}`}
                               >
-                                <AssistantCodeMessage content={part.text} />
+                                <AssistantCodeMessage
+                                  content={part.text}
+                                  isStreaming={isStreamingPart}
+                                />
                               </div>
                             );
                           }
@@ -727,8 +906,26 @@ export function CodeTemplateAIPanel({
 }
 
 // Render assistant messages, collapsing TSX code blocks
-function AssistantCodeMessage({ content }: { content: string }) {
+function AssistantCodeMessage({
+  content,
+  isStreaming,
+}: {
+  content: string;
+  isStreaming?: boolean;
+}) {
   const parts = content.split(/(```(?:tsx|typescript|ts)?[\s\S]*?```)/g);
+  const hasCodeBlock = parts.some((p) => p.startsWith("```"));
+  let lastCodeIdx = -1;
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (parts[i].startsWith("```")) {
+      lastCodeIdx = i;
+      break;
+    }
+  }
+  const hasTextAfterCode =
+    hasCodeBlock &&
+    lastCodeIdx >= 0 &&
+    parts.slice(lastCodeIdx + 1).some((p) => p.trim().length > 0);
 
   return (
     <div className="space-y-2 whitespace-pre-wrap">
@@ -748,6 +945,12 @@ function AssistantCodeMessage({ content }: { content: string }) {
           <span key={`${index}-${trimmed.slice(0, 20)}`}>{trimmed}</span>
         ) : null;
       })}
+      {isStreaming && hasCodeBlock && !hasTextAfterCode && (
+        <div className="flex items-center gap-1.5 pt-1 text-muted-foreground text-xs">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Reviewing changes...</span>
+        </div>
+      )}
     </div>
   );
 }

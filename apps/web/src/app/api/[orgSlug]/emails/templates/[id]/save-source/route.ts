@@ -1,11 +1,24 @@
 import { createHash } from "node:crypto";
 import { auth } from "@wraps/auth";
-import { db, template } from "@wraps/db";
-import { and, eq } from "drizzle-orm";
+import { db, template, templateVersion } from "@wraps/db";
+import { and, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
+
+const saveSourceSchema = z
+  .object({
+    source: z.string().min(1),
+    compiledHtml: z.string().min(1),
+    compiledText: z.string().optional().default(""),
+    variables: z
+      .array(z.record(z.string(), z.unknown()))
+      .optional()
+      .default([]),
+  })
+  .strict();
 
 type RouteContext = {
   params: Promise<{
@@ -66,24 +79,17 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    const {
-      source,
-      compiledHtml,
-      compiledText,
-      variables,
-    }: {
-      source: string;
-      compiledHtml: string;
-      compiledText: string;
-      variables: Array<{ name: string; fallback?: string }>;
-    } = await request.json();
+    const rawBody = await request.json();
+    const parsed = saveSourceSchema.safeParse(rawBody);
 
-    if (!(source && compiledHtml)) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "source and compiledHtml are required" },
+        { error: "Invalid request body", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { source, compiledHtml, compiledText, variables } = parsed.data;
 
     // Compute source hash
     const sourceHash = createHash("sha256").update(source).digest("hex");
@@ -97,13 +103,38 @@ export async function POST(request: Request, context: RouteContext) {
         sourceHash,
         compiledHtml,
         compiledText,
-        variables: (variables ?? []) as Record<string, unknown>[],
+        variables: variables as Record<string, unknown>[],
         lastEditedFrom: "dashboard",
         lastEditedBy: session.user.id,
         updatedAt: now,
       })
-      .where(eq(template.id, id))
+      .where(
+        and(
+          eq(template.id, id),
+          eq(template.organizationId, orgWithMembership.id)
+        )
+      )
       .returning();
+
+    // Auto-create version if source changed from last version
+    const latestVersion = await db.query.templateVersion.findFirst({
+      where: eq(templateVersion.templateId, id),
+      orderBy: [desc(templateVersion.version)],
+      columns: { version: true, source: true },
+    });
+
+    if (!latestVersion || latestVersion.source !== source) {
+      const nextVersion = latestVersion ? latestVersion.version + 1 : 1;
+      await db.insert(templateVersion).values({
+        templateId: id,
+        content: updated.content,
+        source,
+        compiledHtml,
+        version: nextVersion,
+        createdBy: session.user.id,
+        changeNote: null,
+      });
+    }
 
     return NextResponse.json({
       success: true,

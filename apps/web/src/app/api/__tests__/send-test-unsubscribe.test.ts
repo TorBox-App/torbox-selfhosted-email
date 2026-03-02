@@ -468,6 +468,8 @@ describe("Send Test Email - Unsubscribe/Preference Links", () => {
       id: "test-marketing-tiptap-unsub",
       organizationId: testOrganization.id,
       name: "TipTap Marketing Template",
+      compiledHtml:
+        '<html><body><p>Hello!</p><p>Click here to <a href="{{unsubscribeUrl}}">unsubscribe</a></p></body></html>',
       content: {
         type: "doc",
         content: [
