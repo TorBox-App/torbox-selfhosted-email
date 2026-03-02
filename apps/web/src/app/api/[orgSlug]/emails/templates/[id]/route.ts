@@ -169,7 +169,10 @@ export async function PUT(request: Request, context: RouteContext) {
 
       // Only auto-compile for TipTap templates (react-email compiles via save-source)
       const existing = await db.query.template.findFirst({
-        where: and(eq(template.id, id), eq(template.organizationId, orgWithMembership.id)),
+        where: and(
+          eq(template.id, id),
+          eq(template.organizationId, orgWithMembership.id)
+        ),
         columns: { sourceFormat: true },
       });
 

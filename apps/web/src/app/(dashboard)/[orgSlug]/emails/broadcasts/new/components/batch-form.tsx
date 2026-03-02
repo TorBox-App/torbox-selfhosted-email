@@ -96,6 +96,7 @@ type Template = {
   id: string;
   name: string;
   subject: string | null;
+  previewText: string | null;
 };
 
 type AwsAccount = {
@@ -517,9 +518,7 @@ export function BatchForm({
             <div className="flex flex-1 items-center" key={step.id}>
               <button
                 className={`flex flex-1 items-center gap-3 ${
-                  index < currentStepIndex
-                    ? "cursor-pointer"
-                    : "cursor-default"
+                  index < currentStepIndex ? "cursor-pointer" : "cursor-default"
                 }`}
                 disabled={index >= currentStepIndex}
                 onClick={() => {
@@ -688,7 +687,6 @@ function SetupStep({
               Internal name to identify this broadcast
             </p>
           </div>
-
         </CardContent>
       </Card>
 
@@ -846,6 +844,7 @@ function ContentStep({
     id: t.id,
     name: t.name,
     subject: t.subject,
+    previewText: t.previewText ?? null,
   }));
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(data.contentType === "html");
@@ -903,8 +902,11 @@ function ContentStep({
       contentType: "template",
       variableMappings: [],
     };
-    if (newTemplate?.subject && !data.subject) {
+    if (newTemplate?.subject) {
       updates.subject = newTemplate.subject;
+    }
+    if (newTemplate?.previewText) {
+      updates.previewText = newTemplate.previewText;
     }
     onChange(updates);
     setShowCreateDialog(false);
@@ -965,6 +967,9 @@ function ContentStep({
                               };
                               if (tmpl?.subject) {
                                 updates.subject = tmpl.subject;
+                              }
+                              if (tmpl?.previewText) {
+                                updates.previewText = tmpl.previewText;
                               }
                               onChange(updates);
                             }}
@@ -1574,6 +1579,7 @@ function ReviewStep({
     id: t.id,
     name: t.name,
     subject: t.subject,
+    previewText: t.previewText ?? null,
   }));
 
   const reviewRecipientFilter = useMemo(

@@ -1,0 +1,1 @@
+ALTER TABLE "template" ADD COLUMN "preview_text" text;

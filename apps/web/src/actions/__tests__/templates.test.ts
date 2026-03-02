@@ -158,7 +158,7 @@ vi.mock("@/lib/activation-tracking", () => ({
 // Mock the tiptap serializer
 vi.mock("@/lib/serializers/tiptap-to-react-email", () => ({
   tiptapToReactEmail: vi.fn(() => null),
-  toBrandKitColors: vi.fn(() => undefined),
+  toBrandKitColors: vi.fn(() => {}),
 }));
 
 // Helper to create test templates

@@ -129,7 +129,10 @@ export async function POST(request: Request, context: RouteContext) {
     let rawHtml: string;
     let rawText: string;
 
-    if (templateData.sourceFormat === "react-email" && templateData.compiledHtml) {
+    if (
+      templateData.sourceFormat === "react-email" &&
+      templateData.compiledHtml
+    ) {
       // React-email templates already have compiled HTML from save-source or CLI push
       rawHtml = templateData.compiledHtml;
       rawText = templateData.compiledText ?? toPlainText(rawHtml);
@@ -161,9 +164,15 @@ export async function POST(request: Request, context: RouteContext) {
     );
 
     // Clean up old SES template if name changed (e.g. after a rename)
-    if (templateData.sesTemplateName && templateData.sesTemplateName !== sesTemplateName) {
-      await deleteSESTemplate(credentials, customerAwsAccount.region, templateData.sesTemplateName)
-        .catch(() => {}); // Best-effort cleanup
+    if (
+      templateData.sesTemplateName &&
+      templateData.sesTemplateName !== sesTemplateName
+    ) {
+      await deleteSESTemplate(
+        credentials,
+        customerAwsAccount.region,
+        templateData.sesTemplateName
+      ).catch(() => {}); // Best-effort cleanup
     }
 
     // Create or update SES template with transformed variables

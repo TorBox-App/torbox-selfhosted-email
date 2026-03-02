@@ -1,6 +1,6 @@
 {
-  "id": "d876b658-e937-4b68-845e-e27740f50711",
-  "prevId": "905430c2-a0da-470d-b098-47e127dc1e87",
+  "id": "da745da0-421f-40a4-97d1-3e12b2a5b9fd",
+  "prevId": "d876b658-e937-4b68-845e-e27740f50711",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4059,6 +4059,12 @@
         },
         "subject": {
           "name": "subject",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "preview_text": {
+          "name": "preview_text",
           "type": "text",
           "primaryKey": false,
           "notNull": false

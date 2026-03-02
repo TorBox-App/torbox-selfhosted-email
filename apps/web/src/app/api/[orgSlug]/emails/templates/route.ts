@@ -185,9 +185,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     // SMS templates use plain text content, email react-email templates start empty (AI generates)
     const defaultContent =
-      templateChannel === "sms"
-        ? { type: "doc", content: [] }
-        : {};
+      templateChannel === "sms" ? { type: "doc", content: [] } : {};
 
     // Create template with empty content
     const [newTemplate] = await db

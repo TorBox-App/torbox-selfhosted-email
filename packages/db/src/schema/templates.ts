@@ -47,6 +47,7 @@ export const template = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     subject: text("subject"), // Email subject line (supports variables like {{firstName}})
+    previewText: text("preview_text"), // Preview text shown after subject in email clients
 
     // Email type determines compliance behavior
     emailType: emailTypeEnum("email_type").default("marketing").notNull(), // marketing = unsubscribe headers, transactional = no unsubscribe

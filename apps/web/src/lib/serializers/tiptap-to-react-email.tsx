@@ -46,17 +46,20 @@ export type BrandKitColors = {
 };
 
 export function toBrandKitColors(
-  kit: {
-    primaryColor: string;
-    secondaryColor: string;
-    backgroundColor: string;
-    textColor: string;
-    fontFamily: string;
-    headingFontFamily: string | null;
-    buttonRadius: string;
-  } | null | undefined
+  kit:
+    | {
+        primaryColor: string;
+        secondaryColor: string;
+        backgroundColor: string;
+        textColor: string;
+        fontFamily: string;
+        headingFontFamily: string | null;
+        buttonRadius: string;
+      }
+    | null
+    | undefined
 ): BrandKitColors | undefined {
-  if (!kit) return undefined;
+  if (!kit) return;
   return {
     primaryColor: kit.primaryColor,
     secondaryColor: kit.secondaryColor,

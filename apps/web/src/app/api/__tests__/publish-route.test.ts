@@ -135,7 +135,7 @@ vi.mock("@react-email/render", () => ({
 
 vi.mock("@/lib/serializers/tiptap-to-react-email", () => ({
   tiptapToReactEmail: vi.fn(() => null),
-  toBrandKitColors: vi.fn(() => undefined),
+  toBrandKitColors: vi.fn(() => {}),
 }));
 
 vi.mock("@/lib/logger", () => ({

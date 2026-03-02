@@ -1,8 +1,8 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import type { JSONContent } from "@tiptap/core";
 import { EditorContent } from "@tiptap/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";

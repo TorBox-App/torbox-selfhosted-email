@@ -377,8 +377,7 @@ export async function createBatchSend(
       // 2. Never verified by platform (publishedAt null — e.g. CLI-pushed templates)
       // 3. Edited since last publish (updatedAt > publishedAt)
       const needsPublish =
-        !tmpl.sesTemplateName ||
-        !tmpl.publishedAt ||
+        !(tmpl.sesTemplateName && tmpl.publishedAt) ||
         (tmpl.updatedAt && tmpl.updatedAt > tmpl.publishedAt);
 
       if (needsPublish) {
@@ -945,7 +944,12 @@ export async function getSampleContacts(
 export async function listTemplatesForBatch(organizationId: string): Promise<
   | {
       success: true;
-      templates: Array<{ id: string; name: string; subject: string | null }>;
+      templates: Array<{
+        id: string;
+        name: string;
+        subject: string | null;
+        previewText: string | null;
+      }>;
     }
   | { success: false; error: string }
 > {
@@ -965,6 +969,7 @@ export async function listTemplatesForBatch(organizationId: string): Promise<
         id: true,
         name: true,
         subject: true,
+        previewText: true,
       },
       orderBy: [desc(template.updatedAt)],
     });
@@ -1155,7 +1160,10 @@ export async function extractTemplateVariables(
 
     // React-email templates store variables in the dedicated column
     if (templateData.sourceFormat === "react-email") {
-      const storedVars = (templateData.variables ?? []) as Array<{ name: string; fallback?: string }>;
+      const storedVars = (templateData.variables ?? []) as Array<{
+        name: string;
+        fallback?: string;
+      }>;
       for (const v of storedVars) {
         if (!seenVariables.has(v.name)) {
           seenVariables.add(v.name);
