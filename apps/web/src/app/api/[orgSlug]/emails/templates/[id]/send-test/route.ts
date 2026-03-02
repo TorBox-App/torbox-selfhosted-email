@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import { render, toPlainText } from "@react-email/render";
 import type { JSONContent } from "@tiptap/core";
 import { auth } from "@wraps/auth";
 import {
   awsAccount,
   brandKit,
+  contact,
   db,
   organizationExtension,
   template,
@@ -16,6 +18,10 @@ import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
+import {
+  generatePreferencesUrl,
+  generateUnsubscribeUrl,
+} from "@/lib/unsubscribe-token";
 
 type RouteContext = {
   params: Promise<{
@@ -109,75 +115,97 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     // Merge template's test data with provided test data
-    const mergedTestData = {
+    const mergedTestData: Record<string, unknown> = {
       ...((templateData.testData as Record<string, unknown>) || {}),
       ...testData,
     };
 
+    const isMarketing = templateData.emailType === "marketing";
+    const orgId = orgWithMembership.id;
+    const templateContent = templateData.content as JSONContent;
+    const sourceFormat = templateData.sourceFormat;
+    const compiledHtml = templateData.compiledHtml;
+
     // Fetch brand kit (use specified one or default for org)
-    let selectedBrandKit = null;
-    if (brandKitId) {
-      selectedBrandKit = await db.query.brandKit.findFirst({
-        where: and(
-          eq(brandKit.id, brandKitId),
-          eq(brandKit.organizationId, orgWithMembership.id)
-        ),
+    const selectedBrandKit = brandKitId
+      ? await db.query.brandKit.findFirst({
+          where: and(
+            eq(brandKit.id, brandKitId),
+            eq(brandKit.organizationId, orgId)
+          ),
+        })
+      : await db.query.brandKit.findFirst({
+          where: and(
+            eq(brandKit.organizationId, orgId),
+            eq(brandKit.isDefault, true)
+          ),
+        });
+
+    // Render HTML from template + test data (marketing URLs injected per-recipient below)
+    async function renderTemplate(
+      data: Record<string, unknown>
+    ): Promise<{ html: string; text: string }> {
+      if (sourceFormat === "react-email" && compiledHtml) {
+        let html = compiledHtml;
+        for (const [key, value] of Object.entries(data)) {
+          html = html.replace(
+            new RegExp(`\\{\\{${key}\\}\\}`, "g"),
+            String(value)
+          );
+        }
+        return { html, text: toPlainText(html) };
+      }
+
+      const emailComponent = tiptapToReactEmail(templateContent, data, {
+        previewText,
+        brandKit: selectedBrandKit
+          ? {
+              primaryColor: selectedBrandKit.primaryColor,
+              secondaryColor: selectedBrandKit.secondaryColor,
+              backgroundColor: selectedBrandKit.backgroundColor,
+              textColor: selectedBrandKit.textColor,
+              fontFamily: selectedBrandKit.fontFamily,
+              headingFontFamily:
+                selectedBrandKit.headingFontFamily ?? undefined,
+              buttonRadius: selectedBrandKit.buttonRadius,
+            }
+          : undefined,
       });
-    } else {
-      // Get default brand kit for org
-      selectedBrandKit = await db.query.brandKit.findFirst({
-        where: and(
-          eq(brandKit.organizationId, orgWithMembership.id),
-          eq(brandKit.isDefault, true)
-        ),
-      });
+      const html = await render(emailComponent);
+      return { html, text: toPlainText(html) };
     }
 
-    let html: string;
-    let text: string;
+    // For marketing templates, look up an existing contact and generate
+    // real unsubscribe/preference URLs. Returns null if the recipient
+    // isn't an existing contact (no side-effect contact creation).
+    async function getMarketingUrls(recipientEmail: string) {
+      const emailHash = createHash("sha256")
+        .update(recipientEmail.toLowerCase().trim())
+        .digest("hex");
 
-    if (
-      templateData.sourceFormat === "react-email" &&
-      templateData.compiledHtml
-    ) {
-      // Code-pushed template — use pre-compiled HTML directly
-      html = templateData.compiledHtml;
-      // Replace {{variables}} with test data values
-      for (const [key, value] of Object.entries(mergedTestData)) {
-        html = html.replace(
-          new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-          String(value)
-        );
+      const contactRecord = await db.query.contact.findFirst({
+        where: and(
+          eq(contact.organizationId, orgId),
+          eq(contact.emailHash, emailHash)
+        ),
+        columns: { id: true },
+      });
+
+      if (!contactRecord) {
+        return null;
       }
-      text = toPlainText(html);
-    } else {
-      // TipTap template — existing conversion path
-      const emailComponent = tiptapToReactEmail(
-        templateData.content as JSONContent,
-        mergedTestData,
-        {
-          previewText,
-          brandKit: selectedBrandKit
-            ? {
-                primaryColor: selectedBrandKit.primaryColor,
-                secondaryColor: selectedBrandKit.secondaryColor,
-                backgroundColor: selectedBrandKit.backgroundColor,
-                textColor: selectedBrandKit.textColor,
-                fontFamily: selectedBrandKit.fontFamily,
-                headingFontFamily:
-                  selectedBrandKit.headingFontFamily ?? undefined,
-                buttonRadius: selectedBrandKit.buttonRadius,
-              }
-            : undefined,
-        }
-      );
-      html = await render(emailComponent);
-      text = toPlainText(html);
+
+      const [unsubscribeUrl, preferencesUrl] = await Promise.all([
+        generateUnsubscribeUrl(contactRecord.id, orgId),
+        generatePreferencesUrl(contactRecord.id, orgId),
+      ]);
+
+      return { unsubscribeUrl, preferencesUrl };
     }
 
     // Get the organization's AWS account
     const customerAwsAccount = await db.query.awsAccount.findFirst({
-      where: eq(awsAccount.organizationId, orgWithMembership.id),
+      where: eq(awsAccount.organizationId, orgId),
     });
 
     if (!customerAwsAccount) {
@@ -213,7 +241,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     if (!senderEmail) {
       const orgExtension = await db.query.organizationExtension.findFirst({
-        where: eq(organizationExtension.organizationId, orgWithMembership.id),
+        where: eq(organizationExtension.organizationId, orgId),
       });
       senderEmail = orgExtension?.defaultFrom ?? undefined;
       senderName = orgExtension?.defaultFromName ?? undefined;
@@ -229,9 +257,26 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    // Send to each recipient
+    // Send to each recipient (marketing URLs generated per-recipient)
+    const warnings: string[] = [];
     const results = await Promise.allSettled(
       recipients.map(async (recipient: string) => {
+        const recipientData = { ...mergedTestData };
+
+        if (isMarketing) {
+          const marketingUrls = await getMarketingUrls(recipient);
+          if (marketingUrls) {
+            recipientData.unsubscribeUrl = marketingUrls.unsubscribeUrl;
+            recipientData.preferencesUrl = marketingUrls.preferencesUrl;
+          } else {
+            warnings.push(
+              `${recipient} is not an existing contact — unsubscribe and preference center links will not work in this test send.`
+            );
+          }
+        }
+
+        const { html, text } = await renderTemplate(recipientData);
+
         const fromAddress = senderName
           ? `${senderName} <${senderEmail}>`
           : senderEmail;
@@ -268,6 +313,7 @@ export async function POST(request: Request, context: RouteContext) {
       success: failed.length === 0,
       sent: successful.length,
       failed: failed.length,
+      warnings,
       details: {
         successful,
         failed,

@@ -177,6 +177,14 @@ function nodeToReactEmail(
               break;
             case "link":
               linkHref = mark.attrs?.href as string;
+              // Resolve {{variable}} placeholders in link hrefs (e.g. {{unsubscribeUrl}})
+              if (linkHref && !options.keepVariablesAsPlaceholders) {
+                linkHref = linkHref.replace(
+                  /\{\{(\w+)(?:\|([^}]*))?\}\}/g,
+                  (_match, name: string, fallback?: string) =>
+                    resolveVariable(name, testData, fallback)
+                );
+              }
               classes.push("underline");
               break;
             case "highlight":

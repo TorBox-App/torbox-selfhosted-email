@@ -39,13 +39,18 @@ type SendTestModalProps = {
   defaultFromName?: string | null;
 };
 
+// System variables auto-injected by the server for marketing templates
+const SYSTEM_VARIABLES = new Set(["unsubscribeUrl", "preferencesUrl"]);
+
 // Extract variable names from template content (e.g., {{variableName}})
 function extractVariables(content: string): string[] {
   const regex = /\{\{(\w+)\}\}/g;
   const matches = new Set<string>();
 
   for (const match of content.matchAll(regex)) {
-    matches.add(match[1]);
+    if (!SYSTEM_VARIABLES.has(match[1])) {
+      matches.add(match[1]);
+    }
   }
 
   return Array.from(matches);
@@ -138,6 +143,11 @@ export function SendTestModal({
           toast.success("Test email sent!", {
             description: `Email sent to ${value.to}`,
           });
+          if (data.warnings?.length > 0) {
+            for (const warning of data.warnings) {
+              toast.warning(warning);
+            }
+          }
           onClose();
         } else if (data.failed > 0) {
           const failedDetails = data.details?.failed?.[0];
