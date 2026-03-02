@@ -515,7 +515,20 @@ export function BatchForm({
         <div className="mx-auto flex max-w-2xl items-center justify-center">
           {steps.map((step, index) => (
             <div className="flex flex-1 items-center" key={step.id}>
-              <div className="flex flex-1 items-center gap-3">
+              <button
+                className={`flex flex-1 items-center gap-3 ${
+                  index < currentStepIndex
+                    ? "cursor-pointer"
+                    : "cursor-default"
+                }`}
+                disabled={index >= currentStepIndex}
+                onClick={() => {
+                  if (index < currentStepIndex) {
+                    setCurrentStep(steps[index].id);
+                  }
+                }}
+                type="button"
+              >
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-full border-2 font-semibold text-sm transition-colors ${
                     index <= currentStepIndex
@@ -538,7 +551,7 @@ export function BatchForm({
                 >
                   {step.label}
                 </span>
-              </div>
+              </button>
               {index < steps.length - 1 && (
                 <div
                   className={`mx-4 h-0.5 flex-1 ${
@@ -608,16 +621,16 @@ export function BatchForm({
       </div>
 
       {/* Footer Navigation */}
-      {currentStep !== "review" && (
-        <div className="border-t pt-6">
-          <div className="mx-auto flex max-w-2xl justify-between">
-            <Button
-              disabled={currentStepIndex === 0}
-              onClick={handleBack}
-              variant="outline"
-            >
-              Back
-            </Button>
+      <div className="border-t pt-6">
+        <div className="mx-auto flex max-w-2xl justify-between">
+          <Button
+            disabled={currentStepIndex === 0}
+            onClick={handleBack}
+            variant="outline"
+          >
+            Back
+          </Button>
+          {currentStep !== "review" && (
             <Button
               disabled={
                 (currentStep === "setup" && !isSetupValid) ||
@@ -628,9 +641,9 @@ export function BatchForm({
             >
               Continue
             </Button>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
