@@ -481,12 +481,12 @@ export function BatchForm({
   const isSetupValid =
     campaignData.awsAccountId &&
     campaignData.fromPrefix &&
-    campaignData.fromDomain &&
-    campaignData.subject;
+    campaignData.fromDomain;
 
   const isContentValid =
-    (campaignData.contentType === "template" && campaignData.templateId) ||
-    (campaignData.contentType === "html" && campaignData.htmlContent.trim());
+    campaignData.subject &&
+    ((campaignData.contentType === "template" && campaignData.templateId) ||
+      (campaignData.contentType === "html" && campaignData.htmlContent.trim()));
 
   const isAudienceValid =
     campaignData.audienceType === "all" ||
@@ -689,30 +689,6 @@ function SetupStep({
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="subject">Subject Line *</Label>
-            <Input
-              id="subject"
-              onChange={(e) => onChange({ subject: e.target.value })}
-              placeholder="Your email subject"
-              value={data.subject}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="previewText">Preview Text</Label>
-            <Textarea
-              className="resize-none"
-              id="previewText"
-              onChange={(e) => onChange({ previewText: e.target.value })}
-              placeholder="Text shown in email preview..."
-              rows={2}
-              value={data.previewText}
-            />
-            <p className="text-muted-foreground text-xs">
-              Appears after the subject in most email clients
-            </p>
-          </div>
         </CardContent>
       </Card>
 
@@ -921,7 +897,16 @@ function ContentStep({
 
   // Handle template selection from create-new editor
   const handleTemplateSelect = (templateId: string) => {
-    onChange({ templateId, contentType: "template", variableMappings: [] });
+    const newTemplate = templatesData?.find((t) => t.id === templateId);
+    const updates: Partial<CampaignData> = {
+      templateId,
+      contentType: "template",
+      variableMappings: [],
+    };
+    if (newTemplate?.subject && !data.subject) {
+      updates.subject = newTemplate.subject;
+    }
+    onChange(updates);
     setShowCreateDialog(false);
   };
 
@@ -970,12 +955,19 @@ function ContentStep({
                       {templates.length > 0 ? (
                         <>
                           <Select
-                            onValueChange={(v) =>
-                              onChange({
+                            onValueChange={(v) => {
+                              const tmpl = templatesData?.find(
+                                (t) => t.id === v
+                              );
+                              const updates: Partial<CampaignData> = {
                                 templateId: v,
                                 variableMappings: [],
-                              })
-                            }
+                              };
+                              if (tmpl?.subject) {
+                                updates.subject = tmpl.subject;
+                              }
+                              onChange(updates);
+                            }}
                             value={data.templateId}
                           >
                             <SelectTrigger>
@@ -1110,6 +1102,42 @@ function ContentStep({
               </div>
             </CollapsibleContent>
           </Collapsible>
+        </CardContent>
+      </Card>
+
+      {/* Subject & Preview Text */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Subject & Preview</CardTitle>
+          <CardDescription>
+            The subject line and preview text for this broadcast
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="subject">Subject Line *</Label>
+            <Input
+              id="subject"
+              onChange={(e) => onChange({ subject: e.target.value })}
+              placeholder="Your email subject"
+              value={data.subject}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="previewText">Preview Text</Label>
+            <Textarea
+              className="resize-none"
+              id="previewText"
+              onChange={(e) => onChange({ previewText: e.target.value })}
+              placeholder="Text shown in email preview..."
+              rows={2}
+              value={data.previewText}
+            />
+            <p className="text-muted-foreground text-xs">
+              Appears after the subject in most email clients
+            </p>
+          </div>
         </CardContent>
       </Card>
 
