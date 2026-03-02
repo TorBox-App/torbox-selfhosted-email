@@ -14,7 +14,10 @@ import { NextResponse } from "next/server";
 import { getOrAssumeRole } from "@/lib/aws/credential-cache";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
-import { tiptapToReactEmail } from "@/lib/serializers/tiptap-to-react-email";
+import {
+  tiptapToReactEmail,
+  toBrandKitColors,
+} from "@/lib/serializers/tiptap-to-react-email";
 
 type RouteContext = {
   params: Promise<{
@@ -122,33 +125,28 @@ export async function POST(request: Request, context: RouteContext) {
       });
     }
 
-    // Convert TipTap content to React Email component
-    // Note: For SES templates, we keep variables as {{variableName}} for SES to substitute
-    const emailComponent = tiptapToReactEmail(
-      templateData.content as JSONContent,
-      {}, // Empty data - variables will be substituted by SES
-      {
-        keepVariablesAsPlaceholders: true, // Always render {{name}} for SES
-        brandKit: selectedBrandKit
-          ? {
-              primaryColor: selectedBrandKit.primaryColor,
-              secondaryColor: selectedBrandKit.secondaryColor,
-              backgroundColor: selectedBrandKit.backgroundColor,
-              textColor: selectedBrandKit.textColor,
-              fontFamily: selectedBrandKit.fontFamily,
-              headingFontFamily:
-                selectedBrandKit.headingFontFamily ?? undefined,
-              buttonRadius: selectedBrandKit.buttonRadius,
-            }
-          : undefined,
-      }
-    );
+    // Build HTML and text from the appropriate source format
+    let rawHtml: string;
+    let rawText: string;
 
-    // Render to HTML
-    const rawHtml = await render(emailComponent);
+    if (templateData.sourceFormat === "react-email" && templateData.compiledHtml) {
+      // React-email templates already have compiled HTML from save-source or CLI push
+      rawHtml = templateData.compiledHtml;
+      rawText = templateData.compiledText ?? toPlainText(rawHtml);
+    } else {
+      // TipTap templates need on-the-fly serialization
+      const emailComponent = tiptapToReactEmail(
+        templateData.content as JSONContent,
+        {},
+        {
+          keepVariablesAsPlaceholders: true,
+          brandKit: toBrandKitColors(selectedBrandKit),
+        }
+      );
 
-    // Generate plain text version using react-email's robust converter
-    const rawText = toPlainText(rawHtml);
+      rawHtml = await render(emailComponent);
+      rawText = toPlainText(rawHtml);
+    }
 
     // Transform variables for SES compatibility
     // {{contact.email}} → {{contactEmail}}
@@ -161,6 +159,12 @@ export async function POST(request: Request, context: RouteContext) {
       templateData.id,
       templateData.name
     );
+
+    // Clean up old SES template if name changed (e.g. after a rename)
+    if (templateData.sesTemplateName && templateData.sesTemplateName !== sesTemplateName) {
+      await deleteSESTemplate(credentials, customerAwsAccount.region, templateData.sesTemplateName)
+        .catch(() => {}); // Best-effort cleanup
+    }
 
     // Create or update SES template with transformed variables
     await upsertSESTemplate(credentials, customerAwsAccount.region, {

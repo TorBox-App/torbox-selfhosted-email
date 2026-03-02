@@ -374,12 +374,12 @@ export async function createBatchSend(
 
       // Check if template needs (re)publishing:
       // 1. Never published (no sesTemplateName)
-      // 2. Edited since last publish (updatedAt > publishedAt)
+      // 2. Never verified by platform (publishedAt null — e.g. CLI-pushed templates)
+      // 3. Edited since last publish (updatedAt > publishedAt)
       const needsPublish =
         !tmpl.sesTemplateName ||
-        (tmpl.updatedAt &&
-          tmpl.publishedAt &&
-          tmpl.updatedAt > tmpl.publishedAt);
+        !tmpl.publishedAt ||
+        (tmpl.updatedAt && tmpl.updatedAt > tmpl.publishedAt);
 
       if (needsPublish) {
         const publishResult = await publishTemplateToSES(
@@ -1136,6 +1136,8 @@ export async function extractTemplateVariables(
       columns: {
         content: true,
         emailType: true,
+        sourceFormat: true,
+        variables: true,
       },
     });
 
@@ -1151,6 +1153,52 @@ export async function extractTemplateVariables(
     const extractedVariables: ExtractedVariable[] = [];
     const seenVariables = new Set<string>();
 
+    // React-email templates store variables in the dedicated column
+    if (templateData.sourceFormat === "react-email") {
+      const storedVars = (templateData.variables ?? []) as Array<{ name: string; fallback?: string }>;
+      for (const v of storedVars) {
+        if (!seenVariables.has(v.name)) {
+          seenVariables.add(v.name);
+
+          const isKnown = knownVariableNames.has(v.name);
+          const knownDef = knownVariables.find((kv) => kv.name === v.name);
+
+          let category: "contact" | "organization" | "system" | "custom";
+          if (isKnown && knownDef?.category) {
+            category = knownDef.category as typeof category;
+          } else if (v.name.startsWith("contact.")) {
+            category = "contact";
+          } else if (v.name.startsWith("organization.")) {
+            category = "organization";
+          } else if (
+            v.name === "unsubscribeUrl" ||
+            v.name === "preferencesUrl" ||
+            v.name === "confirmationUrl"
+          ) {
+            category = "system";
+          } else {
+            category = "custom";
+          }
+
+          extractedVariables.push({
+            name: v.name,
+            label: knownDef?.label,
+            fallback: v.fallback,
+            isKnown,
+            category,
+          });
+        }
+      }
+
+      extractedVariables.sort((a, b) => {
+        if (a.isKnown !== b.isKnown) return a.isKnown ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      return { success: true, variables: extractedVariables };
+    }
+
+    // TipTap templates: walk JSONContent nodes to find variable nodes
     function extractFromNode(node: JSONContent) {
       // Check if this is a variable node
       if (node.type === "variable" && node.attrs) {
