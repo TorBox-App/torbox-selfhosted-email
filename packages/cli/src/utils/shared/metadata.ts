@@ -477,6 +477,29 @@ export function applyConfigUpdates(
         ...result.smtpCredentials,
         ...(value as NonNullable<WrapsEmailConfig["smtpCredentials"]>),
       } as NonNullable<WrapsEmailConfig["smtpCredentials"]>;
+    } else if (key === "inbound" && typeof value === "object") {
+      // Deep merge inbound
+      result.inbound = {
+        ...result.inbound,
+        ...(value as NonNullable<WrapsEmailConfig["inbound"]>),
+      } as NonNullable<WrapsEmailConfig["inbound"]>;
+    } else if (key === "alerts" && typeof value === "object") {
+      // Deep merge alerts (has nested thresholds)
+      const alertUpdate = value as NonNullable<WrapsEmailConfig["alerts"]>;
+      result.alerts = {
+        ...result.alerts,
+        ...alertUpdate,
+        thresholds: {
+          ...result.alerts?.thresholds,
+          ...alertUpdate.thresholds,
+        },
+      } as NonNullable<WrapsEmailConfig["alerts"]>;
+    } else if (key === "userWebhook" && typeof value === "object") {
+      // Deep merge userWebhook
+      result.userWebhook = {
+        ...result.userWebhook,
+        ...(value as NonNullable<WrapsEmailConfig["userWebhook"]>),
+      } as NonNullable<WrapsEmailConfig["userWebhook"]>;
     } else {
       // Direct assignment for primitives and other objects
       result[key as keyof WrapsEmailConfig] = value as any;
@@ -580,6 +603,32 @@ export function addServiceToConnection(
 }
 
 /**
+ * Shallow merge that deep-merges nested objects (one level).
+ * Used by updateServiceConfig for SMS/CDN configs to prevent
+ * partial updates from replacing entire nested objects.
+ */
+function shallowMergeWithNestedObjects<T extends Record<string, unknown>>(
+  existing: T,
+  updates: Partial<T>
+): T {
+  const result = { ...existing };
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) {
+      continue;
+    }
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      (result as Record<string, unknown>)[key] = {
+        ...(existing[key] as Record<string, unknown> | undefined),
+        ...(value as Record<string, unknown>),
+      };
+    } else {
+      (result as Record<string, unknown>)[key] = value;
+    }
+  }
+  return result;
+}
+
+/**
  * Update service configuration in metadata
  */
 export function updateServiceConfig<T extends ServiceType>(
@@ -594,20 +643,20 @@ export function updateServiceConfig<T extends ServiceType>(
         : never
 ): void {
   if (service === "email" && metadata.services.email) {
-    metadata.services.email.config = {
-      ...metadata.services.email.config,
-      ...(config as Partial<WrapsEmailConfig>),
-    };
+    metadata.services.email.config = applyConfigUpdates(
+      metadata.services.email.config,
+      config as Partial<WrapsEmailConfig>
+    );
   } else if (service === "sms" && metadata.services.sms) {
-    metadata.services.sms.config = {
-      ...metadata.services.sms.config,
-      ...(config as Partial<WrapsSMSConfig>),
-    };
+    metadata.services.sms.config = shallowMergeWithNestedObjects(
+      metadata.services.sms.config,
+      config as Partial<WrapsSMSConfig>
+    );
   } else if (service === "cdn" && metadata.services.cdn) {
-    metadata.services.cdn.config = {
-      ...metadata.services.cdn.config,
-      ...(config as Partial<WrapsCdnConfig>),
-    };
+    metadata.services.cdn.config = shallowMergeWithNestedObjects(
+      metadata.services.cdn.config,
+      config as Partial<WrapsCdnConfig>
+    );
   } else {
     throw new Error(`${service} service not configured in metadata`);
   }
