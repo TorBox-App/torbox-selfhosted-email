@@ -487,3 +487,116 @@ describe("no duplicate infrastructure helpers", () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────
+// Test 14: No duplicate verifyOrgAccess declarations
+// ─────────────────────────────────────────────────────────
+
+describe("no duplicate verifyOrgAccess", () => {
+  test("verifyOrgAccess must not be declared outside shared module", () => {
+    const files = findFiles("apps/web/src/actions/**/*.ts").filter(
+      (f) =>
+        !(
+          f.includes("__tests__") ||
+          f.includes(".test.") ||
+          f.includes("/shared/")
+        )
+    );
+
+    const violations: string[] = [];
+    const funcRegex = /function\s+verifyOrgAccess\s*\(/g;
+
+    for (const file of files) {
+      const content = readFile(file);
+      funcRegex.lastIndex = 0;
+      if (funcRegex.test(content)) {
+        violations.push(
+          `${file} declares verifyOrgAccess locally (import from shared/verify-org-access instead)`
+        );
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test 15: No duplicate hash helpers
+// ─────────────────────────────────────────────────────────
+
+describe("no duplicate hash helpers", () => {
+  test("hashEmail and hashPhone must not be declared outside shared module", () => {
+    const files = findFiles("apps/web/src/actions/**/*.ts").filter(
+      (f) =>
+        !(
+          f.includes("__tests__") ||
+          f.includes(".test.") ||
+          f.includes("/shared/")
+        )
+    );
+
+    const violations: string[] = [];
+    const hashRegex = /function\s+(hashEmail|hashPhone)\s*\(/g;
+
+    for (const file of files) {
+      const content = readFile(file);
+      hashRegex.lastIndex = 0;
+      for (const match of content.matchAll(hashRegex)) {
+        violations.push(
+          `${file} declares ${match[1]} locally (import from shared/hash instead)`
+        );
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test 16: File size limits
+// ─────────────────────────────────────────────────────────
+
+describe("file size limits", () => {
+  const LIMITS: Array<{ pattern: string; maxLines: number; label: string }> = [
+    {
+      pattern: "apps/web/src/actions/*.ts",
+      maxLines: 1000,
+      label: "action files",
+    },
+    {
+      pattern: "apps/api/src/routes/**/*.ts",
+      maxLines: 1500,
+      label: "API route files",
+    },
+    {
+      pattern: "apps/api/src/**/workers/**/*.ts",
+      maxLines: 1000,
+      label: "worker files",
+    },
+  ];
+
+  for (const { pattern, maxLines, label } of LIMITS) {
+    test(`${label} must not exceed ${maxLines} lines`, () => {
+      const files = findFiles(pattern).filter(
+        (f) => !(f.includes("__tests__") || f.includes(".test."))
+      );
+
+      const violations: string[] = [];
+
+      for (const file of files) {
+        const content = readFile(file);
+
+        // Escape hatch: comment in first 5 lines
+        const head = content.split("\n").slice(0, 5).join("\n");
+        if (head.includes("// baseline:allow-large-file")) continue;
+
+        const lineCount = content.split("\n").length;
+        if (lineCount > maxLines) {
+          violations.push(`${file} has ${lineCount} lines (max ${maxLines})`);
+        }
+      }
+
+      expect(violations, violations.join("\n")).toEqual([]);
+    });
+  }
+});

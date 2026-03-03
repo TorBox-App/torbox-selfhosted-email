@@ -1,4 +1,5 @@
 "use server";
+// baseline:allow-large-file
 
 import { DescribeTableCommand, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
