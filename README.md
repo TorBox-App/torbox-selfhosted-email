@@ -1,8 +1,12 @@
-<p align="center">
-  <a href="https://wraps.dev">
-    <img src="https://wraps.dev/wraps-dark-logo.png" alt="Wraps" width="200" />
-  </a>
+
+<p align="center" style=`{"background: "#f1f1f1"}`>
+  <kbd>
+    <a href="https://wraps.dev">
+      <img src="https://wraps.dev/wraps-light-logo.png" alt="Wraps" width="200" />
+    </a>
+  </kbd>
 </p>
+
 
 <p align="center">
   <strong>Deploy email infrastructure to your AWS account in under 2 minutes.</strong>
