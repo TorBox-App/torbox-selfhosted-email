@@ -16,6 +16,7 @@
 
 import { batchQueue, workflowQueue } from "./queues";
 import { schedulerGroup, schedulerRole } from "./scheduler";
+import { axiomToken } from "./secrets";
 import { rateLimitTable } from "./tables";
 
 // API Gateway with Elysia Lambda handler
@@ -46,6 +47,8 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
   memory: "512 MB",
   environment: {
     DATABASE_URL: process.env.DATABASE_URL ?? "",
+    AXIOM_TOKEN: axiomToken.value,
+    AXIOM_DATASET: "wraps",
     BATCH_QUEUE_URL: batchQueue.url,
     RATE_LIMIT_TABLE_NAME: rateLimitTable.name,
     // EventBridge Scheduler config for scheduled broadcasts

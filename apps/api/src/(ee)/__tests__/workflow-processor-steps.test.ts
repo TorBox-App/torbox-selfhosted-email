@@ -214,6 +214,7 @@ vi.mock("../../lib/activation-tracking", () => ({
 
 vi.mock("../../lib/logger", () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  flushLogger: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../lib/unsubscribe-token", () => ({

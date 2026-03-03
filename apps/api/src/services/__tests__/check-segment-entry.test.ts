@@ -75,6 +75,7 @@ vi.mock("../../lib/logger", () => ({
     warn: vi.fn(),
     error: vi.fn(),
   },
+  flushLogger: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Import after mocks are set up

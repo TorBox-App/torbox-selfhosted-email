@@ -31,7 +31,7 @@ import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, exists, isNotNull, sql } from "drizzle-orm";
 
 import { trackFirstEmailSent } from "../lib/activation-tracking";
-import { log } from "../lib/logger";
+import { flushLogger, log } from "../lib/logger";
 import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 import { getCredentials } from "../services/credentials";
 import type { BatchJob } from "../services/queue";
@@ -76,9 +76,13 @@ const DEFAULT_RATE_LIMIT = 14; // Fallback emails/sec if can't fetch from AWS
 const QUEUE_URL = process.env.BATCH_QUEUE_URL;
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
-  for (const record of event.Records) {
-    const job: BatchJob = JSON.parse(record.body);
-    await processJob(job);
+  try {
+    for (const record of event.Records) {
+      const job: BatchJob = JSON.parse(record.body);
+      await processJob(job);
+    }
+  } finally {
+    await flushLogger();
   }
 };
 

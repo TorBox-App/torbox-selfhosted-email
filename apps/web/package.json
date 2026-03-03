@@ -29,6 +29,7 @@
     "@aws-sdk/client-sqs": "3.957.0",
     "@aws-sdk/client-sts": "^3.927.0",
     "@aws-sdk/lib-dynamodb": "3.957.0",
+    "@axiomhq/pino": "1.4.0",
     "@babel/parser": "7.28.5",
     "@babel/traverse": "7.28.5",
     "@babel/types": "7.28.5",

@@ -8,6 +8,7 @@
  */
 
 import { schedulerGroup, schedulerRole } from "./scheduler-resources";
+import { axiomToken } from "./secrets";
 
 // Dead Letter Queue for failed batch jobs
 export const batchDlq = new sst.aws.Queue("BatchDlq", {
@@ -50,6 +51,8 @@ batchQueue.subscribe(
     memory: "512 MB",
     environment: {
       DATABASE_URL: process.env.DATABASE_URL ?? "",
+      AXIOM_TOKEN: axiomToken.value,
+      AXIOM_DATASET: "wraps",
       // Base URLs for unsubscribe/preferences links
       API_BASE_URL:
         $app.stage === "production"
@@ -116,6 +119,8 @@ workflowDlq.subscribe(
     memory: "256 MB",
     environment: {
       DATABASE_URL: process.env.DATABASE_URL ?? "",
+      AXIOM_TOKEN: axiomToken.value,
+      AXIOM_DATASET: "wraps",
     },
     nodejs: {
       install: ["pg"],
@@ -156,6 +161,8 @@ workflowQueue.subscribe(
     memory: "512 MB",
     environment: {
       DATABASE_URL: process.env.DATABASE_URL ?? "",
+      AXIOM_TOKEN: axiomToken.value,
+      AXIOM_DATASET: "wraps",
       WORKFLOW_QUEUE_URL: workflowQueue.url,
       WORKFLOW_QUEUE_ARN: workflowQueue.arn,
       // EventBridge Scheduler config for delays

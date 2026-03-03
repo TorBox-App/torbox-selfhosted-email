@@ -19,7 +19,7 @@ import {
 import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, sql } from "drizzle-orm";
 
-import { log } from "../../lib/logger";
+import { flushLogger, log } from "../../lib/logger";
 import type { WorkflowJob } from "../../services/workflow-queue";
 import { createNextWorkflowSchedule } from "../../services/workflow-scheduler";
 
@@ -58,6 +58,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
       });
     }
   }
+  await flushLogger().catch(() => {});
 };
 
 async function handleExecute(job: Extract<WorkflowJob, { type: "execute" }>) {

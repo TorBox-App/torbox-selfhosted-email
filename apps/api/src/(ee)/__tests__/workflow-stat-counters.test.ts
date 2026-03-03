@@ -168,6 +168,7 @@ vi.mock("../../lib/logger", () => ({
     warn: vi.fn(),
     error: vi.fn(),
   },
+  flushLogger: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../lib/unsubscribe-token", () => ({

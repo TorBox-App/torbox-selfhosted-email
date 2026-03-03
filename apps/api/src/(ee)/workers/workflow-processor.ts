@@ -43,7 +43,7 @@ import { and, sql } from "drizzle-orm";
 import Handlebars from "handlebars";
 
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
-import { log } from "../../lib/logger";
+import { flushLogger, log } from "../../lib/logger";
 import { generateUnsubscribeToken } from "../../lib/unsubscribe-token";
 
 import { getCredentials } from "../../services/credentials";
@@ -94,6 +94,7 @@ export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
     })
     .filter((f): f is { itemIdentifier: string } => f !== null);
 
+  await flushLogger();
   return { batchItemFailures };
 };
 
