@@ -49,10 +49,7 @@ const pinoLogger = pino(
     timestamp: pino.stdTimeFunctions.isoTime,
   },
   axiomToken && !isDev
-    ? pino.multistream([
-        { stream: process.stdout },
-        { stream: axiomStream },
-      ])
+    ? pino.multistream([{ stream: process.stdout }, { stream: axiomStream }])
     : undefined
 );
 

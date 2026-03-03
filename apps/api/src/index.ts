@@ -15,6 +15,7 @@ import type { AuthContext } from "./middleware/auth";
 import { batchRoutes } from "./routes/batch";
 import { connectionsRoutes } from "./routes/connections";
 import { contactsRoutes } from "./routes/contacts";
+import { contactsTopicsRoutes } from "./routes/contacts-topics";
 import { eventsRoutes } from "./routes/events";
 import { healthRoutes } from "./routes/health";
 import { preferenceEventsRoutes } from "./routes/preference-events";
@@ -176,6 +177,7 @@ export const app = new Elysia()
   .use(healthRoutes)
   .use(connectionsRoutes)
   .use(contactsRoutes)
+  .use(contactsTopicsRoutes)
   .use(batchRoutes)
   .use(eventsRoutes)
   .use(workflowsRoutes)
