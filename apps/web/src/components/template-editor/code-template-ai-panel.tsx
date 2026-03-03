@@ -138,7 +138,7 @@ export function CodeTemplateAIPanel({
   const [pendingSource, setPendingSource] = useState<string | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [autoFixAttempted, setAutoFixAttempted] = useState(false);
-  const lastAppliedSourceRef = useRef<string | null>(null);
+  const lastAppliedSourceRef = useRef<string | null>(currentSource);
   const [hasShownWarningToast, setHasShownWarningToast] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -348,7 +348,7 @@ export function CodeTemplateAIPanel({
     }
   }, [messages, isLoading, autoFixAttempted, onApply]);
 
-  // Auto-scroll
+  // Auto-scroll to bottom when messages change or while streaming
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector(
@@ -358,7 +358,7 @@ export function CodeTemplateAIPanel({
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
     }
-  }, []);
+  }, [messages, isLoading]);
 
   // Apply: compile first, then call onApply. On failure, ask AI to fix (once).
   const handleApply = useCallback(async () => {
