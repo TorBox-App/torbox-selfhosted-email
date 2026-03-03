@@ -1,10 +1,8 @@
 "use server";
 
-import { auth } from "@wraps/auth";
 import { buildConditionSQL, contact, db, segment } from "@wraps/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import {
@@ -17,6 +15,7 @@ import {
   type UpdateSegmentResult,
   validateCondition,
 } from "@/lib/segments";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // Re-export types for convenience
 export type {
@@ -28,32 +27,6 @@ export type {
   SegmentWithMeta,
   UpdateSegmentResult,
 } from "@/lib/segments";
-
-/**
- * Verify user has access to organization
- */
-async function verifyOrgAccess(
-  organizationId: string
-): Promise<{ userId: string; role: string } | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, { and, eq }) =>
-      and(eq(m.organizationId, organizationId), eq(m.userId, session.user.id)),
-  });
-
-  if (!membership) {
-    return null;
-  }
-
-  return { userId: session.user.id, role: membership.role };
-}
 
 /**
  * List all segments for an organization

@@ -21,6 +21,7 @@ import {
   tiptapToReactEmail,
   toBrandKitColors,
 } from "@/lib/serializers/tiptap-to-react-email";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 export type PublishTemplateResult =
   | { success: true; sesTemplateName: string }
@@ -44,48 +45,6 @@ export type BulkUpdateStatusResult =
       errors: string[];
     }
   | { success: false; error: string };
-
-/**
- * Verify user has access to organization
- */
-async function verifyOrgAccess(organizationId: string): Promise<{
-  userId: string;
-  userEmail: string;
-  role: string;
-  orgSlug: string;
-} | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, { and: andOp, eq: eqOp }) =>
-      andOp(
-        eqOp(m.organizationId, organizationId),
-        eqOp(m.userId, session.user.id)
-      ),
-    with: {
-      organization: {
-        columns: { slug: true },
-      },
-    },
-  });
-
-  if (!membership?.organization.slug) {
-    return null;
-  }
-
-  return {
-    userId: session.user.id,
-    userEmail: session.user.email,
-    role: membership.role,
-    orgSlug: membership.organization.slug,
-  };
-}
 
 /**
  * Revalidate templates page using the org slug

@@ -1,9 +1,7 @@
 "use server";
 
-import { auth } from "@wraps/auth";
 import { contact, contactEvent, db } from "@wraps/db";
 import { and, count, desc, eq, sql } from "drizzle-orm";
-import { headers } from "next/headers";
 import type {
   EventWithContact,
   GetEventNamesResult,
@@ -13,6 +11,7 @@ import type {
 } from "@/lib/events";
 import { buildEventsFilterConditions } from "@/lib/events-queries.server";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // Re-export types for convenience
 export type {
@@ -22,41 +21,6 @@ export type {
   ListEventsOptions,
   ListEventsResult,
 } from "@/lib/events";
-
-/**
- * Verify user has access to organization
- */
-async function verifyOrgAccess(
-  organizationId: string
-): Promise<{ userId: string; role: string; orgSlug: string } | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, { and, eq }) =>
-      and(eq(m.organizationId, organizationId), eq(m.userId, session.user.id)),
-    with: {
-      organization: {
-        columns: { slug: true },
-      },
-    },
-  });
-
-  if (!membership?.organization.slug) {
-    return null;
-  }
-
-  return {
-    userId: session.user.id,
-    role: membership.role,
-    orgSlug: membership.organization.slug,
-  };
-}
 
 /**
  * List events for an organization with pagination and search

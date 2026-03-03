@@ -21,7 +21,7 @@ import {
   type MessageStatusTimestamps,
   type TimelineEvent,
   type TimelineEventType,
-} from "@/actions/contacts";
+} from "@/actions/contacts-analytics";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

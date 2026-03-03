@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@wraps/auth";
 import {
   batchSend,
   brandKit,
@@ -12,9 +11,9 @@ import {
   workflow,
 } from "@wraps/db";
 import { and, eq, ilike, or } from "drizzle-orm";
-import { headers } from "next/headers";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 export type SearchEntityType =
   | "contact"
@@ -43,41 +42,6 @@ export type UniversalSearchResult =
  */
 function escapeIlike(value: string): string {
   return value.replace(/%/g, "\\%").replace(/_/g, "\\_");
-}
-
-/**
- * Verify user has access to organization (same pattern as contacts.ts)
- */
-async function verifyOrgAccess(organizationId: string): Promise<{
-  userId: string;
-  orgSlug: string;
-} | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, { and: a, eq: e }) =>
-      a(e(m.organizationId, organizationId), e(m.userId, session.user.id)),
-    with: {
-      organization: {
-        columns: { slug: true },
-      },
-    },
-  });
-
-  if (!membership?.organization.slug) {
-    return null;
-  }
-
-  return {
-    userId: session.user.id,
-    orgSlug: membership.organization.slug,
-  };
 }
 
 /**

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   bulkCreateContactsFromEmails,
   checkExistingContacts,
-} from "@/actions/contacts";
+} from "@/actions/contacts-bulk";
 import { Badge } from "@/components/ui/badge";
 import {
   InputGroup,

@@ -1,10 +1,9 @@
 "use server";
 
-import { auth } from "@wraps/auth";
 import { db, template } from "@wraps/db";
 import { and, eq, inArray } from "drizzle-orm";
-import { headers } from "next/headers";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -21,40 +20,6 @@ export type ReadinessCheck = {
 export type ReadinessResult =
   | { success: true; checks: ReadinessCheck[] }
   | { success: false; error: string };
-
-// ═══════════════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
-
-async function verifyOrgAccess(
-  organizationId: string
-): Promise<{ userId: string; userEmail: string; role: string } | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, ops) =>
-      ops.and(
-        ops.eq(m.organizationId, organizationId),
-        ops.eq(m.userId, session.user.id)
-      ),
-  });
-
-  if (!membership) {
-    return null;
-  }
-
-  return {
-    userId: session.user.id,
-    userEmail: session.user.email,
-    role: membership.role,
-  };
-}
 
 /**
  * Known first-class contact fields (from packages/db/src/schema/contacts.ts).

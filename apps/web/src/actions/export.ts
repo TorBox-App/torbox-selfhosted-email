@@ -1,9 +1,7 @@
 "use server";
 
-import { auth } from "@wraps/auth";
 import { contact, contactEvent, contactTopic, db } from "@wraps/db";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
-import { headers } from "next/headers";
 import type {
   ContactStatus,
   ContactWithMeta,
@@ -14,40 +12,9 @@ import type {
 import type { EventWithContact, ListEventsOptions } from "@/lib/events";
 import { buildEventsFilterConditions } from "@/lib/events-queries.server";
 import { createActionLogger, serializeError } from "@/lib/logger";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 const MAX_EXPORT_ROWS = 50_000;
-
-async function verifyOrgAccess(
-  organizationId: string
-): Promise<{ userId: string; role: string; orgSlug: string } | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, { and, eq }) =>
-      and(eq(m.organizationId, organizationId), eq(m.userId, session.user.id)),
-    with: {
-      organization: {
-        columns: { slug: true },
-      },
-    },
-  });
-
-  if (!membership?.organization.slug) {
-    return null;
-  }
-
-  return {
-    userId: session.user.id,
-    role: membership.role,
-    orgSlug: membership.organization.slug,
-  };
-}
 
 export async function exportAllContacts(
   organizationId: string,

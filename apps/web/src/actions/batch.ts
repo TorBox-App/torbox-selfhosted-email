@@ -1,4 +1,5 @@
 "use server";
+// baseline:allow-large-file
 
 import { auth } from "@wraps/auth";
 import { batchSend, contact, contactTopic, db, template } from "@wraps/db";
@@ -34,6 +35,7 @@ import type {
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess } from "@/lib/plan-limits";
 import type { FilterCondition, SegmentFilter } from "@/lib/segments";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 import { publishTemplateToSES } from "./templates";
 
 // UUID validation schema for input sanitization
@@ -50,36 +52,6 @@ export type {
   ListBatchesResult,
   RecipientFilter,
 } from "@/lib/batch";
-
-/**
- * Verify user has access to organization
- */
-async function verifyOrgAccess(
-  organizationId: string
-): Promise<{ userId: string; userEmail: string; role: string } | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, { and, eq }) =>
-      and(eq(m.organizationId, organizationId), eq(m.userId, session.user.id)),
-  });
-
-  if (!membership) {
-    return null;
-  }
-
-  return {
-    userId: session.user.id,
-    userEmail: session.user.email,
-    role: membership.role,
-  };
-}
 
 /**
  * List batch sends for an organization

@@ -42,7 +42,7 @@ export async function myAction(organizationId: string, data: Input) {
 }
 ```
 
-`verifyOrgAccess` is in `src/lib/auth.ts`. It checks session + org membership. Returns `null` if unauthorized.
+`verifyOrgAccess` is in `src/actions/shared/verify-org-access.ts`. It checks session + org membership. Returns `null` if unauthorized.
 
 ### 3. Revalidate with orgSlug, Not organizationId
 

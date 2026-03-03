@@ -18,17 +18,19 @@ import {
   vi,
 } from "vitest";
 import {
-  bulkSubscribeContactsToTopics,
-  bulkUnsubscribeContactsFromTopics,
   createContact,
   deleteContact,
   getContact,
-  getContactAnalytics,
   listContacts,
-  subscribeContactToTopics,
-  unsubscribeContactFromTopics,
   updateContact,
 } from "../contacts";
+import { getContactAnalytics } from "../contacts-analytics";
+import {
+  bulkSubscribeContactsToTopics,
+  bulkUnsubscribeContactsFromTopics,
+  subscribeContactToTopics,
+  unsubscribeContactFromTopics,
+} from "../contacts-topics";
 
 // Test data
 const testUser = {

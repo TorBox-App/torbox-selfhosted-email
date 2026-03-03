@@ -32,15 +32,17 @@ import {
 } from "react";
 import { toast } from "sonner";
 import {
-  bulkDeleteContacts,
-  bulkSubscribeContactsToTopics,
-  bulkUnsubscribeContactsFromTopics,
   createContact,
   deleteContact,
-  subscribeContactToTopics,
-  unsubscribeContactFromTopics,
   updateContact,
 } from "@/actions/contacts";
+import { bulkDeleteContacts } from "@/actions/contacts-bulk";
+import {
+  bulkSubscribeContactsToTopics,
+  bulkUnsubscribeContactsFromTopics,
+  subscribeContactToTopics,
+  unsubscribeContactFromTopics,
+} from "@/actions/contacts-topics";
 import { exportAllContacts } from "@/actions/export";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";

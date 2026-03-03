@@ -1,71 +1,14 @@
 "use server";
 
-import crypto from "node:crypto";
-import { auth } from "@wraps/auth";
 import { contact, contactTopic, db } from "@wraps/db";
 import { and, eq, inArray } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { trackContactsImported } from "@/lib/activation-tracking";
 import type { ImportContactsResult } from "@/lib/contacts";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkContactLimit } from "@/lib/plan-limits";
-
-// ═══════════════════════════════════════════════════════════════════════════
-// HELPERS (mirrored from contacts.ts — these are private to that module)
-// ═══════════════════════════════════════════════════════════════════════════
-
-function hashEmail(email: string): string {
-  return crypto
-    .createHash("sha256")
-    .update(email.toLowerCase().trim())
-    .digest("hex");
-}
-
-function hashPhone(phone: string): string {
-  const normalized = phone.replace(/\D/g, "");
-  return crypto.createHash("sha256").update(normalized).digest("hex");
-}
-
-function revalidateContacts(orgSlug: string): void {
-  revalidatePath(`/${orgSlug}/contacts`, "page");
-}
-
-async function verifyOrgAccess(organizationId: string): Promise<{
-  userId: string;
-  userEmail: string;
-  role: string;
-  orgSlug: string;
-} | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, { and: a, eq: e }) =>
-      a(e(m.organizationId, organizationId), e(m.userId, session.user.id)),
-    with: {
-      organization: {
-        columns: { slug: true },
-      },
-    },
-  });
-
-  if (!membership?.organization.slug) {
-    return null;
-  }
-
-  return {
-    userId: session.user.id,
-    userEmail: session.user.email,
-    role: membership.role,
-    orgSlug: membership.organization.slug,
-  };
-}
+import { revalidateContacts } from "./contacts";
+import { hashEmail, hashPhone } from "./shared/hash";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VALIDATION

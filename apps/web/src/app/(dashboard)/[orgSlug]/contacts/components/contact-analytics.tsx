@@ -5,7 +5,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   type ContactAnalytics as ContactAnalyticsData,
   getContactAnalytics,
-} from "@/actions/contacts";
+} from "@/actions/contacts-analytics";
 import {
   Card,
   CardAction,

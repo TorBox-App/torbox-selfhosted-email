@@ -1,4 +1,5 @@
 "use server";
+// baseline:allow-large-file
 
 import { auth } from "@wraps/auth";
 import {
@@ -19,6 +20,7 @@ import { headers } from "next/headers";
 import { trackWorkflowCreated } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 import { checkFeatureAccess, checkWorkflowLimit } from "@/lib/plan-limits";
+import { verifyOrgAccess } from "./shared/verify-org-access";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -65,40 +67,6 @@ export type EnableWorkflowResult =
 export type DuplicateWorkflowResult =
   | { success: true; workflow: WorkflowWithMeta }
   | { success: false; error: string };
-
-// ═══════════════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Verify user has access to organization
- */
-async function verifyOrgAccess(
-  organizationId: string
-): Promise<{ userId: string; userEmail: string; role: string } | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return null;
-  }
-
-  const membership = await db.query.member.findFirst({
-    where: (m, { and, eq }) =>
-      and(eq(m.organizationId, organizationId), eq(m.userId, session.user.id)),
-  });
-
-  if (!membership) {
-    return null;
-  }
-
-  return {
-    userId: session.user.id,
-    userEmail: session.user.email,
-    role: membership.role,
-  };
-}
 
 /**
  * Validate workflow definition for common issues

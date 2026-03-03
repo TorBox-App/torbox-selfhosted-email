@@ -16,7 +16,7 @@ import { Download, Loader2, Search, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { bulkCreateContactsFromEmails } from "@/actions/contacts";
+import { bulkCreateContactsFromEmails } from "@/actions/contacts-bulk";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
