@@ -24,11 +24,12 @@ const isDev = process.env.NODE_ENV !== "production";
 /**
  * Create the base logger
  *
- * Logs to stdout in all environments. When AXIOM_TOKEN is set,
- * also sends logs to Axiom via @axiomhq/pino transport.
+ * Logs to stdout in all environments. Axiom ingestion is handled by
+ * Vercel Log Drains — pino.transport() is incompatible with bundled
+ * serverless runtimes (Turbopack/webpack can't resolve transports at runtime).
  */
 function createLogger(): pino.Logger {
-  const options: pino.LoggerOptions = {
+  return pino({
     level: isDev ? "debug" : "info",
     base: {
       service: "wraps-web",
@@ -38,27 +39,7 @@ function createLogger(): pino.Logger {
       level: (label) => ({ level: label }),
     },
     timestamp: pino.stdTimeFunctions.isoTime,
-  };
-
-  if (process.env.AXIOM_TOKEN && !isDev) {
-    return pino(
-      options,
-      pino.transport({
-        targets: [
-          { target: "pino/file", options: { destination: 1 } },
-          {
-            target: "@axiomhq/pino",
-            options: {
-              dataset: process.env.AXIOM_DATASET ?? "wraps",
-              token: process.env.AXIOM_TOKEN,
-            },
-          },
-        ],
-      })
-    );
-  }
-
-  return pino(options);
+  });
 }
 
 /**

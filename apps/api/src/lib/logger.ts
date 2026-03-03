@@ -4,33 +4,16 @@ type LogData = Record<string, unknown>;
 
 const isDev = process.env.NODE_ENV === "development";
 
-function createTransport() {
-  const token = process.env.AXIOM_TOKEN;
-  if (token && !isDev) {
-    return pino.transport({
-      targets: [
-        { target: "pino/file", options: { destination: 1 } },
-        {
-          target: "@axiomhq/pino",
-          options: {
-            dataset: process.env.AXIOM_DATASET ?? "wraps",
-            token,
-          },
-        },
-      ],
-    });
-  }
-}
-
-const pinoLogger = pino(
-  {
-    level: isDev ? "debug" : "info",
-    base: { service: "wraps-api" },
-    formatters: { level: (label) => ({ level: label }) },
-    timestamp: pino.stdTimeFunctions.isoTime,
-  },
-  createTransport()
-);
+/**
+ * Logs to stdout — Axiom ingestion via Vercel Log Drains.
+ * pino.transport() is incompatible with bundled Lambda runtimes.
+ */
+const pinoLogger = pino({
+  level: isDev ? "debug" : "info",
+  base: { service: "wraps-api" },
+  formatters: { level: (label) => ({ level: label }) },
+  timestamp: pino.stdTimeFunctions.isoTime,
+});
 
 export const log = {
   info(msg: string, data?: LogData) {
