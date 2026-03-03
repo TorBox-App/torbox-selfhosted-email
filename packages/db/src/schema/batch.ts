@@ -293,6 +293,7 @@ export const messageSend = pgTable(
     error: text("error"),
     bounceType: text("bounce_type"), // Email: Permanent, Transient
     bounceSubType: text("bounce_sub_type"), // Email: detailed bounce reason
+    clickedUrl: text("clicked_url"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

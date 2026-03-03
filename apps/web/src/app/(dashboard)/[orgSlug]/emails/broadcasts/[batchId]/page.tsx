@@ -1,16 +1,12 @@
 import { auth } from "@wraps/auth";
+import { and, db, eq, messageSend } from "@wraps/db";
+import { isNotNull, sql } from "drizzle-orm";
 import { ArrowLeft, Mail, MessageSquare, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getBatchSend } from "@/actions/batch";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { BatchStats } from "./components/batch-stats";
@@ -53,6 +49,47 @@ export default async function BatchDetailPage({
   }
 
   const batch = result.batch;
+
+  // Fetch bounce breakdown (hard vs soft) from message_send
+  const bounceBreakdown = await db
+    .select({
+      hardBounced:
+        sql<number>`count(*) filter (where ${messageSend.bounceType} = 'Permanent')`.as(
+          "hard_bounced"
+        ),
+      softBounced:
+        sql<number>`count(*) filter (where ${messageSend.bounceType} = 'Transient')`.as(
+          "soft_bounced"
+        ),
+    })
+    .from(messageSend)
+    .where(
+      and(
+        eq(messageSend.batchSendId, batch.id),
+        eq(messageSend.organizationId, orgWithMembership.id)
+      )
+    );
+
+  const hardBounced = bounceBreakdown[0]?.hardBounced ?? 0;
+  const softBounced = bounceBreakdown[0]?.softBounced ?? 0;
+
+  // Fetch click URL breakdown
+  const clicksByUrl = await db
+    .select({
+      url: messageSend.clickedUrl,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(messageSend)
+    .where(
+      and(
+        eq(messageSend.batchSendId, batch.id),
+        eq(messageSend.organizationId, orgWithMembership.id),
+        isNotNull(messageSend.clickedUrl)
+      )
+    )
+    .groupBy(messageSend.clickedUrl)
+    .orderBy(sql`count(*) desc`);
+
   const canCancel =
     (batch.status === "scheduled" ||
       batch.status === "queued" ||
@@ -94,7 +131,7 @@ export default async function BatchDetailPage({
         )}
       </div>
 
-      {/* Stats with auto-refresh */}
+      {/* Stats with auto-refresh + engagement funnel */}
       <BatchStats
         batch={{
           id: batch.id,
@@ -109,9 +146,14 @@ export default async function BatchDetailPage({
           bounced: batch.bounced,
           complained: batch.complained,
           failed: batch.failed,
+          hardBounced,
+          softBounced,
           startedAt: batch.startedAt,
           completedAt: batch.completedAt,
         }}
+        clicksByUrl={clicksByUrl.filter(
+          (r): r is { url: string; count: number } => r.url !== null
+        )}
         organizationId={orgWithMembership.id}
       />
 
@@ -187,42 +229,6 @@ export default async function BatchDetailPage({
           </CardHeader>
           <CardContent>
             <p>{batch.errorMessage}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Delivery Issues */}
-      {(batch.bounced > 0 || batch.complained > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Delivery Issues</CardTitle>
-            <CardDescription>
-              Issues encountered during email delivery
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {batch.bounced > 0 && (
-                <div className="rounded-lg border p-4">
-                  <div className="font-bold text-2xl text-orange-600">
-                    {batch.bounced}
-                  </div>
-                  <div className="text-muted-foreground text-sm">
-                    Bounced emails
-                  </div>
-                </div>
-              )}
-              {batch.complained > 0 && (
-                <div className="rounded-lg border p-4">
-                  <div className="font-bold text-2xl text-red-600">
-                    {batch.complained}
-                  </div>
-                  <div className="text-muted-foreground text-sm">
-                    Spam complaints
-                  </div>
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
       )}

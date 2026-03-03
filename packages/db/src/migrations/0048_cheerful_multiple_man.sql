@@ -1,0 +1,1 @@
+ALTER TABLE "message_send" ADD COLUMN "clicked_url" text;

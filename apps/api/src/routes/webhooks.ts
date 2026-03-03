@@ -166,7 +166,12 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
           break;
 
         case "Click":
-          await processClick(message, messageId, event.detail.click?.timestamp);
+          await processClick(
+            message,
+            messageId,
+            event.detail.click?.timestamp,
+            event.detail.click?.link
+          );
           break;
 
         case "Bounce":
@@ -335,7 +340,8 @@ async function processOpen(
 async function processClick(
   message: MessageRecord,
   messageId: string,
-  timestamp?: string
+  timestamp?: string,
+  link?: string
 ): Promise<void> {
   const clickedAt = timestamp ? new Date(timestamp) : new Date();
 
@@ -351,6 +357,7 @@ async function processClick(
     .set({
       status: "clicked",
       clickedAt,
+      clickedUrl: link ?? null,
     })
     .where(eq(messageSend.id, message.id));
 

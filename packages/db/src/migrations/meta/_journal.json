@@ -337,6 +337,13 @@
       "when": 1772491024120,
       "tag": "0047_empty_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1772508795836,
+      "tag": "0048_cheerful_multiple_man",
+      "breakpoints": true
     }
   ]
 }
