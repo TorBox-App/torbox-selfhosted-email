@@ -20,6 +20,13 @@ vi.mock("node:fs");
 vi.mock("../../utils/shared/aws.js");
 vi.mock("../../utils/shared/fs.js");
 vi.mock("../../utils/shared/metadata.js");
+vi.mock("../../utils/shared/pulumi.js", async () => {
+  const actual = (await vi.importActual("../../utils/shared/pulumi.js")) as any;
+  return {
+    ...actual,
+    ensurePulumiInstalled: vi.fn().mockResolvedValue(undefined),
+  };
+});
 vi.mock("../../utils/route53.js");
 vi.mock("@aws-sdk/client-sesv2");
 

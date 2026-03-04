@@ -373,6 +373,8 @@ export type EmailUpgradeOptions = {
   yes?: boolean;
   preview?: boolean;
   json?: boolean;
+  action?: string;
+  preset?: string;
 };
 
 /**

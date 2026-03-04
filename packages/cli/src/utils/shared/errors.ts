@@ -1,4 +1,5 @@
 import * as clack from "@clack/prompts";
+
 import pc from "picocolors";
 import { trackError } from "../../telemetry/events.js";
 import { isJsonMode, jsonError } from "./json-output.js";

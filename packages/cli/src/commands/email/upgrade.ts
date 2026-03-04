@@ -322,14 +322,18 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     }
   );
 
-  upgradeAction = await clack.select({
-    message: "What would you like to do?",
-    options: upgradeOptions,
-  });
+  if (options.action) {
+    upgradeAction = options.action;
+  } else {
+    upgradeAction = await clack.select({
+      message: "What would you like to do?",
+      options: upgradeOptions,
+    });
 
-  if (clack.isCancel(upgradeAction)) {
-    clack.cancel("Upgrade cancelled.");
-    process.exit(0);
+    if (clack.isCancel(upgradeAction)) {
+      clack.cancel("Upgrade cancelled.");
+      process.exit(0);
+    }
   }
 
   let updatedConfig: WrapsEmailConfig = { ...config };
@@ -375,14 +379,19 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
         process.exit(0);
       }
 
-      const selectedPreset = await clack.select({
-        message: "Select new preset:",
-        options: availablePresets,
-      });
+      let selectedPreset: string | symbol;
+      if (options.preset) {
+        selectedPreset = options.preset;
+      } else {
+        selectedPreset = await clack.select({
+          message: "Select new preset:",
+          options: availablePresets,
+        });
 
-      if (clack.isCancel(selectedPreset)) {
-        clack.cancel("Upgrade cancelled.");
-        process.exit(0);
+        if (clack.isCancel(selectedPreset)) {
+          clack.cancel("Upgrade cancelled.");
+          process.exit(0);
+        }
       }
 
       // Get preset config but preserve user-customized fields from existing config
@@ -1571,14 +1580,16 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
       );
       console.log("");
 
-      const confirmCreate = await clack.confirm({
-        message: "Create SMTP credentials?",
-        initialValue: true,
-      });
+      if (!options.yes) {
+        const confirmCreate = await clack.confirm({
+          message: "Create SMTP credentials?",
+          initialValue: true,
+        });
 
-      if (clack.isCancel(confirmCreate) || !confirmCreate) {
-        clack.log.info("SMTP credentials not created.");
-        process.exit(0);
+        if (clack.isCancel(confirmCreate) || !confirmCreate) {
+          clack.log.info("SMTP credentials not created.");
+          process.exit(0);
+        }
       }
 
       updatedConfig = {
@@ -1976,7 +1987,6 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
     );
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-
     // Track upgrade failure
     trackServiceUpgrade("email", {
       from_preset: metadata.services.email?.preset,
@@ -1996,8 +2006,14 @@ export async function upgrade(options: UpgradeOptions): Promise<void> {
   }
 
   // 13. Create DNS records using stored provider (or detect if not stored)
+  // Skip DNS management in JSON mode — non-interactive
   let dnsAutoCreated = false;
-  if (outputs.domain && outputs.dkimTokens && outputs.dkimTokens.length > 0) {
+  if (
+    !isJsonMode() &&
+    outputs.domain &&
+    outputs.dkimTokens &&
+    outputs.dkimTokens.length > 0
+  ) {
     // Use stored DNS provider or detect available providers
     let dnsProvider: DNSProviderType | undefined =
       metadata.services.email?.dnsProvider;

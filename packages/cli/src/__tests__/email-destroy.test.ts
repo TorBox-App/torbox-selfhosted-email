@@ -144,6 +144,7 @@ vi.mock("../utils/shared/timeout.js", () => ({
 vi.mock("../utils/shared/pulumi.js", async () => {
   const actual = (await vi.importActual("../utils/shared/pulumi.js")) as any;
   return {
+    ensurePulumiInstalled: vi.fn().mockResolvedValue(undefined),
     previewWithResourceChanges: vi.fn(),
     withLockRetry: actual.withLockRetry,
   };

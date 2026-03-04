@@ -398,6 +398,13 @@ args.options([
     description: "Resend verification code",
     defaultValue: false,
   },
+  // Email upgrade options
+  {
+    name: "action",
+    description:
+      "Upgrade action (preset, smtp-credentials, events, archiving, etc.)",
+    defaultValue: undefined,
+  },
   // Email test options
   {
     name: "scenario",
@@ -784,6 +791,8 @@ async function run() {
             yes: flags.yes,
             preview: flags.preview,
             json: flags.json,
+            action: flags.action,
+            preset: flags.preset,
           });
           break;
 

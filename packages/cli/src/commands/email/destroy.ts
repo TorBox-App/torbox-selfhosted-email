@@ -88,6 +88,14 @@ export async function emailDestroy(options: DestroyOptions): Promise<void> {
 
   const progress = new DeploymentProgress();
 
+  // 0. Ensure Pulumi CLI is installed
+  await progress.execute("Checking Pulumi CLI installation", async () => {
+    const { ensurePulumiInstalled } = await import(
+      "../../utils/shared/pulumi.js"
+    );
+    await ensurePulumiInstalled();
+  });
+
   // 1. Validate AWS credentials
   const identity = await progress.execute(
     "Validating AWS credentials",
