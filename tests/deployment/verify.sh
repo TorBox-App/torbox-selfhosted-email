@@ -110,6 +110,19 @@ verify_base() {
         fail "IAM policy missing ses:GetSendStatistics"
       fi
 
+      # SES identity read permissions
+      if echo "$policy_text" | grep -q 'ses:ListEmailIdentities'; then
+        pass "IAM policy has ses:ListEmailIdentities"
+      else
+        fail "IAM policy missing ses:ListEmailIdentities"
+      fi
+
+      if echo "$policy_text" | grep -q 'ses:GetEmailIdentity'; then
+        pass "IAM policy has ses:GetEmailIdentity"
+      else
+        fail "IAM policy missing ses:GetEmailIdentity"
+      fi
+
       # SES send permissions
       if echo "$policy_text" | grep -q 'ses:SendEmail'; then
         pass "IAM policy has ses:SendEmail"
@@ -224,6 +237,94 @@ verify_base() {
     fi
   else
     fail "SES email identity $domain not found" "$identity_output"
+  fi
+}
+
+# ─── IAM Policy Conditional Verification ─────────────────────────────
+
+verify_iam_events_policy() {
+  section "IAM: Conditional policy statements (events enabled)"
+
+  local policies_list
+  if policies_list=$(aws_check iam list-role-policies --role-name wraps-email-role); then
+    local policy_name
+    policy_name=$(echo "$policies_list" | jq -r '.PolicyNames[0]')
+    local policy_doc
+    policy_doc=$(aws iam get-role-policy --role-name wraps-email-role --policy-name "$policy_name" 2>/dev/null)
+    local policy_text
+    policy_text=$(echo "$policy_doc" | jq -r '.PolicyDocument')
+
+    # DynamoDB access should be present when events.storeHistory is true
+    if echo "$policy_text" | grep -q 'dynamodb:PutItem'; then
+      pass "IAM policy has DynamoDB access (events.storeHistory)"
+    else
+      fail "IAM policy missing DynamoDB access"
+    fi
+
+    if echo "$policy_text" | grep -q 'dynamodb:Query'; then
+      pass "IAM policy has dynamodb:Query"
+    else
+      fail "IAM policy missing dynamodb:Query"
+    fi
+
+    # EventBridge access should be present when events is configured
+    if echo "$policy_text" | grep -q 'events:PutEvents'; then
+      pass "IAM policy has events:PutEvents (events configured)"
+    else
+      fail "IAM policy missing events:PutEvents"
+    fi
+
+    # SQS access should be present when events is configured
+    if echo "$policy_text" | grep -q 'sqs:SendMessage'; then
+      pass "IAM policy has sqs:SendMessage (events configured)"
+    else
+      fail "IAM policy missing sqs:SendMessage"
+    fi
+
+    if echo "$policy_text" | grep -q 'sqs:ReceiveMessage'; then
+      pass "IAM policy has sqs:ReceiveMessage (events configured)"
+    else
+      fail "IAM policy missing sqs:ReceiveMessage"
+    fi
+  else
+    fail "Could not list IAM role policies" "$policies_list"
+  fi
+}
+
+verify_iam_no_events_policy() {
+  section "IAM: Verify no conditional statements (events disabled)"
+
+  local policies_list
+  if policies_list=$(aws_check iam list-role-policies --role-name wraps-email-role); then
+    local policy_name
+    policy_name=$(echo "$policies_list" | jq -r '.PolicyNames[0]')
+    local policy_doc
+    policy_doc=$(aws iam get-role-policy --role-name wraps-email-role --policy-name "$policy_name" 2>/dev/null)
+    local policy_text
+    policy_text=$(echo "$policy_doc" | jq -r '.PolicyDocument')
+
+    # DynamoDB access should NOT be present without events
+    if echo "$policy_text" | grep -q 'dynamodb:PutItem'; then
+      fail "IAM policy has DynamoDB access but events not configured"
+    else
+      pass "No DynamoDB access (expected without events)"
+    fi
+
+    # EventBridge access should NOT be present without events
+    if echo "$policy_text" | grep -q 'events:PutEvents'; then
+      fail "IAM policy has events:PutEvents but events not configured"
+    else
+      pass "No EventBridge access (expected without events)"
+    fi
+
+    # SQS access should NOT be present without events
+    if echo "$policy_text" | grep -q 'sqs:SendMessage'; then
+      fail "IAM policy has sqs:SendMessage but events not configured"
+    else
+      pass "No SQS access (expected without events)"
+    fi
+  else
+    fail "Could not list IAM role policies" "$policies_list"
   fi
 }
 
@@ -758,6 +859,89 @@ verify_smtp() {
   fi
 }
 
+# ─── Webhook Verification ─────────────────────────────────────────────
+
+verify_webhook() {
+  local region="${1:-us-east-1}"
+
+  section "Webhook: EventBridge Connection"
+
+  local conn_output
+  if conn_output=$(aws_check events describe-connection \
+    --name wraps-webhook-connection \
+    --region "$region"); then
+    pass "EventBridge connection wraps-webhook-connection exists"
+
+    local auth_type
+    auth_type=$(echo "$conn_output" | jq -r '.AuthorizationType // "NONE"')
+    if [[ "$auth_type" == "API_KEY" ]]; then
+      pass "Connection auth type: API_KEY"
+    else
+      fail "Connection auth type: expected API_KEY, got $auth_type"
+    fi
+
+    local conn_state
+    conn_state=$(echo "$conn_output" | jq -r '.ConnectionState // "UNKNOWN"')
+    if [[ "$conn_state" == "AUTHORIZED" || "$conn_state" == "AUTHORIZING" || "$conn_state" == "CREATING" ]]; then
+      pass "Connection state: $conn_state"
+    else
+      fail "Connection state: unexpected $conn_state"
+    fi
+  else
+    fail "EventBridge connection wraps-webhook-connection not found" "$conn_output"
+  fi
+
+  section "Webhook: API Destination"
+
+  local dest_output
+  if dest_output=$(aws_check events describe-api-destination \
+    --name wraps-webhook-destination \
+    --region "$region"); then
+    pass "API destination wraps-webhook-destination exists"
+
+    local http_method
+    http_method=$(echo "$dest_output" | jq -r '.HttpMethod // "NONE"')
+    if [[ "$http_method" == "POST" ]]; then
+      pass "API destination method: POST"
+    else
+      fail "API destination method: expected POST, got $http_method"
+    fi
+
+    local endpoint
+    endpoint=$(echo "$dest_output" | jq -r '.InvocationEndpoint // ""')
+    if [[ "$endpoint" == *"/webhooks/ses/"* ]]; then
+      pass "API destination endpoint contains /webhooks/ses/"
+    else
+      fail "API destination endpoint doesn't match expected pattern: $endpoint"
+    fi
+
+    local rate_limit
+    rate_limit=$(echo "$dest_output" | jq -r '.InvocationRateLimitPerSecond // 0')
+    if (( rate_limit > 0 )); then
+      pass "API destination rate limit: $rate_limit/s"
+    else
+      fail "API destination rate limit not set"
+    fi
+  else
+    fail "API destination wraps-webhook-destination not found" "$dest_output"
+  fi
+
+  section "Webhook: EventBridge Rule Targets"
+
+  # Check that the EventBridge rule has an API Destination target
+  local targets_output
+  targets_output=$(aws events list-targets-by-rule \
+    --rule wraps-email-events-to-sqs \
+    --region "$region" 2>/dev/null)
+  local target_count
+  target_count=$(echo "$targets_output" | jq '.Targets | length')
+  if (( target_count >= 2 )); then
+    pass "EventBridge rule has $target_count targets (SQS + webhook)"
+  else
+    fail "EventBridge rule has only $target_count target(s), expected >= 2"
+  fi
+}
+
 # ─── Teardown Verification ───────────────────────────────────────────
 
 verify_teardown() {
@@ -851,5 +1035,23 @@ verify_teardown() {
     fail "IAM user wraps-email-smtp-user still exists"
   else
     pass "IAM user wraps-email-smtp-user removed"
+  fi
+
+  # Webhook connection
+  if aws events describe-connection \
+    --name wraps-webhook-connection \
+    --region "$region" &>/dev/null; then
+    fail "EventBridge connection wraps-webhook-connection still exists"
+  else
+    pass "EventBridge connection wraps-webhook-connection removed"
+  fi
+
+  # Webhook API destination
+  if aws events describe-api-destination \
+    --name wraps-webhook-destination \
+    --region "$region" &>/dev/null; then
+    fail "API destination wraps-webhook-destination still exists"
+  else
+    pass "API destination wraps-webhook-destination removed"
   fi
 }

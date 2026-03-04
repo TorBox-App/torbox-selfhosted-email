@@ -20,8 +20,12 @@ import type { WrapsEmailProps, WrapsEmailResources } from "./types.js";
  * Get the package root directory (where package.json lives)
  */
 function getPackageRoot(): string {
-  const currentFile = fileURLToPath(import.meta.url);
-  let dir = dirname(currentFile);
+  // CJS: __dirname is available directly
+  // ESM: derive from import.meta.url
+  let dir =
+    typeof __dirname !== "undefined"
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
 
   while (dir !== dirname(dir)) {
     if (existsSync(join(dir, "package.json"))) {
@@ -131,11 +135,17 @@ export class WrapsEmail extends Construct {
   /** SMTP endpoint */
   public readonly smtpEndpoint?: string;
 
+  /** SMTP username (IAM access key ID) */
+  public readonly smtpUsername?: string;
+
   constructor(scope: Construct, id: string, props: WrapsEmailProps) {
     super(scope, id);
 
     // Apply defaults
     const config = applyDefaults(props);
+
+    // Tag all resources in this construct
+    cdk.Tags.of(this).add("ManagedBy", "wraps-cdk");
 
     // Initialize resources object
     const resources: Partial<WrapsEmailResources> = {};
@@ -300,7 +310,7 @@ export class WrapsEmail extends Construct {
       // Main event queue
       const queue = new sqs.Queue(this, "Queue", {
         queueName: "wraps-email-events",
-        visibilityTimeout: cdk.Duration.seconds(60), // Must be >= Lambda timeout
+        visibilityTimeout: cdk.Duration.seconds(300), // Must be >= Lambda timeout
         retentionPeriod: cdk.Duration.days(4),
         receiveMessageWaitTime: cdk.Duration.seconds(20), // Long polling
         deadLetterQueue: {
@@ -321,11 +331,52 @@ export class WrapsEmail extends Construct {
       eventRule.addTarget(new eventsTargets.SqsQueue(queue));
       resources.eventRule = eventRule;
 
+      // Webhook via EventBridge API Destination (if configured)
+      if (config.webhook) {
+        const { awsAccountNumber, webhookSecret, webhookUrl } = config.webhook;
+        const baseUrl = webhookUrl || "https://api.wraps.dev";
+
+        // Connection (stores auth credentials in Secrets Manager)
+        const webhookConnection = new events.Connection(this, "WebhookConnection", {
+          connectionName: "wraps-webhook-connection",
+          description: "Connection for Wraps platform webhook",
+          authorization: events.Authorization.apiKey(
+            "X-Wraps-Api-Key",
+            cdk.SecretValue.unsafePlainText(webhookSecret)
+          ),
+        });
+
+        // API Destination
+        const webhookApiDestination = new events.ApiDestination(
+          this,
+          "WebhookApiDestination",
+          {
+            apiDestinationName: "wraps-webhook-destination",
+            description: "Send SES events to Wraps platform",
+            connection: webhookConnection,
+            endpoint: `${baseUrl}/webhooks/ses/${awsAccountNumber}`,
+            httpMethod: events.HttpMethod.POST,
+            rateLimitPerSecond: 300,
+          }
+        );
+
+        // Add API Destination as a target of the same EventBridge rule
+        eventRule.addTarget(
+          new eventsTargets.ApiDestination(webhookApiDestination)
+        );
+
+        resources.webhookConnection = webhookConnection;
+        resources.webhookApiDestination = webhookApiDestination;
+      }
+
       // SES event destination to publish events to EventBridge
       // Maps event types from config (e.g., "SEND") to SES format (e.g., "send")
       const eventTypes = config.events.types ?? [];
+      // CloudFormation expects camelCase event types (e.g., "renderingFailure", "deliveryDelay")
       const sesEventTypes = eventTypes.map((type) =>
-        type.toLowerCase().replace(/_/g, "-")
+        type
+          .toLowerCase()
+          .replace(/_([a-z])/g, (_, c) => c.toUpperCase())
       );
 
       new ses.CfnConfigurationSetEventDestination(this, "EventDestination", {
@@ -379,10 +430,10 @@ export class WrapsEmail extends Construct {
         const eventProcessor = new lambda.Function(this, "EventProcessor", {
           functionName: "wraps-email-event-processor",
           description: "Processes SES email events and stores them in DynamoDB",
-          runtime: lambda.Runtime.NODEJS_20_X,
+          runtime: lambda.Runtime.NODEJS_22_X,
           handler: "index.handler",
           code: lambda.Code.fromAsset(getLambdaPath()),
-          timeout: cdk.Duration.seconds(30),
+          timeout: cdk.Duration.seconds(300),
           memorySize: 512,
           environment: {
             TABLE_NAME: table.tableName,
@@ -425,8 +476,14 @@ export class WrapsEmail extends Construct {
         })
       );
 
+      const smtpAccessKey = new iam.AccessKey(this, "SmtpAccessKey", {
+        user: smtpUser,
+      });
+
       resources.smtpUser = smtpUser;
+      resources.smtpAccessKey = smtpAccessKey;
       this.smtpEndpoint = `email-smtp.${cdk.Stack.of(this).region}.amazonaws.com`;
+      this.smtpUsername = smtpAccessKey.accessKeyId;
     }
 
     // Store resources
@@ -496,6 +553,28 @@ export class WrapsEmail extends Construct {
         description: "DMARC TXT record (recommended) - add to DNS",
       });
     }
+
+    // SMTP outputs
+    if (this.smtpEndpoint && resources.smtpAccessKey) {
+      new cdk.CfnOutput(this, "SmtpEndpointOutput", {
+        value: this.smtpEndpoint,
+        description: "SMTP endpoint for sending emails",
+        exportName: "WrapsEmailSmtpEndpoint",
+      });
+
+      new cdk.CfnOutput(this, "SmtpUsernameOutput", {
+        value: resources.smtpAccessKey.accessKeyId,
+        description: "SMTP username (IAM access key ID)",
+        exportName: "WrapsEmailSmtpUsername",
+      });
+
+      new cdk.CfnOutput(this, "SmtpSecretAccessKeyOutput", {
+        value: resources.smtpAccessKey.secretAccessKey.unsafeUnwrap(),
+        description:
+          "IAM secret access key - convert to SMTP password with convertToSMTPPassword from @wraps/core",
+        exportName: "WrapsEmailSmtpSecretAccessKey",
+      });
+    }
   }
 
   /**
@@ -547,11 +626,29 @@ export class WrapsEmail extends Construct {
       assumedBy,
     });
 
+    // SES read permissions (always)
+    role.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "SESReadAccess",
+        actions: [
+          "ses:GetAccount",
+          "ses:GetSendStatistics",
+          "ses:ListIdentities",
+          "ses:GetIdentityVerificationAttributes",
+          "ses:ListEmailIdentities",
+          "ses:GetEmailIdentity",
+          "cloudwatch:GetMetricData",
+          "cloudwatch:GetMetricStatistics",
+        ],
+        resources: ["*"],
+      })
+    );
+
     // SES sending permissions
     if (config.sendingEnabled) {
       role.addToPolicy(
         new iam.PolicyStatement({
-          sid: "SESSending",
+          sid: "SESSendAccess",
           actions: [
             "ses:SendEmail",
             "ses:SendRawEmail",
@@ -560,40 +657,77 @@ export class WrapsEmail extends Construct {
             "ses:SendBulkEmail",
           ],
           resources: ["*"],
-          conditions: {
-            StringEquals: {
-              "ses:ConfigurationSetName": "wraps-email-tracking",
-            },
-          },
         })
       );
     }
 
-    // SES read permissions
-    role.addToPolicy(
-      new iam.PolicyStatement({
-        sid: "SESRead",
-        actions: [
-          "ses:GetSendQuota",
-          "ses:GetSendStatistics",
-          "ses:GetAccount",
-        ],
-        resources: ["*"],
-      })
-    );
+    // DynamoDB access (if history storage enabled)
+    if (config.events?.storeHistory) {
+      role.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "DynamoDBAccess",
+          actions: [
+            "dynamodb:PutItem",
+            "dynamodb:GetItem",
+            "dynamodb:Query",
+            "dynamodb:Scan",
+            "dynamodb:BatchGetItem",
+            "dynamodb:DescribeTable",
+          ],
+          resources: [
+            "arn:aws:dynamodb:*:*:table/wraps-email-*",
+            "arn:aws:dynamodb:*:*:table/wraps-email-*/index/*",
+          ],
+        })
+      );
+    }
 
-    // CloudWatch metrics
-    role.addToPolicy(
-      new iam.PolicyStatement({
-        sid: "CloudWatchMetrics",
-        actions: [
-          "cloudwatch:GetMetricData",
-          "cloudwatch:GetMetricStatistics",
-          "cloudwatch:ListMetrics",
-        ],
-        resources: ["*"],
-      })
-    );
+    // EventBridge access (if events configured)
+    if (config.events) {
+      role.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "EventBridgeAccess",
+          actions: ["events:PutEvents", "events:DescribeEventBus"],
+          resources: ["arn:aws:events:*:*:event-bus/wraps-email-*"],
+        })
+      );
+    }
+
+    // SQS access (if events configured)
+    if (config.events) {
+      role.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "SQSAccess",
+          actions: [
+            "sqs:SendMessage",
+            "sqs:ReceiveMessage",
+            "sqs:DeleteMessage",
+            "sqs:GetQueueAttributes",
+          ],
+          resources: ["arn:aws:sqs:*:*:wraps-email-*"],
+        })
+      );
+    }
+
+    // Mail Manager Archive access (if archiving enabled)
+    if (config.archiving?.enabled) {
+      role.addToPolicy(
+        new iam.PolicyStatement({
+          sid: "MailManagerArchiveAccess",
+          actions: [
+            "ses:StartArchiveSearch",
+            "ses:GetArchiveSearchResults",
+            "ses:GetArchiveMessage",
+            "ses:GetArchiveMessageContent",
+            "ses:GetArchive",
+            "ses:ListArchives",
+            "ses:StartArchiveExport",
+            "ses:GetArchiveExport",
+          ],
+          resources: ["arn:aws:ses:*:*:mailmanager-archive/*"],
+        })
+      );
+    }
 
     return role;
   }

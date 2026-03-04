@@ -8,12 +8,13 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@wraps.dev/cdk": "latest",
+    "@wraps.dev/cdk": "file:../../../../packages/cdk",
     "aws-cdk-lib": "^2.170.0",
     "constructs": "^10.0.0"
   },
   "devDependencies": {
     "aws-cdk": "^2.170.0",
+    "ts-node": "^10.9.0",
     "typescript": "^5.7.0"
   }
 }

@@ -12,6 +12,11 @@ type TestConfig = {
   smtp?: {
     enabled?: boolean;
   };
+  webhook?: {
+    awsAccountNumber: string;
+    webhookSecret: string;
+    webhookUrl?: string;
+  };
 };
 
 const configPath = path.join(__dirname, "..", "config.json");
@@ -29,5 +34,6 @@ new WrapsEmail(stack, "Email", {
   domain: config.domain,
   events: config.events,
   smtp: config.smtp,
+  webhook: config.webhook,
   removalPolicy: cdk.RemovalPolicy.DESTROY,
 });

@@ -202,4 +202,10 @@ export type WrapsEmailResources = {
   distribution?: cloudfront.IDistribution;
   /** SMTP IAM user (if smtp.enabled is true) */
   smtpUser?: iam.IUser;
+  /** SMTP access key (if smtp.enabled is true) */
+  smtpAccessKey?: iam.AccessKey;
+  /** EventBridge Connection for webhook (if webhook is configured) */
+  webhookConnection?: events.IConnection;
+  /** EventBridge API Destination for webhook (if webhook is configured) */
+  webhookApiDestination?: events.IApiDestination;
 };

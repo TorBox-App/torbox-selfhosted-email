@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 # CDK deployment verification test
-# Deploys via CDK construct through 3 phases, verifying resources at each step
+# Deploys via CDK construct through 5 phases, verifying resources at each step
 
 set -euo pipefail
 
@@ -31,7 +31,7 @@ if [[ ! -d "$APP_DIR/node_modules" ]]; then
 fi
 
 # Bootstrap CDK if needed
-cdk bootstrap --app "npx ts-node $APP_DIR/bin/stack.ts" 2>/dev/null || true
+(cd "$APP_DIR" && npx cdk bootstrap 2>/dev/null || true)
 
 write_config() {
   cat > "$APP_DIR/config.json" <<CONF
@@ -51,6 +51,7 @@ write_config "{
 
 reset_counters
 verify_base "$DOMAIN" "$REGION"
+verify_iam_no_events_policy
 
 section "Phase 1: Verify no event resources"
 if aws dynamodb describe-table --table-name wraps-email-history --region "$REGION" &>/dev/null; then
@@ -83,6 +84,7 @@ write_config "{
 reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
+verify_iam_events_policy
 
 section "Phase 2: Verify no SMTP"
 if aws iam get-user --user-name wraps-email-smtp-user &>/dev/null; then
@@ -113,9 +115,41 @@ write_config "{
 reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
+verify_iam_events_policy
 verify_smtp
 
 summary || { printf "${RED}Phase 3 FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 4: Add webhook ────────────────────────────────────────────
+
+printf "\n${YELLOW}Phase 4: Add webhook${NC}\n"
+
+write_config "{
+  \"domain\": \"$DOMAIN\",
+  \"events\": {
+    \"storeHistory\": true,
+    \"retention\": \"90days\"
+  },
+  \"smtp\": {
+    \"enabled\": true
+  },
+  \"webhook\": {
+    \"awsAccountNumber\": \"886375649429\",
+    \"webhookSecret\": \"test-webhook-secret-key\",
+    \"webhookUrl\": \"https://api.wraps.dev\"
+  }
+}"
+
+(cd "$APP_DIR" && npx cdk deploy --require-approval never)
+
+reset_counters
+verify_base "$DOMAIN" "$REGION"
+verify_events "$REGION"
+verify_iam_events_policy
+verify_smtp
+verify_webhook "$REGION"
+
+summary || { printf "${RED}Phase 4 FAILED${NC}\n"; exit 1; }
 
 # ─── Teardown ─────────────────────────────────────────────────────────
 

@@ -1,15 +1,16 @@
 {
   "name": "@wraps.dev/cdk",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "AWS CDK construct for deploying Wraps email infrastructure",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [

@@ -10,7 +10,7 @@ export WRAPS_TEST_REGION="${WRAPS_TEST_REGION:-us-east-1}"
 
 # AWS profiles — one per deployment method (can be same account if running sequentially)
 export AWS_PROFILE_CLI="${AWS_PROFILE_CLI:-test-wraps-cli}"
-export AWS_PROFILE_CDK="${AWS_PROFILE_CDK:-wraps-test-cdk}"
+export AWS_PROFILE_CDK="${AWS_PROFILE_CDK:-test-wraps-cli}"
 export AWS_PROFILE_PULUMI="${AWS_PROFILE_PULUMI:-wraps-test-pulumi}"
 
 # Timeouts
