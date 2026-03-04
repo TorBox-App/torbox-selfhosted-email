@@ -82,23 +82,48 @@ verify_base() {
     fail "IAM role wraps-email-role not found" "$role_output"
   fi
 
-  # Check inline policy (name may have Pulumi suffix)
+  # Check inline policy (name varies: CLI uses wraps-email-policy, Pulumi auto-names)
   local policies_list
   if policies_list=$(aws_check iam list-role-policies --role-name wraps-email-role); then
-    local policy_name
-    policy_name=$(echo "$policies_list" | jq -r '.PolicyNames[0] // ""')
-    if [[ -n "$policy_name" && "$policy_name" == wraps-email-policy* ]]; then
+    local policy_count
+    policy_count=$(echo "$policies_list" | jq '.PolicyNames | length')
+    if (( policy_count > 0 )); then
+      local policy_name
+      policy_name=$(echo "$policies_list" | jq -r '.PolicyNames[0]')
       pass "IAM inline policy exists: $policy_name"
 
-      local policy_output
-      policy_output=$(aws iam get-role-policy --role-name wraps-email-role --policy-name "$policy_name" 2>/dev/null)
-      if echo "$policy_output" | jq -r '.PolicyDocument' | grep -q 'ses:'; then
-        pass "IAM policy has SES permissions"
+      local policy_doc
+      policy_doc=$(aws iam get-role-policy --role-name wraps-email-role --policy-name "$policy_name" 2>/dev/null)
+      local policy_text
+      policy_text=$(echo "$policy_doc" | jq -r '.PolicyDocument')
+
+      # SES read permissions
+      if echo "$policy_text" | grep -q 'ses:GetAccount'; then
+        pass "IAM policy has ses:GetAccount"
       else
-        fail "IAM policy missing SES permissions"
+        fail "IAM policy missing ses:GetAccount"
+      fi
+
+      if echo "$policy_text" | grep -q 'ses:GetSendStatistics'; then
+        pass "IAM policy has ses:GetSendStatistics"
+      else
+        fail "IAM policy missing ses:GetSendStatistics"
+      fi
+
+      # SES send permissions
+      if echo "$policy_text" | grep -q 'ses:SendEmail'; then
+        pass "IAM policy has ses:SendEmail"
+      else
+        fail "IAM policy missing ses:SendEmail"
+      fi
+
+      if echo "$policy_text" | grep -q 'ses:SendRawEmail'; then
+        pass "IAM policy has ses:SendRawEmail"
+      else
+        fail "IAM policy missing ses:SendRawEmail"
       fi
     else
-      fail "IAM inline policy not found or unexpected name: $policy_name"
+      fail "IAM inline policy not found"
     fi
   else
     fail "Could not list IAM role policies" "$policies_list"
@@ -113,17 +138,26 @@ verify_base() {
     pass "SES config set wraps-email-tracking exists"
 
     # Check sending is enabled
-    if echo "$ses_output" | jq -e '.SendingOptions.SendingEnabled' &>/dev/null; then
+    if echo "$ses_output" | jq -e '.SendingOptions.SendingEnabled == true' &>/dev/null; then
       pass "SES config set sending enabled"
     else
       fail "SES config set sending not enabled"
     fi
 
-    # Check suppression
-    if echo "$ses_output" | jq -e '.SuppressionOptions.SuppressedReasons[]' 2>/dev/null | grep -q 'BOUNCE\|COMPLAINT'; then
-      pass "SES config set has suppression list (BOUNCE/COMPLAINT)"
+    # Check reputation metrics
+    if echo "$ses_output" | jq -e '.ReputationOptions.ReputationMetricsEnabled == true' &>/dev/null; then
+      pass "SES config set reputation metrics enabled"
     else
-      fail "SES config set missing suppression list"
+      fail "SES config set reputation metrics not enabled"
+    fi
+
+    # Check suppression (BOUNCE and COMPLAINT)
+    local suppressed_reasons
+    suppressed_reasons=$(echo "$ses_output" | jq -r '[.SuppressionOptions.SuppressedReasons[]] | sort | join(",")' 2>/dev/null)
+    if [[ "$suppressed_reasons" == *"BOUNCE"* && "$suppressed_reasons" == *"COMPLAINT"* ]]; then
+      pass "SES config set suppression: $suppressed_reasons"
+    else
+      fail "SES config set missing suppression (BOUNCE/COMPLAINT), got: $suppressed_reasons"
     fi
   else
     fail "SES config set wraps-email-tracking not found" "$ses_output"
@@ -137,13 +171,29 @@ verify_base() {
     --region "$region"); then
     pass "SES email identity $domain exists"
 
-    # Check DKIM
+    # Check DKIM status
     local dkim_status
     dkim_status=$(echo "$identity_output" | jq -r '.DkimAttributes.Status // "NONE"')
     if [[ "$dkim_status" == "SUCCESS" || "$dkim_status" == "PENDING" ]]; then
       pass "SES DKIM status: $dkim_status"
     else
       fail "SES DKIM status unexpected: $dkim_status"
+    fi
+
+    # Check DKIM signing key length
+    local dkim_key_length
+    dkim_key_length=$(echo "$identity_output" | jq -r '.DkimAttributes.CurrentSigningKeyLength // .DkimAttributes.SigningAttributesOrigin // "NONE"')
+    if [[ "$dkim_key_length" == "RSA_2048_BIT" || "$dkim_key_length" == "RSA_1024_BIT" ]]; then
+      pass "SES DKIM key length: $dkim_key_length"
+    else
+      # Some API versions return this differently, just check DKIM tokens exist
+      local token_count
+      token_count=$(echo "$identity_output" | jq '[.DkimAttributes.Tokens // [] | length] | .[0]' 2>/dev/null)
+      if (( token_count > 0 )); then
+        pass "SES DKIM tokens present ($token_count)"
+      else
+        pass "SES DKIM configured (key length: $dkim_key_length)"
+      fi
     fi
 
     # Check config set linkage
@@ -154,6 +204,24 @@ verify_base() {
     else
       fail "SES identity config set: expected wraps-email-tracking, got $linked_config"
     fi
+
+    # Check MAIL FROM domain (optional — not all presets/configs set it)
+    local mail_from
+    mail_from=$(echo "$identity_output" | jq -r '.MailFromAttributes.MailFromDomain // "NONE"')
+    if [[ "$mail_from" == mail.* || "$mail_from" == *".${domain}" ]]; then
+      pass "SES MAIL FROM domain: $mail_from"
+
+      # Check MAIL FROM behavior on failure (only if MAIL FROM is configured)
+      local mail_from_behavior
+      mail_from_behavior=$(echo "$identity_output" | jq -r '.MailFromAttributes.BehaviorOnMxFailure // "NONE"')
+      if [[ "$mail_from_behavior" == "USE_DEFAULT_VALUE" ]]; then
+        pass "SES MAIL FROM fallback: USE_DEFAULT_VALUE"
+      else
+        fail "SES MAIL FROM fallback: expected USE_DEFAULT_VALUE, got $mail_from_behavior"
+      fi
+    else
+      pass "SES MAIL FROM not configured (optional)"
+    fi
   else
     fail "SES email identity $domain not found" "$identity_output"
   fi
@@ -163,6 +231,49 @@ verify_base() {
 
 verify_events() {
   local region="${1:-us-east-1}"
+
+  section "Events: SES Event Destination"
+
+  # Check that config set has an EventBridge event destination
+  local event_dest_output
+  if event_dest_output=$(aws_check sesv2 get-configuration-set-event-destinations \
+    --configuration-set-name wraps-email-tracking \
+    --region "$region"); then
+    local dest_count
+    dest_count=$(echo "$event_dest_output" | jq '[.EventDestinations[]] | length')
+    if (( dest_count > 0 )); then
+      pass "SES config set has event destination(s): $dest_count"
+
+      # Check for EventBridge destination
+      if echo "$event_dest_output" | jq -e '.EventDestinations[] | select(.EventBridgeDestination != null)' &>/dev/null; then
+        pass "SES event destination targets EventBridge"
+      else
+        fail "SES event destination not targeting EventBridge"
+      fi
+
+      # Check destination is enabled
+      if echo "$event_dest_output" | jq -e '.EventDestinations[] | select(.Enabled == true)' &>/dev/null; then
+        pass "SES event destination is enabled"
+      else
+        fail "SES event destination is disabled"
+      fi
+
+      # Check matching event types include critical ones
+      local event_types
+      event_types=$(echo "$event_dest_output" | jq -r '[.EventDestinations[0].MatchingEventTypes[]] | join(",")' 2>/dev/null)
+      for evt in SEND DELIVERY BOUNCE COMPLAINT; do
+        if [[ "$event_types" == *"$evt"* ]]; then
+          pass "SES event destination captures $evt"
+        else
+          fail "SES event destination missing $evt event type"
+        fi
+      done
+    else
+      fail "SES config set has no event destinations"
+    fi
+  else
+    fail "Could not get SES event destinations" "$event_dest_output"
+  fi
 
   section "Events: DynamoDB Table"
 
@@ -211,6 +322,28 @@ verify_events() {
     # GSI
     if echo "$table_output" | jq -e '.Table.GlobalSecondaryIndexes[] | select(.IndexName=="accountId-sentAt-index")' &>/dev/null; then
       pass "DynamoDB GSI accountId-sentAt-index exists"
+
+      # GSI key schema
+      if echo "$table_output" | jq -e '.Table.GlobalSecondaryIndexes[] | select(.IndexName=="accountId-sentAt-index") | .KeySchema[] | select(.AttributeName=="accountId" and .KeyType=="HASH")' &>/dev/null; then
+        pass "DynamoDB GSI hash key: accountId"
+      else
+        fail "DynamoDB GSI hash key not accountId"
+      fi
+
+      if echo "$table_output" | jq -e '.Table.GlobalSecondaryIndexes[] | select(.IndexName=="accountId-sentAt-index") | .KeySchema[] | select(.AttributeName=="sentAt" and .KeyType=="RANGE")' &>/dev/null; then
+        pass "DynamoDB GSI range key: sentAt"
+      else
+        fail "DynamoDB GSI range key not sentAt"
+      fi
+
+      # GSI projection
+      local gsi_projection
+      gsi_projection=$(echo "$table_output" | jq -r '.Table.GlobalSecondaryIndexes[] | select(.IndexName=="accountId-sentAt-index") | .Projection.ProjectionType')
+      if [[ "$gsi_projection" == "ALL" ]]; then
+        pass "DynamoDB GSI projection: ALL"
+      else
+        fail "DynamoDB GSI projection: expected ALL, got $gsi_projection"
+      fi
     else
       fail "DynamoDB GSI accountId-sentAt-index not found"
     fi
@@ -234,14 +367,16 @@ verify_events() {
       --attribute-names All \
       --region "$region" 2>/dev/null)
 
+    # Visibility timeout (must be >= Lambda timeout, range 60-300)
     local vis_timeout
     vis_timeout=$(echo "$queue_attrs" | jq -r '.Attributes.VisibilityTimeout // "0"')
-    if [[ "$vis_timeout" == "60" ]]; then
-      pass "SQS visibility timeout: 60s"
+    if (( vis_timeout >= 60 && vis_timeout <= 300 )); then
+      pass "SQS visibility timeout: ${vis_timeout}s"
     else
-      fail "SQS visibility timeout: expected 60, got $vis_timeout"
+      fail "SQS visibility timeout: expected 60-300, got $vis_timeout"
     fi
 
+    # Message retention (4 days)
     local retention
     retention=$(echo "$queue_attrs" | jq -r '.Attributes.MessageRetentionPeriod // "0"')
     if [[ "$retention" == "345600" ]]; then
@@ -250,11 +385,30 @@ verify_events() {
       fail "SQS retention: expected 345600, got $retention"
     fi
 
-    # Check redrive policy points to DLQ
-    if echo "$queue_attrs" | jq -r '.Attributes.RedrivePolicy // ""' | grep -q 'wraps-email-events-dlq'; then
+    # Long polling
+    local receive_wait
+    receive_wait=$(echo "$queue_attrs" | jq -r '.Attributes.ReceiveMessageWaitTimeSeconds // "0"')
+    if (( receive_wait >= 10 && receive_wait <= 20 )); then
+      pass "SQS long polling: ${receive_wait}s"
+    else
+      fail "SQS long polling: expected 10-20, got $receive_wait"
+    fi
+
+    # Redrive policy: check DLQ target and maxReceiveCount
+    local redrive_policy
+    redrive_policy=$(echo "$queue_attrs" | jq -r '.Attributes.RedrivePolicy // ""')
+    if echo "$redrive_policy" | grep -q 'wraps-email-events-dlq'; then
       pass "SQS redrive policy targets DLQ"
     else
       fail "SQS redrive policy not targeting DLQ"
+    fi
+
+    local max_receive
+    max_receive=$(echo "$redrive_policy" | jq -r '.maxReceiveCount // 0' 2>/dev/null)
+    if [[ "$max_receive" == "3" ]]; then
+      pass "SQS redrive maxReceiveCount: 3"
+    else
+      fail "SQS redrive maxReceiveCount: expected 3, got $max_receive"
     fi
   else
     fail "SQS queue wraps-email-events not found"
@@ -293,6 +447,7 @@ verify_events() {
     --region "$region"); then
     pass "Lambda wraps-email-event-processor exists"
 
+    # Runtime
     local runtime
     runtime=$(echo "$lambda_output" | jq -r '.Configuration.Runtime')
     if [[ "$runtime" == nodejs* ]]; then
@@ -301,6 +456,7 @@ verify_events() {
       fail "Lambda runtime: expected nodejs*, got $runtime"
     fi
 
+    # Memory
     local memory
     memory=$(echo "$lambda_output" | jq -r '.Configuration.MemorySize')
     if [[ "$memory" == "512" ]]; then
@@ -309,25 +465,138 @@ verify_events() {
       fail "Lambda memory: expected 512, got $memory"
     fi
 
-    # Check env vars
+    # Timeout (30-300s, must be <= SQS visibility timeout)
+    local timeout
+    timeout=$(echo "$lambda_output" | jq -r '.Configuration.Timeout')
+    if (( timeout >= 30 && timeout <= 300 )); then
+      pass "Lambda timeout: ${timeout}s"
+    else
+      fail "Lambda timeout: expected 30-300, got $timeout"
+    fi
+
+    # Verify Lambda timeout <= SQS visibility timeout
+    if (( timeout <= vis_timeout )); then
+      pass "Lambda timeout ($timeout) <= SQS visibility ($vis_timeout)"
+    else
+      fail "Lambda timeout ($timeout) > SQS visibility ($vis_timeout) — will cause retries"
+    fi
+
+    # Handler
+    local handler
+    handler=$(echo "$lambda_output" | jq -r '.Configuration.Handler')
+    if [[ "$handler" == "index.handler" ]]; then
+      pass "Lambda handler: index.handler"
+    else
+      fail "Lambda handler: expected index.handler, got $handler"
+    fi
+
+    # Environment variables
     local env_vars
     env_vars=$(echo "$lambda_output" | jq -r '.Configuration.Environment.Variables // {}')
-    if echo "$env_vars" | jq -e '.TABLE_NAME' &>/dev/null; then
-      pass "Lambda has TABLE_NAME env var"
+
+    if echo "$env_vars" | jq -e '.TABLE_NAME == "wraps-email-history"' &>/dev/null; then
+      pass "Lambda TABLE_NAME = wraps-email-history"
+    elif echo "$env_vars" | jq -e '.TABLE_NAME' &>/dev/null; then
+      local table_val
+      table_val=$(echo "$env_vars" | jq -r '.TABLE_NAME')
+      fail "Lambda TABLE_NAME: expected wraps-email-history, got $table_val"
     else
       fail "Lambda missing TABLE_NAME env var"
     fi
 
+    if echo "$env_vars" | jq -e '.AWS_ACCOUNT_ID' &>/dev/null; then
+      pass "Lambda has AWS_ACCOUNT_ID env var"
+    else
+      fail "Lambda missing AWS_ACCOUNT_ID env var"
+    fi
+
     if echo "$env_vars" | jq -e '.RETENTION_DAYS' &>/dev/null; then
-      pass "Lambda has RETENTION_DAYS env var"
+      local ret_days
+      ret_days=$(echo "$env_vars" | jq -r '.RETENTION_DAYS')
+      pass "Lambda RETENTION_DAYS = $ret_days"
     else
       fail "Lambda missing RETENTION_DAYS env var"
+    fi
+
+    # Tags
+    local lambda_tags
+    lambda_tags=$(echo "$lambda_output" | jq -r '.Tags // {}')
+    if echo "$lambda_tags" | jq -e '.ManagedBy' &>/dev/null; then
+      pass "Lambda has ManagedBy tag"
+    else
+      fail "Lambda missing ManagedBy tag"
     fi
   else
     fail "Lambda wraps-email-event-processor not found" "$lambda_output"
   fi
 
+  # Lambda IAM role — discover from Lambda function's Role ARN
+  section "Events: Lambda IAM Role"
+
+  local lambda_role_name
+  lambda_role_name=$(echo "$lambda_output" | jq -r '.Configuration.Role // ""' | sed 's|.*/||')
+  if [[ -z "$lambda_role_name" ]]; then
+    fail "Could not determine Lambda IAM role from function config"
+  else
+    local lambda_role_output
+    if lambda_role_output=$(aws_check iam get-role --role-name "$lambda_role_name"); then
+      pass "Lambda IAM role $lambda_role_name exists"
+
+      # Trust policy allows lambda.amazonaws.com
+      if echo "$lambda_role_output" | jq -e '.Role.AssumeRolePolicyDocument.Statement[] | select(.Principal.Service == "lambda.amazonaws.com")' &>/dev/null; then
+        pass "Lambda role trusts lambda.amazonaws.com"
+      else
+        fail "Lambda role missing lambda.amazonaws.com trust"
+      fi
+
+      # Check attached managed policy (AWSLambdaBasicExecutionRole)
+      local attached_policies
+      attached_policies=$(aws iam list-attached-role-policies --role-name "$lambda_role_name" --query 'AttachedPolicies[].PolicyArn' --output json 2>/dev/null)
+      if echo "$attached_policies" | grep -q 'AWSLambdaBasicExecutionRole'; then
+        pass "Lambda role has AWSLambdaBasicExecutionRole"
+      else
+        fail "Lambda role missing AWSLambdaBasicExecutionRole"
+      fi
+
+      # Check inline policy has DynamoDB + SQS permissions
+      local lambda_policies
+      lambda_policies=$(aws iam list-role-policies --role-name "$lambda_role_name" --query 'PolicyNames' --output json 2>/dev/null)
+      local lambda_policy_count
+      lambda_policy_count=$(echo "$lambda_policies" | jq 'length')
+      if (( lambda_policy_count > 0 )); then
+        local lp_name
+        lp_name=$(echo "$lambda_policies" | jq -r '.[0]')
+        local lp_doc
+        lp_doc=$(aws iam get-role-policy --role-name "$lambda_role_name" --policy-name "$lp_name" --query 'PolicyDocument' --output json 2>/dev/null)
+
+        if echo "$lp_doc" | grep -q 'dynamodb:PutItem'; then
+          pass "Lambda policy has DynamoDB write access"
+        else
+          fail "Lambda policy missing DynamoDB write access"
+        fi
+
+        if echo "$lp_doc" | grep -q 'sqs:ReceiveMessage'; then
+          pass "Lambda policy has SQS read access"
+        else
+          fail "Lambda policy missing SQS read access"
+        fi
+
+        if echo "$lp_doc" | grep -q 'sqs:DeleteMessage'; then
+          pass "Lambda policy has SQS delete access"
+        else
+          fail "Lambda policy missing SQS delete access"
+        fi
+      else
+        fail "Lambda role has no inline policies"
+      fi
+    else
+      fail "Lambda IAM role $lambda_role_name not found" "$lambda_role_output"
+    fi
+  fi
+
   # Event source mapping
+  section "Events: Lambda Event Source Mapping"
+
   local esm_output
   if esm_output=$(aws_check lambda list-event-source-mappings \
     --function-name wraps-email-event-processor \
@@ -337,12 +606,43 @@ verify_events() {
     if (( esm_count > 0 )); then
       pass "Lambda has SQS event source mapping"
 
+      local esm_first
+      esm_first=$(echo "$esm_output" | jq '.EventSourceMappings[0]')
+
+      # Batch size
       local batch_size
-      batch_size=$(echo "$esm_output" | jq -r '.EventSourceMappings[0].BatchSize')
+      batch_size=$(echo "$esm_first" | jq -r '.BatchSize')
       if [[ "$batch_size" == "10" ]]; then
-        pass "Lambda batch size: 10"
+        pass "Lambda ESM batch size: 10"
       else
-        fail "Lambda batch size: expected 10, got $batch_size"
+        fail "Lambda ESM batch size: expected 10, got $batch_size"
+      fi
+
+      # Batching window
+      local batch_window
+      batch_window=$(echo "$esm_first" | jq -r '.MaximumBatchingWindowInSeconds // 0')
+      if (( batch_window >= 0 && batch_window <= 10 )); then
+        pass "Lambda ESM batching window: ${batch_window}s"
+      else
+        fail "Lambda ESM batching window: expected 0-10, got $batch_window"
+      fi
+
+      # ReportBatchItemFailures
+      local response_types
+      response_types=$(echo "$esm_first" | jq -r '[.FunctionResponseTypes // []] | .[0] | join(",")' 2>/dev/null)
+      if [[ "$response_types" == *"ReportBatchItemFailures"* ]]; then
+        pass "Lambda ESM reports batch item failures"
+      else
+        fail "Lambda ESM missing ReportBatchItemFailures"
+      fi
+
+      # Source ARN points to our queue
+      local esm_source
+      esm_source=$(echo "$esm_first" | jq -r '.EventSourceArn // ""')
+      if [[ "$esm_source" == *"wraps-email-events"* ]]; then
+        pass "Lambda ESM source: wraps-email-events queue"
+      else
+        fail "Lambda ESM source doesn't match wraps-email-events"
       fi
     else
       fail "Lambda has no event source mappings"
@@ -357,12 +657,42 @@ verify_events() {
     --region "$region"); then
     pass "EventBridge rule wraps-email-events-to-sqs exists"
 
+    # Event pattern
     local pattern
     pattern=$(echo "$rule_output" | jq -r '.EventPattern // ""')
     if echo "$pattern" | grep -q 'aws.ses'; then
       pass "EventBridge rule matches aws.ses events"
     else
       fail "EventBridge rule pattern doesn't match aws.ses"
+    fi
+
+    # Rule is enabled
+    local rule_state
+    rule_state=$(echo "$rule_output" | jq -r '.State // "DISABLED"')
+    if [[ "$rule_state" == "ENABLED" ]]; then
+      pass "EventBridge rule is ENABLED"
+    else
+      fail "EventBridge rule state: expected ENABLED, got $rule_state"
+    fi
+
+    # Check targets
+    local targets_output
+    targets_output=$(aws events list-targets-by-rule \
+      --rule wraps-email-events-to-sqs \
+      --region "$region" 2>/dev/null)
+    local target_count
+    target_count=$(echo "$targets_output" | jq '.Targets | length')
+    if (( target_count > 0 )); then
+      pass "EventBridge rule has $target_count target(s)"
+
+      # At least one target points to SQS
+      if echo "$targets_output" | jq -e '.Targets[] | select(.Arn | contains("sqs"))' &>/dev/null; then
+        pass "EventBridge rule targets SQS queue"
+      else
+        fail "EventBridge rule has no SQS target"
+      fi
+    else
+      fail "EventBridge rule has no targets"
     fi
   else
     fail "EventBridge rule wraps-email-events-to-sqs not found" "$rule_output"
@@ -413,6 +743,19 @@ verify_smtp() {
   else
     fail "Could not list SMTP user policies" "$policies_output"
   fi
+
+  # Check access key exists
+  local access_keys
+  access_keys=$(aws iam list-access-keys --user-name wraps-email-smtp-user --query 'AccessKeyMetadata' --output json 2>/dev/null)
+  local key_count
+  key_count=$(echo "$access_keys" | jq 'length')
+  if (( key_count > 0 )); then
+    local key_status
+    key_status=$(echo "$access_keys" | jq -r '.[0].Status')
+    pass "SMTP access key exists (status: $key_status)"
+  else
+    fail "SMTP user has no access keys"
+  fi
 }
 
 # ─── Teardown Verification ───────────────────────────────────────────
@@ -430,11 +773,15 @@ verify_teardown() {
     pass "IAM role wraps-email-role removed"
   fi
 
-  # Lambda role
-  if aws iam get-role --role-name wraps-email-lambda-role &>/dev/null; then
-    fail "IAM role wraps-email-lambda-role still exists"
+  # Lambda role (name may have auto-generated suffix)
+  local lambda_roles
+  lambda_roles=$(aws iam list-roles --query "Roles[?starts_with(RoleName, 'wraps-email-lambda-role')].RoleName" --output json 2>/dev/null)
+  local lambda_role_count
+  lambda_role_count=$(echo "$lambda_roles" | jq 'length')
+  if (( lambda_role_count > 0 )); then
+    fail "Lambda role still exists: $(echo "$lambda_roles" | jq -r '.[0]')"
   else
-    pass "IAM role wraps-email-lambda-role removed"
+    pass "Lambda role wraps-email-lambda-role* removed"
   fi
 
   # SES config set

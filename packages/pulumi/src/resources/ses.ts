@@ -210,7 +210,7 @@ export function createSESResources(
   name: string,
   config: ResolvedConfig,
   tags: Record<string, string>,
-  transform?: TransformFunctions,
+  _transform?: TransformFunctions,
   opts?: pulumi.ComponentResourceOptions
 ): SESResourcesResult {
   // Create configuration set with v2 API for full feature support
@@ -228,33 +228,33 @@ export function createSESResources(
   }
 
   // Create domain identity if domain is provided
-  let domainIdentity: aws.ses.DomainIdentity | undefined;
-  let domainDkim: aws.ses.DomainDkim | undefined;
+  let domainIdentityV2: aws.sesv2.EmailIdentity | undefined;
   let mailFromAttributes: aws.sesv2.EmailIdentityMailFromAttributes | undefined;
   let dkimTokens: pulumi.Output<string[]> = pulumi.output([]);
 
   if (config.domain) {
-    const domainResources = createDomainIdentity(
+    // Use v2 API for domain identity — supports config set linking and DKIM
+    domainIdentityV2 = createDomainIdentityV2(
       name,
       config.domain,
+      configSet.configurationSetName,
       tags,
-      transform?.domainIdentity,
-      opts
+      { ...opts, dependsOn: [configSet] }
     );
-    domainIdentity = domainResources.domainIdentity;
-    domainDkim = domainResources.domainDkim;
 
-    // Get DKIM tokens
-    dkimTokens = domainDkim.dkimTokens;
+    // Extract DKIM tokens from v2 identity
+    dkimTokens = domainIdentityV2.dkimSigningAttributes.apply(
+      (attrs) => attrs.tokens ?? []
+    );
 
     // Configure MAIL FROM if domain is provided
-    if (config.domain && config.mailFromSubdomain) {
+    if (config.mailFromSubdomain) {
       const mailFromDomain = `${config.mailFromSubdomain}.${config.domain}`;
       mailFromAttributes = createMailFromAttributes(
         name,
         config.domain,
         mailFromDomain,
-        domainIdentity,
+        domainIdentityV2,
         opts
       );
     }
@@ -263,8 +263,8 @@ export function createSESResources(
   return {
     configSet: configSet as unknown as aws.ses.ConfigurationSet,
     eventDestination,
-    domainIdentity,
-    domainDkim,
+    domainIdentity: undefined,
+    domainDkim: undefined,
     mailFromAttributes,
     dkimTokens,
   };

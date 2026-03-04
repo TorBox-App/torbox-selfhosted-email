@@ -9,8 +9,12 @@ import type { TransformFunctions } from "../types.js";
  * Get the package root directory (where package.json lives)
  */
 function getPackageRoot(): string {
-  const currentFile = fileURLToPath(import.meta.url);
-  let dir = dirname(currentFile);
+  // CJS: __dirname is available directly
+  // ESM: derive from import.meta.url
+  let dir =
+    typeof __dirname !== "undefined"
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
 
   while (dir !== dirname(dir)) {
     if (existsSync(join(dir, "package.json"))) {

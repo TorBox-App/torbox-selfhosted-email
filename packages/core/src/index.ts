@@ -63,6 +63,22 @@ export type {
   WebhookConfig,
 } from "./types.js";
 
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/**
+ * Resolve a path relative to this package, compatible with both ESM and CJS.
+ * In CJS (when bundled by tsup), __dirname is available.
+ * In ESM, derive from import.meta.url.
+ */
+function resolvePackagePath(relativePath: string): string {
+  const dir =
+    typeof __dirname !== "undefined"
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
+  return join(dir, "..", relativePath);
+}
+
 /**
  * Path to the pre-bundled email event processor Lambda code directory.
  * Use this when configuring Lambda functions in Pulumi or CDK.
@@ -78,10 +94,9 @@ export type {
  * });
  * ```
  */
-export const LAMBDA_EVENT_PROCESSOR_PATH = new URL(
-  "../lambda/event-processor",
-  import.meta.url
-).pathname;
+export const LAMBDA_EVENT_PROCESSOR_PATH = resolvePackagePath(
+  "lambda/event-processor"
+);
 
 /**
  * Path to the pre-bundled SMS event processor Lambda code directory.
@@ -98,7 +113,6 @@ export const LAMBDA_EVENT_PROCESSOR_PATH = new URL(
  * });
  * ```
  */
-export const LAMBDA_SMS_EVENT_PROCESSOR_PATH = new URL(
-  "../lambda/sms-event-processor",
-  import.meta.url
-).pathname;
+export const LAMBDA_SMS_EVENT_PROCESSOR_PATH = resolvePackagePath(
+  "lambda/sms-event-processor"
+);
