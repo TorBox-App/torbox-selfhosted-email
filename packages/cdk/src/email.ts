@@ -155,7 +155,7 @@ export class WrapsEmail extends Construct {
     // ============================================
     if (config.vercel) {
       const oidcProvider = new iam.OpenIdConnectProvider(this, "OidcProvider", {
-        url: "https://oidc.vercel.com",
+        url: `https://oidc.vercel.com/${config.vercel.teamSlug}`,
         clientIds: [`https://vercel.com/${config.vercel.teamSlug}`],
       });
       resources.oidcProvider = oidcProvider;
@@ -432,7 +432,7 @@ export class WrapsEmail extends Construct {
         const eventProcessor = new lambda.Function(this, "EventProcessor", {
           functionName: "wraps-email-event-processor",
           description: "Processes SES email events and stores them in DynamoDB",
-          runtime: lambda.Runtime.NODEJS_22_X,
+          runtime: lambda.Runtime.NODEJS_24_X,
           handler: "index.handler",
           code: lambda.Code.fromAsset(getLambdaPath()),
           timeout: cdk.Duration.seconds(300),
@@ -634,13 +634,17 @@ export class WrapsEmail extends Construct {
         sid: "SESReadAccess",
         actions: [
           "ses:GetAccount",
+          "ses:GetSendQuota",
           "ses:GetSendStatistics",
           "ses:ListIdentities",
           "ses:GetIdentityVerificationAttributes",
           "ses:ListEmailIdentities",
           "ses:GetEmailIdentity",
+          "ses:GetConfigurationSet",
+          "ses:GetConfigurationSetEventDestinations",
           "cloudwatch:GetMetricData",
           "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
         ],
         resources: ["*"],
       })

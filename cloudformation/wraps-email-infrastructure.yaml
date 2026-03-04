@@ -334,6 +334,30 @@ Resources:
                     - !Sub "${WrapsEmailHistoryTable.Arn}/index/*"
                 - !Ref AWS::NoValue
 
+              # EventBridge Access (conditional)
+              - !If
+                - HasEventTracking
+                - Sid: "EventBridgeAccess"
+                  Effect: Allow
+                  Action:
+                    - "events:PutEvents"
+                    - "events:DescribeEventBus"
+                  Resource: !Sub "arn:aws:events:*:${AWS::AccountId}:event-bus/wraps-email-*"
+                - !Ref AWS::NoValue
+
+              # SQS Access (conditional)
+              - !If
+                - HasEventTracking
+                - Sid: "SQSAccess"
+                  Effect: Allow
+                  Action:
+                    - "sqs:SendMessage"
+                    - "sqs:ReceiveMessage"
+                    - "sqs:DeleteMessage"
+                    - "sqs:GetQueueAttributes"
+                  Resource: !Sub "arn:aws:sqs:*:${AWS::AccountId}:wraps-email-*"
+                - !Ref AWS::NoValue
+
               # Email Archiving (conditional)
               - !If
                 - HasEmailArchiving
@@ -428,6 +452,30 @@ Resources:
                   Resource:
                     - !GetAtt WrapsEmailHistoryTable.Arn
                     - !Sub "${WrapsEmailHistoryTable.Arn}/index/*"
+                - !Ref AWS::NoValue
+
+              # EventBridge Access (conditional)
+              - !If
+                - HasEventTracking
+                - Sid: "EventBridgeAccess"
+                  Effect: Allow
+                  Action:
+                    - "events:PutEvents"
+                    - "events:DescribeEventBus"
+                  Resource: !Sub "arn:aws:events:*:${AWS::AccountId}:event-bus/wraps-email-*"
+                - !Ref AWS::NoValue
+
+              # SQS Access (conditional)
+              - !If
+                - HasEventTracking
+                - Sid: "SQSAccess"
+                  Effect: Allow
+                  Action:
+                    - "sqs:SendMessage"
+                    - "sqs:ReceiveMessage"
+                    - "sqs:DeleteMessage"
+                    - "sqs:GetQueueAttributes"
+                  Resource: !Sub "arn:aws:sqs:*:${AWS::AccountId}:wraps-email-*"
                 - !Ref AWS::NoValue
 
               # Email Archiving (conditional)
@@ -558,7 +606,7 @@ Resources:
     Condition: HasEventTracking
     Properties:
       QueueName: "wraps-email-events"
-      VisibilityTimeout: 60
+      VisibilityTimeout: 300
       MessageRetentionPeriod: 345600
       ReceiveMessageWaitTimeSeconds: 20
       RedrivePolicy:
@@ -599,8 +647,6 @@ Resources:
       EventPattern:
         source:
           - "aws.ses"
-        detail-type:
-          - "Email Sending Events"
       State: ENABLED
       Targets:
         - Id: "SQSTarget"
@@ -695,7 +741,7 @@ Resources:
       Description: "Processes SES email events and stores them in DynamoDB"
       Runtime: nodejs24.x
       Handler: index.handler
-      Timeout: 30
+      Timeout: 300
       MemorySize: 512
       Role: !GetAtt WrapsEmailProcessorRole.Arn
       Environment:
@@ -1087,8 +1133,6 @@ Resources:
       EventPattern:
         source:
           - "aws.ses"
-        detail-type:
-          - "Email Sending Events"
       State: ENABLED
       Targets:
         - Id: "WrapsWebhookTarget"

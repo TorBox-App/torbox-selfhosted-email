@@ -104,13 +104,17 @@ function buildPolicyStatements(config: ResolvedConfig): object[] {
     Effect: "Allow",
     Action: [
       "ses:GetAccount",
+      "ses:GetSendQuota",
       "ses:GetSendStatistics",
       "ses:ListIdentities",
       "ses:GetIdentityVerificationAttributes",
       "ses:ListEmailIdentities",
       "ses:GetEmailIdentity",
+      "ses:GetConfigurationSet",
+      "ses:GetConfigurationSetEventDestinations",
       "cloudwatch:GetMetricData",
       "cloudwatch:GetMetricStatistics",
+      "cloudwatch:ListMetrics",
     ],
     Resource: "*",
   });

@@ -31,7 +31,7 @@ export async function createSQSResources(): Promise<SQSResources> {
   // Main queue for SES events
   const queue = new aws.sqs.Queue("wraps-email-events", {
     name: "wraps-email-events",
-    visibilityTimeoutSeconds: 60, // Must be >= Lambda timeout
+    visibilityTimeoutSeconds: 300, // Must be >= Lambda timeout (5 minutes)
     messageRetentionSeconds: 345_600, // 4 days
     receiveWaitTimeSeconds: 20, // Long polling
     redrivePolicy: dlq.arn.apply((arn) =>
