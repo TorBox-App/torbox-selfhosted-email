@@ -1,0 +1,3 @@
+name: wraps-deployment-test
+runtime: nodejs
+description: Wraps deployment verification test

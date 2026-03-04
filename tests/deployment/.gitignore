@@ -1,0 +1,9 @@
+.logs/
+config.local.sh
+cdk/app/node_modules/
+cdk/app/dist/
+cdk/app/cdk.out/
+cdk/app/config.json
+pulumi/app/node_modules/
+pulumi/app/dist/
+pulumi/app/Pulumi.*.yaml
