@@ -1,6 +1,6 @@
 {
   "name": "@wraps.dev/pulumi",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Pulumi component for deploying Wraps email infrastructure",
   "type": "module",
   "main": "./dist/index.cjs",
