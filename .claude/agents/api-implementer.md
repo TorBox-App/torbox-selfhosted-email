@@ -60,6 +60,12 @@ You ONLY touch files in:
 - NEVER trust user-provided IDs without verifying org ownership. A user could send another org's resource ID.
 - NEVER use timing-unsafe comparison (`===`) for secrets, tokens, or API keys. Use `timingSafeEqual()`.
 
+## Bounded Iteration
+
+- **Max 2 CI/test fix rounds.** If tests or checks fail after implementation, you get 2 attempts to fix.
+- After 2 failed fix attempts: stop, document what's broken (test name, error message, file path), and report back to the orchestrator.
+- Never retry the same failing approach. If the first fix doesn't work, try a fundamentally different approach on round 2.
+
 ## Output
 
 When done, report:

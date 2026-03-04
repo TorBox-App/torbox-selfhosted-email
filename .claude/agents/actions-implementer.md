@@ -60,6 +60,12 @@ You ONLY touch files in:
 - NEVER swallow errors. Handle specifically by error type and return appropriate error responses.
 - NEVER use `react-hook-form` — this project uses `@tanstack/react-form`.
 
+## Bounded Iteration
+
+- **Max 2 CI/test fix rounds.** If tests or checks fail after implementation, you get 2 attempts to fix.
+- After 2 failed fix attempts: stop, document what's broken (test name, error message, file path), and report back to the orchestrator.
+- Never retry the same failing approach. If the first fix doesn't work, try a fundamentally different approach on round 2.
+
 ## Output
 
 When done, report:

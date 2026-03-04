@@ -126,8 +126,13 @@ If any check fails:
 1. Identify which domain owns the failure
 2. Send a fix request to the appropriate sub-agent
 3. Re-run verification after the fix
+4. **Max 2 fix attempts per domain agent.** If a domain agent fails twice, stop that agent, document what's broken, and proceed to the report phase with partial results.
 
-## Phase 6: Report
+## Phase 6: Report & Draft PR
+
+If on a feature branch (not main), open a draft PR with the implementation results. Use `gh pr create --draft`.
+
+If verification passed fully, the PR body summarizes the feature. If verification failed partially, add a **Known Issues** section listing what's broken and why.
 
 ```
 ## Feature Implementation Report
@@ -152,6 +157,9 @@ If any check fails:
 - TypeScript: [pass/fail]
 - Tests: [X passed, Y failed]
 - Lint: [pass/fail]
+
+### Known Issues (if partial)
+- [what failed, which domain, error details]
 
 ### Remaining Work
 - [anything not completed and why]

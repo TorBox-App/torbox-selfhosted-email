@@ -337,14 +337,18 @@ export class WrapsEmail extends Construct {
         const baseUrl = webhookUrl || "https://api.wraps.dev";
 
         // Connection (stores auth credentials in Secrets Manager)
-        const webhookConnection = new events.Connection(this, "WebhookConnection", {
-          connectionName: "wraps-webhook-connection",
-          description: "Connection for Wraps platform webhook",
-          authorization: events.Authorization.apiKey(
-            "X-Wraps-Api-Key",
-            cdk.SecretValue.unsafePlainText(webhookSecret)
-          ),
-        });
+        const webhookConnection = new events.Connection(
+          this,
+          "WebhookConnection",
+          {
+            connectionName: "wraps-webhook-connection",
+            description: "Connection for Wraps platform webhook",
+            authorization: events.Authorization.apiKey(
+              "X-Wraps-Api-Key",
+              cdk.SecretValue.unsafePlainText(webhookSecret)
+            ),
+          }
+        );
 
         // API Destination
         const webhookApiDestination = new events.ApiDestination(
@@ -374,9 +378,7 @@ export class WrapsEmail extends Construct {
       const eventTypes = config.events.types ?? [];
       // CloudFormation expects camelCase event types (e.g., "renderingFailure", "deliveryDelay")
       const sesEventTypes = eventTypes.map((type) =>
-        type
-          .toLowerCase()
-          .replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+        type.toLowerCase().replace(/_([a-z])/g, (_, c) => c.toUpperCase())
       );
 
       new ses.CfnConfigurationSetEventDestination(this, "EventDestination", {

@@ -69,6 +69,12 @@ Focus on tests that **no single domain agent could write** because they span bou
 - NEVER test shadcn/ui components.
 - NEVER write tests that depend on execution order between `describe` blocks.
 
+## Bounded Iteration
+
+- **Max 2 CI/test fix rounds.** If tests fail after writing them, you get 2 attempts to fix.
+- After 2 failed fix attempts: stop, document what's broken (test name, error message, file path), and report back to the orchestrator.
+- Never retry the same failing approach. If the first fix doesn't work, try a fundamentally different approach on round 2.
+
 ## Output
 
 When done, report:

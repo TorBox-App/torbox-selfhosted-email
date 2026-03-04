@@ -18,14 +18,16 @@ Optional commit message hint:
 
 Run `git status` and `git diff --stat` in parallel to see what changed. If there are no changes, tell the user and stop.
 
-## Step 2: Run Checks
+## Step 2: Run Checks (Two-Tier)
 
-Run `pnpm check:all`. This runs lint, typecheck, baseline, build, and tests.
+**Fast pass first**: Run `pnpm check:fast` (~10-15s). This runs lint (error-level) and baseline architecture tests. If this fails, fix the issues before proceeding — no point running the full suite.
+
+**Full suite second**: Once `check:fast` passes, run `pnpm check:all`. This adds typecheck, build, and the full test suite.
 
 If checks fail:
 1. Show the user what failed
 2. Ask if they want you to fix the issues
-3. If yes, fix them and re-run `pnpm check:all`
+3. If yes, fix them and re-run the failing check tier
 4. If checks fail again after 2 attempts, stop and show the errors
 
 Do NOT skip checks. Do NOT commit with failing checks.
@@ -100,7 +102,7 @@ Run `git status` after to confirm success.
 - NEVER commit with failing checks
 - NEVER use `git add .` or `git add -A`
 - NEVER stage `.env`, credentials, or secrets
-- NEVER skip `pnpm check:all`
+- NEVER skip checks (`pnpm check:fast` then `pnpm check:all`)
 - NEVER amend previous commits unless explicitly asked
 - ALWAYS use conventional commit format
 - ALWAYS include `Co-Authored-By` trailer

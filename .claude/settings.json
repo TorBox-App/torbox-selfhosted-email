@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(pnpm check:fast)",
       "Bash(pnpm check)",
       "Bash(pnpm check:all)",
       "Bash(pnpm fix)",
@@ -98,6 +99,11 @@
       "name": "docs-pages",
       "description": "Create and normalize documentation pages for the Wraps website",
       "path": ".claude/skills/docs-pages/SKILL.md"
+    },
+    {
+      "name": "pr",
+      "description": "Create a pull request from the current branch",
+      "path": ".claude/skills/pr/SKILL.md"
     }
   ]
 }

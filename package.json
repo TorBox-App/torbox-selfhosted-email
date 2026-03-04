@@ -19,6 +19,7 @@
     "check": "pnpm dlx ultracite@latest check",
     "check:errors": "pnpm dlx ultracite@latest check --diagnostic-level=error",
     "test:baseline": "vitest run --config vitest.config.ts && pnpm baseline",
+    "check:fast": "pnpm check:errors && pnpm test:baseline",
     "check:all": "pnpm check:errors && pnpm typecheck && pnpm test:baseline && pnpm build && pnpm test",
     "fix": "pnpm dlx ultracite@latest fix",
     "clean": "turbo run clean && rm -rf node_modules",

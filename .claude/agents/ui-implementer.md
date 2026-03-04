@@ -64,6 +64,12 @@ You ONLY touch files in:
 - NEVER use `next/router`. Use `next/navigation` (App Router).
 - ALWAYS use `<Link>` for navigation, not programmatic `router.push` (unless conditional).
 
+## Bounded Iteration
+
+- **Max 2 CI/test fix rounds.** If tests or checks fail after implementation, you get 2 attempts to fix.
+- After 2 failed fix attempts: stop, document what's broken (test name, error message, file path), and report back to the orchestrator.
+- Never retry the same failing approach. If the first fix doesn't work, try a fundamentally different approach on round 2.
+
 ## Output
 
 When done, report:
