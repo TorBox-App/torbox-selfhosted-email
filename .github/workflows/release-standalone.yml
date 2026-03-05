@@ -47,6 +47,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm --filter @wraps/core build
+
       - run: pnpm --filter @wraps.dev/cli build
 
       - name: Build standalone distribution
