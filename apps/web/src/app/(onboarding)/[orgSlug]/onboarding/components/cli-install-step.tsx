@@ -24,14 +24,15 @@ export function CliInstallStep({
   onBack,
   onSkip,
 }: CliInstallStepProps) {
-  const [copied, setCopied] = useState(false);
-  const installCommand = "npm install -g @wraps.dev/cli";
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
+  const curlCommand = "curl -fsSL https://get.wraps.dev | sh";
+  const npmCommand = "npm install -g @wraps.dev/cli";
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(installCommand);
-    setCopied(true);
+  const handleCopy = async (command: string) => {
+    await navigator.clipboard.writeText(command);
+    setCopiedCommand(command);
     toast.success("Copied to clipboard");
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopiedCommand(null), 2000);
   };
 
   return (
@@ -56,21 +57,31 @@ export function CliInstallStep({
           <h3 className="font-semibold text-sm">1. Run the install command</h3>
           <div className="relative">
             <pre className="overflow-x-auto rounded-lg bg-secondary p-4">
-              <code className="text-sm">{installCommand}</code>
+              <code className="text-sm">{curlCommand}</code>
             </pre>
             <Button
               className="absolute top-2 right-2"
-              onClick={handleCopy}
+              onClick={() => handleCopy(curlCommand)}
               size="icon"
               variant="outline"
             >
-              {copied ? (
+              {copiedCommand === curlCommand ? (
                 <CheckCircle2Icon className="h-4 w-4" />
               ) : (
                 <CopyIcon className="h-4 w-4" />
               )}
             </Button>
           </div>
+          <p className="text-muted-foreground text-xs">
+            Or install via npm:{" "}
+            <button
+              className="font-mono underline underline-offset-2"
+              onClick={() => handleCopy(npmCommand)}
+              type="button"
+            >
+              {npmCommand}
+            </button>
+          </p>
         </div>
 
         {/* Verification */}

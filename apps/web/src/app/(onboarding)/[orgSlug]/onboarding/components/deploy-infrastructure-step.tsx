@@ -189,7 +189,8 @@ export function DeployInfrastructureStep({
 
   const estimatedCost = useMemo(() => estimateMonthlyCost(config), [config]);
 
-  const installCommand = "npm install -g @wraps.dev/cli";
+  const installCommand = "curl -fsSL https://get.wraps.dev | sh";
+  const npmInstallCommand = "npm install -g @wraps.dev/cli";
   const deployCommand = "wraps email init";
 
   // Track deployment method changes
@@ -459,6 +460,21 @@ export function DeployInfrastructureStep({
                   )}
                 </Button>
               </div>
+              <p className="text-muted-foreground text-xs">
+                Or via npm:{" "}
+                <button
+                  className="font-mono underline underline-offset-2"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(npmInstallCommand);
+                    setCopiedInstall(true);
+                    toast.success("Copied to clipboard");
+                    setTimeout(() => setCopiedInstall(false), 2000);
+                  }}
+                  type="button"
+                >
+                  {npmInstallCommand}
+                </button>
+              </p>
             </div>
 
             {/* Deploy Command */}

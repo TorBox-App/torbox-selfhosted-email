@@ -16,6 +16,7 @@ import { WordRotate } from "@/components/ui/word-rotate";
 import { assetUrl } from "@/lib/utils";
 
 const installCommands = {
+  curl: "curl -fsSL https://get.wraps.dev | sh",
   npm: "npm install -g @wraps.dev/cli",
   pnpm: "pnpm add -g @wraps.dev/cli",
   yarn: "yarn global add @wraps.dev/cli",
@@ -70,7 +71,7 @@ export function CliHeroSection() {
             <div className="mb-8 max-w-md">
               <Snippet
                 className="border-green-500/30 bg-[#0a0a0a] shadow-[0_0_15px_rgba(34,197,94,0.15)]"
-                defaultValue="npm"
+                defaultValue="curl"
               >
                 <SnippetHeader className="border-green-500/20 bg-[#0a0a0a]">
                   <div className="flex items-center gap-3">
@@ -80,6 +81,12 @@ export function CliHeroSection() {
                       <div className="size-2.5 rounded-full bg-green-500/80" />
                     </div>
                     <SnippetTabsList className="bg-transparent">
+                      <SnippetTabsTrigger
+                        className="text-green-400/70 data-[state=active]:bg-green-500/10 data-[state=active]:text-green-400"
+                        value="curl"
+                      >
+                        curl
+                      </SnippetTabsTrigger>
                       <SnippetTabsTrigger
                         className="text-green-400/70 data-[state=active]:bg-green-500/10 data-[state=active]:text-green-400"
                         value="npm"

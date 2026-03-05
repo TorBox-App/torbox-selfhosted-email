@@ -39,7 +39,8 @@ type CliDeployConnectStepProps = {
 const CLI_STEPS = [
   {
     label: "Install the CLI",
-    command: "npm install -g @wraps.dev/cli",
+    command: "curl -fsSL https://get.wraps.dev | sh",
+    altCommand: "npm install -g @wraps.dev/cli",
     time: "~1 min",
   },
   {
@@ -60,10 +61,6 @@ const CLI_STEPS = [
 ];
 
 const PREREQUISITES = [
-  {
-    label: "Node.js 20+",
-    href: "https://nodejs.org/en/download",
-  },
   {
     label: "AWS CLI installed",
     href: "https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html",
@@ -383,6 +380,20 @@ export function CliDeployConnectStep({
                       )}
                     </Button>
                   </div>
+                  {"altCommand" in item && item.altCommand && (
+                    <p className="text-muted-foreground text-xs">
+                      Or via npm:{" "}
+                      <button
+                        className="font-mono underline underline-offset-2"
+                        onClick={() =>
+                          handleCopy(item.altCommand as string, index)
+                        }
+                        type="button"
+                      >
+                        {item.altCommand}
+                      </button>
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
