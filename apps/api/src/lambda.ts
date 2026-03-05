@@ -32,6 +32,11 @@ export async function handler(
       }
     }
 
+    // Propagate API Gateway request ID for log correlation (client-sent header takes priority)
+    if (!filteredHeaders["x-request-id"]) {
+      filteredHeaders["x-request-id"] = event.requestContext.requestId;
+    }
+
     const request = new Request(url.toString(), {
       method: event.requestContext.http.method,
       headers: new Headers(filteredHeaders),

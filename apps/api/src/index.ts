@@ -115,13 +115,20 @@ if (appUrl && !allowedOrigins.includes(appUrl)) {
 }
 
 export const app = new Elysia()
-  .derive(() => ({ startTime: performance.now() }))
-  .onAfterResponse(({ request, startTime, set, ...ctx }) => {
+  .derive(({ request }) => ({
+    startTime: performance.now(),
+    requestId: request.headers.get("x-request-id") ?? crypto.randomUUID(),
+  }))
+  .onAfterResponse(({ request, startTime, requestId, set, ...ctx }) => {
     const auth = (ctx as unknown as { auth?: AuthContext }).auth;
+
+    set.headers["x-request-id"] = requestId;
+
     if (!auth) return;
 
     const url = new URL(request.url);
     log.info("api.request", {
+      requestId,
       method: request.method,
       path: url.pathname,
       status: set.status ?? 200,
@@ -133,7 +140,7 @@ export const app = new Elysia()
       authMethod: auth.apiKeyId ? "api_key" : "session",
     });
   })
-  .onError(({ error, request, code, set, ...ctx }) => {
+  .onError(({ error, request, code, set, requestId, ...ctx }) => {
     const auth = (ctx as unknown as { auth?: AuthContext }).auth;
     const url = new URL(request.url);
     const status =
@@ -147,6 +154,7 @@ export const app = new Elysia()
       "api.error",
       error instanceof Error ? error : new Error(String(error)),
       {
+        requestId,
         method: request.method,
         path: url.pathname,
         status,
