@@ -3,7 +3,7 @@ name: Release Standalone CLI
 on:
   push:
     tags:
-      - 'cli@*'
+      - 'cli-v*'
   workflow_dispatch:
     inputs:
       version:
@@ -75,14 +75,14 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
           else
-            VERSION="${GITHUB_REF_NAME#cli@}"
+            VERSION="${GITHUB_REF_NAME#cli-v}"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('cli@{0}', github.event.inputs.version) || github.ref_name }}
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('cli-v{0}', github.event.inputs.version) || github.ref_name }}
           name: CLI v${{ steps.version.outputs.version }}
           body: |
             ## Install
