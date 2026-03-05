@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'CLI version to build (e.g., 2.17.7)'
+        description: 'CLI version to build (e.g., 2.17.10)'
         required: true
 
 concurrency:
@@ -63,7 +63,7 @@ jobs:
           path: wraps-*-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
 
-  upload:
+  release:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -74,16 +74,31 @@ jobs:
       - name: Generate checksums
         run: sha256sum wraps-*.tar.gz > CHECKSUMS.sha256
 
-      - name: Determine tag
-        id: tag
+      - name: Determine version and tag
+        id: meta
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
             echo "tag=cli-v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
           else
+            VERSION="${GITHUB_REF_NAME#cli-v}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
             echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload assets to existing release
+      - name: Create release with assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ steps.tag.outputs.tag }}" wraps-*.tar.gz CHECKSUMS.sha256 --clobber --repo ${{ github.repository }}
+        run: |
+          gh release create "${{ steps.meta.outputs.tag }}" \
+            wraps-*.tar.gz CHECKSUMS.sha256 \
+            --repo ${{ github.repository }} \
+            --title "CLI v${{ steps.meta.outputs.version }}" \
+            --generate-notes \
+            --notes "## Install
+
+          \`\`\`bash
+          curl -fsSL https://get.wraps.dev | sh
+          \`\`\`
+
+          Or download the binary for your platform below."
