@@ -432,9 +432,11 @@ async function processJob(job: BatchJob): Promise<void> {
 
         if (isThrottle) {
           // Re-queue this chunk with a longer delay (30 seconds)
-          console.warn(
-            `SES throttled for batch ${batchId}, requeuing chunk ${chunkIndex} with 30s delay`
-          );
+          log.warn("SES throttled, requeuing chunk with delay", {
+            batchId,
+            chunkIndex,
+            delaySeconds: 30,
+          });
           await enqueueNextChunk(
             { ...job }, // Same job, same chunkIndex
             { delaySeconds: 30 }

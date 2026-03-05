@@ -16,6 +16,7 @@ import {
 } from "@aws-sdk/client-sqs";
 
 import { awsDefaults } from "../lib/aws-defaults";
+import { log } from "../lib/logger";
 
 const sqs = new SQSClient(awsDefaults);
 const scheduler = new SchedulerClient(awsDefaults);
@@ -87,10 +88,9 @@ export async function enqueueWorkflowStep(job: WorkflowJob): Promise<void> {
     if (IS_PRODUCTION) {
       throw new Error("WORKFLOW_QUEUE_URL not configured");
     }
-    console.warn(
-      "[workflow-queue] Skipping enqueue - queue not configured",
-      job
-    );
+    log.warn("[workflow-queue] Skipping enqueue - queue not configured", {
+      job,
+    });
     return;
   }
 
@@ -116,10 +116,9 @@ export async function enqueueWorkflowStepBatch(
     if (IS_PRODUCTION) {
       throw new Error("WORKFLOW_QUEUE_URL not configured");
     }
-    console.warn(
-      "[workflow-queue] Skipping batch enqueue - queue not configured",
-      { count: jobs.length }
-    );
+    log.warn("[workflow-queue] Skipping batch enqueue - queue not configured", {
+      count: jobs.length,
+    });
     return;
   }
 
@@ -162,9 +161,7 @@ export async function scheduleWorkflowStep(params: {
     if (IS_PRODUCTION) {
       throw new Error("EventBridge Scheduler not configured for workflows");
     }
-    console.warn(
-      "[workflow-queue] Skipping schedule creation - config not set"
-    );
+    log.warn("[workflow-queue] Skipping schedule creation - config not set");
     return scheduleName;
   }
 
@@ -214,7 +211,7 @@ export async function scheduleWaitTimeout(params: {
     if (IS_PRODUCTION) {
       throw new Error("EventBridge Scheduler not configured for workflows");
     }
-    console.warn("[workflow-queue] Skipping timeout schedule - config not set");
+    log.warn("[workflow-queue] Skipping timeout schedule - config not set");
     return scheduleName;
   }
 
@@ -251,7 +248,7 @@ export async function scheduleWaitTimeout(params: {
 export async function deleteScheduledStep(scheduleName: string): Promise<void> {
   if (!SCHEDULER_ROLE_ARN) {
     if (!IS_PRODUCTION) {
-      console.warn(
+      log.warn(
         "[workflow-queue] Skipping schedule deletion - config not set"
       );
       return;
