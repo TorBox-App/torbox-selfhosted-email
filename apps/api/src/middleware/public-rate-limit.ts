@@ -7,6 +7,8 @@
 
 import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { Elysia } from "elysia";
+
+import { awsDefaults } from "../lib/aws-defaults";
 import { log } from "../lib/logger";
 
 // Rate limits for public endpoints
@@ -16,7 +18,7 @@ const PUBLIC_LIMITS = {
 };
 
 // DynamoDB client (reuse across invocations)
-const dynamoClient = new DynamoDBClient({});
+const dynamoClient = new DynamoDBClient(awsDefaults);
 const TABLE_NAME = process.env.RATE_LIMIT_TABLE_NAME ?? "RateLimitTable";
 
 /**

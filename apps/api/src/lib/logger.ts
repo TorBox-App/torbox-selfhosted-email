@@ -76,9 +76,7 @@ export const log = {
   },
   error(msg: string, error?: unknown, data?: LogData) {
     const err =
-      error instanceof Error
-        ? serializeError(error)
-        : { error: String(error) };
+      error instanceof Error ? serializeError(error) : { error: String(error) };
     pinoLogger.error({ err, ...data }, msg);
   },
 };

@@ -11,7 +11,9 @@ import {
   SchedulerClient,
 } from "@aws-sdk/client-scheduler";
 
-const schedulerClient = new SchedulerClient({});
+import { awsDefaults } from "../lib/aws-defaults";
+
+const schedulerClient = new SchedulerClient(awsDefaults);
 
 const SCHEDULE_GROUP = process.env.SCHEDULER_GROUP_NAME || "wraps-broadcasts";
 const TARGET_QUEUE_ARN = process.env.BATCH_QUEUE_ARN;

@@ -8,11 +8,20 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import type { Context, S3Event } from "aws-lambda";
 import { simpleParser } from "mailparser";
 
-const s3 = new S3Client({});
-const eventbridge = new EventBridgeClient({});
+const awsDefaults = {
+  requestHandler: new NodeHttpHandler({
+    requestTimeout: 10_000,
+    connectionTimeout: 5000,
+  }),
+  maxAttempts: 5,
+};
+
+const s3 = new S3Client(awsDefaults);
+const eventbridge = new EventBridgeClient(awsDefaults);
 
 const BUCKET_NAME = process.env.BUCKET_NAME!;
 const INBOUND_EVENT_SOURCE =

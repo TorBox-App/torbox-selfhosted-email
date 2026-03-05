@@ -8,7 +8,9 @@
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { awsAccount, db, eq } from "@wraps/db";
 
-const stsClient = new STSClient({});
+import { awsDefaults } from "../lib/aws-defaults";
+
+const stsClient = new STSClient(awsDefaults);
 
 export type AwsCredentials = {
   accessKeyId: string;

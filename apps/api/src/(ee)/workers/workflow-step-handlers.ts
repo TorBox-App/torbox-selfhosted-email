@@ -36,8 +36,8 @@ import {
   upsertSESTemplate,
 } from "@wraps/email";
 import { and, sql } from "drizzle-orm";
-
 import { trackFirstEmailSent } from "../../lib/activation-tracking";
+import { awsDefaults } from "../../lib/aws-defaults";
 import { log } from "../../lib/logger";
 import { generateUnsubscribeToken } from "../../lib/unsubscribe-token";
 import { getCredentials } from "../../services/credentials";
@@ -182,6 +182,7 @@ export async function handleSendEmail(
 
   // Create SES client
   const sesClient = new SESv2Client({
+    ...awsDefaults,
     region: account.region,
     credentials: {
       accessKeyId: credentials.accessKeyId,
@@ -561,6 +562,7 @@ export async function handleSendSms(
 
   // Create Pinpoint SMS Voice V2 client with assumed credentials
   const smsClient = new PinpointSMSVoiceV2Client({
+    ...awsDefaults,
     region: account.region,
     credentials: {
       accessKeyId: credentials.accessKeyId,

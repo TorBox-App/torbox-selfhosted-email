@@ -17,10 +17,11 @@ import { db, eq, type TriggerConfig, workflow } from "@wraps/db";
 import { Cron } from "croner";
 import { and } from "drizzle-orm";
 
+import { awsDefaults } from "../lib/aws-defaults";
 import { log } from "../lib/logger";
 import { formatScheduleExpression, type WorkflowJob } from "./workflow-queue";
 
-const scheduler = new SchedulerClient({});
+const scheduler = new SchedulerClient(awsDefaults);
 
 const WORKFLOW_QUEUE_ARN = process.env.WORKFLOW_QUEUE_ARN;
 const SCHEDULE_GROUP = process.env.SCHEDULER_GROUP_NAME || "wraps-workflows";

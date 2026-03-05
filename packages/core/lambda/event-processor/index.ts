@@ -1,8 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import type { Context, SQSEvent } from "aws-lambda";
 
-const dynamodb = new DynamoDBClient({});
+const awsDefaults = {
+  requestHandler: new NodeHttpHandler({
+    requestTimeout: 10_000,
+    connectionTimeout: 5000,
+  }),
+  maxAttempts: 5,
+};
+
+const dynamodb = new DynamoDBClient(awsDefaults);
 
 /**
  * Lambda handler for processing SES events from SQS (via EventBridge)

@@ -6,7 +6,9 @@
 
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 
-const sqsClient = new SQSClient({});
+import { awsDefaults } from "../lib/aws-defaults";
+
+const sqsClient = new SQSClient(awsDefaults);
 const QUEUE_URL = process.env.BATCH_QUEUE_URL;
 
 export type BatchJob = {

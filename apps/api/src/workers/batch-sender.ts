@@ -29,8 +29,8 @@ import {
 } from "@wraps/db";
 import type { SQSEvent, SQSHandler } from "aws-lambda";
 import { and, exists, isNotNull, sql } from "drizzle-orm";
-
 import { trackFirstEmailSent } from "../lib/activation-tracking";
+import { awsDefaults } from "../lib/aws-defaults";
 import { flushLogger, log } from "../lib/logger";
 import { generateUnsubscribeToken } from "../lib/unsubscribe-token";
 import { getCredentials } from "../services/credentials";
@@ -147,6 +147,7 @@ async function processJob(job: BatchJob): Promise<void> {
 
   // Create SES v2 client with customer credentials and their SES region
   const sesClient = new SESv2Client({
+    ...awsDefaults,
     credentials: {
       accessKeyId: credentials.accessKeyId,
       secretAccessKey: credentials.secretAccessKey,
@@ -751,7 +752,7 @@ async function enqueueNextChunk(
     throw new Error("BATCH_QUEUE_URL not configured");
   }
 
-  const sqsClient = new SQSClient({});
+  const sqsClient = new SQSClient(awsDefaults);
   await sqsClient.send(
     new SendMessageCommand({
       QueueUrl: QUEUE_URL,

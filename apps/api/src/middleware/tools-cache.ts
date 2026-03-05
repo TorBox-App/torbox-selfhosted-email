@@ -10,10 +10,12 @@ import {
   GetItemCommand,
   PutItemCommand,
 } from "@aws-sdk/client-dynamodb";
+
+import { awsDefaults } from "../lib/aws-defaults";
 import { log } from "../lib/logger";
 
 // DynamoDB client (reuse across invocations)
-const dynamoClient = new DynamoDBClient({});
+const dynamoClient = new DynamoDBClient(awsDefaults);
 const TABLE_NAME = process.env.RATE_LIMIT_TABLE_NAME ?? "RateLimitTable";
 
 // Cache TTL in seconds (5 minutes)

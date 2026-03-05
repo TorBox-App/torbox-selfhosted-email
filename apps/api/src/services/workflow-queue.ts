@@ -15,8 +15,10 @@ import {
   SQSClient,
 } from "@aws-sdk/client-sqs";
 
-const sqs = new SQSClient({});
-const scheduler = new SchedulerClient({});
+import { awsDefaults } from "../lib/aws-defaults";
+
+const sqs = new SQSClient(awsDefaults);
+const scheduler = new SchedulerClient(awsDefaults);
 
 /**
  * Format a date for EventBridge Scheduler at() expression.
