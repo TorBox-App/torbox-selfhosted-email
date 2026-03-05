@@ -53,6 +53,20 @@ const pinoLogger = pino(
     : undefined
 );
 
+function serializeError(error: Error): Record<string, unknown> {
+  const obj: Record<string, unknown> = {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  };
+  if (error.cause instanceof Error) {
+    obj.cause = serializeError(error.cause);
+  } else if (error.cause !== undefined) {
+    obj.cause = String(error.cause);
+  }
+  return obj;
+}
+
 export const log = {
   info(msg: string, data?: LogData) {
     pinoLogger.info(data ?? {}, msg);
@@ -63,7 +77,7 @@ export const log = {
   error(msg: string, error?: unknown, data?: LogData) {
     const err =
       error instanceof Error
-        ? { name: error.name, message: error.message }
+        ? serializeError(error)
         : { error: String(error) };
     pinoLogger.error({ err, ...data }, msg);
   },
