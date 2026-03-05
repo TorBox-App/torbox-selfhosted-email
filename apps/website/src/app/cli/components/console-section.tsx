@@ -35,13 +35,17 @@ export function CliConsoleSection() {
 
             {/* Screenshot */}
             <div className="relative aspect-video overflow-hidden bg-muted/20">
-              <img
-                alt="Wraps local console dashboard"
+              <video
+                autoPlay
                 className="size-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.01]"
-                decoding="async"
-                loading="lazy"
-                src="/cli/wraps-console.gif"
-              />
+                loop
+                muted
+                playsInline
+                preload="none"
+                src="/cli/wraps-console.mp4"
+              >
+                <track kind="descriptions" label="Wraps local console dashboard" />
+              </video>
 
               {/* Fade overlay at bottom */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background/60 to-transparent" />

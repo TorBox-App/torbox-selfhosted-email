@@ -403,11 +403,17 @@ export CLOUDFLARE_ZONE_ID=your_zone_id`,
           </li>
           <li>Enter your domain name and click Create</li>
         </ol>
-        <img
-          alt="Creating a domain identity in SES console"
+        <video
+          autoPlay
           className="rounded-lg border"
-          src="/docs/ses-create-identity.gif"
-        />
+          loop
+          muted
+          playsInline
+          preload="none"
+          src="/docs/ses-create-identity.mp4"
+        >
+          <track kind="descriptions" label="Creating a domain identity in SES console" />
+        </video>
       </section>
 
       {/* Step 2: DKIM Setup */}

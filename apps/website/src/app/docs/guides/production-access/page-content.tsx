@@ -170,11 +170,17 @@ export default function ProductionAccessPageContent() {
           </li>
           <li>Check the acknowledgement box and submit</li>
         </ol>
-        <img
-          alt="Requesting production access in SES console"
+        <video
+          autoPlay
           className="rounded-lg border"
-          src="/docs/ses-request-production-access.gif"
-        />
+          loop
+          muted
+          playsInline
+          preload="none"
+          src="/docs/ses-request-production-access.mp4"
+        >
+          <track kind="descriptions" label="Requesting production access in SES console" />
+        </video>
       </section>
 
       {/* Request via CLI */}
