@@ -23,12 +23,48 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "FILE_PATH=$(cat | jq -r '.tool_input.file_path // empty') && [ -n \"$FILE_PATH\" ] && pnpm dlx code-baseline@latest scan \"$FILE_PATH\" --config baseline.toml --format compact 1>&2 || true",
-            "timeout": 10
+            "command": "agent-receipt hook tool-use",
+            "timeout": 5,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "agent-receipt hook session-start",
+            "timeout": 5,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "agent-receipt hook tool-failure",
+            "timeout": 5,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "agent-receipt hook session-end",
+            "timeout": 30,
+            "async": true
           }
         ]
       }
