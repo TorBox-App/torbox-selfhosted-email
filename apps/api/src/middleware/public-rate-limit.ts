@@ -75,8 +75,8 @@ async function incrementCounter(
 
     return Number(result.Attributes?.count?.N ?? 1);
   } catch (error) {
-    // Fail open - if DynamoDB is down, allow the request
-    log.error("Rate limit check failed", error);
+    // Fail open — log for ops awareness
+    log.error("Rate limiter failing open", error, { key });
     return 0;
   }
 }

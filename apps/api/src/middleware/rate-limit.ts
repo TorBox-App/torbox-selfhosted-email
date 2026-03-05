@@ -84,16 +84,19 @@ export const rateLimitMiddleware = new Elysia({ name: "rate-limit" }).derive(
         Math.max(0, limits.minute - minuteResult)
       );
     } catch (error) {
-      // If DynamoDB fails, log but allow request (fail open)
+      // Re-throw intentional 429 errors
       if (
         error instanceof Error &&
-        !error.message.includes("Rate limit exceeded") &&
-        !error.message.includes("Daily limit exceeded")
+        (error.message.includes("Rate limit exceeded") ||
+          error.message.includes("Daily limit exceeded"))
       ) {
-        log.error("Rate limit check failed", error, { organizationId });
-      } else {
         throw error;
       }
+      // DynamoDB failed — fail open but log for ops awareness
+      log.error("Rate limiter failing open", error, {
+        organizationId,
+        planId,
+      });
     }
 
     return {};
