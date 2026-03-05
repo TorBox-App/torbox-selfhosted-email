@@ -86,4 +86,4 @@ jobs:
       - name: Upload assets to existing release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ steps.tag.outputs.tag }}" wraps-*.tar.gz CHECKSUMS.sha256 --clobber
+        run: gh release upload "${{ steps.tag.outputs.tag }}" wraps-*.tar.gz CHECKSUMS.sha256 --clobber --repo ${{ github.repository }}
