@@ -23,8 +23,14 @@ const TOKEN_EXPIRATION = "48h"; // Confirmation links valid for 48 hours
 function getSecret(): Uint8Array {
   const secret = process.env.UNSUBSCRIBE_SECRET;
   if (!secret) {
-    console.warn("UNSUBSCRIBE_SECRET not set, using default (insecure!)");
-    return new TextEncoder().encode("default-dev-secret-change-me");
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "UNSUBSCRIBE_SECRET environment variable is required in production"
+      );
+    }
+    return new TextEncoder().encode(
+      "dev-unsubscribe-secret-change-in-production"
+    );
   }
   return new TextEncoder().encode(secret);
 }
