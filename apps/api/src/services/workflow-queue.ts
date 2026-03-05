@@ -248,9 +248,7 @@ export async function scheduleWaitTimeout(params: {
 export async function deleteScheduledStep(scheduleName: string): Promise<void> {
   if (!SCHEDULER_ROLE_ARN) {
     if (!IS_PRODUCTION) {
-      log.warn(
-        "[workflow-queue] Skipping schedule deletion - config not set"
-      );
+      log.warn("[workflow-queue] Skipping schedule deletion - config not set");
       return;
     }
     return;
