@@ -78,7 +78,13 @@ describe("Onboarding API - GET /api/[orgSlug]/onboarding/status", () => {
     expect(data).toMatchObject({
       completed: false,
       hasAwsAccount: false,
-      awsAccountCount: 0,
+      steps: {
+        hasAwsAccount: false,
+        hasPlatformConnection: false,
+        hasVerifiedDomain: false,
+        hasSentEmail: false,
+        sandboxStatus: null,
+      },
     });
   });
 

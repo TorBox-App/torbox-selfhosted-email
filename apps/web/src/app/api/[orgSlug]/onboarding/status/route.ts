@@ -1,11 +1,12 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
-import { awsAccount, organizationExtension } from "@wraps/db/schema/app";
+import { organizationExtension } from "@wraps/db/schema/app";
 import { subscription } from "@wraps/db/schema/auth";
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { getSetupStatus } from "@/lib/setup-status";
 
 type RouteContext = {
   params: Promise<{
@@ -37,34 +38,34 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     // Get organization extension with onboarding status
-    const extension = await db.query.organizationExtension.findFirst({
-      where: eq(organizationExtension.organizationId, orgWithMembership.id),
-    });
-
-    // Check if AWS account is connected
-    const awsAccounts = await db.query.awsAccount.findMany({
-      where: eq(awsAccount.organizationId, orgWithMembership.id),
-    });
-
-    const hasAwsAccount = awsAccounts.length > 0;
-
-    // Check if user has an active subscription
-    const activeSubscription = await db.query.subscription.findFirst({
-      where: and(
-        eq(subscription.referenceId, orgWithMembership.id),
-        or(
-          eq(subscription.status, "active"),
-          eq(subscription.status, "trialing")
-        )
-      ),
-    });
+    const [extension, activeSubscription, { setupStatus }] = await Promise.all([
+      db.query.organizationExtension.findFirst({
+        where: eq(organizationExtension.organizationId, orgWithMembership.id),
+      }),
+      db.query.subscription.findFirst({
+        where: and(
+          eq(subscription.referenceId, orgWithMembership.id),
+          or(
+            eq(subscription.status, "active"),
+            eq(subscription.status, "trialing")
+          )
+        ),
+      }),
+      getSetupStatus(orgWithMembership.id),
+    ]);
 
     return NextResponse.json({
       completed: extension?.onboardingCompleted ?? false,
       completedAt: extension?.onboardingCompletedAt,
-      hasAwsAccount,
-      awsAccountCount: awsAccounts.length,
+      hasAwsAccount: setupStatus.hasAwsAccount,
       hasActiveSubscription: !!activeSubscription,
+      steps: {
+        hasAwsAccount: setupStatus.hasAwsAccount,
+        hasPlatformConnection: setupStatus.hasPlatformConnection,
+        hasVerifiedDomain: setupStatus.hasVerifiedDomain,
+        hasSentEmail: setupStatus.hasSentEmail,
+        sandboxStatus: setupStatus.sandboxStatus,
+      },
     });
   } catch (error) {
     const orgSlug = (await context.params).orgSlug;
