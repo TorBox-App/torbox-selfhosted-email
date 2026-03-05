@@ -12,6 +12,7 @@ export WRAPS_TEST_REGION="${WRAPS_TEST_REGION:-us-east-1}"
 export AWS_PROFILE_CLI="${AWS_PROFILE_CLI:-test-wraps-cli}"
 export AWS_PROFILE_CDK="${AWS_PROFILE_CDK:-test-wraps-cli}"
 export AWS_PROFILE_PULUMI="${AWS_PROFILE_PULUMI:-wraps-test-pulumi}"
+export AWS_PROFILE_CFN="${AWS_PROFILE_CFN:-test-wraps-cli}"
 
 # Timeouts
 export DEPLOY_TIMEOUT="${DEPLOY_TIMEOUT:-600}"  # 10 minutes per deploy phase
