@@ -63,7 +63,7 @@ jobs:
           path: wraps-*-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
 
-  release:
+  upload:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -74,30 +74,16 @@ jobs:
       - name: Generate checksums
         run: sha256sum wraps-*.tar.gz > CHECKSUMS.sha256
 
-      - name: Extract version
-        id: version
+      - name: Determine tag
+        id: tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "tag=cli-v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
           else
-            VERSION="${GITHUB_REF_NAME#cli-v}"
-            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('cli-v{0}', github.event.inputs.version) || github.ref_name }}
-          name: CLI v${{ steps.version.outputs.version }}
-          body: |
-            ## Install
-
-            curl -fsSL https://get.wraps.dev | sh
-
-            Or download the binary for your platform below.
-          files: |
-            wraps-*.tar.gz
-            CHECKSUMS.sha256
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+      - name: Upload assets to existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ steps.tag.outputs.tag }}" wraps-*.tar.gz CHECKSUMS.sha256 --clobber
