@@ -133,7 +133,7 @@ importers:
         specifier: 2.0.4
         version: 2.0.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@smithy/node-http-handler':
-        specifier: 4.4.14
+        specifier: ^4.4.14
         version: 4.4.14
       '@wraps.dev/client':
         specifier: 0.6.1
@@ -1336,7 +1336,7 @@ importers:
         specifier: ^3.810.0
         version: 3.957.0(@aws-sdk/client-dynamodb@3.958.0)
       '@smithy/node-http-handler':
-        specifier: 4.4.14
+        specifier: ^4.4.14
         version: 4.4.14
       '@types/mailparser':
         specifier: ^3.4.5
@@ -6431,10 +6431,6 @@ packages:
     resolution: {integrity: sha512-rzMY6CaKx2qxrbYbqjXWS0plqEy7LOdKHS0bg4ixJ6aoGDPNUcLWk/FRNuCILh7GKLG9TFUXYYeQQldMBBwuyw==}
     engines: {node: '>=18.0.0'}
 
-  '@smithy/abort-controller@4.2.9':
-    resolution: {integrity: sha512-6YGSygFmck1vMjzSxbjEPKMm1xWUr2+w+F8kWVc8rqKQYd1C5zZftvxGii4ti4Mh5ulIXZtAUoXS88Hhu6fkjQ==}
-    engines: {node: '>=18.0.0'}
-
   '@smithy/chunked-blob-reader-native@4.2.1':
     resolution: {integrity: sha512-lX9Ay+6LisTfpLid2zZtIhSEjHMZoAR5hHCR4H7tBz/Zkfr5ea8RcQ7Tk4mi0P76p4cN+Btz16Ffno7YHpKXnQ==}
     engines: {node: '>=18.0.0'}
@@ -6683,20 +6679,12 @@ packages:
     resolution: {integrity: sha512-QNINVDhxpZ5QnP3aviNHQFlRogQZDfYlCkQT+7tJnErPQbDhysondEjhikuANxgMsZrkGeiAxXy4jguEGsDrWQ==}
     engines: {node: '>=18.0.0'}
 
-  '@smithy/protocol-http@5.3.9':
-    resolution: {integrity: sha512-PRy4yZqsKI3Eab8TLc16Dj2NzC4dnw/8E95+++Jc+wwlkjBpAq3tNLqkLHMmSvDfxKQ+X5PmmCYt+rM/GcMKPA==}
-    engines: {node: '>=18.0.0'}
-
   '@smithy/querystring-builder@4.2.11':
     resolution: {integrity: sha512-7spdikrYiljpket6u0up2Ck2mxhy7dZ0+TDd+S53Dg2DHd6wg+YNJrTCHiLdgZmEXZKI7LJZcwL3721ZRDFiqA==}
     engines: {node: '>=18.0.0'}
 
   '@smithy/querystring-builder@4.2.7':
     resolution: {integrity: sha512-eKONSywHZxK4tBxe2lXEysh8wbBdvDWiA+RIuaxZSgCMmA0zMgoDpGLJhnyj+c0leOQprVnXOmcB4m+W9Rw7sg==}
-    engines: {node: '>=18.0.0'}
-
-  '@smithy/querystring-builder@4.2.9':
-    resolution: {integrity: sha512-/AIDaq0+ehv+QfeyAjCUFShwHIt+FA1IodsV/2AZE5h4PUZcQYv5sjmy9V67UWfsBoTjOPKUFYSRfGoNW9T2UQ==}
     engines: {node: '>=18.0.0'}
 
   '@smithy/querystring-parser@4.2.7':
@@ -15234,7 +15222,7 @@ snapshots:
       '@smithy/core': 3.22.0
       '@smithy/node-config-provider': 4.3.8
       '@smithy/property-provider': 4.2.8
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/signature-v4': 5.3.8
       '@smithy/smithy-client': 4.11.1
       '@smithy/types': 4.12.0
@@ -15250,7 +15238,7 @@ snapshots:
       '@smithy/core': 3.20.0
       '@smithy/node-config-provider': 4.3.7
       '@smithy/property-provider': 4.2.7
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/signature-v4': 5.3.7
       '@smithy/smithy-client': 4.10.2
       '@smithy/types': 4.12.0
@@ -15298,7 +15286,7 @@ snapshots:
       '@smithy/core': 3.23.4
       '@smithy/node-config-provider': 4.3.8
       '@smithy/property-provider': 4.2.8
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/signature-v4': 5.3.8
       '@smithy/smithy-client': 4.11.7
       '@smithy/types': 4.12.0
@@ -16396,7 +16384,7 @@ snapshots:
       '@aws-sdk/types': 3.930.0
       '@aws-sdk/util-arn-parser': 3.893.0
       '@smithy/node-config-provider': 4.3.8
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       '@smithy/util-config-provider': 4.2.0
       tslib: 2.8.1
@@ -16425,14 +16413,14 @@ snapshots:
       '@aws-sdk/endpoint-cache': 3.972.2
       '@aws-sdk/types': 3.973.1
       '@smithy/node-config-provider': 4.3.8
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
   '@aws-sdk/middleware-expect-continue@3.930.0':
     dependencies:
       '@aws-sdk/types': 3.930.0
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -16452,7 +16440,7 @@ snapshots:
       '@aws-sdk/types': 3.930.0
       '@smithy/is-array-buffer': 4.2.0
       '@smithy/node-config-provider': 4.3.8
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       '@smithy/util-middleware': 4.2.8
       '@smithy/util-stream': 4.5.10
@@ -16486,7 +16474,7 @@ snapshots:
   '@aws-sdk/middleware-host-header@3.930.0':
     dependencies:
       '@aws-sdk/types': 3.930.0
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -16514,7 +16502,7 @@ snapshots:
   '@aws-sdk/middleware-host-header@3.972.3':
     dependencies:
       '@aws-sdk/types': 3.973.1
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -16586,7 +16574,7 @@ snapshots:
     dependencies:
       '@aws-sdk/types': 3.930.0
       '@aws/lambda-invoke-store': 0.2.2
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -16618,7 +16606,7 @@ snapshots:
     dependencies:
       '@aws-sdk/types': 3.973.1
       '@aws/lambda-invoke-store': 0.2.2
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -16652,7 +16640,7 @@ snapshots:
       '@aws-sdk/util-arn-parser': 3.893.0
       '@smithy/core': 3.22.0
       '@smithy/node-config-provider': 4.3.8
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/signature-v4': 5.3.8
       '@smithy/smithy-client': 4.11.1
       '@smithy/types': 4.12.0
@@ -16759,7 +16747,7 @@ snapshots:
       '@aws-sdk/types': 3.930.0
       '@aws-sdk/util-endpoints': 3.930.0
       '@smithy/core': 3.22.0
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -16769,7 +16757,7 @@ snapshots:
       '@aws-sdk/types': 3.930.0
       '@aws-sdk/util-endpoints': 3.930.0
       '@smithy/core': 3.20.0
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -16799,7 +16787,7 @@ snapshots:
       '@aws-sdk/types': 3.973.1
       '@aws-sdk/util-endpoints': 3.996.0
       '@smithy/core': 3.23.4
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -17325,7 +17313,7 @@ snapshots:
     dependencies:
       '@aws-sdk/middleware-sdk-s3': 3.932.0
       '@aws-sdk/types': 3.930.0
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/signature-v4': 5.3.8
       '@smithy/types': 4.12.0
       tslib: 2.8.1
@@ -17334,7 +17322,7 @@ snapshots:
     dependencies:
       '@aws-sdk/middleware-sdk-s3': 3.935.0
       '@aws-sdk/types': 3.930.0
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/signature-v4': 5.3.7
       '@smithy/types': 4.12.0
       tslib: 2.8.1
@@ -17882,17 +17870,6 @@ snapshots:
       nanostores: 1.1.0
       zod: 4.3.5
 
-  '@better-auth/core@1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.5))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)':
-    dependencies:
-      '@better-auth/utils': 0.3.0
-      '@better-fetch/fetch': 1.1.21
-      '@standard-schema/spec': 1.1.0
-      better-call: 1.1.8(zod@4.3.5)
-      jose: 6.1.3
-      kysely: 0.28.9
-      nanostores: 1.1.0
-      zod: 4.3.5
-
   '@better-auth/passkey@1.4.17(@better-auth/core@1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.1.12))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-auth@1.4.17(drizzle-kit@0.31.8)(drizzle-orm@0.44.7(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.9)(pg@8.16.3))(next@16.1.6(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.16.3)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(solid-js@1.9.10)(vitest@4.0.8))(better-call@1.1.8(zod@4.1.12))(nanostores@1.1.0)':
     dependencies:
       '@better-auth/core': 1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.1.12))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
@@ -17921,9 +17898,9 @@ snapshots:
       stripe: 19.3.1(@types/node@24.10.0)
       zod: 4.3.5
 
-  '@better-auth/telemetry@1.4.17(@better-auth/core@1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.5))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))':
+  '@better-auth/telemetry@1.4.17(@better-auth/core@1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.1.12))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))':
     dependencies:
-      '@better-auth/core': 1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.5))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
+      '@better-auth/core': 1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.1.12))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
 
@@ -22706,11 +22683,6 @@ snapshots:
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
-  '@smithy/abort-controller@4.2.9':
-    dependencies:
-      '@smithy/types': 4.12.0
-      tslib: 2.8.1
-
   '@smithy/chunked-blob-reader-native@4.2.1':
     dependencies:
       '@smithy/util-base64': 4.3.0
@@ -22763,7 +22735,7 @@ snapshots:
   '@smithy/core@3.22.0':
     dependencies:
       '@smithy/middleware-serde': 4.2.9
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       '@smithy/util-base64': 4.3.0
       '@smithy/util-body-length-browser': 4.2.0
@@ -22776,7 +22748,7 @@ snapshots:
   '@smithy/core@3.23.4':
     dependencies:
       '@smithy/middleware-serde': 4.2.10
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       '@smithy/util-base64': 4.3.1
       '@smithy/util-body-length-browser': 4.2.1
@@ -22888,8 +22860,8 @@ snapshots:
 
   '@smithy/fetch-http-handler@5.3.9':
     dependencies:
-      '@smithy/protocol-http': 5.3.9
-      '@smithy/querystring-builder': 4.2.9
+      '@smithy/protocol-http': 5.3.11
+      '@smithy/querystring-builder': 4.2.11
       '@smithy/types': 4.12.0
       '@smithy/util-base64': 4.3.0
       tslib: 2.8.1
@@ -22989,7 +22961,7 @@ snapshots:
 
   '@smithy/middleware-content-length@4.2.8':
     dependencies:
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -23041,7 +23013,7 @@ snapshots:
   '@smithy/middleware-retry@4.4.29':
     dependencies:
       '@smithy/node-config-provider': 4.3.8
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/service-error-classification': 4.2.8
       '@smithy/smithy-client': 4.11.1
       '@smithy/types': 4.12.0
@@ -23053,7 +23025,7 @@ snapshots:
   '@smithy/middleware-retry@4.4.35':
     dependencies:
       '@smithy/node-config-provider': 4.3.9
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/service-error-classification': 4.2.9
       '@smithy/smithy-client': 4.11.7
       '@smithy/types': 4.12.0
@@ -23076,7 +23048,7 @@ snapshots:
 
   '@smithy/middleware-serde@4.2.9':
     dependencies:
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -23154,11 +23126,6 @@ snapshots:
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
-  '@smithy/protocol-http@5.3.9':
-    dependencies:
-      '@smithy/types': 4.12.0
-      tslib: 2.8.1
-
   '@smithy/querystring-builder@4.2.11':
     dependencies:
       '@smithy/types': 4.12.0
@@ -23166,12 +23133,6 @@ snapshots:
       tslib: 2.8.1
 
   '@smithy/querystring-builder@4.2.7':
-    dependencies:
-      '@smithy/types': 4.12.0
-      '@smithy/util-uri-escape': 4.2.2
-      tslib: 2.8.1
-
-  '@smithy/querystring-builder@4.2.9':
     dependencies:
       '@smithy/types': 4.12.0
       '@smithy/util-uri-escape': 4.2.2
@@ -23256,7 +23217,7 @@ snapshots:
       '@smithy/core': 3.22.0
       '@smithy/middleware-endpoint': 4.4.12
       '@smithy/middleware-stack': 4.2.8
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       '@smithy/util-stream': 4.5.10
       tslib: 2.8.1
@@ -23266,7 +23227,7 @@ snapshots:
       '@smithy/core': 3.23.4
       '@smithy/middleware-endpoint': 4.4.18
       '@smithy/middleware-stack': 4.2.9
-      '@smithy/protocol-http': 5.3.9
+      '@smithy/protocol-http': 5.3.11
       '@smithy/types': 4.12.0
       '@smithy/util-stream': 4.5.14
       tslib: 2.8.1
@@ -23510,7 +23471,7 @@ snapshots:
 
   '@smithy/util-waiter@4.2.8':
     dependencies:
-      '@smithy/abort-controller': 4.2.9
+      '@smithy/abort-controller': 4.2.11
       '@smithy/types': 4.12.0
       tslib: 2.8.1
 
@@ -25139,8 +25100,8 @@ snapshots:
 
   better-auth@1.4.17(drizzle-kit@0.31.8)(drizzle-orm@0.44.7(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.9)(pg@8.16.3))(next@16.1.6(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.16.3)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(solid-js@1.9.10)(vitest@4.0.8):
     dependencies:
-      '@better-auth/core': 1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.5))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
-      '@better-auth/telemetry': 1.4.17(@better-auth/core@1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.5))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))
+      '@better-auth/core': 1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.1.12))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0)
+      '@better-auth/telemetry': 1.4.17(@better-auth/core@1.4.17(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.1.12))(jose@6.1.3)(kysely@0.28.9)(nanostores@1.1.0))
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
