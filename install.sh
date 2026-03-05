@@ -79,11 +79,11 @@ resolve_version() {
   RELEASES="$(fetch_text "https://api.github.com/repos/${REPO}/releases")" \
     || abort "Failed to fetch releases from GitHub"
 
-  # Find the latest cli@X.Y.Z tag and extract version
+  # Find the latest cli-vX.Y.Z tag and extract version
   VERSION="$(printf '%s' "$RELEASES" \
-    | grep -o '"tag_name":\s*"cli@[^"]*"' \
+    | grep -o '"tag_name":\s*"cli-v[^"]*"' \
     | head -n1 \
-    | sed 's/.*cli@\([^"]*\)".*/\1/')"
+    | sed 's/.*cli-v\([^"]*\)".*/\1/')"
 
   [ -n "$VERSION" ] || abort "Could not determine latest CLI version"
   info "Latest version: $VERSION"
@@ -93,7 +93,7 @@ resolve_version() {
 
 download_and_verify() {
   TARBALL="wraps-${VERSION}-${PLATFORM}-${ARCH}.tar.gz"
-  BASE_URL="https://github.com/${REPO}/releases/download/cli@${VERSION}"
+  BASE_URL="https://github.com/${REPO}/releases/download/cli-v${VERSION}"
 
   TMPDIR_CREATED="$(mktemp -d)"
 
