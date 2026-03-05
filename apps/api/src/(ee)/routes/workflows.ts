@@ -285,8 +285,10 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
         }
       }
 
-      // Process each contact request and collect jobs for batch enqueue
+      // Process each contact request and collect jobs for batch enqueue.
+      // Deduplicate by resolved contactId to prevent double-triggering.
       const jobs: WorkflowJob[] = [];
+      const seenContactIds = new Set<string>();
       for (const c of contacts) {
         let contactRecord: typeof contact.$inferSelect | undefined;
 
@@ -302,6 +304,11 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
           );
           continue;
         }
+
+        if (seenContactIds.has(contactRecord.id)) {
+          continue;
+        }
+        seenContactIds.add(contactRecord.id);
 
         jobs.push({
           type: "trigger",

@@ -322,16 +322,26 @@ function setupProcessStep(opts: {
     };
   });
 
+  // Simulate ON CONFLICT ... WHERE behavior:
+  // - "executing" (first claim): returns the new row
+  // - "completed" or "already_executing": WHERE rejects → empty RETURNING
+  const isBlocked =
+    opts.stepExecStatus === "completed" ||
+    opts.stepExecStatus === "already_executing";
   mockDbInsert.mockReturnValue({
     values: vi.fn().mockReturnValue({
       onConflictDoUpdate: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue([
-          {
-            id: "se-1",
-            status: opts.stepExecStatus || "executing",
-            idempotencyKey: `${exec.id}-${exec.currentStepId}`,
-          },
-        ]),
+        returning: vi.fn().mockResolvedValue(
+          isBlocked
+            ? []
+            : [
+                {
+                  id: "se-1",
+                  status: "executing",
+                  idempotencyKey: `${exec.id}-${exec.currentStepId}`,
+                },
+              ]
+        ),
       }),
       onConflictDoNothing: vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([]),
@@ -441,6 +451,65 @@ describe("processStep edge cases", () => {
     setupProcessStep({ stepExecStatus: "completed" });
     await handler(makeSQSEvent(executeJob()));
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
+  });
+
+  it("skips when step already executing (concurrent race condition)", async () => {
+    // Simulate: another SQS message already claimed this step.
+    // ON CONFLICT ... WHERE status NOT IN ('executing','completed') fails,
+    // so RETURNING gives back an empty array.
+    const exec = makeExecution();
+    const wf = makeWorkflow();
+    const ct = makeContact();
+
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(exec);
+
+    let selectCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCount++;
+      if (selectCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
+      }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([ct]),
+          }),
+        }),
+      };
+    });
+
+    // ON CONFLICT WHERE clause rejects → empty RETURNING
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([exec]),
+        }),
+      }),
+    });
+
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    const result = await handler(makeSQSEvent(executeJob()));
+
+    // Step should NOT be executed — no fetch, no enqueue
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
+    // Should return SUCCESS (graceful skip), not a batchItemFailure
+    expect(result.batchItemFailures).toEqual([]);
   });
 
   it("completes execution on exit step", async () => {
@@ -880,18 +949,29 @@ describe("handleSendSms", () => {
       }
     });
 
-    mockDbInsert.mockReturnValue({
-      values: vi.fn().mockReturnValue({
-        onConflictDoUpdate: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([
-            {
-              id: "se-1",
-              status: "executing",
-              idempotencyKey: "exec-1-step-sms",
-            },
-          ]),
-        }),
-      }),
+    let insertCallCount = 0;
+    mockDbInsert.mockImplementation(() => {
+      insertCallCount++;
+      if (insertCallCount === 1) {
+        // Step execution insert with onConflictDoUpdate
+        return {
+          values: vi.fn().mockReturnValue({
+            onConflictDoUpdate: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([
+                {
+                  id: "se-1",
+                  status: "executing",
+                  idempotencyKey: "exec-1-step-sms",
+                },
+              ]),
+            }),
+          }),
+        };
+      }
+      // messageSend insert (plain insert, no conflict handler)
+      return {
+        values: vi.fn().mockResolvedValue(undefined),
+      };
     });
 
     mockDbUpdate.mockReturnValue({
@@ -991,6 +1071,17 @@ describe("handleSendSms", () => {
     await handler(makeSQSEvent(smsJob));
     expect(smsSendCalls).toHaveLength(1);
     expect(transformVariablesForSes).toHaveBeenCalledWith(body);
+  });
+
+  it("records SMS send in messageSend table", async () => {
+    setupSmsTest();
+    await handler(makeSQSEvent(smsJob));
+    expect(smsSendCalls).toHaveLength(1);
+
+    // Verify db.insert was called for messageSend (second insert call after step execution)
+    const insertCalls = mockDbInsert.mock.calls;
+    // First insert = step execution, subsequent inserts = messageSend
+    expect(insertCalls.length).toBeGreaterThanOrEqual(2);
   });
 });
 

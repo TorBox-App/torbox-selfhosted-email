@@ -238,6 +238,18 @@ describe("sanitizeEmailSubject", () => {
     expect(sanitizeEmailSubject("   \n\r\t   ")).toBe("");
   });
 
+  it("should escape HTML entities to prevent XSS in email clients", () => {
+    expect(sanitizeEmailSubject("Price < $10 & save > 20%")).toBe(
+      "Price &lt; $10 &amp; save &gt; 20%"
+    );
+    expect(sanitizeEmailSubject('<script>alert("xss")</script>')).toBe(
+      "&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;"
+    );
+    expect(sanitizeEmailSubject('Test "quotes" & ampersand')).toBe(
+      "Test &quot;quotes&quot; &amp; ampersand"
+    );
+  });
+
   it("should prevent header injection attacks by removing newlines", () => {
     const malicious = "Subject\r\nBcc: attacker@evil.com\r\n\r\nMalicious body";
     const result = sanitizeEmailSubject(malicious);

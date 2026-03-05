@@ -401,6 +401,83 @@ describe("triggerWorkflow", () => {
     expect(mockEnqueueWorkflowStep).not.toHaveBeenCalled();
   });
 
+  it("scopes maxConcurrentExecutions count by organizationId", async () => {
+    const wf = makeWorkflow({ maxConcurrentExecutions: 10 });
+
+    // Track all eq() calls to verify org scope is included
+    const { eq: realEq } = await import("@wraps/db");
+    const eqCalls: Array<{ left: unknown; right: unknown }> = [];
+    const eqSpy = vi.fn((...args: Parameters<typeof realEq>) => {
+      eqCalls.push({ left: args[0], right: args[1] });
+      return realEq(...args);
+    });
+
+    // Temporarily replace eq in the module
+    const dbModule = await import("@wraps/db");
+    const originalEq = dbModule.eq;
+    // Replace eq for testing
+    (dbModule as Record<string, unknown>).eq = eqSpy;
+
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
+      }
+      // Count query
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 0 }]),
+        }),
+      };
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+
+    mockDbTransaction.mockImplementation(async (callback: Function) =>
+      callback({
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({
+            onConflictDoNothing: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([{ id: "exec-1" }]),
+            }),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+      })
+    );
+
+    await handler(makeSQSEvent(triggerJob));
+
+    // Restore eq
+    // Restore eq
+    (dbModule as Record<string, unknown>).eq = originalEq;
+
+    // Verify eq was called with organizationId column for the count query.
+    // The count query uses eq(workflowExecution.workflowId, ...) and should
+    // also use eq(workflowExecution.organizationId, organizationId).
+    const orgEqCalls = eqCalls.filter((c) => {
+      const col = c.left as { name?: string };
+      return col?.name === "organization_id";
+    });
+    // At least 2 org-scoped eq() calls: 1 for loading workflow, 1 for count query
+    expect(orgEqCalls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it("returns early when no trigger step in workflow", async () => {
     const wf = makeWorkflow({
       steps: [

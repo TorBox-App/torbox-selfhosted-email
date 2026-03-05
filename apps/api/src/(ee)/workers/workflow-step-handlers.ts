@@ -637,9 +637,27 @@ export async function handleSendSms(
 
   const response = await smsClient.send(command);
 
+  const smsMessageId = response.MessageId ?? "";
+
   log.info("Workflow: SMS sent", {
     to: contactRecord.phone,
-    messageId: response.MessageId,
+    messageId: smsMessageId,
+  });
+
+  // Record the send in messageSend table (parity with email sends)
+  await db.insert(messageSend).values({
+    organizationId,
+    contactId: contactRecord.id,
+    awsAccountId: wf.awsAccountId,
+    channel: "sms",
+    sourceType: "workflow",
+    recipient: contactRecord.phone,
+    subject: null,
+    from: senderId || null,
+    fromName: null,
+    messageId: smsMessageId,
+    status: "sent",
+    sentAt: new Date(),
   });
 
   // Update contact SMS metrics
@@ -654,7 +672,7 @@ export async function handleSendSms(
   return {
     action: "next",
     data: {
-      messageId: response.MessageId,
+      messageId: smsMessageId,
       recipient: contactRecord.phone,
       body: messageBody,
       timestamp: new Date().toISOString(),

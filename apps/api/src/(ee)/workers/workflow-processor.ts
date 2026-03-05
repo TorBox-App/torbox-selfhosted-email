@@ -163,7 +163,7 @@ async function triggerWorkflow(
     }
   }
 
-  // Check maxConcurrentExecutions limit
+  // Check maxConcurrentExecutions limit (scoped by org for cross-org safety)
   if (wf.maxConcurrentExecutions && wf.maxConcurrentExecutions > 0) {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -171,6 +171,7 @@ async function triggerWorkflow(
       .where(
         and(
           eq(workflowExecution.workflowId, workflowId),
+          eq(workflowExecution.organizationId, organizationId),
           sql`${workflowExecution.status} IN ('pending', 'active', 'paused', 'waiting')`
         )
       );
@@ -529,8 +530,10 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     return;
   }
 
-  // Atomic idempotency check and step execution creation
-  // Uses ON CONFLICT to prevent race conditions with duplicate SQS messages
+  // Atomic idempotency check and step execution creation.
+  // Uses ON CONFLICT with a WHERE clause to prevent both duplicate sends
+  // (completed) AND concurrent execution (executing). Only allows retry
+  // when the previous attempt failed.
   const idempotencyKey = `${executionId}-${stepId}`;
 
   const [stepExec] = await db
@@ -546,16 +549,18 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
     .onConflictDoUpdate({
       target: workflowStepExecution.idempotencyKey,
       set: {
-        // Only update if not already completed (prevents re-execution)
-        status: sql`CASE WHEN ${workflowStepExecution.status} = 'completed' THEN ${workflowStepExecution.status} ELSE 'executing' END`,
-        startedAt: sql`CASE WHEN ${workflowStepExecution.status} = 'completed' THEN ${workflowStepExecution.startedAt} ELSE ${new Date().toISOString()}::timestamp END`,
+        status: sql`'executing'`,
+        startedAt: sql`${new Date().toISOString()}::timestamp`,
       },
+      // Only allow update when previous attempt failed (retry).
+      // Rejects when status is 'executing' (concurrent) or 'completed' (done).
+      setWhere: sql`${workflowStepExecution.status} NOT IN ('executing', 'completed')`,
     })
     .returning();
 
-  // If step was already completed, skip execution
-  if (stepExec.status === "completed") {
-    log.info("Step already executed", { stepId, executionId });
+  // If no row returned, another message already claimed or completed this step
+  if (!stepExec) {
+    log.info("Step already executing or completed", { stepId, executionId });
     return;
   }
 

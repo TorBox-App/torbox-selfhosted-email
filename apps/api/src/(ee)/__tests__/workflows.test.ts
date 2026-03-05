@@ -207,6 +207,9 @@ function createTestApp() {
         errors: [] as string[],
       };
 
+      // Deduplicate contacts to prevent double-triggering
+      const seenContactIds = new Set<string>();
+
       for (const c of contacts) {
         let contact: (typeof mockContacts)[string] | undefined;
         if (c.contactId) {
@@ -229,6 +232,12 @@ function createTestApp() {
           );
           continue;
         }
+
+        // Skip duplicate contacts
+        if (seenContactIds.has(contact.id)) {
+          continue;
+        }
+        seenContactIds.add(contact.id);
 
         enqueuedSteps.push({
           type: "trigger",
@@ -650,6 +659,40 @@ describe("Workflow Routes", () => {
       expect(result.errors).toHaveLength(2);
       expect(result.errors).toContain("Contact not found: contact-missing");
       expect(result.errors).toContain("Contact not found: missing@example.com");
+    });
+
+    it("should deduplicate contacts with same contactId", async () => {
+      mockWorkflows["wf-123"] = {
+        id: "wf-123",
+        organizationId: "org-123",
+        name: "Batch Flow",
+        status: "enabled",
+        triggerType: "api",
+      };
+      mockContacts["contact-1"] = {
+        id: "contact-1",
+        email: "user1@example.com",
+        organizationId: "org-123",
+      };
+
+      const response = await app.handle(
+        new Request("http://localhost/v1/workflows/wf-123/trigger/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contacts: [
+              { contactId: "contact-1", data: { seq: 1 } },
+              { contactId: "contact-1", data: { seq: 2 } },
+              { contactId: "contact-1", data: { seq: 3 } },
+            ],
+          }),
+        })
+      );
+
+      const result = await response.json();
+      // Should only trigger once per unique contact, not 3 times
+      expect(result.triggered).toBe(1);
+      expect(enqueuedSteps).toHaveLength(1);
     });
 
     it("should return error for non-api trigger type", async () => {

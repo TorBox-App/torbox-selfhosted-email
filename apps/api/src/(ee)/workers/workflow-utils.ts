@@ -78,6 +78,10 @@ export function sanitizeEmailSubject(subject: string): string {
     .replace(/[\r\n]+/g, " ") // Remove newlines (header injection prevention)
     .replace(/\s+/g, " ") // Collapse whitespace
     .trim()
+    .replace(/&/g, "&amp;") // Escape & first (before other entities)
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
     .slice(0, 998); // RFC 2822 max line length
 }
 
