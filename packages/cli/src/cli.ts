@@ -272,6 +272,7 @@ function showHelp() {
   console.log(
     `  ${pc.cyan("telemetry")}    Manage anonymous telemetry settings`
   );
+  console.log(`  ${pc.cyan("update")}       Update CLI to latest version`);
   console.log(`  ${pc.cyan("news")}         Show recent Wraps updates`);
   console.log(
     `  ${pc.cyan("support")}      Get help and support contact info\n`
@@ -1438,6 +1439,12 @@ async function run() {
       case "completion":
         printCompletionScript();
         break;
+
+      case "update": {
+        const { update } = await import("./commands/update.js");
+        await update(VERSION);
+        break;
+      }
 
       case "news":
         await news();

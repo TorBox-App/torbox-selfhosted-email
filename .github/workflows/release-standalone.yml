@@ -1,0 +1,98 @@
+name: Release Standalone CLI
+
+on:
+  push:
+    tags:
+      - 'cli@*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'CLI version to build (e.g., 2.17.7)'
+        required: true
+
+concurrency:
+  group: release-standalone-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - platform: darwin
+            arch: arm64
+            runner: macos-latest
+          - platform: darwin
+            arch: x64
+            runner: macos-13
+          - platform: linux
+            arch: x64
+            runner: ubuntu-latest
+          - platform: linux
+            arch: arm64
+            runner: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter @wraps.dev/cli build
+
+      - name: Build standalone distribution
+        run: bash scripts/build-standalone.sh --platform ${{ matrix.platform }} --arch ${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wraps-${{ matrix.platform }}-${{ matrix.arch }}
+          path: wraps-*-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: sha256sum wraps-*.tar.gz > CHECKSUMS.sha256
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION="${GITHUB_REF_NAME#cli@}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('cli@{0}', github.event.inputs.version) || github.ref_name }}
+          name: CLI v${{ steps.version.outputs.version }}
+          body: |
+            ## Install
+
+            curl -fsSL https://get.wraps.dev | sh
+
+            Or download the binary for your platform below.
+          files: |
+            wraps-*.tar.gz
+            CHECKSUMS.sha256
+          draft: false
+          prerelease: false
+          generate_release_notes: true
