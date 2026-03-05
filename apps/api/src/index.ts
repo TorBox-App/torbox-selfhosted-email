@@ -103,6 +103,17 @@ const openApiDocumentation = {
   security: [{ bearerAuth: [] }],
 };
 
+/**
+ * CORS origin allowlist.
+ * Production: app.wraps.dev + wraps.dev
+ * Dev/staging: also includes NEXT_PUBLIC_APP_URL (e.g. http://localhost:3000)
+ */
+const allowedOrigins = ["https://app.wraps.dev", "https://wraps.dev"];
+const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+if (appUrl && !allowedOrigins.includes(appUrl)) {
+  allowedOrigins.push(appUrl);
+}
+
 export const app = new Elysia()
   .derive(() => ({ startTime: performance.now() }))
   .onAfterResponse(({ request, startTime, set, ...ctx }) => {
@@ -156,13 +167,27 @@ export const app = new Elysia()
         method: request.method,
       }
     );
-    const message = error instanceof Error ? error.message : String(error);
-    return { error: message };
+    if (code === "NOT_FOUND") {
+      return { error: "Not found" };
+    }
+
+    if (code === "VALIDATION") {
+      const message = error instanceof Error ? error.message : String(error);
+      return { error: "Validation failed", details: message };
+    }
+
+    // 4xx errors from routes are already sanitized — pass through
+    if (status >= 400 && status < 500) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { error: message };
+    }
+
+    // 5xx: never leak internal details
+    return { error: "Internal server error" };
   })
   .use(
     cors({
-      origin: true, // Allow any origin for public API
-      credentials: true,
+      origin: allowedOrigins,
       allowedHeaders: ["Content-Type", "Authorization", "X-Organization-Id"],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     })
