@@ -1,7 +1,8 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
+import { messageSend } from "@wraps/db/schema";
 import { awsAccount } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
+import { and, count, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getSESMetricsSummary } from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -105,6 +106,44 @@ export async function GET(request: Request, context: RouteContext) {
     const bounceRate = totalSent > 0 ? (totalBounced / totalSent) * 100 : 0;
     const complaintRate =
       totalSent > 0 ? (totalComplaints / totalSent) * 100 : 0;
+
+    // If CloudWatch has no data, fall back to PostgreSQL messageSend table
+    if (totalSent === 0) {
+      const [pgOverview] = await db
+        .select({
+          totalSent: count(),
+          totalDelivered: count(messageSend.deliveredAt),
+          totalBounced: count(messageSend.bouncedAt),
+          totalComplaints: count(messageSend.complainedAt),
+        })
+        .from(messageSend)
+        .where(
+          and(
+            eq(messageSend.organizationId, orgWithMembership.id),
+            eq(messageSend.channel, "email"),
+            isNotNull(messageSend.sentAt),
+            gte(messageSend.sentAt, startTime),
+            lte(messageSend.sentAt, endTime)
+          )
+        );
+
+      if (pgOverview && Number(pgOverview.totalSent) > 0) {
+        const pgSent = Number(pgOverview.totalSent);
+        const pgDelivered = Number(pgOverview.totalDelivered);
+        const pgBounced = Number(pgOverview.totalBounced);
+        const pgComplaints = Number(pgOverview.totalComplaints);
+
+        return NextResponse.json({
+          totalSent: pgSent,
+          totalDelivered: pgDelivered,
+          totalBounced: pgBounced,
+          totalComplaints: pgComplaints,
+          deliveryRate: Number(((pgDelivered / pgSent) * 100).toFixed(2)),
+          bounceRate: Number(((pgBounced / pgSent) * 100).toFixed(2)),
+          complaintRate: Number(((pgComplaints / pgSent) * 100).toFixed(2)),
+        });
+      }
+    }
 
     return NextResponse.json({
       totalSent: Math.round(totalSent),

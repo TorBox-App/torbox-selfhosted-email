@@ -3,7 +3,13 @@
  *
  * Creates realistic activity data in both PostgreSQL (message_send) and
  * DynamoDB (wraps-email-history, wraps-sms-history) so the dashboard
- * activity feeds show data.
+ * activity feeds and analytics charts show beautiful demo data.
+ *
+ * Data distribution:
+ *   - Growth curve: volume increases over time (organic growth story)
+ *   - Weekday/weekend patterns: 3-4x more volume on weekdays
+ *   - Business hour bias: 70% of messages during 8am-6pm
+ *   - Demo-optimized engagement rates for healthy-looking charts
  *
  * Usage:
  *   pnpm --filter @wraps/db seed:activity
@@ -13,8 +19,8 @@
  *
  * Options (via env vars):
  *   ORG_ID - Target organization ID
- *   MESSAGE_COUNT - Number of messages to create (default: 500)
- *   DAYS_BACK - How far back to generate data (default: 7, max for dashboard view)
+ *   MESSAGE_COUNT - Number of messages to create (default: 10000)
+ *   DAYS_BACK - How far back to generate data (default: 90)
  *   SKIP_DYNAMO - Set to "true" to skip DynamoDB writes (Postgres only)
  */
 
@@ -54,12 +60,6 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function randomDate(daysBack: number): Date {
-  const now = new Date();
-  const msBack = randomInt(0, daysBack * 24 * 60 * 60 * 1000);
-  return new Date(now.getTime() - msBack);
-}
-
 function afterDate(base: Date, minMs: number, maxMs: number): Date {
   return new Date(base.getTime() + randomInt(minMs, maxMs));
 }
@@ -71,6 +71,67 @@ function fakeMessageId(): string {
     id += chars[Math.floor(Math.random() * chars.length)];
   }
   return id;
+}
+
+// --- Day-by-day distribution helpers ---
+
+function weekdayMultiplier(dow: number): number {
+  // 0=Sunday, 6=Saturday. Weekdays get 3-4x more volume than weekends.
+  const multipliers = [0.25, 0.85, 1.0, 1.0, 1.0, 0.85, 0.35];
+  return multipliers[dow];
+}
+
+function growthWeight(dayIndex: number, totalDays: number): number {
+  // Exponential growth from ~0.3x to ~1.0x over the period
+  const t = dayIndex / Math.max(totalDays - 1, 1);
+  return 0.3 + 0.7 * t ** 1.5;
+}
+
+function calculateDailyVolumes(
+  totalCount: number,
+  daysBack: number
+): { date: Date; count: number }[] {
+  const days: { date: Date; weight: number }[] = [];
+  let totalWeight = 0;
+
+  for (let d = 0; d < daysBack; d++) {
+    const date = new Date();
+    date.setDate(date.getDate() - (daysBack - 1 - d));
+    date.setHours(0, 0, 0, 0);
+
+    const dow = date.getDay();
+    const noise = 0.85 + Math.random() * 0.3; // +/-15% daily noise
+    const weight = growthWeight(d, daysBack) * weekdayMultiplier(dow) * noise;
+
+    days.push({ date, weight });
+    totalWeight += weight;
+  }
+
+  return days.map((d) => ({
+    date: d.date,
+    count: Math.max(1, Math.round((totalCount * d.weight) / totalWeight)),
+  }));
+}
+
+function randomTimeOnDay(baseDate: Date): Date {
+  const date = new Date(baseDate);
+  // Bias toward business hours (8am-6pm)
+  const roll = Math.random();
+  let hour: number;
+  if (roll < 0.7) {
+    hour = 8 + Math.random() * 10; // 8am-6pm (70%)
+  } else if (roll < 0.9) {
+    hour = 18 + Math.random() * 5; // 6pm-11pm (20%)
+  } else {
+    hour = Math.random() * 8; // 12am-8am (10%)
+  }
+  date.setHours(
+    Math.floor(hour),
+    randomInt(0, 59),
+    randomInt(0, 59),
+    randomInt(0, 999)
+  );
+  return date;
 }
 
 // --- Email subject lines ---
@@ -134,6 +195,13 @@ const smsEventTypeMap: Record<string, string> = {
 };
 
 // --- Email lifecycle ---
+//
+// Demo-optimized rates:
+//   Delivery:  ~96.5%   (below 4% bounce threshold line)
+//   Open rate: ~33%     (of delivered — realistic with Apple MPP)
+//   Click rate: ~7.4%   (of delivered)
+//   Bounce:    ~1.5%    (well below 4% SES threshold)
+//   Complaint: ~0.05%   (well below 0.08% SES threshold)
 
 type EmailLifecycle = {
   status:
@@ -154,7 +222,8 @@ type EmailLifecycle = {
 function randomEmailLifecycle(): EmailLifecycle {
   const roll = Math.random();
 
-  if (roll < 0.45) {
+  if (roll < 0.63) {
+    // 63% — delivered but never opened
     return {
       status: "delivered",
       events: (sentAt) => {
@@ -166,7 +235,8 @@ function randomEmailLifecycle(): EmailLifecycle {
       },
     };
   }
-  if (roll < 0.75) {
+  if (roll < 0.875) {
+    // 24.5% — opened but didn't click
     return {
       status: "opened",
       events: (sentAt) => {
@@ -180,7 +250,8 @@ function randomEmailLifecycle(): EmailLifecycle {
       },
     };
   }
-  if (roll < 0.87) {
+  if (roll < 0.945) {
+    // 7% — opened and clicked
     return {
       status: "clicked",
       events: (sentAt) => {
@@ -196,13 +267,15 @@ function randomEmailLifecycle(): EmailLifecycle {
       },
     };
   }
-  if (roll < 0.9) {
+  if (roll < 0.965) {
+    // 2% — sent but pending delivery (recent messages)
     return {
       status: "sent",
       events: (sentAt) => [{ eventType: "Send", timestamp: sentAt }],
     };
   }
-  if (roll < 0.95) {
+  if (roll < 0.98) {
+    // 1.5% — bounced
     const permanent = Math.random() < 0.6;
     return {
       status: "bounced",
@@ -219,7 +292,8 @@ function randomEmailLifecycle(): EmailLifecycle {
       },
     };
   }
-  if (roll < 0.97) {
+  if (roll < 0.9805) {
+    // 0.05% — complained (well below 0.08% SES threshold)
     return {
       status: "complained",
       events: (sentAt) => {
@@ -234,11 +308,13 @@ function randomEmailLifecycle(): EmailLifecycle {
     };
   }
   if (roll < 0.99) {
+    // 0.95% — suppressed
     return {
       status: "suppressed",
       events: (sentAt) => [{ eventType: "Suppressed", timestamp: sentAt }],
     };
   }
+  // 1% — failed/rejected
   return {
     status: "failed",
     error: randomChoice([
@@ -251,6 +327,10 @@ function randomEmailLifecycle(): EmailLifecycle {
 }
 
 // --- SMS lifecycle ---
+//
+// Demo-optimized rates:
+//   Delivery: ~93%+ (high for SMS)
+//   Failure:  ~4%   (carrier issues)
 
 type SmsLifecycle = {
   status: "sent" | "delivered" | "clicked" | "failed" | "opted_out";
@@ -261,7 +341,8 @@ type SmsLifecycle = {
 function randomSmsLifecycle(): SmsLifecycle {
   const roll = Math.random();
 
-  if (roll < 0.7) {
+  if (roll < 0.75) {
+    // 75% — delivered
     return {
       status: "delivered",
       events: (sentAt) => {
@@ -274,7 +355,8 @@ function randomSmsLifecycle(): SmsLifecycle {
       },
     };
   }
-  if (roll < 0.8) {
+  if (roll < 0.84) {
+    // 9% — clicked (delivered + link tracked)
     return {
       status: "clicked",
       events: (sentAt) => {
@@ -287,7 +369,8 @@ function randomSmsLifecycle(): SmsLifecycle {
       },
     };
   }
-  if (roll < 0.88) {
+  if (roll < 0.9) {
+    // 6% — sent but pending
     return {
       status: "sent",
       events: (sentAt) => [
@@ -296,7 +379,8 @@ function randomSmsLifecycle(): SmsLifecycle {
       ],
     };
   }
-  if (roll < 0.93) {
+  if (roll < 0.94) {
+    // 4% — failed
     return {
       status: "failed",
       error: randomChoice([
@@ -312,6 +396,7 @@ function randomSmsLifecycle(): SmsLifecycle {
     };
   }
   if (roll < 0.97) {
+    // 3% — opted out (delivered then opted out)
     return {
       status: "opted_out",
       events: (sentAt) => {
@@ -324,6 +409,7 @@ function randomSmsLifecycle(): SmsLifecycle {
       },
     };
   }
+  // 3% — delayed delivery (still counts as delivered)
   return {
     status: "delivered",
     events: (sentAt) => {
@@ -380,8 +466,11 @@ async function writeDynamoBatch(
 async function main() {
   console.log("Seeding demo email & SMS activity...\n");
 
-  const messageCount = Number.parseInt(process.env.MESSAGE_COUNT || "500", 10);
-  const daysBack = Number.parseInt(process.env.DAYS_BACK || "7", 10);
+  const messageCount = Number.parseInt(
+    process.env.MESSAGE_COUNT || "10000",
+    10
+  );
+  const daysBack = Number.parseInt(process.env.DAYS_BACK || "90", 10);
   const skipDynamo = process.env.SKIP_DYNAMO === "true";
 
   let organizationId = process.env.ORG_ID;
@@ -444,12 +533,17 @@ async function main() {
     `\nFound ${emailContacts.length} email contacts, ${smsContacts.length} SMS contacts`
   );
   console.log(`Found ${batches.length} existing batch sends`);
-  console.log(`Generating activity for last ${daysBack} days`);
-  console.log(`Creating ${messageCount} messages...\n`);
+  console.log(
+    `Generating activity over ${daysBack} days (growth curve + weekday patterns)`
+  );
 
   const emailCount = Math.round(messageCount * 0.75);
   const smsCount = messageCount - emailCount;
   const retentionMs = 90 * 24 * 60 * 60 * 1000; // 90 day TTL
+
+  console.log(
+    `Target: ~${messageCount} messages (${emailCount} email, ${smsCount} SMS)\n`
+  );
 
   const stats = {
     email: {} as Record<string, number>,
@@ -461,17 +555,19 @@ async function main() {
 
   const pgBatchSize = 50;
 
-  // --- Seed email messages ---
+  // --- Seed email messages (day by day) ---
   if (emailContacts.length > 0) {
-    for (let i = 0; i < emailCount; i += pgBatchSize) {
-      const pgBatch = [];
-      const dynamoBatch: Record<string, unknown>[] = [];
-      const end = Math.min(i + pgBatchSize, emailCount);
+    const dailyVolumes = calculateDailyVolumes(emailCount, daysBack);
+    let pgBatch: Record<string, unknown>[] = [];
+    let dynamoBatch: Record<string, unknown>[] = [];
+    let totalGenerated = 0;
+    let isFirstDynamoFlush = true;
 
-      for (let j = i; j < end; j++) {
+    for (const { date, count } of dailyVolumes) {
+      for (let j = 0; j < count; j++) {
         const contact = randomChoice(emailContacts);
         const lifecycle = randomEmailLifecycle();
-        const sentAt = randomDate(daysBack);
+        const sentAt = randomTimeOnDay(date);
         const events = lifecycle.events(sentAt);
         const messageId = fakeMessageId();
 
@@ -502,7 +598,6 @@ async function main() {
 
         const domain = randomChoice(fromDomains);
         const fromAddr = `${emailMeta.from}${domain}`;
-        const lastEvent = events.at(-1)!;
 
         stats.email[lifecycle.status] =
           (stats.email[lifecycle.status] || 0) + 1;
@@ -601,9 +696,36 @@ async function main() {
             });
           }
         }
-      }
 
-      await db.insert(schema.messageSend).values(pgBatch);
+        // Flush batch when full
+        if (pgBatch.length >= pgBatchSize) {
+          await db.insert(schema.messageSend).values(pgBatch as never);
+
+          if (dynamoClient && dynamoBatch.length > 0) {
+            const written = await writeDynamoBatch(
+              dynamoClient,
+              "wraps-email-history",
+              dynamoBatch
+            );
+            stats.dynamoEmail += written;
+            if (written === 0 && isFirstDynamoFlush) {
+              dynamoClient = null;
+              console.log("  (skipping remaining DynamoDB email writes)");
+            }
+            isFirstDynamoFlush = false;
+          }
+
+          totalGenerated += pgBatch.length;
+          pgBatch = [];
+          dynamoBatch = [];
+          process.stdout.write(`\r  Email: ${totalGenerated}/${emailCount}`);
+        }
+      }
+    }
+
+    // Flush remaining records
+    if (pgBatch.length > 0) {
+      await db.insert(schema.messageSend).values(pgBatch as never);
 
       if (dynamoClient && dynamoBatch.length > 0) {
         const written = await writeDynamoBatch(
@@ -612,36 +734,32 @@ async function main() {
           dynamoBatch
         );
         stats.dynamoEmail += written;
-        if (written === 0 && i === 0) {
-          // Table doesn't exist, skip remaining DynamoDB writes for email
-          dynamoClient = null;
-          console.log("  (skipping remaining DynamoDB email writes)");
-        }
       }
 
-      process.stdout.write(`\r  Email: ${end}/${emailCount}`);
+      totalGenerated += pgBatch.length;
     }
-    console.log();
+    console.log(`\r  Email: ${totalGenerated}/${emailCount}`);
   } else {
     console.log("  Skipping email messages (no email contacts)");
   }
 
-  // --- Seed SMS messages ---
-  // Re-create client if it was nulled due to missing email table
+  // --- Seed SMS messages (day by day) ---
   let smsDynamoClient = skipDynamo
     ? null
     : new DynamoDBClient({ region: account.region });
 
   if (smsContacts.length > 0) {
-    for (let i = 0; i < smsCount; i += pgBatchSize) {
-      const pgBatch = [];
-      const dynamoBatch: Record<string, unknown>[] = [];
-      const end = Math.min(i + pgBatchSize, smsCount);
+    const dailyVolumes = calculateDailyVolumes(smsCount, daysBack);
+    let pgBatch: Record<string, unknown>[] = [];
+    let dynamoBatch: Record<string, unknown>[] = [];
+    let totalGenerated = 0;
+    let isFirstDynamoFlush = true;
 
-      for (let j = i; j < end; j++) {
+    for (const { date, count } of dailyVolumes) {
+      for (let j = 0; j < count; j++) {
         const contact = randomChoice(smsContacts);
         const lifecycle = randomSmsLifecycle();
-        const sentAt = randomDate(daysBack);
+        const sentAt = randomTimeOnDay(date);
         const events = lifecycle.events(sentAt);
         const messageId = fakeMessageId();
         const message = randomChoice(smsMessages);
@@ -738,9 +856,36 @@ async function main() {
             });
           }
         }
-      }
 
-      await db.insert(schema.messageSend).values(pgBatch);
+        // Flush batch when full
+        if (pgBatch.length >= pgBatchSize) {
+          await db.insert(schema.messageSend).values(pgBatch as never);
+
+          if (smsDynamoClient && dynamoBatch.length > 0) {
+            const written = await writeDynamoBatch(
+              smsDynamoClient,
+              "wraps-sms-history",
+              dynamoBatch
+            );
+            stats.dynamoSms += written;
+            if (written === 0 && isFirstDynamoFlush) {
+              smsDynamoClient = null;
+              console.log("  (skipping remaining DynamoDB SMS writes)");
+            }
+            isFirstDynamoFlush = false;
+          }
+
+          totalGenerated += pgBatch.length;
+          pgBatch = [];
+          dynamoBatch = [];
+          process.stdout.write(`\r  SMS: ${totalGenerated}/${smsCount}`);
+        }
+      }
+    }
+
+    // Flush remaining
+    if (pgBatch.length > 0) {
+      await db.insert(schema.messageSend).values(pgBatch as never);
 
       if (smsDynamoClient && dynamoBatch.length > 0) {
         const written = await writeDynamoBatch(
@@ -749,34 +894,30 @@ async function main() {
           dynamoBatch
         );
         stats.dynamoSms += written;
-        if (written === 0 && i === 0) {
-          smsDynamoClient = null;
-          console.log("  (skipping remaining DynamoDB SMS writes)");
-        }
       }
 
-      process.stdout.write(`\r  SMS: ${end}/${smsCount}`);
+      totalGenerated += pgBatch.length;
     }
-    console.log();
+    console.log(`\r  SMS: ${totalGenerated}/${smsCount}`);
   } else {
     console.log("  Skipping SMS messages (no SMS contacts)");
   }
 
-  console.log("\n📊 Email status distribution:");
+  console.log("\nEmail status distribution:");
   for (const [status, count] of Object.entries(stats.email).sort(
     (a, b) => b[1] - a[1]
   )) {
     console.log(`  ${status}: ${count}`);
   }
 
-  console.log("\n📊 SMS status distribution:");
+  console.log("\nSMS status distribution:");
   for (const [status, count] of Object.entries(stats.sms).sort(
     (a, b) => b[1] - a[1]
   )) {
     console.log(`  ${status}: ${count}`);
   }
 
-  console.log("\n📊 Source types:");
+  console.log("\nSource types:");
   for (const [type, count] of Object.entries(stats.sourceTypes).sort(
     (a, b) => b[1] - a[1]
   )) {
@@ -784,13 +925,15 @@ async function main() {
   }
 
   if (stats.dynamoEmail > 0 || stats.dynamoSms > 0) {
-    console.log("\n📊 DynamoDB items written:");
+    console.log("\nDynamoDB items written:");
     console.log(`  wraps-email-history: ${stats.dynamoEmail}`);
     console.log(`  wraps-sms-history: ${stats.dynamoSms}`);
   }
 
+  const totalEmail = Object.values(stats.email).reduce((a, b) => a + b, 0);
+  const totalSms = Object.values(stats.sms).reduce((a, b) => a + b, 0);
   console.log(
-    `\n✅ Created ${messageCount} demo messages (${emailCount} email, ${smsCount} SMS)!\n`
+    `\nDone! Created ${totalEmail + totalSms} demo messages (${totalEmail} email, ${totalSms} SMS)\n`
   );
 }
 

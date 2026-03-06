@@ -1,7 +1,8 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
+import { messageSend } from "@wraps/db/schema";
 import { awsAccount } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
@@ -172,6 +173,47 @@ async function fetchEmails(
       }))
       .sort((a, b) => b.sentAt - a.sentAt)
       .slice(0, limit);
+
+    // If DynamoDB returned no data, fall back to PostgreSQL messageSend table
+    if (emails.length === 0) {
+      const pgEmails = await db
+        .select({
+          id: messageSend.id,
+          messageId: messageSend.messageId,
+          from: messageSend.from,
+          recipient: messageSend.recipient,
+          subject: messageSend.subject,
+          status: messageSend.status,
+          sentAt: messageSend.sentAt,
+          openedAt: messageSend.openedAt,
+          clickedAt: messageSend.clickedAt,
+        })
+        .from(messageSend)
+        .where(
+          and(
+            eq(messageSend.organizationId, organizationId),
+            eq(messageSend.channel, "email"),
+            isNotNull(messageSend.sentAt),
+            gte(messageSend.sentAt, startTime),
+            lte(messageSend.sentAt, endTime)
+          )
+        )
+        .orderBy(desc(messageSend.sentAt))
+        .limit(limit);
+
+      return pgEmails.map((e) => ({
+        id: e.id,
+        messageId: e.messageId ?? e.id,
+        from: e.from ?? "",
+        to: [e.recipient],
+        subject: e.subject ?? "(no subject)",
+        status: (e.status as EmailStatus) ?? "sent",
+        sentAt: e.sentAt?.getTime() ?? 0,
+        eventCount: 1,
+        hasOpened: !!e.openedAt,
+        hasClicked: !!e.clickedAt,
+      }));
+    }
 
     return emails;
   } catch (error) {

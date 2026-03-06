@@ -1,7 +1,8 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
+import { messageSend } from "@wraps/db/schema";
 import { awsAccount } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
+import { and, count, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import {
   aggregateByDate,
@@ -168,6 +169,67 @@ export async function GET(request: Request, context: RouteContext) {
         ctr: Number(ctr.toFixed(1)),
       };
     });
+
+    // If CloudWatch has no data, fall back to PostgreSQL messageSend table
+    const hasCloudWatchData = dataPoints.some(
+      (d) => d.openRate > 0 || d.clickRate > 0
+    );
+    if (!hasCloudWatchData) {
+      const pgData = await db
+        .select({
+          date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+          delivered: count(messageSend.deliveredAt),
+          opens: count(messageSend.openedAt),
+          clicks: count(messageSend.clickedAt),
+        })
+        .from(messageSend)
+        .where(
+          and(
+            eq(messageSend.organizationId, orgWithMembership.id),
+            eq(messageSend.channel, "email"),
+            isNotNull(messageSend.sentAt),
+            gte(messageSend.sentAt, startTime),
+            lte(messageSend.sentAt, endTime)
+          )
+        )
+        .groupBy(
+          sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+        )
+        .orderBy(
+          sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+        );
+
+      if (pgData.length > 0) {
+        const pgMap = new Map(
+          pgData.map((d) => {
+            const delivered = Number(d.delivered);
+            const opens = Number(d.opens);
+            const clicks = Number(d.clicks);
+            const openRate = delivered > 0 ? (opens / delivered) * 100 : 0;
+            const clickRate = delivered > 0 ? (clicks / delivered) * 100 : 0;
+            const ctr = opens > 0 ? (clicks / opens) * 100 : 0;
+            return [
+              d.date,
+              {
+                openRate: Number(openRate.toFixed(1)),
+                clickRate: Number(clickRate.toFixed(1)),
+                ctr: Number(ctr.toFixed(1)),
+              },
+            ] as const;
+          })
+        );
+        return NextResponse.json(
+          gapFillDates(
+            dateRange,
+            pgMap as Map<
+              string,
+              { openRate: number; clickRate: number; ctr: number }
+            >,
+            { openRate: 0, clickRate: 0, ctr: 0 }
+          )
+        );
+      }
+    }
 
     return NextResponse.json(dataPoints);
   } catch (error) {

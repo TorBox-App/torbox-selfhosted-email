@@ -1,7 +1,8 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
+import { messageSend } from "@wraps/db/schema";
 import { awsAccount } from "@wraps/db/schema/app";
-import { eq } from "drizzle-orm";
+import { and, count, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import {
   aggregateByDate,
@@ -150,6 +151,54 @@ export async function GET(request: Request, context: RouteContext) {
       delivered: Math.round(d.delivered),
       bounced: Math.round(d.bounced),
     }));
+
+    // If CloudWatch has no data, fall back to PostgreSQL messageSend table
+    const hasCloudWatchData = dataPoints.some((d) => d.sent > 0);
+    if (!hasCloudWatchData) {
+      const pgData = await db
+        .select({
+          date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+          sent: count(),
+          delivered: count(messageSend.deliveredAt),
+          bounced: count(messageSend.bouncedAt),
+        })
+        .from(messageSend)
+        .where(
+          and(
+            eq(messageSend.organizationId, orgWithMembership.id),
+            eq(messageSend.channel, "email"),
+            isNotNull(messageSend.sentAt),
+            gte(messageSend.sentAt, startTime),
+            lte(messageSend.sentAt, endTime)
+          )
+        )
+        .groupBy(
+          sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+        )
+        .orderBy(
+          sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+        );
+
+      if (pgData.length > 0) {
+        const pgMap = new Map(
+          pgData.map((d) => [
+            d.date,
+            {
+              sent: Number(d.sent),
+              delivered: Number(d.delivered),
+              bounced: Number(d.bounced),
+            },
+          ])
+        );
+        return NextResponse.json(
+          gapFillDates(dateRange, pgMap, {
+            sent: 0,
+            delivered: 0,
+            bounced: 0,
+          })
+        );
+      }
+    }
 
     return NextResponse.json(dataPoints);
   } catch (error) {
