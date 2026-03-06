@@ -28,14 +28,20 @@ export function HeroSection() {
 
           {/* Main Headline - server rendered, CSS animation */}
           <h1 className="max-w-[864px] text-left text-[28px] font-medium leading-[32px] animate-fade-in-up md:text-[34px] md:leading-[40px] lg:text-[48px] lg:leading-[56px]">
-            The email platform that sends through your AWS.
+            Stop overpaying for email.
           </h1>
 
           {/* Subheadline - server rendered, CSS animation */}
           <p className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-muted-foreground animate-fade-in-up animation-delay-100 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
-            Automate on user behavior. Design templates. Schedule broadcasts.
+            AWS SES sends for $0.10/1,000 emails. Postmark charges $1.50.
             <br />
-            Transparent pricing. Sending infrastructure you own.
+            Wraps gives you Postmark's DX on your own AWS — deployed in one
+            command.
+          </p>
+
+          {/* Founder credibility */}
+          <p className="mt-3 text-left text-[13px] text-muted-foreground/70 animate-fade-in-up animation-delay-100">
+            Built by an ex-SendGrid engineer.
           </p>
 
           {/* CTA - client component for tracking */}

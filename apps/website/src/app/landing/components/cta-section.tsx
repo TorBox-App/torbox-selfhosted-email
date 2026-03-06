@@ -7,13 +7,12 @@ export function CTASection() {
         {/* Headline - server rendered */}
         <div className="animate-fade-in-up">
           <p className="mb-6 text-2xl font-medium tracking-tight sm:text-3xl">
-            Infrastructure You Own.{" "}
-            <span className="text-orange-500">Forever.</span>
+            Your infrastructure. Your data.{" "}
+            <span className="text-orange-500">Your AWS bill.</span>
           </p>
 
           <p className="mb-8 text-muted-foreground">
-            Deploy to your AWS in one command. Cancel anytime—your
-            infrastructure keeps running.
+            Deploy in one command. Cancel anytime — everything keeps running.
           </p>
         </div>
 

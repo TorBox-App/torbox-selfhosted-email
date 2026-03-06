@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { AutomationsCodeSection } from "./landing/components/automations-code-section";
 import { CliTabbedSection } from "./landing/components/cli-tabbed-section";
 import { CTASection } from "./landing/components/cta-section";
 import { FaqSection } from "./landing/components/faq-section";
@@ -9,8 +8,6 @@ import { HeroSection } from "./landing/components/hero-section";
 import { LandingNavbar } from "./landing/components/navbar";
 import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
-import { ProductTabbedSection } from "./landing/components/product-tabbed-section";
-import { TrustedBySection } from "./landing/components/trusted-by-section";
 
 export const metadata: Metadata = {
   alternates: {
@@ -114,20 +111,13 @@ export default function LandingPage() {
         <main>
           {/* Hero & Credibility */}
           <HeroSection />
-          <TrustedBySection />
           <PrinciplesSection />
 
-          {/* Primary: Wraps Platform */}
-          <ProductTabbedSection />
-
-          {/* Automations */}
-          <AutomationsCodeSection />
+          {/* How it works - CLI deploy + SDK */}
+          <CliTabbedSection />
 
           {/* Pricing */}
           <PricingSection />
-
-          {/* Free Tier - CLI + SDK */}
-          <CliTabbedSection />
 
           {/* Footer sections */}
           <FaqSection />
