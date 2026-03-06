@@ -11,11 +11,13 @@ import {
   Shield,
   ShieldAlert,
   ShieldOff,
+  Terminal,
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { trackEvent } from "@/utils/analytics";
 
 // Animated email headers scrolling in hero section only
 export const EmailHeaderScroller = () => {
@@ -1019,13 +1021,88 @@ export const DomainChecker = () => {
         </div>
       )}
 
-      <p className="mt-4 text-muted-foreground text-xs">
-        Real-time DNS analysis powered by{" "}
-        <a className="text-primary hover:underline" href="/tools">
-          Wraps Email Tools
-        </a>
-        .
-      </p>
+      {result &&
+        (result.score.grade === "D" ||
+          result.score.grade === "F" ||
+          !result.dmarc.exists ||
+          result.dmarc.policy === "none") && (
+          <div className="mt-4 rounded-xl border border-orange-500/30 bg-orange-500/5 p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Terminal className="h-4 w-4 text-orange-500" />
+              <p className="font-semibold text-foreground">
+                Fix this automatically
+              </p>
+            </div>
+            <p className="mb-3 text-foreground/80 text-sm">
+              Wraps CLI deploys DKIM, SPF, and DMARC to your AWS account in one
+              command. No manual DNS configuration.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                asChild
+                className="cursor-pointer bg-orange-500 hover:bg-orange-600"
+                size="sm"
+              >
+                <a
+                  href="/docs/quickstart"
+                  onClick={() =>
+                    trackEvent("cta_click", {
+                      location: "domain_checker_result",
+                      cta_text: "Get Started Free",
+                    })
+                  }
+                >
+                  Get Started Free
+                </a>
+              </Button>
+              <Button asChild className="cursor-pointer" size="sm" variant="outline">
+                <a
+                  href="/tools"
+                  onClick={() =>
+                    trackEvent("cta_click", {
+                      location: "domain_checker_result",
+                      cta_text: "Full Domain Report",
+                    })
+                  }
+                >
+                  Full Domain Report
+                </a>
+              </Button>
+            </div>
+          </div>
+        )}
+
+      {result &&
+        result.score.grade !== "D" &&
+        result.score.grade !== "F" &&
+        result.dmarc.exists &&
+        result.dmarc.policy !== "none" && (
+          <p className="mt-4 text-center text-muted-foreground text-sm">
+            Looking good! Want to keep it that way?{" "}
+            <a
+              className="text-primary hover:underline"
+              href="/tools"
+              onClick={() =>
+                trackEvent("cta_click", {
+                  location: "domain_checker_result",
+                  cta_text: "Monitor with Wraps",
+                })
+              }
+            >
+              Get a full domain report
+            </a>
+          </p>
+        )}
+
+      {!result && (
+        <p className="mt-4 text-muted-foreground text-xs">
+          Real-time DNS analysis powered by{" "}
+          <a className="text-primary hover:underline" href="/tools">
+            Wraps Email Tools
+          </a>
+          .
+        </p>
+      )}
     </Card>
   );
 };

@@ -775,19 +775,20 @@ export default function Page() {
             </div>
             <TheFix />
 
-            <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <p className="text-foreground/90 text-sm">
-                <strong>Tip:</strong> If you're using AWS SES,{" "}
-                <a className="text-primary hover:underline" href="/cli">
-                  Wraps CLI
-                </a>{" "}
-                automatically configures SPF, DKIM, and DMARC when you deploy
-                your email infrastructure. Check your current setup with our{" "}
-                <a className="text-primary hover:underline" href="/tools">
-                  free domain analyzer
-                </a>
-                .
+            <div className="mt-6 rounded-xl border border-orange-500/30 bg-orange-500/5 p-5">
+              <p className="mb-2 font-semibold text-foreground">
+                Skip the manual setup
               </p>
+              <p className="mb-3 text-foreground/80 text-sm">
+                Wraps CLI automatically configures SPF, DKIM, and DMARC when you
+                deploy. One command, production-ready authentication.
+              </p>
+              <a
+                className="inline-flex items-center gap-1 font-medium text-orange-500 text-sm hover:text-orange-600"
+                href="/docs/quickstart"
+              >
+                Deploy in 2 minutes &rarr;
+              </a>
             </div>
 
             <div className="prose prose-neutral dark:prose-invert mt-8 max-w-none">
@@ -808,55 +809,51 @@ export default function Page() {
             </div>
           </section>
 
-          {/* Related Resources */}
-          <section className="space-y-4">
-            <h2 className="font-bold text-2xl">Continue Learning</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+          {/* Fix Your Email Authentication */}
+          <section className="space-y-6">
+            <div className="text-center">
+              <h2 className="font-bold text-2xl">
+                Fix Your Email Authentication
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Deploy DKIM, SPF, and DMARC in 2 minutes
+              </p>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border bg-muted/50">
+              <div className="flex items-center gap-2 border-b px-4 py-2 text-muted-foreground text-xs">
+                <span className="inline-block h-3 w-3 rounded-full bg-red-500/60" />
+                <span className="inline-block h-3 w-3 rounded-full bg-yellow-500/60" />
+                <span className="inline-block h-3 w-3 rounded-full bg-green-500/60" />
+                <span className="ml-2">Terminal</span>
+              </div>
+              <div className="p-4">
+                <code className="font-mono text-foreground text-sm">
+                  <span className="text-muted-foreground">$</span> npx
+                  @wraps.dev/cli email init
+                </code>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <a
-                className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
-                href="/blog/spf-guide"
+                className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-6 py-2.5 font-medium text-white transition-colors hover:bg-orange-600"
+                href="/docs/quickstart"
               >
-                <h3 className="font-semibold group-hover:text-primary">
-                  The SPF 10-Lookup Limit
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Why your SPF record might be failing silently
-                </p>
+                Free CLI Quickstart
               </a>
               <a
-                className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
-                href="/blog/ses-sandbox-guide"
-              >
-                <h3 className="font-semibold group-hover:text-primary">
-                  Escape AWS SES Sandbox
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Get production access on your first try
-                </p>
-              </a>
-              <a
-                className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
-                href="/docs/guides/domain-verification"
-              >
-                <h3 className="font-semibold group-hover:text-primary">
-                  Domain Verification Guide
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Set up DKIM, SPF, and DMARC step by step
-                </p>
-              </a>
-              <a
-                className="group rounded-xl border p-4 transition-colors hover:border-primary/50"
+                className="inline-flex items-center justify-center rounded-lg border px-6 py-2.5 font-medium text-foreground transition-colors hover:bg-muted"
                 href="/tools"
               >
-                <h3 className="font-semibold group-hover:text-primary">
-                  Email Tools
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  Check your domain's email authentication setup
-                </p>
+                Check Your Domain
               </a>
             </div>
+
+            <p className="text-center text-muted-foreground text-xs">
+              No credit card &middot; Open source &middot; Infrastructure you
+              own
+            </p>
           </section>
 
           {/* Footer */}
@@ -908,17 +905,29 @@ export default function Page() {
                 </a>
               </div>
             </Card>
-            <p className="text-muted-foreground">
-              Built by{" "}
-              <a className="text-foreground hover:text-primary" href="/">
-                Wraps
-              </a>{" "}
-              &mdash;{" "}
-              <a className="hover:text-primary" href="/cli">
-                Deploy email infrastructure
-              </a>{" "}
-              to your AWS account with one command.
-            </p>
+            <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-6">
+              <p className="font-semibold text-foreground">
+                Stop configuring. Start sending.
+              </p>
+              <p className="mx-auto mt-1 max-w-md text-muted-foreground text-sm">
+                Wraps deploys production-ready email infrastructure to your AWS
+                account. You own everything.
+              </p>
+              <div className="mt-4 flex flex-col justify-center gap-3 sm:flex-row">
+                <a
+                  className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-5 py-2 font-medium text-sm text-white transition-colors hover:bg-orange-600"
+                  href="/docs/quickstart"
+                >
+                  Get Started Free &rarr;
+                </a>
+                <a
+                  className="inline-flex items-center justify-center rounded-lg border px-5 py-2 font-medium text-foreground text-sm transition-colors hover:bg-muted"
+                  href="/why-wraps"
+                >
+                  Why Wraps?
+                </a>
+              </div>
+            </div>
           </footer>
         </div>
 
