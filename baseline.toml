@@ -185,27 +185,24 @@ glob = "apps/web/src/**/*.{ts,tsx}"
 exclude_glob = ["**/components/ui/**"]
 message = "Migrate hardcoded white/black to theme colors for dark mode support (77 remaining, ratchet down)"
 
-# Ratchet: react-hook-form → @tanstack/react-form migration (6 files remaining)
+# Banned: react-hook-form (fully migrated to @tanstack/react-form)
 [[rule]]
-id = "ratchet-react-hook-form"
-type = "ratchet"
+id = "no-react-hook-form"
+type = "banned-import"
 severity = "error"
-pattern = "from [\"']react-hook-form[\"']"
-regex = true
-max_count = 5
+packages = ["react-hook-form"]
 glob = "**/*.{ts,tsx}"
-message = "Migrate react-hook-form to @tanstack/react-form (5 remaining, ratchet down)"
+message = "Use @tanstack/react-form instead of react-hook-form."
+suggest = "Import from '@tanstack/react-form' instead"
 
-# Ratchet: @hookform/resolvers → @tanstack/react-form Zod adapter (6 files remaining)
 [[rule]]
-id = "ratchet-hookform-resolvers"
-type = "ratchet"
+id = "no-hookform-resolvers"
+type = "banned-import"
 severity = "error"
-pattern = "from [\"']@hookform/resolvers"
-regex = true
-max_count = 2
+packages = ["@hookform/resolvers"]
 glob = "**/*.{ts,tsx}"
-message = "Migrate @hookform/resolvers to @tanstack/react-form Zod adapter (2 remaining, ratchet down)"
+message = "Use @tanstack/react-form validators instead of @hookform/resolvers."
+suggest = "Use inline validators or @tanstack/zod-form-adapter"
 
 # Ratchet: raw Tailwind color utilities missing dark: variants
 [[rule]]
@@ -261,6 +258,12 @@ severity = "error"
 packages = ["moment", "dayjs"]
 message = "Use date-fns or Intl API instead."
 
+[[rule]]
+id = "dep-no-react-hook-form"
+type = "banned-dependency"
+severity = "error"
+packages = ["react-hook-form", "@hookform/resolvers"]
+message = "Fully migrated to @tanstack/react-form. Do not re-add."
 
 # ══════════════════════════════════════════════
 # ESM ENFORCEMENT

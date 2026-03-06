@@ -1,13 +1,11 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import type { topicSettings } from "@wraps/db";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,14 +15,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -33,13 +28,6 @@ import {
 } from "../actions";
 
 type TopicSettingsType = typeof topicSettings.$inferSelect;
-
-const formSchema = z.object({
-  preferenceCenterTitle: z.string().optional(),
-  preferenceCenterDescription: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
 
 type PreferenceCenterSettingsProps = {
   organizationId: string;
@@ -54,29 +42,28 @@ export function PreferenceCenterSettings({
   const [isPending, startTransition] = useTransition();
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm({
     defaultValues: {
       preferenceCenterTitle: settings?.preferenceCenterTitle || "",
       preferenceCenterDescription: settings?.preferenceCenterDescription || "",
     },
-  });
+    onSubmit: ({ value }) => {
+      startTransition(async () => {
+        const result = await updateTopicSettings(organizationId, {
+          preferenceCenterTitle: value.preferenceCenterTitle || null,
+          preferenceCenterDescription:
+            value.preferenceCenterDescription || null,
+        });
 
-  const onSubmit = (values: FormValues) => {
-    startTransition(async () => {
-      const result = await updateTopicSettings(organizationId, {
-        preferenceCenterTitle: values.preferenceCenterTitle || null,
-        preferenceCenterDescription: values.preferenceCenterDescription || null,
+        if (result.success) {
+          toast.success("Settings saved successfully");
+          router.refresh();
+        } else {
+          toast.error(result.error || "Failed to save settings");
+        }
       });
-
-      if (result.success) {
-        toast.success("Settings saved successfully");
-        router.refresh();
-      } else {
-        toast.error(result.error || "Failed to save settings");
-      }
-    });
-  };
+    },
+  });
 
   const handlePreview = async () => {
     setIsPreviewLoading(true);
@@ -102,39 +89,50 @@ export function PreferenceCenterSettings({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-            <FormField
-              control={form.control}
-              name="preferenceCenterTitle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Page Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Email Preferences" {...field} />
-                  </FormControl>
-                  <FormDescription>
+        <form
+          className="space-y-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <form.Field name="preferenceCenterTitle">
+            {(field) => (
+              <Field>
+                <FieldLabel htmlFor={field.name}>Page Title</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Email Preferences"
+                    value={field.state.value}
+                  />
+                  <FieldDescription>
                     Title shown at the top of the preference center page
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            )}
+          </form.Field>
 
-            <FormField
-              control={form.control}
-              name="preferenceCenterDescription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Manage subscriptions for {{masked_email}}"
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
+          <form.Field name="preferenceCenterDescription">
+            {(field) => (
+              <Field>
+                <FieldLabel htmlFor={field.name}>Description</FieldLabel>
+                <FieldContent>
+                  <Textarea
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Manage subscriptions for {{masked_email}}"
+                    rows={3}
+                    value={field.state.value}
+                  />
+                  <FieldDescription>
                     Introductory text shown below the title. Available
                     variables:{" "}
                     <code className="rounded bg-muted px-1 text-xs">
@@ -148,33 +146,32 @@ export function PreferenceCenterSettings({
                     <code className="rounded bg-muted px-1 text-xs">
                       {"{{org_name}}"}
                     </code>
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            )}
+          </form.Field>
 
-            <div className="flex gap-3">
-              <Button disabled={isPending} type="submit">
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-              <Button
-                disabled={isPreviewLoading}
-                onClick={handlePreview}
-                type="button"
-                variant="outline"
-              >
-                {isPreviewLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                )}
-                Preview
-              </Button>
-            </div>
-          </form>
-        </Form>
+          <div className="flex gap-3">
+            <Button disabled={isPending} type="submit">
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+            <Button
+              disabled={isPreviewLoading}
+              onClick={handlePreview}
+              type="button"
+              variant="outline"
+            >
+              {isPreviewLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ExternalLink className="mr-2 h-4 w-4" />
+              )}
+              Preview
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );

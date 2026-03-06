@@ -72,13 +72,7 @@
       "diff@>=8": "^8.0.3",
       "tmp": "^0.2.4"
     },
-    "packageExtensions": {
-      "@hookform/resolvers": {
-        "peerDependencies": {
-          "zod": ">=4.0.0"
-        }
-      }
-    },
+    "packageExtensions": {},
     "onlyBuiltDependencies": [
       "@posthog/cli",
       "@pulumi/command",

@@ -1,11 +1,10 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import type { topicSettings } from "@wraps/db";
 import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { TemplateSelector } from "@/components/template-editor/template-selector";
@@ -18,36 +17,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { updateTopicSettings } from "../actions";
 
 type TopicSettingsType = typeof topicSettings.$inferSelect;
-
-const formSchema = z.object({
-  confirmationFromName: z.string().optional(),
-  confirmationFromEmail: z
-    .string()
-    .email("Must be a valid email address")
-    .optional()
-    .or(z.literal("")),
-  confirmationReplyToEmail: z
-    .string()
-    .email("Must be a valid email address")
-    .optional()
-    .or(z.literal("")),
-});
-
-type FormValues = z.infer<typeof formSchema>;
 
 type DoubleOptInSettingsProps = {
   organizationId: string;
@@ -72,47 +52,31 @@ export function DoubleOptInSettings({
     string | undefined
   >(settings?.confirmationTemplateId ?? undefined);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm({
     defaultValues: {
       confirmationFromName: settings?.confirmationFromName || "",
       confirmationFromEmail: settings?.confirmationFromEmail || "",
       confirmationReplyToEmail: settings?.confirmationReplyToEmail || "",
     },
-  });
-
-  const onSubmit = (values: FormValues) => {
-    // Validate that email domain is from verified domains
-    if (values.confirmationFromEmail) {
-      const emailDomain = values.confirmationFromEmail.split("@")[1];
-      if (
-        verifiedDomains.length > 0 &&
-        !verifiedDomains.includes(emailDomain)
-      ) {
-        form.setError("confirmationFromEmail", {
-          message: `Email must be from a verified domain: ${verifiedDomains.join(", ")}`,
+    onSubmit: ({ value }) => {
+      startTransition(async () => {
+        const result = await updateTopicSettings(organizationId, {
+          confirmationFromName: value.confirmationFromName || null,
+          confirmationFromEmail: value.confirmationFromEmail || null,
+          confirmationReplyToEmail: value.confirmationReplyToEmail || null,
+          confirmationTemplateId:
+            templateMode === "custom" ? selectedTemplateId : null,
         });
-        return;
-      }
-    }
 
-    startTransition(async () => {
-      const result = await updateTopicSettings(organizationId, {
-        confirmationFromName: values.confirmationFromName || null,
-        confirmationFromEmail: values.confirmationFromEmail || null,
-        confirmationReplyToEmail: values.confirmationReplyToEmail || null,
-        confirmationTemplateId:
-          templateMode === "custom" ? selectedTemplateId : null,
+        if (result.success) {
+          toast.success("Settings saved successfully");
+          router.refresh();
+        } else {
+          toast.error(result.error || "Failed to save settings");
+        }
       });
-
-      if (result.success) {
-        toast.success("Settings saved successfully");
-        router.refresh();
-      } else {
-        toast.error(result.error || "Failed to save settings");
-      }
-    });
-  };
+    },
+  });
 
   const handleTemplateChange = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -135,133 +99,191 @@ export function DoubleOptInSettings({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-            <FormField
-              control={form.control}
-              name="confirmationFromName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>From Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Acme Inc" {...field} />
-                  </FormControl>
-                  <FormDescription>
+        <form
+          className="space-y-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <form.Field name="confirmationFromName">
+            {(field) => (
+              <Field>
+                <FieldLabel htmlFor={field.name}>From Name</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Acme Inc"
+                    value={field.state.value}
+                  />
+                  <FieldDescription>
                     Display name shown in the email from field
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            )}
+          </form.Field>
 
-            <FormField
-              control={form.control}
-              name="confirmationFromEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>From Email</FormLabel>
-                  <FormControl>
+          <form.Field
+            name="confirmationFromEmail"
+            validators={{
+              onBlur: ({ value }) => {
+                if (!value) return;
+                const result = z.string().email().safeParse(value);
+                if (!result.success) return "Must be a valid email address";
+                const emailDomain = value.split("@")[1];
+                if (
+                  verifiedDomains.length > 0 &&
+                  !verifiedDomains.includes(emailDomain)
+                ) {
+                  return `Email must be from a verified domain: ${verifiedDomains.join(", ")}`;
+                }
+                return;
+              },
+            }}
+          >
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>From Email</FieldLabel>
+                  <FieldContent>
                     <Input
+                      aria-invalid={isInvalid}
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="noreply@yourdomain.com"
                       type="email"
-                      {...field}
+                      value={field.state.value}
                     />
-                  </FormControl>
-                  <FormDescription>
-                    {verifiedDomains.length > 0 ? (
-                      <>
-                        Must be from a verified domain:{" "}
-                        {verifiedDomains.join(", ")}
-                      </>
-                    ) : (
-                      "Must be from a domain verified in your AWS SES"
+                    <FieldDescription>
+                      {verifiedDomains.length > 0 ? (
+                        <>
+                          Must be from a verified domain:{" "}
+                          {verifiedDomains.join(", ")}
+                        </>
+                      ) : (
+                        "Must be from a domain verified in your AWS SES"
+                      )}
+                    </FieldDescription>
+                    {isInvalid && field.state.meta.errors.length > 0 && (
+                      <p className="text-destructive text-sm">
+                        {String(field.state.meta.errors[0])}
+                      </p>
                     )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </FieldContent>
+                </Field>
+              );
+            }}
+          </form.Field>
 
-            <FormField
-              control={form.control}
-              name="confirmationReplyToEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reply-To Email (Optional)</FormLabel>
-                  <FormControl>
+          <form.Field
+            name="confirmationReplyToEmail"
+            validators={{
+              onBlur: ({ value }) => {
+                if (!value) return;
+                const result = z.string().email().safeParse(value);
+                if (!result.success) return "Must be a valid email address";
+                return;
+              },
+            }}
+          >
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>
+                    Reply-To Email (Optional)
+                  </FieldLabel>
+                  <FieldContent>
                     <Input
+                      aria-invalid={isInvalid}
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="support@yourdomain.com"
                       type="email"
-                      {...field}
+                      value={field.state.value}
                     />
-                  </FormControl>
-                  <FormDescription>
-                    Where replies will be sent. Leave empty to use the from
-                    email.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FieldDescription>
+                      Where replies will be sent. Leave empty to use the from
+                      email.
+                    </FieldDescription>
+                    {isInvalid && field.state.meta.errors.length > 0 && (
+                      <p className="text-destructive text-sm">
+                        {String(field.state.meta.errors[0])}
+                      </p>
+                    )}
+                  </FieldContent>
+                </Field>
+              );
+            }}
+          </form.Field>
 
-            {/* Email Template Section */}
-            <div className="space-y-4 rounded-lg border p-4">
-              <div>
-                <Label className="font-semibold text-base">
-                  Email Template
-                </Label>
-                <p className="text-muted-foreground text-sm">
-                  Choose to use the default confirmation email or create a
-                  custom template.
-                </p>
-              </div>
-
-              <RadioGroup
-                className="space-y-2"
-                onValueChange={(value) =>
-                  setTemplateMode(value as "default" | "custom")
-                }
-                value={templateMode}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem id="template-default" value="default" />
-                  <Label className="font-normal" htmlFor="template-default">
-                    Use default template
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem id="template-custom" value="custom" />
-                  <Label className="font-normal" htmlFor="template-custom">
-                    Use custom template
-                  </Label>
-                </div>
-              </RadioGroup>
-
-              {templateMode === "custom" && (
-                <div className="space-y-4 pt-2">
-                  <TemplateSelector
-                    onTemplateChange={handleTemplateChange}
-                    orgSlug={params.orgSlug}
-                    selectedTemplateId={selectedTemplateId}
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    <strong>Tip:</strong> Your confirmation template should
-                    include the{" "}
-                    <code className="rounded bg-muted px-1">
-                      {"{{confirmationUrl}}"}
-                    </code>{" "}
-                    variable for the confirmation link.
-                  </p>
-                </div>
-              )}
+          {/* Email Template Section */}
+          <div className="space-y-4 rounded-lg border p-4">
+            <div>
+              <Label className="font-semibold text-base">Email Template</Label>
+              <p className="text-muted-foreground text-sm">
+                Choose to use the default confirmation email or create a custom
+                template.
+              </p>
             </div>
 
-            <Button disabled={isPending} type="submit">
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </form>
-        </Form>
+            <RadioGroup
+              className="space-y-2"
+              onValueChange={(value) =>
+                setTemplateMode(value as "default" | "custom")
+              }
+              value={templateMode}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem id="template-default" value="default" />
+                <Label className="font-normal" htmlFor="template-default">
+                  Use default template
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem id="template-custom" value="custom" />
+                <Label className="font-normal" htmlFor="template-custom">
+                  Use custom template
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {templateMode === "custom" && (
+              <div className="space-y-4 pt-2">
+                <TemplateSelector
+                  onTemplateChange={handleTemplateChange}
+                  orgSlug={params.orgSlug}
+                  selectedTemplateId={selectedTemplateId}
+                />
+                <p className="text-muted-foreground text-xs">
+                  <strong>Tip:</strong> Your confirmation template should
+                  include the{" "}
+                  <code className="rounded bg-muted px-1">
+                    {"{{confirmationUrl}}"}
+                  </code>{" "}
+                  variable for the confirmation link.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <Button disabled={isPending} type="submit">
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Changes
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );
