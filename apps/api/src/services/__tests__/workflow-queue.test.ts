@@ -199,7 +199,10 @@ describe("enqueueWorkflowStep behavior", () => {
   });
 
   it("should warn when queue URL not configured in dev", async () => {
-    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const mockWarn = vi.fn();
+    vi.doMock("../../lib/logger", () => ({
+      log: { info: vi.fn(), warn: mockWarn, error: vi.fn() },
+    }));
     process.env.WORKFLOW_QUEUE_URL = "";
     process.env.NODE_ENV = "development";
 
@@ -213,12 +216,10 @@ describe("enqueueWorkflowStep behavior", () => {
       organizationId: "org",
     });
 
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(mockWarn).toHaveBeenCalledWith(
       expect.stringContaining("Skipping enqueue"),
       expect.any(Object)
     );
-
-    consoleSpy.mockRestore();
   });
 });
 
@@ -239,7 +240,10 @@ describe("enqueueWorkflowStepBatch behavior", () => {
   });
 
   it("should no-op for empty jobs array", async () => {
-    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const mockWarn = vi.fn();
+    vi.doMock("../../lib/logger", () => ({
+      log: { info: vi.fn(), warn: mockWarn, error: vi.fn() },
+    }));
     process.env.WORKFLOW_QUEUE_URL = "";
     process.env.NODE_ENV = "development";
 
@@ -248,12 +252,14 @@ describe("enqueueWorkflowStepBatch behavior", () => {
     await enqueueWorkflowStepBatch([]);
 
     // Should not even warn — just returns immediately
-    expect(consoleSpy).not.toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    expect(mockWarn).not.toHaveBeenCalled();
   });
 
   it("should warn when queue URL not configured in dev", async () => {
-    const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const mockWarn = vi.fn();
+    vi.doMock("../../lib/logger", () => ({
+      log: { info: vi.fn(), warn: mockWarn, error: vi.fn() },
+    }));
     process.env.WORKFLOW_QUEUE_URL = "";
     process.env.NODE_ENV = "development";
 
@@ -268,12 +274,10 @@ describe("enqueueWorkflowStepBatch behavior", () => {
       },
     ]);
 
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(mockWarn).toHaveBeenCalledWith(
       expect.stringContaining("Skipping batch enqueue"),
       expect.objectContaining({ count: 1 })
     );
-
-    consoleSpy.mockRestore();
   });
 
   it("should throw when queue URL not configured in production", async () => {
