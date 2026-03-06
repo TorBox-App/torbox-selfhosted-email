@@ -183,6 +183,7 @@ export function ConnectAWSAccountForm({
               />
               <InputGroupAddon align="inline-end">
                 <Button
+                  aria-label="Copy External ID"
                   onClick={() => {
                     navigator.clipboard.writeText(externalId);
                   }}

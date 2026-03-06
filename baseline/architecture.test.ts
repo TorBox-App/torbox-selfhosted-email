@@ -702,3 +702,195 @@ describe("file size limits", () => {
     });
   }
 });
+
+// ─────────────────────────────────────────────────────────
+// Test: Plain <button> with only icon children must have aria-label
+// (catches icon-only buttons that don't use size="icon")
+// ─────────────────────────────────────────────────────────
+
+describe("icon-only plain buttons have accessible labels", () => {
+  test("plain <button> with only icon children must have aria-label or title", () => {
+    const files = findFiles("apps/web/src/**/*.tsx").filter(
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
+    );
+
+    const violations: string[] = [];
+
+    for (const file of files) {
+      const content = readFile(file);
+      if (!content.includes("<button")) continue;
+
+      const lines = content.split("\n");
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!/<button\b/.test(line)) continue;
+
+        // Walk forward to find the closing </button>
+        let elementEnd = -1;
+        for (let j = i; j < Math.min(lines.length, i + 20); j++) {
+          if (lines[j].includes("</button>")) {
+            elementEnd = j;
+            break;
+          }
+        }
+        if (elementEnd === -1) continue;
+
+        const elementBlock = lines.slice(i, elementEnd + 1).join("\n");
+
+        // Skip if already has aria-label, title, or escape hatch
+        if (
+          elementBlock.includes("aria-label") ||
+          elementBlock.includes("title=") ||
+          elementBlock.includes("baseline:allow-no-label")
+        )
+          continue;
+
+        // Find where the opening tag ends, handling JSX expressions
+        // that may contain > (arrow functions, comparisons).
+        // Track {}-depth so we only match > at depth 0.
+        const buttonIdx = elementBlock.indexOf("<button");
+        if (buttonIdx === -1) continue;
+        let depth = 0;
+        let contentStart = -1;
+        for (let c = buttonIdx + 7; c < elementBlock.length; c++) {
+          const ch = elementBlock[c];
+          if (ch === "{") depth++;
+          else if (ch === "}") depth--;
+          else if (ch === ">" && depth === 0) {
+            contentStart = c + 1;
+            break;
+          }
+        }
+        if (contentStart === -1) continue;
+        const closingIndex = elementBlock.lastIndexOf("</button>");
+        if (closingIndex <= contentStart) continue;
+
+        const innerContent = elementBlock.slice(contentStart, closingIndex);
+
+        // Strip only self-closing JSX tags (icons like <X />, <Icon />)
+        // and whitespace. If anything else remains (text, expressions, non-self-closing
+        // elements), the button has content and is not icon-only.
+        const textOnly = innerContent
+          .replace(/<\w[^>]*\/>/g, "") // Remove self-closing tags only
+          .replace(/\s+/g, "") // Remove whitespace
+          .trim();
+
+        if (textOnly.length === 0) {
+          violations.push(
+            `${file}:${i + 1} — icon-only <button> missing aria-label or title`
+          );
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// Test: Checkbox/radio inputs must have label association
+// ─────────────────────────────────────────────────────────
+
+describe("form inputs have labels", () => {
+  test('checkbox and radio <input> must have id+label or aria-label', () => {
+    const files = findFiles("apps/web/src/**/*.tsx").filter(
+      (f) =>
+        !(
+          f.includes("__tests__") ||
+          f.includes(".test.") ||
+          f.includes("/ui/checkbox.tsx") ||
+          f.includes("/ui/radio-group.tsx")
+        )
+    );
+
+    const violations: string[] = [];
+
+    for (const file of files) {
+      const content = readFile(file);
+      if (
+        !(
+          content.includes('type="checkbox"') ||
+          content.includes('type="radio"')
+        )
+      )
+        continue;
+
+      const lines = content.split("\n");
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (
+          !(
+            line.includes('type="checkbox"') ||
+            line.includes('type="radio"')
+          )
+        )
+          continue;
+
+        // Only match raw <input elements, not component wrappers
+        // Walk backwards to find the opening <input
+        let elementStart = i;
+        for (let j = i; j >= Math.max(0, i - 5); j--) {
+          if (/<input\b/.test(lines[j])) {
+            elementStart = j;
+            break;
+          }
+        }
+        if (!/<input\b/.test(lines[elementStart])) continue;
+
+        // Walk forward to find /> or >
+        let elementEnd = i;
+        for (let j = i; j < Math.min(lines.length, i + 5); j++) {
+          if (lines[j].includes("/>") || lines[j].includes(">")) {
+            elementEnd = j;
+            break;
+          }
+        }
+
+        const elementBlock = lines
+          .slice(elementStart, elementEnd + 1)
+          .join("\n");
+
+        // Skip hidden inputs
+        if (elementBlock.includes('type="hidden"')) continue;
+
+        // Skip if it has accessibility attributes
+        if (
+          elementBlock.includes("aria-label") ||
+          elementBlock.includes("baseline:allow-no-label")
+        )
+          continue;
+
+        // Check if wrapped in a <label> element (implicit association)
+        let isWrappedInLabel = false;
+        for (let j = elementStart - 1; j >= Math.max(0, elementStart - 10); j--) {
+          if (/<label\b/.test(lines[j])) {
+            isWrappedInLabel = true;
+            break;
+          }
+          if (/<\/label>/.test(lines[j])) break;
+        }
+        if (isWrappedInLabel) continue;
+
+        // Check if it has an id
+        const idMatch = elementBlock.match(/id=["'{]([^"'}]+)["'}]/);
+        if (idMatch) {
+          // Check if a <label htmlFor="..."> or <Label htmlFor="..."> exists in the file
+          const inputId = idMatch[1];
+          if (
+            content.includes(`htmlFor="${inputId}"`) ||
+            content.includes(`htmlFor={'${inputId}'}`)
+          )
+            continue;
+        }
+
+        violations.push(
+          `${file}:${elementStart + 1} — <input type="checkbox|radio"> missing id+label or aria-label`
+        );
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});

@@ -308,7 +308,7 @@ export function CliDeployConnectStep({
               <div className="space-y-1.5">
                 {PREREQUISITES.map((prereq) => (
                   <div key={prereq.label}>
-                    <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2">
                       <input
                         className="h-4 w-4 rounded border-muted-foreground/25"
                         type="checkbox"
@@ -322,7 +322,7 @@ export function CliDeployConnectStep({
                       >
                         Guide
                       </a>
-                    </div>
+                    </label>
                     {"hint" in prereq && (
                       <p className="ml-6 mt-0.5 text-muted-foreground text-xs">
                         Run{" "}

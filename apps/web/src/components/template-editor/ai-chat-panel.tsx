@@ -408,6 +408,7 @@ export function AIChatPanel({
                           {fav.label}
                         </Button>
                         <button
+                          aria-label="Remove from favorites"
                           className="absolute right-1 top-1/2 -translate-y-1/2 rounded-sm p-0.5 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();

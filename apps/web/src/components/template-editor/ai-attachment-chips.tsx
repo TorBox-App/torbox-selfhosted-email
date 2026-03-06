@@ -29,6 +29,7 @@ export function AIAttachmentChips({
             {imageAttachment.filename}
           </span>
           <button
+            aria-label="Remove image"
             className="ml-0.5 rounded-sm p-0.5 hover:bg-background"
             onClick={onRemoveImage}
             type="button"
@@ -44,6 +45,7 @@ export function AIAttachmentChips({
             {selectedBrandKit.name}
           </span>
           <button
+            aria-label="Remove brand kit"
             className="ml-0.5 rounded-sm p-0.5 hover:bg-background"
             onClick={onRemoveBrandKit}
             type="button"
