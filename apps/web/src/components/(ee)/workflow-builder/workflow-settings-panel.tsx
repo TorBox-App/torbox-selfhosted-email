@@ -272,7 +272,7 @@ export function WorkflowSettingsPanel({
           <Settings className="h-4 w-4" />
           <span className="font-medium">Workflow Settings</span>
         </div>
-        <Button onClick={onClose} size="icon" variant="ghost">
+        <Button aria-label="Close" onClick={onClose} size="icon" variant="ghost">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -337,6 +337,7 @@ export function WorkflowSettingsPanel({
               <div className="flex items-center justify-between">
                 <Label htmlFor="fromPrefix">From Email</Label>
                 <Button
+                  aria-label="Refresh domains"
                   className="h-6 w-6"
                   disabled={domainsLoading || !awsAccountId}
                   onClick={() => fetchDomainsForAccount(awsAccountId, true)}
@@ -424,6 +425,7 @@ export function WorkflowSettingsPanel({
                         <div className="flex items-center justify-between">
                           <Label>Sender Phone Number</Label>
                           <Button
+                            aria-label="Refresh phone numbers"
                             className="h-6 w-6"
                             disabled={phoneNumbersLoading}
                             onClick={() =>

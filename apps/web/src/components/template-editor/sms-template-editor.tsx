@@ -132,7 +132,7 @@ export function SmsTemplateEditor({
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-3">
           <Link href={`/${orgSlug}/emails/templates`}>
-            <Button size="icon" variant="ghost">
+            <Button aria-label="Back to templates" size="icon" variant="ghost">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>

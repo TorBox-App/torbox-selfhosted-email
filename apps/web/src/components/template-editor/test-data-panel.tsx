@@ -144,6 +144,7 @@ export function TestDataPanel({ editor, className }: TestDataPanelProps) {
         </h3>
         {Object.keys(testData).length > 0 && (
           <Button
+            aria-label="Clear all test data"
             className="h-6 w-6"
             onClick={clearAll}
             size="icon"
@@ -236,6 +237,7 @@ export function TestDataPanel({ editor, className }: TestDataPanelProps) {
                   <div className="flex items-center justify-between">
                     <Label className="font-mono text-xs">{key}</Label>
                     <Button
+                      aria-label="Remove variable"
                       className="h-5 w-5"
                       onClick={() => removeValue(key)}
                       size="icon"

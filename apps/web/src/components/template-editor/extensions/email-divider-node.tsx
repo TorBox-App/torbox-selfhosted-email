@@ -89,7 +89,7 @@ const EmailDividerNodeView = ({
         <DragHandle />
         <Popover onOpenChange={setIsEditing} open={isEditing}>
           <PopoverTrigger asChild>
-            <Button className="h-6 w-6" size="icon" variant="secondary">
+            <Button aria-label="Edit divider settings" className="h-6 w-6" size="icon" variant="secondary">
               <Settings2 className="h-3 w-3" />
             </Button>
           </PopoverTrigger>

@@ -193,7 +193,7 @@ export function SegmentDetailsSheet({
               <Pencil className="mr-2 h-4 w-4" />
               Edit Segment
             </Button>
-            <Button onClick={onDelete} size="icon" variant="ghost">
+            <Button aria-label="Delete segment" onClick={onDelete} size="icon" variant="ghost">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>

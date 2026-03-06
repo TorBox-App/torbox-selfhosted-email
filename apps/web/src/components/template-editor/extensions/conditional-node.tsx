@@ -95,6 +95,7 @@ const ConditionalNodeView = ({
           <Popover onOpenChange={setIsEditing} open={isEditing}>
             <PopoverTrigger asChild>
               <Button
+                aria-label="Edit condition settings"
                 className="h-6 w-6 text-amber-600 hover:text-amber-800"
                 size="icon"
                 variant="ghost"

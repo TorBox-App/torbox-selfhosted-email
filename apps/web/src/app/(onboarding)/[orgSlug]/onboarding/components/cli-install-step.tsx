@@ -60,6 +60,7 @@ export function CliInstallStep({
               <code className="text-sm">{curlCommand}</code>
             </pre>
             <Button
+              aria-label="Copy to clipboard"
               className="absolute top-2 right-2"
               onClick={() => handleCopy(curlCommand)}
               size="icon"

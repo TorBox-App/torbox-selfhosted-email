@@ -434,6 +434,7 @@ export function ContactFormDialog({
                           value={prop.value}
                         />
                         <Button
+                          aria-label="Remove property"
                           className="h-8 w-8 shrink-0 p-0"
                           onClick={() => removeProperty(index)}
                           type="button"

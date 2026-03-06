@@ -797,6 +797,7 @@ export function CodeTemplateAIPanel({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
+                  aria-label="Brand kit"
                   className="h-7 w-7"
                   size="icon"
                   title="Brand kit"
@@ -857,6 +858,7 @@ export function CodeTemplateAIPanel({
             <div className="flex-1" />
             {messages.length > 0 && !isLoading && (
               <Button
+                aria-label="Regenerate"
                 className="h-7 w-7"
                 disabled={aiUsage?.remaining === 0}
                 onClick={() => regenerate()}
@@ -870,6 +872,7 @@ export function CodeTemplateAIPanel({
             )}
             {input.trim().length > 10 && (
               <Button
+                aria-label="Save to favorites"
                 className="h-7 w-7"
                 onClick={() => saveFavorite(input.trim())}
                 size="icon"
@@ -881,6 +884,7 @@ export function CodeTemplateAIPanel({
               </Button>
             )}
             <Button
+              aria-label="Send message"
               className={cn(
                 "h-7 w-7 transition-colors",
                 input.trim() && !isLoading

@@ -81,6 +81,7 @@ function CopyButton({ value }: { value: string }) {
 
   return (
     <Button
+      aria-label="Copy to clipboard"
       className="h-8 w-8 shrink-0"
       onClick={handleCopy}
       size="icon"

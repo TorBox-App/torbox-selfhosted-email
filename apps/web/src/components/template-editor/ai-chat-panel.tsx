@@ -604,6 +604,7 @@ export function AIChatPanel({
             <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5">
               {messages.length > 0 && !isLoading && (
                 <Button
+                  aria-label="Regenerate"
                   className="h-7 w-7"
                   disabled={aiUsage?.remaining === 0}
                   onClick={() => regenerate()}
@@ -617,6 +618,7 @@ export function AIChatPanel({
               )}
               {input.trim().length > 10 && (
                 <Button
+                  aria-label="Save to favorites"
                   className="h-7 w-7"
                   onClick={() => saveFavorite(input.trim())}
                   size="icon"
@@ -630,6 +632,7 @@ export function AIChatPanel({
             </div>
             <div className="absolute right-2.5 bottom-2.5">
               <Button
+                aria-label="Send message"
                 className={cn(
                   "h-7 w-7 transition-colors",
                   input.trim() && !isLoading

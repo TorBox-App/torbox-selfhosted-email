@@ -162,7 +162,7 @@ export function WorkflowPropertiesPanel({
     <div className="w-80 overflow-y-auto border-l bg-background">
       <div className="flex items-center justify-between border-b p-4">
         <h3 className="font-medium">Properties</h3>
-        <Button onClick={() => selectNode(null)} size="icon" variant="ghost">
+        <Button aria-label="Close" onClick={() => selectNode(null)} size="icon" variant="ghost">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -584,6 +584,7 @@ function SendEmailConfig({
           </Select>
           {config.templateId && onEditTemplate && (
             <Button
+              aria-label="Edit template"
               onClick={() => onEditTemplate(config.templateId!)}
               size="icon"
               title="Edit template"
@@ -619,6 +620,7 @@ function SendEmailConfig({
           <Label>From Address (optional)</Label>
           {onRefreshDomains && (
             <Button
+              aria-label="Refresh domains"
               className="h-6 w-6"
               disabled={domainsLoading}
               onClick={onRefreshDomains}
@@ -664,6 +666,7 @@ function SendEmailConfig({
           <div className="flex items-center gap-1">
             <Input className="flex-1" readOnly value={existingFrom} />
             <Button
+              aria-label="Clear from address"
               className="h-9 w-9 shrink-0"
               onClick={() => onChange({ from: undefined })}
               size="icon"
@@ -1407,6 +1410,7 @@ function CascadeConfig({
                 <div className="flex items-center gap-1">
                   {index > 0 && (
                     <Button
+                      aria-label="Move up"
                       className="h-6 w-6"
                       onClick={() => moveChannel(index, "up")}
                       size="icon"
@@ -1417,6 +1421,7 @@ function CascadeConfig({
                   )}
                   {!isLast && (
                     <Button
+                      aria-label="Move down"
                       className="h-6 w-6"
                       onClick={() => moveChannel(index, "down")}
                       size="icon"
@@ -1427,6 +1432,7 @@ function CascadeConfig({
                   )}
                   {channels.length > 1 && (
                     <Button
+                      aria-label="Remove channel"
                       className="h-6 w-6 text-destructive"
                       onClick={() => removeChannel(index)}
                       size="icon"
@@ -1499,6 +1505,7 @@ function CascadeConfig({
                       </Select>
                       {channel.templateId && onEditTemplate && (
                         <Button
+                          aria-label="Edit template"
                           className="h-9 w-9"
                           onClick={() => onEditTemplate(channel.templateId!)}
                           size="icon"

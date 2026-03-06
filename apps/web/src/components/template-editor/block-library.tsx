@@ -225,6 +225,7 @@ function BlockCard({ block, onInsert, onDelete }: BlockCardProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            aria-label="More actions"
             className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100"
             onClick={(e) => e.stopPropagation()}
             size="icon"
@@ -275,6 +276,7 @@ function BlockListItem({ block, onInsert, onDelete }: BlockCardProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            aria-label="More actions"
             className="h-6 w-6 opacity-0 group-hover:opacity-100"
             onClick={(e) => e.stopPropagation()}
             size="icon"

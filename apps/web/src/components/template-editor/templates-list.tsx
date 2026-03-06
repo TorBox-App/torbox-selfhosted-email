@@ -1112,6 +1112,7 @@ function TemplateRow({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
+              aria-label="More actions"
               className="h-8 w-8 opacity-0 group-hover:opacity-100"
               size="icon"
               variant="ghost"

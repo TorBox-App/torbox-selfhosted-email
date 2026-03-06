@@ -205,6 +205,7 @@ export function EmailPreviewCarousel({
           </CardTitle>
           <div className="flex items-center gap-1">
             <Button
+              aria-label="Previous"
               disabled={contacts.length <= 1}
               onClick={handlePrev}
               size="icon"
@@ -213,6 +214,7 @@ export function EmailPreviewCarousel({
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
+              aria-label="Next"
               disabled={contacts.length <= 1}
               onClick={handleNext}
               size="icon"

@@ -414,6 +414,7 @@ export function OrganizationSettingsMembers({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
+                          aria-label="More actions"
                           disabled={isPending}
                           size="icon"
                           variant="ghost"
@@ -492,6 +493,7 @@ export function OrganizationSettingsMembers({
                     </div>
                   </div>
                   <Button
+                    aria-label="Cancel invitation"
                     disabled={isPending}
                     onClick={() => handleCancelInvitation(invitation.id)}
                     size="icon"

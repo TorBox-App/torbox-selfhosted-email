@@ -553,7 +553,7 @@ export function OrganizationSettingsBrandKits({
                   {canEdit && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost">
+                        <Button aria-label="More actions" size="icon" variant="ghost">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

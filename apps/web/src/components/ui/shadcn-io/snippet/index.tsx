@@ -82,6 +82,7 @@ export const SnippetCopyButton = ({
 
   return (
     <Button
+      aria-label="Copy to clipboard"
       className="opacity-0 transition-opacity group-hover:opacity-100"
       onClick={copyToClipboard}
       size="icon"

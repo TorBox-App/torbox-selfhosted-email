@@ -148,6 +148,7 @@ export function AIImageUrlPopover({
     >
       <PopoverTrigger asChild>
         <Button
+          aria-label="Attach image"
           className="h-7 w-7"
           disabled={disabled}
           size="icon"

@@ -31,6 +31,7 @@ export function CliCommand({ command, className }: CliCommandProps) {
         <code>{command}</code>
       </div>
       <Button
+        aria-label="Copy to clipboard"
         className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
         onClick={handleCopy}
         size="icon"

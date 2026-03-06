@@ -453,6 +453,7 @@ export function OrganizationSettingsApiKeys({
                     value={newSecretKey}
                   />
                   <Button
+                    aria-label="Toggle visibility"
                     className="-translate-y-1/2 absolute top-1/2 right-2 h-6 w-6"
                     onClick={() => setShowSecretKey(!showSecretKey)}
                     size="icon"
@@ -466,6 +467,7 @@ export function OrganizationSettingsApiKeys({
                   </Button>
                 </div>
                 <Button
+                  aria-label="Copy to clipboard"
                   onClick={() => copyToClipboard(newSecretKey)}
                   size="icon"
                   variant="outline"
@@ -679,7 +681,7 @@ export function OrganizationSettingsApiKeys({
                     {canEdit && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button size="icon" variant="ghost">
+                          <Button aria-label="More actions" size="icon" variant="ghost">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

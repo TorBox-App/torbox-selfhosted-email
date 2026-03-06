@@ -57,6 +57,7 @@ export function ModeToggle({ variant = "outline" }: ModeToggleProps) {
 
   return (
     <Button
+      aria-label="Toggle theme"
       className="mode-toggle-button relative cursor-pointer overflow-hidden"
       onClick={handleToggle}
       size="icon"

@@ -205,6 +205,7 @@ export function PasskeyManagement() {
                         setPasskeyName(passkey.name || "");
                         setIsEditingPasskey(true);
                       }}
+                      aria-label="Edit passkey"
                       size="sm"
                       variant="ghost"
                     >
@@ -216,6 +217,7 @@ export function PasskeyManagement() {
                         setSelectedPasskey(passkey);
                         setIsDeletingPasskey(true);
                       }}
+                      aria-label="Delete passkey"
                       size="sm"
                       variant="ghost"
                     >

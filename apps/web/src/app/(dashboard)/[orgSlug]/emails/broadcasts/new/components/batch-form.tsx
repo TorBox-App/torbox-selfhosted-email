@@ -484,7 +484,7 @@ export function BatchForm({
     <div className="flex min-h-[calc(100vh-8rem)] flex-col">
       {/* Header */}
       <div className="flex items-center gap-4 pb-6">
-        <Button asChild size="icon" variant="ghost">
+        <Button aria-label="Back to broadcasts" asChild size="icon" variant="ghost">
           <Link href={`/${orgSlug}/emails/broadcasts`}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -696,6 +696,7 @@ function SetupStep({
             <div className="flex items-center justify-between">
               <Label htmlFor="fromPrefix">From Email *</Label>
               <Button
+                aria-label="Refresh domains"
                 className="h-6 w-6"
                 disabled={domainsLoading}
                 onClick={onRefreshDomains}

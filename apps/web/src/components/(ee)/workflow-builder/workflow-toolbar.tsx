@@ -330,6 +330,7 @@ export function WorkflowToolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  aria-label="Undo"
                   disabled={!canUndo}
                   onClick={handleUndo}
                   size="icon"
@@ -343,6 +344,7 @@ export function WorkflowToolbar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  aria-label="Redo"
                   disabled={!canRedo}
                   onClick={handleRedo}
                   size="icon"
@@ -361,6 +363,7 @@ export function WorkflowToolbar({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                aria-label="Workflow settings"
                 onClick={toggleSettingsPanel}
                 size="icon"
                 variant={settingsPanelOpen ? "secondary" : "outline"}

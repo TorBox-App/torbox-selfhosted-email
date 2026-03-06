@@ -80,6 +80,7 @@ const EmailColumnNodeView = ({
       <Popover onOpenChange={setIsEditing} open={isEditing}>
         <PopoverTrigger asChild>
           <Button
+            aria-label="Edit column settings"
             className="absolute top-1 right-1 z-10 h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100"
             size="icon"
             variant="secondary"

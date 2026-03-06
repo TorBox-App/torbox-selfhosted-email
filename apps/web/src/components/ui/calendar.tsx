@@ -203,7 +203,7 @@ function CalendarDayButton({
         !modifiers.range_middle
       }
       ref={ref}
-      size="icon"
+      size="icon" // baseline:allow-no-aria-label — aria-label provided by react-day-picker via {...props}
       variant="ghost"
       {...props}
     />

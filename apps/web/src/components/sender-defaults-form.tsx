@@ -341,6 +341,7 @@ export function SenderDefaultsForm({
                 <div className="flex items-center justify-between">
                   <Label>From Email</Label>
                   <Button
+                    aria-label="Refresh domains"
                     className="h-6 w-6"
                     disabled={
                       domainsLoading || !currentAwsAccountId || !canEdit
@@ -457,6 +458,7 @@ export function SenderDefaultsForm({
                             <div className="flex items-center justify-between">
                               <Label>Sender Phone Number</Label>
                               <Button
+                                aria-label="Refresh phone numbers"
                                 className="h-6 w-6"
                                 disabled={phoneNumbersLoading || !canEdit}
                                 onClick={() =>

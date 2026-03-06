@@ -372,6 +372,70 @@ describe("no console.log in web app", () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────
+// Test: Icon buttons must have aria-label or sr-only
+// ─────────────────────────────────────────────────────────
+
+describe("icon buttons have accessible labels", () => {
+  test('size="icon" buttons must have aria-label or sr-only', () => {
+    const files = findFiles("apps/web/src/**/*.tsx").filter(
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
+    );
+
+    const violations: string[] = [];
+
+    for (const file of files) {
+      const content = readFile(file);
+      if (!content.includes('size="icon"')) continue;
+
+      const lines = content.split("\n");
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.includes('size="icon"')) continue;
+
+        // Walk backwards to find the opening <Button or <button
+        let elementStart = i;
+        for (let j = i; j >= Math.max(0, i - 15); j--) {
+          if (/<(?:Button|button)\b/.test(lines[j])) {
+            elementStart = j;
+            break;
+          }
+        }
+
+        // Walk forward to find the closing </Button>, </button>, or self-closing />
+        let elementEnd = i;
+        for (let j = i; j < Math.min(lines.length, i + 15); j++) {
+          if (
+            lines[j].includes("</Button>") ||
+            lines[j].includes("</button>") ||
+            (lines[j].includes("/>") && !lines[j].includes("<"))
+          ) {
+            elementEnd = j;
+            break;
+          }
+        }
+
+        const elementBlock = lines.slice(elementStart, elementEnd + 1).join("\n");
+
+        const hasAriaLabel = elementBlock.includes("aria-label");
+        const hasSrOnly = elementBlock.includes("sr-only");
+        const hasEscapeHatch = elementBlock.includes(
+          "baseline:allow-no-aria-label"
+        );
+
+        if (!hasAriaLabel && !hasSrOnly && !hasEscapeHatch) {
+          violations.push(
+            `${file}:${elementStart + 1} — size="icon" button missing aria-label or sr-only`
+          );
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
 function getCLICommandFiles(): string[] {
   return findFiles("packages/cli/src/commands/**/*.ts").filter(
     (f) => !(f.includes("__tests__") || f.includes(".test."))

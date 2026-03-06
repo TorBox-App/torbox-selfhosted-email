@@ -361,6 +361,7 @@ function VersionItem({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
+                    aria-label="Restore version"
                     className="h-7 w-7"
                     onClick={onRestore}
                     size="icon"
