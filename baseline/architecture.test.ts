@@ -416,7 +416,9 @@ describe("icon buttons have accessible labels", () => {
           }
         }
 
-        const elementBlock = lines.slice(elementStart, elementEnd + 1).join("\n");
+        const elementBlock = lines
+          .slice(elementStart, elementEnd + 1)
+          .join("\n");
 
         const hasAriaLabel = elementBlock.includes("aria-label");
         const hasSrOnly = elementBlock.includes("sr-only");
@@ -424,7 +426,7 @@ describe("icon buttons have accessible labels", () => {
           "baseline:allow-no-aria-label"
         );
 
-        if (!hasAriaLabel && !hasSrOnly && !hasEscapeHatch) {
+        if (!(hasAriaLabel || hasSrOnly || hasEscapeHatch)) {
           violations.push(
             `${file}:${elementStart + 1} — size="icon" button missing aria-label or sr-only`
           );
@@ -793,7 +795,7 @@ describe("icon-only plain buttons have accessible labels", () => {
 // ─────────────────────────────────────────────────────────
 
 describe("form inputs have labels", () => {
-  test('checkbox and radio <input> must have id+label or aria-label', () => {
+  test("checkbox and radio <input> must have id+label or aria-label", () => {
     const files = findFiles("apps/web/src/**/*.tsx").filter(
       (f) =>
         !(
@@ -821,10 +823,7 @@ describe("form inputs have labels", () => {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         if (
-          !(
-            line.includes('type="checkbox"') ||
-            line.includes('type="radio"')
-          )
+          !(line.includes('type="checkbox"') || line.includes('type="radio"'))
         )
           continue;
 
@@ -864,7 +863,11 @@ describe("form inputs have labels", () => {
 
         // Check if wrapped in a <label> element (implicit association)
         let isWrappedInLabel = false;
-        for (let j = elementStart - 1; j >= Math.max(0, elementStart - 10); j--) {
+        for (
+          let j = elementStart - 1;
+          j >= Math.max(0, elementStart - 10);
+          j--
+        ) {
           if (/<label\b/.test(lines[j])) {
             isWrappedInLabel = true;
             break;

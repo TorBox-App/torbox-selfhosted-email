@@ -205,7 +205,12 @@ export function TopicSubscribersSheet({
               <Pencil className="mr-2 h-4 w-4" />
               Edit Topic
             </Button>
-            <Button aria-label="Delete topic" onClick={onDelete} size="icon" variant="ghost">
+            <Button
+              aria-label="Delete topic"
+              onClick={onDelete}
+              size="icon"
+              variant="ghost"
+            >
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>

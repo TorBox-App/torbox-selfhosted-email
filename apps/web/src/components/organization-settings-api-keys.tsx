@@ -681,7 +681,11 @@ export function OrganizationSettingsApiKeys({
                     {canEdit && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button aria-label="More actions" size="icon" variant="ghost">
+                          <Button
+                            aria-label="More actions"
+                            size="icon"
+                            variant="ghost"
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

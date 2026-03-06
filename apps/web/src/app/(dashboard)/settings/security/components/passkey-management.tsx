@@ -199,25 +199,25 @@ export function PasskeyManagement() {
                   </div>
                   <div className="flex gap-2">
                     <Button
+                      aria-label="Edit passkey"
                       className="cursor-pointer"
                       onClick={() => {
                         setSelectedPasskey(passkey);
                         setPasskeyName(passkey.name || "");
                         setIsEditingPasskey(true);
                       }}
-                      aria-label="Edit passkey"
                       size="sm"
                       variant="ghost"
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button
+                      aria-label="Delete passkey"
                       className="cursor-pointer text-destructive hover:text-destructive"
                       onClick={() => {
                         setSelectedPasskey(passkey);
                         setIsDeletingPasskey(true);
                       }}
-                      aria-label="Delete passkey"
                       size="sm"
                       variant="ghost"
                     >

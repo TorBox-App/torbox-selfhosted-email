@@ -87,7 +87,12 @@ const EmailSpacerNodeView = ({
         <DragHandle />
         <Popover onOpenChange={setIsEditing} open={isEditing}>
           <PopoverTrigger asChild>
-            <Button aria-label="Edit spacer settings" className="h-6 w-6" size="icon" variant="secondary">
+            <Button
+              aria-label="Edit spacer settings"
+              className="h-6 w-6"
+              size="icon"
+              variant="secondary"
+            >
               <MoveVertical className="h-3 w-3" />
             </Button>
           </PopoverTrigger>

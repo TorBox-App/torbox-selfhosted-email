@@ -179,7 +179,10 @@ export default function ProductionAccessPageContent() {
           preload="none"
           src="/docs/ses-request-production-access.mp4"
         >
-          <track kind="descriptions" label="Requesting production access in SES console" />
+          <track
+            kind="descriptions"
+            label="Requesting production access in SES console"
+          />
         </video>
       </section>
 

@@ -164,7 +164,12 @@ const EmailIconNodeView = ({
           <DragHandle />
           <Popover onOpenChange={setIsEditing} open={isEditing}>
             <PopoverTrigger asChild>
-              <Button aria-label="Edit icon settings" className="h-6 w-6" size="icon" variant="secondary">
+              <Button
+                aria-label="Edit icon settings"
+                className="h-6 w-6"
+                size="icon"
+                variant="secondary"
+              >
                 <Pencil className="h-3 w-3" />
               </Button>
             </PopoverTrigger>

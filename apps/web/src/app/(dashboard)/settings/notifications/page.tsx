@@ -274,7 +274,10 @@ export default function NotificationSettings() {
                     onValueChange={field.handleChange}
                     value={field.state.value}
                   >
-                    <SelectTrigger aria-label="Select email frequency" className="w-full cursor-pointer">
+                    <SelectTrigger
+                      aria-label="Select email frequency"
+                      className="w-full cursor-pointer"
+                    >
                       <SelectValue placeholder="Select frequency" />
                     </SelectTrigger>
                     <SelectContent>
@@ -297,7 +300,10 @@ export default function NotificationSettings() {
                       onValueChange={field.handleChange}
                       value={field.state.value}
                     >
-                      <SelectTrigger aria-label="Select quiet hours start time" className="w-50 cursor-pointer">
+                      <SelectTrigger
+                        aria-label="Select quiet hours start time"
+                        className="w-50 cursor-pointer"
+                      >
                         <SelectValue placeholder="Start" />
                       </SelectTrigger>
                       <SelectContent>
@@ -315,7 +321,10 @@ export default function NotificationSettings() {
                       onValueChange={field.handleChange}
                       value={field.state.value}
                     >
-                      <SelectTrigger aria-label="Select quiet hours end time" className="w-50 cursor-pointer">
+                      <SelectTrigger
+                        aria-label="Select quiet hours end time"
+                        className="w-50 cursor-pointer"
+                      >
                         <SelectValue placeholder="End" />
                       </SelectTrigger>
                       <SelectContent>
@@ -555,7 +564,10 @@ export default function NotificationSettings() {
                         onValueChange={field.handleChange}
                         value={field.state.value}
                       >
-                        <SelectTrigger aria-label="Select notification timing" className="w-full max-w-sm cursor-pointer">
+                        <SelectTrigger
+                          aria-label="Select notification timing"
+                          className="w-full max-w-sm cursor-pointer"
+                        >
                           <SelectValue placeholder="Select timing" />
                         </SelectTrigger>
                         <SelectContent>

@@ -162,7 +162,12 @@ export function WorkflowPropertiesPanel({
     <div className="w-80 overflow-y-auto border-l bg-background">
       <div className="flex items-center justify-between border-b p-4">
         <h3 className="font-medium">Properties</h3>
-        <Button aria-label="Close" onClick={() => selectNode(null)} size="icon" variant="ghost">
+        <Button
+          aria-label="Close"
+          onClick={() => selectNode(null)}
+          size="icon"
+          variant="ghost"
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>

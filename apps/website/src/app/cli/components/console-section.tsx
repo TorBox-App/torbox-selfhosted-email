@@ -44,7 +44,10 @@ export function CliConsoleSection() {
                 preload="none"
                 src="/cli/wraps-console.mp4"
               >
-                <track kind="descriptions" label="Wraps local console dashboard" />
+                <track
+                  kind="descriptions"
+                  label="Wraps local console dashboard"
+                />
               </video>
 
               {/* Fade overlay at bottom */}

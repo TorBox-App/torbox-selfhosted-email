@@ -272,7 +272,12 @@ export function WorkflowSettingsPanel({
           <Settings className="h-4 w-4" />
           <span className="font-medium">Workflow Settings</span>
         </div>
-        <Button aria-label="Close" onClick={onClose} size="icon" variant="ghost">
+        <Button
+          aria-label="Close"
+          onClick={onClose}
+          size="icon"
+          variant="ghost"
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>

@@ -412,7 +412,10 @@ export CLOUDFLARE_ZONE_ID=your_zone_id`,
           preload="none"
           src="/docs/ses-create-identity.mp4"
         >
-          <track kind="descriptions" label="Creating a domain identity in SES console" />
+          <track
+            kind="descriptions"
+            label="Creating a domain identity in SES console"
+          />
         </video>
       </section>
 
