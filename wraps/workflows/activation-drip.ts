@@ -9,23 +9,47 @@ import {
 /**
  * Activation Drip Campaign
  *
- * Single workflow that checks 3 milestones after onboarding:
+ * Full-funnel activation checks after onboarding:
+ *   +2h    → AWS connected?               → concierge onboarding if no
+ *   Day 1  → Domain verified?             → nudge if no
  *   Day 2  → Has sent first email?        → nudge if no
- *   Day 5  → Activation score >= 3?        → celebrate & exit if yes
- *           → Has created a workflow?       → nudge if no
- *   Day 19 → Has sent a broadcast?         → nudge if no
+ *   Day 4  → Activation score >= 3?       → celebrate & exit if yes
+ *           → Has created a workflow?      → nudge if no
+ *   Day 10 → Has sent a broadcast?        → nudge if no
  */
 export default defineWorkflow({
   name: "Activation Drip Campaign",
   description:
-    "Nudge users through activation milestones after onboarding. Celebrates those who complete all 3 within 5 days.",
+    "Nudge users through every activation milestone after onboarding — from AWS connection to first broadcast.",
 
   trigger: { type: "event", eventName: "onboarding.completed" },
   settings: { allowReentry: false },
 
   steps: [
+    // ── +2 hours: AWS connection check ────────────────────────────────
+    delay("wait-2h", { hours: 2 }),
+    condition("check-aws", {
+      field: "contact.hasConnectedAws",
+      operator: "is_true",
+      branches: {
+        yes: [],
+        no: [sendEmail("nudge-aws", { template: "nudge-connect-aws" })],
+      },
+    }),
+
+    // ── Day 1: Domain verification check ──────────────────────────────
+    delay("wait-22h", { hours: 22 }),
+    condition("check-domain", {
+      field: "contact.hasDomainVerified",
+      operator: "is_true",
+      branches: {
+        yes: [],
+        no: [sendEmail("nudge-domain", { template: "nudge-verify-domain" })],
+      },
+    }),
+
     // ── Day 2: First email check ──────────────────────────────────────
-    delay("wait-2d", { days: 2 }),
+    delay("wait-1d", { days: 1 }),
     condition("check-email", {
       field: "contact.hasSentEmail",
       operator: "is_true",
@@ -35,8 +59,8 @@ export default defineWorkflow({
       },
     }),
 
-    // ── Day 5: Celebration gate ───────────────────────────────────────
-    delay("wait-3d", { days: 3 }),
+    // ── Day 4: Celebration gate ───────────────────────────────────────
+    delay("wait-2d", { days: 2 }),
     condition("check-score", {
       field: "contact.activationScore",
       operator: "greater_than_or_equals",
@@ -50,7 +74,7 @@ export default defineWorkflow({
       },
     }),
 
-    // ── Day 5: Workflow check (only reached if not fully activated) ───
+    // ── Day 4: Workflow check (only reached if not fully activated) ───
     condition("check-workflow", {
       field: "contact.hasCreatedWorkflow",
       operator: "is_true",
@@ -62,8 +86,8 @@ export default defineWorkflow({
       },
     }),
 
-    // ── Day 19: Broadcast check ───────────────────────────────────────
-    delay("wait-14d", { days: 14 }),
+    // ── Day 10: Broadcast check ───────────────────────────────────────
+    delay("wait-6d", { days: 6 }),
     condition("check-broadcast", {
       field: "contact.hasSentBroadcast",
       operator: "is_true",
