@@ -672,7 +672,7 @@ function SESCalculatorInner() {
             </div>
 
             {eventTrackingEnabled && (
-              <div className="ml-6 space-y-4 border-l-2 pl-4">
+              <div className="ml-4 space-y-4 border-l-2 pl-3 sm:ml-6 sm:pl-4">
                 {/* EventBridge */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -812,7 +812,7 @@ function SESCalculatorInner() {
             </div>
 
             {httpsTracking && (
-              <div className="ml-6 flex items-center justify-between border-l-2 pl-4">
+              <div className="ml-4 flex items-center justify-between border-l-2 pl-3 sm:ml-6 sm:pl-4">
                 <div className="space-y-0.5">
                   <Label htmlFor="waf-enabled">WAF Rate Limiting</Label>
                   <p className="text-muted-foreground text-sm">
@@ -869,7 +869,7 @@ function SESCalculatorInner() {
               </div>
             ) : (
               <div className="mb-6">
-                <div className="mb-2 tabular-nums font-bold text-5xl">
+                <div className="mb-2 tabular-nums font-bold text-4xl sm:text-5xl">
                   {formatCost(wrapsCosts.totalWrapsCost + total)}
                 </div>
                 <div className="text-muted-foreground">
@@ -894,8 +894,8 @@ function SESCalculatorInner() {
                 </div>
               )}
               {wrapsCosts.overageCost > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span className="ml-4">
+                <div className="flex justify-between gap-2 text-muted-foreground">
+                  <span className="ml-4 min-w-0 truncate">
                     + Overage ({wrapsCosts.overageEvents?.toLocaleString()}{" "}
                     events)
                   </span>
@@ -955,8 +955,8 @@ function SESCalculatorInner() {
                 </span>
               </div>
               {wrapsCosts.overageCost > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span className="ml-4">
+                <div className="flex justify-between gap-2 text-muted-foreground">
+                  <span className="ml-4 min-w-0 truncate">
                     + Overage ({wrapsCosts.overageEvents?.toLocaleString()}{" "}
                     events)
                   </span>
@@ -1044,7 +1044,7 @@ function SESCalculatorInner() {
 
                   return (
                     <div
-                      className="flex items-center justify-between text-sm"
+                      className="flex flex-wrap items-center justify-between gap-x-2 text-sm"
                       key={`month-${point.month}`}
                     >
                       <span className="text-muted-foreground">
