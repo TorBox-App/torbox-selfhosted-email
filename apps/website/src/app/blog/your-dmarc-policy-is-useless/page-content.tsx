@@ -1055,7 +1055,12 @@ export const DomainChecker = () => {
                   Get Started Free
                 </a>
               </Button>
-              <Button asChild className="cursor-pointer" size="sm" variant="outline">
+              <Button
+                asChild
+                className="cursor-pointer"
+                size="sm"
+                variant="outline"
+              >
                 <a
                   href="/tools"
                   onClick={() =>

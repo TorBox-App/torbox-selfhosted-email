@@ -239,6 +239,14 @@ function randomDate(daysBack: number): Date {
   return new Date(now.getTime() - msBack);
 }
 
+function growthDate(daysBack: number): Date {
+  const now = new Date();
+  // Power distribution biases toward recent dates → exponential growth curve
+  const t = Math.random() ** 1.8;
+  const msBack = t * daysBack * 24 * 60 * 60 * 1000;
+  return new Date(now.getTime() - msBack);
+}
+
 function hashEmail(email: string): string {
   return createHash("sha256").update(email.toLowerCase()).digest("hex");
 }
@@ -406,7 +414,7 @@ function randomProperties(): Record<string, unknown> {
 async function main() {
   console.log("Seeding demo contacts...\n");
 
-  const contactCount = Number.parseInt(process.env.CONTACT_COUNT || "200", 10);
+  const contactCount = Number.parseInt(process.env.CONTACT_COUNT || "2000", 10);
 
   let organizationId = process.env.ORG_ID;
 
@@ -433,7 +441,7 @@ async function main() {
     for (let j = i; j < end; j++) {
       const firstName = randomChoice(firstNames);
       const lastName = randomChoice(lastNames);
-      const createdAt = randomDate(180);
+      const createdAt = growthDate(180);
 
       // Channel distribution: 60% email-only, 15% SMS-only, 25% both
       const channelRoll = Math.random();
