@@ -149,7 +149,7 @@ export function OrganizationSettingsAwsAccounts({
     <div className="space-y-6">
       {/* Connect Account Dialog */}
       <Dialog onOpenChange={setConnectDialogOpen} open={connectDialogOpen}>
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-[calc(100%-2rem)] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Connect AWS Account</DialogTitle>
             <DialogDescription>

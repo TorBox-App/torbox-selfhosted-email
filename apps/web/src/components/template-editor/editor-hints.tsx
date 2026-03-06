@@ -212,7 +212,7 @@ export function FloatingHint({
 
   return (
     <div
-      className="fixed z-50 w-64 animate-in fade-in-0 zoom-in-95 rounded-lg border bg-popover p-3 shadow-lg"
+      className="fixed z-50 w-64 max-w-[calc(100vw-2rem)] animate-in fade-in-0 zoom-in-95 rounded-lg border bg-popover p-3 shadow-lg"
       style={{
         top: position.top,
         left: position.left,
