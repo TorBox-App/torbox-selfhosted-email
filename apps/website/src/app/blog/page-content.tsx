@@ -5,6 +5,7 @@ import {
   Code2,
   FileCheck,
   Inbox,
+  Mail,
   Network,
   Server,
   Shield,
@@ -36,6 +37,19 @@ type BlogPost = {
 };
 
 const posts: BlogPost[] = [
+  {
+    slug: "how-email-works",
+    title: "How Email Actually Works",
+    description:
+      "You click Send. What happens in the next 3 seconds? An interactive journey through SMTP handshakes, DNS lookups, relay hops, and authentication — with a terminal you can type in.",
+    category: "Engineering",
+    date: "March 2026",
+    readTime: "20 min read",
+    author: "Wraps Team",
+    featured: true,
+    icon: <Mail className="h-6 w-6" />,
+    image: "/blog/how-email-works.webp",
+  },
   {
     slug: "email-templates-react-workflows-typescript",
     title: "Email Templates as React, Workflows as TypeScript",
@@ -183,7 +197,9 @@ export default function BlogContent() {
                               ? "rounded-t-xl md:rounded-r-xl md:rounded-tl-none md:h-full md:w-auto"
                               : "rounded-t-xl md:rounded-l-xl md:rounded-tr-none md:h-full md:w-auto"
                           }`}
+                          height={630}
                           src={post.image || ""}
+                          width={1200}
                         />
                       </div>
                       <div

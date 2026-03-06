@@ -195,10 +195,17 @@ export default function Page() {
             </h2>
 
             <p className="mb-6 text-foreground/80 text-lg leading-relaxed">
-              Most email infrastructure focuses on sending. But receiving emails
-              opens up powerful automation possibilities. Instead of building
-              custom SMTP servers or relying on third-party services that store
-              your data, you can process emails directly in your AWS account.
+              Most email infrastructure focuses on sending ({" "}
+              <a
+                className="text-primary hover:underline"
+                href="/blog/how-email-works"
+              >
+                here's how that works under the hood
+              </a>
+              ). But receiving emails opens up powerful automation
+              possibilities. Instead of building custom SMTP servers or relying
+              on third-party services that store your data, you can process
+              emails directly in your AWS account.
             </p>
 
             <Card className="p-6">

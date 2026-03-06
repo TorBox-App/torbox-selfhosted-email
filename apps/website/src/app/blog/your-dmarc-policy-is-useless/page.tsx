@@ -504,7 +504,14 @@ export default function Page() {
               <p className="text-foreground/80 text-xl leading-relaxed">
                 SPF, DKIM, and DMARC are three separate protocols that work
                 together—but each has limitations, and they only matter when you
-                actually enforce the result. Here's how the chain works:
+                actually enforce the result.{" "}
+                <a
+                  className="text-primary hover:underline"
+                  href="/blog/how-email-works"
+                >
+                  Understand how email flows end-to-end
+                </a>{" "}
+                first, then here's how the authentication chain works:
               </p>
             </div>
             <AuthExplainer />

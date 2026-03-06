@@ -70,7 +70,15 @@ export default function DomainVerificationPageContent() {
         <h2 className="mb-4 font-bold text-2xl">Why Verify Your Domain?</h2>
         <p className="mb-4 text-muted-foreground">
           Email authentication proves to receiving servers that your emails are
-          legitimate and haven't been tampered with. Without it:
+          legitimate and haven't been tampered with. If you're new to email
+          infrastructure,{" "}
+          <a
+            className="text-primary hover:underline"
+            href="/blog/how-email-works"
+          >
+            learn how email actually works
+          </a>{" "}
+          first. Without authentication:
         </p>
         <ul className="mb-4 space-y-2 text-muted-foreground">
           <li className="flex items-start gap-2">

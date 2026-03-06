@@ -278,8 +278,14 @@ export default function Page() {
 
                 <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
                   <p className="text-foreground/90 text-sm">
-                    <strong>Before you start:</strong> Make sure your domain has
-                    proper email authentication configured.{" "}
+                    <strong>Before you start:</strong> Make sure you{" "}
+                    <a
+                      className="text-primary hover:underline"
+                      href="/blog/how-email-works"
+                    >
+                      understand how email works
+                    </a>
+                    , have proper email authentication configured.{" "}
                     <a
                       className="text-primary hover:underline"
                       href="/blog/your-dmarc-policy-is-useless"
