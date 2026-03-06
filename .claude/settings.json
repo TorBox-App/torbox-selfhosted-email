@@ -1,4 +1,12 @@
 {
+  "hooks": {
+    "postToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "(pnpm check:errors 2>&1 | grep -E '(error|✖|Error)'; pnpm baseline 2>&1 | sed 's/\\x1b\\[[0-9;]*m//g' | grep -E '(\\berror\\b|✗)') | head -15 || true"
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(pnpm check:fast)",
