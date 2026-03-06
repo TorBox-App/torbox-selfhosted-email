@@ -1,6 +1,6 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
-import { messageSend } from "@wraps/db/schema";
+import { messageSend } from "@wraps/db/schema/batch";
 import { awsAccount } from "@wraps/db/schema/app";
 import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { redirect } from "next/navigation";
