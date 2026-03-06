@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { ArrowRight, Inbox, RefreshCw, Terminal } from "lucide-react";
+import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import { CliCommand } from "@/components/cli-command";
 import { Button } from "@/components/ui/button";
@@ -115,7 +116,15 @@ export default async function InboundEmailsPage({ params }: InboundPageProps) {
     redirect("/");
   }
 
-  const { emails, hasInbound } = await fetchInboundEmails(orgWithMembership.id);
+  const getCachedInboundEmails = unstable_cache(
+    fetchInboundEmails,
+    [`inbound-emails-${orgWithMembership.id}`],
+    { revalidate: 60, tags: [`inbound-emails-${orgWithMembership.id}`] }
+  );
+
+  const { emails, hasInbound } = await getCachedInboundEmails(
+    orgWithMembership.id
+  );
 
   if (!hasInbound) {
     return (

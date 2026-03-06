@@ -1,8 +1,9 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
-import { messageSend } from "@wraps/db/schema/batch";
 import { awsAccount } from "@wraps/db/schema/app";
+import { messageSend } from "@wraps/db/schema/batch";
 import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
@@ -246,8 +247,13 @@ export default async function EmailsPage({
     redirect("/");
   }
 
-  // Fetch actual emails directly
-  const emails = await fetchEmails(
+  const getCachedEmails = unstable_cache(
+    fetchEmails,
+    [`emails-${orgWithMembership.id}`],
+    { revalidate: 60, tags: [`emails-${orgWithMembership.id}`] }
+  );
+
+  const emails = await getCachedEmails(
     orgWithMembership.id,
     Number.parseInt(days, 10),
     Number.parseInt(limit, 10)

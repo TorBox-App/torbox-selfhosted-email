@@ -1,16 +1,9 @@
 import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { messageSend } from "@wraps/db/schema/batch";
-import { awsAccount } from "@wraps/db/schema/app";
 import { and, count, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import {
-  aggregateByDate,
-  gapFillDates,
-  generateDateRange,
-} from "@/lib/analytics-utils";
-import { getCloudWatchMetrics, SES_METRICS } from "@/lib/aws/cloudwatch";
-import { createRequestLogger, serializeError } from "@/lib/logger";
+import { gapFillDates, generateDateRange } from "@/lib/analytics-utils";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
 type RouteContext = {
@@ -22,13 +15,7 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
-    const log = createRequestLogger({
-      path: "/api/[orgSlug]/analytics/volume",
-      method: "GET",
-      orgSlug,
-    });
 
-    // Authenticate user
     const session = await auth.api.getSession({
       headers: await import("next/headers").then((mod) => mod.headers()),
     });
@@ -37,7 +24,6 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify organization membership
     const orgWithMembership = await getOrganizationWithMembership(
       orgSlug,
       session.user.id
@@ -47,169 +33,55 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get time range from query params
     const { searchParams } = new URL(request.url);
     const days = Number.parseInt(searchParams.get("days") || "90", 10);
     const endTime = new Date();
     const startTime = new Date(endTime.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // Determine period based on date range
-    const period = days <= 7 ? 3600 : days <= 30 ? 3600 * 6 : 3600 * 24; // 1h, 6h, or 24h
-
-    // Get all AWS accounts for this organization
-    const accounts = await db.query.awsAccount.findMany({
-      where: eq(awsAccount.organizationId, orgWithMembership.id),
-    });
-
-    if (accounts.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    // Fetch metrics for all accounts in parallel
-    const metricsResults = await Promise.all(
-      accounts.map(async (account) => {
-        try {
-          const [sent, delivered, bounced] = await Promise.all([
-            getCloudWatchMetrics({
-              awsAccountId: account.id,
-              metric: SES_METRICS.SEND,
-              period,
-              startTime,
-              endTime,
-            }),
-            getCloudWatchMetrics({
-              awsAccountId: account.id,
-              metric: SES_METRICS.DELIVERY,
-              period,
-              startTime,
-              endTime,
-            }),
-            getCloudWatchMetrics({
-              awsAccountId: account.id,
-              metric: SES_METRICS.BOUNCE,
-              period,
-              startTime,
-              endTime,
-            }),
-          ]);
-
-          return { sent, delivered, bounced };
-        } catch (error) {
-          log.error(
-            { err: serializeError(error), accountId: account.id },
-            "Failed to fetch volume metrics for account"
-          );
-          return null;
-        }
+    const pgData = await db
+      .select({
+        date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
+        sent: count(),
+        delivered: count(messageSend.deliveredAt),
+        bounced: count(messageSend.bouncedAt),
       })
-    );
-
-    // Aggregate CloudWatch sub-day periods (1h, 6h) into daily totals
-    const keys = ["sent", "delivered", "bounced"] as const;
-    const dailyMap = new Map<string, Record<(typeof keys)[number], number>>();
-
-    for (const metrics of metricsResults) {
-      if (!metrics) {
-        continue;
-      }
-
-      const timestamps = metrics.sent[0]?.Timestamps || [];
-      const perAccount = aggregateByDate(
-        timestamps,
-        [
-          metrics.sent[0]?.Values || [],
-          metrics.delivered[0]?.Values || [],
-          metrics.bounced[0]?.Values || [],
-        ],
-        [...keys]
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.organizationId, orgWithMembership.id),
+          eq(messageSend.channel, "email"),
+          isNotNull(messageSend.sentAt),
+          gte(messageSend.sentAt, startTime),
+          lte(messageSend.sentAt, endTime)
+        )
+      )
+      .groupBy(
+        sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+      )
+      .orderBy(
+        sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
       );
 
-      // Merge this account's daily totals into the overall map
-      for (const [dateStr, values] of perAccount) {
-        const existing = dailyMap.get(dateStr) || {
-          sent: 0,
-          delivered: 0,
-          bounced: 0,
-        };
-        dailyMap.set(dateStr, {
-          sent: existing.sent + values.sent,
-          delivered: existing.delivered + values.delivered,
-          bounced: existing.bounced + values.bounced,
-        });
-      }
-    }
-
-    // Gap-fill every day in the range including today, then round values
     const dateRange = generateDateRange(startTime, endTime);
-    const dataPoints = gapFillDates(dateRange, dailyMap, {
-      sent: 0,
-      delivered: 0,
-      bounced: 0,
-    }).map((d) => ({
-      ...d,
-      sent: Math.round(d.sent),
-      delivered: Math.round(d.delivered),
-      bounced: Math.round(d.bounced),
-    }));
-
-    // If CloudWatch has no data, fall back to PostgreSQL messageSend table
-    const hasCloudWatchData = dataPoints.some((d) => d.sent > 0);
-    if (!hasCloudWatchData) {
-      const pgData = await db
-        .select({
-          date: sql<string>`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`,
-          sent: count(),
-          delivered: count(messageSend.deliveredAt),
-          bounced: count(messageSend.bouncedAt),
-        })
-        .from(messageSend)
-        .where(
-          and(
-            eq(messageSend.organizationId, orgWithMembership.id),
-            eq(messageSend.channel, "email"),
-            isNotNull(messageSend.sentAt),
-            gte(messageSend.sentAt, startTime),
-            lte(messageSend.sentAt, endTime)
-          )
-        )
-        .groupBy(
-          sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
-        )
-        .orderBy(
-          sql`to_char(${messageSend.sentAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
-        );
-
-      if (pgData.length > 0) {
-        const pgMap = new Map(
-          pgData.map((d) => [
-            d.date,
-            {
-              sent: Number(d.sent),
-              delivered: Number(d.delivered),
-              bounced: Number(d.bounced),
-            },
-          ])
-        );
-        return NextResponse.json(
-          gapFillDates(dateRange, pgMap, {
-            sent: 0,
-            delivered: 0,
-            bounced: 0,
-          })
-        );
-      }
-    }
-
-    return NextResponse.json(dataPoints);
-  } catch (error) {
-    const log = createRequestLogger({
-      path: "/api/[orgSlug]/analytics/volume",
-      method: "GET",
-    });
-    log.error(
-      { err: serializeError(error) },
-      "Error fetching volume analytics"
+    const pgMap = new Map(
+      pgData.map((d) => [
+        d.date,
+        {
+          sent: Number(d.sent),
+          delivered: Number(d.delivered),
+          bounced: Number(d.bounced),
+        },
+      ])
     );
+
+    return NextResponse.json(
+      gapFillDates(dateRange, pgMap, {
+        sent: 0,
+        delivered: 0,
+        bounced: 0,
+      })
+    );
+  } catch (error) {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
