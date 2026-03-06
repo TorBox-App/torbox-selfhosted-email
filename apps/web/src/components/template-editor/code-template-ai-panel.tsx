@@ -101,7 +101,7 @@ function useFavoritePrompts() {
   const saveFavorite = useCallback((prompt: string) => {
     const newFavorite: FavoritePrompt = {
       id: Date.now().toString(),
-      label: prompt.slice(0, 30) + (prompt.length > 30 ? "..." : ""),
+      label: prompt.slice(0, 30) + (prompt.length > 30 ? "…" : ""),
       prompt,
     };
     setFavorites((prev) => {
@@ -385,7 +385,7 @@ export function CodeTemplateAIPanel({
         // Ask the AI to fix the compilation error (one attempt)
         setAutoFixAttempted(true);
         setPendingSource(null);
-        toast.info("Compilation failed — asking AI to fix it...");
+        toast.info("Compilation failed — asking AI to fix it…");
         sendMessage({
           text: `The code you generated failed to compile with this error:\n\n${message}\n\nPlease fix the code and output the complete corrected TSX file.`,
         });
@@ -696,7 +696,7 @@ export function CodeTemplateAIPanel({
                       </div>
                     </div>
                     <span className="text-muted-foreground text-xs">
-                      Generating your email code...
+                      Generating your email code…
                     </span>
                   </div>
                 </div>
@@ -779,7 +779,7 @@ export function CodeTemplateAIPanel({
               placeholder={
                 aiUsage?.remaining === 0
                   ? "Message limit reached"
-                  : "Describe your email..."
+                  : "Describe your email…"
               }
               ref={textareaRef}
               value={input}
@@ -952,7 +952,7 @@ function AssistantCodeMessage({
       {isStreaming && hasCodeBlock && !hasTextAfterCode && (
         <div className="flex items-center gap-1.5 pt-1 text-muted-foreground text-xs">
           <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Reviewing changes...</span>
+          <span>Reviewing changes…</span>
         </div>
       )}
     </div>

@@ -239,7 +239,7 @@ export function TemplateSelector({
               variant="outline"
             >
               <Copy className="mr-2 h-4 w-4" />
-              {isDuplicating ? "Duplicating..." : "Duplicate & Edit"}
+              {isDuplicating ? "Duplicating…" : "Duplicate & Edit"}
               <span className="ml-auto text-muted-foreground text-xs">
                 Create a copy for this broadcast only
               </span>

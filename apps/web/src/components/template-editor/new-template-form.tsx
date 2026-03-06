@@ -187,8 +187,8 @@ export function NewTemplateForm({ orgSlug }: NewTemplateFormProps) {
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={
                     selectedChannel === "sms"
-                      ? "Sent after an order is placed..."
-                      : "Sent to new users after they sign up..."
+                      ? "Sent after an order is placed…"
+                      : "Sent to new users after they sign up…"
                   }
                   rows={3}
                   value={field.state.value ?? ""}
@@ -205,7 +205,7 @@ export function NewTemplateForm({ orgSlug }: NewTemplateFormProps) {
 
       <div className="flex gap-3">
         <Button disabled={createTemplate.isPending} type="submit">
-          {createTemplate.isPending ? "Creating..." : "Create Template"}
+          {createTemplate.isPending ? "Creating…" : "Create Template"}
         </Button>
         <Button onClick={() => router.back()} type="button" variant="outline">
           Cancel

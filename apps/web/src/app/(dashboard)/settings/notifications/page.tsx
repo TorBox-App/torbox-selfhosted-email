@@ -274,7 +274,7 @@ export default function NotificationSettings() {
                     onValueChange={field.handleChange}
                     value={field.state.value}
                   >
-                    <SelectTrigger className="w-full cursor-pointer">
+                    <SelectTrigger aria-label="Select email frequency" className="w-full cursor-pointer">
                       <SelectValue placeholder="Select frequency" />
                     </SelectTrigger>
                     <SelectContent>
@@ -297,7 +297,7 @@ export default function NotificationSettings() {
                       onValueChange={field.handleChange}
                       value={field.state.value}
                     >
-                      <SelectTrigger className="w-50 cursor-pointer">
+                      <SelectTrigger aria-label="Select quiet hours start time" className="w-50 cursor-pointer">
                         <SelectValue placeholder="Start" />
                       </SelectTrigger>
                       <SelectContent>
@@ -315,7 +315,7 @@ export default function NotificationSettings() {
                       onValueChange={field.handleChange}
                       value={field.state.value}
                     >
-                      <SelectTrigger className="w-50 cursor-pointer">
+                      <SelectTrigger aria-label="Select quiet hours end time" className="w-50 cursor-pointer">
                         <SelectValue placeholder="End" />
                       </SelectTrigger>
                       <SelectContent>
@@ -336,7 +336,11 @@ export default function NotificationSettings() {
             <CardTitle>Notification Preferences</CardTitle>
             <CardDescription>
               We need permission from your browser to show notifications.{" "}
-              <Button className="h-auto p-0 text-primary" variant="link">
+              <Button
+                className="h-auto p-0 text-primary"
+                onClick={() => Notification.requestPermission()}
+                variant="link"
+              >
                 Request Permission
               </Button>
             </CardDescription>
@@ -551,7 +555,7 @@ export default function NotificationSettings() {
                         onValueChange={field.handleChange}
                         value={field.state.value}
                       >
-                        <SelectTrigger className="w-full max-w-sm cursor-pointer">
+                        <SelectTrigger aria-label="Select notification timing" className="w-full max-w-sm cursor-pointer">
                           <SelectValue placeholder="Select timing" />
                         </SelectTrigger>
                         <SelectContent>
@@ -677,7 +681,7 @@ export default function NotificationSettings() {
                 disabled={!canSubmit}
                 type="submit"
               >
-                {isSubmitting ? "Saving..." : "Save Preferences"}
+                {isSubmitting ? "Saving\u2026" : "Save Preferences"}
               </Button>
             )}
           </form.Subscribe>

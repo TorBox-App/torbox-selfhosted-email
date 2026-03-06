@@ -218,7 +218,7 @@ export function SegmentsTable({
             <Input
               className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(event.target.value)}
-              placeholder="Search segments..."
+              placeholder="Search segments\u2026"
               ref={searchInputRef}
               value={globalFilter}
             />
@@ -357,7 +357,7 @@ export function SegmentsTable({
               onClick={handleDeleteSegment}
               variant="destructive"
             >
-              {isPending ? "Deleting..." : "Delete"}
+              {isPending ? "Deleting\u2026" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

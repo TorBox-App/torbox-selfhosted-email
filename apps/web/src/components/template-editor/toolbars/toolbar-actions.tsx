@@ -328,7 +328,7 @@ export function InlineToolbarActions({
           ) : (
             <Save className="h-3.5 w-3.5" />
           )}
-          <span className="text-xs">{isSaving ? "Saving..." : saveLabel}</span>
+          <span className="text-xs">{isSaving ? "Saving…" : saveLabel}</span>
         </Button>
       )}
     </div>

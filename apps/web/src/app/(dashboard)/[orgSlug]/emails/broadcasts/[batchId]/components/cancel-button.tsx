@@ -67,7 +67,7 @@ export function CancelBatchButton({
             disabled={isPending}
             onClick={handleCancel}
           >
-            {isPending ? "Cancelling..." : "Cancel Broadcast"}
+            {isPending ? "Cancelling\u2026" : "Cancel Broadcast"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

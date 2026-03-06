@@ -60,8 +60,8 @@ export function SendConfirmDialog({
           >
             {loading
               ? variant === "schedule"
-                ? "Scheduling..."
-                : "Sending..."
+                ? "Scheduling…"
+                : "Sending…"
               : variant === "schedule"
                 ? "Schedule"
                 : "Send now"}

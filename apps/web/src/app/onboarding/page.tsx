@@ -131,7 +131,7 @@ export default function OnboardingPage() {
                   }}
                   variant="destructive"
                 >
-                  {isDeleting ? "Deleting..." : "Delete Account"}
+                  {isDeleting ? "Deleting\u2026" : "Delete Account"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

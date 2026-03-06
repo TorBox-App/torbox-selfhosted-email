@@ -216,7 +216,7 @@ export function LoginAlerts() {
               loading={isSecurityPending}
               type="submit"
             >
-              {isSecurityPending ? "Saving..." : "Save Security Settings"}
+              {isSecurityPending ? "Saving\u2026" : "Save Security Settings"}
             </Button>
             <Button
               className="cursor-pointer"

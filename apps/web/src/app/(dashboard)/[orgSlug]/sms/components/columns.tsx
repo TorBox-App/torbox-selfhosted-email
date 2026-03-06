@@ -159,7 +159,7 @@ export const columns: ColumnDef<SMSListItem>[] = [
     ),
     meta: {
       label: "Recipient",
-      placeholder: "Search phone numbers...",
+      placeholder: "Search phone numbers\u2026",
       variant: "text",
     },
     enableColumnFilter: true,

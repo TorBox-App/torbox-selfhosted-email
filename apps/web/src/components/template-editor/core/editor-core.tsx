@@ -175,7 +175,7 @@ export function EditorCore({
   if (!(editor && instanceContextValue)) {
     return (
       <div className={cn("flex h-full items-center justify-center", className)}>
-        <p className="text-muted-foreground">Initializing editor...</p>
+        <p className="text-muted-foreground">Initializing editor…</p>
       </div>
     );
   }

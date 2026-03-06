@@ -36,7 +36,7 @@ export function EventUsageCard({ orgSlug, className }: EventUsageCardProps) {
             <Activity className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">Event Usage</CardTitle>
           </div>
-          <CardDescription>Loading...</CardDescription>
+          <CardDescription>Loading…</CardDescription>
         </CardHeader>
       </Card>
     );

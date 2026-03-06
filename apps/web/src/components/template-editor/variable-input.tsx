@@ -227,7 +227,7 @@ export const VariableInput = forwardRef<HTMLInputElement, VariableInputProps>(
               <CommandInput
                 className="h-9"
                 onValueChange={setSearchQuery}
-                placeholder="Search variables..."
+                placeholder="Search variables…"
                 value={searchQuery}
               />
               <CommandList>

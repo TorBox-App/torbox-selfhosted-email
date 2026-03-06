@@ -457,7 +457,7 @@ export function CodeView({ editor: tiptapEditor, previewText }: CodeViewProps) {
             "TipTap JSON document - edit and apply to update the visual editor"}
           {format === "html" &&
             (isGeneratingHtml
-              ? "Generating production-ready HTML..."
+              ? "Generating production-ready HTML…"
               : "Production-ready email HTML - edit and apply to update the visual editor")}
         </p>
       </div>

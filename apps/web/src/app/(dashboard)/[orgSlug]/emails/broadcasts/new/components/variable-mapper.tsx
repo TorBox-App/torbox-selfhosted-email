@@ -277,7 +277,7 @@ function VariableMapperRow({
                 onChange={(e) =>
                   onUpdate({ type: "static", value: e.target.value })
                 }
-                placeholder="Enter value..."
+                placeholder="Enter value\u2026"
                 value={staticValue}
               />
             )}
@@ -302,7 +302,7 @@ function VariableMapperRow({
                 value={contactField}
               >
                 <SelectTrigger className="h-8">
-                  <SelectValue placeholder="Select field..." />
+                  <SelectValue placeholder="Select field\u2026" />
                 </SelectTrigger>
                 <SelectContent>
                   {CONTACT_FIELDS.map((field) => (

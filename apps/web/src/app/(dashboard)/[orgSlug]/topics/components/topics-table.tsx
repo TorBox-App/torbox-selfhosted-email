@@ -410,7 +410,7 @@ export function TopicsTable({
               onClick={handleDeleteTopic}
               variant="destructive"
             >
-              {isPending ? "Deleting..." : "Delete"}
+              {isPending ? "Deleting\u2026" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

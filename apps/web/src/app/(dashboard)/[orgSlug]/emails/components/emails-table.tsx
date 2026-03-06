@@ -216,7 +216,7 @@ export function EmailsTable({
             <Input
               className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(String(event.target.value))}
-              placeholder="Search emails..."
+              placeholder="Search emails\u2026"
               ref={searchInputRef}
               value={globalFilter ?? ""}
             />
@@ -465,7 +465,7 @@ export function EmailsTable({
             </Button>
             <Button disabled={isPending} onClick={handleCreateContacts}>
               <UserPlus className="mr-2 h-4 w-4" />
-              {isPending ? "Creating..." : "Create Contacts"}
+              {isPending ? "Creating\u2026" : "Create Contacts"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -115,7 +115,7 @@ export function DeclineInvitationForm({
           size="lg"
           variant="destructive"
         >
-          {isDeclining ? "Declining..." : "Yes, Decline Invitation"}
+          {isDeclining ? "Declining…" : "Yes, Decline Invitation"}
         </Button>
         <Button
           className="w-full"

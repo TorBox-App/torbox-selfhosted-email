@@ -251,7 +251,7 @@ export function UserFormDialog({ onAddUser }: UserFormDialogProps) {
                   disabled={!canSubmit}
                   type="submit"
                 >
-                  {isSubmitting ? "Saving..." : "Save User"}
+                  {isSubmitting ? "Saving\u2026" : "Save User"}
                 </Button>
               )}
             </form.Subscribe>

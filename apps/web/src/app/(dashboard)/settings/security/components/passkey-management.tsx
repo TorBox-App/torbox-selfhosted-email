@@ -271,7 +271,7 @@ export function PasskeyManagement() {
               disabled={isLoading}
               onClick={handleAddPasskey}
             >
-              {isLoading ? "Adding..." : "Add Passkey"}
+              {isLoading ? "Adding\u2026" : "Add Passkey"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -314,7 +314,7 @@ export function PasskeyManagement() {
               disabled={isLoading || !passkeyName}
               onClick={handleEditPasskey}
             >
-              {isLoading ? "Saving..." : "Save Changes"}
+              {isLoading ? "Saving\u2026" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -343,7 +343,7 @@ export function PasskeyManagement() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDeletePasskey}
             >
-              {isLoading ? "Removing..." : "Remove Passkey"}
+              {isLoading ? "Removing\u2026" : "Remove Passkey"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

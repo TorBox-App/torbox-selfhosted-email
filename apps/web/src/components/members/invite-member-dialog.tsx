@@ -129,7 +129,7 @@ export function InviteMemberDialog({
               Cancel
             </Button>
             <Button disabled={isInviting} type="submit">
-              {isInviting ? "Sending..." : "Send Invitation"}
+              {isInviting ? "Sending…" : "Send Invitation"}
             </Button>
           </DialogFooter>
         </form>

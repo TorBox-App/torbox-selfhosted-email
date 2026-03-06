@@ -436,6 +436,44 @@ describe("icon buttons have accessible labels", () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────
+// Test: No triple-dot ellipsis in user-facing strings
+// ─────────────────────────────────────────────────────────
+
+describe("typography: proper ellipsis character", () => {
+  test("loading states must use … (U+2026) not ... (three dots)", () => {
+    const files = findFiles("apps/web/src/**/*.tsx").filter(
+      (f) => !(f.includes("__tests__") || f.includes(".test."))
+    );
+
+    const violations: string[] = [];
+
+    // Match common loading state patterns: "Verbing..."
+    const loadingStateRegex =
+      /["'](?:Loading|Saving|Creating|Deleting|Sending|Updating|Removing|Cancelling|Connecting|Accepting|Declining|Scheduling|Activating|Approving|Verifying|Subscribing|Unsubscribing|Duplicating|Publishing|Generating|Thinking|Adding)\.\.\.['"]/g;
+
+    for (const file of files) {
+      const content = readFile(file);
+      const lines = content.split("\n");
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+
+        loadingStateRegex.lastIndex = 0;
+        for (const match of line.matchAll(loadingStateRegex)) {
+          violations.push(
+            `${file}:${i + 1} — ${match[0]} should use … not ...`
+          );
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
 function getCLICommandFiles(): string[] {
   return findFiles("packages/cli/src/commands/**/*.ts").filter(
     (f) => !(f.includes("__tests__") || f.includes(".test."))

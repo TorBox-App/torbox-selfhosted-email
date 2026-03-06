@@ -39,7 +39,7 @@ export function SaveStatusIndicator({
       case "saving":
         return {
           icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
-          text: "Saving...",
+          text: "Saving…",
           tooltip: "Saving changes to cloud",
           className: "text-muted-foreground",
         };

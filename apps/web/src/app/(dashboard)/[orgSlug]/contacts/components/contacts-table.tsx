@@ -571,7 +571,7 @@ export function ContactsTable({
             <Input
               className="pl-9 pr-16"
               onChange={(event) => handleSearch(event.target.value)}
-              placeholder="Search by email..."
+              placeholder="Search by email\u2026"
               ref={searchInputRef}
               value={globalFilter}
             />
@@ -947,7 +947,7 @@ export function ContactsTable({
               onClick={handleDeleteContact}
               variant="destructive"
             >
-              {isPending ? "Deleting..." : "Delete"}
+              {isPending ? "Deleting\u2026" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1015,7 +1015,7 @@ export function ContactsTable({
               disabled={isPending || !selectedTopicId}
               onClick={handleBulkSubscribe}
             >
-              {isPending ? "Subscribing..." : "Subscribe"}
+              {isPending ? "Subscribing\u2026" : "Subscribe"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1069,7 +1069,7 @@ export function ContactsTable({
               onClick={handleBulkUnsubscribe}
               variant="destructive"
             >
-              {isPending ? "Unsubscribing..." : "Unsubscribe"}
+              {isPending ? "Unsubscribing\u2026" : "Unsubscribe"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1110,7 +1110,7 @@ export function ContactsTable({
               onClick={handleBulkDelete}
               variant="destructive"
             >
-              {isPending ? "Deleting..." : "Delete"}
+              {isPending ? "Deleting\u2026" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

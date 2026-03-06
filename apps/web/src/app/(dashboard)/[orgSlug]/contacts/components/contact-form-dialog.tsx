@@ -479,8 +479,8 @@ export function ContactFormDialog({
             <Button disabled={isPending || !isValid} type="submit">
               {isPending
                 ? mode === "create"
-                  ? "Creating..."
-                  : "Saving..."
+                  ? "Creating\u2026"
+                  : "Saving\u2026"
                 : mode === "create"
                   ? "Add Contact"
                   : "Save Changes"}

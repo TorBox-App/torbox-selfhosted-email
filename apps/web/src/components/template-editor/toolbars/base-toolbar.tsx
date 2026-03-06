@@ -115,7 +115,7 @@ export function BaseToolbar({
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
 
   const displaySubject = subject || "No subject";
-  const displayPreviewText = previewText || "Add preview text...";
+  const displayPreviewText = previewText || "Add preview text…";
 
   // Determine which view tabs to show based on features
   const showCodeTab = features.code;

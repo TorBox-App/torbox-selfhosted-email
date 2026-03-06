@@ -83,7 +83,7 @@ function ReasoningTrigger({ className }: { className?: string }) {
         )}
       />
       <span className="flex-1 text-left font-medium">
-        {isStreaming ? "Thinking..." : "View reasoning"}
+        {isStreaming ? "Thinking…" : "View reasoning"}
       </span>
       <motion.div
         animate={{ rotate: isOpen ? 180 : 0 }}

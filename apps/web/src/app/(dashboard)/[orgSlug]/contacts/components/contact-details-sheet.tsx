@@ -383,7 +383,7 @@ export function ContactDetailsSheet({
                     onClick={handleSave}
                     size="sm"
                   >
-                    {isPending ? "Saving..." : "Save"}
+                    {isPending ? "Saving\u2026" : "Save"}
                   </Button>
                 </>
               )}

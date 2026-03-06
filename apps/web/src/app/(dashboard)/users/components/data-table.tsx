@@ -338,7 +338,7 @@ export function DataTable({
             <Input
               className="pl-9 pr-16"
               onChange={(event) => setGlobalFilter(String(event.target.value))}
-              placeholder="Search users..."
+              placeholder="Search users\u2026"
               ref={searchInputRef}
               value={globalFilter ?? ""}
             />

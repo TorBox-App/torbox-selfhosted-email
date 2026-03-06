@@ -289,7 +289,7 @@ export function OrganizationSettingsGeneral({
                       onClick={handleDeleteOrganization}
                       variant="destructive"
                     >
-                      {isDeleting ? "Deleting..." : "Delete Organization"}
+                      {isDeleting ? "Deleting…" : "Delete Organization"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -308,7 +308,7 @@ export function OrganizationSettingsGeneral({
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Saving…
                 </>
               ) : (
                 "Save Changes"

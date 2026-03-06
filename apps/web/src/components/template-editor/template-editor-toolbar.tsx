@@ -166,7 +166,7 @@ export function TemplateEditorToolbar({
   }
 
   const displaySubject = subject || "No subject";
-  const displayPreviewText = previewText || "Add preview text...";
+  const displayPreviewText = previewText || "Add preview text…";
 
   return (
     <TooltipProvider>

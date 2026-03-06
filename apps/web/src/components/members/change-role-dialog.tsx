@@ -119,7 +119,7 @@ export function ChangeRoleDialog({
             Cancel
           </Button>
           <Button disabled={isUpdating} onClick={handleSubmit}>
-            {isUpdating ? "Updating..." : "Update Role"}
+            {isUpdating ? "Updating…" : "Update Role"}
           </Button>
         </DialogFooter>
       </DialogContent>

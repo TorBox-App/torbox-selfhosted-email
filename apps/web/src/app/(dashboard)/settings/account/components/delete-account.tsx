@@ -81,7 +81,7 @@ export function DeleteAccount() {
                   onClick={handleDeleteAccount}
                   variant="destructive"
                 >
-                  {isDeleting ? "Deleting..." : "Delete Account"}
+                  {isDeleting ? "Deleting\u2026" : "Delete Account"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

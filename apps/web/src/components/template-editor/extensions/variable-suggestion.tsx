@@ -110,7 +110,7 @@ const SuggestionList = forwardRef<SuggestionRef, SuggestionListProps>(
           </Button>
         </div>
         <Command>
-          <CommandInput className="h-9" placeholder="Search variables..." />
+          <CommandInput className="h-9" placeholder="Search variables…" />
           <CommandList>
             <CommandEmpty>No variables found.</CommandEmpty>
             <CommandGroup>

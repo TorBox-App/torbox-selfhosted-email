@@ -210,7 +210,7 @@ export function EventsTable({
             <Input
               className="pl-9 pr-16"
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search events..."
+              placeholder="Search events\u2026"
               ref={searchInputRef}
               value={searchInput}
             />

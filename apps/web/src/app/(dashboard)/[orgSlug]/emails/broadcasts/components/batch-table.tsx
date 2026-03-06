@@ -439,7 +439,7 @@ export function BatchTable({
             <Input
               className="pl-9 pr-16"
               onChange={(event) => handleSearch(event.target.value)}
-              placeholder="Search broadcasts..."
+              placeholder="Search broadcasts\u2026"
               ref={searchInputRef}
               value={globalFilter}
             />

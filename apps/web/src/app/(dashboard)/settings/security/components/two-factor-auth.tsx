@@ -407,6 +407,7 @@ export function TwoFactorAuth() {
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
+                // autoFocus: primary input in verification dialog
                 autoFocus
                 id="password"
                 onChange={(e) => setPassword(e.target.value)}
@@ -465,7 +466,7 @@ export function TwoFactorAuth() {
               disabled={isLoading}
               onClick={() => promptForPassword("disable")}
             >
-              {isLoading ? "Loading..." : "Continue"}
+              {isLoading ? "Loading\u2026" : "Continue"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -179,7 +179,7 @@ export const columns: ColumnDef<EmailListItem>[] = [
     },
     meta: {
       label: "Recipient",
-      placeholder: "Search recipients...",
+      placeholder: "Search recipients\u2026",
       variant: "text",
     },
     enableColumnFilter: true,
@@ -195,7 +195,7 @@ export const columns: ColumnDef<EmailListItem>[] = [
     ),
     meta: {
       label: "Subject",
-      placeholder: "Search subjects...",
+      placeholder: "Search subjects\u2026",
       variant: "text",
     },
     enableColumnFilter: true,

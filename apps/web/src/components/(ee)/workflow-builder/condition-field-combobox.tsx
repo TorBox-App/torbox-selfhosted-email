@@ -88,7 +88,7 @@ export function ConditionFieldCombobox({
           variant="outline"
         >
           <span className={cn(!value && "text-muted-foreground")}>
-            {value ? getFieldLabel(value) : "Select field..."}
+            {value ? getFieldLabel(value) : "Select field…"}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -98,7 +98,7 @@ export function ConditionFieldCombobox({
         className="w-[var(--radix-popover-trigger-width)] p-0"
       >
         <Command>
-          <CommandInput placeholder="Search fields..." />
+          <CommandInput placeholder="Search fields…" />
           <CommandList id={listboxId}>
             <CommandEmpty>No fields found.</CommandEmpty>
 

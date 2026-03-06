@@ -223,8 +223,8 @@ export function TopicFormDialog({
             <Button disabled={isPending || !name || !slug} type="submit">
               {isPending
                 ? mode === "create"
-                  ? "Creating..."
-                  : "Saving..."
+                  ? "Creating\u2026"
+                  : "Saving\u2026"
                 : mode === "create"
                   ? "Create Topic"
                   : "Save Changes"}
