@@ -236,7 +236,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     // Redirect if onboarding is completed
     if (onboardingStatus?.completed && orgSlug) {
       hasRedirected.current = true;
-      router.push(`/${orgSlug}/emails`);
+      router.push(`/${orgSlug}`);
       return;
     }
 
@@ -306,7 +306,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       setCurrentStep(currentStep + 1);
     } else {
       // If on last step, skip to emails without marking complete
-      router.push(`/${orgSlug}/emails`);
+      router.push(`/${orgSlug}`);
     }
   };
 
@@ -341,7 +341,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       });
     }
 
-    router.push(`/${orgSlug}/emails`);
+    router.push(`/${orgSlug}`);
   };
 
   return (
