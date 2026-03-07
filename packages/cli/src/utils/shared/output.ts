@@ -19,6 +19,10 @@ export class DeploymentProgress {
    */
   start(message: string) {
     if (this.silent) return;
+    if (this.currentSpinner) {
+      this.currentSpinner.stop("");
+      this.currentSpinner = null;
+    }
     this.currentSpinner = clack.spinner();
     this.currentSpinner.start(message);
   }

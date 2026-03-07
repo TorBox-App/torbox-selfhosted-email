@@ -151,8 +151,15 @@ export function CodeTemplateCodeView({
       onSourceSaved?.(updatedTemplate);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to save";
-      setCompileError(message);
-      toast.error("Failed to save", { description: message });
+      if (message.includes("Cannot require")) {
+        const hint =
+          "This template uses shared components. Push changes via CLI: wraps email templates push";
+        setCompileError(hint);
+        toast.error("Cannot save in browser", { description: hint });
+      } else {
+        setCompileError(message);
+        toast.error("Failed to save", { description: message });
+      }
     } finally {
       setIsSaving(false);
     }
@@ -179,10 +186,22 @@ export function CodeTemplateCodeView({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleSave]);
 
+  // Show stored compiled HTML on initial mount (avoids recompiling CLI-pushed templates
+  // that use shared components the browser compiler can't resolve)
+  const initializedRef = useRef(false);
+  useEffect(() => {
+    if (!initializedRef.current && template.compiledHtml) {
+      initializedRef.current = true;
+      onPreviewUpdate(template.compiledHtml);
+    }
+  }, [template.compiledHtml, onPreviewUpdate]);
+
   // Live preview: debounced compile as you type
   const previewTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
-    if (!editedSource) return;
+    if (!(editedSource && initializedRef.current)) return;
+    // Skip recompiling if source hasn't changed from the stored version
+    if (editedSource === originalSource) return;
 
     clearTimeout(previewTimerRef.current);
     previewTimerRef.current = setTimeout(async () => {
@@ -193,12 +212,18 @@ export function CodeTemplateCodeView({
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Compile error";
-        setPreviewError(message);
+        if (message.includes("Cannot require")) {
+          setPreviewError(
+            "This template uses shared components that can only be compiled via CLI. Push changes with: wraps email templates push"
+          );
+        } else {
+          setPreviewError(message);
+        }
       }
     }, 1000);
 
     return () => clearTimeout(previewTimerRef.current);
-  }, [editedSource, onPreviewUpdate]);
+  }, [editedSource, originalSource, onPreviewUpdate]);
 
   // Auto-save: 1 minute after last source change
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
