@@ -429,6 +429,7 @@ async function pushToSES(
 
   const ses = new SESClient({ region });
 
+  try {
   const settled = await Promise.allSettled(
     templates.map(async (t) => {
       progress.start(`Pushing ${pc.cyan(t.slug)} to SES`);
@@ -480,6 +481,9 @@ async function pushToSES(
   }
 
   return results;
+  } finally {
+    ses.destroy();
+  }
 }
 
 // ── API Remote Check ──
@@ -620,8 +624,12 @@ async function pushToAPI(
         throw new Error(`API returned ${resp.status}: ${body}`);
       }
     } catch (err) {
+      const cause =
+        err instanceof Error && err.cause instanceof Error
+          ? `: ${err.cause.message}`
+          : "";
       const msg = err instanceof Error ? err.message : String(err);
-      progress.fail(`Dashboard sync failed: ${msg}`);
+      progress.fail(`Dashboard sync failed: ${msg}${cause}`);
       for (const t of templates) {
         results.push({ slug: t.slug, success: false });
       }
@@ -666,9 +674,13 @@ async function pushToAPI(
         throw new Error(`API returned ${resp.status}: ${body}`);
       }
     } catch (err) {
+      const cause =
+        err instanceof Error && err.cause instanceof Error
+          ? `: ${err.cause.message}`
+          : "";
       const msg = err instanceof Error ? err.message : String(err);
       results.push({ slug: t.slug, success: false });
-      progress.fail(`Dashboard sync failed for ${t.slug}: ${msg}`);
+      progress.fail(`Dashboard sync failed for ${t.slug}: ${msg}${cause}`);
     }
   }
 
