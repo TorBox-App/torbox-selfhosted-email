@@ -12,6 +12,7 @@ import {
   EXECUTION_STATUS_COLORS,
   EXECUTION_STATUS_LABELS,
 } from "@/lib/workflows";
+import { RetryButton } from "./components/retry-button";
 import { StepTrace } from "./components/step-trace";
 
 type ExecutionDetailPageProps = {
@@ -95,6 +96,12 @@ export default async function ExecutionDetailPage({
           </div>
           <p className="text-muted-foreground">{contactName}</p>
         </div>
+        {execution.status === "failed" && (
+          <RetryButton
+            executionId={execution.id}
+            organizationId={orgWithMembership.id}
+          />
+        )}
       </div>
 
       {/* Step Trace */}
