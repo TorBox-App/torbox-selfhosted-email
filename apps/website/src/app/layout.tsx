@@ -12,8 +12,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://wraps.dev"),
   title: {
-    default:
-      "Wraps - Email Templates as React. Workflows as TypeScript.",
+    default: "Wraps - Email Templates as React. Workflows as TypeScript.",
     template: "%s | Wraps",
   },
   description:

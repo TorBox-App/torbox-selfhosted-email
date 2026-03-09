@@ -80,13 +80,13 @@ export function StepTrace({ stepExecutions, stepNameMap }: StepTraceProps) {
               <div
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
                   isFailed
-                    ? "border-red-200 bg-red-50"
+                    ? "border-destructive/30 bg-destructive/10"
                     : "border-border bg-muted"
                 }`}
               >
                 <TypeIcon
                   className={`h-4 w-4 ${
-                    isFailed ? "text-red-600" : "text-muted-foreground"
+                    isFailed ? "text-destructive" : "text-muted-foreground"
                   }`}
                 />
               </div>
@@ -118,7 +118,7 @@ export function StepTrace({ stepExecutions, stepNameMap }: StepTraceProps) {
 
               {/* Error message */}
               {step.error && (
-                <div className="mt-1 rounded bg-red-50 px-3 py-2 text-red-700 text-sm">
+                <div className="mt-1 rounded bg-destructive/10 px-3 py-2 text-destructive text-sm">
                   {step.error}
                 </div>
               )}

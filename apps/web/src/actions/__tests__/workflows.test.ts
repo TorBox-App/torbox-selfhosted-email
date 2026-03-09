@@ -1476,10 +1476,7 @@ describe("Workflows Server Actions", () => {
         },
       ]);
 
-      const result = await getWorkflowExecution(
-        exec!.id,
-        testOrganization.id
-      );
+      const result = await getWorkflowExecution(exec!.id, testOrganization.id);
 
       expect(result.success).toBe(true);
       if (!result.success) return;
@@ -1512,10 +1509,7 @@ describe("Workflows Server Actions", () => {
         .returning();
 
       // Try to access with a different org ID — verifyOrgAccess blocks first
-      const result = await getWorkflowExecution(
-        exec!.id,
-        "different-org-id"
-      );
+      const result = await getWorkflowExecution(exec!.id, "different-org-id");
 
       expect(result.success).toBe(false);
       if (!result.success) {

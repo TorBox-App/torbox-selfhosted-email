@@ -40,7 +40,9 @@ export function VisualSection() {
                 width={600}
               />
             </div>
-            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">Template Editor</h3>
+            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">
+              Template Editor
+            </h3>
             <p className="text-sm text-muted-foreground">
               20+ drag-and-drop blocks. Brand kits. AI chat that knows your
               colors, fonts, and variables. Edit a subject line without opening
@@ -68,11 +70,13 @@ export function VisualSection() {
                 width={600}
               />
             </div>
-            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">Workflow Builder</h3>
+            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">
+              Workflow Builder
+            </h3>
             <p className="text-sm text-muted-foreground">
               React Flow canvas. Drag nodes, draw connections, configure
-              triggers. Or type "create a welcome series with a 1-day delay"
-              and let AI build it.
+              triggers. Or type "create a welcome series with a 1-day delay" and
+              let AI build it.
             </p>
           </Link>
 
@@ -96,7 +100,9 @@ export function VisualSection() {
                 width={600}
               />
             </div>
-            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">Broadcasts</h3>
+            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">
+              Broadcasts
+            </h3>
             <p className="text-sm text-muted-foreground">
               Newsletters, announcements, campaigns. Target with segments.
               Schedule sends. No code required.
