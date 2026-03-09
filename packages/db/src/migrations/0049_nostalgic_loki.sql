@@ -1,0 +1,3 @@
+ALTER TABLE "message_send" ADD COLUMN "workflow_execution_id" text;--> statement-breakpoint
+ALTER TABLE "message_send" ADD CONSTRAINT "message_send_workflow_execution_id_workflow_execution_id_fk" FOREIGN KEY ("workflow_execution_id") REFERENCES "public"."workflow_execution"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "message_send_workflow_execution_idx" ON "message_send" USING btree ("workflow_execution_id");

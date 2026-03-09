@@ -13,6 +13,7 @@ import { awsAccount } from "./app";
 import { organization, user } from "./auth";
 import { contact } from "./contacts";
 import { template } from "./templates";
+import { workflowExecution } from "./workflows";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ENUMS
@@ -233,7 +234,10 @@ export const messageSend = pgTable(
     // campaignId and workflowId will be added when those features are implemented
     // campaignId: text("campaign_id").references(() => campaign.id),
     // workflowId: text("workflow_id").references(() => workflow.id),
-    // workflowExecutionId: text("workflow_execution_id").references(() => workflowExecution.id),
+    workflowExecutionId: text("workflow_execution_id").references(
+      () => workflowExecution.id,
+      { onDelete: "set null" }
+    ),
 
     // ═══════════════════════════════════════════════════════════════════════
     // RECIPIENT (denormalized for history)
@@ -302,6 +306,7 @@ export const messageSend = pgTable(
     index("message_send_contact_idx").on(table.contactId),
     index("message_send_channel_idx").on(table.channel),
     index("message_send_batch_idx").on(table.batchSendId),
+    index("message_send_workflow_execution_idx").on(table.workflowExecutionId),
     index("message_send_status_idx").on(table.batchSendId, table.status),
     uniqueIndex("message_send_message_id_idx").on(table.messageId),
     index("message_send_source_type_idx").on(table.sourceType),
@@ -349,6 +354,10 @@ export const messageSendRelations = relations(messageSend, ({ one }) => ({
   batchSend: one(batchSend, {
     fields: [messageSend.batchSendId],
     references: [batchSend.id],
+  }),
+  workflowExecution: one(workflowExecution, {
+    fields: [messageSend.workflowExecutionId],
+    references: [workflowExecution.id],
   }),
   emailTemplate: one(template, {
     fields: [messageSend.emailTemplateId],

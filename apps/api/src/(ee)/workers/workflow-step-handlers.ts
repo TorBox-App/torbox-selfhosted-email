@@ -404,16 +404,16 @@ export async function handleSendEmail(
     log.info("Workflow: email sent via raw HTML", { to: contactRecord.email });
   }
 
-  const messageId = result.MessageId ?? "";
+  const messageId = result.MessageId ?? crypto.randomUUID();
 
   // Record the send in messageSend table
-  // Note: workflowExecutionId is not yet in schema, will be added later
   await db.insert(messageSend).values({
     organizationId,
     contactId: contactRecord.id,
     awsAccountId: wf.awsAccountId,
     channel: "email",
     sourceType: "workflow",
+    workflowExecutionId: execution.id,
     recipient: contactRecord.email,
     subject,
     from: fromAddress,
@@ -676,7 +676,7 @@ export async function handleSendSms(
 
   const response = await smsClient.send(command);
 
-  const smsMessageId = response.MessageId ?? "";
+  const smsMessageId = response.MessageId ?? crypto.randomUUID();
 
   log.info("Workflow: SMS sent", {
     to: contactRecord.phone,
@@ -690,6 +690,7 @@ export async function handleSendSms(
     awsAccountId: wf.awsAccountId,
     channel: "sms",
     sourceType: "workflow",
+    workflowExecutionId: execution.id,
     recipient: contactRecord.phone,
     subject: null,
     from: senderId || null,

@@ -15,7 +15,14 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import type { StepEngagement } from "@/actions/workflows";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { STEP_STATUS_COLORS, STEP_STATUS_LABELS } from "@/lib/workflows";
 
 const STEP_TYPE_ICONS: Record<string, typeof Zap> = {
@@ -51,12 +58,99 @@ function formatStepDuration(
   return `${Math.round(ms / 86_400_000)}d`;
 }
 
+const ENGAGEMENT_DOT_CONFIG = {
+  sent: { color: "bg-blue-500", label: "Sent" },
+  delivered: { color: "bg-green-500", label: "Delivered" },
+  opened: { color: "bg-purple-500", label: "Opened" },
+  clicked: { color: "bg-indigo-500", label: "Clicked" },
+  bounced: { color: "bg-red-500", label: "Bounced" },
+  complained: { color: "bg-orange-500", label: "Spam complaint" },
+  optedOut: { color: "bg-red-500", label: "Opted out" },
+} as const;
+
+function formatTimestampShort(date: Date): string {
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function EngagementDots({ engagement }: { engagement: StepEngagement }) {
+  const isEmail = engagement.channel === "email";
+
+  const statuses = isEmail
+    ? ([
+        { key: "sent", timestamp: engagement.sentAt },
+        { key: "delivered", timestamp: engagement.deliveredAt },
+        { key: "opened", timestamp: engagement.openedAt },
+        { key: "clicked", timestamp: engagement.clickedAt },
+        { key: "bounced", timestamp: engagement.bouncedAt },
+        { key: "complained", timestamp: engagement.complainedAt },
+      ] as const)
+    : ([
+        { key: "sent", timestamp: engagement.sentAt },
+        { key: "delivered", timestamp: engagement.deliveredAt },
+        { key: "clicked", timestamp: engagement.clickedAt },
+        { key: "optedOut", timestamp: engagement.optedOutAt },
+      ] as const);
+
+  const activeStatuses = statuses.filter((s) => s.timestamp);
+
+  if (activeStatuses.length === 0) return null;
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+      {activeStatuses.map(({ key, timestamp }) => {
+        const config = ENGAGEMENT_DOT_CONFIG[key];
+        return (
+          <Tooltip key={key}>
+            <TooltipTrigger asChild>
+              <span
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  config.color
+                )}
+              />
+            </TooltipTrigger>
+            <TooltipContent className="text-xs" side="top">
+              <span className="font-medium">{config.label}</span>
+              {timestamp && (
+                <span className="ml-1 text-muted-foreground">
+                  {formatTimestampShort(new Date(timestamp))}
+                </span>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        );
+      })}
+      {engagement.bounceType && (
+        <span className="text-destructive text-xs">
+          {engagement.bounceType}
+          {engagement.bounceSubType ? ` (${engagement.bounceSubType})` : ""}
+        </span>
+      )}
+      {engagement.clickedUrl && (
+        <span className="truncate text-muted-foreground text-xs">
+          {engagement.clickedUrl}
+        </span>
+      )}
+    </div>
+  );
+}
+
 type StepTraceProps = {
   stepExecutions: WorkflowStepExecutionRecord[];
   stepNameMap: Record<string, string>;
+  stepEngagement?: Record<string, StepEngagement>;
 };
 
-export function StepTrace({ stepExecutions, stepNameMap }: StepTraceProps) {
+export function StepTrace({
+  stepExecutions,
+  stepNameMap,
+  stepEngagement,
+}: StepTraceProps) {
   if (stepExecutions.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">No steps executed yet.</p>
@@ -128,6 +222,11 @@ export function StepTrace({ stepExecutions, stepNameMap }: StepTraceProps) {
                 <div className="mt-1 text-muted-foreground text-xs">
                   Skipped: {step.skipReason}
                 </div>
+              )}
+
+              {/* Engagement */}
+              {stepEngagement?.[step.id] && (
+                <EngagementDots engagement={stepEngagement[step.id]} />
               )}
             </div>
           </div>

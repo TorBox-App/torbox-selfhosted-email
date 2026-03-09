@@ -125,6 +125,7 @@ export default async function ExecutionDetailPage({
         </CardHeader>
         <CardContent>
           <StepTrace
+            stepEngagement={execution.stepEngagement}
             stepExecutions={execution.stepExecutions}
             stepNameMap={Object.fromEntries(stepNameMap)}
           />

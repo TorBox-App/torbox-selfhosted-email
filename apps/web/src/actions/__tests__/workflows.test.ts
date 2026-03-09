@@ -4,6 +4,7 @@ import {
   contact,
   db,
   member,
+  messageSend,
   organization,
   organizationExtension,
   subscription,
@@ -1488,6 +1489,228 @@ describe("Workflows Server Actions", () => {
       expect(result.execution.stepExecutions.length).toBe(2);
       expect(result.execution.stepExecutions[0]!.stepId).toBe("step-1");
       expect(result.execution.stepExecutions[1]!.stepId).toBe("step-2");
+    });
+
+    it("should return stepEngagement for send steps with messageSend records", async () => {
+      const wfResult = await createWorkflow(testOrganization.id, {
+        name: "Engagement Email Test",
+      });
+      expect(wfResult.success).toBe(true);
+      if (!wfResult.success) return;
+
+      const [exec] = await db
+        .insert(workflowExecution)
+        .values({
+          workflowId: wfResult.workflow.id,
+          contactId: testContact.id,
+          organizationId: testOrganization.id,
+          status: "completed",
+          startedAt: new Date("2026-03-01T00:00:00"),
+          completedAt: new Date("2026-03-01T00:01:00"),
+        })
+        .returning();
+
+      // Insert step executions
+      const [triggerStep] = await db
+        .insert(workflowStepExecution)
+        .values({
+          executionId: exec!.id,
+          stepId: "step-trigger",
+          stepType: "trigger",
+          status: "completed",
+          idempotencyKey: `${exec!.id}-step-trigger`,
+          startedAt: new Date("2026-03-01T00:00:00"),
+          completedAt: new Date("2026-03-01T00:00:01"),
+        })
+        .returning();
+
+      const [sendStep] = await db
+        .insert(workflowStepExecution)
+        .values({
+          executionId: exec!.id,
+          stepId: "step-send-email",
+          stepType: "send_email",
+          status: "completed",
+          idempotencyKey: `${exec!.id}-step-send-email`,
+          startedAt: new Date("2026-03-01T00:00:01"),
+          completedAt: new Date("2026-03-01T00:00:02"),
+          result: { messageId: "test-msg-001" },
+        })
+        .returning();
+
+      // Insert messageSend record linked to this execution
+      await db.insert(messageSend).values({
+        organizationId: testOrganization.id,
+        contactId: testContact.id,
+        awsAccountId: testAwsAccount.id,
+        channel: "email",
+        sourceType: "workflow",
+        workflowExecutionId: exec!.id,
+        recipient: "contact@example.com",
+        subject: "Welcome",
+        messageId: "test-msg-001",
+        status: "opened",
+        sentAt: new Date("2026-03-01T00:00:02"),
+        deliveredAt: new Date("2026-03-01T00:00:05"),
+        openedAt: new Date("2026-03-01T00:01:00"),
+      });
+
+      const result = await getWorkflowExecution(exec!.id, testOrganization.id);
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      expect(result.execution.stepEngagement).toBeDefined();
+      const engagement = result.execution.stepEngagement![sendStep!.id];
+      expect(engagement).toBeDefined();
+      expect(engagement!.channel).toBe("email");
+      expect(engagement!.sentAt).toBeTruthy();
+      expect(engagement!.deliveredAt).toBeTruthy();
+      expect(engagement!.openedAt).toBeTruthy();
+      expect(engagement!.clickedAt).toBeNull();
+
+      // Trigger step should NOT have engagement
+      expect(result.execution.stepEngagement![triggerStep!.id]).toBeUndefined();
+    });
+
+    it("should return empty stepEngagement when no messageSend records exist", async () => {
+      const wfResult = await createWorkflow(testOrganization.id, {
+        name: "No Engagement Test",
+      });
+      expect(wfResult.success).toBe(true);
+      if (!wfResult.success) return;
+
+      const [exec] = await db
+        .insert(workflowExecution)
+        .values({
+          workflowId: wfResult.workflow.id,
+          contactId: testContact.id,
+          organizationId: testOrganization.id,
+          status: "completed",
+          startedAt: new Date("2026-03-01T00:00:00"),
+          completedAt: new Date("2026-03-01T00:01:00"),
+        })
+        .returning();
+
+      await db.insert(workflowStepExecution).values({
+        executionId: exec!.id,
+        stepId: "step-send-skipped",
+        stepType: "send_email",
+        status: "completed",
+        idempotencyKey: `${exec!.id}-step-send-skipped`,
+        startedAt: new Date("2026-03-01T00:00:01"),
+        completedAt: new Date("2026-03-01T00:00:02"),
+        result: { skipped: true, reason: "no_email" },
+      });
+
+      const result = await getWorkflowExecution(exec!.id, testOrganization.id);
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      expect(result.execution.stepEngagement).toBeDefined();
+      expect(Object.keys(result.execution.stepEngagement!)).toHaveLength(0);
+    });
+
+    it("should return engagement for both email and SMS steps in same execution", async () => {
+      const wfResult = await createWorkflow(testOrganization.id, {
+        name: "Multi-Channel Engagement Test",
+      });
+      expect(wfResult.success).toBe(true);
+      if (!wfResult.success) return;
+
+      const [exec] = await db
+        .insert(workflowExecution)
+        .values({
+          workflowId: wfResult.workflow.id,
+          contactId: testContact.id,
+          organizationId: testOrganization.id,
+          status: "completed",
+          startedAt: new Date("2026-03-01T00:00:00"),
+          completedAt: new Date("2026-03-01T00:02:00"),
+        })
+        .returning();
+
+      const [emailStep] = await db
+        .insert(workflowStepExecution)
+        .values({
+          executionId: exec!.id,
+          stepId: "step-send-email-multi",
+          stepType: "send_email",
+          status: "completed",
+          idempotencyKey: `${exec!.id}-step-send-email-multi`,
+          startedAt: new Date("2026-03-01T00:00:01"),
+          completedAt: new Date("2026-03-01T00:00:02"),
+          result: { messageId: "test-msg-email-multi" },
+        })
+        .returning();
+
+      const [smsStep] = await db
+        .insert(workflowStepExecution)
+        .values({
+          executionId: exec!.id,
+          stepId: "step-send-sms-multi",
+          stepType: "send_sms",
+          status: "completed",
+          idempotencyKey: `${exec!.id}-step-send-sms-multi`,
+          startedAt: new Date("2026-03-01T00:01:00"),
+          completedAt: new Date("2026-03-01T00:01:01"),
+          result: { messageId: "test-msg-sms-multi" },
+        })
+        .returning();
+
+      // Insert email messageSend
+      await db.insert(messageSend).values({
+        organizationId: testOrganization.id,
+        contactId: testContact.id,
+        awsAccountId: testAwsAccount.id,
+        channel: "email",
+        sourceType: "workflow",
+        workflowExecutionId: exec!.id,
+        recipient: "contact@example.com",
+        subject: "Welcome",
+        messageId: "test-msg-email-multi",
+        status: "clicked",
+        sentAt: new Date("2026-03-01T00:00:02"),
+        deliveredAt: new Date("2026-03-01T00:00:05"),
+        openedAt: new Date("2026-03-01T00:00:30"),
+        clickedAt: new Date("2026-03-01T00:01:00"),
+        clickedUrl: "https://example.com/cta",
+      });
+
+      // Insert SMS messageSend
+      await db.insert(messageSend).values({
+        organizationId: testOrganization.id,
+        contactId: testContact.id,
+        awsAccountId: testAwsAccount.id,
+        channel: "sms",
+        sourceType: "workflow",
+        workflowExecutionId: exec!.id,
+        recipient: "+15551234567",
+        messageId: "test-msg-sms-multi",
+        status: "delivered",
+        sentAt: new Date("2026-03-01T00:01:01"),
+        deliveredAt: new Date("2026-03-01T00:01:05"),
+      });
+
+      const result = await getWorkflowExecution(exec!.id, testOrganization.id);
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      // Email engagement
+      const emailEngagement = result.execution.stepEngagement![emailStep!.id];
+      expect(emailEngagement).toBeDefined();
+      expect(emailEngagement!.channel).toBe("email");
+      expect(emailEngagement!.clickedAt).toBeTruthy();
+      expect(emailEngagement!.clickedUrl).toBe("https://example.com/cta");
+
+      // SMS engagement
+      const smsEngagement = result.execution.stepEngagement![smsStep!.id];
+      expect(smsEngagement).toBeDefined();
+      expect(smsEngagement!.channel).toBe("sms");
+      expect(smsEngagement!.deliveredAt).toBeTruthy();
+      expect(smsEngagement!.openedAt).toBeNull(); // SMS has no opens
     });
 
     it("should return error for execution in different org (IDOR prevention)", async () => {

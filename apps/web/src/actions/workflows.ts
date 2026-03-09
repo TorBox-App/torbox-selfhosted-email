@@ -6,6 +6,7 @@ import {
   type CanvasViewport,
   contact,
   db,
+  messageSend,
   type TriggerConfig,
   template,
   type Workflow,
@@ -92,6 +93,21 @@ export type ListWorkflowExecutionsResult =
     }
   | { success: false; error: string };
 
+export type StepEngagement = {
+  channel: "email" | "sms";
+  status: string;
+  sentAt: Date | null;
+  deliveredAt: Date | null;
+  openedAt: Date | null;
+  clickedAt: Date | null;
+  bouncedAt: Date | null;
+  complainedAt: Date | null;
+  optedOutAt: Date | null;
+  clickedUrl: string | null;
+  bounceType: string | null;
+  bounceSubType: string | null;
+};
+
 export type ExecutionDetail = WorkflowExecution & {
   contact: {
     id: string;
@@ -101,6 +117,7 @@ export type ExecutionDetail = WorkflowExecution & {
   } | null;
   workflow: { name: string } | null;
   stepExecutions: WorkflowStepExecutionRecord[];
+  stepEngagement?: Record<string, StepEngagement>;
 };
 
 export type GetWorkflowExecutionResult =
@@ -1387,9 +1404,69 @@ export async function getWorkflowExecution(
       return { success: false, error: "Execution not found" };
     }
 
+    // Query engagement data from messageSend via workflowExecutionId FK
+    const sends =
+      exec.stepExecutions.length > 0
+        ? await db
+            .select({
+              id: messageSend.id,
+              channel: messageSend.channel,
+              status: messageSend.status,
+              messageId: messageSend.messageId,
+              sentAt: messageSend.sentAt,
+              deliveredAt: messageSend.deliveredAt,
+              openedAt: messageSend.openedAt,
+              clickedAt: messageSend.clickedAt,
+              bouncedAt: messageSend.bouncedAt,
+              complainedAt: messageSend.complainedAt,
+              optedOutAt: messageSend.optedOutAt,
+              clickedUrl: messageSend.clickedUrl,
+              bounceType: messageSend.bounceType,
+              bounceSubType: messageSend.bounceSubType,
+            })
+            .from(messageSend)
+            .where(
+              and(
+                eq(messageSend.workflowExecutionId, executionId),
+                eq(messageSend.organizationId, organizationId)
+              )
+            )
+            .limit(100)
+        : [];
+
+    // Build map: step execution ID -> engagement
+    // Match via messageId from step result JSON -> messageSend.messageId
+    const sendsByMessageId = new Map(
+      sends.filter((s) => s.messageId).map((s) => [s.messageId!, s])
+    );
+    const stepEngagement: Record<string, StepEngagement> = {};
+    for (const step of exec.stepExecutions) {
+      if (step.stepType !== "send_email" && step.stepType !== "send_sms")
+        continue;
+      const result = step.result as Record<string, unknown> | null;
+      const msgId = result?.messageId;
+      if (typeof msgId !== "string" || !msgId) continue;
+      const send = sendsByMessageId.get(msgId);
+      if (!send) continue;
+      stepEngagement[step.id] = {
+        channel: send.channel as "email" | "sms",
+        status: send.status,
+        sentAt: send.sentAt,
+        deliveredAt: send.deliveredAt,
+        openedAt: send.openedAt,
+        clickedAt: send.clickedAt,
+        bouncedAt: send.bouncedAt,
+        complainedAt: send.complainedAt,
+        optedOutAt: send.optedOutAt,
+        clickedUrl: send.clickedUrl,
+        bounceType: send.bounceType,
+        bounceSubType: send.bounceSubType,
+      };
+    }
+
     return {
       success: true,
-      execution: exec as ExecutionDetail,
+      execution: { ...exec, stepEngagement } as ExecutionDetail,
     };
   } catch (error) {
     const log = createActionLogger("getWorkflowExecution", {
