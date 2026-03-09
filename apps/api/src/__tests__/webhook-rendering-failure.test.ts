@@ -92,11 +92,13 @@ function selectChain(rows: unknown[]) {
 function updateChain(returning?: unknown[]) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   chain.set = vi.fn().mockReturnValue({
-    where: vi.fn().mockReturnValue(
-      returning !== undefined
-        ? { returning: vi.fn().mockResolvedValue(returning) }
-        : Promise.resolve(undefined)
-    ),
+    where: vi
+      .fn()
+      .mockReturnValue(
+        returning !== undefined
+          ? { returning: vi.fn().mockResolvedValue(returning) }
+          : Promise.resolve(undefined)
+      ),
   });
   return chain;
 }
@@ -106,17 +108,14 @@ async function sendWebhookEvent(
   body: Record<string, unknown>
 ) {
   return app.handle(
-    new Request(
-      `http://localhost/webhooks/ses/${TEST_AWS_ACCOUNT_NUMBER}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-wraps-api-key": TEST_WEBHOOK_SECRET,
-        },
-        body: JSON.stringify(body),
-      }
-    )
+    new Request(`http://localhost/webhooks/ses/${TEST_AWS_ACCOUNT_NUMBER}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-wraps-api-key": TEST_WEBHOOK_SECRET,
+      },
+      body: JSON.stringify(body),
+    })
   );
 }
 
@@ -145,7 +144,7 @@ const mockMessageSend = {
 
 describe("Webhook: Rendering Failure", () => {
   let app: ReturnType<typeof createTestApp>;
-  let updateCalls: Array<ReturnType<typeof updateChain>>;
+  let updateCalls: ReturnType<typeof updateChain>[];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -187,7 +186,8 @@ describe("Webhook: Rendering Failure", () => {
     expect(updateCalls[0].set).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "failed",
-        error: "Rendering failure: Attribute 'firstName' is not present in the rendering data.",
+        error:
+          "Rendering failure: Attribute 'firstName' is not present in the rendering data.",
       })
     );
   });
@@ -221,12 +221,10 @@ describe("Webhook: Rendering Failure", () => {
 
   it("fails active workflow execution when executionId tag present", async () => {
     // Mock transaction to capture the updates inside it
-    const txUpdateCalls: Array<ReturnType<typeof updateChain>> = [];
+    const txUpdateCalls: ReturnType<typeof updateChain>[] = [];
     mockDbTransaction.mockImplementation(async (callback: Function) => {
       const txUpdate = vi.fn().mockImplementation(() => {
-        const chain = updateChain([
-          { id: "exec-1", workflowId: "wf-1" },
-        ]);
+        const chain = updateChain([{ id: "exec-1", workflowId: "wf-1" }]);
         txUpdateCalls.push(chain);
         return chain;
       });
@@ -275,7 +273,7 @@ describe("Webhook: Rendering Failure", () => {
 
   it("skips workflow counter update when execution already completed", async () => {
     // Transaction returns empty array (no rows matched = execution was already completed/failed)
-    const txUpdateCalls: Array<ReturnType<typeof updateChain>> = [];
+    const txUpdateCalls: ReturnType<typeof updateChain>[] = [];
     mockDbTransaction.mockImplementation(async (callback: Function) => {
       const txUpdate = vi.fn().mockImplementation(() => {
         // Return empty array — no execution matched the WHERE clause
