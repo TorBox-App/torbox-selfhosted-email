@@ -141,7 +141,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
 
     log.info("Webhook: processing event", { eventType, messageId });
 
-    // 4. Find the messageSend record
+    // 4. Find the messageSend record, scoped to the authenticated AWS account's org
     const [message] = await db
       .select({
         id: messageSend.id,
@@ -152,7 +152,12 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
         clickedAt: messageSend.clickedAt,
       })
       .from(messageSend)
-      .where(eq(messageSend.messageId, messageId))
+      .where(
+        and(
+          eq(messageSend.messageId, messageId),
+          eq(messageSend.organizationId, account.organizationId)
+        )
+      )
       .limit(1);
 
     if (!message) {
@@ -228,7 +233,6 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       set.status = 500;
       return {
         error: "Failed to process event",
-        details: error instanceof Error ? error.message : String(error),
       };
     }
   },
