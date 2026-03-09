@@ -9,12 +9,12 @@ export function VisualSection() {
         {/* Section header */}
         <div className="mb-12 text-center animate-fade-in-up">
           <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-            Or don't write a single line of code.
+            Your marketing team ships without filing a ticket.
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            Drag-and-drop template builder. Visual workflow canvas. AI that
-            generates both from a prompt. Use code when you want precision. Use
-            the dashboard when you want speed.
+            AI-first template editor. Code you can read and review. Marketers
+            prompt AI. Developers write code. Both produce the same React Email
+            templates.
           </p>
         </div>
 
@@ -44,9 +44,8 @@ export function VisualSection() {
               Template Editor
             </h3>
             <p className="text-sm text-muted-foreground">
-              20+ drag-and-drop blocks. Brand kits. AI chat that knows your
-              colors, fonts, and variables. Edit a subject line without opening
-              your IDE.
+              AI chat that generates templates from a prompt. Brand kits. Raw
+              code access. Edit a subject line without opening your IDE.
             </p>
           </Link>
 
@@ -74,9 +73,9 @@ export function VisualSection() {
               Workflow Builder
             </h3>
             <p className="text-sm text-muted-foreground">
-              React Flow canvas. Drag nodes, draw connections, configure
-              triggers. Or type "create a welcome series with a 1-day delay" and
-              let AI build it.
+              Define workflows in TypeScript or let AI generate them from a
+              prompt. Version in git. Deploy with CI. Or type "create a welcome
+              series with a 1-day delay" and let AI build it.
             </p>
           </Link>
 
@@ -112,8 +111,8 @@ export function VisualSection() {
 
         {/* Section closer */}
         <p className="mt-12 text-center text-lg text-muted-foreground animate-fade-in-up animation-delay-200">
-          Code and visual. Not code or visual. Your team picks the right tool
-          for each job.
+          AI and code. Not one <em>or</em> the other. Engineers and marketers
+          on the same platform, working the way they prefer.
         </p>
       </div>
     </section>

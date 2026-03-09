@@ -12,17 +12,17 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://wraps.dev"),
   title: {
-    default: "Wraps - Email Templates as React. Workflows as TypeScript.",
+    default: "Wraps - The Email Platform That Sends Through Your AWS",
     template: "%s | Wraps",
   },
   description:
-    "Write email templates as React components. Define automations as TypeScript. Review in PRs, deploy with your app, send through your AWS at $0.10/1K emails.",
+    "Write email templates as React components. Define automations as TypeScript. Review in PRs, deploy with your app. Your marketing team edits and sends without code.",
   openGraph: {
     type: "website",
     siteName: "Wraps",
-    title: "Wraps - Email Templates as React. Workflows as TypeScript.",
+    title: "Wraps - The Email Platform That Sends Through Your AWS",
     description:
-      "Write email templates as React components. Define automations as TypeScript. Review in PRs, deploy with your app, send through your AWS at $0.10/1K emails.",
+      "Write email templates as React components. Define automations as TypeScript. Review in PRs, deploy with your app. Your marketing team edits and sends without code.",
     url: "https://wraps.dev/",
     images: [
       {
@@ -36,9 +36,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     site: "@useWraps",
-    title: "Wraps - Email Templates as React. Workflows as TypeScript.",
+    title: "Wraps - The Email Platform That Sends Through Your AWS",
     description:
-      "Write email templates as React components. Define automations as TypeScript. Review in PRs, deploy with your app, send through your AWS at $0.10/1K emails.",
+      "Write email templates as React components. Define automations as TypeScript. Review in PRs, deploy with your app. Your marketing team edits and sends without code.",
     images: ["/og-image.webp"],
   },
   icons: {

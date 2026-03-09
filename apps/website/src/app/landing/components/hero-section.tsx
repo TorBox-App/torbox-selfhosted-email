@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Github } from "lucide-react";
 import { DotPattern } from "@/components/dot-pattern";
 import { HeroAnimatedCTA } from "./hero-cta";
@@ -28,21 +29,34 @@ export function HeroSection() {
 
           {/* Main Headline - server rendered, CSS animation */}
           <h1 className="max-w-[864px] text-left text-[28px] font-medium leading-[32px] animate-fade-in-up md:text-[34px] md:leading-[40px] lg:text-[48px] lg:leading-[56px]">
-            Templates are React. Workflows are TypeScript.{" "}
-            <span className="text-orange-500">Email is code.</span>
+            The email platform that sends through{" "}
+            <span className="text-orange-500">your AWS.</span>
           </h1>
 
           {/* Subheadline - server rendered, CSS animation */}
           <p className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-muted-foreground animate-fade-in-up animation-delay-100 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
-            Write email templates as React components. Define automations as
-            TypeScript. Review in PRs. Deploy with your app. Send through your
-            AWS.
+            Automate on user behavior. Design templates. Schedule broadcasts.
+            Transparent pricing. Sending infrastructure you own.
+          </p>
+
+          {/* Accent line - code-first teaser */}
+          <p className="mt-3 text-left text-[13px] tracking-wide text-muted-foreground/70 animate-fade-in-up animation-delay-100 md:text-[14px]">
+            Templates are React. Workflows are TypeScript. Email is code.
           </p>
 
           {/* Founder credibility */}
-          <p className="mt-3 text-left text-[13px] text-muted-foreground/70 animate-fade-in-up animation-delay-100">
-            Built by an ex-SendGrid engineer.
-          </p>
+          <div className="mt-4 flex items-center gap-2.5 animate-fade-in-up animation-delay-100">
+            <Image
+              alt="Jarod, founder of Wraps"
+              className="shrink-0 rounded-full"
+              height={36}
+              src="/team/jarod-medium-smile.webp"
+              width={36}
+            />
+            <p className="text-left text-[15px] leading-[22px] text-muted-foreground md:text-[16px]">
+              Built by an ex-SendGrid engineer
+            </p>
+          </div>
 
           {/* CTA - client component for tracking */}
           <HeroAnimatedCTA />

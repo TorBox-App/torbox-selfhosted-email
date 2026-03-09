@@ -1,4 +1,4 @@
-import { Cloud, Eye, GitPullRequest, ShieldCheck } from "lucide-react";
+import { Cloud, GitPullRequest, ShieldCheck, Sparkles } from "lucide-react";
 
 const principles = [
   {
@@ -16,10 +16,10 @@ const principles = [
     delay: "animation-delay-100",
   },
   {
-    icon: Eye,
-    title: "Visual When You Want It",
+    icon: Sparkles,
+    title: "AI When You Want It",
     description:
-      "Don't want to write code? Drag-and-drop template builder, visual workflow canvas, and AI chat that generates both.",
+      "Don't want to write code? AI generates templates and workflows from a prompt. You review the output, not a GUI.",
     delay: "animation-delay-200",
   },
   {

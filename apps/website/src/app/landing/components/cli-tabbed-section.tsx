@@ -10,9 +10,9 @@ export function CliTabbedSection() {
             Deploy to your AWS in one command.
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">
-            One command deploys SES, DynamoDB, Lambda, and EventBridge to your
-            AWS. No console clicking. No sandbox approval essays. No DNS waiting
-            rooms.
+            One command deploys and configures SES, DynamoDB, Lambda, and
+            EventBridge to your AWS. No console clicking. Configured for
+            deliverability.
           </p>
         </div>
 

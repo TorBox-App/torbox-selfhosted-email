@@ -22,9 +22,6 @@ export function PricingSection() {
           <p className="mx-auto max-w-2xl text-muted-foreground">
             {PRICING_COPY.subheadline}
           </p>
-          <p className="mt-3 text-sm text-muted-foreground/80">
-            You pay us for the platform. You pay AWS for sending. No surprises.
-          </p>
         </div>
 
         {/* Free hero card */}

@@ -126,10 +126,9 @@ export function CodeFirstSection() {
         {/* Section closer */}
         <div className="mt-12 animate-fade-in-up animation-delay-200">
           <p className="text-lg text-muted-foreground">
-            Your team writes this code. An AI agent writes the same code. Both
-            open PRs. Both get reviewed. Both deploy with your app. The
-            platforms built for marketers clicking through GUIs don't work this
-            way. Wraps does.
+            The same template a developer writes as React, a marketer generates
+            with AI. The same workflow defined in TypeScript, an AI agent builds
+            from a prompt. One system. Two ways to work.
           </p>
           <a
             className="mt-4 inline-flex items-center text-sm font-medium text-orange-500 hover:text-orange-600"
