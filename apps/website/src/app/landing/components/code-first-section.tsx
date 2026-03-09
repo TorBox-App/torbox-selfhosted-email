@@ -52,7 +52,11 @@ export default defineWorkflow({
 });`;
 
 const templateData = [
-  { language: "tsx", filename: "wraps/templates/welcome.tsx", code: templateCode },
+  {
+    language: "tsx",
+    filename: "wraps/templates/welcome.tsx",
+    code: templateCode,
+  },
 ];
 
 const workflowData = [

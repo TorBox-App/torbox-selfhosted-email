@@ -111,8 +111,8 @@ export function VisualSection() {
 
         {/* Section closer */}
         <p className="mt-12 text-center text-lg text-muted-foreground animate-fade-in-up animation-delay-200">
-          AI and code. Not one <em>or</em> the other. Engineers and marketers
-          on the same platform, working the way they prefer.
+          AI and code. Not one <em>or</em> the other. Engineers and marketers on
+          the same platform, working the way they prefer.
         </p>
       </div>
     </section>

@@ -19,7 +19,8 @@ const features = [
   {
     icon: Sparkles,
     title: "AI-First Editing",
-    description: "Generate entire emails from a prompt, then refine with AI chat",
+    description:
+      "Generate entire emails from a prompt, then refine with AI chat",
     premium: true,
   },
   {
@@ -41,7 +42,8 @@ const features = [
   {
     icon: LayoutGrid,
     title: "React Email Components",
-    description: "Buttons, images, sections, layouts — all typed and composable",
+    description:
+      "Buttons, images, sections, layouts — all typed and composable",
   },
   {
     icon: Palette,

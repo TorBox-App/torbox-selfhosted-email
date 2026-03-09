@@ -59,7 +59,8 @@ const features: {
   {
     icon: MousePointerClick,
     title: "Teams use the builder",
-    description: "AI generates workflows from prompts for marketing, sales, and ops",
+    description:
+      "AI generates workflows from prompts for marketing, sales, and ops",
   },
   {
     icon: Play,

@@ -1393,7 +1393,9 @@ describe("Step retry clears stale error", () => {
 
     // The onConflictDoUpdate set must clear stale error/completedAt from previous failed attempt
     expect(capturedConflictConfig).not.toBeNull();
-    const setObj = (capturedConflictConfig as unknown as Record<string, unknown>).set as Record<string, unknown>;
+    const setObj = (
+      capturedConflictConfig as unknown as Record<string, unknown>
+    ).set as Record<string, unknown>;
     expect(setObj).toHaveProperty("error", null);
     expect(setObj).toHaveProperty("completedAt", null);
   });

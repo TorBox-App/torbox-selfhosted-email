@@ -583,11 +583,7 @@ async function processRenderingFailure(
         .where(
           and(
             eq(workflowExecution.id, executionId),
-            inArray(workflowExecution.status, [
-              "active",
-              "paused",
-              "waiting",
-            ])
+            inArray(workflowExecution.status, ["active", "paused", "waiting"])
           )
         )
         .returning();

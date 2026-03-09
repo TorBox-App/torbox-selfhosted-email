@@ -115,8 +115,8 @@ export function DashboardBroadcastsSection() {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             <p className="text-lg text-muted-foreground">
-              Send newsletters, announcements, and marketing campaigns. Segments,
-              topics, and scheduling included in Starter.
+              Send newsletters, announcements, and marketing campaigns.
+              Segments, topics, and scheduling included in Starter.
             </p>
 
             {/* Features as list */}
