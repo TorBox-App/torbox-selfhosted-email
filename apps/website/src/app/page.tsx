@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { CliTabbedSection } from "./landing/components/cli-tabbed-section";
-import { CodeFirstSection } from "./landing/components/code-first-section";
 import { CTASection } from "./landing/components/cta-section";
+import { DualPathSection } from "./landing/components/dual-path-section";
 import { FaqSection } from "./landing/components/faq-section";
 import { LandingFooter } from "./landing/components/footer";
 import { HeroSection } from "./landing/components/hero-section";
@@ -10,7 +10,6 @@ import { InfrastructureSection } from "./landing/components/infrastructure-secti
 import { LandingNavbar } from "./landing/components/navbar";
 import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
-import { VisualSection } from "./landing/components/visual-section";
 
 export const metadata: Metadata = {
   alternates: {
@@ -116,11 +115,8 @@ export default function LandingPage() {
           <HeroSection />
           <PrinciplesSection />
 
-          {/* 2. Code-first differentiation */}
-          <CodeFirstSection />
-
-          {/* 3. Visual / no-code option */}
-          <VisualSection />
+          {/* 2. Two paths — code & AI side by side */}
+          <DualPathSection />
 
           {/* 4. CLI deploy demo */}
           <CliTabbedSection />

@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { Github } from "lucide-react";
+import Image from "next/image";
 import { DotPattern } from "@/components/dot-pattern";
 import { HeroAnimatedCTA } from "./hero-cta";
 
@@ -39,11 +39,6 @@ export function HeroSection() {
             Transparent pricing. Sending infrastructure you own.
           </p>
 
-          {/* Accent line - code-first teaser */}
-          <p className="mt-3 text-left text-[13px] tracking-wide text-muted-foreground/70 animate-fade-in-up animation-delay-100 md:text-[14px]">
-            Templates are React. Workflows are TypeScript. Email is code.
-          </p>
-
           {/* Founder credibility */}
           <div className="mt-4 flex items-center gap-2.5 animate-fade-in-up animation-delay-100">
             <Image
@@ -53,9 +48,14 @@ export function HeroSection() {
               src="/team/jarod-medium-smile.webp"
               width={36}
             />
-            <p className="text-left text-[15px] leading-[22px] text-muted-foreground md:text-[16px]">
+            <a
+              className="text-left text-[15px] leading-[22px] text-muted-foreground underline underline-offset-2 hover:text-foreground md:text-[16px]"
+              href="https://x.com/stewartjarod"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
               Built by an ex-SendGrid engineer
-            </p>
+            </a>
           </div>
 
           {/* CTA - client component for tracking */}
