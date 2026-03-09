@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { AiAgentsSection } from "./landing/components/ai-agents-section";
 import { CliTabbedSection } from "./landing/components/cli-tabbed-section";
+import { CodeFirstSection } from "./landing/components/code-first-section";
 import { CTASection } from "./landing/components/cta-section";
 import { FaqSection } from "./landing/components/faq-section";
 import { LandingFooter } from "./landing/components/footer";
 import { HeroSection } from "./landing/components/hero-section";
+import { InfrastructureSection } from "./landing/components/infrastructure-section";
 import { LandingNavbar } from "./landing/components/navbar";
 import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
+import { VisualSection } from "./landing/components/visual-section";
 
 export const metadata: Metadata = {
   alternates: {
@@ -109,17 +113,29 @@ export default function LandingPage() {
 
         {/* Main Content */}
         <main>
-          {/* Hero & Credibility */}
+          {/* 1. Hero & Feature Cards */}
           <HeroSection />
           <PrinciplesSection />
 
-          {/* How it works - CLI deploy + SDK */}
+          {/* 2. Code-first differentiation */}
+          <CodeFirstSection />
+
+          {/* 3. Visual / no-code option */}
+          <VisualSection />
+
+          {/* 4. CLI deploy demo */}
           <CliTabbedSection />
 
-          {/* Pricing */}
+          {/* 5. AWS ownership */}
+          <InfrastructureSection />
+
+          {/* 6. AI agent positioning */}
+          <AiAgentsSection />
+
+          {/* 7. Pricing */}
           <PricingSection />
 
-          {/* Footer sections */}
+          {/* 8. FAQ & CTA */}
           <FaqSection />
           <CTASection />
         </main>

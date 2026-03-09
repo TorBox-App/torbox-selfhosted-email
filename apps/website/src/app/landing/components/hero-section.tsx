@@ -28,15 +28,15 @@ export function HeroSection() {
 
           {/* Main Headline - server rendered, CSS animation */}
           <h1 className="max-w-[864px] text-left text-[28px] font-medium leading-[32px] animate-fade-in-up md:text-[34px] md:leading-[40px] lg:text-[48px] lg:leading-[56px]">
-            Stop overpaying for email.
+            Templates are React. Workflows are TypeScript.{" "}
+            <span className="text-orange-500">Email is code.</span>
           </h1>
 
           {/* Subheadline - server rendered, CSS animation */}
           <p className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-muted-foreground animate-fade-in-up animation-delay-100 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
-            AWS SES sends for $0.10/1,000 emails. Postmark charges $1.50.
-            <br />
-            Wraps gives you Postmark's DX on your own AWS — deployed in one
-            command.
+            Write email templates as React components. Define automations as
+            TypeScript. Review in PRs. Deploy with your app. Send through your
+            AWS.
           </p>
 
           {/* Founder credibility */}
