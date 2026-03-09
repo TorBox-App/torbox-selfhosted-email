@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { assetUrl } from "@/lib/utils";
 
 export function VisualSection() {
@@ -20,8 +21,8 @@ export function VisualSection() {
         {/* Three capabilities */}
         <div className="grid gap-10 md:grid-cols-3 animate-fade-in-up animation-delay-100">
           {/* Template Editor */}
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <Link className="space-y-4 group" href="/platform#templates">
+            <div className="overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow group-hover:shadow-md">
               {/* Light mode image */}
               <Image
                 alt="Template editor with AI chat panel"
@@ -39,17 +40,17 @@ export function VisualSection() {
                 width={600}
               />
             </div>
-            <h3 className="font-semibold text-lg">Template Editor</h3>
+            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">Template Editor</h3>
             <p className="text-sm text-muted-foreground">
               20+ drag-and-drop blocks. Brand kits. AI chat that knows your
               colors, fonts, and variables. Edit a subject line without opening
               your IDE.
             </p>
-          </div>
+          </Link>
 
           {/* Workflow Builder */}
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <Link className="space-y-4 group" href="/platform#automations">
+            <div className="overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow group-hover:shadow-md">
               {/* Light mode image */}
               <Image
                 alt="Workflow builder canvas with branching"
@@ -67,17 +68,17 @@ export function VisualSection() {
                 width={600}
               />
             </div>
-            <h3 className="font-semibold text-lg">Workflow Builder</h3>
+            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">Workflow Builder</h3>
             <p className="text-sm text-muted-foreground">
               React Flow canvas. Drag nodes, draw connections, configure
               triggers. Or type "create a welcome series with a 1-day delay"
               and let AI build it.
             </p>
-          </div>
+          </Link>
 
           {/* Broadcasts */}
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <Link className="space-y-4 group" href="/platform#broadcasts">
+            <div className="overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow group-hover:shadow-md">
               {/* Light mode image */}
               <Image
                 alt="Broadcast compose view with segments"
@@ -95,12 +96,12 @@ export function VisualSection() {
                 width={600}
               />
             </div>
-            <h3 className="font-semibold text-lg">Broadcasts</h3>
+            <h3 className="font-semibold text-lg group-hover:text-orange-500 transition-colors">Broadcasts</h3>
             <p className="text-sm text-muted-foreground">
               Newsletters, announcements, campaigns. Target with segments.
               Schedule sends. No code required.
             </p>
-          </div>
+          </Link>
         </div>
 
         {/* Section closer */}
