@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { AiAgentsSection } from "./landing/components/ai-agents-section";
 import { CliTabbedSection } from "./landing/components/cli-tabbed-section";
 import { CodeFirstSection } from "./landing/components/code-first-section";
 import { CTASection } from "./landing/components/cta-section";
@@ -129,13 +128,10 @@ export default function LandingPage() {
           {/* 5. AWS ownership */}
           <InfrastructureSection />
 
-          {/* 6. AI agent positioning */}
-          <AiAgentsSection />
-
-          {/* 7. Pricing */}
+          {/* 6. Pricing */}
           <PricingSection />
 
-          {/* 8. FAQ & CTA */}
+          {/* 7. FAQ & CTA */}
           <FaqSection />
           <CTASection />
         </main>
