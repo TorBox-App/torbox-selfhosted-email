@@ -16,6 +16,7 @@ import {
   createAuthenticatedRoutes,
 } from "../../middleware/auth";
 import { rateLimitMiddleware } from "../../middleware/rate-limit";
+import { cancelWorkflowExecution } from "../../services/workflow-cancel";
 import {
   enqueueWorkflowStep,
   enqueueWorkflowStepBatch,
@@ -506,6 +507,46 @@ export const workflowsRoutes = createAuthenticatedRoutes("/v1/workflows")
         summary: "Retry failed execution",
         description:
           "Retry a failed workflow execution from the step where it failed. Completed steps are preserved.",
+        tags: ["workflows"],
+      },
+    }
+  )
+
+  /**
+   * Cancel a workflow execution
+   *
+   * POST /v1/workflows/executions/:executionId/cancel
+   *
+   * Cancels an active execution, cleans up schedulers, adjusts workflow stats.
+   */
+  .post(
+    "/executions/:executionId/cancel",
+    async (ctx) => {
+      const { params } = ctx;
+      const auth = (ctx as unknown as { auth: AuthContext }).auth;
+
+      return cancelWorkflowExecution({
+        executionId: params.executionId,
+        organizationId: auth.organizationId,
+      });
+    },
+    {
+      params: t.Object({
+        executionId: t.String({
+          description: "Execution ID to cancel",
+          maxLength: 36,
+        }),
+      }),
+      response: {
+        200: t.Object({
+          success: t.Boolean(),
+          error: t.Optional(t.String()),
+        }),
+      },
+      detail: {
+        summary: "Cancel workflow execution",
+        description:
+          "Cancel an active workflow execution. Cleans up schedulers and adjusts workflow stats.",
         tags: ["workflows"],
       },
     }

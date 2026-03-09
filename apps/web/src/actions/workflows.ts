@@ -1468,3 +1468,69 @@ export async function retryWorkflowExecution(
     return { success: false, error: "Failed to retry execution" };
   }
 }
+
+export type CancelWorkflowExecutionResult =
+  | { success: true }
+  | { success: false; error: string };
+
+/**
+ * Cancel an active workflow execution
+ */
+export async function cancelWorkflowExecution(
+  executionId: string,
+  organizationId: string
+): Promise<CancelWorkflowExecutionResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      return { success: false, error: "API URL not configured" };
+    }
+
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.session?.token) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const response = await fetch(
+      `${apiUrl}/v1/workflows/executions/${executionId}/cancel`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.session.token}`,
+          "X-Organization-Id": organizationId,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { success: false, error: text };
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      return { success: false, error: result.error ?? "Cancel failed" };
+    }
+
+    revalidatePath("/[orgSlug]/automations", "page");
+
+    return { success: true };
+  } catch (error) {
+    const log = createActionLogger("cancelWorkflowExecution", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), executionId },
+      "Failed to cancel execution"
+    );
+    return { success: false, error: "Failed to cancel execution" };
+  }
+}

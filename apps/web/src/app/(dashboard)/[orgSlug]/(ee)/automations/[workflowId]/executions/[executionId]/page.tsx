@@ -12,8 +12,16 @@ import {
   EXECUTION_STATUS_COLORS,
   EXECUTION_STATUS_LABELS,
 } from "@/lib/workflows";
+import { CancelButton } from "./components/cancel-button";
 import { RetryButton } from "./components/retry-button";
 import { StepTrace } from "./components/step-trace";
+
+const CANCELLABLE_STATUSES = new Set([
+  "pending",
+  "active",
+  "paused",
+  "waiting",
+]);
 
 type ExecutionDetailPageProps = {
   params: Promise<{
@@ -98,6 +106,12 @@ export default async function ExecutionDetailPage({
         </div>
         {execution.status === "failed" && (
           <RetryButton
+            executionId={execution.id}
+            organizationId={orgWithMembership.id}
+          />
+        )}
+        {CANCELLABLE_STATUSES.has(execution.status) && (
+          <CancelButton
             executionId={execution.id}
             organizationId={orgWithMembership.id}
           />
