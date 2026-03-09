@@ -321,7 +321,13 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
         const matchesDescription = template.description
           ?.toLowerCase()
           .includes(query);
-        if (!(matchesName || matchesDescription)) {
+        const matchesSubject = template.subject
+          ?.toLowerCase()
+          .includes(query);
+        const matchesPreviewText = template.previewText
+          ?.toLowerCase()
+          .includes(query);
+        if (!(matchesName || matchesDescription || matchesSubject || matchesPreviewText)) {
           return false;
         }
       }
@@ -433,6 +439,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
               <TableRow>
                 <TableHead className="w-12" />
                 <TableHead>Name</TableHead>
+                <TableHead>Subject</TableHead>
                 <TableHead>Channel</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
@@ -450,6 +457,9 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-5 w-48" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-40" />
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-5 w-16" />
@@ -686,6 +696,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                 >
                   Name
                 </SortableHeader>
+                <TableHead>Subject</TableHead>
                 <TableHead className="w-20">Channel</TableHead>
                 <SortableHeader
                   column="type"
@@ -723,7 +734,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                 <TableRow>
                   <TableCell
                     className="h-32 text-center text-muted-foreground"
-                    colSpan={8}
+                    colSpan={9}
                   >
                     {hasActiveFilters
                       ? "No templates match your filters"
@@ -1015,6 +1026,24 @@ function TemplateRow({
             </span>
           )}
         </div>
+      </TableCell>
+
+      {/* Subject & Preview */}
+      <TableCell>
+        {template.subject ? (
+          <div className="flex flex-col">
+            <span className="line-clamp-1 text-sm">
+              {template.subject}
+            </span>
+            {template.previewText && (
+              <span className="line-clamp-1 text-muted-foreground text-xs">
+                {template.previewText}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        )}
       </TableCell>
 
       {/* Channel */}
