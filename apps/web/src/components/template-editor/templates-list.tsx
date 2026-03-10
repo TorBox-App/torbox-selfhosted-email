@@ -321,13 +321,18 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
         const matchesDescription = template.description
           ?.toLowerCase()
           .includes(query);
-        const matchesSubject = template.subject
-          ?.toLowerCase()
-          .includes(query);
+        const matchesSubject = template.subject?.toLowerCase().includes(query);
         const matchesPreviewText = template.previewText
           ?.toLowerCase()
           .includes(query);
-        if (!(matchesName || matchesDescription || matchesSubject || matchesPreviewText)) {
+        if (
+          !(
+            matchesName ||
+            matchesDescription ||
+            matchesSubject ||
+            matchesPreviewText
+          )
+        ) {
           return false;
         }
       }
@@ -1032,9 +1037,7 @@ function TemplateRow({
       <TableCell>
         {template.subject ? (
           <div className="flex flex-col">
-            <span className="line-clamp-1 text-sm">
-              {template.subject}
-            </span>
+            <span className="line-clamp-1 text-sm">{template.subject}</span>
             {template.previewText && (
               <span className="line-clamp-1 text-muted-foreground text-xs">
                 {template.previewText}

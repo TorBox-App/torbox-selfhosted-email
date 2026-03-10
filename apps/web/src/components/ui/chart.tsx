@@ -93,11 +93,7 @@ ${colorConfig
     )
     .join("\n");
 
-  return (
-    <style>
-      {css}
-    </style>
-  );
+  return <style>{css}</style>;
 };
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
