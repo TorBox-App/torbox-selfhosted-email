@@ -266,8 +266,7 @@ export async function downloadMetadata(
   } catch (error) {
     if (
       error instanceof Error &&
-      (error.name === "NoSuchKey" ||
-        has404StatusCode(error))
+      (error.name === "NoSuchKey" || has404StatusCode(error))
     ) {
       return null;
     }
