@@ -72,7 +72,7 @@ export function NavUser() {
                   {user.email}
                 </span>
               </div>
-              <EllipsisVertical className="ml-auto size-4" />
+              <EllipsisVertical className="ml-auto size-4 group-data-[collapsible=icon]:hidden data-[state=open]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
