@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/ingest/"],
+        disallow: ["/api/", "/ingest/", "/_next/"],
       },
     ],
     sitemap: "https://wraps.dev/sitemap.xml",
