@@ -5,6 +5,7 @@ import {
   type QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import { db } from "@wraps/db";
+import { isOpenEventBot } from "../email-bot-detection";
 import { getOrAssumeRole } from "./credential-cache";
 
 type EmailEvent = {
@@ -169,7 +170,7 @@ export async function getEmailEngagementMetrics(
 
     if (existing) {
       existing.eventTypes.add(event.eventType);
-      if (event.eventType === "Open") {
+      if (event.eventType === "Open" && !isOpenEventBot(event.additionalData)) {
         existing.opens++;
       }
       if (event.eventType === "Click") {
@@ -192,7 +193,10 @@ export async function getEmailEngagementMetrics(
         to: event.to,
         sentAt: event.sentAt,
         eventTypes: new Set([event.eventType]),
-        opens: event.eventType === "Open" ? 1 : 0,
+        opens:
+          event.eventType === "Open" && !isOpenEventBot(event.additionalData)
+            ? 1
+            : 0,
         clicks: event.eventType === "Click" ? 1 : 0,
         hasDelivered: event.eventType === "Delivery",
         hasBounced: event.eventType === "Bounce",

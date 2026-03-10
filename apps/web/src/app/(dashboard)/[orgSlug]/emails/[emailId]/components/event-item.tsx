@@ -82,8 +82,7 @@ export function EventItem({ event, iconType, color, isLast }: EventItemProps) {
   const Icon = ICON_MAP[iconType as keyof typeof ICON_MAP] || Clock;
   const isAutomated =
     (event.type === "open" || event.type === "opened") &&
-    event.metadata?.userAgent != null &&
-    isBotOpen(event.metadata.userAgent as string);
+    isBotOpen(event.metadata?.userAgent as string | undefined | null);
 
   return (
     <div>

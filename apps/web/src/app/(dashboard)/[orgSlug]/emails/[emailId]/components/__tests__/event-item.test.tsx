@@ -47,6 +47,25 @@ describe("EventItem bot detection", () => {
     expect(screen.queryByText("Automated")).toBeNull();
   });
 
+  it("shows Automated badge for open events with no user agent", () => {
+    render(
+      <EventItem
+        color="text-purple-500"
+        event={{
+          type: "open",
+          timestamp: Date.now(),
+          metadata: {
+            ipAddress: "1.2.3.4",
+          },
+        }}
+        iconType="open"
+        isLast={false}
+      />
+    );
+
+    expect(screen.getByText("Automated")).toBeTruthy();
+  });
+
   it("does not show Automated badge for non-open events", () => {
     render(
       <EventItem

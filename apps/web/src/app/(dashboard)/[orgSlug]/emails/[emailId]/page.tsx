@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
+import { isOpenEventBot } from "@/lib/email-bot-detection";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import type { Email, EmailStatus } from "../types";
 import { CopyButton } from "./components/copy-button";
@@ -150,6 +151,11 @@ async function fetchEmail(
     let currentPriority = statusPriority.indexOf(finalStatus);
 
     for (const event of emailEvents) {
+      // Don't let bot opens promote status
+      if (event.eventType === "Open" && isOpenEventBot(event.additionalData)) {
+        continue;
+      }
+
       const eventStatus = mapEventTypeToStatus(event.eventType);
       const eventPriority = statusPriority.indexOf(eventStatus);
 
