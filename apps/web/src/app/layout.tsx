@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -9,12 +10,19 @@ import { QueryProvider } from "@/contexts/query-client-context";
 import { SessionProvider } from "@/contexts/session-context";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { inter } from "@/lib/fonts";
-import { Geist, Geist_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geistMono = Geist_Mono({subsets:['menu','cyrillic','latin','latin-ext'],weight:['100','200','300','400','500','600','700','800','900'],variable:'--font-geist-mono'});
+const geistMono = Geist_Mono({
+  subsets: ["cyrillic", "latin", "latin-ext"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-geist-mono",
+});
 
-const geist = Geist({subsets:['menu','cyrillic','latin','latin-ext'],weight:['100','200','300','400','500','600','700','800','900'],variable:'--font-geist'});
+const geist = Geist({
+  subsets: ["cyrillic", "latin", "latin-ext"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-geist",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -48,7 +56,15 @@ export default async function RootLayout({
 
   return (
     <html
-      className={cn("antialiased", inter.variable, isDark ? " dark" : "", "font-geist", "font-geist-mono", geist.variable, geistMono.variable)}
+      className={cn(
+        "antialiased",
+        inter.variable,
+        isDark ? " dark" : "",
+        "font-geist",
+        "font-geist-mono",
+        geist.variable,
+        geistMono.variable
+      )}
       lang="en"
     >
       <body className={inter.className}>

@@ -58,7 +58,7 @@
   --font-body: var(--font-geist);
   --font-mono: var(--font-geist-mono);
   --font-geist: var(--font-geist);
-  --font-geist-mono: var(--font-geist-mono)
+  --font-geist-mono: var(--font-geist-mono);
 }
 
 :root {
@@ -191,29 +191,40 @@
     font-size: 2.25rem;
     line-height: 1.15;
     letter-spacing: -0.025em;
-    font-weight: 700;}
+    font-weight: 700;
+  }
   h2 {
     font-family: var(--font-heading);
     font-size: 1.875rem;
     line-height: 1.2;
     letter-spacing: -0.02em;
-    font-weight: 600;}
+    font-weight: 600;
+  }
   h3 {
     font-family: var(--font-heading);
     font-size: 1.5rem;
     line-height: 1.3;
     letter-spacing: -0.015em;
-    font-weight: 500;}
-  h4, h5, h6 {
+    font-weight: 500;
+  }
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-heading);
-    letter-spacing: -0.01em;}
-  body, p {
+    letter-spacing: -0.01em;
+  }
+  body,
+  p {
     font-family: var(--font-body);
-    line-height: 1.6;}
-  code, pre {
-    font-family: var(--font-mono);}
+    line-height: 1.6;
+  }
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
   html {
-    @apply font-geist font-geist-mono;}
+    @apply font-geist font-geist-mono;
+  }
 }
 
 /* Ensure consistent font rendering across different DPI levels */
