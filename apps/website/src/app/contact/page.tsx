@@ -4,20 +4,20 @@ import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 
 export const metadata: Metadata = {
-  title: "Contact Us - Get Help with Wraps",
+  title: "Contact Us - Book a Call with Wraps",
   description:
-    "Need help or have questions about Wraps? Reach out via our contact form, Discord community, or GitHub. We're here to help.",
+    "Schedule a call with the Wraps team to discuss your email infrastructure needs. Or reach out via Discord or GitHub.",
   openGraph: {
     title: "Contact Us | Wraps",
     description:
-      "Need help or have questions about Wraps? Reach out via our contact form, Discord community, or GitHub.",
+      "Schedule a call with the Wraps team to discuss your email infrastructure needs.",
     type: "website",
     url: "https://wraps.dev/contact",
   },
   twitter: {
     title: "Contact Us | Wraps",
     description:
-      "Need help or have questions about Wraps? Reach out via our contact form, Discord community, or GitHub.",
+      "Schedule a call with the Wraps team to discuss your email infrastructure needs.",
   },
   alternates: {
     canonical: "https://wraps.dev/contact",

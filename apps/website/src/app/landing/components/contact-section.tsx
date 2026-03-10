@@ -1,56 +1,14 @@
 "use client";
 
-import { useForm } from "@tanstack/react-form";
-import { BookOpen, Github, Mail, MessageCircle } from "lucide-react";
+import Cal from "@calcom/embed-react";
+import { BookOpen, Github, MessageCircle } from "lucide-react";
 import Link from "next/link";
-import { memo, useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod";
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { trackEvent } from "@/utils/analytics";
-
-const contactFormSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters."),
-  lastName: z.string().min(2, "Last name must be at least 2 characters."),
-  email: z.string().email("Please enter a valid email address."),
-  subject: z.string().min(5, "Subject must be at least 5 characters."),
-  message: z.string().min(10, "Message must be at least 10 characters."),
-});
 
 const ContactSection = memo(function ContactSection() {
-  const [isSubmitted, setIsSubmitted] = useState(false);
-
-  const form = useForm({
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      subject: "",
-      message: "",
-    },
-    validators: {
-      onSubmit: contactFormSchema,
-    },
-    onSubmit: async ({ value }) => {
-      trackEvent("contact_form_submitted", {
-        email: value.email,
-        subject: value.subject,
-        firstName: value.firstName,
-        lastName: value.lastName,
-        message: value.message,
-      });
-      toast.success("Message sent! We'll get back to you soon.");
-      setIsSubmitted(true);
-      form.reset();
-      setTimeout(() => setIsSubmitted(false), 3000);
-    },
-  });
-
   return (
     <section className="py-24 sm:py-32" id="contact">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -59,11 +17,11 @@ const ContactSection = memo(function ContactSection() {
             Get In Touch
           </Badge>
           <h1 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-            Need help or have questions?
+            Book a call with us
           </h1>
           <p className="text-lg text-muted-foreground">
-            Our team is here to help you get the most out of Wraps. Choose the
-            best way to reach out to us.
+            Schedule a time to chat about your email infrastructure needs. We'll
+            help you get started with Wraps.
           </p>
         </div>
 
@@ -158,184 +116,13 @@ const ContactSection = memo(function ContactSection() {
             </Card>
           </div>
 
-          {/* Contact Form */}
+          {/* Cal.com Booking Embed */}
           <div className="order-1 lg:order-2 lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail aria-hidden="true" className="h-5 w-5" />
-                  Send us a message
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form
-                  className="space-y-6"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    form.handleSubmit();
-                  }}
-                >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <form.Field name="firstName">
-                      {(field) => (
-                        <div className="grid gap-2">
-                          <Label htmlFor={field.name}>First name</Label>
-                          <Input
-                            id={field.name}
-                            name={field.name}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="John"
-                            value={field.state.value}
-                          />
-                          {field.state.meta.errors.map((error) => (
-                            <p
-                              className="text-destructive text-sm"
-                              key={
-                                typeof error === "string"
-                                  ? error
-                                  : error?.message
-                              }
-                            >
-                              {typeof error === "string"
-                                ? error
-                                : error?.message}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                    </form.Field>
-                    <form.Field name="lastName">
-                      {(field) => (
-                        <div className="grid gap-2">
-                          <Label htmlFor={field.name}>Last name</Label>
-                          <Input
-                            id={field.name}
-                            name={field.name}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="Doe"
-                            value={field.state.value}
-                          />
-                          {field.state.meta.errors.map((error) => (
-                            <p
-                              className="text-destructive text-sm"
-                              key={
-                                typeof error === "string"
-                                  ? error
-                                  : error?.message
-                              }
-                            >
-                              {typeof error === "string"
-                                ? error
-                                : error?.message}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                    </form.Field>
-                  </div>
-                  <form.Field name="email">
-                    {(field) => (
-                      <div className="grid gap-2">
-                        <Label htmlFor={field.name}>Email</Label>
-                        <Input
-                          id={field.name}
-                          name={field.name}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="john@example.com"
-                          type="email"
-                          value={field.state.value}
-                        />
-                        {field.state.meta.errors.map((error) => (
-                          <p
-                            className="text-destructive text-sm"
-                            key={
-                              typeof error === "string" ? error : error?.message
-                            }
-                          >
-                            {typeof error === "string" ? error : error?.message}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </form.Field>
-                  <form.Field name="subject">
-                    {(field) => (
-                      <div className="grid gap-2">
-                        <Label htmlFor={field.name}>Subject</Label>
-                        <Input
-                          id={field.name}
-                          name={field.name}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="Component request, bug report, general inquiry..."
-                          value={field.state.value}
-                        />
-                        {field.state.meta.errors.map((error) => (
-                          <p
-                            className="text-destructive text-sm"
-                            key={
-                              typeof error === "string" ? error : error?.message
-                            }
-                          >
-                            {typeof error === "string" ? error : error?.message}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </form.Field>
-                  <form.Field name="message">
-                    {(field) => (
-                      <div className="grid gap-2">
-                        <Label htmlFor={field.name}>Message</Label>
-                        <Textarea
-                          className="min-h-50"
-                          id={field.name}
-                          name={field.name}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="Tell us how we can help you with Wraps..."
-                          rows={10}
-                          value={field.state.value}
-                        />
-                        {field.state.meta.errors.map((error) => (
-                          <p
-                            className="text-destructive text-sm"
-                            key={
-                              typeof error === "string" ? error : error?.message
-                            }
-                          >
-                            {typeof error === "string" ? error : error?.message}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </form.Field>
-                  <form.Subscribe
-                    selector={(state) => ({
-                      canSubmit: state.canSubmit,
-                      isSubmitting: state.isSubmitting,
-                    })}
-                  >
-                    {({ canSubmit, isSubmitting }) => (
-                      <Button
-                        className="w-full cursor-pointer"
-                        disabled={!canSubmit || isSubmitting || isSubmitted}
-                        type="submit"
-                      >
-                        {isSubmitting
-                          ? "Sending..."
-                          : isSubmitted
-                            ? "Message Sent!"
-                            : "Send Message"}
-                      </Button>
-                    )}
-                  </form.Subscribe>
-                </form>
-              </CardContent>
-            </Card>
+            <Cal
+              calLink="wraps/get-started-with-wraps"
+              config={{ layout: "month_view" }}
+              style={{ width: "100%", height: "100%", overflow: "scroll" }}
+            />
           </div>
         </div>
       </div>
