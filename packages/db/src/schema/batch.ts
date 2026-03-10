@@ -292,6 +292,14 @@ export const messageSend = pgTable(
     optedOutAt: timestamp("opted_out_at"),
 
     // ═══════════════════════════════════════════════════════════════════════
+    // ENGAGEMENT METADATA (from SES event callbacks)
+    // ═══════════════════════════════════════════════════════════════════════
+    openUserAgent: text("open_user_agent"),
+    openIpAddress: text("open_ip_address"),
+    clickUserAgent: text("click_user_agent"),
+    clickIpAddress: text("click_ip_address"),
+
+    // ═══════════════════════════════════════════════════════════════════════
     // ERROR TRACKING
     // ═══════════════════════════════════════════════════════════════════════
     error: text("error"),

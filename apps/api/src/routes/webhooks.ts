@@ -174,7 +174,13 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
           break;
 
         case "Open":
-          await processOpen(message, messageId, event.detail.open?.timestamp);
+          await processOpen(
+            message,
+            messageId,
+            event.detail.open?.timestamp,
+            event.detail.open?.userAgent,
+            event.detail.open?.ipAddress
+          );
           break;
 
         case "Click":
@@ -182,7 +188,9 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
             message,
             messageId,
             event.detail.click?.timestamp,
-            event.detail.click?.link
+            event.detail.click?.link,
+            event.detail.click?.userAgent,
+            event.detail.click?.ipAddress
           );
           break;
 
@@ -311,7 +319,9 @@ async function processDelivery(
 async function processOpen(
   message: MessageRecord,
   messageId: string,
-  timestamp?: string
+  timestamp?: string,
+  userAgent?: string,
+  ipAddress?: string
 ): Promise<void> {
   const openedAt = timestamp ? new Date(timestamp) : new Date();
 
@@ -321,12 +331,14 @@ async function processOpen(
     return;
   }
 
-  // Update messageSend status
+  // Update messageSend status with engagement metadata
   await db
     .update(messageSend)
     .set({
       status: "opened",
       openedAt,
+      openUserAgent: userAgent ?? null,
+      openIpAddress: ipAddress ?? null,
     })
     .where(eq(messageSend.id, message.id));
 
@@ -361,7 +373,9 @@ async function processClick(
   message: MessageRecord,
   messageId: string,
   timestamp?: string,
-  link?: string
+  link?: string,
+  userAgent?: string,
+  ipAddress?: string
 ): Promise<void> {
   const clickedAt = timestamp ? new Date(timestamp) : new Date();
 
@@ -371,13 +385,15 @@ async function processClick(
     return;
   }
 
-  // Update messageSend status
+  // Update messageSend status with engagement metadata
   await db
     .update(messageSend)
     .set({
       status: "clicked",
       clickedAt,
       clickedUrl: link ?? null,
+      clickUserAgent: userAgent ?? null,
+      clickIpAddress: ipAddress ?? null,
     })
     .where(eq(messageSend.id, message.id));
 

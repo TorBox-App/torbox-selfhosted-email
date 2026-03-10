@@ -7,6 +7,7 @@ import { unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
+import { aggregateEmailEvents } from "@/lib/email-aggregation";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { EmailAnalytics } from "./components/email-analytics";
 import { EmailsTable } from "./components/emails-table";
@@ -21,23 +22,6 @@ type EmailsPageProps = {
     limit?: string;
   }>;
 };
-
-// Map SES event types to our EmailStatus
-function mapEventTypeToStatus(eventType: string): EmailStatus {
-  const mapping: Record<string, EmailStatus> = {
-    Send: "sent",
-    Delivery: "delivered",
-    Open: "opened",
-    Click: "clicked",
-    Bounce: "bounced",
-    Complaint: "complained",
-    Reject: "rejected",
-    "Rendering Failure": "rendering_failure",
-    RenderingFailure: "rendering_failure",
-    DeliveryDelay: "delivery_delay",
-  };
-  return (mapping[eventType] as EmailStatus) || "sent";
-}
 
 async function fetchEmails(
   organizationId: string,
@@ -85,95 +69,8 @@ async function fetchEmails(
       })
     );
 
-    // Group events by messageId
-    const emailsMap = new Map<
-      string,
-      {
-        id: string;
-        messageId: string;
-        from: string;
-        to: string[];
-        subject: string;
-        status: EmailStatus;
-        sentAt: number;
-        eventTypes: Set<string>;
-        hasOpened: boolean;
-        hasClicked: boolean;
-      }
-    >();
-
-    for (const events of allEvents) {
-      for (const event of events) {
-        const existing = emailsMap.get(event.messageId);
-
-        if (existing) {
-          existing.eventTypes.add(event.eventType);
-          if (event.eventType === "Open") {
-            existing.hasOpened = true;
-          }
-          if (event.eventType === "Click") {
-            existing.hasClicked = true;
-          }
-
-          // Always use the earliest sentAt (should be consistent, but this ensures it)
-          if (event.sentAt < existing.sentAt) {
-            existing.sentAt = event.sentAt;
-          }
-
-          // Update status to most significant event
-          const newStatus = mapEventTypeToStatus(event.eventType);
-          const statusPriority: EmailStatus[] = [
-            "clicked",
-            "complained",
-            "bounced",
-            "opened",
-            "delivered",
-            "sent",
-            "failed",
-            "rejected",
-            "rendering_failure",
-            "delivery_delay",
-          ];
-
-          const currentPriority = statusPriority.indexOf(existing.status);
-          const newPriority = statusPriority.indexOf(newStatus);
-
-          if (newPriority < currentPriority) {
-            existing.status = newStatus;
-          }
-        } else {
-          emailsMap.set(event.messageId, {
-            id: event.messageId,
-            messageId: event.messageId,
-            from: event.from,
-            to: event.to,
-            subject: event.subject,
-            status: mapEventTypeToStatus(event.eventType),
-            sentAt: event.sentAt,
-            eventTypes: new Set([event.eventType]),
-            hasOpened: event.eventType === "Open",
-            hasClicked: event.eventType === "Click",
-          });
-        }
-      }
-    }
-
-    // Convert to array and sort by sentAt (newest first)
-    const emails = Array.from(emailsMap.values())
-      .map((email) => ({
-        id: email.id,
-        messageId: email.messageId,
-        from: email.from,
-        to: email.to,
-        subject: email.subject,
-        status: email.status,
-        sentAt: email.sentAt,
-        eventCount: email.eventTypes.size,
-        hasOpened: email.hasOpened,
-        hasClicked: email.hasClicked,
-      }))
-      .sort((a, b) => b.sentAt - a.sentAt)
-      .slice(0, limit);
+    // Group events by messageId, filtering out bot opens
+    const emails = aggregateEmailEvents(allEvents).slice(0, limit);
 
     // If DynamoDB returned no data, fall back to PostgreSQL messageSend table
     if (emails.length === 0) {

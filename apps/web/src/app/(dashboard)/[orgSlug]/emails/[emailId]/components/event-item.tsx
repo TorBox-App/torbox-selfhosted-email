@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bot,
   Check,
   ChevronDown,
   ChevronRight,
@@ -13,6 +14,7 @@ import {
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { isBotOpen } from "@/lib/email-bot-detection";
 
 type EventItemProps = {
   event: {
@@ -78,6 +80,10 @@ export function EventItem({ event, iconType, color, isLast }: EventItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasMetadata = event.metadata && Object.keys(event.metadata).length > 0;
   const Icon = ICON_MAP[iconType as keyof typeof ICON_MAP] || Clock;
+  const isAutomated =
+    (event.type === "open" || event.type === "opened") &&
+    event.metadata?.userAgent != null &&
+    isBotOpen(event.metadata.userAgent as string);
 
   return (
     <div>
@@ -109,6 +115,12 @@ export function EventItem({ event, iconType, color, isLast }: EventItemProps) {
                 <div className="font-semibold capitalize">
                   {event.type.replace("_", " ")}
                 </div>
+                {isAutomated && (
+                  <Badge className="text-xs" variant="secondary">
+                    <Bot className="mr-1 h-3 w-3" />
+                    Automated
+                  </Badge>
+                )}
                 {hasMetadata && event.metadata && (
                   <Badge className="text-xs" variant="outline">
                     {Object.keys(event.metadata).length} detail
