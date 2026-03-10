@@ -12,10 +12,10 @@ import { Footer } from "./_components/footer";
 
 // -- Metadata --
 
-export const subject = "quick question{{#if firstName}}, {{firstName}}{{/if}}";
+export const subject = "your first send is 5 lines of code";
 export const emailType = "marketing" as const;
 export const previewText =
-  "Your SES infrastructure has been sitting idle for 2 days.";
+  "The hardest part is done — here's how to send your first email.";
 
 // -- Test Data (for preview) --
 
@@ -44,9 +44,8 @@ export default function NudgeSendFirstEmail({ unsubscribeUrl }: Props) {
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              Your email infrastructure deployed 2 days ago but you haven&apos;t
-              sent anything yet. The hardest part is done &mdash; sending is 5
-              lines of code.
+              Your email infrastructure is deployed and ready to go. Sending
+              your first email is just 5 lines of code.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">

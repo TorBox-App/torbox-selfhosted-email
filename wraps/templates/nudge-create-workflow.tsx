@@ -49,8 +49,8 @@ export default function NudgeCreateWorkflow({
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              You&apos;re sending emails &mdash; that&apos;s great. But most
-              teams stop there and manually trigger every send.
+              You&apos;re sending emails &mdash; that&apos;s great. There&apos;s
+              one more thing that makes a huge difference &mdash; workflows.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
