@@ -9,6 +9,12 @@ import { QueryProvider } from "@/contexts/query-client-context";
 import { SessionProvider } from "@/contexts/session-context";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { inter } from "@/lib/fonts";
+import { Geist, Geist_Mono } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geistMono = Geist_Mono({subsets:['menu','cyrillic','latin','latin-ext'],weight:['100','200','300','400','500','600','700','800','900'],variable:'--font-geist-mono'});
+
+const geist = Geist({subsets:['menu','cyrillic','latin','latin-ext'],weight:['100','200','300','400','500','600','700','800','900'],variable:'--font-geist'});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -42,7 +48,7 @@ export default async function RootLayout({
 
   return (
     <html
-      className={`${inter.variable} antialiased${isDark ? " dark" : ""}`}
+      className={cn("antialiased", inter.variable, isDark ? " dark" : "", "font-geist", "font-geist-mono", geist.variable, geistMono.variable)}
       lang="en"
     >
       <body className={inter.className}>
