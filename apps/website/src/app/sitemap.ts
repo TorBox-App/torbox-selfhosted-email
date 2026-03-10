@@ -28,7 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         ? 1
         : route.startsWith("/tools")
           ? 0.9
-          : route.startsWith("/docs")
+          : route.startsWith("/docs") || route.startsWith("/compare")
             ? 0.8
             : 0.7,
   }));

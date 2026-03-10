@@ -65,6 +65,11 @@ const featuresItems = [
     description: "Wraps Platform for templates & broadcasts",
   },
   {
+    name: "Compare",
+    href: "/compare",
+    description: "Honest comparisons with Resend, SendGrid & more",
+  },
+  {
     name: "Email Tools",
     href: "/tools",
     description: "Check your email deliverability setup",
