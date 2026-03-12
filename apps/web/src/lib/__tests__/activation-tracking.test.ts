@@ -26,20 +26,70 @@ vi.mock("@wraps.dev/client", () => ({
 }));
 
 // Mock database — return count=1 so activation events fire
+const mockDbWhere = vi.fn(() => Promise.resolve([{ count: 1 }]));
+const mockDbInsertOnConflict = vi.fn(() => Promise.resolve());
+const mockFindManyAwsAccounts = vi.fn(() =>
+  Promise.resolve([
+    {
+      isVerified: true,
+      features: {
+        email: {
+          identities: [{ type: "DOMAIN", identity: "example.com" }],
+        },
+      },
+    },
+  ])
+);
 vi.mock("@wraps/db", () => ({
   db: {
     select: vi.fn(() => ({
       from: vi.fn(() => ({
-        where: vi.fn(() => Promise.resolve([{ count: 1 }])),
+        where: mockDbWhere,
       })),
     })),
+    insert: vi.fn(() => ({
+      values: vi.fn(() => ({
+        onConflictDoUpdate: mockDbInsertOnConflict,
+      })),
+    })),
+    query: {
+      awsAccount: {
+        findMany: () => mockFindManyAwsAccounts(),
+      },
+    },
   },
-  awsAccount: { organizationId: "organizationId" },
+  awsAccount: { organizationId: "organizationId", isVerified: "isVerified" },
   contact: { organizationId: "organizationId" },
   template: { organizationId: "organizationId" },
   batchSend: { organizationId: "organizationId" },
   apiKey: { organizationId: "organizationId" },
   messageSend: { organizationId: "organizationId", status: "status" },
+  invitation: { organizationId: "organizationId", status: "status" },
+  organizationExtension: { organizationId: "organizationId" },
+}));
+
+// Mock setup-status for computeActivationScore
+const mockGetSetupStatus = vi.fn((_orgId: string) =>
+  Promise.resolve({
+    setupStatus: {
+      hasAwsAccount: true,
+      hasVerifiedDomain: true,
+      hasSentEmail: false,
+      hasTemplate: true,
+      hasBroadcast: false,
+      hasPlatformConnection: false,
+      verifiedDomains: [],
+      awsRegion: null,
+      emailCount: 0,
+      sandboxStatus: null,
+      awsAccountId: null,
+      domainCount: 0,
+    },
+    awsAccount: null,
+  })
+);
+vi.mock("../setup-status", () => ({
+  getSetupStatus: (orgId: string) => mockGetSetupStatus(orgId),
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -50,6 +100,7 @@ vi.mock("drizzle-orm", () => ({
 
 // Import AFTER mocks
 import {
+  computeActivationScore,
   trackApiKeyCreated,
   trackAwsConnected,
   trackBroadcastCreated,
@@ -57,6 +108,8 @@ import {
   trackContactsImported,
   trackDomainVerified,
   trackFirstEmailSent,
+  trackOnboardingPathChosen,
+  trackTeammateInvited,
   trackTemplateCreated,
   trackTemplatePublished,
   trackWorkflowCreated,
@@ -285,6 +338,99 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
           organization_id: "org-123",
         }),
       },
+    });
+  });
+
+  // ─── trackTeammateInvited ─────────────────────────────────────────────────
+
+  it("trackTeammateInvited should await emit() so the HTTP call completes", async () => {
+    let postResolved = false;
+    mockPost.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            postResolved = true;
+            resolve({ data: { success: true }, error: null });
+          }, 10);
+        })
+    );
+
+    await trackTeammateInvited("user@example.com", "org-123", {
+      invitedEmail: "colleague@example.com",
+      role: "member",
+    });
+
+    expect(postResolved).toBe(true);
+  });
+
+  it("trackTeammateInvited should emit activation event on first invitation", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackTeammateInvited("user@example.com", "org-123", {
+      invitedEmail: "colleague@example.com",
+      role: "member",
+    });
+
+    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
+      body: {
+        name: "teammate.invited",
+        contactEmail: "user@example.com",
+        properties: expect.objectContaining({
+          organization_id: "org-123",
+          invited_email: "colleague@example.com",
+        }),
+      },
+    });
+
+    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
+      body: {
+        name: "activation.teammate_invited",
+        contactEmail: "user@example.com",
+        properties: expect.objectContaining({
+          organization_id: "org-123",
+        }),
+      },
+    });
+  });
+
+  // ─── trackOnboardingPathChosen ────────────────────────────────────────────
+
+  it("trackOnboardingPathChosen should emit event with path", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackOnboardingPathChosen("user@example.com", "org-123", {
+      path: "start_building",
+    });
+
+    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
+      body: {
+        name: "onboarding.path_chosen",
+        contactEmail: "user@example.com",
+        properties: expect.objectContaining({
+          organization_id: "org-123",
+          path: "start_building",
+        }),
+      },
+    });
+  });
+
+  // ─── computeActivationScore ───────────────────────────────────────────────
+
+  it("computeActivationScore should return score and milestones from setup status + counts", async () => {
+    // Mock: 3 true milestones from setupStatus (hasAwsAccount, hasVerifiedDomain, hasTemplate)
+    // Mock: count=1 for contacts and invitations (2 more true milestones)
+    // Total expected: 5
+    const { score, milestones } = await computeActivationScore("org-123");
+
+    expect(score).toBe(5);
+    expect(milestones).toEqual({
+      hasTemplate: true,
+      hasBroadcast: false,
+      hasContact: true,
+      hasTeammateInvited: true,
+      hasAwsAccount: true,
+      hasVerifiedDomain: true,
+      hasSentEmail: false,
     });
   });
 });

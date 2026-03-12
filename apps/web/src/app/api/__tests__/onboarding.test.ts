@@ -281,4 +281,34 @@ describe("Onboarding API - POST /api/[orgSlug]/onboarding/complete", () => {
     expect(response.status).toBe(403);
     expect(data.error).toBe("Forbidden");
   });
+
+  it("should persist onboarding path when provided", async () => {
+    const { POST } = await import("../[orgSlug]/onboarding/complete/route");
+
+    const request = new Request(
+      "http://localhost/api/onboarding-test-org/onboarding/complete",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: "start_building" }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+
+    // Verify onboardingPath was persisted
+    const extension = await db.query.organizationExtension.findFirst({
+      where: eq(organizationExtension.organizationId, testOrganization.id),
+    });
+
+    expect(extension?.onboardingPath).toBe("start_building");
+    expect(extension?.onboardingCompleted).toBe(true);
+  });
 });

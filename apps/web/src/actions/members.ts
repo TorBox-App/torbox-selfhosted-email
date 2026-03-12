@@ -6,6 +6,7 @@ import { invitation, member, user } from "@wraps/db/schema/auth";
 import { getWrapsClient } from "@wraps/email/lib/client";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { trackTeammateInvited } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 
 export type MemberWithUser = {
@@ -429,6 +430,11 @@ export async function inviteMember(
       // Continue even if email fails - the invitation is still created
       // The user can manually share the link or we can retry later
     }
+
+    await trackTeammateInvited(session.user.id, organizationId, {
+      invitedEmail: email,
+      role,
+    });
 
     // Revalidate the members page
     if (org.slug) {

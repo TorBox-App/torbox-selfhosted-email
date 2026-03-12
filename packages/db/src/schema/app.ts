@@ -33,6 +33,10 @@ export const organizationExtension = pgTable("organization_extension", {
   // Onboarding tracking
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  onboardingPath: text("onboarding_path"), // "start_building" | "connect_aws" | null
+
+  // Activation tracking
+  activationScore: integer("activation_score").default(0).notNull(),
 
   // Sender Defaults (pre-fill for new workflows/broadcasts)
   defaultAwsAccountId: text("default_aws_account_id").references(
