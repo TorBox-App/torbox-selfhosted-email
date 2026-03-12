@@ -6,6 +6,7 @@ import { invitation, member, user } from "@wraps/db/schema/auth";
 import { sendInvitationEmail } from "@wraps/email/emails/invitation";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { trackTeammateInvited } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
 
@@ -53,7 +54,7 @@ export async function listMembers(
 ): Promise<ListMembersResult> {
   try {
     const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
+      headers: await headers(),
     });
 
     if (!session?.user) {
@@ -171,7 +172,7 @@ export async function updateMemberRole(
 ): Promise<UpdateMemberRoleResult> {
   try {
     const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
+      headers: await headers(),
     });
 
     if (!session?.user) {
@@ -299,7 +300,7 @@ export async function inviteMember(
     }
 
     const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
+      headers: await headers(),
     });
 
     if (!session?.user) {
@@ -511,7 +512,7 @@ export async function removeMember(
 ): Promise<RemoveMemberResult> {
   try {
     const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
+      headers: await headers(),
     });
 
     if (!session?.user) {
@@ -625,7 +626,7 @@ export async function cancelInvitation(
 ): Promise<CancelInvitationResult> {
   try {
     const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
+      headers: await headers(),
     });
 
     if (!session?.user) {

@@ -2,6 +2,7 @@ import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { organizationExtension } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { computeActivationScore } from "@/lib/activation-tracking";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -18,7 +19,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const { orgSlug } = await context.params;
 
     const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
+      headers: await headers(),
     });
 
     if (!session?.user) {

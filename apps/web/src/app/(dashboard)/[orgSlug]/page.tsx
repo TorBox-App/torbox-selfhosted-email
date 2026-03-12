@@ -7,6 +7,7 @@ import {
   workflowExecution,
 } from "@wraps/db";
 import { count, desc, eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { getSetupStatus } from "@/lib/setup-status";
@@ -141,7 +142,7 @@ export default async function OrganizationDashboard({
 }: OrganizationDashboardProps) {
   const { orgSlug } = await params;
   const session = await auth.api.getSession({
-    headers: await import("next/headers").then((mod) => mod.headers()),
+    headers: await headers(),
   });
 
   if (!session?.user) {

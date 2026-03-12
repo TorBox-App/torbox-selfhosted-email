@@ -286,11 +286,16 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   // Completion logic — defined before early returns so EFFECT 6 can call it
   const completeOnboarding = async () => {
     if (!orgSlug) return;
-    await fetch(`/api/${orgSlug}/onboarding/complete`, {
+    const res = await fetch(`/api/${orgSlug}/onboarding/complete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ path: onboardingPath ?? "connect_aws" }),
     });
+    if (!res.ok) {
+      toast.error("Failed to complete onboarding. Please try again.");
+      hasRedirected.current = false;
+      return;
+    }
     await queryClient.invalidateQueries({
       queryKey: ["onboarding-status", orgSlug],
     });
@@ -402,6 +407,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
         onConnected={handleConnected}
         onNext={handleNext}
         onSkip={handleSkip}
+        orgSlug={orgSlug}
         organizationId={currentOrg.id}
       />
     </div>

@@ -2,6 +2,7 @@ import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { organizationExtension } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { trackOnboardingCompleted } from "@/lib/activation-tracking";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -19,7 +20,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Authenticate user
     const session = await auth.api.getSession({
-      headers: await import("next/headers").then((mod) => mod.headers()),
+      headers: await headers(),
     });
 
     if (!session?.user) {

@@ -11,7 +11,10 @@ import {
 } from "@wraps/db";
 import { createPlatformClient } from "@wraps.dev/client";
 import { and, count, eq } from "drizzle-orm";
+import { logger } from "./logger";
 import { getPostHogClient } from "./posthog-server";
+
+const log = logger.child({ module: "activation-tracking" });
 
 /** Fire-and-forget PostHog capture. Never throws. */
 function capture(
@@ -49,10 +52,10 @@ async function emit(
       },
     });
     if (error) {
-      console.error(`[activation-tracking] emit ${event} failed:`, error);
+      log.error({ event, error }, "Platform event emission failed");
     }
   } catch (err) {
-    console.error(`[activation-tracking] emit ${event} threw:`, err);
+    log.error({ event, err }, "Platform event emission threw");
   }
 }
 
@@ -214,7 +217,7 @@ export async function trackOnboardingCompleted(
     if (properties?.path) {
       props.path = properties.path;
     }
-    capture(organizationId, "onboarding_completed", props);
+    capture(userEmail, "onboarding_completed", props);
 
     // Store onboarding path on contact properties BEFORE emitting the event,
     // so workflow conditions can read the path when the gate evaluates
@@ -463,44 +466,7 @@ export async function computeActivationScore(
 
 async function updateActivationScore(organizationId: string): Promise<void> {
   try {
-    const [
-      templateCount,
-      broadcastCount,
-      contactCount,
-      invitationCount,
-      sentMessageCount,
-      verifiedAccounts,
-    ] = await Promise.all([
-      countTemplates(organizationId),
-      countBatchSends(organizationId),
-      countContacts(organizationId),
-      countInvitations(organizationId),
-      countSentMessages(organizationId),
-      db.query.awsAccount.findMany({
-        where: and(
-          eq(awsAccount.organizationId, organizationId),
-          eq(awsAccount.isVerified, true)
-        ),
-      }),
-    ]);
-
-    const hasVerifiedDomain = verifiedAccounts.some((a) => {
-      const features = a.features as {
-        email?: { identities?: Array<{ type: string }> };
-      } | null;
-      return (features?.email?.identities ?? []).some(
-        (i) => i.type === "DOMAIN"
-      );
-    });
-
-    let score = 0;
-    if (templateCount > 0) score++;
-    if (broadcastCount > 0) score++;
-    if (contactCount > 0) score++;
-    if (invitationCount > 0) score++;
-    if (sentMessageCount > 0) score++;
-    if (verifiedAccounts.length > 0) score++;
-    if (hasVerifiedDomain) score++;
+    const { score } = await computeActivationScore(organizationId);
 
     await db
       .insert(organizationExtension)
