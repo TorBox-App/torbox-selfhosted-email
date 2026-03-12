@@ -26,6 +26,18 @@ export default defineWorkflow({
   settings: { allowReentry: false },
 
   steps: [
+    // ── Gate: skip start_building users (they have their own workflow) ─
+    // Uses not_equals so existing users without a path continue normally
+    condition("check-path", {
+      field: "contact.properties.onboardingPath",
+      operator: "not_equals",
+      value: "start_building",
+      branches: {
+        yes: [],
+        no: [exit("wrong-path")],
+      },
+    }),
+
     // ── +2 hours: AWS connection check ────────────────────────────────
     delay("wait-2h", { hours: 2 }),
     condition("check-aws", {

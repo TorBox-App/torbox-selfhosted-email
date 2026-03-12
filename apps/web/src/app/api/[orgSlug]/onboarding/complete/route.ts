@@ -74,7 +74,9 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     // Emit onboarding.completed event to trigger workflows (e.g. activation drip)
-    await trackOnboardingCompleted(session.user.email, orgWithMembership.id);
+    await trackOnboardingCompleted(session.user.email, orgWithMembership.id, {
+      path: onboardingPath as "start_building" | "connect_aws" | undefined,
+    });
 
     return NextResponse.json({
       success: true,

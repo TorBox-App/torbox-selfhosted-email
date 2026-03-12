@@ -14,14 +14,18 @@ vi.mock("../posthog-server", () => ({
   })),
 }));
 
-// Track whether POST was called and completed
+// Track whether POST/PATCH were called and completed
 const mockPost = vi.fn(() =>
+  Promise.resolve({ data: { success: true }, error: null })
+);
+const mockPatch = vi.fn(() =>
   Promise.resolve({ data: { success: true }, error: null })
 );
 
 vi.mock("@wraps.dev/client", () => ({
   createPlatformClient: vi.fn(() => ({
     POST: mockPost,
+    PATCH: mockPatch,
   })),
 }));
 
@@ -108,6 +112,7 @@ import {
   trackContactsImported,
   trackDomainVerified,
   trackFirstEmailSent,
+  trackOnboardingCompleted,
   trackOnboardingPathChosen,
   trackTeammateInvited,
   trackTemplateCreated,
@@ -412,6 +417,78 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
         }),
       },
     });
+  });
+
+  // ─── trackOnboardingCompleted ────────────────────────────────────────────
+
+  it("trackOnboardingCompleted should PATCH contact properties BEFORE emitting event", async () => {
+    const callOrder: string[] = [];
+    mockPatch.mockImplementation(() => {
+      callOrder.push("PATCH");
+      return Promise.resolve({ data: { success: true }, error: null });
+    });
+    mockPost.mockImplementation(() => {
+      callOrder.push("POST");
+      return Promise.resolve({ data: { success: true }, error: null });
+    });
+
+    await trackOnboardingCompleted("user@example.com", "org-123", {
+      path: "start_building",
+    });
+
+    // PATCH must happen before POST so the workflow engine can read the path
+    // when it evaluates the gate condition on the onboarding.completed event
+    expect(callOrder.indexOf("PATCH")).toBeLessThan(
+      callOrder.indexOf("POST")
+    );
+
+    // Should PATCH contact to store onboarding path in properties
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/v1/contacts/{id}",
+      expect.objectContaining({
+        params: expect.objectContaining({
+          path: expect.objectContaining({ id: "user@example.com" }),
+        }),
+        body: expect.objectContaining({
+          properties: expect.objectContaining({
+            onboardingPath: "start_building",
+          }),
+        }),
+      })
+    );
+
+    // Should emit onboarding.completed event with path in properties
+    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
+      body: {
+        name: "onboarding.completed",
+        contactEmail: "user@example.com",
+        createIfMissing: true,
+        properties: expect.objectContaining({
+          organization_id: "org-123",
+          path: "start_building",
+        }),
+      },
+    });
+  });
+
+  it("trackOnboardingCompleted should work without path (backward compat)", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackOnboardingCompleted("user@example.com", "org-123");
+
+    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
+      body: {
+        name: "onboarding.completed",
+        contactEmail: "user@example.com",
+        createIfMissing: true,
+        properties: {
+          organization_id: "org-123",
+        },
+      },
+    });
+
+    // Should NOT patch contact when no path provided
+    expect(mockPatch).not.toHaveBeenCalled();
   });
 
   // ─── computeActivationScore ───────────────────────────────────────────────

@@ -204,11 +204,37 @@ export async function trackFirstEmailSent(
 
 export async function trackOnboardingCompleted(
   userEmail: string,
-  organizationId: string
+  organizationId: string,
+  properties?: { path?: "start_building" | "connect_aws" }
 ) {
   try {
-    const props = { organization_id: organizationId };
+    const props: Record<string, unknown> = {
+      organization_id: organizationId,
+    };
+    if (properties?.path) {
+      props.path = properties.path;
+    }
     capture(organizationId, "onboarding_completed", props);
+
+    // Store onboarding path on contact properties BEFORE emitting the event,
+    // so workflow conditions can read the path when the gate evaluates
+    if (properties?.path) {
+      try {
+        const key = process.env.WRAPS_API_KEY;
+        if (key) {
+          const client = createPlatformClient({ apiKey: key });
+          await client.PATCH("/v1/contacts/{id}", {
+            params: { path: { id: userEmail } },
+            body: {
+              properties: { onboardingPath: properties.path },
+            },
+          });
+        }
+      } catch {
+        // contact properties update is best-effort
+      }
+    }
+
     await emit(userEmail, "onboarding.completed", props, {
       createIfMissing: true,
     });
