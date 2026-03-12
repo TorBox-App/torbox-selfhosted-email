@@ -3,12 +3,24 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { messageSend } from "@wraps/db/schema/batch";
 import { and, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { Mail } from "lucide-react";
 import { unstable_cache } from "next/cache";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { EmailStatus } from "@/app/(dashboard)/[orgSlug]/emails/types";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { aggregateEmailEvents } from "@/lib/email-aggregation";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { checkHasAwsAccounts } from "@/lib/setup-status";
 import { EmailAnalytics } from "./components/email-analytics";
 import { EmailsTable } from "./components/emails-table";
 import type { EmailListItem } from "./types";
@@ -142,6 +154,46 @@ export default async function EmailsPage({
 
   if (!orgWithMembership) {
     redirect("/");
+  }
+
+  // Check if org has any AWS accounts before fetching
+  const hasAccounts = await checkHasAwsAccounts(orgWithMembership.id);
+
+  if (!hasAccounts) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-4 lg:p-6">
+        <Empty className="max-w-2xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Mail className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>Email Activity</EmptyTitle>
+            <EmptyDescription>
+              See every email your application sends — delivery status, opens,
+              clicks, and bounces in real time.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <div className="flex gap-2">
+              <Button asChild variant="outline">
+                <Link href={`/${orgSlug}/setup`}>
+                  Connect AWS to start sending
+                </Link>
+              </Button>
+              <Button asChild variant="ghost">
+                <a
+                  href="https://docs.wraps.dev/email"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  View documentation
+                </a>
+              </Button>
+            </div>
+          </EmptyContent>
+        </Empty>
+      </div>
+    );
   }
 
   const getCachedEmails = unstable_cache(

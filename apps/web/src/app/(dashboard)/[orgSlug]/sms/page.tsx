@@ -2,10 +2,22 @@ import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
+import { MessageSquare } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { SMSStatus } from "@/app/(dashboard)/[orgSlug]/sms/types";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { querySMSEvents } from "@/lib/aws/sms-voice";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { checkHasAwsAccounts } from "@/lib/setup-status";
 import { SMSTable } from "./components/sms-table";
 import type { SMSListItem } from "./types";
 
@@ -174,6 +186,46 @@ export default async function SMSPage({ params, searchParams }: SMSPageProps) {
 
   if (!orgWithMembership) {
     redirect("/");
+  }
+
+  // Check if org has any AWS accounts before fetching
+  const hasAccounts = await checkHasAwsAccounts(orgWithMembership.id);
+
+  if (!hasAccounts) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-4 lg:p-6">
+        <Empty className="max-w-2xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MessageSquare className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>SMS Messages</EmptyTitle>
+            <EmptyDescription>
+              View your SMS messaging history — delivery status, phone numbers,
+              and message details across all your AWS accounts.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <div className="flex gap-2">
+              <Button asChild variant="outline">
+                <Link href={`/${orgSlug}/setup`}>
+                  Connect AWS to start sending
+                </Link>
+              </Button>
+              <Button asChild variant="ghost">
+                <a
+                  href="https://docs.wraps.dev/sms"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  View documentation
+                </a>
+              </Button>
+            </div>
+          </EmptyContent>
+        </Empty>
+      </div>
+    );
   }
 
   // Fetch SMS messages directly

@@ -1,6 +1,18 @@
 import { auth } from "@wraps/auth";
+import { BarChart3 } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { checkHasAwsAccounts } from "@/lib/setup-status";
 import { SMSDeliverabilityChart } from "./components/sms-deliverability-chart";
 import { SMSOverview } from "./components/sms-overview";
 import { SMSPhoneNumbers } from "./components/sms-phone-numbers";
@@ -34,6 +46,35 @@ export default async function SMSAnalyticsPage({
 
   if (!orgWithMembership) {
     redirect("/");
+  }
+
+  // Check if org has any AWS accounts
+  const hasAccounts = await checkHasAwsAccounts(orgWithMembership.id);
+
+  if (!hasAccounts) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-4 lg:p-6">
+        <Empty className="max-w-2xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <BarChart3 className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>SMS Analytics</EmptyTitle>
+            <EmptyDescription>
+              Monitor your SMS performance — delivery rates, spend tracking,
+              phone number health, and registration status.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button asChild variant="outline">
+              <Link href={`/${orgSlug}/setup`}>
+                Connect AWS to see analytics
+              </Link>
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </div>
+    );
   }
 
   return (
