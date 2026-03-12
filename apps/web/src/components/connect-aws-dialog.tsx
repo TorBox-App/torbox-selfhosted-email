@@ -38,12 +38,14 @@ export function ConnectAwsDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Connect AWS to continue</AlertDialogTitle>
-          <AlertDialogDescription>{descriptions[action]}</AlertDialogDescription>
+          <AlertDialogDescription>
+            {descriptions[action]}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <Button asChild>
-            <Link href={`/${orgSlug}/onboarding`}>Connect AWS</Link>
+            <Link href={`/${orgSlug}/setup`}>Connect AWS</Link>
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

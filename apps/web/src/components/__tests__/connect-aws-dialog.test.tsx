@@ -71,7 +71,7 @@ describe("ConnectAwsDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("should link Connect AWS button to /{orgSlug}/onboarding", () => {
+  it("should link Connect AWS button to /{orgSlug}/setup", () => {
     render(
       <ConnectAwsDialog
         action="send"
@@ -82,7 +82,7 @@ describe("ConnectAwsDialog", () => {
     );
 
     const link = screen.getByRole("link", { name: /connect aws/i });
-    expect(link).toHaveAttribute("href", "/my-company/onboarding");
+    expect(link).toHaveAttribute("href", "/my-company/setup");
   });
 
   it("should call onOpenChange with false when Cancel is clicked", async () => {
