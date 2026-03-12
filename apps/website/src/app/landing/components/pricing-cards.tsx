@@ -1,9 +1,9 @@
 "use client";
 
-import { Check } from "lucide-react";
 import { memo, useState } from "react";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Button } from "@/components/ui/button";
+import { WrapsMotif } from "@/components/wraps-motif";
 import {
   type BillingInterval,
   getCtaLink,
@@ -113,10 +113,8 @@ export const PricingCards = memo(function PricingCards({
               <ul className="space-y-2">
                 {plan.features.map((feature) => (
                   <li className="flex items-start gap-2" key={feature}>
-                    <Check
-                      aria-hidden="true"
-                      className={`mt-0.5 size-4 shrink-0 ${plan.highlight ? "text-orange-500" : "text-muted-foreground"}`}
-                      strokeWidth={2.5}
+                    <WrapsMotif
+                      className="mt-0.5 size-3 shrink-0 text-orange-500/70"
                     />
                     <span className="text-sm">
                       <FeatureText text={feature} />

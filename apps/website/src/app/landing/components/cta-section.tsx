@@ -1,3 +1,4 @@
+import { WrapsMotif } from "@/components/wraps-motif";
 import { CTAButtons } from "./cta-buttons";
 
 export function CTASection() {
@@ -22,9 +23,18 @@ export function CTASection() {
 
           {/* Trust signals - static */}
           <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-muted-foreground text-sm">
-            <span>✓ No credit card</span>
-            <span>✓ Infrastructure stays if you cancel</span>
-            <span>✓ Open source</span>
+            <span className="inline-flex items-center gap-1.5">
+              <WrapsMotif className="size-2.5 text-orange-500/70" />
+              No credit card
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <WrapsMotif className="size-2.5 text-orange-500/70" />
+              Infrastructure stays if you cancel
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <WrapsMotif className="size-2.5 text-orange-500/70" />
+              Open source
+            </span>
           </div>
         </div>
       </div>

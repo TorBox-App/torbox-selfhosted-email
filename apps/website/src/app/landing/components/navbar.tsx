@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle";
+import { WrapsMotif } from "@/components/wraps-motif";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -288,6 +289,7 @@ export function LandingNavbar() {
               target="_blank"
             >
               Start for free
+              <WrapsMotif className="ml-1.5 size-2.5 text-white/70" />
             </a>
           </Button>
         </div>

@@ -1,5 +1,5 @@
-import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WrapsMotif } from "@/components/wraps-motif";
 import { PRICING_COPY, PRICING_TIERS } from "@/config/pricing";
 
 const freeTier = PRICING_TIERS[0];
@@ -21,10 +21,8 @@ export function FreeHero() {
         <div className="mb-6 grid gap-x-8 gap-y-2 sm:grid-cols-2">
           {freeTier.features.map((feature) => (
             <div className="flex items-start gap-2" key={feature}>
-              <Check
-                aria-hidden="true"
-                className="mt-0.5 size-4 shrink-0 text-orange-500"
-                strokeWidth={2.5}
+              <WrapsMotif
+                className="mt-0.5 size-3 shrink-0 text-orange-500/70"
               />
               <span className="text-sm">{feature}</span>
             </div>

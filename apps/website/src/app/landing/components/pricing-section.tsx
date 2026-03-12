@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { WrapsMotif } from "@/components/wraps-motif";
 import { PRICING_COPY, PRICING_TIERS } from "@/config/pricing";
 import { FreeHero } from "./free-hero";
 import { PricingCards } from "./pricing-cards";
@@ -57,7 +58,8 @@ export function PricingSection() {
         </p>
 
         {/* AWS Cost Note */}
-        <div className="rounded-xl border bg-muted/30 p-6">
+        <div className="relative rounded-xl border bg-muted/30 p-6">
+          <WrapsMotif className="absolute top-4 right-4 size-4 text-orange-500/70" />
           <p className="mb-2 font-semibold text-foreground">
             AWS costs are separate
           </p>
