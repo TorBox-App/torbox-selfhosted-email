@@ -1,4 +1,4 @@
-import { NewTemplateForm } from "@/components/template-editor/new-template-form";
+import { TemplateGallery } from "@/components/template-editor/template-gallery";
 
 type PageProps = {
   params: Promise<{
@@ -10,9 +10,9 @@ export default async function NewTemplatePage({ params }: PageProps) {
   const { orgSlug } = await params;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 lg:px-6">
-      <h1 className="mb-6 font-semibold text-2xl">Create New Template</h1>
-      <NewTemplateForm orgSlug={orgSlug} />
+    <div className="mx-auto max-w-4xl px-4 py-8 lg:px-6">
+      <h1 className="mb-6 font-semibold text-2xl">Create Template</h1>
+      <TemplateGallery orgSlug={orgSlug} />
     </div>
   );
 }

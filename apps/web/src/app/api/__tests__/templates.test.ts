@@ -1279,6 +1279,94 @@ describe("Templates API - POST SMS channel support", () => {
   });
 });
 
+describe("Templates API - POST with starter template fields", () => {
+  it("should create a template with source, compiledHtml, subject, previewText, and emailType", async () => {
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/templates`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Welcome Email",
+          source:
+            'import { Html } from "@react-email/components"; export default function Welcome() { return <Html><h1>Hello</h1></Html>; }',
+          compiledHtml: "<html><h1>Hello</h1></html>",
+          subject: "Welcome to Acme!",
+          previewText: "We're glad to have you",
+          emailType: "transactional",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.name).toBe("Welcome Email");
+    expect(data.source).toBe(
+      'import { Html } from "@react-email/components"; export default function Welcome() { return <Html><h1>Hello</h1></Html>; }'
+    );
+    expect(data.compiledHtml).toBe("<html><h1>Hello</h1></html>");
+    expect(data.subject).toBe("Welcome to Acme!");
+    expect(data.previewText).toBe("We're glad to have you");
+    expect(data.emailType).toBe("transactional");
+  });
+
+  it("should create empty template when no source fields provided (backward compat)", async () => {
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/templates`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Plain Template",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.name).toBe("Plain Template");
+    expect(data.source).toBeNull();
+    expect(data.compiledHtml).toBeNull();
+    expect(data.emailType).toBe("marketing"); // DB default
+  });
+
+  it("should set emailType to transactional when provided", async () => {
+    const { POST } = await import("../[orgSlug]/emails/templates/route");
+
+    const request = new Request(
+      `http://localhost/api/${testOrganization.slug}/templates`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: "Password Reset",
+          emailType: "transactional",
+        }),
+      }
+    );
+    const context = {
+      params: Promise.resolve({ orgSlug: testOrganization.slug }),
+    };
+
+    const response = await POST(request, context);
+    const data = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(data.emailType).toBe("transactional");
+  });
+});
+
 describe("Templates API - Authorization", () => {
   it("should return 403 for unauthorized organization", async () => {
     const { GET } = await import("../[orgSlug]/emails/templates/route");

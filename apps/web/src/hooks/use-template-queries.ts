@@ -146,6 +146,10 @@ export function useCreateTemplate(orgSlug: string) {
       description?: string;
       subject?: string;
       channel?: "email" | "sms";
+      source?: string;
+      compiledHtml?: string;
+      previewText?: string;
+      emailType?: "marketing" | "transactional";
     }) => {
       const response = await fetch(`/api/${orgSlug}/emails/templates`, {
         method: "POST",

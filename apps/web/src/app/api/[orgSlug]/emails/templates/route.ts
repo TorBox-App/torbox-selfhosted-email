@@ -171,7 +171,16 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { name, description, subject, channel } = await request.json();
+    const {
+      name,
+      description,
+      subject,
+      channel,
+      source,
+      compiledHtml,
+      previewText,
+      emailType,
+    } = await request.json();
 
     if (!name || typeof name !== "string") {
       return NextResponse.json(
@@ -187,7 +196,7 @@ export async function POST(request: Request, context: RouteContext) {
     const defaultContent =
       templateChannel === "sms" ? { type: "doc", content: [] } : {};
 
-    // Create template with empty content
+    // Create template with empty content (or pre-populated from starter)
     const [newTemplate] = await db
       .insert(template)
       .values({
@@ -195,8 +204,15 @@ export async function POST(request: Request, context: RouteContext) {
         name: name.trim(),
         description: description?.trim() || null,
         subject: templateChannel === "sms" ? null : subject?.trim() || null,
+        previewText:
+          templateChannel === "sms" ? null : previewText?.trim() || null,
+        ...(emailType === "transactional" || emailType === "marketing"
+          ? { emailType }
+          : {}),
         channel: templateChannel,
         content: defaultContent,
+        source: typeof source === "string" ? source : null,
+        compiledHtml: typeof compiledHtml === "string" ? compiledHtml : null,
         sourceFormat: templateChannel === "sms" ? "tiptap" : "react-email",
         createdBy: session.user.id,
         status: "DRAFT",
