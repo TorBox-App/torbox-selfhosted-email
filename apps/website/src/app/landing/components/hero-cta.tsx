@@ -45,7 +45,7 @@ export function HeroAnimatedCTA() {
           </a>
         </Button>
       </div>
-      <p className="mt-3 text-[12px] text-muted-foreground/60">
+      <p className="mt-3 text-[12px] text-foreground/50">
         No account required. Free and open source.
       </p>
     </div>

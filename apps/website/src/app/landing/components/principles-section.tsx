@@ -107,10 +107,10 @@ export function PrinciplesSection() {
                     <Icon className="size-5 text-orange-500" />
                   </div>
 
-                  <h3 className="relative mb-1 font-semibold text-sm text-foreground">
+                  <h3 className="relative mb-1 font-semibold text-sm text-foreground/70">
                     {principle.title}
                   </h3>
-                  <p className="relative text-muted-foreground text-xs leading-relaxed">
+                  <p className="relative text-foreground/70 text-xs leading-relaxed">
                     {principle.description}
                   </p>
                 </div>

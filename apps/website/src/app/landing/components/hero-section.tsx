@@ -34,7 +34,7 @@ export function HeroSection() {
           </h1>
 
           {/* Subheadline - server rendered, CSS animation */}
-          <p className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-muted-foreground animate-fade-in-up animation-delay-100 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
+          <p className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-foreground/70 animate-fade-in-up animation-delay-100 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
             Automate on user behavior. Design templates. Schedule broadcasts.
             Transparent pricing. Sending infrastructure you own.
           </p>
@@ -49,7 +49,7 @@ export function HeroSection() {
               width={36}
             />
             <a
-              className="text-left text-[15px] leading-[22px] text-muted-foreground underline underline-offset-2 hover:text-foreground md:text-[16px]"
+              className="text-left text-[15px] leading-[22px] text-foreground/50 underline underline-offset-2 hover:text-foreground md:text-[16px]"
               href="https://x.com/stewartjarod"
               rel="noopener noreferrer"
               target="_blank"
