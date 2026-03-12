@@ -2,8 +2,7 @@ import { auth } from "@wraps/auth";
 import { db } from "@wraps/db";
 import { member, organization } from "@wraps/db/schema/auth";
 import { eq } from "drizzle-orm";
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse, userAgent } from "next/server";
 
 // --- Marketing attribution cookie ---
 
@@ -69,6 +68,30 @@ function setAttributionCookie(
   });
 }
 
+// --- Device type cookie ---
+
+const DEVICE_TYPE_COOKIE = "device-type";
+const DEVICE_TYPE_MAX_AGE = 3600; // 1 hour
+
+function setDeviceTypeCookie(
+  request: NextRequest,
+  response: NextResponse
+): void {
+  if (request.cookies.has(DEVICE_TYPE_COOKIE)) {
+    return;
+  }
+
+  const { device } = userAgent(request);
+  const isMobile = device.type === "mobile" || device.type === "tablet";
+
+  response.cookies.set(DEVICE_TYPE_COOKIE, isMobile ? "mobile" : "desktop", {
+    maxAge: DEVICE_TYPE_MAX_AGE,
+    sameSite: "lax",
+    path: "/",
+    // NOT httpOnly — client JS reads this for bypass button
+  });
+}
+
 // Define public routes that don't require authentication
 // All other routes are protected by default
 const publicRoutes = [
@@ -102,6 +125,7 @@ export async function proxy(request: NextRequest) {
   // Attach attribution cookie + request ID to every response
   function finalize(response: NextResponse): NextResponse {
     setAttributionCookie(request, response);
+    setDeviceTypeCookie(request, response);
     addRequestId(request, response);
     return response;
   }

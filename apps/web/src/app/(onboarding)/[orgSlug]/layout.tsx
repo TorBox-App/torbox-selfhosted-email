@@ -1,7 +1,9 @@
 import { auth } from "@wraps/auth";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getOrganizationWithMembership } from "@/lib/organization";
+import { MobileRescueGate } from "./onboarding/components/mobile-rescue-gate";
 
 type OnboardingOrgLayoutProps = {
   children: ReactNode;
@@ -34,6 +36,21 @@ export default async function OnboardingOrgLayout({
     redirect("/");
   }
 
-  // Allow onboarding to proceed without checking completion status
+  const cookieStore = await cookies();
+  const isMobile = cookieStore.get("device-type")?.value === "mobile";
+
+  if (isMobile) {
+    return (
+      <MobileRescueGate
+        organizationId={orgWithMembership.id}
+        orgName={orgWithMembership.name}
+        orgSlug={orgSlug}
+        userEmail={session.user.email}
+      >
+        {children}
+      </MobileRescueGate>
+    );
+  }
+
   return <>{children}</>;
 }
