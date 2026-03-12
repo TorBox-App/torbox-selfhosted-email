@@ -1,6 +1,6 @@
 import { db } from "@wraps/db";
 import { member, organization, subscription } from "@wraps/db/schema/auth";
-import { and, eq, or } from "drizzle-orm";
+import { and, count, eq, or } from "drizzle-orm";
 import { cache } from "react";
 
 /**
@@ -100,12 +100,19 @@ export const getOrganizationWithDashboardData = cache(
       return null;
     }
 
+    // Query real member count (the extension field is unreliable)
+    const [memberCountResult] = await db
+      .select({ count: count() })
+      .from(member)
+      .where(eq(member.organizationId, org.id));
+
     return {
       ...org,
       userRole: membership.role as "owner" | "admin" | "member",
       extension: org.extension,
       activeSubscription: org.subscriptions[0] ?? null,
       awsAccounts: org.awsAccounts,
+      memberCount: memberCountResult?.count ?? 1,
     };
   }
 );

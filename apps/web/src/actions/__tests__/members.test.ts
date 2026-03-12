@@ -88,6 +88,15 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+const mockSendInvitationEmail = vi.fn(() =>
+  Promise.resolve({ success: true, messageId: "test-msg-id" })
+);
+
+vi.mock("@wraps/email/emails/invitation", () => ({
+  sendInvitationEmail: (...args: Parameters<typeof mockSendInvitationEmail>) =>
+    mockSendInvitationEmail(...args),
+}));
+
 vi.mock("@wraps/email/lib/client", () => ({
   getWrapsClient: vi.fn(async () => ({
     sendTemplate: vi.fn(),
@@ -313,5 +322,49 @@ describe("inviteMember — email validation", () => {
         /invalid email/i
       );
     }
+  });
+});
+
+// ─── Enriched invite email ──────────────────────────────────────────────────
+
+describe("inviteMember — enriched invite email", () => {
+  it("calls sendInvitationEmail with workspace context instead of sendTemplate", async () => {
+    mockSendInvitationEmail.mockClear();
+
+    const result = await inviteMember(
+      "enriched-invite@example.com",
+      "member",
+      orgA.id
+    );
+
+    // The invite should succeed (invitation is created)
+    expect(result.success).toBe(true);
+
+    // Should have called the new sendInvitationEmail, not the old sendTemplate
+    expect(mockSendInvitationEmail).toHaveBeenCalledTimes(1);
+    expect(mockSendInvitationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "enriched-invite@example.com",
+        organizationName: orgA.name,
+        inviterName: userA.name,
+        role: "member",
+        inviteLink: expect.stringContaining("/accept"),
+        declineLink: expect.stringContaining("/decline"),
+        workspaceContext: expect.objectContaining({
+          templateCount: expect.any(Number),
+          contactCount: expect.any(Number),
+          hasAwsAccount: expect.any(Boolean),
+          verifiedDomains: expect.any(Array),
+          hasSentEmail: expect.any(Boolean),
+        }),
+      })
+    );
+  });
+
+  afterAll(async () => {
+    // Clean up invitation created by test
+    await db
+      .delete(invitation)
+      .where(eq(invitation.email, "enriched-invite@example.com"));
   });
 });

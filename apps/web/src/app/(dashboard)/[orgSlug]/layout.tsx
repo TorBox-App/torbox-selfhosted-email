@@ -72,14 +72,13 @@ export default async function OrganizationLayout({
       workflows: plan.features.workflows,
       events: plan.features.events,
     },
+    memberCount: orgData.memberCount,
   };
 
   return (
     <>
       <ProductsStatusHydrator orgId={orgData.id} status={productsStatus} />
-      {!productsStatus.hasAwsAccounts && (
-        <GoLiveBanner orgSlug={orgSlug} />
-      )}
+      {!productsStatus.hasAwsAccounts && <GoLiveBanner orgSlug={orgSlug} />}
       {children}
     </>
   );

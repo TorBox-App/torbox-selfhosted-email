@@ -1,10 +1,16 @@
 "use server";
 
 import { auth } from "@wraps/auth";
-import { db } from "@wraps/db";
+import {
+  awsAccount,
+  contact,
+  db,
+  messageSend,
+  template,
+} from "@wraps/db";
 import { invitation, member, user } from "@wraps/db/schema/auth";
-import { getWrapsClient } from "@wraps/email/lib/client";
-import { and, eq } from "drizzle-orm";
+import { sendInvitationEmail } from "@wraps/email/emails/invitation";
+import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { trackTeammateInvited } from "@/lib/activation-tracking";
 import { createActionLogger, serializeError } from "@/lib/logger";
@@ -402,21 +408,57 @@ export async function inviteMember(
       };
     }
 
-    // Send invitation email using @wraps.dev/email
+    // Gather workspace context for the enriched invite email
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      const wraps = await getWrapsClient();
+      const [templateResult, contactResult, sentResult, accounts] =
+        await Promise.all([
+          db
+            .select({ count: count() })
+            .from(template)
+            .where(eq(template.organizationId, organizationId)),
+          db
+            .select({ count: count() })
+            .from(contact)
+            .where(eq(contact.organizationId, organizationId)),
+          db
+            .select({ count: count() })
+            .from(messageSend)
+            .where(
+              and(
+                eq(messageSend.organizationId, organizationId),
+                eq(messageSend.status, "sent")
+              )
+            ),
+          db.query.awsAccount.findMany({
+            where: eq(awsAccount.organizationId, organizationId),
+            columns: { isVerified: true, features: true },
+          }),
+        ]);
 
-      await wraps.sendTemplate({
-        from: process.env.EMAIL_FROM || "Wraps <info@wraps.dev>",
+      const verifiedDomains: string[] = [];
+      for (const a of accounts) {
+        const features = a.features as {
+          email?: { identities?: Array<{ type: string; identity: string }> };
+        } | null;
+        for (const id of features?.email?.identities ?? []) {
+          if (id.type === "DOMAIN") verifiedDomains.push(id.identity);
+        }
+      }
+
+      await sendInvitationEmail({
         to: email,
-        template: "Wraps-Organization-Member-Invite",
-        templateData: {
-          declineLink: `${appUrl}/invitations/${newInvitation.id}/decline`,
-          inviteLink: `${appUrl}/invitations/${newInvitation.id}/accept`,
-          organizationName: org.name,
-          inviterName: session.user.name,
-          role,
+        inviteLink: `${appUrl}/invitations/${newInvitation.id}/accept`,
+        declineLink: `${appUrl}/invitations/${newInvitation.id}/decline`,
+        organizationName: org.name,
+        inviterName: session.user.name,
+        role,
+        workspaceContext: {
+          templateCount: templateResult[0]?.count ?? 0,
+          contactCount: contactResult[0]?.count ?? 0,
+          hasAwsAccount: accounts.length > 0,
+          verifiedDomains,
+          hasSentEmail: (sentResult[0]?.count ?? 0) > 0,
         },
       });
     } catch (emailError) {
@@ -428,7 +470,6 @@ export async function inviteMember(
         "Failed to send invitation email"
       );
       // Continue even if email fails - the invitation is still created
-      // The user can manually share the link or we can retry later
     }
 
     await trackTeammateInvited(session.user.id, organizationId, {

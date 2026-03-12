@@ -16,6 +16,7 @@ export type ProductsStatus = {
   hasAwsAccounts: boolean;
   planId: PlanId;
   planFeatures: PlanFeatures;
+  memberCount: number;
 };
 
 type ProductsStore = {

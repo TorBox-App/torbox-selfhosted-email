@@ -24,6 +24,12 @@ vi.mock("@/lib/activation-tracking", () => ({
   trackTemplatePublished: vi.fn(noop),
   trackBroadcastCreated: vi.fn(noop),
   trackApiKeyCreated: vi.fn(noop),
+  trackTeammateInvited: vi.fn(noop),
+  trackOnboardingPathChosen: vi.fn(noop),
+  computeActivationScore: vi.fn(() =>
+    Promise.resolve({ score: 0, milestones: {} })
+  ),
+  updateActivationScore: vi.fn(noop),
 }));
 
 // Test data - we'll insert these into the real database
