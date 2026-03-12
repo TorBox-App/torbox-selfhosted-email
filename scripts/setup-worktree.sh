@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-MAIN_TREE="$(git rev-parse --show-toplevel)"
+MAIN_TREE="$(git worktree list --porcelain | head -1 | sed 's/^worktree //')"
 BRANCH="${1:?Usage: setup-worktree.sh <branch> [path]}"
 WORKTREE="${2:-$(dirname "$MAIN_TREE")/wraps.${BRANCH}}"
 
