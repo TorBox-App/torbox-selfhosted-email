@@ -128,8 +128,11 @@ export async function createOrganizationAction(
       .where(eq(sessionTable.userId, session.user.id));
 
     // 8. Revalidate paths
-    revalidatePath("/");
-    revalidatePath(`/${slug}`);
+    // Use "page" type to only revalidate the root page, not all routes.
+    // revalidatePath("/") without a type is a special case that purges the
+    // entire Router Cache, which races with the client-side router.push()
+    // and prevents navigation to the onboarding page.
+    revalidatePath("/", "page");
 
     // 9. Return success
     return {
