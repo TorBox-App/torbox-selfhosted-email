@@ -143,12 +143,12 @@ export function CliDeployConnectStep({
       if (data.connections?.length > 0) {
         toast.success("Connection detected!");
         posthog.capture("onboarding_cli_connection_detected", {
-          step: 3,
+          step: 4,
           step_name: "Deploy & Connect",
           organization_id: organizationId,
         });
         posthog.capture("onboarding_step_completed", {
-          step: 3,
+          step: 4,
           step_name: "Deploy & Connect",
           organization_id: organizationId,
           method: "cli",
@@ -196,7 +196,7 @@ export function CliDeployConnectStep({
         queryKey: ["onboarding-status", organizationId],
       });
       posthog.capture("onboarding_step_completed", {
-        step: 3,
+        step: 4,
         step_name: "Deploy & Connect",
         organization_id: organizationId,
         method: "cloudformation",
@@ -233,7 +233,7 @@ export function CliDeployConnectStep({
     setCopiedIndex(index);
     toast.success("Copied to clipboard");
     posthog.capture("onboarding_cli_command_copied", {
-      step: 3,
+      step: 4,
       step_name: "Deploy & Connect",
       organization_id: organizationId,
       command,
@@ -243,7 +243,7 @@ export function CliDeployConnectStep({
 
   const handleBack = () => {
     posthog.capture("onboarding_step_back", {
-      step: 3,
+      step: 4,
       step_name: "Deploy & Connect",
       organization_id: organizationId,
     });
@@ -252,7 +252,7 @@ export function CliDeployConnectStep({
 
   const handleSkip = () => {
     posthog.capture("onboarding_skipped", {
-      step: 3,
+      step: 4,
       step_name: "Deploy & Connect",
       organization_id: organizationId,
     });
@@ -261,7 +261,7 @@ export function CliDeployConnectStep({
 
   const handleCloudFormationDeploy = () => {
     posthog.capture("onboarding_deployment_started", {
-      step: 3,
+      step: 4,
       step_name: "Deploy & Connect",
       organization_id: organizationId,
       method: "cloudformation",

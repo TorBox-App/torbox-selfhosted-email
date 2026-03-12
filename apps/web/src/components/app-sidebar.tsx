@@ -15,7 +15,6 @@ import { Logo } from "@/components/logo";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
-import { SidebarInvite } from "@/components/sidebar-invite";
 import { SidebarUpgrade } from "@/components/sidebar-upgrade";
 import {
   Sidebar,
@@ -200,7 +199,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={orgScopedNavGroups} />
       </SidebarContent>
       <SidebarFooter>
-        <SidebarInvite />
         <SidebarUpgrade />
         <NavUser />
       </SidebarFooter>

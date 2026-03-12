@@ -9,9 +9,10 @@ import { toast } from "sonner";
 import Loader from "@/components/loader";
 import { authClient } from "@/lib/auth-client";
 import { BillingStep } from "./components/billing-step";
+import { ChoosePathStep } from "./components/choose-path-step";
+import { InviteMembersStep } from "./components/invite-members-step";
 import { StepProgress } from "./components/step-progress";
 import { SuccessStep } from "./components/success-step";
-import { ChoosePathStep } from "./components/choose-path-step";
 
 // Dynamic import for heavy component - loaded when user reaches step 3
 const CliDeployConnectStep = dynamic(
@@ -24,9 +25,10 @@ const CliDeployConnectStep = dynamic(
 
 const STEPS = [
   { id: 1, title: "Choose Plan", component: BillingStep },
-  { id: 2, title: "Choose Path", component: ChoosePathStep },
-  { id: 3, title: "Deploy & Connect", component: CliDeployConnectStep },
-  { id: 4, title: "Success", component: SuccessStep },
+  { id: 2, title: "Invite Team", component: InviteMembersStep },
+  { id: 3, title: "Choose Path", component: ChoosePathStep },
+  { id: 4, title: "Deploy & Connect", component: CliDeployConnectStep },
+  { id: 5, title: "Success", component: SuccessStep },
 ];
 
 /**
@@ -312,7 +314,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   useEffect(() => {
     if (
       isInitialized &&
-      currentStep >= 3 &&
+      currentStep >= 4 &&
       onboardingPath === "start_building" &&
       !hasRedirected.current
     ) {
@@ -335,7 +337,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   }
 
   // Prevent flash of Deploy & Connect UI while auto-complete effect runs
-  if (currentStep >= 3 && onboardingPath === "start_building") {
+  if (currentStep >= 4 && onboardingPath === "start_building") {
     return <Loader fullScreen />;
   }
 
@@ -349,7 +351,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
         userAdvancedPastBilling.current = true;
       }
       // Sync path choice from localStorage when advancing from Choose Path step
-      if (currentStep === 2 && orgSlug) {
+      if (currentStep === 3 && orgSlug) {
         const savedPath = localStorage.getItem(`onboarding_path_${orgSlug}`);
         if (savedPath === "start_building" || savedPath === "connect_aws") {
           setOnboardingPath(savedPath);
@@ -378,8 +380,8 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   // Called when AWS account is connected (CLI polling or CloudFormation validation)
   const handleConnected = () => {
     setIsInfrastructureConnected(true);
-    // Advance to Success step (step 4)
-    setCurrentStep(4);
+    // Advance to Success step (step 5)
+    setCurrentStep(5);
   };
 
   const handleComplete = completeOnboarding;

@@ -46,7 +46,7 @@ export function AwsConnectStep({
   // Track back button
   const handleBack = () => {
     posthog.capture("onboarding_step_back", {
-      step: 4,
+      step: 5,
       step_name: "AWS Connect",
       organization_id: organizationId,
     });
@@ -56,7 +56,7 @@ export function AwsConnectStep({
   // Track skip button
   const handleSkip = () => {
     posthog.capture("onboarding_skipped", {
-      step: 4,
+      step: 5,
       step_name: "AWS Connect",
       organization_id: organizationId,
     });
@@ -86,12 +86,12 @@ export function AwsConnectStep({
         queryKey: ["onboarding", organizationId],
       });
       posthog.capture("onboarding_aws_connected", {
-        step: 4,
+        step: 5,
         step_name: "AWS Connect",
         organization_id: organizationId,
       });
       posthog.capture("onboarding_step_completed", {
-        step: 4,
+        step: 5,
         step_name: "AWS Connect",
         organization_id: organizationId,
       });
@@ -100,7 +100,7 @@ export function AwsConnectStep({
     onError: (error: Error) => {
       toast.error(error.message || "Failed to validate AWS connection");
       posthog.capture("onboarding_aws_connection_failed", {
-        step: 4,
+        step: 5,
         step_name: "AWS Connect",
         organization_id: organizationId,
         error: error.message,

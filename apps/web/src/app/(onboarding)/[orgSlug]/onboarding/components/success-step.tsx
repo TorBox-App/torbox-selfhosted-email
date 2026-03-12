@@ -35,7 +35,7 @@ export function SuccessStep({
 }: SuccessStepProps) {
   const handleComplete = () => {
     posthog.capture("onboarding_completed", {
-      step: 4,
+      step: 5,
       step_name: "Success",
       organization_id: organizationId,
       infrastructure_connected: isConnected,
@@ -45,7 +45,7 @@ export function SuccessStep({
 
   const handleNextStepClick = (action: string) => {
     posthog.capture("onboarding_next_step_clicked", {
-      step: 4,
+      step: 5,
       step_name: "Success",
       organization_id: organizationId,
       action,
@@ -54,7 +54,7 @@ export function SuccessStep({
 
   const handleGoBack = () => {
     posthog.capture("onboarding_step_back", {
-      step: 4,
+      step: 5,
       step_name: "Success",
       organization_id: organizationId,
     });

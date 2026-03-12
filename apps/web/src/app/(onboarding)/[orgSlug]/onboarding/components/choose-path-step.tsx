@@ -25,12 +25,12 @@ export function ChoosePathStep({
 
     posthog.capture("onboarding_path_chosen", {
       path,
-      step: 2,
+      step: 3,
       step_name: "Choose Path",
       organization_id: organizationId,
     });
     posthog.capture("onboarding_step_completed", {
-      step: 2,
+      step: 3,
       step_name: "Choose Path",
       organization_id: organizationId,
     });

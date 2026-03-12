@@ -199,7 +199,7 @@ export function DeployInfrastructureStep({
   ) => {
     setDeploymentMethod(method);
     posthog.capture("onboarding_deployment_method_selected", {
-      step: 3,
+      step: 4,
       step_name: "Deploy",
       organization_id: organizationId,
       method,
@@ -209,7 +209,7 @@ export function DeployInfrastructureStep({
   // Track back button
   const handleBack = () => {
     posthog.capture("onboarding_step_back", {
-      step: 3,
+      step: 4,
       step_name: "Deploy",
       organization_id: organizationId,
     });
@@ -219,7 +219,7 @@ export function DeployInfrastructureStep({
   // Track skip button
   const handleSkip = () => {
     posthog.capture("onboarding_skipped", {
-      step: 3,
+      step: 4,
       step_name: "Deploy",
       organization_id: organizationId,
       deployment_method: deploymentMethod,
@@ -231,7 +231,7 @@ export function DeployInfrastructureStep({
   const handleCloudFormationDeploy = () => {
     setCfDeploymentStarted(true);
     posthog.capture("onboarding_deployment_started", {
-      step: 3,
+      step: 4,
       step_name: "Deploy",
       organization_id: organizationId,
       method: "cloudformation",
@@ -257,7 +257,7 @@ export function DeployInfrastructureStep({
     setCliDeployed(checked);
     if (checked) {
       posthog.capture("onboarding_cli_deployment_confirmed", {
-        step: 3,
+        step: 4,
         step_name: "Deploy",
         organization_id: organizationId,
         method: "cli",
@@ -268,7 +268,7 @@ export function DeployInfrastructureStep({
   // Track CLI continue (step completed via CLI)
   const handleCliContinue = () => {
     posthog.capture("onboarding_step_completed", {
-      step: 3,
+      step: 4,
       step_name: "Deploy",
       organization_id: organizationId,
       method: "cli",
@@ -281,7 +281,7 @@ export function DeployInfrastructureStep({
     setCopiedInstall(true);
     toast.success("Copied to clipboard");
     posthog.capture("onboarding_cli_command_copied", {
-      step: 3,
+      step: 4,
       step_name: "Deploy",
       organization_id: organizationId,
       command: "install",
@@ -294,7 +294,7 @@ export function DeployInfrastructureStep({
     setCopiedDeploy(true);
     toast.success("Copied to clipboard");
     posthog.capture("onboarding_cli_command_copied", {
-      step: 3,
+      step: 4,
       step_name: "Deploy",
       organization_id: organizationId,
       command: "deploy",
@@ -327,13 +327,13 @@ export function DeployInfrastructureStep({
         queryKey: ["onboarding", organizationId],
       });
       posthog.capture("onboarding_infrastructure_validated", {
-        step: 3,
+        step: 4,
         step_name: "Deploy",
         organization_id: organizationId,
         method: "cloudformation",
       });
       posthog.capture("onboarding_step_completed", {
-        step: 3,
+        step: 4,
         step_name: "Deploy",
         organization_id: organizationId,
         method: "cloudformation",
@@ -348,7 +348,7 @@ export function DeployInfrastructureStep({
     onError: (error: Error) => {
       toast.error(error.message || "Failed to validate connection");
       posthog.capture("onboarding_infrastructure_validation_failed", {
-        step: 3,
+        step: 4,
         step_name: "Deploy",
         organization_id: organizationId,
         method: "cloudformation",
