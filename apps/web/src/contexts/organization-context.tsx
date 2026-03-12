@@ -2,12 +2,13 @@
 
 import type { organization } from "@wraps/db";
 import type { InferSelectModel } from "drizzle-orm";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   createContext,
   type ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { authClient } from "@/lib/auth-client";
@@ -26,10 +27,12 @@ const OrganizationContext = createContext<OrganizationContextValue | undefined>(
 
 export function OrganizationProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const params = useParams<{ orgSlug?: string }>();
   const { data: activeOrgData, isPending } = authClient.useActiveOrganization();
   const [organizations, setOrganizations] = useState<
     InferSelectModel<typeof organization>[]
   >([]);
+  const autoSetAttempted = useRef(false);
 
   // Fetch all user's organizations
   useEffect(() => {
@@ -52,6 +55,18 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
     fetchOrganizations();
   }, []);
+
+  // Auto-set active org from URL when session has no active org
+  // (e.g., after deleting the previously active org)
+  useEffect(() => {
+    if (isPending || activeOrgData || autoSetAttempted.current) return;
+    if (!params.orgSlug) return;
+
+    autoSetAttempted.current = true;
+    authClient.organization.setActive({
+      organizationSlug: params.orgSlug,
+    });
+  }, [isPending, activeOrgData, params.orgSlug]);
 
   const setActiveOrganization = async (orgSlug: string) => {
     const { data, error } = await authClient.organization.setActive({
