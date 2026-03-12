@@ -96,7 +96,7 @@ export function PrinciplesSection() {
                 className={`animate-fade-in-up ${principle.delay}`}
                 key={principle.title}
               >
-                <div className="group relative h-full overflow-hidden rounded-lg border border-zinc-200 bg-white p-4 pt-12 transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="group relative h-full overflow-hidden rounded-lg border border-black/[0.06] bg-black/[0.03] p-4 pt-12 backdrop-blur-xl transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-white/[0.08] dark:bg-white/[0.04]">
                   {/* Large background icon */}
                   <div className="absolute -right-3 -top-3 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
                     <Icon className="size-24 text-orange-500" />

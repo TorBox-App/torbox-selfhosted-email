@@ -12,6 +12,22 @@ export function HeroSection() {
         <DotPattern className="opacity-100" fadeStyle="ellipse" size="md" />
       </div>
 
+      {/* Noise grain texture */}
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.06]"
+      >
+        <filter id="hero-noise">
+          <feTurbulence
+            baseFrequency="0.65"
+            numOctaves="3"
+            stitchTiles="stitch"
+            type="fractalNoise"
+          />
+        </filter>
+        <rect filter="url(#hero-noise)" height="100%" width="100%" />
+      </svg>
+
       <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start">
           {/* Badge - static, visible immediately */}
