@@ -27,6 +27,8 @@ import {
   enableWorkflow,
   updateWorkflow,
 } from "@/actions/workflows";
+import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
+import { useRequireAws } from "@/hooks/use-require-aws";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +64,7 @@ export function WorkflowToolbar({
 }: WorkflowToolbarProps) {
   const [isPending, startTransition] = useTransition();
   const [isEnabling, startEnableTransition] = useTransition();
+  const { requireAws, dialogOpen: awsDialogOpen, setDialogOpen: setAwsDialogOpen, pendingAction, orgSlug: awsOrgSlug } = useRequireAws(orgSlug);
   const isDirty = useIsDirty();
   const isSaving = useIsSaving();
   const validationResult = useValidationResult();
@@ -198,6 +201,8 @@ export function WorkflowToolbar({
   };
 
   const handleEnable = () => {
+    if (!requireAws("enable")) return;
+
     // Run validation first
     const result = runValidation();
     if (!result.isValid) {
@@ -469,6 +474,13 @@ export function WorkflowToolbar({
         organizationId={organizationId}
         orgSlug={orgSlug}
         workflow={workflow}
+      />
+
+      <ConnectAwsDialog
+        action={pendingAction ?? "enable"}
+        onOpenChange={setAwsDialogOpen}
+        open={awsDialogOpen}
+        orgSlug={awsOrgSlug}
       />
     </div>
   );

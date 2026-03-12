@@ -1,6 +1,7 @@
 import { auth } from "@wraps/auth";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { GoLiveBanner } from "@/components/go-live-banner";
 import { ProductsStatusHydrator } from "@/components/products-status-hydrator";
 import {
   getOrganizationWithDashboardData,
@@ -76,6 +77,9 @@ export default async function OrganizationLayout({
   return (
     <>
       <ProductsStatusHydrator orgId={orgData.id} status={productsStatus} />
+      {!productsStatus.hasAwsAccounts && (
+        <GoLiveBanner orgSlug={orgSlug} />
+      )}
       {children}
     </>
   );

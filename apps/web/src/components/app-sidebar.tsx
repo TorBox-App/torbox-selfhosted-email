@@ -77,6 +77,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 title: "Setup Email",
                 url: `/${orgSlug}/emails/setup`,
               },
+              {
+                title: "Templates",
+                url: `/${orgSlug}/emails/templates`,
+              },
             ],
       }
     : null;

@@ -35,7 +35,9 @@ import {
   bulkUpdateTemplateStatus,
   bulkUpdateTemplateType,
 } from "@/actions/templates";
+import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { useRequireAws } from "@/hooks/use-require-aws";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -145,6 +147,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { requireAws, dialogOpen: awsDialogOpen, setDialogOpen: setAwsDialogOpen, pendingAction, orgSlug: awsOrgSlug } = useRequireAws(orgSlug);
 
   // Search, filter, and sort state
   const [searchQuery, setSearchQuery] = useState("");
@@ -223,6 +226,8 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
   };
 
   const handleBulkStatusChange = () => {
+    if (selectedStatus === "PUBLISHED" && !requireAws("publish")) return;
+
     startTransition(async () => {
       const result = await bulkUpdateTemplateStatus(
         organizationId,
@@ -887,6 +892,12 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      <ConnectAwsDialog
+        action={pendingAction ?? "publish"}
+        onOpenChange={setAwsDialogOpen}
+        open={awsDialogOpen}
+        orgSlug={awsOrgSlug}
+      />
       </div>
     </TooltipProvider>
   );

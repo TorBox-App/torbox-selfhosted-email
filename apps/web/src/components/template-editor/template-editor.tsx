@@ -11,7 +11,9 @@ import { toast } from "sonner";
 import type { SenderDefaults } from "@/actions/organizations";
 import { getSenderDefaultsAction } from "@/actions/organizations";
 import { convertTiptapTemplate } from "@/actions/templates";
+import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { useRequireAws } from "@/hooks/use-require-aws";
 import { useActiveBrandKit } from "@/hooks/use-brand-kit-queries";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
@@ -277,6 +279,7 @@ function TemplateEditorContent({
   className,
 }: TemplateEditorContentProps) {
   const router = useRouter();
+  const { requireAws, dialogOpen: awsDialogOpen, setDialogOpen: setAwsDialogOpen, pendingAction, orgSlug: awsOrgSlug } = useRequireAws(orgSlug);
   const [showSendTestModal, setShowSendTestModal] = useState(false);
   const [showSaveBlockModal, setShowSaveBlockModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -456,6 +459,7 @@ function TemplateEditorContent({
 
   // Handle publish
   const handlePublish = useCallback(async () => {
+    if (!requireAws("publish")) return;
     const isFirstPublish = template.status === "DRAFT";
 
     try {
@@ -480,7 +484,7 @@ function TemplateEditorContent({
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
-  }, [saveNow, updateMutation, subject, publishMutation, template.status]);
+  }, [requireAws, saveNow, updateMutation, subject, publishMutation, template.status]);
 
   // Handle unpublish
   const handleUnpublish = useCallback(async () => {
@@ -786,6 +790,13 @@ function TemplateEditorContent({
         onOpenChange={setDeleteDialogOpen}
         open={deleteDialogOpen}
         title="Delete Template"
+      />
+
+      <ConnectAwsDialog
+        action={pendingAction ?? "publish"}
+        onOpenChange={setAwsDialogOpen}
+        open={awsDialogOpen}
+        orgSlug={awsOrgSlug}
       />
     </>
   );

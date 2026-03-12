@@ -1,4 +1,4 @@
-import { awsAccount, batchSend, db, template } from "@wraps/db";
+import { awsAccount, batchSend, db, template, workflow } from "@wraps/db";
 import { and, count, eq } from "drizzle-orm";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 
@@ -37,6 +37,7 @@ export type SetupStatus = {
   hasSentEmail: boolean;
   hasTemplate: boolean;
   hasBroadcast: boolean;
+  hasWorkflow: boolean;
   verifiedDomains: string[];
   awsRegion: string | null;
   emailCount: number;
@@ -126,6 +127,15 @@ async function checkHasBroadcasts(organizationId: string): Promise<boolean> {
   return (result?.count ?? 0) > 0;
 }
 
+/** Check if organization has any workflows */
+async function checkHasWorkflows(organizationId: string): Promise<boolean> {
+  const [result] = await db
+    .select({ count: count() })
+    .from(workflow)
+    .where(eq(workflow.organizationId, organizationId));
+  return (result?.count ?? 0) > 0;
+}
+
 export async function getSetupStatus(organizationId: string): Promise<{
   setupStatus: SetupStatus;
   awsAccount: AwsAccountData;
@@ -146,11 +156,13 @@ export async function getSetupStatus(organizationId: string): Promise<{
   const hasVerifiedDomain = verifiedDomains.length > 0;
 
   // Check email, template, and broadcast status in parallel
-  const [emailStatus, hasTemplate, hasBroadcast] = await Promise.all([
-    checkEmailsSent(accounts),
-    checkHasTemplates(organizationId),
-    checkHasBroadcasts(organizationId),
-  ]);
+  const [emailStatus, hasTemplate, hasBroadcast, hasWorkflow] =
+    await Promise.all([
+      checkEmailsSent(accounts),
+      checkHasTemplates(organizationId),
+      checkHasBroadcasts(organizationId),
+      checkHasWorkflows(organizationId),
+    ]);
 
   // Get first verified account for inline actions
   const firstVerifiedAccount = accounts.find((a) => a.isVerified);
@@ -176,6 +188,7 @@ export async function getSetupStatus(organizationId: string): Promise<{
       hasSentEmail: emailStatus.hasSentEmail,
       hasTemplate,
       hasBroadcast,
+      hasWorkflow,
       verifiedDomains,
       awsRegion,
       emailCount: emailStatus.emailCount,

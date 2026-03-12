@@ -11,6 +11,7 @@ import {
   CloudIcon,
   CodeIcon,
   CopyIcon,
+  ExternalLinkIcon,
   GlobeIcon,
   InfoIcon,
   LayoutTemplateIcon,
@@ -20,11 +21,13 @@ import {
   MegaphoneIcon,
   RefreshCwIcon,
   ServerIcon,
+  TerminalIcon,
+  WorkflowIcon,
   XCircleIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   saveWebhookSecretAction,
   scanAWSAccountFeatures,
@@ -44,7 +47,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { AccountFeatures, AwsAccountData, SetupStatus } from "../page";
 
@@ -531,18 +536,11 @@ type DomainVerificationProps = {
 function DomainVerification({ verifiedDomains }: DomainVerificationProps) {
   if (verifiedDomains.length === 0) {
     return (
-      <div className="space-y-3">
-        <p className="text-muted-foreground text-sm">
-          No verified domains found. Use the CLI to add and verify a domain.
-        </p>
-        <p className="text-muted-foreground text-xs">
-          Run{" "}
-          <code className="rounded bg-muted px-1 py-0.5">
-            wraps email domains add -d yourdomain.com
-          </code>{" "}
-          to add a domain, then configure the DNS records shown.
-        </p>
-      </div>
+      <CliCommandGuide
+        command="wraps email domains add -d yourdomain.com"
+        description="No verified domains found. Add and verify a domain using the CLI:"
+        hint="Follow the DNS instructions shown after running this command. Verification can take up to 48 hours."
+      />
     );
   }
 
@@ -635,7 +633,416 @@ function SendBroadcastGuide({ orgSlug }: { orgSlug: string }) {
   );
 }
 
+function CreateWorkflowGuide({ orgSlug }: { orgSlug: string }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-muted-foreground text-sm">
+        Build automated email sequences triggered by events, schedules, or
+        segments. Use the visual builder to design your flow.
+      </p>
+      <Button asChild size="sm" variant="default">
+        <Link href={`/${orgSlug}/automations/new`}>Create Workflow</Link>
+      </Button>
+    </div>
+  );
+}
+
 const CAL_BOOKING_URL = "https://cal.com/wraps/get-started-with-wraps";
+
+const DEPLOY_CLI_STEPS = [
+  {
+    label: "Install the CLI",
+    command: "curl -fsSL https://get.wraps.dev | sh",
+    altCommand: "npm install -g @wraps.dev/cli",
+    time: "~1 min",
+  },
+  {
+    label: "Authenticate",
+    command: "wraps auth login",
+    time: "~1 min",
+  },
+  {
+    label: "Deploy infrastructure",
+    command: "wraps email init",
+    time: "~5 min",
+  },
+  {
+    label: "Connect to platform",
+    command: "wraps platform connect",
+    time: "~2 min",
+  },
+];
+
+const DEPLOY_PREREQUISITES = [
+  {
+    label: "AWS CLI installed",
+    href: "https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html",
+  },
+  {
+    label: "AWS credentials configured",
+    href: "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html",
+    hint: true,
+  },
+];
+
+function generateQuickCreateUrl(
+  organizationId: string,
+  webhookSecret: string
+): string {
+  const templateUrl =
+    "https://wraps-assets.s3.amazonaws.com/cloudformation/wraps-email-infrastructure.yaml";
+
+  const params = new URLSearchParams({
+    templateURL: templateUrl,
+    stackName: "wraps-email-infrastructure",
+    param_EnableEventTracking: "true",
+    param_EnableHistoryStorage: "true",
+    param_HistoryRetentionDays: "90",
+    param_EnableSMTP: "false",
+    param_TLSRequired: "false",
+    param_WrapsOrganizationId: organizationId,
+    param_WrapsWebhookSecret: webhookSecret,
+  });
+
+  return `https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?${params.toString()}`;
+}
+
+function generateSecureWebhookSecret(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function CliCommandGuide({
+  description,
+  command,
+  hint,
+}: {
+  description: string;
+  command: string;
+  hint?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(command);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-sm">{description}</p>
+      <div className="relative">
+        <pre className="overflow-x-auto rounded-lg bg-secondary p-3 pr-10">
+          <code className="text-sm">{command}</code>
+        </pre>
+        <Button
+          aria-label={copied ? "Copied" : "Copy command"}
+          className="absolute top-1.5 right-1.5 h-7 w-7"
+          onClick={handleCopy}
+          size="icon"
+          variant="ghost"
+        >
+          {copied ? (
+            <CheckCircle2Icon className="h-3.5 w-3.5 text-green-500" />
+          ) : (
+            <CopyIcon className="h-3.5 w-3.5" />
+          )}
+        </Button>
+      </div>
+      {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
+    </div>
+  );
+}
+
+function DeployConnectGuide({ organizationId }: { organizationId: string }) {
+  const router = useRouter();
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const [checkFailed, setCheckFailed] = useState(false);
+  const [cfnDeployed, setCfnDeployed] = useState(false);
+  const [roleArn, setRoleArn] = useState("");
+  const [externalId, setExternalId] = useState("");
+  const [isValidating, startValidation] = useTransition();
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const [webhookSecret] = useState(() => generateSecureWebhookSecret());
+  const quickCreateUrl = useMemo(
+    () => generateQuickCreateUrl(organizationId, webhookSecret),
+    [organizationId, webhookSecret]
+  );
+
+  const handleCopy = async (command: string, index: number) => {
+    await navigator.clipboard.writeText(command);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const handleCheckConnection = async () => {
+    setIsChecking(true);
+    setCheckFailed(false);
+    try {
+      const res = await fetch(`/api/${organizationId}/connections`);
+      if (!res.ok) {
+        setCheckFailed(true);
+        return;
+      }
+      const data = await res.json();
+      if (data.connections?.length > 0) {
+        router.refresh();
+      } else {
+        setCheckFailed(true);
+      }
+    } catch {
+      setCheckFailed(true);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const handleCloudFormationDeploy = () => {
+    window.open(quickCreateUrl, "_blank", "noopener,noreferrer");
+    setCfnDeployed(true);
+  };
+
+  const handleValidateConnection = () => {
+    setValidationError(null);
+    startValidation(async () => {
+      try {
+        const response = await fetch(
+          `/api/${organizationId}/aws/validate-infrastructure`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roleArn, externalId, webhookSecret }),
+          }
+        );
+        if (!response.ok) {
+          const error = await response.json();
+          setValidationError(
+            error.error || "Failed to validate AWS connection"
+          );
+          return;
+        }
+        router.refresh();
+      } catch {
+        setValidationError("Failed to validate connection. Please try again.");
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Tabs defaultValue="cli">
+        <TabsList className="w-full">
+          <TabsTrigger value="cli">
+            <TerminalIcon className="h-4 w-4" />
+            CLI Setup
+          </TabsTrigger>
+          <TabsTrigger value="cloudformation">
+            <CloudIcon className="h-4 w-4" />
+            CloudFormation
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent className="space-y-4 pt-3" value="cli">
+          <div className="space-y-2 rounded-lg bg-muted/50 p-3">
+            <h4 className="font-semibold text-xs">Prerequisites</h4>
+            <div className="space-y-1">
+              {DEPLOY_PREREQUISITES.map((prereq) => (
+                <div key={prereq.label}>
+                  <label className="flex items-center gap-2">
+                    <input
+                      className="h-3.5 w-3.5 rounded border-muted-foreground/25"
+                      type="checkbox"
+                    />
+                    <span className="text-xs">{prereq.label}</span>
+                    <a
+                      className="text-primary text-xs underline underline-offset-4"
+                      href={prereq.href}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      Guide
+                    </a>
+                  </label>
+                  {"hint" in prereq && (
+                    <p className="ml-5.5 mt-0.5 text-muted-foreground text-xs">
+                      Run{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        aws configure
+                      </code>{" "}
+                      or{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        aws sso login
+                      </code>
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {DEPLOY_CLI_STEPS.map((item, index) => (
+              <div className="space-y-1" key={item.command}>
+                <h3 className="flex items-center gap-2 font-semibold text-xs">
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px]">
+                    {index + 1}
+                  </span>
+                  {item.label}
+                  <span className="font-normal text-muted-foreground text-xs">
+                    {item.time}
+                  </span>
+                </h3>
+                <div className="relative">
+                  <pre className="overflow-x-auto rounded-lg bg-secondary p-3 pr-10">
+                    <code className="text-xs">{item.command}</code>
+                  </pre>
+                  <Button
+                    aria-label={
+                      copiedIndex === index
+                        ? "Copied"
+                        : `Copy ${item.label} command`
+                    }
+                    className="absolute top-1.5 right-1.5 h-7 w-7"
+                    onClick={() => handleCopy(item.command, index)}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    {copiedIndex === index ? (
+                      <CheckCircle2Icon className="h-3.5 w-3.5 text-green-500" />
+                    ) : (
+                      <CopyIcon className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            className="w-full"
+            disabled={isChecking}
+            onClick={handleCheckConnection}
+            size="sm"
+          >
+            {isChecking ? (
+              <>
+                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              <>
+                <RefreshCwIcon className="mr-2 h-4 w-4" />
+                I've finished — check connection
+              </>
+            )}
+          </Button>
+          {checkFailed && (
+            <p className="text-center text-muted-foreground text-xs">
+              No connection found. Make sure you've run all 4 commands, then try
+              again.
+            </p>
+          )}
+        </TabsContent>
+
+        <TabsContent className="space-y-4 pt-3" value="cloudformation">
+          <p className="text-muted-foreground text-sm">
+            Don't have Node.js? Deploy from your browser using AWS
+            CloudFormation instead.
+          </p>
+
+          {cfnDeployed ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 rounded-lg bg-green-500/10 p-3 text-green-600">
+                <CheckCircle2Icon className="h-4 w-4" />
+                <span className="font-medium text-sm">
+                  CloudFormation deployment started
+                </span>
+              </div>
+
+              <p className="text-muted-foreground text-sm">
+                Once CloudFormation finishes, copy the{" "}
+                <strong>ConsoleRoleArn</strong> and{" "}
+                <strong>ExternalId</strong> from the Outputs tab:
+              </p>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="cfn-role-arn">
+                    Console Role ARN
+                  </Label>
+                  <Input
+                    id="cfn-role-arn"
+                    onChange={(e) => setRoleArn(e.target.value)}
+                    placeholder="arn:aws:iam::123456789012:role/wraps-console-access-role"
+                    value={roleArn}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs" htmlFor="cfn-external-id">
+                    External ID
+                  </Label>
+                  <Input
+                    id="cfn-external-id"
+                    onChange={(e) => setExternalId(e.target.value)}
+                    placeholder="wraps-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    value={externalId}
+                  />
+                </div>
+                {validationError && (
+                  <ResultMessage message={validationError} success={false} />
+                )}
+                <Button
+                  className="w-full"
+                  disabled={!roleArn || !externalId || isValidating}
+                  onClick={handleValidateConnection}
+                  size="sm"
+                >
+                  {isValidating ? (
+                    <>
+                      <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                      Validating...
+                    </>
+                  ) : (
+                    "Validate Connection"
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button className="w-full" onClick={handleCloudFormationDeploy} size="sm">
+              <ExternalLinkIcon className="mr-2 h-4 w-4" />
+              Deploy to AWS Console
+            </Button>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <div className="rounded-lg border border-dashed p-3">
+        <div className="flex items-start gap-2">
+          <CalendarIcon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+          <div>
+            <p className="text-muted-foreground text-xs">
+              Need help? Free 15-minute walkthrough.
+            </p>
+            <Button asChild className="mt-1.5" size="sm" variant="outline">
+              <a
+                href={CAL_BOOKING_URL}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Book a Setup Call
+              </a>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function GettingStartedDashboard({
   orgSlug,
@@ -653,6 +1060,7 @@ export function GettingStartedDashboard({
     hasSentEmail,
     hasTemplate,
     hasBroadcast,
+    hasWorkflow,
     verifiedDomains,
     awsRegion,
   } = setupStatus;
@@ -722,61 +1130,77 @@ export function GettingStartedDashboard({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Deploy infrastructure - expandable with scan action if account exists */}
-                {awsAccount ? (
-                  <ExpandableChecklistItem
-                    description="Set up AWS SES, DynamoDB, and event tracking in your account"
-                    icon={<CloudIcon className="h-5 w-5" />}
-                    isComplete={hasAwsAccount}
-                    title="Deploy email infrastructure"
-                  >
+                {/* Build first — let users create content before deploying */}
+                <ExpandableChecklistItem
+                  defaultOpen={!hasTemplate}
+                  description="Create a brand kit and build reusable templates"
+                  icon={<LayoutTemplateIcon className="h-5 w-5" />}
+                  isComplete={hasTemplate}
+                  title="Create an email template"
+                >
+                  <CreateTemplateGuide orgSlug={orgSlug} />
+                </ExpandableChecklistItem>
+
+                <ExpandableChecklistItem
+                  description="Add yourself as a contact and send a test broadcast"
+                  icon={<MegaphoneIcon className="h-5 w-5" />}
+                  isComplete={hasBroadcast}
+                  title="Send a broadcast"
+                >
+                  <SendBroadcastGuide orgSlug={orgSlug} />
+                </ExpandableChecklistItem>
+
+                <ExpandableChecklistItem
+                  description="Automate email sequences with visual workflows"
+                  icon={<WorkflowIcon className="h-5 w-5" />}
+                  isComplete={hasWorkflow}
+                  title="Create a workflow"
+                >
+                  <CreateWorkflowGuide orgSlug={orgSlug} />
+                </ExpandableChecklistItem>
+
+                {/* Deploy infrastructure — after building content */}
+                <ExpandableChecklistItem
+                  description="Set up AWS SES, DynamoDB, and event tracking in your account"
+                  icon={<CloudIcon className="h-5 w-5" />}
+                  isComplete={hasAwsAccount}
+                  title="Deploy email infrastructure"
+                >
+                  {awsAccount ? (
                     <ScanFeaturesAction
                       awsAccountId={awsAccount.id}
                       features={awsAccount.features}
                       organizationId={organizationId}
                     />
-                  </ExpandableChecklistItem>
-                ) : (
-                  <ExpandableChecklistItem
-                    description="Set up AWS SES, DynamoDB, and event tracking in your account"
-                    href={`/${orgSlug}/onboarding`}
-                    icon={<CloudIcon className="h-5 w-5" />}
-                    isComplete={hasAwsAccount}
-                    title="Deploy email infrastructure"
-                  />
-                )}
+                  ) : (
+                    <DeployConnectGuide organizationId={organizationId} />
+                  )}
+                </ExpandableChecklistItem>
 
-                {/* Connect to platform - expandable with webhook form if account exists */}
-                {awsAccount ? (
-                  <ExpandableChecklistItem
-                    description="Stream events and grant dashboard access"
-                    icon={<LinkIcon className="h-5 w-5" />}
-                    isComplete={hasPlatformConnection}
-                    title="Connect to platform"
-                  >
+                {/* Connect to platform */}
+                <ExpandableChecklistItem
+                  description="Stream events and grant dashboard access"
+                  icon={<LinkIcon className="h-5 w-5" />}
+                  isComplete={hasPlatformConnection}
+                  title="Connect to platform"
+                >
+                  {awsAccount ? (
                     <WebhookSecretForm
                       awsAccountId={awsAccount.id}
                       isConnected={hasPlatformConnection}
                     />
-                  </ExpandableChecklistItem>
-                ) : (
-                  <ExpandableChecklistItem
-                    description="Stream events and grant dashboard access"
-                    href="https://wraps.dev/docs/platform-connection"
-                    icon={<LinkIcon className="h-5 w-5" />}
-                    isComplete={hasPlatformConnection}
-                    title="Connect to platform"
-                  />
-                )}
+                  ) : (
+                    <CliCommandGuide
+                      command="wraps platform connect"
+                      description="After deploying infrastructure, run this command to connect your AWS account to the Wraps dashboard:"
+                      hint="This grants the dashboard read-only access and streams email events in real time."
+                    />
+                  )}
+                </ExpandableChecklistItem>
 
-                {/* Verify domain - expandable with domain list */}
+                {/* Verify domain */}
                 <ExpandableChecklistItem
                   description="Configure DNS records to send emails from your domain"
-                  href={
-                    awsAccount || hasVerifiedDomain
-                      ? undefined
-                      : `/${orgSlug}/settings/aws-accounts`
-                  }
                   icon={<GlobeIcon className="h-5 w-5" />}
                   isComplete={hasVerifiedDomain}
                   title="Verify your domain"
@@ -796,6 +1220,7 @@ export function GettingStartedDashboard({
                   </div>
                 </ExpandableChecklistItem>
 
+                {/* Send first email */}
                 <ExpandableChecklistItem
                   description="Configure sender defaults and use the SDK to send a test email"
                   icon={<MailIcon className="h-5 w-5" />}
@@ -825,26 +1250,6 @@ export function GettingStartedDashboard({
                       )}
                     <SendFirstEmailGuide orgSlug={orgSlug} />
                   </div>
-                </ExpandableChecklistItem>
-
-                <ExpandableChecklistItem
-                  description="Create a brand kit and build reusable templates"
-                  icon={<LayoutTemplateIcon className="h-5 w-5" />}
-                  isComplete={hasTemplate}
-                  isOptional
-                  title="Create an email template"
-                >
-                  <CreateTemplateGuide orgSlug={orgSlug} />
-                </ExpandableChecklistItem>
-
-                <ExpandableChecklistItem
-                  description="Add yourself as a contact and send a test broadcast"
-                  icon={<MegaphoneIcon className="h-5 w-5" />}
-                  isComplete={hasBroadcast}
-                  isOptional
-                  title="Send a broadcast"
-                >
-                  <SendBroadcastGuide orgSlug={orgSlug} />
                 </ExpandableChecklistItem>
               </CardContent>
             </Card>

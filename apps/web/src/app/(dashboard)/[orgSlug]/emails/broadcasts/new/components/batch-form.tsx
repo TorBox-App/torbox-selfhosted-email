@@ -39,7 +39,9 @@ import {
   getSampleContacts,
   type RecipientFilter,
 } from "@/actions/batch";
+import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
 import { SendConfirmDialog } from "@/components/send-confirm-dialog";
+import { useRequireAws } from "@/hooks/use-require-aws";
 import { TemplateSelector } from "@/components/template-editor/template-selector";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -167,6 +169,7 @@ export function BatchForm({
 }: BatchFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { requireAws, dialogOpen: awsDialogOpen, setDialogOpen: setAwsDialogOpen, pendingAction, orgSlug: awsOrgSlug } = useRequireAws(orgSlug);
 
   // Step state
   const [currentStep, setCurrentStep] = useState<Step>("setup");
@@ -347,6 +350,8 @@ export function BatchForm({
   };
 
   const handleSend = () => {
+    if (!requireAws("send")) return;
+
     if (!campaignData.awsAccountId) {
       toast.error("Please select an AWS account");
       return;
@@ -634,6 +639,13 @@ export function BatchForm({
           )}
         </div>
       </div>
+
+      <ConnectAwsDialog
+        action={pendingAction ?? "send"}
+        onOpenChange={setAwsDialogOpen}
+        open={awsDialogOpen}
+        orgSlug={awsOrgSlug}
+      />
     </div>
   );
 }
