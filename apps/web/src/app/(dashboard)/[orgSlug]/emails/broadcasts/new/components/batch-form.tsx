@@ -41,7 +41,6 @@ import {
 } from "@/actions/batch";
 import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
 import { SendConfirmDialog } from "@/components/send-confirm-dialog";
-import { useRequireAws } from "@/hooks/use-require-aws";
 import { TemplateSelector } from "@/components/template-editor/template-selector";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -74,6 +73,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useNaturalDateParser } from "@/hooks/use-natural-date-parser";
+import { useRequireAws } from "@/hooks/use-require-aws";
 import { useTemplates } from "@/hooks/use-template-queries";
 import type { SampleContact, VariableMapping } from "@/lib/batch";
 import { cn } from "@/lib/utils";
@@ -169,7 +169,13 @@ export function BatchForm({
 }: BatchFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { requireAws, dialogOpen: awsDialogOpen, setDialogOpen: setAwsDialogOpen, pendingAction, orgSlug: awsOrgSlug } = useRequireAws(orgSlug);
+  const {
+    requireAws,
+    dialogOpen: awsDialogOpen,
+    setDialogOpen: setAwsDialogOpen,
+    pendingAction,
+    orgSlug: awsOrgSlug,
+  } = useRequireAws(orgSlug);
 
   // Step state
   const [currentStep, setCurrentStep] = useState<Step>("setup");

@@ -762,13 +762,13 @@ export function CodeTemplateAIPanel({
         <div
           className={cn(
             "relative flex flex-col rounded-xl transition-all duration-200",
-            "ring-1 ring-black/10 dark:ring-white/10",
-            isFocused && "ring-black/20 dark:ring-white/20"
+            "ring-1 ring-foreground/10",
+            isFocused && "ring-foreground/20"
           )}
         >
           <div>
             <Textarea
-              className="w-full resize-none overflow-y-auto rounded-xl rounded-b-none border-none bg-black/5 px-3 py-2.5 text-xs leading-relaxed [field-sizing:normal] placeholder:text-muted-foreground focus-visible:ring-0 dark:bg-white/5"
+              className="w-full resize-none overflow-y-auto rounded-xl rounded-b-none border-none bg-foreground/5 px-3 py-2.5 text-xs leading-relaxed [field-sizing:normal] placeholder:text-muted-foreground focus-visible:ring-0"
               disabled={isLoading || aiUsage?.remaining === 0}
               onBlur={() => setIsFocused(false)}
               onChange={(e) => {
@@ -787,7 +787,7 @@ export function CodeTemplateAIPanel({
             />
           </div>
 
-          <div className="flex min-h-10 items-center gap-1.5 rounded-b-xl bg-black/5 px-2.5 py-1.5 dark:bg-white/5">
+          <div className="flex min-h-10 items-center gap-1.5 rounded-b-xl bg-foreground/5 px-2.5 py-1.5">
             <AIImageUrlPopover
               disabled={
                 !!imageAttachment || isLoading || aiUsage?.remaining === 0

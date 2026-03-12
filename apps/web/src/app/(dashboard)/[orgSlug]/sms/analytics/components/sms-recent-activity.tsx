@@ -33,7 +33,7 @@ const getActivityIcon = (status: string) => {
     );
   }
   if (statusLower === "queued" || statusLower === "pending") {
-    return <Clock className="h-4 w-4 text-gray-700 dark:text-gray-400" />;
+    return <Clock className="h-4 w-4 text-muted-foreground" />;
   }
   if (statusLower === "sent") {
     return (
@@ -52,7 +52,7 @@ const getActivityIcon = (status: string) => {
       <AlertTriangle className="h-4 w-4 text-orange-700 dark:text-orange-400" />
     );
   }
-  return <Clock className="h-4 w-4 text-gray-700 dark:text-gray-400" />;
+  return <Clock className="h-4 w-4 text-muted-foreground" />;
 };
 
 const getActivityBadgeConfig = (status: string) => {
@@ -86,14 +86,12 @@ const getActivityBadgeConfig = (status: string) => {
     },
     queued: {
       variant: "default",
-      className:
-        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
+      className: "bg-muted text-muted-foreground border-muted-foreground/20",
       label: "Queued",
     },
     pending: {
       variant: "default",
-      className:
-        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
+      className: "bg-muted text-muted-foreground border-muted-foreground/20",
       label: "Pending",
     },
     failed: {
@@ -125,8 +123,7 @@ const getActivityBadgeConfig = (status: string) => {
   return (
     configs[statusLower] || {
       variant: "secondary" as const,
-      className:
-        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
+      className: "bg-muted text-muted-foreground border-muted-foreground/20",
       label: status,
     }
   );

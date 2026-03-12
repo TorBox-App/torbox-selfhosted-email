@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "@/components/mode-toggle";
-import { WrapsMotif } from "@/components/wraps-motif";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -26,6 +25,7 @@ import {
   SheetHeader,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { WrapsMotif } from "@/components/wraps-motif";
 import { useTheme } from "@/hooks/use-theme";
 import { trackEvent } from "@/utils/analytics";
 

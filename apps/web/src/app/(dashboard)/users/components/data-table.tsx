@@ -121,9 +121,9 @@ export function DataTable({
       case "Error":
         return "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20";
       case "Inactive":
-        return "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20";
+        return "text-muted-foreground bg-muted";
       default:
-        return "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20";
+        return "text-muted-foreground bg-muted";
     }
   };
 
@@ -140,7 +140,7 @@ export function DataTable({
       case "Subscriber":
         return "text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/20";
       default:
-        return "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20";
+        return "text-muted-foreground bg-muted";
     }
   };
 

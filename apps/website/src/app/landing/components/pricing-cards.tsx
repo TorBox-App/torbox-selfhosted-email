@@ -113,9 +113,7 @@ export const PricingCards = memo(function PricingCards({
               <ul className="space-y-2">
                 {plan.features.map((feature) => (
                   <li className="flex items-start gap-2" key={feature}>
-                    <WrapsMotif
-                      className="mt-0.5 size-3 shrink-0 text-orange-500/70"
-                    />
+                    <WrapsMotif className="mt-0.5 size-3 shrink-0 text-orange-500/70" />
                     <span className="text-sm">
                       <FeatureText text={feature} />
                     </span>

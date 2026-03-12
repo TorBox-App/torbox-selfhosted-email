@@ -73,7 +73,7 @@ export function AcceptInvitationForm({
       case "admin":
         return "bg-blue-100 text-blue-700";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-muted text-foreground";
     }
   };
 
@@ -140,20 +140,20 @@ export function AcceptInvitationForm({
           <p className="font-semibold text-sm">What happens when you accept:</p>
           <ul className="space-y-2">
             <li className="flex items-start gap-2 text-sm">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <span className="text-muted-foreground">
                 You'll join {invitation.organization.name} as a{" "}
                 {invitation.role || "member"}
               </span>
             </li>
             <li className="flex items-start gap-2 text-sm">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <span className="text-muted-foreground">
                 You'll get access to the organization's dashboard and resources
               </span>
             </li>
             <li className="flex items-start gap-2 text-sm">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <span className="text-muted-foreground">
                 You can collaborate with other team members
               </span>

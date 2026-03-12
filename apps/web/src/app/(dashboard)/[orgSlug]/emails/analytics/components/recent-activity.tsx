@@ -31,7 +31,7 @@ const getActivityIcon = (type: string) => {
     );
   }
   if (type === "Send") {
-    return <Clock className="h-4 w-4 text-gray-700 dark:text-gray-400" />;
+    return <Clock className="h-4 w-4 text-muted-foreground" />;
   }
   if (type === "Open") {
     return <Mail className="h-4 w-4 text-blue-700 dark:text-blue-400" />;
@@ -50,7 +50,7 @@ const getActivityIcon = (type: string) => {
   if (type === "Reject") {
     return <XCircle className="h-4 w-4 text-red-700 dark:text-red-400" />;
   }
-  return <Clock className="h-4 w-4 text-gray-700 dark:text-gray-400" />;
+  return <Clock className="h-4 w-4 text-muted-foreground" />;
 };
 
 const getActivityBadgeConfig = (type: string) => {
@@ -63,8 +63,7 @@ const getActivityBadgeConfig = (type: string) => {
   > = {
     Send: {
       variant: "default",
-      className:
-        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
+      className: "bg-muted text-muted-foreground border-muted-foreground/20",
     },
     Delivery: {
       variant: "default",
@@ -101,8 +100,7 @@ const getActivityBadgeConfig = (type: string) => {
   return (
     configs[type] || {
       variant: "secondary" as const,
-      className:
-        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20",
+      className: "bg-muted text-muted-foreground border-muted-foreground/20",
     }
   );
 };

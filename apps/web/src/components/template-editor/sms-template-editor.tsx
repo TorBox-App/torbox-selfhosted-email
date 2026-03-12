@@ -232,7 +232,7 @@ export function SmsTemplateEditor({
         <div className="w-80 border-l bg-muted/30 p-6">
           <Label className="mb-3 block">Preview</Label>
           <div className="rounded-2xl bg-green-600 p-3">
-            <div className="rounded-xl bg-white p-3 text-sm">
+            <div className="rounded-xl bg-card p-3 text-sm">
               {body || (
                 <span className="text-muted-foreground italic">
                   Your message will appear here...

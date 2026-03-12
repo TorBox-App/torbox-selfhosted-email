@@ -1,4 +1,11 @@
-import { awsAccount, batchSend, db, template, workflow } from "@wraps/db";
+import {
+  awsAccount,
+  batchSend,
+  contact,
+  db,
+  template,
+  workflow,
+} from "@wraps/db";
 import { and, count, eq } from "drizzle-orm";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 
@@ -32,11 +39,13 @@ type AwsAccountRecord = {
 
 export type SetupStatus = {
   hasAwsAccount: boolean;
+  hasAnyAwsAccounts: boolean;
   hasPlatformConnection: boolean;
   hasVerifiedDomain: boolean;
   hasSentEmail: boolean;
   hasTemplate: boolean;
   hasBroadcast: boolean;
+  hasContact: boolean;
   hasWorkflow: boolean;
   verifiedDomains: string[];
   awsRegion: string | null;
@@ -104,6 +113,26 @@ async function checkEmailsSent(
   return { hasSentEmail: false, emailCount: 0 };
 }
 
+/** Check if organization has any AWS accounts */
+export async function checkHasAwsAccounts(
+  organizationId: string
+): Promise<boolean> {
+  const accounts = await db.query.awsAccount.findMany({
+    where: eq(awsAccount.organizationId, organizationId),
+    columns: { id: true },
+  });
+  return accounts.length > 0;
+}
+
+/** Check if organization has any contacts */
+async function checkHasContacts(organizationId: string): Promise<boolean> {
+  const [result] = await db
+    .select({ count: count() })
+    .from(contact)
+    .where(eq(contact.organizationId, organizationId));
+  return (result?.count ?? 0) > 0;
+}
+
 /** Check if organization has any templates */
 async function checkHasTemplates(organizationId: string): Promise<boolean> {
   const [result] = await db
@@ -155,12 +184,15 @@ export async function getSetupStatus(organizationId: string): Promise<{
   const { verifiedDomains, awsRegion } = getDomainsAndRegion(accounts);
   const hasVerifiedDomain = verifiedDomains.length > 0;
 
-  // Check email, template, and broadcast status in parallel
-  const [emailStatus, hasTemplate, hasBroadcast, hasWorkflow] =
+  const hasAnyAwsAccounts = accounts.length > 0;
+
+  // Check email, template, broadcast, contact, and workflow status in parallel
+  const [emailStatus, hasTemplate, hasBroadcast, hasContact, hasWorkflow] =
     await Promise.all([
       checkEmailsSent(accounts),
       checkHasTemplates(organizationId),
       checkHasBroadcasts(organizationId),
+      checkHasContacts(organizationId),
       checkHasWorkflows(organizationId),
     ]);
 
@@ -183,11 +215,13 @@ export async function getSetupStatus(organizationId: string): Promise<{
   return {
     setupStatus: {
       hasAwsAccount,
+      hasAnyAwsAccounts,
       hasPlatformConnection,
       hasVerifiedDomain,
       hasSentEmail: emailStatus.hasSentEmail,
       hasTemplate,
       hasBroadcast,
+      hasContact,
       hasWorkflow,
       verifiedDomains,
       awsRegion,

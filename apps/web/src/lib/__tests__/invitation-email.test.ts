@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
 import {
-  renderInvitationEmail,
   type RenderInvitationEmailParams,
+  renderInvitationEmail,
 } from "@wraps/email/emails/invitation";
+import { describe, expect, it } from "vitest";
 
 const baseParams: RenderInvitationEmailParams = {
   inviteLink: "https://app.wraps.dev/invitations/123/accept",

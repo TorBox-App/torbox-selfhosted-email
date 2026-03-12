@@ -1064,9 +1064,7 @@ export function GettingStartedDashboard({
             {/* Checklist */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">
-                  Setup Checklist
-                </CardTitle>
+                <CardTitle className="text-lg">Setup Checklist</CardTitle>
                 <CardDescription>
                   Deploy infrastructure and connect your AWS account
                 </CardDescription>

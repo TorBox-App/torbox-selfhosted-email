@@ -1,6 +1,17 @@
 import { auth } from "@wraps/auth";
+import { Send } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { listBatchSends } from "@/actions/batch";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { BatchTable } from "./components/batch-table";
 
@@ -47,6 +58,44 @@ export default async function SendPage({
   });
 
   const batches = batchesResult.success ? batchesResult.batches : [];
+
+  if (batches.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-4 lg:p-6">
+        <Empty className="max-w-2xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Send className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>Broadcasts</EmptyTitle>
+            <EmptyDescription>
+              Send targeted email campaigns to your contacts. Build with the
+              template editor, select your audience, and send — all at AWS
+              pricing.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <div className="flex gap-2">
+              <Button asChild>
+                <Link href={`/${orgSlug}/emails/templates/new`}>
+                  Create your first template
+                </Link>
+              </Button>
+              <Button asChild variant="ghost">
+                <a
+                  href="https://docs.wraps.dev/email/broadcasts"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Learn about broadcasts
+                </a>
+              </Button>
+            </div>
+          </EmptyContent>
+        </Empty>
+      </div>
+    );
+  }
 
   return (
     <>

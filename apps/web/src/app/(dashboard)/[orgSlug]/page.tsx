@@ -1,9 +1,16 @@
 import { auth } from "@wraps/auth";
-import { batchSend, contactEvent, db, workflowExecution } from "@wraps/db";
-import { desc, eq } from "drizzle-orm";
+import {
+  batchSend,
+  contactEvent,
+  db,
+  member,
+  workflowExecution,
+} from "@wraps/db";
+import { count, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { getSetupStatus } from "@/lib/setup-status";
+import { ExploreFirstDashboard } from "./components/explore-first-dashboard";
 import { GettingStartedDashboard } from "./components/getting-started-dashboard";
 import { OverviewDashboard } from "./components/overview-dashboard";
 
@@ -27,6 +34,14 @@ export type RecentItem = {
   timestamp: number;
   href: string;
 };
+
+async function getMemberCount(organizationId: string): Promise<number> {
+  const [result] = await db
+    .select({ count: count() })
+    .from(member)
+    .where(eq(member.organizationId, organizationId));
+  return result?.count ?? 1;
+}
 
 async function getRecentItems(
   organizationId: string,
@@ -158,7 +173,7 @@ export default async function OrganizationDashboard({
     (completedRequired / requiredSteps.length) * 100
   );
 
-  // If all required steps are complete, show overview dashboard
+  // Fully set up — show overview dashboard
   if (completionPercent === 100) {
     const recentItems = await getRecentItems(orgWithMembership.id, orgSlug);
 
@@ -173,6 +188,21 @@ export default async function OrganizationDashboard({
     );
   }
 
+  // No AWS at all — show value-first explore dashboard
+  if (!setupStatus.hasAnyAwsAccounts) {
+    const memberCount = await getMemberCount(orgWithMembership.id);
+
+    return (
+      <ExploreFirstDashboard
+        memberCount={memberCount}
+        organizationName={orgWithMembership.name}
+        orgSlug={orgSlug}
+        setupStatus={setupStatus}
+      />
+    );
+  }
+
+  // Has AWS but not fully set up — show infrastructure checklist
   return (
     <GettingStartedDashboard
       awsAccount={awsAccountData}

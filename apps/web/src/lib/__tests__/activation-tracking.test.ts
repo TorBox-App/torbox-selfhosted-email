@@ -438,9 +438,7 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
 
     // PATCH must happen before POST so the workflow engine can read the path
     // when it evaluates the gate condition on the onboarding.completed event
-    expect(callOrder.indexOf("PATCH")).toBeLessThan(
-      callOrder.indexOf("POST")
-    );
+    expect(callOrder.indexOf("PATCH")).toBeLessThan(callOrder.indexOf("POST"));
 
     // Should PATCH contact to store onboarding path in properties
     expect(mockPatch).toHaveBeenCalledWith(

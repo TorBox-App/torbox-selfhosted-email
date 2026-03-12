@@ -44,9 +44,7 @@ describe("GoLiveBanner", () => {
     render(<GoLiveBanner orgSlug="test-org" />);
 
     expect(
-      screen.getByText(
-        "Connect your AWS account to start sending emails."
-      )
+      screen.getByText("Connect your AWS account to start sending emails.")
     ).toBeInTheDocument();
     expect(screen.getByRole("status")).toBeInTheDocument();
   });

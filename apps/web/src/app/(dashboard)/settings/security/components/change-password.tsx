@@ -198,9 +198,9 @@ export function ChangePassword() {
             >
               {/* Form-level errors */}
               {passwordFormErrors.length > 0 && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
                   {passwordFormErrors.map((error) => (
-                    <p className="text-red-600 text-sm" key={String(error)}>
+                    <p className="text-destructive text-sm" key={String(error)}>
                       {String(error)}
                     </p>
                   ))}
@@ -215,15 +215,15 @@ export function ChangePassword() {
                   <div
                     className={`rounded-lg border p-4 ${
                       isPasswordCompromised
-                        ? "border-orange-200 bg-orange-50"
-                        : "border-red-200 bg-red-50"
+                        ? "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"
+                        : "border-destructive/30 bg-destructive/10"
                     }`}
                   >
                     <p
                       className={`font-medium text-sm ${
                         isPasswordCompromised
-                          ? "text-orange-700"
-                          : "text-red-600"
+                          ? "text-amber-700 dark:text-amber-300"
+                          : "text-destructive"
                       }`}
                     >
                       {isPasswordCompromised && "⚠️ "}

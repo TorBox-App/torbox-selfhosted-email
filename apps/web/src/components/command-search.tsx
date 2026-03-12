@@ -52,7 +52,7 @@ const Command = forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive
     className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-xl bg-white text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50",
+      "flex h-full w-full flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground",
       className
     )}
     ref={ref}
@@ -67,15 +67,15 @@ const CommandInput = forwardRef<
     isLoading?: boolean;
   }
 >(({ className, isLoading, ...props }, ref) => (
-  <div className="relative flex items-center border-zinc-200 border-b px-4 dark:border-zinc-800">
+  <div className="relative flex items-center border-border border-b px-4">
     {isLoading ? (
-      <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin text-zinc-400" />
+      <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
     ) : (
-      <Search className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
+      <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
     )}
     <CommandPrimitive.Input
       className={cn(
-        "flex h-12 w-full bg-transparent py-3 text-[17px] outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-400",
+        "flex h-12 w-full bg-transparent py-3 text-[17px] outline-none placeholder:text-muted-foreground",
         className
       )}
       ref={ref}
@@ -105,7 +105,7 @@ const CommandEmpty = forwardRef<
   ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
 >((props, ref) => (
   <CommandPrimitive.Empty
-    className="flex h-12 items-center justify-center text-sm text-zinc-500 dark:text-zinc-400"
+    className="flex h-12 items-center justify-center text-sm text-muted-foreground"
     ref={ref}
     {...props}
   />
@@ -118,7 +118,7 @@ const CommandGroup = forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Group
     className={cn(
-      "overflow-hidden px-2 [&:not(:first-child)]:mt-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-zinc-500 dark:[&_[cmdk-group-heading]]:text-zinc-400",
+      "overflow-hidden px-2 [&:not(:first-child)]:mt-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-muted-foreground",
       className
     )}
     ref={ref}
@@ -135,7 +135,7 @@ const CommandItem = forwardRef<
 >(({ className, shortcut, children, ...props }, ref) => (
   <CommandPrimitive.Item
     className={cn(
-      "relative flex h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-4 text-sm text-zinc-700 outline-none transition-colors data-[disabled=true]:pointer-events-none data-[selected=true]:bg-zinc-100 data-[selected=true]:text-zinc-900 data-[disabled=true]:opacity-50 dark:text-zinc-300 dark:data-[selected=true]:bg-zinc-800 dark:data-[selected=true]:text-zinc-100 [&+[cmdk-item]]:mt-1",
+      "relative flex h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-4 text-sm text-foreground/80 outline-none transition-colors data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 [&+[cmdk-item]]:mt-1",
       className
     )}
     ref={ref}
@@ -174,7 +174,7 @@ function getStatusStyle(status: string | null): string | null {
   if (s === "published" || s === "enabled" || s === "completed")
     return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
   if (s === "archived" || s === "paused")
-    return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";
+    return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-muted-foreground";
   if (s === "scheduled")
     return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
   if (s === "default")
@@ -400,7 +400,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent className="max-w-[640px] overflow-hidden border border-zinc-200 p-0 shadow-2xl dark:border-zinc-800">
+      <DialogContent className="max-w-[640px] overflow-hidden border border-border p-0 shadow-2xl">
         <DialogTitle className="sr-only">Command Search</DialogTitle>
         <Command
           className="transition-transform duration-100 ease-out"
@@ -436,10 +436,10 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
                         onSelect={() => handleSelect(item.url, item)}
                         value={`${item.title} ${item.subtitle ?? ""}`}
                       >
-                        <GroupIcon className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
+                        <GroupIcon className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="truncate">{item.title}</span>
                         {item.subtitle && (
-                          <span className="ml-1 truncate text-zinc-400 text-xs">
+                          <span className="ml-1 truncate text-muted-foreground text-xs">
                             {item.subtitle}
                           </span>
                         )}
@@ -464,10 +464,10 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
                           onSelect={() => handleSelect(item.url, item)}
                           value={`recent ${item.title}`}
                         >
-                          <Icon className="mr-2 h-4 w-4 shrink-0 text-zinc-400" />
+                          <Icon className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="truncate">{item.title}</span>
                           {item.subtitle && (
-                            <span className="ml-1 truncate text-zinc-400 text-xs">
+                            <span className="ml-1 truncate text-muted-foreground text-xs">
                               {item.subtitle}
                             </span>
                           )}

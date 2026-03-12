@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { WrapsMotif } from "@/components/wraps-motif";
 import {
   CodeBlock,
   CodeBlockBody,
@@ -10,6 +9,7 @@ import {
   CodeBlockCopyButton,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
+import { WrapsMotif } from "@/components/wraps-motif";
 import { assetUrl } from "@/lib/utils";
 
 const workflowCode = `import { defineWorkflow, sendEmail, delay, condition } from '@wraps.dev/client';

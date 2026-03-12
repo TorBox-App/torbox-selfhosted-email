@@ -167,9 +167,9 @@ export function PreferencesForm({
   if (isGloballyUnsubscribed) {
     return (
       <div className="py-8 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
           <svg
-            className="h-8 w-8 text-gray-400"
+            className="h-8 w-8 text-muted-foreground"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -182,10 +182,10 @@ export function PreferencesForm({
             />
           </svg>
         </div>
-        <h2 className="mb-2 font-semibold text-gray-900 text-lg dark:text-white">
+        <h2 className="mb-2 font-semibold text-foreground text-lg">
           You're Unsubscribed
         </h2>
-        <p className="text-gray-500 text-sm dark:text-gray-400">
+        <p className="text-muted-foreground text-sm">
           You won't receive any more emails
           {orgName ? ` from ${orgName}` : ""}.
         </p>
@@ -200,13 +200,13 @@ export function PreferencesForm({
         <div
           className={`flex items-center gap-3 rounded-xl p-4 ${
             message.type === "success"
-              ? "bg-green-50 text-green-800"
-              : "bg-red-50 text-red-800"
+              ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+              : "bg-destructive/10 text-destructive"
           }`}
         >
           {message.type === "success" ? (
             <svg
-              className="h-5 w-5 shrink-0 text-green-500"
+              className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -220,7 +220,7 @@ export function PreferencesForm({
             </svg>
           ) : (
             <svg
-              className="h-5 w-5 shrink-0 text-red-500"
+              className="h-5 w-5 shrink-0 text-destructive"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -240,21 +240,21 @@ export function PreferencesForm({
       {/* Topics list */}
       {topics.length > 0 ? (
         <div className="space-y-1">
-          <h2 className="mb-3 font-medium text-gray-900 text-sm dark:text-white">
+          <h2 className="mb-3 font-medium text-foreground text-sm">
             Email Topics
           </h2>
-          <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+          <div className="divide-y divide-border rounded-xl border border-border">
             {topics.map((topic) => {
               const isPendingConfirmation = pendingTopics.has(topic.id);
               const isResending = resendingFor === topic.id;
 
               return (
                 <div className="p-4" key={topic.id}>
-                  <label className="flex cursor-pointer items-start gap-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <label className="flex cursor-pointer items-start gap-4 transition-colors hover:bg-muted/50">
                     <div className="relative flex h-5 items-center">
                       <input
                         checked={subscriptions[topic.id] ?? false}
-                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-gray-300 transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 dark:border-gray-600"
+                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-input transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2"
                         onChange={(e) =>
                           handleTopicChange(topic.id, e.target.checked)
                         }
@@ -293,7 +293,7 @@ export function PreferencesForm({
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 text-sm dark:text-white">
+                        <span className="font-medium text-foreground text-sm">
                           {topic.name}
                         </span>
                         {isPendingConfirmation && (
@@ -303,7 +303,7 @@ export function PreferencesForm({
                         )}
                       </div>
                       {topic.description && (
-                        <div className="mt-0.5 text-gray-500 text-sm dark:text-gray-400">
+                        <div className="mt-0.5 text-muted-foreground text-sm">
                           {topic.description}
                         </div>
                       )}
@@ -332,7 +332,7 @@ export function PreferencesForm({
         </div>
       ) : (
         <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm dark:text-gray-400">
+          <p className="text-muted-foreground text-sm">
             No email topics available.
           </p>
         </div>
@@ -341,13 +341,13 @@ export function PreferencesForm({
       {/* Channel preference */}
       {hasMultipleChannels && (
         <div className="space-y-1">
-          <h2 className="mb-3 font-medium text-gray-900 text-sm dark:text-white">
+          <h2 className="mb-3 font-medium text-foreground text-sm">
             Preferred Channel
           </h2>
-          <p className="mb-3 text-gray-500 text-xs dark:text-gray-400">
+          <p className="mb-3 text-muted-foreground text-xs">
             Choose how you'd prefer to be contacted.
           </p>
-          <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+          <div className="divide-y divide-border rounded-xl border border-border">
             {(
               [
                 { value: null, label: "No preference" },
@@ -356,13 +356,13 @@ export function PreferencesForm({
               ] as const
             ).map((option) => (
               <label
-                className="flex cursor-pointer items-center gap-4 p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                className="flex cursor-pointer items-center gap-4 p-4 transition-colors hover:bg-muted/50"
                 key={option.label}
               >
                 <div className="relative flex h-5 items-center">
                   <input
                     checked={selectedChannel === option.value}
-                    className="h-4 w-4 cursor-pointer appearance-none rounded-full border-2 border-gray-300 transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 dark:border-gray-600"
+                    className="h-4 w-4 cursor-pointer appearance-none rounded-full border-2 border-input transition-all checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2"
                     name="preferredChannel"
                     onChange={() => setSelectedChannel(option.value)}
                     style={{
@@ -379,7 +379,7 @@ export function PreferencesForm({
                     </div>
                   )}
                 </div>
-                <span className="font-medium text-gray-900 text-sm dark:text-white">
+                <span className="font-medium text-foreground text-sm">
                   {option.label}
                 </span>
               </label>
@@ -403,7 +403,7 @@ export function PreferencesForm({
         )}
 
         <button
-          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          className="w-full rounded-xl border border-border bg-card px-4 py-3 font-medium text-muted-foreground text-sm transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
           disabled={isPending}
           onClick={handleUnsubscribeAll}
           type="button"

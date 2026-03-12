@@ -171,7 +171,7 @@ export function EmailPreview({ email, orgSlug }: EmailPreviewProps) {
         <CardContent>
           {email.html ? (
             <iframe
-              className="h-[500px] w-full rounded-md border bg-white"
+              className="h-[500px] w-full rounded-md border bg-card"
               sandbox="allow-same-origin"
               srcDoc={email.html}
               title="Email content"

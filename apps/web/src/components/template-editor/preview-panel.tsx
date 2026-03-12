@@ -333,7 +333,7 @@ export function PreviewPanel({ editor }: PreviewPanelProps) {
         <div className="flex min-h-full flex-col items-center py-6">
           {/* Email container with device-specific styling */}
           <div
-            className="rounded-lg bg-white shadow-2xl ring-1 ring-gray-200"
+            className="rounded-lg bg-card shadow-2xl ring-1 ring-gray-200"
             style={{
               width: deviceWidths[device],
               maxWidth: "100%",

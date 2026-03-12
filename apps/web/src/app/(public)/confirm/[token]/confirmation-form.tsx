@@ -47,7 +47,7 @@ export function ConfirmationForm({ token, brandColor }: ConfirmationFormProps) {
             />
           </svg>
         </div>
-        <h3 className="mb-1 font-medium text-gray-900 dark:text-white">
+        <h3 className="mb-1 font-medium text-gray-900 dark:text-foreground">
           Subscription Confirmed!
         </h3>
         <p className="text-gray-500 text-sm dark:text-gray-400">

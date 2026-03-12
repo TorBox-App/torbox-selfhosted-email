@@ -239,7 +239,7 @@ export function EmailPreviewCarousel({
         )}
       </CardHeader>
       <CardContent>
-        <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-hidden rounded-lg border bg-card">
           <iframe
             className="h-[400px] w-full border-0"
             sandbox="allow-same-origin"

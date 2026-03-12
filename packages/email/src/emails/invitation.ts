@@ -28,10 +28,14 @@ function renderWorkspaceContextHtml(
   const items: string[] = [];
 
   if (ctx.templateCount > 0) {
-    items.push(`${ctx.templateCount} email template${ctx.templateCount === 1 ? "" : "s"}`);
+    items.push(
+      `${ctx.templateCount} email template${ctx.templateCount === 1 ? "" : "s"}`
+    );
   }
   if (ctx.contactCount > 0) {
-    items.push(`${ctx.contactCount} contact${ctx.contactCount === 1 ? "" : "s"}`);
+    items.push(
+      `${ctx.contactCount} contact${ctx.contactCount === 1 ? "" : "s"}`
+    );
   }
   if (ctx.hasAwsAccount) {
     items.push("AWS connected");
@@ -50,13 +54,13 @@ function renderWorkspaceContextHtml(
     html += `\n          <li style="margin-bottom: 4px;">${item}</li>`;
   }
 
-  html += `\n        </ul>`;
+  html += "\n        </ul>";
 
   if (!ctx.hasAwsAccount) {
     html += `\n        <p style="margin: 12px 0 0 0; font-size: 14px; color: #92400e; background: #fffbeb; padding: 8px 12px; border-radius: 4px;">AWS infrastructure hasn't been connected yet — your help may be needed to deploy.</p>`;
   }
 
-  html += `\n      </div>`;
+  html += "\n      </div>";
   return html;
 }
 
@@ -67,10 +71,14 @@ function renderWorkspaceContextText(
   const items: string[] = [];
 
   if (ctx.templateCount > 0) {
-    items.push(`- ${ctx.templateCount} email template${ctx.templateCount === 1 ? "" : "s"}`);
+    items.push(
+      `- ${ctx.templateCount} email template${ctx.templateCount === 1 ? "" : "s"}`
+    );
   }
   if (ctx.contactCount > 0) {
-    items.push(`- ${ctx.contactCount} contact${ctx.contactCount === 1 ? "" : "s"}`);
+    items.push(
+      `- ${ctx.contactCount} contact${ctx.contactCount === 1 ? "" : "s"}`
+    );
   }
   if (ctx.hasAwsAccount) {
     items.push("- AWS connected");
@@ -90,9 +98,10 @@ function renderWorkspaceContextText(
   return text;
 }
 
-export function renderInvitationEmail(
-  params: RenderInvitationEmailParams
-): { html: string; text: string } {
+export function renderInvitationEmail(params: RenderInvitationEmailParams): {
+  html: string;
+  text: string;
+} {
   const {
     inviteLink,
     declineLink,

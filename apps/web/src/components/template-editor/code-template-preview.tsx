@@ -101,7 +101,7 @@ export function CodeTemplatePreview({ html }: CodeTemplatePreviewProps) {
           {html ? (
             <>
               <div
-                className="rounded-lg bg-white shadow-2xl ring-1 ring-gray-200"
+                className="rounded-lg bg-card shadow-2xl ring-1 ring-gray-200"
                 style={{
                   width: deviceWidths[device],
                   maxWidth: "100%",

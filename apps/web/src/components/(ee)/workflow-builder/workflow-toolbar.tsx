@@ -28,7 +28,6 @@ import {
   updateWorkflow,
 } from "@/actions/workflows";
 import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
-import { useRequireAws } from "@/hooks/use-require-aws";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +36,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useRequireAws } from "@/hooks/use-require-aws";
 import { EnableReadinessDialog } from "./enable-readiness-dialog";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useBeforeUnload } from "./use-before-unload";
@@ -64,7 +64,13 @@ export function WorkflowToolbar({
 }: WorkflowToolbarProps) {
   const [isPending, startTransition] = useTransition();
   const [isEnabling, startEnableTransition] = useTransition();
-  const { requireAws, dialogOpen: awsDialogOpen, setDialogOpen: setAwsDialogOpen, pendingAction, orgSlug: awsOrgSlug } = useRequireAws(orgSlug);
+  const {
+    requireAws,
+    dialogOpen: awsDialogOpen,
+    setDialogOpen: setAwsDialogOpen,
+    pendingAction,
+    orgSlug: awsOrgSlug,
+  } = useRequireAws(orgSlug);
   const isDirty = useIsDirty();
   const isSaving = useIsSaving();
   const validationResult = useValidationResult();

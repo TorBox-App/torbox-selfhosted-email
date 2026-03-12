@@ -293,7 +293,7 @@ export function TwoFactorAuth() {
           <div className="space-y-4 py-4">
             {setupData?.totpURI && (
               <div className="flex flex-col items-center gap-4">
-                <div className="rounded-lg border bg-white p-3 sm:p-4">
+                <div className="rounded-lg border bg-card p-3 sm:p-4">
                   <QRCodeSVG
                     className="h-auto w-full max-w-[200px]"
                     size={200}

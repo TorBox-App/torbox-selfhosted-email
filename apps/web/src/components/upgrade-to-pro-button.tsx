@@ -18,7 +18,7 @@ export function UpgradeToProButton() {
       <HoverCard closeDelay={100} openDelay={100}>
         <HoverCardTrigger asChild>
           <Button
-            className="cursor-pointer bg-gradient-to-br from-slate-900 to-slate-400 px-6 py-3 font-bold text-white shadow-lg"
+            className="cursor-pointer bg-gradient-to-br from-slate-900 to-slate-400 px-6 py-3 font-bold text-primary-foreground shadow-lg"
             onClick={() =>
               typeof window !== "undefined" && window.open(WRAPS_URL, "_blank")
             }

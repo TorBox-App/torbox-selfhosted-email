@@ -54,8 +54,8 @@ export function DeclineInvitationForm({
   return (
     <Card className="w-full max-w-lg shadow-xl">
       <CardHeader className="space-y-4 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-          <X className="h-8 w-8 text-gray-600" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+          <X className="h-8 w-8 text-muted-foreground" />
         </div>
         <div>
           <CardTitle className="text-2xl">Decline Invitation</CardTitle>

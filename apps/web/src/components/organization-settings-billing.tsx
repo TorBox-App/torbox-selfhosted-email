@@ -186,7 +186,9 @@ export function OrganizationSettingsBilling({
               <CardTitle className="flex items-center gap-2">
                 Current Plan
                 {isAnnual && (
-                  <Badge className="bg-green-600 text-white">Annual</Badge>
+                  <Badge className="bg-green-600 text-primary-foreground">
+                    Annual
+                  </Badge>
                 )}
                 {isTrialing && <Badge variant="secondary">Trial</Badge>}
                 {isCancelled && <Badge variant="destructive">Cancelling</Badge>}

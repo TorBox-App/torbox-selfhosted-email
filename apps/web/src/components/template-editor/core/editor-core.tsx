@@ -198,7 +198,7 @@ export function EditorCore({
                 {/* Editor - always mounted, hidden with CSS to prevent flushSync issues */}
                 <div className={cn(view !== "edit" && "hidden")}>
                   <div className="mx-auto max-w-3xl p-6">
-                    <div className="min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm">
+                    <div className="min-h-[600px] rounded-lg border bg-card text-card-foreground shadow-sm">
                       <EditorContent className="p-6" editor={editor} />
                       {/* Bubble menu for text formatting */}
                       <EditorBubbleMenu editor={editor} />

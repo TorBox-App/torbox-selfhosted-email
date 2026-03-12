@@ -74,7 +74,7 @@ export function PlanSelector({
             {/* Early adopter badge */}
             {isEarlyAdopter && (
               <div className="-top-3 -translate-x-1/2 absolute left-1/2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 font-medium text-white text-xs">
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 font-medium text-primary-foreground text-xs">
                   Early Adopter
                 </span>
               </div>

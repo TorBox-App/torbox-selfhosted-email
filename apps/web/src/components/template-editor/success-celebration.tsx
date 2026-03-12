@@ -52,13 +52,13 @@ export function SuccessCelebration({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm transition-opacity duration-300",
+        "fixed inset-0 z-[100] flex items-center justify-center bg-foreground/20 backdrop-blur-sm transition-opacity duration-300",
         isExiting ? "opacity-0" : "opacity-100"
       )}
     >
       <div
         className={cn(
-          "flex flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-2xl transition-all duration-500",
+          "flex flex-col items-center gap-4 rounded-2xl bg-background p-8 shadow-2xl transition-all duration-500",
           isExiting ? "scale-95 opacity-0" : "scale-100 opacity-100"
         )}
       >

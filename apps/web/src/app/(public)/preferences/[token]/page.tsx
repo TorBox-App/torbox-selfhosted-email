@@ -69,10 +69,10 @@ export default async function PreferencesPage({
   if (!payload) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm dark:bg-gray-800">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30">
+        <div className="w-full max-w-md rounded-2xl bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
             <svg
-              className="h-6 w-6 text-red-500"
+              className="h-6 w-6 text-destructive"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -85,10 +85,10 @@ export default async function PreferencesPage({
               />
             </svg>
           </div>
-          <h1 className="mb-2 font-semibold text-gray-900 text-xl dark:text-white">
+          <h1 className="mb-2 font-semibold text-foreground text-xl">
             Link Expired
           </h1>
-          <p className="text-gray-500 text-sm dark:text-gray-400">
+          <p className="text-muted-foreground text-sm">
             This preferences link is no longer valid. Please use the link from a
             more recent email.
           </p>
@@ -225,10 +225,10 @@ export default async function PreferencesPage({
             </div>
           ) : null}
 
-          <h1 className="mb-2 font-semibold text-2xl text-gray-900 tracking-tight dark:text-white">
+          <h1 className="mb-2 font-semibold text-2xl text-foreground tracking-tight">
             {orgWithSettings?.preferenceCenterTitle || "Email Preferences"}
           </h1>
-          <p className="text-gray-500 text-sm dark:text-gray-400">
+          <p className="text-muted-foreground text-sm">
             {orgWithSettings?.preferenceCenterDescription ? (
               renderDescription(orgWithSettings.preferenceCenterDescription, {
                 masked_email: maskedEmail,
@@ -238,7 +238,7 @@ export default async function PreferencesPage({
             ) : (
               <>
                 Manage subscriptions for{" "}
-                <span className="font-medium text-gray-700 dark:text-gray-300">
+                <span className="font-medium text-foreground">
                   {maskedEmail}
                 </span>
               </>
@@ -247,7 +247,7 @@ export default async function PreferencesPage({
         </div>
 
         {/* Form card */}
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
+        <div className="rounded-2xl bg-card p-6 shadow-sm ring-1 ring-border">
           <PreferencesForm
             brandColor={brandColor}
             contactId={contactId}
@@ -266,7 +266,7 @@ export default async function PreferencesPage({
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-center text-gray-400 text-xs dark:text-gray-500">
+        <p className="mt-6 text-center text-muted-foreground text-xs">
           You can update your preferences anytime using the link in our emails.
         </p>
       </div>
@@ -311,7 +311,7 @@ function renderDescription(
         if (varName === "masked_email") {
           return (
             <span
-              className="font-medium text-gray-700 dark:text-gray-300"
+              className="font-medium text-foreground"
               key={`${varName}-${currentPosition}`}
             >
               {value}

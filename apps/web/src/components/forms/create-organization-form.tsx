@@ -81,8 +81,8 @@ export function CreateOrganizationForm({
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-          <p className="text-red-600 text-sm">{error}</p>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+          <p className="text-destructive text-sm">{error}</p>
         </div>
       )}
 
@@ -98,7 +98,7 @@ export function CreateOrganizationForm({
           value={name}
         />
         {fieldErrors.name && (
-          <p className="text-red-600 text-sm">{fieldErrors.name}</p>
+          <p className="text-destructive text-sm">{fieldErrors.name}</p>
         )}
         <p className="text-muted-foreground text-xs">
           The name of your organization or company
@@ -118,7 +118,7 @@ export function CreateOrganizationForm({
           />
         </div>
         {fieldErrors.slug && (
-          <p className="text-red-600 text-sm">{fieldErrors.slug}</p>
+          <p className="text-destructive text-sm">{fieldErrors.slug}</p>
         )}
         <p className="text-muted-foreground text-xs">
           A unique identifier for your organization's dashboard URL

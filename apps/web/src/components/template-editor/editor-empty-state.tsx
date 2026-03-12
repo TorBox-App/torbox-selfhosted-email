@@ -321,7 +321,7 @@ export function EditorEmptyState({ editor, onOpenAI }: EditorEmptyStateProps) {
   };
 
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/95 backdrop-blur-sm">
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/95 backdrop-blur-sm">
       <div className="w-full max-w-lg px-6 text-center">
         {/* Header */}
         <div className="mb-8">
@@ -369,7 +369,7 @@ export function EditorEmptyState({ editor, onOpenAI }: EditorEmptyStateProps) {
             <div className="w-full border-t" />
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-muted-foreground text-xs">
+            <span className="bg-background px-3 text-muted-foreground text-xs">
               or
             </span>
           </div>

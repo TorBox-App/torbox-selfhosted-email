@@ -13,8 +13,8 @@ import { getSenderDefaultsAction } from "@/actions/organizations";
 import { convertTiptapTemplate } from "@/actions/templates";
 import { ConnectAwsDialog } from "@/components/connect-aws-dialog";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import { useRequireAws } from "@/hooks/use-require-aws";
 import { useActiveBrandKit } from "@/hooks/use-brand-kit-queries";
+import { useRequireAws } from "@/hooks/use-require-aws";
 import { useTemplateEditor } from "@/hooks/use-template-editor";
 import {
   templateKeys,
@@ -279,7 +279,13 @@ function TemplateEditorContent({
   className,
 }: TemplateEditorContentProps) {
   const router = useRouter();
-  const { requireAws, dialogOpen: awsDialogOpen, setDialogOpen: setAwsDialogOpen, pendingAction, orgSlug: awsOrgSlug } = useRequireAws(orgSlug);
+  const {
+    requireAws,
+    dialogOpen: awsDialogOpen,
+    setDialogOpen: setAwsDialogOpen,
+    pendingAction,
+    orgSlug: awsOrgSlug,
+  } = useRequireAws(orgSlug);
   const [showSendTestModal, setShowSendTestModal] = useState(false);
   const [showSaveBlockModal, setShowSaveBlockModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -484,7 +490,14 @@ function TemplateEditorContent({
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
-  }, [requireAws, saveNow, updateMutation, subject, publishMutation, template.status]);
+  }, [
+    requireAws,
+    saveNow,
+    updateMutation,
+    subject,
+    publishMutation,
+    template.status,
+  ]);
 
   // Handle unpublish
   const handleUnpublish = useCallback(async () => {
@@ -662,7 +675,7 @@ function TemplateEditorContent({
                 <div className={cn(view !== "edit" && "hidden")}>
                   <div className="mx-auto max-w-3xl p-6">
                     <div
-                      className="relative min-h-[600px] rounded-lg border bg-white text-gray-900 shadow-sm"
+                      className="relative min-h-[600px] rounded-lg border bg-card text-card-foreground shadow-sm"
                       id="editor-canvas"
                       tabIndex={-1}
                     >
