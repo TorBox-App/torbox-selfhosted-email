@@ -13,7 +13,7 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
 
@@ -39,7 +39,7 @@ export async function POST(_request: Request, context: RouteContext) {
     // Parse optional body for onboarding path
     let onboardingPath: string | undefined;
     try {
-      const body = await _request.json();
+      const body = await request.json();
       if (body?.path === "start_building" || body?.path === "connect_aws") {
         onboardingPath = body.path;
       }

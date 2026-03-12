@@ -151,8 +151,8 @@ export function BillingStep({
         plan: selectedPlan,
         annual: billingInterval === "annual",
         referenceId: organizationId,
-        successUrl: `${window.location.origin}/${orgSlug}/onboarding?step=3&subscribed=true`,
-        cancelUrl: `${window.location.origin}/${orgSlug}/onboarding?step=2&plan=${selectedPlan}&interval=${billingInterval}`,
+        successUrl: `${window.location.origin}/${orgSlug}/onboarding?step=2&subscribed=true`,
+        cancelUrl: `${window.location.origin}/${orgSlug}/onboarding?step=1&plan=${selectedPlan}&interval=${billingInterval}`,
       });
 
       if (result.error) {

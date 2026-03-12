@@ -11,7 +11,7 @@ import { authClient } from "@/lib/auth-client";
 import { BillingStep } from "./components/billing-step";
 import { StepProgress } from "./components/step-progress";
 import { SuccessStep } from "./components/success-step";
-import { WelcomeStep } from "./components/welcome-step";
+import { ChoosePathStep } from "./components/choose-path-step";
 
 // Dynamic import for heavy component - loaded when user reaches step 3
 const CliDeployConnectStep = dynamic(
@@ -23,8 +23,8 @@ const CliDeployConnectStep = dynamic(
 );
 
 const STEPS = [
-  { id: 1, title: "Welcome", component: WelcomeStep },
-  { id: 2, title: "Choose Plan", component: BillingStep },
+  { id: 1, title: "Choose Plan", component: BillingStep },
+  { id: 2, title: "Choose Path", component: ChoosePathStep },
   { id: 3, title: "Deploy & Connect", component: CliDeployConnectStep },
   { id: 4, title: "Success", component: SuccessStep },
 ];
@@ -83,6 +83,11 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
   const [isInfrastructureConnected, setIsInfrastructureConnected] =
     useState(false);
 
+  // Track which onboarding path the user chose
+  const [onboardingPath, setOnboardingPath] = useState<
+    "start_building" | "connect_aws" | null
+  >(null);
+
   // Refs to prevent duplicate actions
   const hasShownSubscribedToast = useRef(false);
   const hasAdjustedBillingStep = useRef(false);
@@ -114,10 +119,20 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
         localStorage.setItem(`onboarding_interval_${slug}`, intervalParam);
       }
 
+      // Read saved onboarding path from localStorage
+      const savedPath = localStorage.getItem(`onboarding_path_${slug}`);
+      const validPath =
+        savedPath === "start_building" || savedPath === "connect_aws"
+          ? savedPath
+          : null;
+
       // Batch state updates in a transition to reduce renders
       startTransition(() => {
         setOrgSlug(slug);
         setCurrentStep(initialStep);
+        if (validPath) {
+          setOnboardingPath(validPath);
+        }
         setIsInitialized(true);
       });
     });
@@ -139,11 +154,9 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       const subscribed = searchParams.get("subscribed");
       if (subscribed === "true") {
         hasShownSubscribedToast.current = true;
-        toast.success(
-          "Payment successful! Let's set up your AWS infrastructure."
-        );
-        if (currentStep === 2) {
-          setCurrentStep(3);
+        toast.success("Payment successful!");
+        if (currentStep === 1) {
+          setCurrentStep(2);
           return; // Skip localStorage save since we're changing step
         }
       }
@@ -187,17 +200,17 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       return;
     }
 
-    // If user has active subscription and is on billing step (step 2), skip to deploy step
-    if (onboardingStatus.hasActiveSubscription && currentStep === 2) {
+    // If user has active subscription and is on billing step (step 1), skip to choose path
+    if (onboardingStatus.hasActiveSubscription && currentStep === 1) {
       hasAdjustedBillingStep.current = true;
-      setCurrentStep(3);
+      setCurrentStep(2);
       return;
     }
 
     // If user is past billing step but has NO subscription, reset to billing step
-    if (!onboardingStatus.hasActiveSubscription && currentStep > 2) {
+    if (!onboardingStatus.hasActiveSubscription && currentStep > 1) {
       hasAdjustedBillingStep.current = true;
-      setCurrentStep(2);
+      setCurrentStep(1);
     }
   }, [isInitialized, onboardingStatus, currentStep]);
 
@@ -268,6 +281,46 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     router,
   ]);
 
+  // Completion logic — defined before early returns so EFFECT 6 can call it
+  const completeOnboarding = async () => {
+    if (!orgSlug) return;
+    await fetch(`/api/${orgSlug}/onboarding/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: onboardingPath ?? "connect_aws" }),
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["onboarding-status", orgSlug],
+    });
+    localStorage.removeItem(`onboarding_step_${orgSlug}`);
+    localStorage.removeItem(`onboarding_plan_${orgSlug}`);
+    localStorage.removeItem(`onboarding_interval_${orgSlug}`);
+    localStorage.removeItem(`onboarding_path_${orgSlug}`);
+    if (currentOrg) {
+      posthog.capture("onboarding_flow_completed", {
+        organization_id: currentOrg.id,
+        final_step: currentStep,
+        onboarding_path: onboardingPath ?? "connect_aws",
+      });
+    }
+    router.push(`/${orgSlug}`);
+  };
+
+  // EFFECT 6: Auto-complete for "Start building" path
+  // When user reaches step 3+ with start_building path, skip Deploy & Connect
+  // Handles both: free plan (handleNext advances to 3) and Stripe return (URL has step=3)
+  useEffect(() => {
+    if (
+      isInitialized &&
+      currentStep >= 3 &&
+      onboardingPath === "start_building" &&
+      !hasRedirected.current
+    ) {
+      hasRedirected.current = true;
+      completeOnboarding();
+    }
+  }, [isInitialized, currentStep, onboardingPath]);
+
   if (isPending || !isInitialized || !orgSlug || isOrgsLoading) {
     return <Loader fullScreen />;
   }
@@ -281,14 +334,26 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     return <Loader fullScreen />;
   }
 
+  // Prevent flash of Deploy & Connect UI while auto-complete effect runs
+  if (currentStep >= 3 && onboardingPath === "start_building") {
+    return <Loader fullScreen />;
+  }
+
   const CurrentStepComponent = STEPS[currentStep - 1].component;
 
   const handleNext = () => {
     if (currentStep < STEPS.length) {
       // If advancing past billing step, prevent Effect 3 from resetting
-      // back to step 2 before the onboarding-status query refreshes
-      if (currentStep === 2) {
+      // back to step 1 before the onboarding-status query refreshes
+      if (currentStep === 1) {
         userAdvancedPastBilling.current = true;
+      }
+      // Sync path choice from localStorage when advancing from Choose Path step
+      if (currentStep === 2 && orgSlug) {
+        const savedPath = localStorage.getItem(`onboarding_path_${orgSlug}`);
+        if (savedPath === "start_building" || savedPath === "connect_aws") {
+          setOnboardingPath(savedPath);
+        }
       }
       setCurrentStep(currentStep + 1);
     }
@@ -317,32 +382,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     setCurrentStep(4);
   };
 
-  const handleComplete = async () => {
-    // Mark onboarding complete and redirect to emails
-    await fetch(`/api/${orgSlug}/onboarding/complete`, {
-      method: "POST",
-    });
-
-    // Invalidate the onboarding status query to refetch
-    await queryClient.invalidateQueries({
-      queryKey: ["onboarding-status", orgSlug],
-    });
-
-    // Clear localStorage
-    localStorage.removeItem(`onboarding_step_${orgSlug}`);
-    localStorage.removeItem(`onboarding_plan_${orgSlug}`);
-    localStorage.removeItem(`onboarding_interval_${orgSlug}`);
-
-    // Track final completion in the main page as well for redundancy
-    if (currentOrg) {
-      posthog.capture("onboarding_flow_completed", {
-        organization_id: currentOrg.id,
-        final_step: currentStep,
-      });
-    }
-
-    router.push(`/${orgSlug}`);
-  };
+  const handleComplete = completeOnboarding;
 
   return (
     <div className="space-y-8">
