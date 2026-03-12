@@ -6,7 +6,7 @@ import { AnalyticsProvider } from "@/components/analytics-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarConfigProvider } from "@/contexts/sidebar-context";
 import { InViewProvider } from "@/hooks/use-shared-in-view";
-import { inter } from "@/lib/fonts";
+import { inter, jetbrainsMono, spaceGrotesk } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -91,7 +91,7 @@ export default function RootLayout({
 }) {
   return (
     <html
-      className={`${inter.variable} antialiased`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
       lang="en"
       suppressHydrationWarning
     >

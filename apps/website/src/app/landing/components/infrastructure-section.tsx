@@ -24,7 +24,7 @@ export function InfrastructureSection() {
     <section className="py-24" id="infrastructure">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="animate-fade-in-up">
-          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+          <h2 className="mb-4 font-bold text-3xl tracking-tight font-heading md:text-4xl">
             Sending infrastructure you actually own.
           </h2>
           <p className="mb-10 max-w-3xl text-lg text-muted-foreground">

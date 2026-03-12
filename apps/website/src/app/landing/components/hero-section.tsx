@@ -28,7 +28,7 @@ export function HeroSection() {
           </div>
 
           {/* Main Headline - server rendered, CSS animation */}
-          <h1 className="max-w-[864px] text-left text-[28px] font-medium leading-[32px] animate-fade-in-up md:text-[34px] md:leading-[40px] lg:text-[48px] lg:leading-[56px]">
+          <h1 className="max-w-[864px] text-left text-[32px] font-semibold leading-[36px] animate-fade-in-up font-heading md:text-[42px] md:leading-[48px] lg:text-[60px] lg:leading-[68px]">
             The email platform that sends through{" "}
             <span className="text-orange-500">your AWS.</span>
           </h1>

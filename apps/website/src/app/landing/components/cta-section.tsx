@@ -6,7 +6,7 @@ export function CTASection() {
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
         {/* Headline - server rendered */}
         <div className="animate-fade-in-up">
-          <p className="mb-6 text-2xl font-medium tracking-tight sm:text-3xl">
+          <p className="mb-6 text-2xl font-semibold tracking-tight font-heading sm:text-3xl">
             Your infrastructure. Your data.{" "}
             <span className="text-orange-500">Your AWS bill.</span>
           </p>

@@ -151,7 +151,7 @@ export function DualPathSection() {
               <span className="text-sm text-foreground/50">for marketers</span>
             </div>
           </div>
-          <h2 className="mb-4 text-center font-bold text-3xl tracking-tight md:text-4xl">
+          <h2 className="mb-4 text-center font-bold text-3xl tracking-tight font-heading md:text-4xl">
             One platform. Two ways to work.
           </h2>
           <p className="mx-auto max-w-3xl text-center text-lg text-foreground/70">

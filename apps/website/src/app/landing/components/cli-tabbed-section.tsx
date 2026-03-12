@@ -6,7 +6,7 @@ export function CliTabbedSection() {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Header - server rendered */}
         <div className="mb-12 text-center animate-fade-in-up">
-          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+          <h2 className="mb-4 font-bold text-3xl tracking-tight font-heading md:text-4xl">
             Deploy to your AWS in one command.
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">

@@ -16,7 +16,7 @@ export function PricingSection() {
           <span className="mb-4 inline-block rounded-full border px-3 py-1 font-medium text-xs bg-background text-muted-foreground border-border">
             Pricing
           </span>
-          <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
+          <h2 className="mb-4 font-bold text-3xl tracking-tight font-heading md:text-4xl">
             {PRICING_COPY.headline}
           </h2>
           <p className="mx-auto max-w-2xl text-muted-foreground">
