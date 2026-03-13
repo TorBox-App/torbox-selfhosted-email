@@ -10,6 +10,7 @@ import { InfrastructureSection } from "./landing/components/infrastructure-secti
 import { LandingNavbar } from "./landing/components/navbar";
 import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
+import { WhyWrapsSection } from "./landing/components/why-wraps-section";
 
 export const metadata: Metadata = {
   alternates: {
@@ -124,7 +125,10 @@ export default function LandingPage() {
           {/* 5. AWS ownership */}
           <InfrastructureSection />
 
-          {/* 6. Pricing */}
+          {/* 6. Founder story */}
+          <WhyWrapsSection />
+
+          {/* 7. Pricing */}
           <PricingSection />
 
           {/* 7. FAQ & CTA */}
