@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 import { CliCommandsSection } from "./components/commands-section";
 import { CliConsoleSection } from "./components/console-section";
 import { CliCtaSection } from "./components/cta-section";
@@ -64,11 +64,7 @@ export const metadata: Metadata = {
 export default function CliPage() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
-        id="software-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={softwareSchema} />
       <div className="min-h-screen bg-background">
         <LandingNavbar />
         <main>

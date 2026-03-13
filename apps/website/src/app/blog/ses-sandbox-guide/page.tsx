@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 import { Badge } from "@/components/ui/badge";
 import SandboxGuideContent from "./page-content";
 
@@ -119,16 +119,8 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-        id="article-schema"
-        type="application/ld+json"
-      />
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        id="faq-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={articleSchema} />
+      <JsonLd data={faqSchema} />
       <div className="min-h-screen bg-background">
         <LandingNavbar />
 

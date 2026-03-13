@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -99,11 +99,7 @@ export const metadata: Metadata = {
 export default function InboundPage() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
-        id="software-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={softwareSchema} />
 
       <div className="min-h-screen bg-background">
         <LandingNavbar />

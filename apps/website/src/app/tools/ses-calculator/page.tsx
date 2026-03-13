@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,16 +108,8 @@ const faqSchema = {
 export default function SESCalculatorPage() {
   return (
     <>
-      <script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
-        suppressHydrationWarning
-        type="application/ld+json"
-      />
-      <script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        suppressHydrationWarning
-        type="application/ld+json"
-      />
+      <JsonLd data={webAppSchema} />
+      <JsonLd data={faqSchema} />
       <div className="min-h-dvh bg-background">
         <LandingNavbar />
 

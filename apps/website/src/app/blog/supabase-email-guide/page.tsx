@@ -14,9 +14,9 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -205,16 +205,8 @@ const InfoCard = ({
 export default function Page() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-        id="article-schema"
-        type="application/ld+json"
-      />
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        id="faq-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={articleSchema} />
+      <JsonLd data={faqSchema} />
 
       <div className="min-h-screen bg-background">
         <LandingNavbar />
@@ -354,8 +346,8 @@ export default function Page() {
                   to your users
                 </li>
                 <li>
-                  Built-in SMTP rate limits are low (as few as 2-3
-                  emails/hour) and can change without notice
+                  Built-in SMTP rate limits are low (as few as 2-3 emails/hour)
+                  and can change without notice
                 </li>
                 <li>
                   No deliverability visibility — you can't see if emails are
@@ -994,8 +986,8 @@ wraps email send --to user@example.com --subject "Hello from Wraps"`}
               >
                 <p className="text-muted-foreground text-sm">
                   Yes. Resend is a solid choice for transactional email. The
-                  tradeoffs: you start at $20/mo for 50K emails (vs ~$5 on
-                  SES), overages are $0.90/1K, you don't own the sending
+                  tradeoffs: you start at $20/mo for 50K emails (vs ~$5 on SES),
+                  overages are $0.90/1K, you don't own the sending
                   infrastructure, and you'll need a separate tool for broadcasts
                   and automations. If you're sending under 10K emails/month and
                   only need transactional, Resend is fine. At scale or if you

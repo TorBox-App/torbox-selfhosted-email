@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import { JsonLd } from "@/components/json-ld";
 import InboundEmailQuickstartPageContent from "./page-content";
 
 const breadcrumbSchema = {
@@ -57,11 +57,7 @@ export const metadata: Metadata = {
 export default function InboundEmailQuickstartPage() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-        id="breadcrumb-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={breadcrumbSchema} />
       <article aria-hidden="true" className="sr-only">
         <h2>Inbound Email Quickstart</h2>
         <p>

@@ -1,8 +1,8 @@
 import { Check, ChevronRight, Clock, Inbox, Shield, Zap } from "lucide-react";
 import type { Metadata } from "next";
-import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 import { Card } from "@/components/ui/card";
 import {
   CLIDemo,
@@ -119,16 +119,8 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-        id="article-schema"
-        type="application/ld+json"
-      />
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        id="faq-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={articleSchema} />
+      <JsonLd data={faqSchema} />
       <div className="min-h-screen bg-background text-foreground">
         <LandingNavbar />
 

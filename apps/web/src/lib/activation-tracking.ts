@@ -176,7 +176,9 @@ export async function trackAwsConnected(
       capture(userId, "activation_aws_connected", props);
       await emit(userId, "activation.aws_connected", props);
     }
-    await updateActivationScore(userId, organizationId,
+    await updateActivationScore(
+      userId,
+      organizationId,
       existing === 1 ? { hasConnectedAws: true } : undefined
     );
   } catch {
@@ -203,7 +205,9 @@ export async function trackDomainVerified(
       capture(userId, "activation_domain_verified", props);
       await emit(userId, "activation.domain_verified", props);
     }
-    await updateActivationScore(userId, organizationId,
+    await updateActivationScore(
+      userId,
+      organizationId,
       properties.isFirstDomain ? { hasDomainVerified: true } : undefined
     );
   } catch {
@@ -230,7 +234,9 @@ export async function trackFirstEmailSent(
       capture(userId, "activation_first_email_sent", props);
       await emit(userId, "activation.first_email_sent", props);
     }
-    await updateActivationScore(userId, organizationId,
+    await updateActivationScore(
+      userId,
+      organizationId,
       existing <= 1 ? { hasSentEmail: true } : undefined
     );
   } catch {
@@ -354,7 +360,9 @@ export async function trackTemplateCreated(
       capture(userId, "activation_first_template", firstProps);
       await emit(userId, "activation.first_template", firstProps);
     }
-    await updateActivationScore(userId, organizationId,
+    await updateActivationScore(
+      userId,
+      organizationId,
       existing === 1 ? { hasCreatedTemplate: true } : undefined
     );
   } catch {
@@ -398,7 +406,9 @@ export async function trackBroadcastCreated(
       capture(userId, "activation_first_broadcast", firstProps);
       await emit(userId, "activation.first_broadcast", firstProps);
     }
-    await updateActivationScore(userId, organizationId,
+    await updateActivationScore(
+      userId,
+      organizationId,
       existing === 1 ? { hasSentBroadcast: true } : undefined
     );
   } catch {

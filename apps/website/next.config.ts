@@ -66,7 +66,6 @@ const nextConfig = {
       },
     ];
   },
-
 } satisfies NextConfig;
 
 // Cast needed: @next/bundle-analyzer resolves NextConfig from next@15, website uses next@16

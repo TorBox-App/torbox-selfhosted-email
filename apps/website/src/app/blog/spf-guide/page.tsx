@@ -10,9 +10,9 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -154,11 +154,7 @@ const PROVIDER_LOOKUPS = [
 export default function Page() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-        id="article-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={articleSchema} />
 
       <div className="min-h-screen bg-background">
         <LandingNavbar />

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import { JsonLd } from "@/components/json-ld";
 import PulumiReferencePageContent from "./page-content";
 
 const breadcrumbSchema = {
@@ -42,11 +42,7 @@ export const metadata: Metadata = {
 export default function PulumiReferencePage() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-        id="breadcrumb-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={breadcrumbSchema} />
       {/* Server-rendered content for SEO */}
       <article aria-hidden="true" className="sr-only">
         <h2>Pulumi Component Reference</h2>

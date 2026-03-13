@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
+import { JsonLd } from "@/components/json-ld";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,11 +60,7 @@ const webAppSchema = {
 export default function SPFBuilderPage() {
   return (
     <>
-      <script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
-        suppressHydrationWarning
-        type="application/ld+json"
-      />
+      <JsonLd data={webAppSchema} />
       <div className="min-h-screen bg-background">
         <LandingNavbar />
 

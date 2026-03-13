@@ -440,10 +440,10 @@ id = "no-dangerous-html"
 type = "ratchet"
 severity = "error"
 pattern = "dangerouslySetInnerHTML"
-max_count = 76
+max_count = 5
 glob = "**/*.{ts,tsx}"
 exclude_glob = ["**/node_modules/**"]
-message = "Reduce dangerouslySetInnerHTML usage — sanitize content or use safe alternatives (76 remaining, ratchet down)"
+message = "Reduce dangerouslySetInnerHTML usage — sanitize content or use safe alternatives (5 remaining, ratchet down)"
 
 # Override security preset: innerHTML used for asciinema cleanup and GTM injection
 [[rule]]

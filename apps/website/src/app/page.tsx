@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import { JsonLd } from "@/components/json-ld";
 import { CliTabbedSection } from "./landing/components/cli-tabbed-section";
 import { CTASection } from "./landing/components/cta-section";
 import { DualPathSection } from "./landing/components/dual-path-section";
@@ -101,11 +101,7 @@ const faqSchema = {
 export default function LandingPage() {
   return (
     <>
-      <Script
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        id="faq-schema"
-        type="application/ld+json"
-      />
+      <JsonLd data={faqSchema} />
       <div className="min-h-screen bg-background">
         {/* Navigation */}
         <LandingNavbar />
