@@ -73,6 +73,18 @@ function TerminalLine({
 }
 
 export default async function Image() {
+  const toDataUri = async (url: string) => {
+    const res = await fetch(url);
+    const buf = await res.arrayBuffer();
+    const base64 = Buffer.from(buf).toString("base64");
+    return `data:image/png;base64,${base64}`;
+  };
+
+  const [supabaseLogo, wrapsLogo] = await Promise.all([
+    toDataUri("https://wraps.dev/logos/supabase-wordmark-dark.png"),
+    toDataUri("https://wraps.dev/wraps-dark-logo.png"),
+  ]);
+
   return new ImageResponse(
     (
       <div
@@ -206,32 +218,20 @@ export default async function Image() {
             justifyContent: "space-between",
           }}
         >
-          {/* Bottom left: Supabase green dot as placeholder */}
+          {/* Bottom left: Supabase logo */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              opacity: 0.7,
+              opacity: 0.8,
             }}
           >
-            <div
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 6,
-                background: "#3ecf8e",
-              }}
+            <img
+              alt="Supabase"
+              height={28}
+              src={supabaseLogo}
+              width={140}
             />
-            <span
-              style={{
-                color: "rgba(255,255,255,0.5)",
-                fontSize: 14,
-                fontWeight: 500,
-              }}
-            >
-              Supabase
-            </span>
           </div>
 
           {/* Center: Title */}
@@ -268,24 +268,20 @@ export default async function Image() {
             </div>
           </div>
 
-          {/* Bottom right: WRAPS text */}
+          {/* Bottom right: Wraps logo */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              opacity: 0.7,
+              opacity: 0.8,
             }}
           >
-            <span
-              style={{
-                color: "rgba(255,255,255,0.7)",
-                fontSize: 20,
-                fontWeight: 800,
-                letterSpacing: "0.05em",
-              }}
-            >
-              WRAPS
-            </span>
+            <img
+              alt="Wraps"
+              height={24}
+              src={wrapsLogo}
+              width={100}
+            />
           </div>
         </div>
       </div>
