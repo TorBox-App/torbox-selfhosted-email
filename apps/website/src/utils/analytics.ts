@@ -15,7 +15,7 @@ declare global {
 export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || "";
 export const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || "";
 export const POSTHOG_HOST =
-  process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
+  process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://o11y.wraps.dev";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 /**

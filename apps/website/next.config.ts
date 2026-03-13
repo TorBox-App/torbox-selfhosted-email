@@ -67,22 +67,6 @@ const nextConfig = {
     ];
   },
 
-  // PostHog reverse proxy rewrites
-  async rewrites() {
-    return [
-      {
-        source: "/ingest/static/:path*",
-        destination: "https://us-assets.i.posthog.com/static/:path*",
-      },
-      {
-        source: "/ingest/:path*",
-        destination: "https://us.i.posthog.com/:path*",
-      },
-    ];
-  },
-
-  // Required to support PostHog trailing slash API requests
-  skipTrailingSlashRedirect: true,
 } satisfies NextConfig;
 
 // Cast needed: @next/bundle-analyzer resolves NextConfig from next@15, website uses next@16
