@@ -62,7 +62,7 @@ const faqSchema = {
       name: "Can I just use Resend with Supabase?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. Resend is a solid choice for transactional email. The tradeoff: you pay $0.40/1K emails (vs $0.10/1K on SES), you don't own the sending infrastructure, and you'll need a separate tool for broadcasts and automations.",
+        text: "Yes. Resend is a solid choice for transactional email. The tradeoff: you start at $20/mo for 50K emails (vs ~$5 on SES), overages are $0.90/1K, you don't own the sending infrastructure, and you'll need a separate tool for broadcasts and automations.",
       },
     },
     {
@@ -113,7 +113,7 @@ const COST_COMPARISON = [
     provider: "Resend",
     cost50k: "$20",
     cost250k: "$225",
-    cost1m: "$810",
+    cost1m: "$900",
     contacts: "N/A",
     note: "Transactional only",
   },
@@ -127,11 +127,11 @@ const COST_COMPARISON = [
   },
   {
     provider: "Customer.io",
-    cost50k: "N/A",
-    cost250k: "$150+",
-    cost1m: "$500+",
-    contacts: "Per-contact",
-    note: "Full platform, their infra",
+    cost50k: "$100+",
+    cost250k: "$100+",
+    cost1m: "$100+",
+    contacts: "Per-profile",
+    note: "$100/mo base, scales with profiles",
   },
   {
     provider: "Mailchimp",
@@ -354,7 +354,8 @@ export default function Page() {
                   to your users
                 </li>
                 <li>
-                  Rate limits on the free plan are low (4 emails/hour per user)
+                  Built-in SMTP rate limits are low (as few as 2-3
+                  emails/hour) and can change without notice
                 </li>
                 <li>
                   No deliverability visibility — you can't see if emails are
@@ -428,8 +429,8 @@ Sender:   noreply@yourdomain.com`}
                   </tr>
                   <tr>
                     <td className="px-4 py-3">Postmark</td>
-                    <td className="px-4 py-3 text-right font-mono">$1.25</td>
-                    <td className="px-4 py-3 text-right font-mono">$63</td>
+                    <td className="px-4 py-3 text-right font-mono">$1.20</td>
+                    <td className="px-4 py-3 text-right font-mono">$66</td>
                   </tr>
                 </tbody>
               </table>
@@ -815,8 +816,8 @@ serve(async () => {
                   unless you build per-user logic
                 </li>
                 <li>
-                  Edge Function timeout — long user lists can exceed the 150s
-                  limit
+                  Edge Function timeout — long user lists can exceed the
+                  execution limit (150s free / 400s paid)
                 </li>
               </ul>
             </InfoCard>
@@ -993,12 +994,12 @@ wraps email send --to user@example.com --subject "Hello from Wraps"`}
               >
                 <p className="text-muted-foreground text-sm">
                   Yes. Resend is a solid choice for transactional email. The
-                  tradeoffs: you pay $0.40/1K emails (vs $0.10/1K on SES), you
-                  don't own the sending infrastructure, and you'll need a
-                  separate tool for broadcasts and automations. If you're
-                  sending under 10K emails/month and only need transactional,
-                  Resend is fine. At scale or if you need a full platform, the
-                  economics favor SES.
+                  tradeoffs: you start at $20/mo for 50K emails (vs ~$5 on
+                  SES), overages are $0.90/1K, you don't own the sending
+                  infrastructure, and you'll need a separate tool for broadcasts
+                  and automations. If you're sending under 10K emails/month and
+                  only need transactional, Resend is fine. At scale or if you
+                  need a full platform, the economics favor SES.
                 </p>
               </Collapsible>
 
@@ -1031,10 +1032,10 @@ wraps email send --to user@example.com --subject "Hello from Wraps"`}
 
               <Collapsible title="What about Postmark?">
                 <p className="text-muted-foreground text-sm">
-                  Great deliverability, good DX. But at $1.25/1K emails, it's
-                  12x more expensive than SES. And Postmark is transactional
-                  only — no broadcasts, no automations. You'd need a second tool
-                  for those flows.
+                  Great deliverability, good DX. But at $1.20/1K emails, it's
+                  12x more expensive than SES. Postmark supports broadcasts now,
+                  but has no automations or workflow builders — you'd need a
+                  second tool for drip sequences and scheduled sends.
                 </p>
               </Collapsible>
 
