@@ -1,10 +1,14 @@
 "use client";
 
+import { useTheme } from "@wraps/ui/hooks/use-theme";
 import {
   CircleUser,
   EllipsisVertical,
   LogOut,
+  Monitor,
+  Moon,
   ShieldCheck,
+  Sun,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,7 +19,12 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -32,6 +41,7 @@ export function NavUser() {
   const { isMobile } = useSidebar();
   const router = useRouter();
   const session = useSession();
+  const { theme, setTheme } = useTheme();
   const user = session.data?.user;
 
   if (!user) {
@@ -115,15 +125,51 @@ export function NavUser() {
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            {/* <DropdownMenuSeparator />
+            <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <Link href="/settings/notifications">
-                  <BellDot />
-                  Notifications
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuGroup> */}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="cursor-pointer gap-2 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground">
+                  {theme === "dark" ? (
+                    <Moon />
+                  ) : theme === "light" ? (
+                    <Sun />
+                  ) : (
+                    <Monitor />
+                  )}
+                  Theme
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuRadioGroup
+                    onValueChange={(value) =>
+                      setTheme(value as "light" | "dark" | "system")
+                    }
+                    value={theme}
+                  >
+                    <DropdownMenuRadioItem
+                      className="cursor-pointer"
+                      value="light"
+                    >
+                      <Sun />
+                      Light
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      className="cursor-pointer"
+                      value="dark"
+                    >
+                      <Moon />
+                      Dark
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem
+                      className="cursor-pointer"
+                      value="system"
+                    >
+                      <Monitor />
+                      System
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer"
