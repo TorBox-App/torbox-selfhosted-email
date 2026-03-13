@@ -489,6 +489,140 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
     expect(mockPatch).not.toHaveBeenCalled();
   });
 
+  // ─── Contact property hydration ──────────────────────────────────────────
+
+  it("trackAwsConnected should PATCH hasConnectedAws on first AWS account", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackAwsConnected("user@example.com", "org-123", {
+      region: "us-east-1",
+      accountId: "123456789012",
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/v1/contacts/{id}",
+      expect.objectContaining({
+        params: { path: { id: "user@example.com" } },
+        body: {
+          properties: expect.objectContaining({ hasConnectedAws: true }),
+        },
+      })
+    );
+  });
+
+  it("trackDomainVerified should PATCH hasDomainVerified on first domain", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackDomainVerified("user@example.com", "org-123", {
+      domain: "example.com",
+      isFirstDomain: true,
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/v1/contacts/{id}",
+      expect.objectContaining({
+        params: { path: { id: "user@example.com" } },
+        body: {
+          properties: expect.objectContaining({ hasDomainVerified: true }),
+        },
+      })
+    );
+  });
+
+  it("trackFirstEmailSent should PATCH hasSentEmail on first email", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackFirstEmailSent("user@example.com", "org-123", {
+      channel: "email",
+      source: "broadcast",
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/v1/contacts/{id}",
+      expect.objectContaining({
+        params: { path: { id: "user@example.com" } },
+        body: { properties: expect.objectContaining({ hasSentEmail: true }) },
+      })
+    );
+  });
+
+  it("trackTemplateCreated should PATCH hasCreatedTemplate on first template", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackTemplateCreated("user@example.com", "org-123");
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/v1/contacts/{id}",
+      expect.objectContaining({
+        params: { path: { id: "user@example.com" } },
+        body: {
+          properties: expect.objectContaining({ hasCreatedTemplate: true }),
+        },
+      })
+    );
+  });
+
+  it("trackWorkflowCreated should PATCH hasCreatedWorkflow", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackWorkflowCreated("user@example.com", "org-123");
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/v1/contacts/{id}",
+      expect.objectContaining({
+        params: { path: { id: "user@example.com" } },
+        body: {
+          properties: expect.objectContaining({ hasCreatedWorkflow: true }),
+        },
+      })
+    );
+  });
+
+  it("trackBroadcastCreated should PATCH hasSentBroadcast on first broadcast", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackBroadcastCreated("user@example.com", "org-123", {
+      channel: "email",
+      recipientCount: 10,
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/v1/contacts/{id}",
+      expect.objectContaining({
+        params: { path: { id: "user@example.com" } },
+        body: {
+          properties: expect.objectContaining({ hasSentBroadcast: true }),
+        },
+      })
+    );
+  });
+
+  it("updateActivationScore should PATCH activationScore on contact", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    // trackAwsConnected calls updateActivationScore internally
+    await trackAwsConnected("user@example.com", "org-123", {
+      region: "us-east-1",
+      accountId: "123456789012",
+    });
+
+    // Should have a PATCH call that includes activationScore
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/v1/contacts/{id}",
+      expect.objectContaining({
+        params: { path: { id: "user@example.com" } },
+        body: { properties: expect.objectContaining({ activationScore: 5 }) },
+      })
+    );
+  });
+
   // ─── computeActivationScore ───────────────────────────────────────────────
 
   it("computeActivationScore should return score and milestones from setup status + counts", async () => {
