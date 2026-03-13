@@ -186,7 +186,7 @@ export function AcceptInvitationForm({
           size="lg"
         >
           {isAccepting
-            ? "Accepting…"
+            ? "Accepting..."
             : session?.user
               ? "Accept Invitation"
               : "Sign In to Accept"}

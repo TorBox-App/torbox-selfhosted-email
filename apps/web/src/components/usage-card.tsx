@@ -55,7 +55,7 @@ export function UsageCard({
             <Icon className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">{title}</CardTitle>
           </div>
-          <CardDescription>Loading…</CardDescription>
+          <CardDescription>Loading...</CardDescription>
         </CardHeader>
       </Card>
     );

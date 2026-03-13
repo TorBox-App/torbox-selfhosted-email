@@ -245,7 +245,7 @@ export function InlineEditor({
       >
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Loading template…</p>
+          <p className="text-muted-foreground">Loading template...</p>
         </div>
       </div>
     );

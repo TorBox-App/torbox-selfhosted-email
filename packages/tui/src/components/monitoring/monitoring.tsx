@@ -127,7 +127,7 @@ function formatJsonValue(value: unknown): ReactNode[] {
   }
   if (typeof value === "string") {
     // Truncate long strings
-    const display = value.length > 80 ? `${value.slice(0, 80)}…` : value;
+    const display = value.length > 80 ? `${value.slice(0, 80)}...` : value;
     return [<text fg={JSON_STRING_COLOR} key="str">{`"${display}"`}</text>];
   }
   if (typeof value === "number") {
@@ -163,7 +163,7 @@ function formatJsonValue(value: unknown): ReactNode[] {
     }
     return [
       <text fg="#AAAAAA" key="arr-trunc">
-        {compact.slice(0, 60)}…
+        {compact.slice(0, 60)}...
       </text>,
     ];
   }
@@ -178,7 +178,7 @@ function formatJsonValue(value: unknown): ReactNode[] {
     }
     return [
       <text fg="#AAAAAA" key="obj-trunc">
-        {compact.slice(0, 60)}…
+        {compact.slice(0, 60)}...
       </text>,
     ];
   }
@@ -312,7 +312,7 @@ function formatLogEntry(entry: LogEntry, termWidth: number): FormattedLine[] {
   // Truncate to terminal width
   const maxMsg = Math.max(40, termWidth - 18);
   if (displayMsg.length > maxMsg) {
-    displayMsg = `${displayMsg.slice(0, maxMsg)}…`;
+    displayMsg = `${displayMsg.slice(0, maxMsg)}...`;
   }
 
   return [

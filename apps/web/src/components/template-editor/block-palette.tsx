@@ -198,7 +198,7 @@ const blocks: BlockItem[] = [
     action: (editor) =>
       editor.commands.insertContent({
         type: "paragraph",
-        content: [{ type: "text", text: "Enter text here…" }],
+        content: [{ type: "text", text: "Enter text here..." }],
       }),
     category: "text",
   },
@@ -278,7 +278,7 @@ const blocks: BlockItem[] = [
         content: [
           {
             type: "paragraph",
-            content: [{ type: "text", text: "Quote text…" }],
+            content: [{ type: "text", text: "Quote text..." }],
           },
         ],
       }),
@@ -539,7 +539,7 @@ function BlockPreview({ blockName }: { blockName: string }) {
     case "Quote":
       return (
         <div className="border-l-2 border-muted-foreground/30 pl-3 text-muted-foreground text-xs italic">
-          "A meaningful quote here…"
+          "A meaningful quote here..."
         </div>
       );
     case "Variable":

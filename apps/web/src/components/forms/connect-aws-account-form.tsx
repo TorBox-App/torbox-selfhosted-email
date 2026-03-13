@@ -61,7 +61,7 @@ function SubmitButton({ canSubmit }: { canSubmit: boolean }) {
       loading={pending}
       type="submit"
     >
-      {pending ? "Connecting…" : "Connect Account"}
+      {pending ? "Connecting..." : "Connect Account"}
     </Button>
   );
 }

@@ -165,7 +165,7 @@ export const EmailSectionNode = Node.create({
             content: [
               {
                 type: "paragraph",
-                content: [{ type: "text", text: "Add content here…" }],
+                content: [{ type: "text", text: "Add content here..." }],
               },
             ],
           }),

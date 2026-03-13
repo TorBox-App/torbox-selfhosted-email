@@ -129,7 +129,7 @@ export function BlockLibrary({ editor, orgSlug }: BlockLibraryProps) {
           <Input
             className="pl-8"
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search blocks…"
+            placeholder="Search blocks..."
             value={search}
           />
         </div>

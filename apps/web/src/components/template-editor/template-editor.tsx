@@ -121,7 +121,7 @@ export function TemplateEditor({
       >
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Loading template…</p>
+          <p className="text-muted-foreground">Loading template...</p>
         </div>
       </div>
     );
@@ -255,7 +255,7 @@ function TiptapMigrationLoader({
     >
       <div className="text-center">
         <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-muted-foreground">Upgrading template…</p>
+        <p className="text-muted-foreground">Upgrading template...</p>
       </div>
     </div>
   );
@@ -591,7 +591,7 @@ function TemplateEditorContent({
           className
         )}
       >
-        <p className="text-muted-foreground">Initializing editor…</p>
+        <p className="text-muted-foreground">Initializing editor...</p>
       </div>
     );
   }

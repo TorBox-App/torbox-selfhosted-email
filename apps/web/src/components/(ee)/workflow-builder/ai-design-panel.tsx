@@ -502,7 +502,7 @@ export function AIDesignPanel({ orgSlug, workflowId }: AIDesignPanelProps) {
               adjustHeight();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Describe your automation…"
+            placeholder="Describe your automation..."
             ref={textareaRef}
             rows={1}
             value={input}

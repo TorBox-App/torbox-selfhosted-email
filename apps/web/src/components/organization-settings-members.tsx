@@ -198,7 +198,7 @@ export function OrganizationSettingsMembers({
       });
 
     toast.promise(promise, {
-      loading: `Sending invitation to ${email}…`,
+      loading: `Sending invitation to ${email}...`,
       success: `Invitation sent to ${email}`,
       error: (err) => err.message,
     });
@@ -221,7 +221,7 @@ export function OrganizationSettingsMembers({
       );
 
       toast.promise(promise, {
-        loading: "Updating role…",
+        loading: "Updating role...",
         success: "Member role updated",
         error: (err) => err.message,
       });
@@ -244,7 +244,7 @@ export function OrganizationSettingsMembers({
       });
 
       toast.promise(promise, {
-        loading: "Removing member…",
+        loading: "Removing member...",
         success: "Member removed",
         error: (err) => err.message,
       });
@@ -265,7 +265,7 @@ export function OrganizationSettingsMembers({
       );
 
       toast.promise(promise, {
-        loading: "Cancelling invitation…",
+        loading: "Cancelling invitation...",
         success: "Invitation cancelled",
         error: (err) => err.message,
       });
@@ -332,7 +332,7 @@ export function OrganizationSettingsMembers({
               {inviteSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending…
+                  Sending...
                 </>
               ) : (
                 "Send Invitation"

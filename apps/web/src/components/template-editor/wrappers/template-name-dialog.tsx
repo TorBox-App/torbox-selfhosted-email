@@ -204,7 +204,7 @@ export function TemplateNameDialog({
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Brief description of what this template is for…"
+                      placeholder="Brief description of what this template is for..."
                       rows={2}
                       value={field.state.value ?? ""}
                     />

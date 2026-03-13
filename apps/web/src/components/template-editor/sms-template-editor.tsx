@@ -153,7 +153,7 @@ export function SmsTemplateEditor({
           {updateMutation.isPending && (
             <span className="flex items-center gap-1 text-muted-foreground text-xs">
               <Loader2 className="h-3 w-3 animate-spin" />
-              Saving…
+              Saving...
             </span>
           )}
           <Button
@@ -161,7 +161,7 @@ export function SmsTemplateEditor({
             onClick={handlePublish}
             size="sm"
           >
-            {publishMutation.isPending ? "Publishing…" : "Publish"}
+            {publishMutation.isPending ? "Publishing..." : "Publish"}
           </Button>
         </div>
       </div>

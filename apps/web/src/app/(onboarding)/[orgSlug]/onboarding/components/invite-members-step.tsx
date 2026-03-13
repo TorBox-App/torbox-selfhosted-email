@@ -124,7 +124,7 @@ export function InviteMembersStep({
           </Select>
           <Button disabled={isInviting || !email} type="submit">
             <UserPlus className="mr-2 h-4 w-4" />
-            {isInviting ? "Sending…" : "Invite"}
+            {isInviting ? "Sending..." : "Invite"}
           </Button>
         </form>
 

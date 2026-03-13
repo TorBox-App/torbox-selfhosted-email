@@ -438,7 +438,7 @@ export function isEditorEmpty(editor: Editor | null): boolean {
     if (para.content.length === 1 && para.content[0].type === "text") {
       const textNode = para.content[0] as { type: "text"; text?: string };
       if (
-        textNode.text === "Start typing or add blocks…" ||
+        textNode.text === "Start typing or add blocks..." ||
         textNode.text === "" ||
         !textNode.text?.trim()
       ) {

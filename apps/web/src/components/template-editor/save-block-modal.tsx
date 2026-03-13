@@ -231,7 +231,7 @@ export function SaveBlockModal({
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Describe what this block contains…"
+                      placeholder="Describe what this block contains..."
                       value={field.state.value}
                     />
                     {isInvalid && <FieldError errors={errors} />}
@@ -249,7 +249,7 @@ export function SaveBlockModal({
               {createBlock.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
+                  Saving...
                 </>
               ) : (
                 <>

@@ -45,7 +45,7 @@ export function DeleteConfirmDialog({
             }}
             variant="destructive"
           >
-            {loading ? "Deleting…" : "Delete"}
+            {loading ? "Deleting..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

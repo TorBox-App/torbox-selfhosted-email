@@ -66,7 +66,7 @@ const EmailPreviewNodeView = ({
               Preview Text (Preheader)
             </div>
             <p className="text-muted-foreground text-sm">
-              {attrs.text || "Add preview text that appears in inbox…"}
+              {attrs.text || "Add preview text that appears in inbox..."}
             </p>
           </div>
         </div>
@@ -102,7 +102,7 @@ const EmailPreviewNodeView = ({
                     id="preview-text"
                     maxLength={150}
                     onChange={(e) => setLocalText(e.target.value)}
-                    placeholder="Enter preview text…"
+                    placeholder="Enter preview text..."
                     value={localText}
                   />
                   <div className="text-right text-muted-foreground text-xs">

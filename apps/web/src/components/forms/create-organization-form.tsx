@@ -127,7 +127,7 @@ export function CreateOrganizationForm({
 
       <div className="flex gap-2 pt-4">
         <Button className="flex-1" disabled={isSubmitting} type="submit">
-          {isSubmitting ? "Creating…" : "Create Organization"}
+          {isSubmitting ? "Creating..." : "Create Organization"}
         </Button>
         {onCancel && (
           <Button

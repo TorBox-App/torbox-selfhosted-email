@@ -161,7 +161,7 @@ const EmailCodeBlockNodeView = ({
                     className="min-h-[120px] font-mono text-sm"
                     id="code"
                     onChange={(e) => updateLocal("code", e.target.value)}
-                    placeholder="Enter your code here…"
+                    placeholder="Enter your code here..."
                     value={localAttrs.code}
                   />
                 </div>

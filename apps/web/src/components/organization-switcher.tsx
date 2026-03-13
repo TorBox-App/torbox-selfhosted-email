@@ -46,7 +46,7 @@ export function OrganizationSwitcher() {
           <SidebarMenuButton
             className="h-auto py-2"
             size="lg"
-            tooltip="Loading…"
+            tooltip="Loading..."
           >
             <div className="flex aspect-square size-8 animate-pulse items-center justify-center rounded-lg bg-muted" />
             <div className="grid flex-1 text-left text-sm leading-tight">

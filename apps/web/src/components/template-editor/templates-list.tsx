@@ -257,7 +257,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
         // Show skipped templates info
         if (result.skipped.length > 0) {
           toast.info("Some templates skipped", {
-            description: `${result.skipped.length} template${result.skipped.length === 1 ? "" : "s"} skipped (missing subject): ${result.skipped.slice(0, 3).join(", ")}${result.skipped.length > 3 ? "…" : ""}`,
+            description: `${result.skipped.length} template${result.skipped.length === 1 ? "" : "s"} skipped (missing subject): ${result.skipped.slice(0, 3).join(", ")}${result.skipped.length > 3 ? "..." : ""}`,
             duration: Number.POSITIVE_INFINITY,
           });
         }
@@ -265,7 +265,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
         // Show errors
         if (result.errors.length > 0) {
           toast.error("Failed to publish some templates", {
-            description: `Failed: ${result.errors.slice(0, 3).join(", ")}${result.errors.length > 3 ? "…" : ""}`,
+            description: `Failed: ${result.errors.slice(0, 3).join(", ")}${result.errors.length > 3 ? "..." : ""}`,
             duration: Number.POSITIVE_INFINITY,
           });
         }
@@ -542,7 +542,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
               <Input
                 className="pl-9"
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search templates…"
+                placeholder="Search templates..."
                 value={searchQuery}
               />
             </div>
@@ -805,7 +805,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                 onClick={handleBulkDelete}
                 variant="destructive"
               >
-                {isPending ? "Deleting…" : "Delete"}
+                {isPending ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -843,7 +843,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                 Cancel
               </Button>
               <Button disabled={isPending} onClick={handleBulkTypeChange}>
-                {isPending ? "Updating…" : "Update"}
+                {isPending ? "Updating..." : "Update"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -893,7 +893,7 @@ export function TemplatesList({ organizationId, orgSlug }: TemplatesListProps) {
                 Cancel
               </Button>
               <Button disabled={isPending} onClick={handleBulkStatusChange}>
-                {isPending ? "Updating…" : "Update"}
+                {isPending ? "Updating..." : "Update"}
               </Button>
             </DialogFooter>
           </DialogContent>

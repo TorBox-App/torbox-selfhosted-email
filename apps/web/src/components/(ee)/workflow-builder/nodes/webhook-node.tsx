@@ -21,7 +21,7 @@ export function WebhookNode({ id, data, selected }: WebhookNodeProps) {
       const url = new URL(config.url);
       description = `${config.method || "POST"} ${url.hostname}`;
     } catch {
-      description = `${config.method || "POST"} ${config.url.substring(0, 20)}…`;
+      description = `${config.method || "POST"} ${config.url.substring(0, 20)}...`;
     }
   }
 

@@ -411,7 +411,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
             autoFocus
             isLoading={isSearching}
             onValueChange={setInputValue}
-            placeholder="Search everything…"
+            placeholder="Search everything..."
             value={inputValue}
           />
           <CommandList>
@@ -549,8 +549,8 @@ export function SearchTrigger({ onClick }: { onClick: () => void }) {
       type="button"
     >
       <Search className="mr-2 h-3.5 w-3.5" />
-      <span className="hidden lg:inline-flex">Search…</span>
-      <span className="inline-flex lg:hidden">Search…</span>
+      <span className="hidden lg:inline-flex">Search...</span>
+      <span className="inline-flex lg:hidden">Search...</span>
       <kbd className="pointer-events-none absolute top-1.5 right-1.5 hidden h-4 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] opacity-100 sm:flex">
         <span className="text-xs">⌘</span>K
       </kbd>

@@ -404,7 +404,7 @@ export function SenderDefaultsForm({
                     <div className="rounded-lg border border-dashed p-3 text-center">
                       <p className="text-muted-foreground text-xs">
                         {domainsLoading
-                          ? "Loading domains…"
+                          ? "Loading domains..."
                           : "No verified domains found"}
                       </p>
                     </div>
@@ -505,7 +505,7 @@ export function SenderDefaultsForm({
                       <div className="rounded-lg border border-dashed p-3 text-center">
                         <p className="text-muted-foreground text-xs">
                           {phoneNumbersLoading
-                            ? "Loading phone numbers…"
+                            ? "Loading phone numbers..."
                             : "No phone numbers found in this account"}
                         </p>
                       </div>
@@ -536,7 +536,7 @@ export function SenderDefaultsForm({
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving…
+                        Saving...
                       </>
                     ) : (
                       "Save Defaults"

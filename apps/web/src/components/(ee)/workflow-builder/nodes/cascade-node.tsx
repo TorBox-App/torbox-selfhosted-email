@@ -77,7 +77,7 @@ export function CascadeNode({ id, data, selected }: CascadeNodeProps) {
                     : "SMS"
                   : channel.body
                     ? "SMS"
-                    : "Configure…"}
+                    : "Configure..."}
               </span>
               {channel.waitDuration && index < channels.length - 1 ? (
                 <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-muted-foreground text-[10px]">

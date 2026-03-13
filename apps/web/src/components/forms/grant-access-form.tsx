@@ -126,7 +126,7 @@ export function GrantAccessForm({
                 onChange={(e) => field.handleChange(e.target.value)}
                 value={field.state.value}
               >
-                <option value="">Select a user…</option>
+                <option value="">Select a user...</option>
                 {members.map((member) => (
                   <option key={member.userId} value={member.userId}>
                     {member.user.name} ({member.user.email}) - {member.role}
@@ -171,7 +171,7 @@ export function GrantAccessForm({
                 }
                 value={field.state.value}
               >
-                <option value="">Select permission level…</option>
+                <option value="">Select permission level...</option>
                 <option value="READ_ONLY">
                   Read Only - View metrics and logs
                 </option>

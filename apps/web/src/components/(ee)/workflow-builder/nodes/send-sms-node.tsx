@@ -19,7 +19,7 @@ export function SendSmsNode({ id, data, selected }: SendSmsNodeProps) {
   if (config.type === "send_sms" && config.body) {
     description =
       config.body.length > 30
-        ? `${config.body.substring(0, 30)}…`
+        ? `${config.body.substring(0, 30)}...`
         : config.body;
   }
 

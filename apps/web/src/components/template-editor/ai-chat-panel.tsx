@@ -89,7 +89,7 @@ function useFavoritePrompts() {
   const saveFavorite = useCallback((prompt: string) => {
     const newFavorite: FavoritePrompt = {
       id: Date.now().toString(),
-      label: prompt.slice(0, 30) + (prompt.length > 30 ? "…" : ""),
+      label: prompt.slice(0, 30) + (prompt.length > 30 ? "..." : ""),
       prompt,
     };
     setFavorites((prev) => {
@@ -519,7 +519,7 @@ export function AIChatPanel({
                       </div>
                     </div>
                     <span className="text-muted-foreground text-xs">
-                      Generating your email…
+                      Generating your email...
                     </span>
                   </div>
                 </div>
@@ -594,7 +594,7 @@ export function AIChatPanel({
               placeholder={
                 aiUsage?.remaining === 0
                   ? "Message limit reached"
-                  : "Describe your email…"
+                  : "Describe your email..."
               }
               ref={textareaRef}
               value={input}

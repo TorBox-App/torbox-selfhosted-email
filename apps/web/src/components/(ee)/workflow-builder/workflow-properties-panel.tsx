@@ -680,7 +680,7 @@ function SendEmailConfig({
             </Select>
           </div>
         ) : domainsLoading ? (
-          <p className="text-muted-foreground text-xs">Loading domains…</p>
+          <p className="text-muted-foreground text-xs">Loading domains...</p>
         ) : existingFrom ? (
           <div className="flex items-center gap-1">
             <Input className="flex-1" readOnly value={existingFrom} />
@@ -756,7 +756,7 @@ function SendSmsConfig({
       <Textarea
         id="sms-body"
         onChange={(e) => onChange({ body: e.target.value })}
-        placeholder="Enter your SMS message…"
+        placeholder="Enter your SMS message..."
         rows={4}
         value={config.body || ""}
       />
@@ -1573,7 +1573,7 @@ function CascadeConfig({
                     onChange={(e) =>
                       updateChannel(index, { body: e.target.value })
                     }
-                    placeholder="Enter SMS message…"
+                    placeholder="Enter SMS message..."
                     rows={3}
                     value={channel.body || ""}
                   />
