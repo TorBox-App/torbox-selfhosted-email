@@ -125,7 +125,9 @@ export function ExploreFirstDashboard({
               <div
                 className={cn(
                   "h-2 w-2 rounded-full",
-                  activity.complete ? "bg-green-500" : "bg-muted-foreground/30"
+                  activity.complete
+                    ? "bg-green-600 dark:bg-green-500"
+                    : "bg-muted-foreground/30"
                 )}
               />
               <span

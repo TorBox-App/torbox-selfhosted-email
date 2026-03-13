@@ -38,6 +38,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
@@ -91,7 +92,7 @@ function CopyButton({ value }: { value: string }) {
       variant="ghost"
     >
       {copied ? (
-        <CheckIcon className="h-4 w-4 text-green-600" />
+        <CheckIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
       ) : (
         <CopyIcon className="h-4 w-4" />
       )}
@@ -119,7 +120,7 @@ function ChecklistItemIcon({
       className={cn(
         "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
         isComplete
-          ? "bg-green-500/10 text-green-600"
+          ? "bg-green-500/10 text-green-600 dark:text-green-400"
           : "bg-primary/10 text-primary"
       )}
     >
@@ -144,7 +145,7 @@ function ChecklistItemBadges({
       )}
       {isComplete && (
         <Badge
-          className="text-xs text-green-600 border-green-200 bg-green-50"
+          className="text-xs text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950"
           variant="outline"
         >
           Complete
@@ -280,7 +281,7 @@ function FeatureStatusRow({
   return (
     <div className="flex items-center gap-2">
       {enabled ? (
-        <CheckCircle2Icon className="h-4 w-4 text-green-600" />
+        <CheckCircle2Icon className="h-4 w-4 text-green-600 dark:text-green-400" />
       ) : (
         <XCircleIcon className="h-4 w-4 text-muted-foreground" />
       )}
@@ -462,7 +463,7 @@ function WebhookSecretForm({
   if (isConnected) {
     return (
       <div className="flex items-center gap-2">
-        <Badge className="text-green-600 border-green-200 bg-green-50">
+        <Badge className="text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950">
           <CheckCircle2Icon className="mr-1 h-3 w-3" />
           Connected
         </Badge>
@@ -547,10 +548,10 @@ function DomainVerification({ verifiedDomains }: DomainVerificationProps) {
       <div className="space-y-2">
         {verifiedDomains.map((domain) => (
           <div className="flex items-center gap-2" key={domain}>
-            <CheckCircle2Icon className="h-4 w-4 text-green-600" />
+            <CheckCircle2Icon className="h-4 w-4 text-green-600 dark:text-green-400" />
             <span className="font-mono text-sm">{domain}</span>
             <Badge
-              className="text-xs text-green-600 border-green-200 bg-green-50"
+              className="text-xs text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950"
               variant="outline"
             >
               Verified
@@ -794,12 +795,17 @@ function DeployConnectGuide({ organizationId }: { organizationId: string }) {
             <div className="space-y-1">
               {DEPLOY_PREREQUISITES.map((prereq) => (
                 <div key={prereq.label}>
-                  <label className="flex items-center gap-2">
-                    <input
-                      className="h-3.5 w-3.5 rounded border-muted-foreground/25"
-                      type="checkbox"
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      aria-label={prereq.label}
+                      id={`prereq-${prereq.label}`}
                     />
-                    <span className="text-xs">{prereq.label}</span>
+                    <label
+                      className="text-xs"
+                      htmlFor={`prereq-${prereq.label}`}
+                    >
+                      {prereq.label}
+                    </label>
                     <a
                       className="text-primary text-xs underline underline-offset-4"
                       href={prereq.href}
@@ -808,9 +814,9 @@ function DeployConnectGuide({ organizationId }: { organizationId: string }) {
                     >
                       Guide
                     </a>
-                  </label>
+                  </div>
                   {"hint" in prereq && (
-                    <p className="ml-5.5 mt-0.5 text-muted-foreground text-xs">
+                    <p className="ml-6 mt-0.5 text-muted-foreground text-xs">
                       Run{" "}
                       <code className="rounded bg-muted px-1 py-0.5">
                         aws configure
@@ -898,7 +904,7 @@ function DeployConnectGuide({ organizationId }: { organizationId: string }) {
 
           {cfnDeployed ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 rounded-lg bg-green-500/10 p-3 text-green-600">
+              <div className="flex items-center gap-2 rounded-lg bg-green-500/10 p-3 text-green-600 dark:text-green-400">
                 <CheckCircle2Icon className="h-4 w-4" />
                 <span className="font-medium text-sm">
                   CloudFormation deployment started
@@ -1181,7 +1187,7 @@ export function GettingStartedDashboard({
                   </div>
                   {hasAwsAccount ? (
                     <Badge
-                      className="text-green-600 border-green-200 bg-green-50"
+                      className="text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950"
                       variant="outline"
                     >
                       Connected
@@ -1198,7 +1204,7 @@ export function GettingStartedDashboard({
                   </div>
                   {hasPlatformConnection ? (
                     <Badge
-                      className="text-green-600 border-green-200 bg-green-50"
+                      className="text-green-600 border-green-200 bg-green-50 dark:text-green-400 dark:border-green-800 dark:bg-green-950"
                       variant="outline"
                     >
                       Streaming
@@ -1237,7 +1243,7 @@ export function GettingStartedDashboard({
                           className="flex items-center gap-2 text-sm"
                           key={domain}
                         >
-                          <CheckCircle2Icon className="h-3.5 w-3.5 text-green-600" />
+                          <CheckCircle2Icon className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                           <span className="font-mono text-xs">{domain}</span>
                         </div>
                       ))}

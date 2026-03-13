@@ -15,9 +15,9 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
-  try {
-    const { orgSlug } = await context.params;
+  const { orgSlug } = await context.params;
 
+  try {
     // Authenticate user
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -84,7 +84,6 @@ export async function POST(request: Request, context: RouteContext) {
       message: "Onboarding completed successfully",
     });
   } catch (error) {
-    const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
       path: "/api/[orgSlug]/onboarding/complete",
       method: "POST",

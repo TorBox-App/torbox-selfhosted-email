@@ -20,6 +20,42 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+function NeedHelpBlock() {
+  return (
+    <div className="space-y-2 rounded-lg bg-muted/50 p-4">
+      <h3 className="font-semibold text-sm">Need help?</h3>
+      <p className="text-muted-foreground text-sm">
+        Check out our{" "}
+        <a
+          className="underline hover:text-foreground"
+          href="/docs"
+          rel="noopener"
+          target="_blank"
+        >
+          documentation
+        </a>
+        , join our{" "}
+        <a
+          className="underline hover:text-foreground"
+          href="https://discord.gg/wraps"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Discord community
+        </a>
+        , or{" "}
+        <a
+          className="underline hover:text-foreground"
+          href="mailto:support@wraps.dev"
+        >
+          email support
+        </a>
+        .
+      </p>
+    </div>
+  );
+}
+
 type SuccessStepProps = {
   onComplete: () => void;
   onBack: () => void;
@@ -65,8 +101,8 @@ export function SuccessStep({
     return (
       <Card>
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
-            <AlertTriangleIcon className="h-10 w-10 text-amber-500" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10 dark:bg-amber-500/15">
+            <AlertTriangleIcon className="h-10 w-10 text-amber-500 dark:text-amber-400" />
           </div>
           <CardTitle className="text-3xl">Setup Incomplete</CardTitle>
           <CardDescription className="text-base">
@@ -103,37 +139,7 @@ wraps platform connect`}</code>
             </div>
           </div>
 
-          <div className="space-y-2 rounded-lg bg-muted/50 p-4">
-            <h3 className="font-semibold text-sm">Need help?</h3>
-            <p className="text-muted-foreground text-sm">
-              Check out our{" "}
-              <a
-                className="underline hover:text-foreground"
-                href="/docs"
-                rel="noopener"
-                target="_blank"
-              >
-                documentation
-              </a>
-              , join our{" "}
-              <a
-                className="underline hover:text-foreground"
-                href="https://discord.gg/wraps"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                Discord community
-              </a>
-              , or{" "}
-              <a
-                className="underline hover:text-foreground"
-                href="mailto:support@wraps.dev"
-              >
-                email support
-              </a>
-              .
-            </p>
-          </div>
+          <NeedHelpBlock />
         </CardContent>
 
         <CardFooter className="flex items-center justify-between">
@@ -151,8 +157,8 @@ wraps platform connect`}</code>
   return (
     <Card>
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-          <CheckCircle2Icon className="h-10 w-10 text-green-500" />
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 dark:bg-green-500/15">
+          <CheckCircle2Icon className="h-10 w-10 text-green-500 dark:text-green-400" />
         </div>
         <CardTitle className="text-3xl">You're All Set!</CardTitle>
         <CardDescription className="text-base">
@@ -253,38 +259,7 @@ await wraps.emails.send({
           </pre>
         </div>
 
-        {/* Support */}
-        <div className="space-y-2 rounded-lg bg-muted/50 p-4">
-          <h3 className="font-semibold text-sm">Need help?</h3>
-          <p className="text-muted-foreground text-sm">
-            Check out our{" "}
-            <a
-              className="underline hover:text-foreground"
-              href="/docs"
-              rel="noopener"
-              target="_blank"
-            >
-              documentation
-            </a>
-            , join our{" "}
-            <a
-              className="underline hover:text-foreground"
-              href="https://discord.gg/wraps"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Discord community
-            </a>
-            , or{" "}
-            <a
-              className="underline hover:text-foreground"
-              href="mailto:support@wraps.dev"
-            >
-              email support
-            </a>
-            .
-          </p>
-        </div>
+        <NeedHelpBlock />
       </CardContent>
 
       <CardFooter className="flex justify-center">

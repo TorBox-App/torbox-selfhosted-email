@@ -15,9 +15,9 @@ type RouteContext = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
-  try {
-    const { orgSlug } = await context.params;
+  const { orgSlug } = await context.params;
 
+  try {
     const session = await auth.api.getSession({
       headers: await headers(),
     });
@@ -48,7 +48,6 @@ export async function GET(_request: Request, context: RouteContext) {
       onboardingPath: extension?.onboardingPath ?? null,
     });
   } catch (error) {
-    const orgSlug = (await context.params).orgSlug;
     const log = createRequestLogger({
       path: "/api/[orgSlug]/activation/status",
       method: "GET",

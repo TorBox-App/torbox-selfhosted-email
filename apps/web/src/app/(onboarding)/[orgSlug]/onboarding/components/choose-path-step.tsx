@@ -12,15 +12,17 @@ import {
 type ChoosePathStepProps = {
   onNext: () => void;
   organizationId: string;
+  orgSlug?: string;
 };
 
 export function ChoosePathStep({
   onNext,
   organizationId,
+  orgSlug: orgSlugProp,
 }: ChoosePathStepProps) {
   const handlePath = (path: "start_building" | "connect_aws") => {
     // Persist path choice to survive Stripe redirect
-    const orgSlug = window.location.pathname.split("/")[1];
+    const orgSlug = orgSlugProp ?? window.location.pathname.split("/")[1] ?? "";
     localStorage.setItem(`onboarding_path_${orgSlug}`, path);
 
     posthog.capture("onboarding_path_chosen", {

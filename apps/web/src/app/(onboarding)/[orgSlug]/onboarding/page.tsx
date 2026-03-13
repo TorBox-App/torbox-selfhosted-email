@@ -283,13 +283,17 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
     router,
   ]);
 
-  // Completion logic — defined before early returns so EFFECT 6 can call it
-  const completeOnboarding = async () => {
+  // Completion logic — defined before early returns so EFFECT 6 can call it.
+  // Accepts an optional explicit path to avoid stale closure when called from effects.
+  const completeOnboarding = async (
+    pathOverride?: "start_building" | "connect_aws" | null
+  ) => {
     if (!orgSlug) return;
+    const path = pathOverride ?? onboardingPath ?? "connect_aws";
     const res = await fetch(`/api/${orgSlug}/onboarding/complete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: onboardingPath ?? "connect_aws" }),
+      body: JSON.stringify({ path }),
     });
     if (!res.ok) {
       toast.error("Failed to complete onboarding. Please try again.");
@@ -307,15 +311,15 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       posthog.capture("onboarding_flow_completed", {
         organization_id: currentOrg.id,
         final_step: currentStep,
-        onboarding_path: onboardingPath ?? "connect_aws",
+        onboarding_path: path,
       });
     }
     router.push(`/${orgSlug}`);
   };
 
   // EFFECT 6: Auto-complete for "Start building" path
-  // When user reaches step 3+ with start_building path, skip Deploy & Connect
-  // Handles both: free plan (handleNext advances to 3) and Stripe return (URL has step=3)
+  // When user reaches step 4+ with start_building path, skip Deploy & Connect.
+  // Passes onboardingPath explicitly to avoid stale closure.
   useEffect(() => {
     if (
       isInitialized &&
@@ -324,7 +328,7 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
       !hasRedirected.current
     ) {
       hasRedirected.current = true;
-      completeOnboarding();
+      completeOnboarding(onboardingPath);
     }
   }, [isInitialized, currentStep, onboardingPath]);
 
@@ -407,8 +411,8 @@ export default function OnboardingPage({ params }: OnboardingPageProps) {
         onConnected={handleConnected}
         onNext={handleNext}
         onSkip={handleSkip}
-        orgSlug={orgSlug}
         organizationId={currentOrg.id}
+        orgSlug={orgSlug}
       />
     </div>
   );
