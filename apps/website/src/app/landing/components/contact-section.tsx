@@ -1,9 +1,12 @@
 "use client";
 
-import Cal from "@calcom/embed-react";
 import { BookOpen, Github, MessageCircle } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { memo } from "react";
+
+const Cal = dynamic(() => import("@calcom/embed-react"), { ssr: false });
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

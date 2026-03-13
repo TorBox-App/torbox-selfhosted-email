@@ -14,7 +14,6 @@ import {
   Shield,
   Terminal,
 } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
 import {
   CodeBlock,
@@ -405,24 +404,20 @@ function ConsoleContent() {
             </span>
           </div>
           <div className="relative aspect-[16/10] overflow-hidden bg-muted/20">
-            <Image
-              alt="Wraps Console - Light Mode"
-              className="block size-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.02] dark:hidden"
-              height={450}
-              loading="lazy"
-              src={assetUrl("Wraps-Console.gif")}
-              unoptimized
-              width={720}
-            />
-            <Image
-              alt="Wraps Console - Dark Mode"
-              className="hidden size-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.02] dark:block"
-              height={450}
-              loading="lazy"
-              src={assetUrl("Wraps-Console.gif")}
-              unoptimized
-              width={720}
-            />
+            <video
+              aria-label="Wraps Console demo"
+              autoPlay
+              className="size-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.02]"
+              loop
+              muted
+              playsInline
+              preload="none"
+            >
+              <source
+                src={assetUrl("cli/wraps-console.mp4")}
+                type="video/mp4"
+              />
+            </video>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/60 to-transparent" />
           </div>
         </div>

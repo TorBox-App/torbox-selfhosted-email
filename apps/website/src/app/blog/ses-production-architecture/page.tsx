@@ -6,13 +6,18 @@ import {
   Lightbulb,
 } from "lucide-react";
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Script from "next/script";
 import { LandingFooter } from "@/app/landing/components/footer";
 import { LandingNavbar } from "@/app/landing/components/navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CodeBlock, FlowDiagram, SectionNav } from "./page-content";
+import { CodeBlock, SectionNav } from "./page-content";
+
+const FlowDiagram = dynamic(() =>
+  import("./flow-diagram").then((mod) => mod.FlowDiagram)
+);
 
 const articleSchema = {
   "@context": "https://schema.org",

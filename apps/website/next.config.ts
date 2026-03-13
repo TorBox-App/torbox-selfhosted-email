@@ -20,6 +20,7 @@ const nextConfig = {
       "motion",
       "recharts",
       "date-fns",
+      "@icons-pack/react-simple-icons",
     ],
   },
 
