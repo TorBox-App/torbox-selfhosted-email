@@ -9,20 +9,54 @@ Run `pnpm check:all` and create a conventional commit.
 
 ## Arguments
 
-Optional commit message hint:
-
 - `/commit` (no args = auto-generate message from diff)
 - `/commit add SMS batch sending` (hint for the message)
+- `/commit quick` or `/commit quick add SMS batch sending` — fast mode (see Step 2)
 
 ## Step 1: Check for Changes
 
 Run `git status` and `git diff --stat` in parallel to see what changed. If there are no changes, tell the user and stop.
 
-## Step 2: Run Checks (Two-Tier)
+## Step 2: Run Checks
+
+### Standard mode (default)
 
 **Fast pass first**: Run `pnpm check:fast` (~10-15s). This runs lint (error-level) and baseline architecture tests. If this fails, fix the issues before proceeding — no point running the full suite.
 
 **Full suite second**: Once `check:fast` passes, run `pnpm check:all`. This adds typecheck, build, and the full test suite.
+
+### Quick mode (`/commit quick`)
+
+Run `pnpm check:fast` only (~10-15s). Skip `pnpm check:all`.
+
+**Targeted tests**: After `check:fast` passes, detect which packages were modified from `git diff --name-only` and run tests only for those packages using turbo filters:
+
+```bash
+# Map changed paths to package filters
+# apps/web/...    → --filter=web
+# apps/api/...    → --filter=api
+# packages/cli/...→ --filter=@wraps.dev/cli
+# packages/db/... → --filter=@wraps.dev/db
+# etc.
+
+# Run targeted tests (only if modified packages have test scripts)
+pnpm turbo run test --filter=<pkg1> --filter=<pkg2>
+```
+
+Path-to-filter mapping:
+- `apps/web` → `--filter=web`
+- `apps/api` → `--filter=api`
+- `apps/website` → `--filter=website`
+- `packages/cli` → `--filter=@wraps.dev/cli`
+- `packages/db` → `--filter=@wraps.dev/db`
+- `packages/auth` → `--filter=@wraps.dev/auth`
+- `packages/core` → `--filter=@wraps.dev/core`
+- `packages/ui` → `--filter=@wraps.dev/ui`
+- `packages/email` → `--filter=@wraps.dev/email`
+
+If no packages with test scripts were modified (e.g., only config files or docs changed), skip targeted tests. If targeted tests fail, show failures and ask the user — do not proceed.
+
+### Both modes
 
 If checks fail:
 1. Show the user what failed
@@ -102,7 +136,9 @@ Run `git status` after to confirm success.
 - NEVER commit with failing checks
 - NEVER use `git add .` or `git add -A`
 - NEVER stage `.env`, credentials, or secrets
-- NEVER skip checks (`pnpm check:fast` then `pnpm check:all`)
+- NEVER skip `pnpm check:fast` — it's the minimum bar for both modes
+- In standard mode, NEVER skip `pnpm check:all`
+- In quick mode, `pnpm check:fast` + targeted tests is sufficient
 - NEVER amend previous commits unless explicitly asked
 - ALWAYS use conventional commit format
 - ALWAYS include `Co-Authored-By` trailer
