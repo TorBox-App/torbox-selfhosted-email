@@ -166,9 +166,10 @@ export async function trackAwsConnected(
     if (existing === 1) {
       capture(userId, "activation_aws_connected", props);
       await emit(userId, "activation.aws_connected", props);
-      await setContactProperties(userId, { hasConnectedAws: true });
     }
-    await updateActivationScore(userId, organizationId);
+    await updateActivationScore(userId, organizationId,
+      existing === 1 ? { hasConnectedAws: true } : undefined
+    );
   } catch {
     // never throw from tracking
   }
@@ -192,9 +193,10 @@ export async function trackDomainVerified(
     if (properties.isFirstDomain) {
       capture(userId, "activation_domain_verified", props);
       await emit(userId, "activation.domain_verified", props);
-      await setContactProperties(userId, { hasDomainVerified: true });
     }
-    await updateActivationScore(userId, organizationId);
+    await updateActivationScore(userId, organizationId,
+      properties.isFirstDomain ? { hasDomainVerified: true } : undefined
+    );
   } catch {
     // never throw from tracking
   }
@@ -218,9 +220,10 @@ export async function trackFirstEmailSent(
       };
       capture(userId, "activation_first_email_sent", props);
       await emit(userId, "activation.first_email_sent", props);
-      await setContactProperties(userId, { hasSentEmail: true });
     }
-    await updateActivationScore(userId, organizationId);
+    await updateActivationScore(userId, organizationId,
+      existing <= 1 ? { hasSentEmail: true } : undefined
+    );
   } catch {
     // never throw from tracking
   }
@@ -334,9 +337,10 @@ export async function trackTemplateCreated(
       const firstProps = { organization_id: organizationId };
       capture(userId, "activation_first_template", firstProps);
       await emit(userId, "activation.first_template", firstProps);
-      await setContactProperties(userId, { hasCreatedTemplate: true });
     }
-    await updateActivationScore(userId, organizationId);
+    await updateActivationScore(userId, organizationId,
+      existing === 1 ? { hasCreatedTemplate: true } : undefined
+    );
   } catch {
     // never throw from tracking
   }
@@ -377,9 +381,10 @@ export async function trackBroadcastCreated(
       };
       capture(userId, "activation_first_broadcast", firstProps);
       await emit(userId, "activation.first_broadcast", firstProps);
-      await setContactProperties(userId, { hasSentBroadcast: true });
     }
-    await updateActivationScore(userId, organizationId);
+    await updateActivationScore(userId, organizationId,
+      existing === 1 ? { hasSentBroadcast: true } : undefined
+    );
   } catch {
     // never throw from tracking
   }
@@ -479,7 +484,8 @@ export async function computeActivationScore(
 
 async function updateActivationScore(
   userEmail: string,
-  organizationId: string
+  organizationId: string,
+  extraContactProps?: Record<string, unknown>
 ): Promise<void> {
   try {
     const { score } = await computeActivationScore(organizationId);
@@ -492,7 +498,10 @@ async function updateActivationScore(
         set: { activationScore: score, updatedAt: new Date() },
       });
 
-    await setContactProperties(userEmail, { activationScore: score });
+    await setContactProperties(userEmail, {
+      ...extraContactProps,
+      activationScore: score,
+    });
   } catch {
     // never throw from tracking
   }
