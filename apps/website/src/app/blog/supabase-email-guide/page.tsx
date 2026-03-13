@@ -2,18 +2,15 @@ import {
   AlertTriangle,
   ArrowRight,
   Bell,
-  Calendar,
   Check,
   CheckCircle,
   CircleDollarSign,
   ExternalLink,
   HelpCircle,
   KeyRound,
-  Mail,
   Megaphone,
   RefreshCw,
   Server,
-  Zap,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -28,8 +25,7 @@ import { CodeBlock, Collapsible } from "./page-content";
 const articleSchema = {
   "@context": "https://schema.org",
   "@type": "Article",
-  headline:
-    "4 Email Flows Your Supabase App Needs Before Going Live",
+  headline: "4 Email Flows Your Supabase App Needs Before Going Live",
   description:
     "Supabase handles auth and database. Email beyond magic links? That's on you. Here are the 4 email flows every production Supabase app needs and how to set each one up.",
   image: "https://wraps.dev/blog/supabase-email-guide.webp",
@@ -326,14 +322,12 @@ export default function Page() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
                 <KeyRound className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="font-bold text-2xl">
-                Flow 1: Auth Emails
-              </h2>
+              <h2 className="font-bold text-2xl">Flow 1: Auth Emails</h2>
             </div>
             <p className="mb-6 text-lg text-muted-foreground">
               Magic links, password resets, signup confirmations. Supabase Auth
-              handles these out of the box — but the defaults have real
-              problems in production.
+              handles these out of the box — but the defaults have real problems
+              in production.
             </p>
 
             <h3 className="mb-4 font-semibold text-xl">
@@ -373,10 +367,9 @@ export default function Page() {
               The Fix: Custom SMTP
             </h3>
             <p className="mb-4 text-muted-foreground">
-              Supabase lets you configure a custom SMTP provider in Dashboard
-              → Authentication → SMTP Settings. This means your auth emails
-              send from your domain, with your branding, through your
-              infrastructure.
+              Supabase lets you configure a custom SMTP provider in Dashboard →
+              Authentication → SMTP Settings. This means your auth emails send
+              from your domain, with your branding, through your infrastructure.
             </p>
 
             <CodeBlock label="Supabase SMTP Settings">
@@ -459,8 +452,8 @@ Sender:   noreply@yourdomain.com`}
             </div>
             <p className="mb-6 text-lg text-muted-foreground">
               Welcome emails, comment notifications, payment receipts, order
-              confirmations. These bring users back to your app — and
-              Supabase Auth doesn't handle any of them.
+              confirmations. These bring users back to your app — and Supabase
+              Auth doesn't handle any of them.
             </p>
 
             <InfoCard
@@ -517,8 +510,8 @@ serve(async (req) => {
             </h3>
             <p className="mb-4 text-muted-foreground">
               If your frontend is Next.js, you can send from an API route
-              instead. This gives you better error handling and keeps email logic
-              close to your application code.
+              instead. This gives you better error handling and keeps email
+              logic close to your application code.
             </p>
             <CodeBlock label="app/api/welcome/route.ts">
               {`import { WrapsEmail } from "@wraps.dev/email";
@@ -562,24 +555,30 @@ export async function POST(req: Request) {
                 <div className="flex items-start gap-2">
                   <Check className="mt-0.5 h-4 w-4 text-green-500" />
                   <span>
-                    <strong className="text-foreground">Edge Functions + fetch</strong>:
-                    Quick prototype, single email type, Supabase-only stack
+                    <strong className="text-foreground">
+                      Edge Functions + fetch
+                    </strong>
+                    : Quick prototype, single email type, Supabase-only stack
                   </span>
                 </div>
                 <div className="flex items-start gap-2">
                   <Check className="mt-0.5 h-4 w-4 text-green-500" />
                   <span>
-                    <strong className="text-foreground">Next.js API route + SDK</strong>:
-                    Production app, multiple email types, TypeScript stack, want
-                    to own infrastructure
+                    <strong className="text-foreground">
+                      Next.js API route + SDK
+                    </strong>
+                    : Production app, multiple email types, TypeScript stack,
+                    want to own infrastructure
                   </span>
                 </div>
                 <div className="flex items-start gap-2">
                   <Check className="mt-0.5 h-4 w-4 text-green-500" />
                   <span>
-                    <strong className="text-foreground">Database webhooks</strong>:
-                    Event-driven architecture, emails triggered by data changes,
-                    want to decouple email from app logic
+                    <strong className="text-foreground">
+                      Database webhooks
+                    </strong>
+                    : Event-driven architecture, emails triggered by data
+                    changes, want to decouple email from app logic
                   </span>
                 </div>
               </div>
@@ -592,9 +591,7 @@ export async function POST(req: Request) {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
                 <Megaphone className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="font-bold text-2xl">
-                Flow 3: Broadcasts
-              </h2>
+              <h2 className="font-bold text-2xl">Flow 3: Broadcasts</h2>
             </div>
             <p className="mb-6 text-lg text-muted-foreground">
               Newsletters, product updates, announcements. One-time sends to a
@@ -627,9 +624,9 @@ export async function POST(req: Request) {
                     Sync users to a third-party via webhooks
                   </h4>
                   <p className="text-muted-foreground text-sm">
-                    More robust, but now you're maintaining user sync code, doing
-                    a one-time backfill, and paying per-contact pricing on the
-                    other end.
+                    More robust, but now you're maintaining user sync code,
+                    doing a one-time backfill, and paying per-contact pricing on
+                    the other end.
                   </p>
                 </div>
               </div>
@@ -667,15 +664,11 @@ export async function POST(req: Request) {
                     <th className="px-4 py-3 text-left font-medium">
                       Provider
                     </th>
-                    <th className="px-4 py-3 text-right font-medium">
-                      50K/mo
-                    </th>
+                    <th className="px-4 py-3 text-right font-medium">50K/mo</th>
                     <th className="px-4 py-3 text-right font-medium">
                       250K/mo
                     </th>
-                    <th className="px-4 py-3 text-right font-medium">
-                      1M/mo
-                    </th>
+                    <th className="px-4 py-3 text-right font-medium">1M/mo</th>
                     <th className="hidden px-4 py-3 text-right font-medium sm:table-cell">
                       Contacts
                     </th>
@@ -684,10 +677,10 @@ export async function POST(req: Request) {
                 <tbody className="divide-y">
                   {COST_COMPARISON.map((row) => (
                     <tr
-                      key={row.provider}
                       className={
                         row.provider === "Wraps + SES" ? "bg-primary/5" : ""
                       }
+                      key={row.provider}
                     >
                       <td className="px-4 py-3">
                         {row.provider === "Wraps + SES" ? (
@@ -698,27 +691,21 @@ export async function POST(req: Request) {
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-mono ${
-                          row.provider === "Wraps + SES"
-                            ? "text-green-500"
-                            : ""
+                          row.provider === "Wraps + SES" ? "text-green-500" : ""
                         }`}
                       >
                         {row.cost50k}
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-mono ${
-                          row.provider === "Wraps + SES"
-                            ? "text-green-500"
-                            : ""
+                          row.provider === "Wraps + SES" ? "text-green-500" : ""
                         }`}
                       >
                         {row.cost250k}
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-mono ${
-                          row.provider === "Wraps + SES"
-                            ? "text-green-500"
-                            : ""
+                          row.provider === "Wraps + SES" ? "text-green-500" : ""
                         }`}
                       >
                         {row.cost1m}
@@ -732,8 +719,8 @@ export async function POST(req: Request) {
               </table>
             </div>
             <p className="mt-2 text-muted-foreground text-sm">
-              Wraps + SES = Wraps platform fee + AWS SES sending cost. All
-              tiers include unlimited contacts.
+              Wraps + SES = Wraps platform fee + AWS SES sending cost. All tiers
+              include unlimited contacts.
             </p>
           </section>
 
@@ -743,20 +730,16 @@ export async function POST(req: Request) {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-muted">
                 <RefreshCw className="h-5 w-5 text-primary" />
               </div>
-              <h2 className="font-bold text-2xl">
-                Flow 4: Automated Emails
-              </h2>
+              <h2 className="font-bold text-2xl">Flow 4: Automated Emails</h2>
             </div>
             <p className="mb-6 text-lg text-muted-foreground">
               Weekly digests, onboarding drip sequences, usage alerts, renewal
-              reminders. The hardest flow to get right — and the most
-              dangerous to get wrong, since you're sending to everyone without
-              seeing the email first.
+              reminders. The hardest flow to get right — and the most dangerous
+              to get wrong, since you're sending to everyone without seeing the
+              email first.
             </p>
 
-            <h3 className="mb-4 font-semibold text-xl">
-              The pg_cron Approach
-            </h3>
+            <h3 className="mb-4 font-semibold text-xl">The pg_cron Approach</h3>
             <p className="mb-4 text-muted-foreground">
               Most Supabase developers wire up a{" "}
               <code className="rounded bg-muted px-1">pg_cron</code> job that
@@ -822,9 +805,7 @@ serve(async () => {
                   No preview — you can't see what gets sent before it goes to
                   all users
                 </li>
-                <li>
-                  No visual builder — you're writing HTML strings in code
-                </li>
+                <li>No visual builder — you're writing HTML strings in code</li>
                 <li>
                   No error recovery — if the function crashes mid-send, some
                   users get the email and some don't
@@ -845,9 +826,8 @@ serve(async () => {
             </h3>
             <p className="mb-4 text-muted-foreground">
               A dedicated email platform with a workflow builder lets you design
-              automated sequences visually — with triggers, delays,
-              conditions, and preview. You see exactly what gets sent before it
-              goes out.
+              automated sequences visually — with triggers, delays, conditions,
+              and preview. You see exactly what gets sent before it goes out.
             </p>
 
             <div className="rounded-xl border bg-muted/30 p-6">
@@ -862,9 +842,7 @@ serve(async () => {
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 <div className="rounded-lg border bg-background p-3">
                   <div className="font-mono text-sm">Wait</div>
-                  <div className="text-muted-foreground text-xs">
-                    1 day
-                  </div>
+                  <div className="text-muted-foreground text-xs">1 day</div>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 <div className="rounded-lg border bg-background p-3">
@@ -981,9 +959,7 @@ serve(async () => {
               </Card>
             </div>
 
-            <h3 className="mb-4 mt-8 font-semibold text-xl">
-              Setup: 3 Steps
-            </h3>
+            <h3 className="mb-4 mt-8 font-semibold text-xl">Setup: 3 Steps</h3>
             <CodeBlock label="Terminal">
               {`# 1. Install the CLI
 npm install -g @wraps.dev/cli
@@ -1011,15 +987,18 @@ wraps email send --to user@example.com --subject "Hello from Wraps"`}
             </div>
 
             <div className="space-y-4">
-              <Collapsible defaultOpen title="Can I just use Resend with Supabase?">
+              <Collapsible
+                defaultOpen
+                title="Can I just use Resend with Supabase?"
+              >
                 <p className="text-muted-foreground text-sm">
                   Yes. Resend is a solid choice for transactional email. The
                   tradeoffs: you pay $0.40/1K emails (vs $0.10/1K on SES), you
                   don't own the sending infrastructure, and you'll need a
-                  separate tool for broadcasts and automations. If you're sending
-                  under 10K emails/month and only need transactional, Resend is
-                  fine. At scale or if you need a full platform, the economics
-                  favor SES.
+                  separate tool for broadcasts and automations. If you're
+                  sending under 10K emails/month and only need transactional,
+                  Resend is fine. At scale or if you need a full platform, the
+                  economics favor SES.
                 </p>
               </Collapsible>
 
@@ -1054,8 +1033,8 @@ wraps email send --to user@example.com --subject "Hello from Wraps"`}
                 <p className="text-muted-foreground text-sm">
                   Great deliverability, good DX. But at $1.25/1K emails, it's
                   12x more expensive than SES. And Postmark is transactional
-                  only — no broadcasts, no automations. You'd need a second
-                  tool for those flows.
+                  only — no broadcasts, no automations. You'd need a second tool
+                  for those flows.
                 </p>
               </Collapsible>
 
@@ -1090,9 +1069,11 @@ wraps email send --to user@example.com --subject "Hello from Wraps"`}
                 Default sender domain hurts deliverability.
               </p>
               <p>
-                <strong className="text-foreground">Transactional emails</strong>{" "}
-                — Completely separate from auth. You need an email service.
-                Use an SDK in your Next.js API routes for the best DX.
+                <strong className="text-foreground">
+                  Transactional emails
+                </strong>{" "}
+                — Completely separate from auth. You need an email service. Use
+                an SDK in your Next.js API routes for the best DX.
               </p>
               <p>
                 <strong className="text-foreground">Broadcasts</strong> — Not
@@ -1153,7 +1134,9 @@ wraps email send --to user@example.com --subject "Hello from Wraps"`}
                 href="/blog/nextjs-vercel-ses-guide"
               >
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <span>Next.js + Vercel + AWS SES: The Complete Email Guide</span>
+                <span>
+                  Next.js + Vercel + AWS SES: The Complete Email Guide
+                </span>
               </a>
               <a
                 className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
@@ -1174,7 +1157,9 @@ wraps email send --to user@example.com --subject "Hello from Wraps"`}
                 href="/blog/spf-guide"
               >
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <span>The SPF 10-Lookup Limit: Why Your Email Might Be Failing</span>
+                <span>
+                  The SPF 10-Lookup Limit: Why Your Email Might Be Failing
+                </span>
               </a>
             </div>
           </section>
