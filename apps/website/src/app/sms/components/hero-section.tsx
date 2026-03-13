@@ -1,6 +1,6 @@
+import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { ArrowRight, BookOpen } from "lucide-react";
 import Link from "next/link";
-import { DotPattern } from "@/components/dot-pattern";
 import { Button } from "@/components/ui/button";
 
 export function SmsHeroSection() {

@@ -1,8 +1,8 @@
 "use client";
 
+import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { ArrowRight, LayoutDashboard } from "lucide-react";
 import { motion } from "motion/react";
-import { DotPattern } from "@/components/dot-pattern";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 

@@ -1,9 +1,9 @@
 "use client";
 
+import { ModeToggle } from "@wraps/ui/components/mode-toggle";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CommandSearch, SearchTrigger } from "@/components/command-search";
-import { ModeToggle } from "@/components/mode-toggle";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useActiveOrganization } from "@/contexts/organization-context";

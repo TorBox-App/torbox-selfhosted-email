@@ -4,9 +4,21 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./components/*": "./src/components/*",
-    "./lib/*": "./src/lib/*",
-    "./hooks/*": "./src/hooks/*",
+    "./components/*": {
+      "types": "./src/components/*",
+      "default": "./src/components/*"
+    },
+    "./components/mode-toggle": "./src/components/mode-toggle.tsx",
+    "./components/dot-pattern": "./src/components/dot-pattern.tsx",
+    "./components/pricing-plans": "./src/components/pricing-plans.tsx",
+    "./components/icon-badge": "./src/components/icon-badge.tsx",
+    "./components/info-box": "./src/components/info-box.tsx",
+    "./components/page-header": "./src/components/page-header.tsx",
+    "./contexts/theme-context": "./src/contexts/theme-context.ts",
+    "./lib/utils": "./src/lib/utils.ts",
+    "./hooks/use-theme": "./src/hooks/use-theme.ts",
+    "./hooks/use-circular-transition": "./src/hooks/use-circular-transition.ts",
+    "./hooks/use-mobile": "./src/hooks/use-mobile.ts",
     "./styles/*": "./src/styles/*"
   },
   "scripts": {

@@ -1,5 +1,5 @@
+import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { History } from "lucide-react";
-import { DotPattern } from "@/components/dot-pattern";
 import { Badge } from "@/components/ui/badge";
 
 export function ChangelogHeroSection() {

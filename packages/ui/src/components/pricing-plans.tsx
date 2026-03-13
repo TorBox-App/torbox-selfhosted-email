@@ -1,15 +1,15 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { cn } from "../lib/utils";
+import { Button } from "./ui/button";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+} from "./ui/card";
 
 export type PricingPlan = {
   id: string;
@@ -58,8 +58,8 @@ const defaultPlans: PricingPlan[] = [
     ],
   },
   {
-    id: "enterprise",
-    name: "Enterprise",
+    id: "growth",
+    name: "Growth",
     description: "For high-volume stores",
     price: "$199",
     frequency: "/month",

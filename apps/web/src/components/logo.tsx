@@ -1,9 +1,9 @@
 "use client";
 
+import { useTheme } from "@wraps/ui/hooks/use-theme";
 import Image from "next/image";
 import type * as React from "react";
 import { useEffect, useState } from "react";
-import { useTheme } from "@/hooks/use-theme";
 
 interface LogoProps extends React.HTMLAttributes<HTMLImageElement> {
   size?: number;

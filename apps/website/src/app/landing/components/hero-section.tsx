@@ -1,6 +1,6 @@
+import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { Github } from "lucide-react";
 import Image from "next/image";
-import { DotPattern } from "@/components/dot-pattern";
 import { HeroAnimatedCTA } from "./hero-cta";
 
 // Static content - server rendered, visible immediately

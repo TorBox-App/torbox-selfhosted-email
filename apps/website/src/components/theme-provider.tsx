@@ -1,7 +1,7 @@
 "use client";
 
+import { ThemeProviderContext } from "@wraps/ui/contexts/theme-context";
 import * as React from "react";
-import { ThemeProviderContext } from "@/contexts/theme-context";
 
 type Theme = "dark" | "light" | "system";
 

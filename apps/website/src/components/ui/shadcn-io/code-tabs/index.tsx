@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "@wraps/ui/hooks/use-theme";
 import * as React from "react";
 import { CopyButton } from "@/components/ui/shadcn-io/copy-button";
 import {
@@ -11,7 +12,6 @@ import {
   TabsTrigger,
   useTabs,
 } from "@/components/ui/shadcn-io/tabs";
-import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 
 // Helper to get resolved theme from theme setting

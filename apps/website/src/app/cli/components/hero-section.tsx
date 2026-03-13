@@ -1,8 +1,8 @@
 "use client";
 
+import { DotPattern } from "@wraps/ui/components/dot-pattern";
 import { Terminal } from "lucide-react";
 import { AsciinemaPlayer } from "@/components/asciinema-player";
-import { DotPattern } from "@/components/dot-pattern";
 import { Badge } from "@/components/ui/badge";
 import {
   Snippet,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "@wraps/ui/hooks/use-theme";
 import { ChevronsUpDown, Moon, Sun, X } from "lucide-react";
 import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +18,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useTheme } from "@/hooks/use-theme";
 
 type UserInfo = {
   accountId: string;

@@ -1,9 +1,9 @@
 "use client";
 
+import { useTheme } from "@wraps/ui/hooks/use-theme";
 import React from "react";
 import { baseColors } from "@/config/theme-customizer-constants";
 import { colorThemes } from "@/config/theme-data";
-import { useTheme } from "@/hooks/use-theme";
 import type { ImportedTheme, ThemePreset } from "@/types/theme-customizer";
 
 export function useThemeManager() {

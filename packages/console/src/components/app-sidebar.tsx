@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "@wraps/ui/hooks/use-theme";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -26,7 +27,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useTheme } from "@/hooks/use-theme";
 
 type SubItem = {
   title: string;

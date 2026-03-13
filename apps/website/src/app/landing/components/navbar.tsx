@@ -1,10 +1,11 @@
 "use client";
 
+import { ModeToggle } from "@wraps/ui/components/mode-toggle";
+import { useTheme } from "@wraps/ui/hooks/use-theme";
 import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
-import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -26,7 +27,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { WrapsMotif } from "@/components/wraps-motif";
-import { useTheme } from "@/hooks/use-theme";
 import { trackEvent } from "@/utils/analytics";
 
 const navigationItems: {

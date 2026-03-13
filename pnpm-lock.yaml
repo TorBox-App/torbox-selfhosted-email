@@ -458,6 +458,9 @@ importers:
       '@wraps/email':
         specifier: workspace:*
         version: link:../../packages/email
+      '@wraps/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@xyflow/react':
         specifier: 12.10.0
         version: 12.10.0(@types/react@19.2.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -777,6 +780,9 @@ importers:
       '@wraps.dev/client':
         specifier: 0.2.0
         version: 0.2.0
+      '@wraps/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       asciinema-player:
         specifier: 3.13.4
         version: 3.13.4
@@ -1227,6 +1233,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: 1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.4))(@types/react@19.2.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@wraps/ui':
+        specifier: workspace:*
+        version: link:../ui
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

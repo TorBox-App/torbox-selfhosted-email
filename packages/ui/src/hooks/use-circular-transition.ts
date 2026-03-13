@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useTheme } from "@/hooks/use-theme";
+import { useTheme } from "./use-theme";
 
 type CircularTransitionHook = {
   startTransition: (
@@ -24,15 +24,12 @@ export function useCircularTransition(): CircularTransitionHook {
 
       isTransitioningRef.current = true;
 
-      // Set CSS variables for the circular reveal animation - exactly like tweakcn
       const x = (coords.x / window.innerWidth) * 100;
       const y = (coords.y / window.innerHeight) * 100;
 
-      // Set the CSS variables on document element
       document.documentElement.style.setProperty("--x", `${x}%`);
       document.documentElement.style.setProperty("--y", `${y}%`);
 
-      // Check if View Transitions API is supported
       if ("startViewTransition" in document) {
         const transition = (
           document as Document & {
@@ -48,7 +45,6 @@ export function useCircularTransition(): CircularTransitionHook {
           isTransitioningRef.current = false;
         });
       } else {
-        // Fallback for browsers without View Transitions API
         callback();
         setTimeout(() => {
           isTransitioningRef.current = false;
@@ -60,7 +56,6 @@ export function useCircularTransition(): CircularTransitionHook {
 
   const toggleTheme = useCallback(
     (event: React.MouseEvent) => {
-      // Get precise click coordinates - use clientX/clientY directly like tweakcn
       const coords = {
         x: event.clientX,
         y: event.clientY,

@@ -1,0 +1,114 @@
+"use client";
+
+import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+
+export type UsageData = {
+  current: number;
+  limit: number;
+  remaining: number;
+  percentUsed: number;
+  threshold: "normal" | "warning" | "critical" | "exceeded";
+};
+
+type UsageCardProps = {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  usage: UsageData | undefined;
+  isLoading: boolean;
+  upgradeHref: string;
+  className?: string;
+};
+
+const progressColors = {
+  normal: "[&>[data-slot=progress-indicator]]:bg-primary",
+  warning: "[&>[data-slot=progress-indicator]]:bg-amber-500",
+  critical: "[&>[data-slot=progress-indicator]]:bg-red-500",
+  exceeded: "[&>[data-slot=progress-indicator]]:bg-red-600",
+};
+
+export function UsageCard({
+  icon: Icon,
+  title,
+  description,
+  usage,
+  isLoading,
+  upgradeHref,
+  className,
+}: UsageCardProps) {
+  if (isLoading) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-base">{title}</CardTitle>
+          </div>
+          <CardDescription>Loading…</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (!usage) {
+    return null;
+  }
+
+  const isUnlimited = usage.limit === -1;
+  const displayPercent = isUnlimited ? 0 : Math.min(usage.percentUsed, 100);
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-base">{title}</CardTitle>
+          </div>
+          {!isUnlimited && (
+            <span className="text-sm text-muted-foreground">
+              {usage.current.toLocaleString()} / {usage.limit.toLocaleString()}
+            </span>
+          )}
+        </div>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isUnlimited ? (
+          <p className="text-sm text-muted-foreground">Unlimited</p>
+        ) : (
+          <>
+            <Progress
+              className={cn("h-2", progressColors[usage.threshold])}
+              value={displayPercent}
+            />
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                {usage.remaining.toLocaleString()} remaining
+              </span>
+              <span className="text-muted-foreground">
+                {usage.percentUsed}% used
+              </span>
+            </div>
+            {usage.threshold !== "normal" && (
+              <Button asChild className="w-full" size="sm" variant="outline">
+                <Link href={upgradeHref}>Upgrade Plan</Link>
+              </Button>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

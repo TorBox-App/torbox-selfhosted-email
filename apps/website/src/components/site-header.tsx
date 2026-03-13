@@ -1,8 +1,8 @@
 "use client";
 
+import { ModeToggle } from "@wraps/ui/components/mode-toggle";
 import * as React from "react";
 import { CommandSearch, SearchTrigger } from "@/components/command-search";
-import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
