@@ -8,6 +8,7 @@ import {
   messageSend,
   organizationExtension,
   template,
+  workflow,
 } from "@wraps/db";
 import { createPlatformClient } from "@wraps.dev/client";
 import { and, count, eq } from "drizzle-orm";
@@ -117,6 +118,14 @@ async function countApiKeys(organizationId: string): Promise<number> {
     .select({ count: count() })
     .from(apiKey)
     .where(eq(apiKey.organizationId, organizationId));
+  return r?.count ?? 0;
+}
+
+async function countWorkflows(organizationId: string): Promise<number> {
+  const [r] = await db
+    .select({ count: count() })
+    .from(workflow)
+    .where(eq(workflow.organizationId, organizationId));
   return r?.count ?? 0;
 }
 
@@ -314,10 +323,17 @@ export async function trackWorkflowCreated(
   properties: Record<string, unknown> = {}
 ) {
   try {
+    const existing = await countWorkflows(organizationId);
     const props = { organization_id: organizationId, ...properties };
     capture(userId, "workflow_created", props);
     await emit(userId, "workflow.created", props);
+    if (existing === 1) {
+      const firstProps = { organization_id: organizationId };
+      capture(userId, "activation_first_automation", firstProps);
+      await emit(userId, "activation.first_automation", firstProps);
+    }
     await setContactProperties(userId, { hasCreatedWorkflow: true });
+    await updateActivationScore(userId, organizationId);
   } catch {
     // never throw from tracking
   }
@@ -476,6 +492,7 @@ export async function computeActivationScore(
     hasAwsAccount: setupStatus.hasAwsAccount,
     hasVerifiedDomain: setupStatus.hasVerifiedDomain,
     hasSentEmail: setupStatus.hasSentEmail,
+    hasAutomation: setupStatus.hasWorkflow,
   };
 
   const score = Object.values(milestones).filter(Boolean).length;

@@ -69,6 +69,7 @@ vi.mock("@wraps/db", () => ({
   apiKey: { organizationId: "organizationId" },
   messageSend: { organizationId: "organizationId", status: "status" },
   invitation: { organizationId: "organizationId", status: "status" },
+  workflow: { organizationId: "organizationId" },
   organizationExtension: { organizationId: "organizationId" },
 }));
 
@@ -81,6 +82,7 @@ const mockGetSetupStatus = vi.fn((_orgId: string) =>
       hasSentEmail: false,
       hasTemplate: true,
       hasBroadcast: false,
+      hasWorkflow: false,
       hasPlatformConnection: false,
       verifiedDomains: [],
       awsRegion: null,
@@ -566,6 +568,23 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
     );
   });
 
+  it("trackWorkflowCreated should emit activation_first_automation on first workflow", async () => {
+    mockPost.mockResolvedValue({ data: { success: true }, error: null });
+    mockPatch.mockResolvedValue({ data: { success: true }, error: null });
+
+    await trackWorkflowCreated("user@example.com", "org-123");
+
+    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
+      body: {
+        name: "activation.first_automation",
+        contactEmail: "user@example.com",
+        properties: expect.objectContaining({
+          organization_id: "org-123",
+        }),
+      },
+    });
+  });
+
   it("trackWorkflowCreated should PATCH hasCreatedWorkflow", async () => {
     mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
@@ -640,6 +659,7 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
       hasAwsAccount: true,
       hasVerifiedDomain: true,
       hasSentEmail: false,
+      hasAutomation: false,
     });
   });
 });
