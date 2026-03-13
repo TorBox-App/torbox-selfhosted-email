@@ -58,8 +58,13 @@ sst-env.d.ts
 ai-notes/
 notes/
 
-# Claude Code local settings
-.claude/settings.local.json
+# AI tools
+.claude/
+.agents/
+.cursor/
+
+# Vite
+.vite/
 
 # Wraps CLI cache
 wraps/.wraps/
@@ -67,22 +72,12 @@ wraps/.wraps/
 # Playwright
 .playwright*
 
-# SST
-.sst
-sst-env.d.ts
+# Vercel
 .vercel
+
 # next-agents-md
 .next-docs/
 next-env.d.ts
-
-.claude/blueprints/
-.claude/investigations/
-.claude/research/
-.claude/spikes/
-.claude/audit/
-.claude/todos/
-.claude/tdd-session
-.claude/sdlc
 
 # MCP configuration (may contain connection strings)
 .mcp.json
