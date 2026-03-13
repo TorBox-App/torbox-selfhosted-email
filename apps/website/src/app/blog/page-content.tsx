@@ -3,6 +3,7 @@ import {
   Calendar,
   Clock,
   Code2,
+  Database,
   FileCheck,
   Inbox,
   Mail,
@@ -37,6 +38,19 @@ type BlogPost = {
 };
 
 const posts: BlogPost[] = [
+  {
+    slug: "supabase-email-guide",
+    title: "4 Email Flows Your Supabase App Needs Before Going Live",
+    description:
+      "Supabase handles auth and database. Email beyond magic links? That's on you. The 4 flows every production Supabase app needs — auth, transactional, broadcasts, automations — and how to set each one up.",
+    category: "Guide",
+    date: "March 2026",
+    readTime: "12 min read",
+    author: "Wraps Team",
+    featured: true,
+    icon: <Database className="h-6 w-6" />,
+    image: "/blog/supabase-email-guide.webp",
+  },
   {
     slug: "how-email-works",
     title: "How Email Actually Works",
