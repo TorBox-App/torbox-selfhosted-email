@@ -22,10 +22,7 @@ const mockPatch = vi.fn(() =>
   Promise.resolve({ data: { success: true }, error: null })
 );
 const mockGet = vi.fn(
-  (
-    _path: string,
-    options?: { params?: { query?: { search?: string } } }
-  ) =>
+  (_path: string, options?: { params?: { query?: { search?: string } } }) =>
     Promise.resolve({
       data: {
         contacts: [

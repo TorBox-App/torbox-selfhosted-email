@@ -218,9 +218,7 @@ describe("Workflow Execution Retry", () => {
       };
       return cb(txMock);
     });
-    mockEnqueueWorkflowStep.mockRejectedValueOnce(
-      new Error("SQS send failed")
-    );
+    mockEnqueueWorkflowStep.mockRejectedValueOnce(new Error("SQS send failed"));
 
     const app = createApp();
     const response = await app.handle(

@@ -732,10 +732,11 @@ async function processNextStep(
     );
   }
 
-  // Fallback to branchless transition only when no specific branch was requested.
-  // When a branch IS specified (e.g., condition "yes"/"no"), falling back to a
-  // branchless transition would incorrectly route through an unrelated path.
-  if (!(nextTransition || branch)) {
+  // Fallback to branchless transition when no branch-specific transition exists.
+  // This handles: empty condition branches (yes:[] / no:[]), wait_for_event steps
+  // resumed with "yes"/"timeout" that use linear (branchless) continuation, and
+  // any step type without explicit branch transitions.
+  if (!nextTransition) {
     nextTransition = transitions.find(
       (t) => t.fromStepId === currentStep.id && !t.condition
     );
