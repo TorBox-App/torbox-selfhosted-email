@@ -425,10 +425,11 @@ export async function handleSendEmail(
   });
 
   // Track first email sent (must await in Lambda)
-  await trackFirstEmailSent(organizationId, {
-    channel: "email",
-    source: "workflow",
-  });
+  await trackFirstEmailSent(
+    organizationId,
+    { channel: "email", source: "workflow" },
+    contactRecord.email
+  );
 
   // Update contact email metrics
   await db
@@ -860,12 +861,17 @@ export async function handleCondition(
   const properties = contactRecord.properties as Record<string, unknown> | null;
   const triggerData = execution.triggerData as Record<string, unknown> | null;
 
-  // Strip "properties." prefix — the editor generates field values like
-  // "properties.plan" for custom properties, but the actual key in the
-  // properties object is just "plan".
-  const field = config.field.startsWith("properties.")
-    ? config.field.slice("properties.".length)
-    : config.field;
+  // Strip prefixes added by the SDK and dashboard editor:
+  // - "contact.properties.onboardingPath" → "onboardingPath"
+  // - "contact.hasConnectedAws" → "hasConnectedAws"
+  // - "properties.plan" → "plan"
+  let field = config.field;
+  if (field.startsWith("contact.")) {
+    field = field.slice("contact.".length);
+  }
+  if (field.startsWith("properties.")) {
+    field = field.slice("properties.".length);
+  }
 
   // Try contact fields first, then contact.properties, then trigger data
   let fieldValue: unknown;

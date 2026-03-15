@@ -272,6 +272,10 @@ vi.stubGlobal("fetch", mockFetch);
 const { handler, handleUpdateContact, handleWaitForEmailEngagement } =
   await import("../workers/workflow-processor");
 
+const { trackFirstEmailSent: mockTrackFirstEmailSent } = await import(
+  "../../lib/activation-tracking"
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -895,6 +899,16 @@ describe("handleSendEmail", () => {
     expect(content.Simple).toBeDefined();
     expect(content.Template).toBeUndefined();
   });
+
+  it("passes contactEmail to trackFirstEmailSent", async () => {
+    setupEmailTest({ contact: { email: "workflow-user@example.com" } });
+    await handler(makeSQSEvent(emailJob));
+    expect(mockTrackFirstEmailSent).toHaveBeenCalledWith(
+      "org-1",
+      { channel: "email", source: "workflow" },
+      "workflow-user@example.com"
+    );
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1392,6 +1406,43 @@ describe("handleCondition", () => {
     await handler(makeSQSEvent(conditionJob));
     expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
       expect.objectContaining({ stepId: "step-no" })
+    );
+  });
+
+  it("strips contact. prefix to read first-class field", async () => {
+    setupConditionTest(
+      { field: "contact.firstName", operator: "equals", value: "Jane" },
+      { firstName: "Jane" }
+    );
+    await handler(makeSQSEvent(conditionJob));
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: "step-yes" })
+    );
+  });
+
+  it("strips contact.properties. prefix to read custom property", async () => {
+    setupConditionTest(
+      {
+        field: "contact.properties.onboardingPath",
+        operator: "equals",
+        value: "start_building",
+      },
+      { properties: { onboardingPath: "start_building" } }
+    );
+    await handler(makeSQSEvent(conditionJob));
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: "step-yes" })
+    );
+  });
+
+  it("strips contact. prefix for is_true on custom property", async () => {
+    setupConditionTest(
+      { field: "contact.hasConnectedAws", operator: "is_true" },
+      { properties: { hasConnectedAws: true } }
+    );
+    await handler(makeSQSEvent(conditionJob));
+    expect(mockEnqueueWorkflowStep).toHaveBeenCalledWith(
+      expect.objectContaining({ stepId: "step-yes" })
     );
   });
 

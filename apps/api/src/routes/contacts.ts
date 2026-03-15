@@ -713,13 +713,15 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const { params, body } = ctx;
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
 
-      // Check contact exists
+      // Resolve contact: accept UUID or email as the :id parameter.
+      // UUIDs never contain "@", so this is a safe heuristic.
+      const isEmail = params.id.includes("@");
       const [existing] = await db
-        .select({ id: contact.id })
+        .select({ id: contact.id, properties: contact.properties })
         .from(contact)
         .where(
           and(
-            eq(contact.id, params.id),
+            isEmail ? eq(contact.email, params.id) : eq(contact.id, params.id),
             eq(contact.organizationId, authContext.organizationId)
           )
         )
@@ -729,6 +731,9 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         ctx.set.status = 404;
         return { error: "Contact not found" };
       }
+
+      // Use the resolved UUID for all subsequent operations
+      const contactId = existing.id;
 
       // Build update values
       const updateValues: Record<string, unknown> = {
@@ -754,7 +759,10 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       }
 
       if (body.properties !== undefined) {
-        updateValues.properties = body.properties;
+        // PATCH merges properties — spread existing then new to preserve unmentioned keys
+        const existingProps =
+          (existing.properties as Record<string, unknown>) || {};
+        updateValues.properties = { ...existingProps, ...body.properties };
       }
 
       if (body.firstName !== undefined) {
@@ -781,7 +789,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       const [updated] = await db
         .update(contact)
         .set(updateValues)
-        .where(eq(contact.id, params.id))
+        .where(eq(contact.id, contactId))
         .returning();
 
       // Add topic subscriptions if specified (PATCH adds, doesn't replace)
@@ -805,7 +813,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             confirmedAt: contactTopic.confirmedAt,
           })
           .from(contactTopic)
-          .where(eq(contactTopic.contactId, params.id));
+          .where(eq(contactTopic.contactId, contactId));
 
         // Only consider actively subscribed topics as "existing"
         const activelySubscribedIds = new Set(
@@ -874,7 +882,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
               })
               .where(
                 and(
-                  eq(contactTopic.contactId, params.id),
+                  eq(contactTopic.contactId, contactId),
                   inArray(contactTopic.topicId, directResubscribeIds)
                 )
               );
@@ -883,7 +891,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             await Promise.all(
               directResubscribeIds.map((topicId) =>
                 emitTopicSubscribed({
-                  contactId: params.id,
+                  contactId,
                   organizationId: authContext.organizationId,
                   topicId,
                   topicName: resubTopicMap.get(topicId)?.name,
@@ -906,7 +914,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
               })
               .where(
                 and(
-                  eq(contactTopic.contactId, params.id),
+                  eq(contactTopic.contactId, contactId),
                   inArray(contactTopic.topicId, pendingResubscribeIds)
                 )
               );
@@ -920,7 +928,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                   if (topicInfo) {
                     try {
                       await sendTopicConfirmationEmail({
-                        contactId: params.id,
+                        contactId,
                         contactEmail: updatedEmailForConfirmation,
                         topicId,
                         topicName: topicInfo.name,
@@ -976,7 +984,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
               }
 
               return {
-                contactId: params.id,
+                contactId,
                 topicId,
                 status: needsConfirmation ? "pending" : "subscribed",
                 subscribedAt: needsConfirmation ? null : now,
@@ -998,7 +1006,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
                 if (topicInfo) {
                   try {
                     await sendTopicConfirmationEmail({
-                      contactId: params.id,
+                      contactId,
                       contactEmail: updatedEmailForConfirmation,
                       topicId,
                       topicName: topicInfo.name,
@@ -1025,7 +1033,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
             immediateTopics.map((topicId) => {
               const topicInfo = topicMap.get(topicId);
               return emitTopicSubscribed({
-                contactId: params.id,
+                contactId,
                 organizationId: authContext.organizationId,
                 topicId,
                 topicName: topicInfo?.name,
@@ -1044,7 +1052,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         (k) => k !== "topicIds" && k !== "topicSlugs"
       );
       await emitContactUpdated({
-        contactId: params.id,
+        contactId,
         organizationId: authContext.organizationId,
         updatedFields,
         contactData: {
@@ -1064,7 +1072,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       // Check segment entry triggers (contact may now match a segment)
       await checkSegmentEntry({
-        contactId: params.id,
+        contactId,
         organizationId: authContext.organizationId,
       }).catch((err) => {
         log.error("Failed to check segment entry", err, {
@@ -1074,7 +1082,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       // Check segment exit triggers (contact may no longer match a segment)
       await checkSegmentExit({
-        contactId: params.id,
+        contactId,
         organizationId: authContext.organizationId,
       }).catch((err) => {
         log.error("Failed to check segment exit", err, {

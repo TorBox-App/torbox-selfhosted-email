@@ -843,7 +843,7 @@ describe("Contacts API Integration", () => {
       expect(updated.email).toBe("new@example.com");
     });
 
-    it("updates contact properties", async () => {
+    it("updates contact properties (merged with existing)", async () => {
       const [existing] = await db
         .insert(contact)
         .values({
@@ -952,6 +952,72 @@ describe("Contacts API Integration", () => {
       );
 
       expect(response.status).toBe(404);
+    });
+
+    it("accepts email as the :id parameter", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "lookup-by-email@example.com",
+          emailHash: "hash-lookup-by-email",
+          properties: { source: "web" },
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(
+          "http://localhost/v1/contacts/lookup-by-email@example.com",
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ firstName: "Updated" }),
+          }
+        )
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      expect(body.firstName).toBe("Updated");
+      expect(body.id).toBe(existing.id);
+    });
+
+    it("merges properties instead of replacing them", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "merge-props@example.com",
+          emailHash: "hash-merge-props",
+          properties: { source: "web", signupAt: "2024-01-01" },
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            properties: { onboardingPath: "start_building" },
+          }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+
+      // Verify in database that existing properties were preserved
+      const [updated] = await db
+        .select()
+        .from(contact)
+        .where(eq(contact.id, existing.id));
+      expect(updated.properties).toEqual({
+        source: "web",
+        signupAt: "2024-01-01",
+        onboardingPath: "start_building",
+      });
     });
 
     it("updates contact subscriptions with topicSlugs", async () => {
