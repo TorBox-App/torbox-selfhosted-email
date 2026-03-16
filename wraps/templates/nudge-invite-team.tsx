@@ -31,9 +31,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function NudgeInviteTeam({
-  unsubscribeUrl,
-}: Props) {
+export default function NudgeInviteTeam({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -53,7 +51,10 @@ export default function NudgeInviteTeam({
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
               If that&apos;s more your engineer&apos;s thing, you can{" "}
-              <Link className="text-gray-800 underline" href="https://app.wraps.dev/settings/members">
+              <Link
+                className="text-gray-800 underline"
+                href="https://app.wraps.dev/settings/members"
+              >
                 invite them to your workspace
               </Link>
               . They&apos;ll get context on what you&apos;ve already set up and

@@ -31,9 +31,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function ActivationStartBuilding({
-  unsubscribeUrl,
-}: Props) {
+export default function ActivationStartBuilding({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />

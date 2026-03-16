@@ -31,9 +31,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function NudgeCreateWorkflow({
-  unsubscribeUrl,
-}: Props) {
+export default function NudgeCreateWorkflow({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -53,7 +51,10 @@ export default function NudgeCreateWorkflow({
             <Text className="text-[15px] leading-relaxed text-gray-800">
               Workflows let you define triggers once and emails send themselves.
               A welcome series, a follow-up after signup, whatever you need.{" "}
-              <Link className="text-gray-800 underline" href="https://app.wraps.dev/workflows/new">
+              <Link
+                className="text-gray-800 underline"
+                href="https://app.wraps.dev/workflows/new"
+              >
                 Create your first workflow
               </Link>{" "}
               &mdash; takes about 2 minutes.

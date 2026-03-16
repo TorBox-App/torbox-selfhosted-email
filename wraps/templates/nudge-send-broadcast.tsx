@@ -58,7 +58,10 @@ export default function NudgeSendBroadcast({
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              <Link className="text-gray-800 underline" href="https://app.wraps.dev/broadcasts/new">
+              <Link
+                className="text-gray-800 underline"
+                href="https://app.wraps.dev/broadcasts/new"
+              >
                 Send your first broadcast
               </Link>{" "}
               and see how it feels to reach everyone at once.

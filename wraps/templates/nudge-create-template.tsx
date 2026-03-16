@@ -31,9 +31,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function NudgeCreateTemplate({
-  unsubscribeUrl,
-}: Props) {
+export default function NudgeCreateTemplate({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -52,7 +50,10 @@ export default function NudgeCreateTemplate({
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
               The{" "}
-              <Link className="text-gray-800 underline" href="https://app.wraps.dev/emails/templates">
+              <Link
+                className="text-gray-800 underline"
+                href="https://app.wraps.dev/emails/templates"
+              >
                 template editor
               </Link>{" "}
               has a few starter layouts you can customize, or you can start from
