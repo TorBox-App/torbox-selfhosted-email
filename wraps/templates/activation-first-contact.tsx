@@ -29,7 +29,6 @@ export const previewText =
 export const testData = {
   firstName: "Jane",
   contactName: "Alex Smith",
-  dashboardUrl: "https://app.wraps.dev",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -38,13 +37,11 @@ export const testData = {
 type Props = {
   firstName: string;
   contactName: string;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
 export default function FirstContactEmail({
   contactName,
-  dashboardUrl,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -186,7 +183,7 @@ export default function FirstContactEmail({
               <Section className="my-7 text-center">
                 <Button
                   className="rounded-md bg-[#16a34a] px-6 py-3 text-base font-semibold text-white no-underline"
-                  href={dashboardUrl}
+                  href="https://app.wraps.dev"
                 >
                   View Contacts
                 </Button>

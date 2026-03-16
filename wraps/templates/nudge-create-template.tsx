@@ -21,7 +21,6 @@ export const previewText =
 
 export const testData = {
   firstName: "Jane",
-  dashboardUrl: "https://app.wraps.dev/emails/templates",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -29,12 +28,10 @@ export const testData = {
 
 type Props = {
   firstName: string;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
 export default function NudgeCreateTemplate({
-  dashboardUrl,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -55,7 +52,7 @@ export default function NudgeCreateTemplate({
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
               The{" "}
-              <Link className="text-gray-800 underline" href={dashboardUrl}>
+              <Link className="text-gray-800 underline" href="https://app.wraps.dev/emails/templates">
                 template editor
               </Link>{" "}
               has a few starter layouts you can customize, or you can start from

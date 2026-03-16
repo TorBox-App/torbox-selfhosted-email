@@ -26,7 +26,6 @@ export const previewText =
 
 export const testData = {
   firstName: "Jane",
-  dashboardUrl: "https://app.wraps.dev",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -34,14 +33,10 @@ export const testData = {
 
 type Props = {
   firstName: string;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
-export default function FirstApiKeyEmail({
-  dashboardUrl,
-  unsubscribeUrl,
-}: Props) {
+export default function FirstApiKeyEmail({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />

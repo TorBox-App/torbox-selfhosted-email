@@ -27,7 +27,6 @@ export const previewText =
 export const testData = {
   firstName: "Jane",
   templateName: "Welcome Email",
-  dashboardUrl: "https://app.wraps.dev",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -36,13 +35,11 @@ export const testData = {
 type Props = {
   firstName: string;
   templateName: string;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
 export default function FirstTemplatePublishedEmail({
   templateName,
-  dashboardUrl,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -154,7 +151,7 @@ export default function FirstTemplatePublishedEmail({
                 <Section className="my-7 text-center">
                   <Button
                     className="rounded-md bg-[#0d9488] px-6 py-3 text-base font-semibold text-white no-underline"
-                    href={dashboardUrl}
+                    href="https://app.wraps.dev"
                   >
                     Send a Test Email
                   </Button>

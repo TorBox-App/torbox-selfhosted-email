@@ -21,7 +21,6 @@ export const previewText =
 
 export const testData = {
   firstName: "Jane",
-  dashboardUrl: "https://app.wraps.dev",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -29,12 +28,10 @@ export const testData = {
 
 type Props = {
   firstName: string;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
 export default function ActivationStartBuilding({
-  dashboardUrl,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -56,7 +53,7 @@ export default function ActivationStartBuilding({
               The best place to start is the{" "}
               <Link
                 className="text-gray-800 underline"
-                href={`${dashboardUrl}/emails/templates`}
+                href="https://app.wraps.dev/emails/templates"
               >
                 template editor
               </Link>

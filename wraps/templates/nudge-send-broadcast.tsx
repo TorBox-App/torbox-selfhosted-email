@@ -22,7 +22,6 @@ export const previewText = "You've been building a list. Time to use it.";
 export const testData = {
   firstName: "Jane",
   contactCount: 847,
-  dashboardUrl: "https://app.wraps.dev/broadcasts/new",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -31,13 +30,11 @@ export const testData = {
 type Props = {
   firstName: string;
   contactCount?: number;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
 export default function NudgeSendBroadcast({
   contactCount,
-  dashboardUrl,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -61,7 +58,7 @@ export default function NudgeSendBroadcast({
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              <Link className="text-gray-800 underline" href={dashboardUrl}>
+              <Link className="text-gray-800 underline" href="https://app.wraps.dev/broadcasts/new">
                 Send your first broadcast
               </Link>{" "}
               and see how it feels to reach everyone at once.

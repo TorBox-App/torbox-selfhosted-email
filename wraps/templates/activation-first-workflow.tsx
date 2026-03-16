@@ -27,7 +27,6 @@ export const previewText =
 export const testData = {
   firstName: "Jane",
   workflowName: "Welcome Sequence",
-  dashboardUrl: "https://app.wraps.dev",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -36,13 +35,11 @@ export const testData = {
 type Props = {
   firstName: string;
   workflowName: string;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
 export default function FirstWorkflowEmail({
   workflowName,
-  dashboardUrl,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -217,7 +214,7 @@ export default function FirstWorkflowEmail({
               <Section className="my-7 text-center">
                 <Button
                   className="rounded-md bg-[#7c3aed] px-6 py-3 text-base font-semibold text-white no-underline"
-                  href={dashboardUrl}
+                  href="https://app.wraps.dev"
                 >
                   Open Workflow Editor
                 </Button>

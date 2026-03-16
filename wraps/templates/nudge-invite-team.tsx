@@ -21,7 +21,6 @@ export const previewText =
 
 export const testData = {
   firstName: "Jane",
-  dashboardUrl: "https://app.wraps.dev/settings/members",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -29,12 +28,10 @@ export const testData = {
 
 type Props = {
   firstName: string;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
 export default function NudgeInviteTeam({
-  dashboardUrl,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -56,7 +53,7 @@ export default function NudgeInviteTeam({
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
               If that&apos;s more your engineer&apos;s thing, you can{" "}
-              <Link className="text-gray-800 underline" href={dashboardUrl}>
+              <Link className="text-gray-800 underline" href="https://app.wraps.dev/settings/members">
                 invite them to your workspace
               </Link>
               . They&apos;ll get context on what you&apos;ve already set up and

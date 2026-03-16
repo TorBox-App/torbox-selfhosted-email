@@ -29,7 +29,6 @@ export const testData = {
   firstName: "Jane",
   recipientCount: "1,240",
   templateName: "Product Launch",
-  dashboardUrl: "https://app.wraps.dev",
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -39,14 +38,12 @@ type Props = {
   firstName: string;
   recipientCount: string;
   templateName: string;
-  dashboardUrl: string;
   unsubscribeUrl: string;
 };
 
 export default function FirstBroadcastEmail({
   recipientCount,
   templateName,
-  dashboardUrl,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -223,7 +220,7 @@ export default function FirstBroadcastEmail({
                 <Section className="my-7 text-center">
                   <Button
                     className="rounded-md bg-[#ea580c] px-6 py-3 text-base font-semibold text-white no-underline"
-                    href={dashboardUrl}
+                    href="https://app.wraps.dev"
                   >
                     View Broadcast Results
                   </Button>
