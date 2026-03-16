@@ -114,19 +114,13 @@ async function emit(
       return;
     }
     const client = createPlatformClient({ apiKey: key });
-    const { error } = await client.POST("/v1/events/", {
-      body: {
-        name: event,
-        contactEmail,
-        properties,
-        ...(options?.createIfMissing && { createIfMissing: true }),
-      },
+    await client.track(event, {
+      contactEmail,
+      properties,
+      ...(options?.createIfMissing && { createIfMissing: true }),
     });
-    if (error) {
-      log.error({ event, error }, "Platform event emission failed");
-    }
   } catch (err) {
-    log.error({ event, err }, "Platform event emission threw");
+    log.error({ event, err }, "Platform event emission failed");
   }
 }
 

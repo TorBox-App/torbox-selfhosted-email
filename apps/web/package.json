@@ -14,7 +14,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@wraps/ui": "workspace:*",
     "@ai-sdk/anthropic": "2.0.53",
     "@ai-sdk/gateway": "2.0.18",
     "@ai-sdk/react": "2.0.109",
@@ -96,11 +95,12 @@
     "@tiptap/suggestion": "3.11.0",
     "@vercel/blob": "2.0.0",
     "@vercel/oidc-aws-credentials-provider": "3.0.4",
-    "@wraps.dev/client": "0.4.0",
+    "@wraps.dev/client": "0.7.0",
     "@wraps.dev/email": "0.5.1",
     "@wraps/auth": "workspace:*",
     "@wraps/db": "workspace:*",
     "@wraps/email": "workspace:*",
+    "@wraps/ui": "workspace:*",
     "@xyflow/react": "12.10.0",
     "ai": "5.0.108",
     "better-auth": "catalog:",

@@ -37,11 +37,21 @@ const mockGet = vi.fn(
     })
 );
 
+const mockTrack = vi.fn(() =>
+  Promise.resolve({
+    success: true,
+    contactCreated: false,
+    workflowsTriggered: 0,
+    executionsResumed: 0,
+  })
+);
+
 vi.mock("@wraps.dev/client", () => ({
   createPlatformClient: vi.fn(() => ({
     GET: mockGet,
     POST: mockPost,
     PATCH: mockPatch,
+    track: mockTrack,
   })),
 }));
 
@@ -148,14 +158,19 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
 
   it("trackAwsConnected should await emit() so the HTTP call completes", async () => {
     // Track whether the POST promise was fully resolved before trackAwsConnected returns
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           // Simulate a short async delay like a real HTTP call
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
@@ -169,17 +184,22 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
     // promise is still pending when trackAwsConnected resolves.
     // This means the HTTP call to Wraps never completes in serverless
     // environments (Next.js server actions, Lambda, etc.)
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackDomainVerified should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
@@ -189,17 +209,22 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
       isFirstDomain: true,
     });
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackFirstEmailSent should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
@@ -209,51 +234,66 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
       source: "broadcast",
     });
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackContactCreated should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
 
     await trackContactCreated("user@example.com", "org-123");
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackApiKeyCreated should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
 
     await trackApiKeyCreated("user@example.com", "org-123");
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackBroadcastCreated should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
@@ -263,117 +303,134 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
       recipientCount: 10,
     });
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackTemplateCreated should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
 
     await trackTemplateCreated("user@example.com", "org-123");
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackTemplatePublished should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
 
     await trackTemplatePublished("user@example.com", "org-123");
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackContactsImported should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
 
     await trackContactsImported("user@example.com", "org-123", { count: 50 });
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackWorkflowCreated should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
 
     await trackWorkflowCreated("user@example.com", "org-123");
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("emit() should be called with correct event name and contact email", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
-
     await trackAwsConnected("user@example.com", "org-123", {
       region: "us-east-1",
       accountId: "123456789012",
     });
 
     // Should be called for both the regular event AND the activation event (count === 1)
-    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "aws_account.connected",
-        contactEmail: "user@example.com",
-        properties: expect.objectContaining({
-          organization_id: "org-123",
-        }),
-      },
+    expect(mockTrack).toHaveBeenCalledWith("aws_account.connected", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+      }),
     });
 
-    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "activation.aws_connected",
-        contactEmail: "user@example.com",
-        properties: expect.objectContaining({
-          organization_id: "org-123",
-        }),
-      },
+    expect(mockTrack).toHaveBeenCalledWith("activation.aws_connected", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+      }),
     });
   });
 
   // ─── trackTeammateInvited ─────────────────────────────────────────────────
 
   it("trackTeammateInvited should await emit() so the HTTP call completes", async () => {
-    let postResolved = false;
-    mockPost.mockImplementation(
+    let trackResolved = false;
+    mockTrack.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(() => {
-            postResolved = true;
-            resolve({ data: { success: true }, error: null });
+            trackResolved = true;
+            resolve({
+              success: true,
+              contactCreated: false,
+              workflowsTriggered: 0,
+              executionsResumed: 0,
+            });
           }, 10);
         })
     );
@@ -383,57 +440,44 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
       role: "member",
     });
 
-    expect(postResolved).toBe(true);
+    expect(trackResolved).toBe(true);
   });
 
   it("trackTeammateInvited should emit activation event on first invitation", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
-
     await trackTeammateInvited("user@example.com", "org-123", {
       invitedEmail: "colleague@example.com",
       role: "member",
     });
 
-    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "teammate.invited",
-        contactEmail: "user@example.com",
-        properties: expect.objectContaining({
-          organization_id: "org-123",
-          invited_email: "colleague@example.com",
-        }),
-      },
+    expect(mockTrack).toHaveBeenCalledWith("teammate.invited", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        invited_email: "colleague@example.com",
+      }),
     });
 
-    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "activation.teammate_invited",
-        contactEmail: "user@example.com",
-        properties: expect.objectContaining({
-          organization_id: "org-123",
-        }),
-      },
+    expect(mockTrack).toHaveBeenCalledWith("activation.teammate_invited", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+      }),
     });
   });
 
   // ─── trackOnboardingPathChosen ────────────────────────────────────────────
 
   it("trackOnboardingPathChosen should emit event with path", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
-
     await trackOnboardingPathChosen("user@example.com", "org-123", {
       path: "start_building",
     });
 
-    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "onboarding.path_chosen",
-        contactEmail: "user@example.com",
-        properties: expect.objectContaining({
-          organization_id: "org-123",
-          path: "start_building",
-        }),
-      },
+    expect(mockTrack).toHaveBeenCalledWith("onboarding.path_chosen", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        path: "start_building",
+      }),
     });
   });
 
@@ -445,18 +489,23 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
       callOrder.push("PATCH");
       return Promise.resolve({ data: { success: true }, error: null });
     });
-    mockPost.mockImplementation(() => {
-      callOrder.push("POST");
-      return Promise.resolve({ data: { success: true }, error: null });
+    mockTrack.mockImplementation(() => {
+      callOrder.push("track");
+      return Promise.resolve({
+        success: true,
+        contactCreated: false,
+        workflowsTriggered: 0,
+        executionsResumed: 0,
+      });
     });
 
     await trackOnboardingCompleted("user@example.com", "org-123", {
       path: "start_building",
     });
 
-    // PATCH must happen before POST so the workflow engine can read the path
+    // PATCH must happen before track so the workflow engine can read the path
     // when it evaluates the gate condition on the onboarding.completed event
-    expect(callOrder.indexOf("PATCH")).toBeLessThan(callOrder.indexOf("POST"));
+    expect(callOrder.indexOf("PATCH")).toBeLessThan(callOrder.indexOf("track"));
 
     // Should PATCH contact to store onboarding path in properties
     expect(mockPatch).toHaveBeenCalledWith(
@@ -474,32 +523,24 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
     );
 
     // Should emit onboarding.completed event with path in properties
-    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "onboarding.completed",
-        contactEmail: "user@example.com",
-        createIfMissing: true,
-        properties: expect.objectContaining({
-          organization_id: "org-123",
-          path: "start_building",
-        }),
-      },
+    expect(mockTrack).toHaveBeenCalledWith("onboarding.completed", {
+      contactEmail: "user@example.com",
+      createIfMissing: true,
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+        path: "start_building",
+      }),
     });
   });
 
   it("trackOnboardingCompleted should work without path (backward compat)", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
-
     await trackOnboardingCompleted("user@example.com", "org-123");
 
-    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "onboarding.completed",
-        contactEmail: "user@example.com",
-        createIfMissing: true,
-        properties: {
-          organization_id: "org-123",
-        },
+    expect(mockTrack).toHaveBeenCalledWith("onboarding.completed", {
+      contactEmail: "user@example.com",
+      createIfMissing: true,
+      properties: {
+        organization_id: "org-123",
       },
     });
 
@@ -521,7 +562,6 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
       error: null,
     });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackOnboardingCompleted("user@example.com", "org-123", {
       path: "start_building",
@@ -546,7 +586,6 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
       data: { contacts: [] },
       error: null,
     });
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackOnboardingCompleted("user@example.com", "org-123", {
       path: "start_building",
@@ -564,7 +603,6 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
   // ─── Contact property hydration ──────────────────────────────────────────
 
   it("trackAwsConnected should PATCH hasConnectedAws on first AWS account", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackAwsConnected("user@example.com", "org-123", {
@@ -584,7 +622,6 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
   });
 
   it("trackDomainVerified should PATCH hasDomainVerified on first domain", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackDomainVerified("user@example.com", "org-123", {
@@ -604,7 +641,6 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
   });
 
   it("trackFirstEmailSent should PATCH hasSentEmail on first email", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackFirstEmailSent("user@example.com", "org-123", {
@@ -622,7 +658,6 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
   });
 
   it("trackTemplateCreated should PATCH hasCreatedTemplate on first template", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackTemplateCreated("user@example.com", "org-123");
@@ -639,24 +674,19 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
   });
 
   it("trackWorkflowCreated should emit activation_first_automation on first workflow", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackWorkflowCreated("user@example.com", "org-123");
 
-    expect(mockPost).toHaveBeenCalledWith("/v1/events/", {
-      body: {
-        name: "activation.first_automation",
-        contactEmail: "user@example.com",
-        properties: expect.objectContaining({
-          organization_id: "org-123",
-        }),
-      },
+    expect(mockTrack).toHaveBeenCalledWith("activation.first_automation", {
+      contactEmail: "user@example.com",
+      properties: expect.objectContaining({
+        organization_id: "org-123",
+      }),
     });
   });
 
   it("trackWorkflowCreated should PATCH hasCreatedWorkflow", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackWorkflowCreated("user@example.com", "org-123");
@@ -673,7 +703,6 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
   });
 
   it("trackBroadcastCreated should PATCH hasSentBroadcast on first broadcast", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
     await trackBroadcastCreated("user@example.com", "org-123", {
@@ -693,7 +722,6 @@ describe("activation-tracking: emit() calls to Wraps platform", () => {
   });
 
   it("updateActivationScore should PATCH activationScore on contact", async () => {
-    mockPost.mockResolvedValue({ data: { success: true }, error: null });
     mockPatch.mockResolvedValue({ data: { success: true }, error: null });
 
     // trackAwsConnected calls updateActivationScore internally
