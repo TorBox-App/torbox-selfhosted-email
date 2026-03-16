@@ -240,6 +240,43 @@ export default defineWorkflow({
   ],
 });`;
 
+const trackEventCode = `// Track a single event
+const result = await client.track('purchase.completed', {
+  contactEmail: 'alice@example.com',
+  properties: {
+    orderId: 'ord_12345',
+    amount: 99.00,
+    plan: 'pro',
+  },
+});
+// { success: true, contactCreated: false, workflowsTriggered: 1, executionsResumed: 0 }`;
+
+const trackCreateContactCode = `// Auto-create contact if they don't exist
+await client.track('signup.completed', {
+  contactEmail: 'new-user@example.com',
+  contactName: 'Alice',
+  createIfMissing: true,
+  properties: {
+    source: 'website',
+    referrer: 'producthunt',
+  },
+});`;
+
+const trackBatchCode = `// Send multiple events in one request
+const result = await client.trackBatch([
+  {
+    name: 'page.viewed',
+    contactEmail: 'alice@example.com',
+    properties: { page: '/pricing' },
+  },
+  {
+    name: 'feature.used',
+    contactId: 'con_abc123',
+    properties: { feature: 'api-keys' },
+  },
+]);
+// { success: true, processed: 2, workflowsTriggered: 0, executionsResumed: 0, errors: [] }`;
+
 const errorHandlingCode = `import { createPlatformClient } from '@wraps.dev/client';
 
 const client = createPlatformClient({
@@ -366,6 +403,34 @@ ${getBatchStatusCode}
 ${cancelBatchCode}
 \`\`\``,
 
+  events: `## Events API
+
+Track custom events for contacts to trigger workflows, record activity, and resume waiting automation steps.
+
+### Track Event
+\`\`\`typescript
+${trackEventCode}
+\`\`\`
+
+### Auto-Create Contacts
+\`\`\`typescript
+${trackCreateContactCode}
+\`\`\`
+
+### Batch Events
+\`\`\`typescript
+${trackBatchCode}
+\`\`\`
+
+### TrackOptions
+| Option | Type | Description |
+|--------|------|-------------|
+| \`contactId\` | string | Contact ID (provide this or \`contactEmail\`) |
+| \`contactEmail\` | string | Contact email (alternative to \`contactId\`) |
+| \`contactName\` | string | Sets \`firstName\` when \`createIfMissing\` creates a new contact |
+| \`createIfMissing\` | boolean | Create the contact if they don't exist (default: \`false\`) |
+| \`properties\` | object | Arbitrary key-value data attached to the event |`,
+
   errorHandling: `## Error Handling
 
 The SDK uses openapi-fetch which returns errors as part of the response object rather than throwing.
@@ -460,6 +525,8 @@ ${SECTION_MD.initialization}
 ${SECTION_MD.contacts}
 
 ${SECTION_MD.batch}
+
+${SECTION_MD.events}
 
 ${SECTION_MD.errorHandling}
 
@@ -1019,6 +1086,240 @@ export default function ClientSDKReferencePageContent() {
                 )}
               </CodeBlockBody>
             </CodeBlock>
+          </div>
+        </div>
+      </section>
+
+      {/* Events API */}
+      <section className="mb-12">
+        <SectionHeading
+          className="mb-4"
+          id="events"
+          markdown={SECTION_MD.events}
+          title="Events API"
+        />
+        <p className="mb-4 text-muted-foreground">
+          Track custom events for contacts to trigger workflows, record
+          activity, and resume waiting automation steps. See the{" "}
+          <Link
+            className="text-primary underline underline-offset-4"
+            href="/docs/guides/custom-events"
+          >
+            Custom Events guide
+          </Link>{" "}
+          for full details.
+        </p>
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="mb-4 font-medium text-lg">Track Event</h3>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "track-event.ts",
+                  code: trackEventCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <h3 className="mb-4 font-medium text-lg">Auto-Create Contacts</h3>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Set{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5">
+                createIfMissing: true
+              </code>{" "}
+              to create a new contact when one doesn&apos;t exist.
+            </p>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "track-create-contact.ts",
+                  code: trackCreateContactCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <h3 className="mb-4 font-medium text-lg">Batch Events</h3>
+            <CodeBlock
+              className="h-auto"
+              data={[
+                {
+                  language: "typescript",
+                  filename: "track-batch.ts",
+                  code: trackBatchCode,
+                },
+              ]}
+              defaultValue="typescript"
+            >
+              <CodeBlockHeader>
+                <CodeBlockFiles>
+                  {(item) => (
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
+                      {item.filename}
+                    </CodeBlockFilename>
+                  )}
+                </CodeBlockFiles>
+                <CodeBlockCopyButton />
+              </CodeBlockHeader>
+              <CodeBlockBody>
+                {(item) => (
+                  <CodeBlockItem
+                    key={item.language}
+                    lineNumbers={false}
+                    value={item.language}
+                  >
+                    <CodeBlockContent language={item.language}>
+                      {item.code}
+                    </CodeBlockContent>
+                  </CodeBlockItem>
+                )}
+              </CodeBlockBody>
+            </CodeBlock>
+          </div>
+
+          <div>
+            <h3 className="mb-4 font-medium text-lg">TrackOptions</h3>
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium">Option</th>
+                    <th className="px-4 py-3 text-left font-medium">Type</th>
+                    <th className="px-4 py-3 text-left font-medium">
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="px-4 py-3 font-mono text-sm">contactId</td>
+                    <td className="px-4 py-3 text-muted-foreground">string</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      Contact ID (provide this or{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        contactEmail
+                      </code>
+                      )
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-4 py-3 font-mono text-sm">
+                      contactEmail
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">string</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      Contact email (alternative to{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        contactId
+                      </code>
+                      )
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-4 py-3 font-mono text-sm">contactName</td>
+                    <td className="px-4 py-3 text-muted-foreground">string</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      Sets{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        firstName
+                      </code>{" "}
+                      when{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        createIfMissing
+                      </code>{" "}
+                      creates a new contact
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="px-4 py-3 font-mono text-sm">
+                      createIfMissing
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">boolean</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      Create the contact if they don&apos;t exist (default:{" "}
+                      <code className="rounded bg-muted px-1 py-0.5">
+                        false
+                      </code>
+                      )
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 font-mono text-sm">properties</td>
+                    <td className="px-4 py-3 text-muted-foreground">object</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      Arbitrary key-value data attached to the event
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>

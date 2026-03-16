@@ -18,6 +18,7 @@ import {
   Layers,
   Mail,
   MessageSquare,
+  Radio,
   Rocket,
   Server,
   Settings,
@@ -234,6 +235,11 @@ const navItems: NavSection[] = [
         title: "Building Workflows",
         href: "/docs/guides/workflows",
         icon: Workflow,
+      },
+      {
+        title: "Custom Events",
+        href: "/docs/guides/custom-events",
+        icon: Radio,
       },
       {
         title: "Cross-Channel Orchestration",
