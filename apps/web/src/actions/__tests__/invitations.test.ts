@@ -239,4 +239,19 @@ describe("getInvitation — PII exposure", () => {
       expect(result.invitation.email).toBe(inviteeUser.email);
     }
   });
+
+  it("does not expose org slug or org id (cross-tenant data leak)", async () => {
+    const result = await getInvitation(pendingInvitation.id);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const org = result.invitation.organization;
+
+      // Org slug enables URL enumeration — must not be exposed without auth
+      expect("slug" in org).toBe(false);
+
+      // Org ID is an internal identifier — must not be exposed without auth
+      expect("id" in org).toBe(false);
+    }
+  });
 });

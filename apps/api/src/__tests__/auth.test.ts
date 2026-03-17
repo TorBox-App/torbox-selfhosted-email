@@ -307,7 +307,7 @@ describe("Authentication", () => {
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("invalid API key");
+      expect(body.error).toBe("Unauthorized");
     });
 
     it("rejects expired API key", async () => {
@@ -320,7 +320,7 @@ describe("Authentication", () => {
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("invalid API key");
+      expect(body.error).toBe("Unauthorized");
     });
 
     it("handles API key without Bearer prefix", async () => {
@@ -385,7 +385,8 @@ describe("Authentication", () => {
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("session not found");
+      // Uniform error — no reason leak (prevents session enumeration)
+      expect(body.error).toBe("Unauthorized");
     });
 
     it("rejects expired session", async () => {
@@ -398,7 +399,8 @@ describe("Authentication", () => {
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("session expired");
+      // Uniform error — no reason leak (prevents session state probing)
+      expect(body.error).toBe("Unauthorized");
     });
 
     it("rejects session for non-member org via X-Organization-Id header", async () => {
@@ -415,7 +417,8 @@ describe("Authentication", () => {
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("not member of org");
+      // Uniform error — no reason leak (prevents org membership enumeration)
+      expect(body.error).toBe("Unauthorized");
     });
   });
 
@@ -426,7 +429,7 @@ describe("Authentication", () => {
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("no auth header");
+      expect(body.error).toBe("Unauthorized");
     });
   });
 
@@ -497,7 +500,8 @@ describe("Authentication", () => {
 
       expect(response.status).toBe(401);
       const body = await response.json();
-      expect(body.error).toContain("session not found");
+      // Uniform error — no reason leak
+      expect(body.error).toBe("Unauthorized");
     });
 
     it("handles very long API keys gracefully", async () => {

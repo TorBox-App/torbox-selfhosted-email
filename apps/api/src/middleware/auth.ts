@@ -165,7 +165,7 @@ async function authenticate(
   const orgId = request.headers.get("x-organization-id") ?? undefined;
 
   if (!authHeader) {
-    return { error: "Unauthorized: no auth header" };
+    return { error: "Unauthorized" };
   }
 
   const token = authHeader.startsWith("Bearer ")
@@ -178,7 +178,7 @@ async function authenticate(
     if (authContext) {
       return { auth: authContext };
     }
-    return { error: "Unauthorized: invalid API key" };
+    return { error: "Unauthorized" };
   }
 
   // Try session token auth (from Better Auth)
@@ -188,10 +188,10 @@ async function authenticate(
     return { auth: result.auth };
   }
 
-  if (result.reason.startsWith("error:")) {
-    return { error: "Unauthorized" };
-  }
-  return { error: `Unauthorized: ${result.reason}` };
+  // Log specific reason server-side but return uniform error to prevent
+  // session state probing and org membership enumeration
+  log.warn("Session auth failed", { reason: result.reason });
+  return { error: "Unauthorized" };
 }
 
 // Export authenticate function for direct use in routes

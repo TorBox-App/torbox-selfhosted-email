@@ -13,9 +13,7 @@ export type InvitationDetails = {
   status: string;
   expiresAt: Date;
   organization: {
-    id: string;
     name: string;
-    slug: string | null;
   };
   inviter: {
     name: string;
@@ -105,9 +103,7 @@ export async function getInvitation(
         status: inv.status,
         expiresAt: inv.expiresAt,
         organization: {
-          id: org.id,
           name: org.name,
-          slug: org.slug,
         },
         inviter: {
           name: inviterUser.name,

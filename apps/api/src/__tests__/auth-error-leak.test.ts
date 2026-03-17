@@ -69,7 +69,7 @@ describe("Auth error information disclosure", () => {
     vi.clearAllMocks();
   });
 
-  it("still returns specific reason for non-error session failures", async () => {
+  it("returns uniform 'Unauthorized' for session not found (no reason leak)", async () => {
     // Simulate session not found (empty result)
     mockLimit.mockResolvedValueOnce([]);
 
@@ -83,7 +83,69 @@ describe("Auth error information disclosure", () => {
 
     expect("error" in result).toBe(true);
     if ("error" in result) {
-      expect(result.error).toBe("Unauthorized: session not found");
+      // Must NOT leak the specific failure reason — enables session enumeration
+      expect(result.error).toBe("Unauthorized");
+    }
+  });
+
+  it("returns uniform 'Unauthorized' for expired session (no reason leak)", async () => {
+    // Simulate expired session
+    mockLimit.mockResolvedValueOnce([
+      {
+        sessionId: "sess-1",
+        userId: "user-1",
+        expiresAt: new Date("2020-01-01"), // expired
+        activeOrganizationId: "org-1",
+        memberRole: "member",
+        plan: null,
+        subStatus: null,
+      },
+    ]);
+
+    const { authenticate } = await import("../middleware/auth");
+
+    const request = new Request("http://localhost/v1/contacts", {
+      headers: { Authorization: "Bearer some-session-token" },
+    });
+
+    const result = await authenticate(request);
+
+    expect("error" in result).toBe(true);
+    if ("error" in result) {
+      // Must NOT say "session expired" — enables session state probing
+      expect(result.error).toBe("Unauthorized");
+    }
+  });
+
+  it("returns uniform 'Unauthorized' for non-member (no org membership leak)", async () => {
+    // Simulate valid session but user is NOT a member of the requested org
+    mockLimit.mockResolvedValueOnce([
+      {
+        sessionId: "sess-1",
+        userId: "user-1",
+        expiresAt: new Date("2030-01-01"), // not expired
+        activeOrganizationId: "org-1",
+        memberRole: null, // NOT a member
+        plan: null,
+        subStatus: null,
+      },
+    ]);
+
+    const { authenticate } = await import("../middleware/auth");
+
+    const request = new Request("http://localhost/v1/contacts", {
+      headers: {
+        Authorization: "Bearer some-session-token",
+        "X-Organization-Id": "org-target",
+      },
+    });
+
+    const result = await authenticate(request);
+
+    expect("error" in result).toBe(true);
+    if ("error" in result) {
+      // Must NOT say "user not member of org" — enables org membership enumeration
+      expect(result.error).toBe("Unauthorized");
     }
   });
 
