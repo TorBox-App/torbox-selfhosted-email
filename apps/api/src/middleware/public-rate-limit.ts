@@ -22,14 +22,25 @@ const dynamoClient = new DynamoDBClient(awsDefaults);
 const TABLE_NAME = process.env.RATE_LIMIT_TABLE_NAME ?? "RateLimitTable";
 
 /**
- * Get client IP from request headers
+ * Get client IP from request headers.
+ *
+ * Priority:
+ * 1. x-source-ip — injected by Lambda handler from API Gateway sourceIp (TCP-level, unspoofable)
+ * 2. Rightmost X-Forwarded-For — the IP appended by the last trusted proxy (API Gateway)
+ * 3. x-real-ip — fallback
  */
-function getClientIp(request: Request): string {
-  // Check common proxy headers
+export function getClientIp(request: Request): string {
+  // Trusted: injected by Lambda handler from API Gateway event.requestContext.http.sourceIp
+  const sourceIp = request.headers.get("x-source-ip");
+  if (sourceIp) {
+    return sourceIp.trim();
+  }
+
+  // Fallback: rightmost XFF IP (appended by API Gateway, not client-controlled)
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) {
-    // Take the first IP (original client)
-    return forwardedFor.split(",")[0].trim();
+    const ips = forwardedFor.split(",");
+    return ips[ips.length - 1].trim();
   }
 
   const realIp = request.headers.get("x-real-ip");
@@ -37,7 +48,6 @@ function getClientIp(request: Request): string {
     return realIp.trim();
   }
 
-  // Fallback - should not happen in production behind API Gateway
   return "unknown";
 }
 

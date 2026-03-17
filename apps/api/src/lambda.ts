@@ -37,6 +37,9 @@ export async function handler(
       filteredHeaders["x-request-id"] = event.requestContext.requestId;
     }
 
+    // Inject trusted client IP from API Gateway (TCP-level, not spoofable via headers)
+    filteredHeaders["x-source-ip"] = event.requestContext.http.sourceIp;
+
     const request = new Request(url.toString(), {
       method: event.requestContext.http.method,
       headers: new Headers(filteredHeaders),
