@@ -114,9 +114,10 @@ export async function startConsoleServer(
     next();
   });
 
-  // Request logging middleware
+  // Request logging middleware — strip auth token from logged URLs
   app.use((req, _res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    const logUrl = req.url.replace(/([?&])token=[^&]+/g, "$1token=***");
+    console.log(`[${new Date().toISOString()}] ${req.method} ${logUrl}`);
     next();
   });
 
