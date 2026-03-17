@@ -31,9 +31,7 @@ vi.mock("@wraps/db", async () => {
             offset: vi.fn().mockReturnThis(),
             limit: vi
               .fn()
-              .mockImplementation(() =>
-                Promise.resolve(contactQueryResult)
-              ),
+              .mockImplementation(() => Promise.resolve(contactQueryResult)),
           };
           return queryChain;
         }),

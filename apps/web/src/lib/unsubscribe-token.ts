@@ -20,8 +20,7 @@ function getSecret(): Uint8Array {
   const secret = process.env.UNSUBSCRIBE_SECRET;
   if (!secret) {
     const isProduction =
-      process.env.NODE_ENV === "production" ||
-      !!process.env.VERCEL_ENV;
+      process.env.NODE_ENV === "production" || !!process.env.VERCEL_ENV;
     if (isProduction) {
       throw new Error(
         "UNSUBSCRIBE_SECRET environment variable is required in production"

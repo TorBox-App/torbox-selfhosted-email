@@ -176,9 +176,7 @@ describe("Plan Limits", () => {
         expect(result.current).toBe(5);
       } finally {
         // Clean up contacts
-        await db
-          .delete(contact)
-          .where(eq(contact.organizationId, testOrgId));
+        await db.delete(contact).where(eq(contact.organizationId, testOrgId));
       }
     });
   });
@@ -243,9 +241,7 @@ describe("Plan Limits", () => {
         const result = await checkWorkflowLimit(testOrgId);
         expect(result.current).toBe(3);
       } finally {
-        await db
-          .delete(workflow)
-          .where(eq(workflow.organizationId, testOrgId));
+        await db.delete(workflow).where(eq(workflow.organizationId, testOrgId));
       }
     });
   });
@@ -255,22 +251,18 @@ describe("Plan Limits", () => {
 
     it("should return accurate count when members exist", async () => {
       // Clean up any leftover test data
-      await db
-        .delete(member)
-        .where(eq(member.organizationId, testOrgId));
+      await db.delete(member).where(eq(member.organizationId, testOrgId));
       await db.delete(user).where(eq(user.id, testUserId));
 
       // Create test user for FK constraint
-      await db
-        .insert(user)
-        .values({
-          id: testUserId,
-          name: "Test User",
-          email: `plan-limits-test-${Date.now()}@example.com`,
-          emailVerified: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
+      await db.insert(user).values({
+        id: testUserId,
+        name: "Test User",
+        email: `plan-limits-test-${Date.now()}@example.com`,
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       await db.insert(member).values({
         id: `plan-limits-member-${Date.now()}`,
@@ -284,9 +276,7 @@ describe("Plan Limits", () => {
         const result = await checkTeamMemberLimit(testOrgId);
         expect(result.current).toBe(1);
       } finally {
-        await db
-          .delete(member)
-          .where(eq(member.organizationId, testOrgId));
+        await db.delete(member).where(eq(member.organizationId, testOrgId));
         await db.delete(user).where(eq(user.id, testUserId));
       }
     });

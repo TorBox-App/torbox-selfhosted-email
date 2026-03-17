@@ -628,7 +628,7 @@ async function processJob(job: BatchJob): Promise<void> {
     .where(eq(batchSend.id, batchId));
 
   // Build cursor from last contact for next chunk
-  const lastContact = contacts[contacts.length - 1];
+  const lastContact = contacts.at(-1);
   const nextCursor = lastContact
     ? { createdAt: lastContact.createdAt.toISOString(), id: lastContact.id }
     : undefined;

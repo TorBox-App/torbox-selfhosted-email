@@ -66,7 +66,7 @@ const mockContacts = Array.from({ length: 50 }, (_, i) => ({
   properties: {},
   createdAt: new Date(contactCreatedAt.getTime() + i * 1000),
 }));
-const lastContact = mockContacts[mockContacts.length - 1];
+const lastContact = mockContacts.at(-1)!;
 
 function getTableName(table: unknown): string {
   if (
@@ -225,8 +225,7 @@ describe("processJob cursor passing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sqsSendCalls.length = 0;
-    process.env.BATCH_QUEUE_URL =
-      "https://sqs.us-east-1.amazonaws.com/queue";
+    process.env.BATCH_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/queue";
   });
 
   it("includes cursor from last contact in next chunk SQS message", async () => {

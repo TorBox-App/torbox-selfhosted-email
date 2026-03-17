@@ -18,6 +18,7 @@ function chain(value: unknown) {
   // Terminal: thenable object returned by .where() — can be awaited or chained with .limit()
   const thenable = {
     limit: vi.fn().mockResolvedValue(value),
+    // biome-ignore lint/suspicious/noThenProperty: Drizzle queries are thenable by design
     then: (res: (v: unknown) => void, rej?: (e: unknown) => void) =>
       Promise.resolve(value).then(res, rej),
   };
