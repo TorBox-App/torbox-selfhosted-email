@@ -8,7 +8,15 @@
 
 import { db, invitation, member, organization, user } from "@wraps/db";
 import { and, eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { acceptInvitation } from "../invitations";
 
 // Mock auth session
@@ -83,10 +91,25 @@ const testInvitation = {
 };
 
 beforeAll(async () => {
-  await db.insert(user).values(ownerUser).onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
-  await db.insert(user).values(testUser).onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
-  await db.insert(organization).values(testOrg).onConflictDoUpdate({ target: organization.id, set: { name: testOrg.name } });
-  await db.insert(member).values(ownerMember).onConflictDoUpdate({ target: member.id, set: { role: ownerMember.role } });
+  await db
+    .insert(user)
+    .values(ownerUser)
+    .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
+  await db
+    .insert(user)
+    .values(testUser)
+    .onConflictDoUpdate({ target: user.id, set: { updatedAt: new Date() } });
+  await db
+    .insert(organization)
+    .values(testOrg)
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: testOrg.name },
+    });
+  await db
+    .insert(member)
+    .values(ownerMember)
+    .onConflictDoUpdate({ target: member.id, set: { role: ownerMember.role } });
 });
 
 beforeEach(async () => {
@@ -95,10 +118,7 @@ beforeEach(async () => {
     .select({ id: member.id })
     .from(member)
     .where(
-      and(
-        eq(member.organizationId, testOrg.id),
-        eq(member.userId, testUser.id)
-      )
+      and(eq(member.organizationId, testOrg.id), eq(member.userId, testUser.id))
     );
   for (const m of members) {
     await db.delete(member).where(eq(member.id, m.id));
@@ -113,7 +133,10 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await db.delete(invitation).where(eq(invitation.id, testInvitation.id));
-  const members = await db.select({ id: member.id }).from(member).where(eq(member.organizationId, testOrg.id));
+  const members = await db
+    .select({ id: member.id })
+    .from(member)
+    .where(eq(member.organizationId, testOrg.id));
   for (const m of members) {
     await db.delete(member).where(eq(member.id, m.id));
   }
@@ -158,17 +181,19 @@ describe("acceptInvitation race condition", () => {
       .where(eq(invitation.id, testInvitation.id));
 
     // Monkey-patch db.query.invitation.findFirst to return stale "pending" status
-    const originalFindFirst = db.query.invitation.findFirst.bind(db.query.invitation);
-    vi.spyOn(db.query.invitation, "findFirst").mockImplementationOnce(
-      async (...args: any[]) => {
-        const result = await (originalFindFirst as any)(...args);
-        if (result?.id === testInvitation.id) {
-          // Return stale data — pretend it's still "pending"
-          return { ...result, status: "pending" };
-        }
-        return result;
-      }
+    const originalFindFirst = db.query.invitation.findFirst.bind(
+      db.query.invitation
     );
+    vi.spyOn(db.query.invitation, "findFirst").mockImplementationOnce((async (
+      ...args: any[]
+    ) => {
+      const result = await (originalFindFirst as any)(...args);
+      if (result?.id === testInvitation.id) {
+        // Return stale data — pretend it's still "pending"
+        return { ...result, status: "pending" };
+      }
+      return result;
+    }) as any);
 
     // With the old code: stale read says "pending", member check passes,
     // INSERT member succeeds, UPDATE invitation is a no-op → duplicate member

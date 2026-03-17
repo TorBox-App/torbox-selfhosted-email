@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { getTableColumns } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
 import { templateVersion } from "../schema/templates";
 
 describe("templateVersion schema", () => {

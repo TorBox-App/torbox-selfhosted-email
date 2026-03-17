@@ -82,7 +82,8 @@ function setupMocksForRace(
   });
 
   // Track all update calls with their set data
-  const updateCalls: { setData: Record<string, unknown>; rowCount: number }[] = [];
+  const updateCalls: { setData: Record<string, unknown>; rowCount: number }[] =
+    [];
   mockDbUpdate.mockImplementation(() => ({
     set: (data: Record<string, unknown>) => ({
       where: () => {
@@ -135,7 +136,10 @@ function makeEvent(type: "Open" | "Click") {
   };
 }
 
-async function sendWebhook(app: ReturnType<typeof createTestApp>, type: "Open" | "Click") {
+async function sendWebhook(
+  app: ReturnType<typeof createTestApp>,
+  type: "Open" | "Click"
+) {
   return app.handle(
     new Request(`http://localhost/webhooks/ses/${TEST_AWS_ACCOUNT_NUMBER}`, {
       method: "POST",

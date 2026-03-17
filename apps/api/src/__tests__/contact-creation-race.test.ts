@@ -9,7 +9,15 @@
 import { contact, db, member, organization, user } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { contactsRoutes } from "../routes/contacts";
 
@@ -67,7 +75,10 @@ beforeAll(async () => {
   await db
     .insert(organization)
     .values(testOrg)
-    .onConflictDoUpdate({ target: organization.id, set: { name: testOrg.name } });
+    .onConflictDoUpdate({
+      target: organization.id,
+      set: { name: testOrg.name },
+    });
   await db
     .insert(member)
     .values(testMember)
@@ -95,7 +106,9 @@ describe("Contact creation race condition", () => {
 
     // Pre-insert a contact directly in DB (simulates the other request winning the race)
     const { createHash } = await import("node:crypto");
-    const emailHash = createHash("sha256").update(email.toLowerCase()).digest("hex");
+    const emailHash = createHash("sha256")
+      .update(email.toLowerCase())
+      .digest("hex");
     await db.insert(contact).values({
       organizationId: testOrg.id,
       email,

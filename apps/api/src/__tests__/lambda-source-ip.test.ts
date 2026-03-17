@@ -5,11 +5,7 @@
  * API Gateway's sourceIp, preventing client spoofing.
  */
 
-import type {
-  APIGatewayProxyEventV2,
-  APIGatewayProxyStructuredResultV2,
-  Context,
-} from "aws-lambda";
+import type { APIGatewayProxyEventV2, Context } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
 
 // Capture the Request passed to app.handle so we can inspect headers

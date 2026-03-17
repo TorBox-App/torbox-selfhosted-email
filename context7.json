@@ -16,12 +16,7 @@
     "**/test",
     "**/.turbo"
   ],
-  "excludeFiles": [
-    "*.test.ts",
-    "*.spec.ts",
-    "*.map",
-    "pnpm-lock.yaml"
-  ],
+  "excludeFiles": ["*.test.ts", "*.spec.ts", "*.map", "pnpm-lock.yaml"],
   "rules": [
     "Wraps deploys infrastructure to the user's AWS account — it is not a managed service",
     "Use @wraps.dev/email for the email SDK and @wraps.dev/sms for the SMS SDK",

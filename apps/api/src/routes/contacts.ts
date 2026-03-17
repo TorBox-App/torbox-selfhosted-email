@@ -528,7 +528,8 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       } catch (err) {
         // PostgreSQL unique_violation = 23505
         // Drizzle wraps DB errors in DrizzleQueryError with the original as `cause`
-        const dbError = err instanceof Error && "cause" in err ? (err as any).cause : err;
+        const dbError =
+          err instanceof Error && "cause" in err ? (err as any).cause : err;
         if (dbError?.code === "23505") {
           ctx.set.status = 409;
           return { error: "Contact already exists" };

@@ -217,10 +217,7 @@ export async function acceptInvitation(
       .update(invitation)
       .set({ status: "accepted" })
       .where(
-        and(
-          eq(invitation.id, invitationId),
-          eq(invitation.status, "pending")
-        )
+        and(eq(invitation.id, invitationId), eq(invitation.status, "pending"))
       );
 
     if ((claimResult as any)?.rowCount === 0) {

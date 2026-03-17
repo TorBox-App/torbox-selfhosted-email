@@ -139,8 +139,9 @@ export const templateVersion = pgTable(
     version: integer("version").notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    createdBy: text("created_by")
-      .references(() => user.id, { onDelete: "set null" }),
+    createdBy: text("created_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
     changeNote: text("change_note"),
   },
   (table) => [
