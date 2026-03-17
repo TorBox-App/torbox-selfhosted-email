@@ -1,7 +1,7 @@
 {
   "name": "@wraps.dev/cdk",
   "version": "0.2.1",
-  "description": "AWS CDK construct for deploying Wraps email infrastructure",
+  "description": "AWS CDK L3 construct for email infrastructure. Deploys SES, event processing, email history, and OIDC auth as a single construct with grant methods.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -28,9 +28,15 @@
     "wraps",
     "email",
     "aws",
+    "aws-ses",
     "ses",
     "cdk",
-    "infrastructure"
+    "aws-cdk",
+    "construct",
+    "infrastructure",
+    "iac",
+    "cloudformation",
+    "l3-construct"
   ],
   "author": "Wraps <hello@wraps.dev>",
   "license": "MIT",

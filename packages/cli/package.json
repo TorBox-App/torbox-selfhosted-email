@@ -1,7 +1,7 @@
 {
   "name": "@wraps.dev/cli",
   "version": "2.17.16",
-  "description": "CLI for deploying Wraps email infrastructure to your AWS account",
+  "description": "Deploy email, SMS, and CDN infrastructure to your AWS account with one command. Sets up SES with DKIM/SPF/DMARC, event processing, and history automatically.",
   "type": "module",
   "main": "./dist/cli.js",
   "bin": {
@@ -39,9 +39,21 @@
   "keywords": [
     "aws",
     "ses",
+    "aws-ses",
     "email",
+    "sms",
+    "cdn",
     "infrastructure",
-    "cli"
+    "cli",
+    "deploy",
+    "dkim",
+    "spf",
+    "dmarc",
+    "cloudfront",
+    "iac",
+    "devops",
+    "email-setup",
+    "wraps"
   ],
   "author": "Wraps",
   "license": "AGPL-3.0-or-later",
