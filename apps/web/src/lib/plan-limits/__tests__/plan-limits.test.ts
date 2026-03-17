@@ -1,9 +1,13 @@
 import {
+  awsAccount,
   contact,
   db,
+  member,
   organization,
   organizationExtension,
   subscription,
+  user,
+  workflow,
 } from "@wraps/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -11,6 +15,8 @@ import {
   checkAwsAccountLimit,
   checkContactLimit,
   checkFeatureAccess,
+  checkTeamMemberLimit,
+  checkWorkflowLimit,
   getOrganizationPlan,
 } from "../index";
 
@@ -156,6 +162,25 @@ describe("Plan Limits", () => {
       // Starter plan has unlimited contacts (-1) in the 2026 pricing model
       expect(result.limit).toBe(-1);
     });
+
+    it("should return accurate count when contacts exist", async () => {
+      // Insert 5 contacts for the test org
+      const contacts = Array.from({ length: 5 }, (_, i) => ({
+        organizationId: testOrgId,
+        email: `count-test-${i}@example.com`,
+      }));
+      await db.insert(contact).values(contacts);
+
+      try {
+        const result = await checkContactLimit(testOrgId);
+        expect(result.current).toBe(5);
+      } finally {
+        // Clean up contacts
+        await db
+          .delete(contact)
+          .where(eq(contact.organizationId, testOrgId));
+      }
+    });
   });
 
   describe("checkAwsAccountLimit", () => {
@@ -183,6 +208,87 @@ describe("Plan Limits", () => {
       expect(result.allowed).toBe(true);
       expect(result.current).toBe(0);
       expect(result.limit).toBe(1); // Starter plan has 1 AWS account
+    });
+
+    it("should return accurate count when AWS accounts exist", async () => {
+      await db.insert(awsAccount).values({
+        organizationId: testOrgId,
+        name: "count-test-account",
+        accountId: "123456789012",
+        region: "us-east-1",
+        roleArn: "arn:aws:iam::123456789012:role/test",
+        externalId: `count-test-ext-${Date.now()}`,
+      });
+
+      try {
+        const result = await checkAwsAccountLimit(testOrgId);
+        expect(result.current).toBe(1);
+      } finally {
+        await db
+          .delete(awsAccount)
+          .where(eq(awsAccount.organizationId, testOrgId));
+      }
+    });
+  });
+
+  describe("checkWorkflowLimit", () => {
+    it("should return accurate count when workflows exist", async () => {
+      const workflows = Array.from({ length: 3 }, (_, i) => ({
+        organizationId: testOrgId,
+        name: `count-test-workflow-${i}`,
+      }));
+      await db.insert(workflow).values(workflows);
+
+      try {
+        const result = await checkWorkflowLimit(testOrgId);
+        expect(result.current).toBe(3);
+      } finally {
+        await db
+          .delete(workflow)
+          .where(eq(workflow.organizationId, testOrgId));
+      }
+    });
+  });
+
+  describe("checkTeamMemberLimit", () => {
+    const testUserId = "plan-limits-test-user";
+
+    it("should return accurate count when members exist", async () => {
+      // Clean up any leftover test data
+      await db
+        .delete(member)
+        .where(eq(member.organizationId, testOrgId));
+      await db.delete(user).where(eq(user.id, testUserId));
+
+      // Create test user for FK constraint
+      await db
+        .insert(user)
+        .values({
+          id: testUserId,
+          name: "Test User",
+          email: `plan-limits-test-${Date.now()}@example.com`,
+          emailVerified: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+      await db.insert(member).values({
+        id: `plan-limits-member-${Date.now()}`,
+        organizationId: testOrgId,
+        userId: testUserId,
+        role: "member",
+        createdAt: new Date(),
+      });
+
+      try {
+        const result = await checkTeamMemberLimit(testOrgId);
+        expect(result.current).toBe(1);
+      } finally {
+        await db
+          .delete(member)
+          .where(eq(member.organizationId, testOrgId));
+        await db.delete(user).where(eq(user.id, testUserId));
+      }
     });
   });
 

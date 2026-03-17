@@ -19,6 +19,7 @@ import {
   subscription,
   workflow,
 } from "@wraps/db";
+import { count } from "drizzle-orm";
 import {
   getRequiredPlan,
   hasFeature,
@@ -82,12 +83,12 @@ export async function checkContactLimit(
   const planId = await getOrganizationPlan(organizationId);
   const plan = PLANS[planId];
 
-  const contactCount = await db
-    .select()
+  const [row] = await db
+    .select({ count: count() })
     .from(contact)
     .where(eq(contact.organizationId, organizationId));
 
-  const current = contactCount.length;
+  const current = row?.count ?? 0;
   const limit = plan.maxContacts;
   const allowed = limit === -1 || current < limit;
 
@@ -111,12 +112,12 @@ export async function checkAwsAccountLimit(
   const planId = await getOrganizationPlan(organizationId);
   const plan = PLANS[planId];
 
-  const accounts = await db
-    .select()
+  const [row] = await db
+    .select({ count: count() })
     .from(awsAccount)
     .where(eq(awsAccount.organizationId, organizationId));
 
-  const current = accounts.length;
+  const current = row?.count ?? 0;
   const limit = plan.maxAwsAccounts;
   const allowed = limit === -1 || current < limit;
 
@@ -140,12 +141,12 @@ export async function checkWorkflowLimit(
   const planId = await getOrganizationPlan(organizationId);
   const plan = PLANS[planId];
 
-  const workflows = await db
-    .select()
+  const [row] = await db
+    .select({ count: count() })
     .from(workflow)
     .where(eq(workflow.organizationId, organizationId));
 
-  const current = workflows.length;
+  const current = row?.count ?? 0;
   const limit = plan.maxWorkflows;
   const allowed = limit === -1 || current < limit;
 
@@ -202,12 +203,12 @@ export async function checkTeamMemberLimit(
   const planId = await getOrganizationPlan(organizationId);
   const plan = PLANS[planId];
 
-  const members = await db
-    .select()
+  const [row] = await db
+    .select({ count: count() })
     .from(member)
     .where(eq(member.organizationId, organizationId));
 
-  const current = members.length;
+  const current = row?.count ?? 0;
   const limit = plan.maxTeamMembers;
   const allowed = limit === -1 || current < limit;
 
