@@ -3,6 +3,7 @@
  *
  * Verifies that getCredentials returns both AWS credentials AND
  * the customer's SES region from the awsAccount record.
+ * Also verifies org-scoping prevents cross-tenant credential access.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,8 +35,10 @@ vi.mock("@wraps/db", () => {
   return {
     db: { select: mockSelect },
     eq: vi.fn(),
+    and: vi.fn(),
     awsAccount: {
       id: "id",
+      organizationId: "organization_id",
       roleArn: "role_arn",
       externalId: "external_id",
       region: "region",
@@ -44,7 +47,7 @@ vi.mock("@wraps/db", () => {
   };
 });
 
-const { __mockLimit } = await import("@wraps/db" as string);
+const { __mockLimit, and: mockAnd } = await import("@wraps/db" as string);
 
 const { getCredentials } = await import("../services/credentials");
 
@@ -64,7 +67,7 @@ describe("getCredentials", () => {
       },
     ]);
 
-    const result = await getCredentials("account-eu-west-1");
+    const result = await getCredentials("account-eu-west-1", "org-1");
 
     expect(result.region).toBe("eu-west-1");
   });
@@ -78,11 +81,26 @@ describe("getCredentials", () => {
       },
     ]);
 
-    const result = await getCredentials("account-ap-southeast-1");
+    const result = await getCredentials("account-ap-southeast-1", "org-1");
 
     expect(result.accessKeyId).toBe("AKIA-test");
     expect(result.secretAccessKey).toBe("secret-test");
     expect(result.sessionToken).toBe("token-test");
     expect(result.region).toBe("ap-southeast-1");
+  });
+
+  it("scopes the DB query by organizationId using and()", async () => {
+    (__mockLimit as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      {
+        roleArn: "arn:aws:iam::123456789012:role/wraps-email-role",
+        externalId: "ext-scoped",
+        region: "us-east-1",
+      },
+    ]);
+
+    await getCredentials("account-scoped", "org-scope-check");
+
+    // Verify the query uses and() to combine both conditions
+    expect(mockAnd).toHaveBeenCalled();
   });
 });

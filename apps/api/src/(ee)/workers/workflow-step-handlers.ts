@@ -177,8 +177,8 @@ export async function handleSendEmail(
     .where(eq(organization.id, organizationId))
     .limit(1);
 
-  // Get credentials for customer's AWS account
-  const credentials = await getCredentials(wf.awsAccountId);
+  // Get credentials for customer's AWS account (scoped by org)
+  const credentials = await getCredentials(wf.awsAccountId, organizationId);
 
   // Create SES client
   const sesClient = new SESv2Client({
@@ -592,8 +592,8 @@ export async function handleSendSms(
     throw new Error(`AWS account ${wf.awsAccountId} not found`);
   }
 
-  // Get credentials for the customer's AWS account
-  const credentials = await getCredentials(wf.awsAccountId);
+  // Get credentials for the customer's AWS account (scoped by org)
+  const credentials = await getCredentials(wf.awsAccountId, organizationId);
 
   // Create Pinpoint SMS Voice V2 client with assumed credentials
   const smsClient = new PinpointSMSVoiceV2Client({

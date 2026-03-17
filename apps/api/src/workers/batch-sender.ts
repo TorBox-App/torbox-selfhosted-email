@@ -142,7 +142,7 @@ async function processJob(job: BatchJob): Promise<void> {
   }
 
   // Get customer AWS credentials
-  const credentials = await getCredentials(awsAccountId);
+  const credentials = await getCredentials(awsAccountId, organizationId);
 
   // Create SES v2 client with customer credentials and their SES region
   const sesClient = new SESv2Client({

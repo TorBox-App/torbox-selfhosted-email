@@ -6,7 +6,7 @@
  */
 
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
-import { awsAccount, db, eq } from "@wraps/db";
+import { and, awsAccount, db, eq } from "@wraps/db";
 
 import { awsDefaults } from "../lib/aws-defaults";
 
@@ -27,16 +27,18 @@ const credentialCache = new Map<
 >();
 
 export async function getCredentials(
-  awsAccountId: string
+  awsAccountId: string,
+  organizationId: string
 ): Promise<AwsCredentials> {
-  // Check cache first
-  const cached = credentialCache.get(awsAccountId);
+  // Check cache first (keyed by both account + org to prevent cross-tenant cache hits)
+  const cacheKey = `${awsAccountId}:${organizationId}`;
+  const cached = credentialCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now() + 60_000) {
     // 1 minute buffer
     return cached.credentials;
   }
 
-  // Look up AWS account to get role ARN and region
+  // Look up AWS account to get role ARN and region (scoped by org)
   const [account] = await db
     .select({
       roleArn: awsAccount.roleArn,
@@ -44,7 +46,12 @@ export async function getCredentials(
       region: awsAccount.region,
     })
     .from(awsAccount)
-    .where(eq(awsAccount.id, awsAccountId))
+    .where(
+      and(
+        eq(awsAccount.id, awsAccountId),
+        eq(awsAccount.organizationId, organizationId)
+      )
+    )
     .limit(1);
 
   if (!account?.roleArn) {
@@ -74,7 +81,7 @@ export async function getCredentials(
   };
 
   // Cache credentials
-  credentialCache.set(awsAccountId, {
+  credentialCache.set(cacheKey, {
     credentials,
     expiresAt: credentials.expiration.getTime(),
   });
