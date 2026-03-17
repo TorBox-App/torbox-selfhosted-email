@@ -6,6 +6,7 @@ import {
   BarChart3,
   Blocks,
   Book,
+  Bot,
   Box,
   ChevronRight,
   Cloud,
@@ -250,6 +251,11 @@ const navItems: NavSection[] = [
         title: "Webhooks",
         href: "/docs/guides/webhooks",
         icon: Zap,
+      },
+      {
+        title: "Context7 (AI Docs)",
+        href: "/docs/guides/context7",
+        icon: Bot,
       },
       {
         title: "Vercel Setup",
