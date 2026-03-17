@@ -1,6 +1,6 @@
 "use server";
 
-import { contact, contactTopic, db, topic } from "@wraps/db";
+import { contact, contactTopic, db, escapeIlike, topic } from "@wraps/db";
 import { and, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { trackContactCreated } from "@/lib/activation-tracking";
@@ -79,7 +79,7 @@ export async function listContacts(
     const conditions = [eq(contact.organizationId, organizationId)];
 
     if (search) {
-      conditions.push(ilike(contact.email, `%${search}%`));
+      conditions.push(ilike(contact.email, `%${escapeIlike(search)}%`));
     }
 
     // Prefer emailStatus over legacy status

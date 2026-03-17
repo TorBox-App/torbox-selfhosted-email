@@ -1,6 +1,12 @@
 "use server";
 
-import { contact, contactEvent, contactTopic, db } from "@wraps/db";
+import {
+  contact,
+  contactEvent,
+  contactTopic,
+  db,
+  escapeIlike,
+} from "@wraps/db";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import type {
   ContactStatus,
@@ -42,7 +48,7 @@ export async function exportAllContacts(
     const conditions = [eq(contact.organizationId, organizationId)];
 
     if (search) {
-      conditions.push(ilike(contact.email, `%${search}%`));
+      conditions.push(ilike(contact.email, `%${escapeIlike(search)}%`));
     }
 
     if (emailStatus) {

@@ -12,7 +12,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { contact, contactTopic, db, eq, topic } from "@wraps/db";
+import { contact, contactTopic, db, eq, escapeIlike, topic } from "@wraps/db";
 import { sendTopicConfirmationEmail } from "@wraps/email";
 import { and, desc, inArray, or, sql } from "drizzle-orm";
 import { t } from "elysia";
@@ -292,8 +292,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       }
 
       if (query.search) {
-        const escaped = query.search.replace(/%/g, "\\%").replace(/_/g, "\\_");
-        const search = `%${escaped}%`;
+        const search = `%${escapeIlike(query.search)}%`;
         conditions.push(
           or(
             sql`${contact.email} ILIKE ${search}`,

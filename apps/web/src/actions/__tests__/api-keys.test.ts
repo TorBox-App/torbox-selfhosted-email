@@ -1,6 +1,21 @@
-import { apiKey, db, member, organization, subscription, user } from "@wraps/db";
+import {
+  apiKey,
+  db,
+  member,
+  organization,
+  subscription,
+  user,
+} from "@wraps/db";
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { createApiKey, verifyApiKey } from "../api-keys";
 
 // --- Test fixtures ---
@@ -74,9 +89,12 @@ vi.mock("@wraps/auth", () => ({
 
 // Mock activation tracking so tests don't hit external services,
 // but we can spy on whether it was awaited (i.e., called and resolved)
-const trackApiKeyCreatedMock = vi.fn(async () => undefined);
+const trackApiKeyCreatedMock = vi.fn<
+  (email: string, orgId: string) => Promise<void>
+>(async () => {});
 vi.mock("@/lib/activation-tracking", () => ({
-  trackApiKeyCreated: (...args: unknown[]) => trackApiKeyCreatedMock(...args),
+  trackApiKeyCreated: (email: string, orgId: string) =>
+    trackApiKeyCreatedMock(email, orgId),
 }));
 
 // Set up test database
@@ -118,14 +136,18 @@ beforeEach(async () => {
 afterAll(async () => {
   await db.delete(apiKey).where(eq(apiKey.organizationId, testOrganization.id));
   await db.delete(member).where(eq(member.id, testMember.id));
-  await db.delete(subscription).where(eq(subscription.referenceId, testOrganization.id));
+  await db
+    .delete(subscription)
+    .where(eq(subscription.referenceId, testOrganization.id));
   await db.delete(organization).where(eq(organization.id, testOrganization.id));
   await db.delete(user).where(eq(user.id, testUser.id));
 });
 
 describe("createApiKey", () => {
   it("creates an API key and returns the secret key", async () => {
-    const result = await createApiKey(testOrganization.id, { name: "Test Key" });
+    const result = await createApiKey(testOrganization.id, {
+      name: "Test Key",
+    });
 
     expect(result.success).toBe(true);
     if (!result.success) throw new Error("Expected success");
@@ -145,7 +167,9 @@ describe("createApiKey", () => {
       resolveTracking();
     });
 
-    const result = await createApiKey(testOrganization.id, { name: "Tracking Key" });
+    const result = await createApiKey(testOrganization.id, {
+      name: "Tracking Key",
+    });
 
     expect(result.success).toBe(true);
     // If tracking was awaited, the promise must already be settled here
@@ -212,7 +236,7 @@ describe("verifyApiKey", () => {
 
   it("returns invalid for an expired key", async () => {
     // Insert a key that is already expired directly in the DB
-    const expiredHash = "expired-hash-" + Date.now();
+    const expiredHash = `expired-hash-${Date.now()}`;
     await db.insert(apiKey).values({
       organizationId: testOrganization.id,
       name: "Expired Key",

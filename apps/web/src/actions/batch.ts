@@ -2,7 +2,14 @@
 // baseline:allow-large-file
 
 import { auth } from "@wraps/auth";
-import { batchSend, contact, contactTopic, db, template } from "@wraps/db";
+import {
+  batchSend,
+  contact,
+  contactTopic,
+  db,
+  escapeIlike,
+  template,
+} from "@wraps/db";
 import {
   and,
   desc,
@@ -636,7 +643,7 @@ function buildFilterSQL(filter: SegmentFilter): SQL | null {
       case "notEquals":
         return sql`properties->>${propertyKey} != ${String(value)}`;
       case "contains":
-        return sql`properties->>${propertyKey} ILIKE ${`%${String(value)}%`}`;
+        return sql`properties->>${propertyKey} ILIKE ${`%${escapeIlike(String(value))}%`}`;
       case "exists":
         return sql`properties ? ${propertyKey}`;
       case "notExists":
@@ -658,7 +665,7 @@ function buildFilterSQL(filter: SegmentFilter): SQL | null {
     case "notEquals":
       return sql`${col} != ${value}`;
     case "contains":
-      return sql`${col} ILIKE ${`%${String(value)}%`}`;
+      return sql`${col} ILIKE ${`%${escapeIlike(String(value))}%`}`;
     case "greaterThan":
       return sql`${col} > ${value}`;
     case "lessThan":

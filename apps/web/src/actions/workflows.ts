@@ -6,6 +6,7 @@ import {
   type CanvasViewport,
   contact,
   db,
+  escapeIlike,
   messageSend,
   type TriggerConfig,
   template,
@@ -278,7 +279,7 @@ export async function listWorkflows(
     const conditions = [eq(workflow.organizationId, organizationId)];
 
     if (search) {
-      conditions.push(ilike(workflow.name, `%${search}%`));
+      conditions.push(ilike(workflow.name, `%${escapeIlike(search)}%`));
     }
 
     if (status) {

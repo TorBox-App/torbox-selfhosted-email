@@ -112,8 +112,8 @@ describe("Webhook — AWS account number format validation (BUG-003)", () => {
       })
     );
 
-    // 404 is also acceptable since there's no route match for empty param
-    expect([400, 404, 422].includes(response.status)).toBe(true);
+    // Empty path segment = no route match (404) or schema validation (422)
+    expect(response.status === 404 || response.status === 422).toBe(true);
   });
 
   it("rejects a non-numeric account number (letters)", async () => {
@@ -129,7 +129,7 @@ describe("Webhook — AWS account number format validation (BUG-003)", () => {
       })
     );
 
-    expect([400, 422].includes(response.status)).toBe(true);
+    expect(response.status).toBe(422);
   });
 
   it("rejects an account number shorter than 12 digits", async () => {
@@ -145,7 +145,7 @@ describe("Webhook — AWS account number format validation (BUG-003)", () => {
       })
     );
 
-    expect([400, 422].includes(response.status)).toBe(true);
+    expect(response.status).toBe(422);
   });
 
   it("rejects an account number with mixed alphanumeric characters", async () => {
@@ -161,7 +161,7 @@ describe("Webhook — AWS account number format validation (BUG-003)", () => {
       })
     );
 
-    expect([400, 422].includes(response.status)).toBe(true);
+    expect(response.status).toBe(422);
   });
 
   it("accepts a valid 12-digit numeric account number and reaches auth logic", async () => {

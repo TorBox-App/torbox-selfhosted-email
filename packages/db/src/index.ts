@@ -9,6 +9,14 @@ export const db = drizzle(pool, { schema });
 
 // Re-export commonly used drizzle-orm operators
 export { and, desc, eq, or, sql as sqlExpr } from "drizzle-orm";
+
+/**
+ * Escape ILIKE special characters to prevent wildcard injection.
+ * Use before interpolating user input into ILIKE patterns.
+ */
+export function escapeIlike(value: string): string {
+  return value.replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
 // Re-export all schemas for use elsewhere
 export * from "./schema";
 // Re-export segment evaluator (SQL-based)

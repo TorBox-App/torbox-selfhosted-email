@@ -1,7 +1,7 @@
 // Server-only query builders for events
 // This file imports @wraps/db and must only be used in server components/actions
 
-import { contact, contactEvent } from "@wraps/db";
+import { contact, contactEvent, escapeIlike } from "@wraps/db";
 import { eq, gte, ilike, lte, type SQL, sql } from "drizzle-orm";
 import type { ListEventsOptions } from "./events";
 
@@ -10,7 +10,7 @@ import type { ListEventsOptions } from "./events";
  * Searches across event name, event data JSON, contact email, first name, and last name.
  */
 export function buildEventsSearchCondition(search: string): SQL {
-  const pattern = `%${search}%`;
+  const pattern = `%${escapeIlike(search)}%`;
   // Use parameterized SQL with explicit table.column references
   return sql`(
     "contact_event"."event_name" ILIKE ${pattern}
@@ -52,7 +52,7 @@ export function buildEventsFilterConditions(
 
   // Build contact email filter
   if (contactEmail) {
-    conditions.push(ilike(contact.email, `%${contactEmail}%`));
+    conditions.push(ilike(contact.email, `%${escapeIlike(contactEmail)}%`));
   }
 
   return conditions;

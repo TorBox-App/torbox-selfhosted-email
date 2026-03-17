@@ -5,6 +5,7 @@ import {
   brandKit,
   contact,
   db,
+  escapeIlike,
   segment,
   template,
   topic,
@@ -36,13 +37,6 @@ export type SearchResultItem = {
 export type UniversalSearchResult =
   | { success: true; results: Record<SearchEntityType, SearchResultItem[]> }
   | { success: false; error: string };
-
-/**
- * Escape ILIKE special characters to prevent wildcard injection
- */
-function escapeIlike(value: string): string {
-  return value.replace(/%/g, "\\%").replace(/_/g, "\\_");
-}
 
 /**
  * Universal search across all Wraps entities
