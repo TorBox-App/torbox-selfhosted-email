@@ -304,6 +304,45 @@ describe("confirmSubscription", () => {
     }
   });
 
+  it("should reject replay on explicitly unsubscribed contact", async () => {
+    const unsubscribedAt = new Date(Date.now() - 86_400_000); // 1 day ago
+
+    // Contact was subscribed, then explicitly unsubscribed
+    await db.insert(contactTopic).values({
+      contactId: testContact.id,
+      topicId: testTopic.id,
+      status: "unsubscribed",
+      subscribedAt: new Date(Date.now() - 172_800_000), // 2 days ago
+      confirmedAt: new Date(Date.now() - 172_800_000),
+      unsubscribedAt,
+    });
+
+    // Replay old confirmation token
+    const token = await generateConfirmationToken(
+      testContact.id,
+      testOrganization.id,
+      testTopic.id
+    );
+
+    const result = await confirmSubscription(token);
+
+    // Must refuse — CAN-SPAM/GDPR requires honoring unsubscribe
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("unsubscribed");
+    }
+
+    // Verify status was NOT changed
+    const [subscription] = await db
+      .select()
+      .from(contactTopic)
+      .where(eq(contactTopic.contactId, testContact.id))
+      .limit(1);
+
+    expect(subscription.status).toBe("unsubscribed");
+    expect(subscription.unsubscribedAt).not.toBeNull();
+  });
+
   it("should clear unsubscribedAt when confirming", async () => {
     const unsubscribedAt = new Date(Date.now() - 86_400_000); // 1 day ago
 

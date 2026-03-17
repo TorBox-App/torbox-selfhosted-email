@@ -68,6 +68,15 @@ export async function confirmSubscription(
     return { success: true };
   }
 
+  // Reject replay on explicitly unsubscribed contacts (CAN-SPAM/GDPR)
+  if (subscription?.status === "unsubscribed") {
+    return {
+      success: false,
+      error:
+        "This contact has unsubscribed and cannot be re-subscribed via confirmation link",
+    };
+  }
+
   // Check if subscription exists
   if (subscription) {
     // Update pending subscription to confirmed
