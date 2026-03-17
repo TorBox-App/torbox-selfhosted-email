@@ -42,17 +42,15 @@ vi.mock("@wraps/db", async () => {
           }
 
           contactQueried = true;
-          // Contact query: .select().from(contact).where().orderBy().offset().limit()
+          // Contact query: .select().from(contact).where().orderBy().limit()
           return {
             where: vi.fn().mockReturnValue({
               orderBy: vi.fn().mockReturnValue({
-                offset: vi.fn().mockReturnValue({
-                  limit: vi
-                    .fn()
-                    .mockImplementation(() =>
-                      Promise.resolve(contactQueryResult)
-                    ),
-                }),
+                limit: vi
+                  .fn()
+                  .mockImplementation(() =>
+                    Promise.resolve(contactQueryResult)
+                  ),
               }),
             }),
           };
@@ -129,7 +127,7 @@ describe("getContactsChunk - segment filtering", () => {
       },
     ];
 
-    const result = await getContactsChunk("org-123", "email", 0, 100, {
+    const result = await getContactsChunk("org-123", "email", 100, {
       audienceType: "segment",
       segmentId: "seg-1",
     });
@@ -146,7 +144,7 @@ describe("getContactsChunk - segment filtering", () => {
   it("returns empty array when segment not found", async () => {
     segmentQueryResult = [];
 
-    const result = await getContactsChunk("org-123", "email", 0, 100, {
+    const result = await getContactsChunk("org-123", "email", 100, {
       audienceType: "segment",
       segmentId: "seg-missing",
     });
@@ -173,7 +171,7 @@ describe("getContactsChunk - segment filtering", () => {
       },
     ];
 
-    const result = await getContactsChunk("org-123", "email", 0, 100, {
+    const result = await getContactsChunk("org-123", "email", 100, {
       audienceType: "all",
     });
 

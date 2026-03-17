@@ -17,6 +17,7 @@ export type BatchJob = {
   awsAccountId: string;
   channel: string;
   chunkIndex: number;
+  cursor?: { createdAt: string; id: string };
 };
 
 export async function enqueueJob(job: BatchJob): Promise<void> {

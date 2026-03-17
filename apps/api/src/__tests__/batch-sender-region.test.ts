@@ -81,20 +81,19 @@ vi.mock("@wraps/db", async () => {
               },
             ]),
             orderBy: vi.fn().mockReturnValue({
-              offset: vi.fn().mockReturnValue({
-                limit: vi.fn().mockResolvedValue([
-                  {
-                    id: "contact-1",
-                    email: "user@example.com",
-                    phone: null,
-                    firstName: "Test",
-                    lastName: "User",
-                    company: null,
-                    jobTitle: null,
-                    properties: {},
-                  },
-                ]),
-              }),
+              limit: vi.fn().mockResolvedValue([
+                {
+                  id: "contact-1",
+                  email: "user@example.com",
+                  phone: null,
+                  firstName: "Test",
+                  lastName: "User",
+                  company: null,
+                  jobTitle: null,
+                  properties: {},
+                  createdAt: new Date("2026-01-15T10:00:00Z"),
+                },
+              ]),
             }),
           }),
         }),

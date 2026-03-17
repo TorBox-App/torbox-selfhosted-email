@@ -115,12 +115,10 @@ async function processJob(job: BatchJob): Promise<void> {
       .where(eq(batchSend.id, batchId));
   }
 
-  // Get contacts for this chunk (with recipient filtering)
-  const offset = chunkIndex * CHUNK_SIZE;
+  // Get contacts for this chunk using cursor-based pagination
   const contacts = await getContactsChunk(
     organizationId,
     channel,
-    offset,
     CHUNK_SIZE,
     {
       audienceType: batch.audienceType as
@@ -130,7 +128,8 @@ async function processJob(job: BatchJob): Promise<void> {
         | undefined,
       topicId: batch.topicId ?? undefined,
       segmentId: batch.segmentId ?? undefined,
-    }
+    },
+    job.cursor
   );
 
   if (contacts.length === 0) {
@@ -628,16 +627,20 @@ async function processJob(job: BatchJob): Promise<void> {
     })
     .where(eq(batchSend.id, batchId));
 
-  // Check if more contacts to process
-  const totalProcessed = (chunkIndex + 1) * CHUNK_SIZE;
-  if (totalProcessed < batch.totalRecipients) {
-    // Enqueue next chunk with rate limit delay
+  // Build cursor from last contact for next chunk
+  const lastContact = contacts[contacts.length - 1];
+  const nextCursor = lastContact
+    ? { createdAt: lastContact.createdAt.toISOString(), id: lastContact.id }
+    : undefined;
+
+  // If we got a full chunk, there may be more contacts — enqueue next chunk
+  if (contacts.length >= CHUNK_SIZE) {
     await enqueueNextChunk(
-      { ...job, chunkIndex: chunkIndex + 1 },
+      { ...job, chunkIndex: chunkIndex + 1, cursor: nextCursor },
       { delaySeconds: rateLimitDelay }
     );
   } else {
-    // Mark batch as completed
+    // Short chunk means we've reached the end — mark batch completed
     await db
       .update(batchSend)
       .set({ status: "completed", completedAt: new Date() })
@@ -654,6 +657,7 @@ type ContactChunk = {
   company: string | null;
   jobTitle: string | null;
   properties: Record<string, unknown>;
+  createdAt: Date;
 };
 
 type RecipientFilter = {
@@ -662,12 +666,14 @@ type RecipientFilter = {
   segmentId?: string;
 };
 
+export type BatchCursor = { createdAt: string; id: string };
+
 export async function getContactsChunk(
   organizationId: string,
   channel: string,
-  offset: number,
   limit: number,
-  filter?: RecipientFilter
+  filter?: RecipientFilter,
+  cursor?: BatchCursor
 ): Promise<ContactChunk[]> {
   const conditions: (ReturnType<typeof eq> | ReturnType<typeof sql>)[] = [
     eq(contact.organizationId, organizationId),
@@ -725,6 +731,15 @@ export async function getContactsChunk(
     }
   }
 
+  // Cursor-based (keyset) pagination: skip contacts at or before the cursor
+  // position instead of using OFFSET, which breaks when contacts are
+  // added/deleted between chunks.
+  if (cursor) {
+    conditions.push(
+      sql`(${contact.createdAt}, ${contact.id}) > (${new Date(cursor.createdAt)}, ${cursor.id})`
+    );
+  }
+
   return db
     .select({
       id: contact.id,
@@ -735,11 +750,11 @@ export async function getContactsChunk(
       company: contact.company,
       jobTitle: contact.jobTitle,
       properties: contact.properties,
+      createdAt: contact.createdAt,
     })
     .from(contact)
     .where(and(...(conditions as Parameters<typeof and>)))
-    .orderBy(contact.createdAt)
-    .offset(offset)
+    .orderBy(contact.createdAt, contact.id)
     .limit(limit);
 }
 
