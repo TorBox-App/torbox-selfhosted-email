@@ -31,6 +31,7 @@ import {
   readAuthConfig,
   resolveTokenAsync,
 } from "../../utils/shared/config.js";
+import { sanitizeErrorMessage } from "../../utils/shared/errors.js";
 import {
   ensurePulumiWorkDir,
   getPulumiWorkDir,
@@ -758,7 +759,7 @@ async function authenticatedConnect(
     const duration = Date.now() - startTime;
     const errorCode = error instanceof Error ? error.name : "UNKNOWN_ERROR";
     trackError(errorCode, "platform:connect", {
-      message: error instanceof Error ? error.message : String(error),
+      message: sanitizeErrorMessage(error),
     });
     trackCommand("platform:connect", {
       success: false,
@@ -1113,7 +1114,7 @@ export async function connect(options: PlatformConnectOptions): Promise<void> {
     const duration = Date.now() - startTime;
     const errorCode = error instanceof Error ? error.name : "UNKNOWN_ERROR";
     trackError(errorCode, "platform:connect", {
-      message: error instanceof Error ? error.message : String(error),
+      message: sanitizeErrorMessage(error),
     });
     trackCommand("platform:connect", {
       success: false,

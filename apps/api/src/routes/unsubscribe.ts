@@ -131,7 +131,12 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
             emailStatus: "unsubscribed",
             emailUnsubscribedAt: now,
           })
-          .where(eq(contact.id, contactId));
+          .where(
+            and(
+              eq(contact.id, contactId),
+              eq(contact.organizationId, organizationId)
+            )
+          );
 
         // Also unsubscribe from all topics
         await db

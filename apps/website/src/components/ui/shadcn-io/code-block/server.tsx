@@ -42,6 +42,15 @@ async function getHighlighter(): Promise<Highlighter> {
   return highlighterPromise;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 export type CodeBlockContentProps = HTMLAttributes<HTMLDivElement> & {
   themes?: CodeOptionsMultipleThemes["themes"];
   language?: BundledLanguage;
@@ -101,7 +110,7 @@ export const CodeBlockContent = async ({
       ],
     });
   } else {
-    html = children;
+    html = escapeHtml(children);
   }
 
   return (

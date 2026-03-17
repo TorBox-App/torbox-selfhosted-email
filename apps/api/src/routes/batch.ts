@@ -353,14 +353,19 @@ export const batchRoutes = createAuthenticatedRoutes("/v1/batch")
         await deleteBroadcastSchedule(batch.id);
       }
 
-      // Update status to cancelled
+      // Update status to cancelled (scoped by org for defense-in-depth)
       await db
         .update(batchSend)
         .set({
           status: "cancelled",
           updatedAt: new Date(),
         })
-        .where(eq(batchSend.id, params.id));
+        .where(
+          and(
+            eq(batchSend.id, batch.id),
+            eq(batchSend.organizationId, authContext.organizationId)
+          )
+        );
 
       return { success: true, id: batch.id, status: "cancelled" };
     },

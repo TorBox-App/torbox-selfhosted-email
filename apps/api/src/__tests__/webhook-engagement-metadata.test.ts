@@ -132,7 +132,7 @@ function setupMocks(messageOverrides: Record<string, unknown> = {}) {
       // Capture the set data for assertions
       (mockDbUpdate as any).__lastSetData = data;
       return {
-        where: () => Promise.resolve(),
+        where: () => Promise.resolve({ rowCount: 1 }),
       };
     },
   }));

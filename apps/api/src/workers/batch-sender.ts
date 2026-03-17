@@ -186,7 +186,12 @@ async function processJob(job: BatchJob): Promise<void> {
           emailType: template.emailType,
         })
         .from(template)
-        .where(eq(template.id, batch.emailTemplateId))
+        .where(
+          and(
+            eq(template.id, batch.emailTemplateId),
+            eq(template.organizationId, organizationId)
+          )
+        )
         .limit(1),
       db
         .select({ name: organization.name })

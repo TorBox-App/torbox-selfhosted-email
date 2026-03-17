@@ -48,6 +48,13 @@ function AppContent() {
 
       if (token) {
         sessionStorage.setItem("wraps-auth-token", token);
+
+        // Remove token from URL to prevent leakage via browser history/extensions
+        params.delete("token");
+        const cleanUrl = params.toString()
+          ? `${window.location.pathname}?${params.toString()}`
+          : window.location.pathname;
+        window.history.replaceState({}, "", cleanUrl);
       }
     }
     setTokenExtracted(true);

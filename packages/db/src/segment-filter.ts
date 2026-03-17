@@ -10,6 +10,19 @@
 import { and, or, type SQL, sql } from "drizzle-orm";
 import type { FilterCondition, SegmentFilter } from "./schema/segments";
 
+const VALID_UNITS = new Set(["days", "hours", "minutes"]);
+
+function validateInterval(
+  value: unknown,
+  unit: string | undefined
+): string | null {
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num) || num <= 0 || !Number.isInteger(num)) return null;
+  if (unit && !VALID_UNITS.has(unit)) return null;
+  const resolvedUnit = unit && VALID_UNITS.has(unit) ? unit : "days";
+  return `${num} ${resolvedUnit}`;
+}
+
 const COLUMN_MAP: Record<string, string> = {
   status: "status",
   email: "email",
@@ -38,13 +51,8 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
       return sql`EXISTS (SELECT 1 FROM "contact_event" WHERE "contact_id" = "contact"."id" AND "event_name" = ${eventName})`;
     }
     if (operator === "triggeredWithin") {
-      const timeValue = value as number;
-      const interval =
-        unit === "hours"
-          ? `${timeValue} hours`
-          : unit === "minutes"
-            ? `${timeValue} minutes`
-            : `${timeValue} days`;
+      const interval = validateInterval(value, unit);
+      if (!interval) return null;
       return sql`EXISTS (SELECT 1 FROM "contact_event" WHERE "contact_id" = "contact"."id" AND "event_name" = ${eventName} AND "created_at" > NOW() - INTERVAL ${interval})`;
     }
     // notTriggered
@@ -150,13 +158,8 @@ export function buildFilterSQL(filter: SegmentFilter): SQL | null {
       return sql`${col} != ALL(${values})`;
     }
     case "within": {
-      const timeValue = value as number;
-      const interval =
-        unit === "hours"
-          ? `${timeValue} hours`
-          : unit === "minutes"
-            ? `${timeValue} minutes`
-            : `${timeValue} days`;
+      const interval = validateInterval(value, unit);
+      if (!interval) return null;
       return sql`${col} > NOW() - INTERVAL ${interval}`;
     }
     default:

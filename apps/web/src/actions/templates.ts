@@ -73,8 +73,17 @@ export async function publishTemplateToSES(
     brandKitId?: string;
   } = {}
 ): Promise<PublishTemplateResult> {
+  // Verify caller has access to this organization
+  const access = await verifyOrgAccess(organizationId);
+  if (!access) {
+    return {
+      success: false,
+      error: "You don't have access to this organization",
+    };
+  }
+
   const log = createActionLogger("publishTemplateToSES", {
-    orgSlug: organizationId,
+    orgSlug: access.orgSlug,
   });
 
   try {

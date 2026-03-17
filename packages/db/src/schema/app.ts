@@ -159,7 +159,7 @@ export const awsAccountPermission = pgTable(
     accountIdx: index("aws_account_permission_account_idx").on(
       table.awsAccountId
     ),
-    uniqueUserAccount: index("aws_account_permission_unique_idx").on(
+    uniqueUserAccount: uniqueIndex("aws_account_permission_unique_idx").on(
       table.userId,
       table.awsAccountId
     ),

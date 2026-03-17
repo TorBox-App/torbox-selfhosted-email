@@ -615,7 +615,7 @@ export async function cancelExecutionsForTopicUnsubscribe(params: {
 
   const workflowIds = matchingWorkflows.map((w) => w.id);
 
-  // Find active executions for this contact in these workflows
+  // Find active executions for this contact in these workflows (org-scoped for defense-in-depth)
   const activeExecutions = await db
     .select({
       id: workflowExecution.id,
@@ -626,6 +626,7 @@ export async function cancelExecutionsForTopicUnsubscribe(params: {
     .from(workflowExecution)
     .where(
       and(
+        eq(workflowExecution.organizationId, organizationId),
         eq(workflowExecution.contactId, contactId),
         inArray(workflowExecution.workflowId, workflowIds),
         sql`${workflowExecution.status} IN ('pending', 'active', 'paused', 'waiting')`

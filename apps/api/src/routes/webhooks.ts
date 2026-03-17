@@ -121,8 +121,7 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
     const secretBuffer = Buffer.from(secret);
     const keyBuffer = Buffer.from(apiKey || "");
     if (
-      !account ||
-      !account.webhookSecret ||
+      !account?.webhookSecret ||
       secretBuffer.length !== keyBuffer.length ||
       !timingSafeEqual(secretBuffer, keyBuffer)
     ) {
@@ -334,9 +333,7 @@ async function processOpen(
       openUserAgent: userAgent ?? null,
       openIpAddress: ipAddress ?? null,
     })
-    .where(
-      and(eq(messageSend.id, message.id), isNull(messageSend.openedAt))
-    );
+    .where(and(eq(messageSend.id, message.id), isNull(messageSend.openedAt)));
 
   // If 0 rows affected, another request already recorded the open
   if ((result as any)?.rowCount === 0) {
@@ -399,9 +396,7 @@ async function processClick(
       clickUserAgent: userAgent ?? null,
       clickIpAddress: ipAddress ?? null,
     })
-    .where(
-      and(eq(messageSend.id, message.id), isNull(messageSend.clickedAt))
-    );
+    .where(and(eq(messageSend.id, message.id), isNull(messageSend.clickedAt)));
 
   // If 0 rows affected, another request already recorded the click
   if ((result as any)?.rowCount === 0) {
