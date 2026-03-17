@@ -211,7 +211,26 @@ export async function acceptInvitation(
       };
     }
 
-    // Create membership
+    // Atomically claim the invitation — prevents TOCTOU race
+    // If another request already accepted it, this returns 0 rows.
+    const claimResult = await db
+      .update(invitation)
+      .set({ status: "accepted" })
+      .where(
+        and(
+          eq(invitation.id, invitationId),
+          eq(invitation.status, "pending")
+        )
+      );
+
+    if ((claimResult as any)?.rowCount === 0) {
+      return {
+        success: false,
+        error: "This invitation has already been used",
+      };
+    }
+
+    // Create membership — safe because we atomically claimed the invitation
     await db.insert(member).values({
       id: crypto.randomUUID(),
       organizationId: inv.organizationId,
@@ -219,12 +238,6 @@ export async function acceptInvitation(
       role: inv.role || "member",
       createdAt: new Date(),
     });
-
-    // Update invitation status
-    await db
-      .update(invitation)
-      .set({ status: "accepted" })
-      .where(eq(invitation.id, invitationId));
 
     // Get organization slug for redirect
     const org = await db.query.organization.findFirst({

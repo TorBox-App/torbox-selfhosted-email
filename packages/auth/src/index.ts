@@ -19,7 +19,7 @@ import {
 import { desc } from "drizzle-orm";
 import { PostHog } from "posthog-node";
 import Stripe from "stripe";
-import { handleStripeWebhook } from "./stripe-webhooks";
+import { onStripeEvent } from "./stripe-webhooks";
 
 // --- Attribution tracking ---
 
@@ -545,13 +545,7 @@ export const auth = betterAuth<BetterAuthOptions>({
           stripe({
             stripeClient,
             stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-            onEvent: async (event) => {
-              try {
-                await handleStripeWebhook(event);
-              } catch (error) {
-                console.error("Error handling Stripe webhook:", error);
-              }
-            },
+            onEvent: onStripeEvent,
             subscription: {
               enabled: true,
               getCheckoutSessionParams: (

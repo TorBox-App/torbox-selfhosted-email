@@ -674,3 +674,16 @@ export async function handleStripeWebhook(event: Stripe.Event): Promise<void> {
       break;
   }
 }
+
+/**
+ * Stripe onEvent callback for better-auth plugin.
+ * Logs errors but re-throws so Stripe receives non-200 and retries.
+ */
+export async function onStripeEvent(event: Stripe.Event): Promise<void> {
+  try {
+    await handleStripeWebhook(event);
+  } catch (error) {
+    console.error("Stripe webhook handler error:", error);
+    throw error;
+  }
+}

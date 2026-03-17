@@ -15,7 +15,7 @@ import {
   workflow,
   workflowExecution,
 } from "@wraps/db";
-import { and, inArray, sql } from "drizzle-orm";
+import { and, inArray, isNull, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { log } from "../lib/logger";
 import {
@@ -115,23 +115,20 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       .where(eq(awsAccount.accountId, awsAccountNumber))
       .limit(1);
 
-    if (!account) {
-      log.warn("Webhook: AWS account not found", { awsAccountNumber });
-      set.status = 404;
-      return { error: "AWS account not found" };
-    }
-
     // 2. Validate API key (constant-time comparison to prevent timing attacks)
-    const secretBuffer = Buffer.from(account.webhookSecret || "");
+    // Return uniform 401 for both missing account and invalid key to prevent account enumeration
+    const secret = account?.webhookSecret || "";
+    const secretBuffer = Buffer.from(secret);
     const keyBuffer = Buffer.from(apiKey || "");
     if (
+      !account ||
       !account.webhookSecret ||
       secretBuffer.length !== keyBuffer.length ||
       !timingSafeEqual(secretBuffer, keyBuffer)
     ) {
-      log.warn("Webhook: invalid API key", { awsAccountNumber });
+      log.warn("Webhook: authentication failed", { awsAccountNumber });
       set.status = 401;
-      return { error: "Invalid API key" };
+      return { error: "Unauthorized" };
     }
 
     // 3. Parse the EventBridge event
@@ -261,9 +258,6 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       401: t.Object({
         error: t.String(),
       }),
-      404: t.Object({
-        error: t.String(),
-      }),
       500: t.Object({
         error: t.String(),
         details: t.Optional(t.String()),
@@ -325,14 +319,14 @@ async function processOpen(
 ): Promise<void> {
   const openedAt = timestamp ? new Date(timestamp) : new Date();
 
-  // Only record first open (idempotency)
+  // Only record first open (idempotency) — fast path from stale read
   if (message.openedAt) {
     log.info("Webhook: duplicate open, skipping", { messageId: message.id });
     return;
   }
 
-  // Update messageSend status with engagement metadata
-  await db
+  // Atomic update: WHERE openedAt IS NULL prevents TOCTOU race
+  const result = await db
     .update(messageSend)
     .set({
       status: "opened",
@@ -340,7 +334,17 @@ async function processOpen(
       openUserAgent: userAgent ?? null,
       openIpAddress: ipAddress ?? null,
     })
-    .where(eq(messageSend.id, message.id));
+    .where(
+      and(eq(messageSend.id, message.id), isNull(messageSend.openedAt))
+    );
+
+  // If 0 rows affected, another request already recorded the open
+  if ((result as any)?.rowCount === 0) {
+    log.info("Webhook: duplicate open (race), skipping", {
+      messageId: message.id,
+    });
+    return;
+  }
 
   // Increment batchSend counter if applicable
   if (message.batchSendId) {
@@ -379,14 +383,14 @@ async function processClick(
 ): Promise<void> {
   const clickedAt = timestamp ? new Date(timestamp) : new Date();
 
-  // Only record first click (idempotency)
+  // Only record first click (idempotency) — fast path from stale read
   if (message.clickedAt) {
     log.info("Webhook: duplicate click, skipping", { messageId: message.id });
     return;
   }
 
-  // Update messageSend status with engagement metadata
-  await db
+  // Atomic update: WHERE clickedAt IS NULL prevents TOCTOU race
+  const result = await db
     .update(messageSend)
     .set({
       status: "clicked",
@@ -395,7 +399,17 @@ async function processClick(
       clickUserAgent: userAgent ?? null,
       clickIpAddress: ipAddress ?? null,
     })
-    .where(eq(messageSend.id, message.id));
+    .where(
+      and(eq(messageSend.id, message.id), isNull(messageSend.clickedAt))
+    );
+
+  // If 0 rows affected, another request already recorded the click
+  if ((result as any)?.rowCount === 0) {
+    log.info("Webhook: duplicate click (race), skipping", {
+      messageId: message.id,
+    });
+    return;
+  }
 
   // Increment batchSend counter if applicable
   if (message.batchSendId) {

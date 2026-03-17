@@ -502,26 +502,39 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         }
       }
 
-      // Create contact
-      const [newContact] = await db
-        .insert(contact)
-        .values({
-          organizationId: authContext.organizationId,
-          email: body.email,
-          emailHash: body.email ? hashValue(body.email) : null,
-          emailStatus: body.emailStatus ?? (body.email ? "active" : null),
-          phone: body.phone,
-          phoneHash: body.phone ? hashValue(body.phone) : null,
-          smsStatus: body.smsStatus ?? (body.phone ? "pending_consent" : null),
-          firstName: body.firstName ?? null,
-          lastName: body.lastName ?? null,
-          company: body.company ?? null,
-          jobTitle: body.jobTitle ?? null,
-          preferredChannel: body.preferredChannel ?? null,
-          properties: body.properties ?? {},
-          createdBy: authContext.userId,
-        })
-        .returning();
+      // Create contact — catch unique constraint violation from race condition
+      let newContact;
+      try {
+        [newContact] = await db
+          .insert(contact)
+          .values({
+            organizationId: authContext.organizationId,
+            email: body.email,
+            emailHash: body.email ? hashValue(body.email) : null,
+            emailStatus: body.emailStatus ?? (body.email ? "active" : null),
+            phone: body.phone,
+            phoneHash: body.phone ? hashValue(body.phone) : null,
+            smsStatus:
+              body.smsStatus ?? (body.phone ? "pending_consent" : null),
+            firstName: body.firstName ?? null,
+            lastName: body.lastName ?? null,
+            company: body.company ?? null,
+            jobTitle: body.jobTitle ?? null,
+            preferredChannel: body.preferredChannel ?? null,
+            properties: body.properties ?? {},
+            createdBy: authContext.userId,
+          })
+          .returning();
+      } catch (err) {
+        // PostgreSQL unique_violation = 23505
+        // Drizzle wraps DB errors in DrizzleQueryError with the original as `cause`
+        const dbError = err instanceof Error && "cause" in err ? (err as any).cause : err;
+        if (dbError?.code === "23505") {
+          ctx.set.status = 409;
+          return { error: "Contact already exists" };
+        }
+        throw err;
+      }
 
       // Resolve topic slugs to IDs if provided
       let topicIds = body.topicIds || [];
@@ -785,11 +798,16 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
         updateValues.preferredChannel = body.preferredChannel;
       }
 
-      // Update contact
+      // Update contact (scoped by org for defense-in-depth)
       const [updated] = await db
         .update(contact)
         .set(updateValues)
-        .where(eq(contact.id, contactId))
+        .where(
+          and(
+            eq(contact.id, contactId),
+            eq(contact.organizationId, authContext.organizationId)
+          )
+        )
         .returning();
 
       // Add topic subscriptions if specified (PATCH adds, doesn't replace)
