@@ -9,7 +9,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { and, awsAccount, db, eq } from "@wraps/db";
+import { and, awsAccount, db, eq, sqlExpr } from "@wraps/db";
 import { count } from "drizzle-orm";
 import { t } from "elysia";
 import { log } from "../lib/logger";
@@ -43,103 +43,126 @@ export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")
       const authContext = (ctx as unknown as { auth: AuthContext }).auth;
       const { body } = ctx;
 
-      // Check plan limits
-      const [accountCount] = await db
-        .select({ count: count() })
-        .from(awsAccount)
-        .where(eq(awsAccount.organizationId, authContext.organizationId));
-
       const maxAccounts = getMaxAwsAccounts(authContext.planId);
 
-      // Upsert: find existing by (organizationId, accountId)
-      const [existing] = await db
-        .select({ id: awsAccount.id, externalId: awsAccount.externalId })
-        .from(awsAccount)
-        .where(
-          and(
-            eq(awsAccount.organizationId, authContext.organizationId),
-            eq(awsAccount.accountId, body.accountId)
+      // Wrap count-check-insert in a transaction with a row-level lock
+      // to prevent concurrent requests from bypassing the plan limit.
+      const result = await db.transaction(async (tx) => {
+        // Lock the organization row to serialize concurrent connection creates
+        await tx.execute(
+          sqlExpr`SELECT 1 FROM "organization" WHERE "id" = ${authContext.organizationId} FOR UPDATE`
+        );
+
+        // Check plan limits
+        const [accountCount] = await tx
+          .select({ count: count() })
+          .from(awsAccount)
+          .where(eq(awsAccount.organizationId, authContext.organizationId));
+
+        // Upsert: find existing by (organizationId, accountId)
+        const [existing] = await tx
+          .select({ id: awsAccount.id, externalId: awsAccount.externalId })
+          .from(awsAccount)
+          .where(
+            and(
+              eq(awsAccount.organizationId, authContext.organizationId),
+              eq(awsAccount.accountId, body.accountId)
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
 
-      if (
-        maxAccounts !== -1 &&
-        (accountCount?.count ?? 0) >= maxAccounts &&
-        !existing
-      ) {
-        ctx.set.status = 403;
-        return {
-          error: `AWS account limit reached (${maxAccounts}). Upgrade your plan to add more accounts.`,
-        };
-      }
+        if (
+          maxAccounts !== -1 &&
+          (accountCount?.count ?? 0) >= maxAccounts &&
+          !existing
+        ) {
+          return { limited: true as const, maxAccounts };
+        }
 
-      // Generate secrets
-      const webhookSecret = randomBytes(32).toString("hex");
-      const externalId = existing?.externalId || generateExternalId();
-      const roleArn = `arn:aws:iam::${body.accountId}:role/wraps-console-access-role`;
+        // Generate secrets
+        const webhookSecret = randomBytes(32).toString("hex");
+        const externalId = existing?.externalId || generateExternalId();
+        const roleArn = `arn:aws:iam::${body.accountId}:role/wraps-console-access-role`;
 
-      // Cast features to a known shape for property access
-      const features = body.features as Record<string, unknown> | undefined;
-      const hasEmailFeature = features?.email !== undefined;
-      const hasSmsFeature = features?.sms !== undefined;
+        // Cast features to a known shape for property access
+        const features = body.features as Record<string, unknown> | undefined;
+        const hasEmailFeature = features?.email !== undefined;
+        const hasSmsFeature = features?.sms !== undefined;
 
-      let connectionId: string;
+        let connectionId: string;
 
-      if (existing) {
-        // Update existing
-        await db
-          .update(awsAccount)
-          .set({
+        if (existing) {
+          // Update existing
+          await tx
+            .update(awsAccount)
+            .set({
+              region: body.region,
+              roleArn,
+              webhookSecret,
+              isVerified: true,
+              lastVerifiedAt: new Date(),
+              emailEnabled: hasEmailFeature,
+              smsEnabled: hasSmsFeature,
+              features: (features ?? null) as any,
+              updatedAt: new Date(),
+            })
+            .where(eq(awsAccount.id, existing.id));
+          connectionId = existing.id;
+        } else {
+          // Insert new
+          const id = crypto.randomUUID();
+          await tx.insert(awsAccount).values({
+            id,
+            organizationId: authContext.organizationId,
+            name: body.name || `AWS ${body.accountId}`,
+            accountId: body.accountId,
             region: body.region,
             roleArn,
+            externalId,
             webhookSecret,
             isVerified: true,
             lastVerifiedAt: new Date(),
             emailEnabled: hasEmailFeature,
             smsEnabled: hasSmsFeature,
-            features: (features ?? null) as any,
-            updatedAt: new Date(),
-          })
-          .where(eq(awsAccount.id, existing.id));
-        connectionId = existing.id;
-      } else {
-        // Insert new
-        const id = crypto.randomUUID();
-        await db.insert(awsAccount).values({
-          id,
-          organizationId: authContext.organizationId,
-          name: body.name || `AWS ${body.accountId}`,
-          accountId: body.accountId,
-          region: body.region,
-          roleArn,
-          externalId,
-          webhookSecret,
-          isVerified: true,
-          lastVerifiedAt: new Date(),
-          emailEnabled: hasEmailFeature,
-          smsEnabled: hasSmsFeature,
-          features: features ?? null,
-          createdBy: authContext.userId,
-        });
-        connectionId = id;
+            features: features ?? null,
+            createdBy: authContext.userId,
+          });
+          connectionId = id;
 
-        log.info("Connection created", {
-          connectionId: id,
-          organizationId: authContext.organizationId,
-          accountId: body.accountId,
-          region: body.region,
-        });
+          log.info("Connection created", {
+            connectionId: id,
+            organizationId: authContext.organizationId,
+            accountId: body.accountId,
+            region: body.region,
+          });
+        }
+
+        return {
+          limited: false as const,
+          isUpdate: !!existing,
+          connectionId,
+          externalId,
+          roleArn,
+          webhookSecret,
+          webhookEndpoint: `https://api.wraps.dev/webhooks/ses/${body.accountId}`,
+        };
+      });
+
+      if (result.limited) {
+        ctx.set.status = 403;
+        return {
+          error: `AWS account limit reached (${result.maxAccounts}). Upgrade your plan to add more accounts.`,
+        };
       }
 
-      ctx.set.status = existing ? 200 : 201;
+      ctx.set.status = result.isUpdate ? 200 : 201;
       return {
         success: true,
-        connectionId,
-        externalId,
-        roleArn,
-        webhookSecret,
-        webhookEndpoint: `https://api.wraps.dev/webhooks/ses/${body.accountId}`,
+        connectionId: result.connectionId,
+        externalId: result.externalId,
+        roleArn: result.roleArn,
+        webhookSecret: result.webhookSecret,
+        webhookEndpoint: result.webhookEndpoint,
       };
     },
     {
