@@ -236,24 +236,21 @@ export async function handleSendEmail(
     }
   }
 
-  // Generate unsubscribe URLs for marketing emails
+  // Generate unsubscribe URLs — always included because templates reference
+  // {{unsubscribeUrl}} in their footer. List-Unsubscribe headers are still
+  // marketing-only (see below).
   const isMarketing = tmpl.emailType === "marketing";
   const apiBaseUrl = process.env.API_BASE_URL || "https://api.wraps.dev";
   const appBaseUrl = process.env.APP_BASE_URL || "https://app.wraps.dev";
 
-  let unsubscribeUrl: string | undefined;
-  let preferencesUrl: string | undefined;
-
-  if (isMarketing) {
-    const unsubscribeToken = await generateUnsubscribeToken(
-      contactRecord.id,
-      organizationId
-    );
-    unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
-    preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
-    replacementData.unsubscribeUrl = unsubscribeUrl;
-    replacementData.preferencesUrl = preferencesUrl;
-  }
+  const unsubscribeToken = await generateUnsubscribeToken(
+    contactRecord.id,
+    organizationId
+  );
+  const unsubscribeUrl = `${apiBaseUrl}/unsubscribe/${unsubscribeToken}`;
+  const preferencesUrl = `${appBaseUrl}/preferences/${unsubscribeToken}`;
+  replacementData.unsubscribeUrl = unsubscribeUrl;
+  replacementData.preferencesUrl = preferencesUrl;
 
   // Build from address (step config > workflow default > fallback)
   const fromAddress =
