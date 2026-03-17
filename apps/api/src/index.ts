@@ -181,7 +181,8 @@ export const app = new Elysia()
 
     if (code === "VALIDATION") {
       const message = error instanceof Error ? error.message : String(error);
-      return { error: "Validation failed", details: message };
+      log.warn("Validation failed", { details: message });
+      return { error: "Validation failed" };
     }
 
     // 4xx errors from routes are already sanitized — pass through

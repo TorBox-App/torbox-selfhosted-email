@@ -1,9 +1,12 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { describe, expect, it } from "vitest";
 
 /**
  * Tests the error sanitization logic from index.ts onError handler.
  * Uses a standalone Elysia app to avoid importing index.ts (which calls app.listen).
+ *
+ * IMPORTANT: createTestApp() must mirror the onError handler in index.ts exactly.
+ * When index.ts is updated, update this function to match.
  */
 function createTestApp() {
   return new Elysia()
@@ -21,7 +24,9 @@ function createTestApp() {
 
       if (code === "VALIDATION") {
         const message = error instanceof Error ? error.message : String(error);
-        return { error: "Validation failed", details: message };
+        // Details are logged server-side only (BUG-015)
+        void message;
+        return { error: "Validation failed" };
       }
 
       if (status >= 400 && status < 500) {
@@ -37,6 +42,9 @@ function createTestApp() {
     .get("/throw-4xx", ({ set }) => {
       set.status = 403;
       throw new Error("Forbidden: insufficient permissions");
+    })
+    .post("/validated", () => ({ ok: true }), {
+      body: t.Object({ name: t.String() }),
     });
 }
 
@@ -68,5 +76,51 @@ describe("API error sanitization", () => {
 
     expect(res.status).toBe(403);
     expect(body.error).toBe("Forbidden: insufficient permissions");
+  });
+});
+
+describe("API validation error — BUG-015: no details leaked to client", () => {
+  it("returns 422 status for validation failures", async () => {
+    const app = createTestApp();
+    const res = await app.handle(
+      new Request("http://localhost/validated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notName: 123 }),
+      })
+    );
+
+    // Elysia returns 422 for schema validation errors
+    expect(res.status).toBe(422);
+  });
+
+  it("returns generic { error: 'Validation failed' } with no details field", async () => {
+    const app = createTestApp();
+    const res = await app.handle(
+      new Request("http://localhost/validated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notName: 123 }),
+      })
+    );
+    const body = await res.json();
+
+    expect(body.error).toBe("Validation failed");
+    expect(body.details).toBeUndefined();
+  });
+
+  it("does not expose schema internals in the response body", async () => {
+    const app = createTestApp();
+    const res = await app.handle(
+      new Request("http://localhost/validated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notName: 123 }),
+      })
+    );
+    const raw = await res.text();
+
+    // Schema internals must not leak to the client
+    expect(raw).not.toContain('"details"');
   });
 });
