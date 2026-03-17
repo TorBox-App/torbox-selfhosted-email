@@ -218,8 +218,8 @@ export async function createApiKey(
     // Revalidate settings page
     revalidatePath("/[orgSlug]/settings", "page");
 
-    // Track activation event (fire-and-forget)
-    trackApiKeyCreated(session.user.email, organizationId);
+    // Track activation event
+    await trackApiKeyCreated(session.user.email, organizationId);
 
     return {
       success: true,
@@ -450,8 +450,8 @@ export async function verifyApiKey(key: string): Promise<{
       return { valid: false, error: "API key has expired" };
     }
 
-    // Update last used timestamp (fire and forget)
-    db.update(apiKey)
+    // Update last used timestamp
+    await db.update(apiKey)
       .set({ lastUsedAt: new Date() })
       .where(eq(apiKey.id, foundKey.id))
       .catch((err) => {
