@@ -1,0 +1,33 @@
+{
+  "projectTitle": "Wraps",
+  "description": "CLI tool, web platform, and TypeScript SDKs that deploy email (SES), SMS, and CDN infrastructure to users' AWS accounts. Zero credentials stored, OIDC auth, AWS pricing.",
+  "folders": [
+    "apps/website/src/app/docs",
+    "apps/website/public",
+    "packages/cli/src",
+    "packages/core/src",
+    "docs"
+  ],
+  "excludeFolders": [
+    "node_modules",
+    "**/dist",
+    "**/.next",
+    "**/__tests__",
+    "**/test",
+    "**/.turbo"
+  ],
+  "excludeFiles": [
+    "*.test.ts",
+    "*.spec.ts",
+    "*.map",
+    "pnpm-lock.yaml"
+  ],
+  "rules": [
+    "Wraps deploys infrastructure to the user's AWS account — it is not a managed service",
+    "Use @wraps.dev/email for the email SDK and @wraps.dev/sms for the SMS SDK",
+    "All AWS resources are namespaced with wraps- prefix (wraps-email-*, wraps-sms-*, wraps-cdn-*)",
+    "ESM only — no require() or module.exports",
+    "CLI entry point: npx @wraps.dev/cli <service> <command> (e.g. wraps email init)",
+    "Non-destructive by design — never modifies existing AWS resources"
+  ]
+}
