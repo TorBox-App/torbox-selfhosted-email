@@ -50,6 +50,7 @@ batchQueue.subscribe(
     timeout: "5 minutes",
     memory: "512 MB",
     environment: {
+      NODE_ENV: "production",
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",
@@ -118,6 +119,7 @@ workflowDlq.subscribe(
     timeout: "1 minute",
     memory: "256 MB",
     environment: {
+      NODE_ENV: "production",
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",
@@ -160,6 +162,7 @@ workflowQueue.subscribe(
     timeout: "5 minutes",
     memory: "512 MB",
     environment: {
+      NODE_ENV: "production",
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       AXIOM_TOKEN: axiomToken.value,
       AXIOM_DATASET: "wraps",

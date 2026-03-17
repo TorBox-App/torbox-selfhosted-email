@@ -23,7 +23,10 @@ const TOKEN_EXPIRATION = "48h"; // Confirmation links valid for 48 hours
 function getSecret(): Uint8Array {
   const secret = process.env.UNSUBSCRIBE_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
+    const isProduction =
+      process.env.NODE_ENV === "production" ||
+      !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+    if (isProduction) {
       throw new Error(
         "UNSUBSCRIBE_SECRET environment variable is required in production"
       );

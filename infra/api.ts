@@ -46,6 +46,7 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
   timeout: "30 seconds",
   memory: "512 MB",
   environment: {
+    NODE_ENV: "production",
     DATABASE_URL: process.env.DATABASE_URL ?? "",
     AXIOM_TOKEN: axiomToken.value,
     AXIOM_DATASET: "wraps",
