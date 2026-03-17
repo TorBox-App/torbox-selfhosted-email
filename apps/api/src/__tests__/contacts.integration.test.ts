@@ -311,6 +311,64 @@ describe("Contacts API Integration", () => {
       expect(body.contacts).toHaveLength(1);
       expect(body.contacts[0].email).toBe("john@example.com");
     });
+
+    it("treats % in search as a literal character, not a SQL wildcard", async () => {
+      await db.insert(contact).values([
+        {
+          organizationId: testOrg.id,
+          email: "literal-percent@example.com",
+          emailHash: "hash-literal-percent",
+          properties: {},
+        },
+        {
+          organizationId: testOrg.id,
+          email: "other@example.com",
+          emailHash: "hash-other-percent",
+          properties: {},
+        },
+      ]);
+
+      const app = createTestApp();
+      // A bare % would match everything via ILIKE — after escaping it should match nothing
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts?search=%25")
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      // No contacts have a literal "%" in their email, so result should be empty
+      expect(body.contacts).toHaveLength(0);
+    });
+
+    it("treats _ in search as a literal character, not a SQL wildcard", async () => {
+      await db.insert(contact).values([
+        {
+          organizationId: testOrg.id,
+          email: "nodash@example.com",
+          emailHash: "hash-nodash",
+          properties: {},
+        },
+        {
+          organizationId: testOrg.id,
+          email: "ab@example.com",
+          emailHash: "hash-ab",
+          properties: {},
+        },
+      ]);
+
+      const app = createTestApp();
+      // A bare "_" would match any single character via ILIKE — after escaping it should match nothing
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts?search=_")
+      );
+
+      expect(response.status).toBe(200);
+
+      const body = await response.json();
+      // No contacts have a literal "_" in their email, so result should be empty
+      expect(body.contacts).toHaveLength(0);
+    });
   });
 
   describe("GET /v1/contacts/:id", () => {

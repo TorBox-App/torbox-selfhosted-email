@@ -288,7 +288,8 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
       }
 
       if (query.search) {
-        const search = `%${query.search}%`;
+        const escaped = query.search.replace(/%/g, "\\%").replace(/_/g, "\\_");
+        const search = `%${escaped}%`;
         conditions.push(
           or(
             sql`${contact.email} ILIKE ${search}`,
