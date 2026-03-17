@@ -451,7 +451,8 @@ export async function verifyApiKey(key: string): Promise<{
     }
 
     // Update last used timestamp
-    await db.update(apiKey)
+    await db
+      .update(apiKey)
       .set({ lastUsedAt: new Date() })
       .where(eq(apiKey.id, foundKey.id))
       .catch((err) => {

@@ -33,51 +33,47 @@ vi.mock("jose", () => ({
   },
 }));
 
-vi.mock("@wraps/db", () => {
-  return {
-    db: {
-      select: vi.fn(() => {
-        selectCallCounter.count++;
-        const callNumber = selectCallCounter.count;
-        return {
-          from: vi.fn(() => ({
-            where: vi.fn(() => ({
-              limit: vi.fn(() => {
-                return mockSelectLimit(callNumber);
-              }),
-            })),
-            innerJoin: vi.fn(() => ({
-              where: vi.fn(() => []),
-            })),
+vi.mock("@wraps/db", () => ({
+  db: {
+    select: vi.fn(() => {
+      selectCallCounter.count++;
+      const callNumber = selectCallCounter.count;
+      return {
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(() => mockSelectLimit(callNumber)),
           })),
-        };
-      }),
-      update: vi.fn(() => ({
-        set: vi.fn(() => ({
-          where: mockUpdateWhere,
+          innerJoin: vi.fn(() => ({
+            where: vi.fn(() => []),
+          })),
         })),
+      };
+    }),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: mockUpdateWhere,
       })),
-    },
-    contact: {
-      id: "contact.id",
-      email: "contact.email",
-      emailStatus: "contact.emailStatus",
-      organizationId: "contact.organizationId",
-    },
-    contactTopic: {
-      contactId: "contactTopic.contactId",
-      topicId: "contactTopic.topicId",
-      status: "contactTopic.status",
-    },
-    topic: {
-      id: "topic.id",
-      name: "topic.name",
-      organizationId: "topic.organizationId",
-    },
-    eq: mockEq,
-    and: mockAnd,
-  };
-});
+    })),
+  },
+  contact: {
+    id: "contact.id",
+    email: "contact.email",
+    emailStatus: "contact.emailStatus",
+    organizationId: "contact.organizationId",
+  },
+  contactTopic: {
+    contactId: "contactTopic.contactId",
+    topicId: "contactTopic.topicId",
+    status: "contactTopic.status",
+  },
+  topic: {
+    id: "topic.id",
+    name: "topic.name",
+    organizationId: "topic.organizationId",
+  },
+  eq: mockEq,
+  and: mockAnd,
+}));
 
 vi.mock("drizzle-orm", () => ({
   and: mockAnd,
@@ -134,8 +130,7 @@ describe("Unsubscribe Topic IDOR Prevention", () => {
 
     // Find the eq call for topic.organizationId
     const topicOrgScopeCall = eqCalls.find(
-      ([field, value]) =>
-        field === "topic.organizationId" && value === "org-A"
+      ([field, value]) => field === "topic.organizationId" && value === "org-A"
     );
 
     expect(topicOrgScopeCall).toBeDefined();
@@ -175,8 +170,7 @@ describe("Unsubscribe Topic IDOR Prevention", () => {
     const eqCalls = mockEq.mock.calls;
 
     const topicOrgScopeCall = eqCalls.find(
-      ([field, value]) =>
-        field === "topic.organizationId" && value === "org-A"
+      ([field, value]) => field === "topic.organizationId" && value === "org-A"
     );
 
     expect(topicOrgScopeCall).toBeDefined();

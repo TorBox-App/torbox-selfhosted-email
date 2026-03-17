@@ -304,10 +304,7 @@ export const unsubscribeRoutes = new Elysia({ prefix: "/unsubscribe" })
           .select({ name: topic.name })
           .from(topic)
           .where(
-            and(
-              eq(topic.id, topicId),
-              eq(topic.organizationId, organizationId)
-            )
+            and(eq(topic.id, topicId), eq(topic.organizationId, organizationId))
           )
           .limit(1);
         topicName = topicRecord?.name || "this topic";
