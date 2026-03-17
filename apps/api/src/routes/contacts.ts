@@ -76,7 +76,9 @@ const contactResponseSchema = t.Object({
 });
 
 const createContactSchema = t.Object({
-  email: t.Optional(t.String({ description: "Email address", maxLength: 255 })),
+  email: t.Optional(
+    t.String({ description: "Email address", maxLength: 255, format: "email" })
+  ),
   phone: t.Optional(t.String({ description: "Phone number", maxLength: 50 })),
   firstName: t.Optional(
     t.String({ description: "First name", maxLength: 100 })
@@ -127,7 +129,9 @@ const createContactSchema = t.Object({
 });
 
 const updateContactSchema = t.Object({
-  email: t.Optional(t.String({ description: "Email address", maxLength: 255 })),
+  email: t.Optional(
+    t.String({ description: "Email address", maxLength: 255, format: "email" })
+  ),
   phone: t.Optional(t.String({ description: "Phone number", maxLength: 50 })),
   firstName: t.Optional(
     t.Union([t.String({ maxLength: 100 }), t.Null()], {

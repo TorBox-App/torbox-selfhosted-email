@@ -574,6 +574,35 @@ describe("Contacts API Integration", () => {
       expect(body.error).toBe("Email or phone is required");
     });
 
+    it("rejects invalid email format on create (BUG-012)", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "not-an-email" }),
+        })
+      );
+
+      expect(response.status).toBe(422);
+    });
+
+    it("accepts a valid email format on create", async () => {
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request("http://localhost/v1/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "valid@example.com" }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+
+      const body = await response.json();
+      expect(body.email).toBe("valid@example.com");
+    });
+
     it("creates contact with topicSlugs", async () => {
       const app = createTestApp();
       const response = await app.handle(
@@ -1010,6 +1039,29 @@ describe("Contacts API Integration", () => {
       );
 
       expect(response.status).toBe(404);
+    });
+
+    it("rejects invalid email format on update (BUG-012)", async () => {
+      const [existing] = await db
+        .insert(contact)
+        .values({
+          organizationId: testOrg.id,
+          email: "patch-invalid-email@example.com",
+          emailHash: "hash-patch-invalid-email",
+          properties: {},
+        })
+        .returning();
+
+      const app = createTestApp();
+      const response = await app.handle(
+        new Request(`http://localhost/v1/contacts/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "not-an-email" }),
+        })
+      );
+
+      expect(response.status).toBe(422);
     });
 
     it("accepts email as the :id parameter", async () => {
