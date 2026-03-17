@@ -520,7 +520,7 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
               t.Object({}, { additionalProperties: true })
             ),
           }),
-          { description: "List of events to process" }
+          { description: "List of events to process", maxItems: 1000 }
         ),
       }),
       response: {

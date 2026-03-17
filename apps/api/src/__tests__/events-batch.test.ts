@@ -553,4 +553,31 @@ describe("POST /v1/events/batch", () => {
 
     expect(incrementEventUsage).toHaveBeenCalledWith(testOrg.id, 2);
   });
+
+  // ---------------------------------------------------------------------------
+  // BUG-002: maxItems enforcement
+  // ---------------------------------------------------------------------------
+
+  it("rejects batches with more than 1000 events (BUG-002)", async () => {
+    const oversizedBatch = Array.from({ length: 1001 }, (_, i) => ({
+      name: `event.${i}`,
+      contactId: testContact1.id,
+    }));
+
+    const res = await postBatch(app, oversizedBatch);
+
+    expect(res.status).toBe(422);
+  });
+
+  it("accepts batches with exactly 1000 events", async () => {
+    const maxBatch = Array.from({ length: 1000 }, (_, i) => ({
+      name: `event.${i}`,
+      contactId: "nonexistent-contact",
+    }));
+
+    const res = await postBatch(app, maxBatch);
+
+    // 200 is returned (all contacts missing = errors, but schema is valid)
+    expect(res.status).toBe(200);
+  });
 });
