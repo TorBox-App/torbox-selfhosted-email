@@ -46,6 +46,12 @@ import {
 } from "./workflow-step-handlers";
 import type { WorkflowBranch } from "./workflow-utils";
 
+/**
+ * Max time a step can stay in 'executing' before it's considered stale
+ * and eligible for reclaim. Matches AWS Lambda max timeout (15 min).
+ */
+export const STEP_EXECUTION_TIMEOUT_MINUTES = 15;
+
 export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
   const results = await Promise.allSettled(
     event.Records.map(async (record) => {
@@ -554,9 +560,11 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
         error: null,
         completedAt: null,
       },
-      // Only allow update when previous attempt failed (retry).
-      // Rejects when status is 'executing' (concurrent) or 'completed' (done).
-      setWhere: sql`${workflowStepExecution.status} NOT IN ('executing', 'completed')`,
+      // Allow update when previous attempt failed (retry) OR when a previous
+      // 'executing' attempt is stale (Lambda crashed before completing).
+      // Always rejects 'completed' (no duplicate sends) and recent 'executing'
+      // (no concurrent execution).
+      setWhere: sql`${workflowStepExecution.status} NOT IN ('executing', 'completed') OR (${workflowStepExecution.status} = 'executing' AND ${workflowStepExecution.startedAt} < NOW() - INTERVAL '${sql.raw(String(STEP_EXECUTION_TIMEOUT_MINUTES))} minutes')`,
     })
     .returning();
 
@@ -564,6 +572,22 @@ async function processStep(executionId: string, stepId: string): Promise<void> {
   if (!stepExec) {
     log.info("Step already executing or completed", { stepId, executionId });
     return;
+  }
+
+  // Detect stale recovery: createdAt much older than now means this row
+  // was previously stuck in 'executing' and reclaimed via timeout
+  if (
+    stepExec.createdAt &&
+    Date.now() - new Date(stepExec.createdAt).getTime() >
+      STEP_EXECUTION_TIMEOUT_MINUTES * 60 * 1000
+  ) {
+    log.warn("Step reclaimed after execution timeout", {
+      stepId,
+      executionId,
+      staleMinutes: Math.round(
+        (Date.now() - new Date(stepExec.createdAt).getTime()) / 60_000
+      ),
+    });
   }
 
   // Update execution current step

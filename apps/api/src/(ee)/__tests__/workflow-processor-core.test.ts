@@ -1314,6 +1314,115 @@ describe("Webhook Step", () => {
   });
 });
 
+describe("Step idempotency timeout recovery", () => {
+  it("exports STEP_EXECUTION_TIMEOUT_MINUTES as 15", async () => {
+    const mod = await import("../workers/workflow-processor");
+    expect(mod.STEP_EXECUTION_TIMEOUT_MINUTES).toBe(15);
+  });
+
+  it("logs warning when reclaiming a stale executing step", async () => {
+    const { log } = await import("../../lib/logger");
+
+    const wf = makeWorkflow({
+      steps: [
+        { id: "trigger-1", type: "trigger", config: { type: "trigger" } },
+        {
+          id: "step-hook",
+          type: "webhook",
+          config: {
+            type: "webhook",
+            url: "https://hook.example.com",
+            method: "POST",
+            headers: {},
+            body: {},
+          },
+        },
+      ],
+      transitions: [
+        {
+          id: "t1",
+          fromStepId: "trigger-1",
+          toStepId: "step-hook",
+          condition: null,
+        },
+      ],
+    });
+
+    const execution = makeExecution({ currentStepId: "step-hook" });
+    const contactRecord = makeContact();
+
+    mockDbQueryWorkflowExecution.findFirst.mockResolvedValue(execution);
+
+    let selectCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCount++;
+      if (selectCount === 1) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([wf]),
+            }),
+          }),
+        };
+      }
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([contactRecord]),
+          }),
+        }),
+      };
+    });
+
+    // Simulate a stale step being reclaimed: insert returns a row whose
+    // createdAt is much older than startedAt (indicating timeout recovery)
+    const staleCreatedAt = new Date(Date.now() - 20 * 60 * 1000); // 20 min ago
+    mockDbInsert.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([
+            {
+              id: "se-1",
+              status: "executing",
+              idempotencyKey: "exec-1-step-hook",
+              createdAt: staleCreatedAt,
+              startedAt: new Date(),
+            },
+          ]),
+        }),
+      }),
+    });
+
+    mockDbUpdate.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([execution]),
+        }),
+      }),
+    });
+
+    mockFetch.mockResolvedValue({ status: 200, ok: true });
+
+    await handler(
+      makeSQSEvent({
+        type: "execute",
+        executionId: "exec-1",
+        stepId: "step-hook",
+        organizationId: "org-1",
+      })
+    );
+
+    // Should log warning about stale recovery
+    expect(log.warn).toHaveBeenCalledWith(
+      "Step reclaimed after execution timeout",
+      expect.objectContaining({
+        stepId: "step-hook",
+        executionId: "exec-1",
+      })
+    );
+  });
+});
+
 describe("Step retry clears stale error", () => {
   it("onConflictDoUpdate clears error and completedAt when re-executing a failed step", async () => {
     const wf = makeWorkflow({
