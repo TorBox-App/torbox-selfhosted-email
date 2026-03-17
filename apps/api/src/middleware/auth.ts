@@ -188,6 +188,9 @@ async function authenticate(
     return { auth: result.auth };
   }
 
+  if (result.reason.startsWith("error:")) {
+    return { error: "Unauthorized" };
+  }
   return { error: `Unauthorized: ${result.reason}` };
 }
 
