@@ -1,6 +1,7 @@
 import * as aws from "@pulumi/aws";
 import type * as pulumi from "@pulumi/pulumi";
 import type { TransformFunctions } from "../types.js";
+import { createACMCertificate } from "./acm.js";
 
 /**
  * CloudFront distribution result
@@ -214,9 +215,6 @@ export function createHTTPSTracking(
     Array<{ name: string; type: string; value: string }>
   >;
 } {
-  // Import ACM functions
-  const { createACMCertificate } = require("./acm.js");
-
   // Create ACM certificate
   const acmResult = createACMCertificate(
     name,
