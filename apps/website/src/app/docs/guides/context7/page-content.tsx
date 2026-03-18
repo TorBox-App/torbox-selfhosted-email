@@ -96,9 +96,9 @@ export default function Context7PageContent() {
           AI-Assisted Development with Context7
         </h1>
         <p className="text-lg text-muted-foreground">
-          Give your AI coding assistant up-to-date Wraps documentation.
-          Context7 feeds real docs and code examples into your prompts so your
-          AI writes correct Wraps code on the first try.
+          Give your AI coding assistant up-to-date Wraps documentation. Context7
+          feeds real docs and code examples into your prompts so your AI writes
+          correct Wraps code on the first try.
         </p>
         <div className="mt-4 flex items-center gap-4 text-muted-foreground text-sm">
           <span className="flex items-center gap-1">
@@ -477,10 +477,7 @@ export default function Context7PageContent() {
             <CodeBlockHeader>
               <CodeBlockFiles>
                 {(item) => (
-                  <CodeBlockFilename
-                    key={item.language}
-                    value={item.language}
-                  >
+                  <CodeBlockFilename key={item.language} value={item.language}>
                     {item.filename}
                   </CodeBlockFilename>
                 )}
@@ -516,10 +513,7 @@ export default function Context7PageContent() {
             <CodeBlockHeader>
               <CodeBlockFiles>
                 {(item) => (
-                  <CodeBlockFilename
-                    key={item.language}
-                    value={item.language}
-                  >
+                  <CodeBlockFilename key={item.language} value={item.language}>
                     {item.filename}
                   </CodeBlockFilename>
                 )}
@@ -603,8 +597,8 @@ export default function Context7PageContent() {
               <p className="font-medium">Be specific in prompts</p>
               <p className="text-muted-foreground text-sm">
                 &ldquo;Send email with React Email template using
-                @wraps.dev/email&rdquo; pulls better results than
-                &ldquo;send email&rdquo;
+                @wraps.dev/email&rdquo; pulls better results than &ldquo;send
+                email&rdquo;
               </p>
             </div>
           </div>
@@ -612,8 +606,8 @@ export default function Context7PageContent() {
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
             <div>
               <p className="font-medium">
-                Use &ldquo;wraps&rdquo; or &ldquo;wraps-js&rdquo; as the
-                library name
+                Use &ldquo;wraps&rdquo; or &ldquo;wraps-js&rdquo; as the library
+                name
               </p>
               <p className="text-muted-foreground text-sm">
                 Context7 resolves these to the correct library IDs automatically
