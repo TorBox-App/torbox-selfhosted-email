@@ -294,3 +294,8 @@ html {
 .animate-logo-scroll:hover {
   animation-play-state: paused;
 }
+
+/* Auto-layout transition animation */
+.wraps-layout-animating {
+  transition: transform 300ms ease-out;
+}

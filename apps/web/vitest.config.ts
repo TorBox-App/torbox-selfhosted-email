@@ -27,6 +27,12 @@ export default defineConfig(({ mode }) => {
       },
       // Load environment variables from .env.test
       env,
+      server: {
+        deps: {
+          // pathfinding is CJS but imported via ESM by @jalez/react-flow-smart-edge
+          inline: ["pathfinding", "@jalez/react-flow-smart-edge"],
+        },
+      },
     },
     resolve: {
       alias: {
@@ -35,6 +41,11 @@ export default defineConfig(({ mode }) => {
         "@wraps/auth": path.resolve(
           import.meta.dirname,
           "../../packages/auth/src"
+        ),
+        // Library's main entry uses CJS but package.json has "type": "module" — resolve to ESM bundle
+        "@jalez/react-flow-smart-edge": path.resolve(
+          import.meta.dirname,
+          "node_modules/@jalez/react-flow-smart-edge/dist/react-flow-smart-edge.esm.js"
         ),
       },
     },

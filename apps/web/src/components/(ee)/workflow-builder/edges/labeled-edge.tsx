@@ -5,10 +5,15 @@ import {
   EdgeLabelRenderer,
   type EdgeProps,
   getSmoothStepPath,
+  useReactFlow,
 } from "@xyflow/react";
+import { useDeferredValue, useMemo } from "react";
+import { computeSmartPath } from "./compute-smart-path";
+import { EdgeLabelPopover } from "./edge-label-popover";
 
 export function LabeledEdge({
   id,
+  source,
   sourceX,
   sourceY,
   targetX,
@@ -19,14 +24,50 @@ export function LabeledEdge({
   style = {},
   markerEnd,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const { getNodes } = useReactFlow();
+  const nodes = getNodes();
+  const deferredNodes = useDeferredValue(nodes);
+
+  const { edgePath, labelX, labelY } = useMemo(() => {
+    const smartResult = computeSmartPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      nodes: deferredNodes,
+    });
+
+    if (smartResult) {
+      return {
+        edgePath: smartResult.svgPath,
+        labelX: smartResult.labelX,
+        labelY: smartResult.labelY,
+      };
+    }
+
+    const [path, lx, ly] = getSmoothStepPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      borderRadius: 16,
+      offset: 25,
+    });
+
+    return { edgePath: path, labelX: lx, labelY: ly };
+  }, [
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
-  });
+    deferredNodes,
+  ]);
 
   // Determine label and color based on source handle
   let label = "";
@@ -85,11 +126,20 @@ export function LabeledEdge({
               pointerEvents: "all",
             }}
           >
-            <div
-              className={`rounded px-2 py-0.5 font-medium text-xs ${labelColor}`}
-            >
-              {label}
-            </div>
+            {sourceHandleId ? (
+              <EdgeLabelPopover
+                label={label}
+                labelColor={labelColor}
+                sourceHandleId={sourceHandleId}
+                sourceNodeId={source}
+              />
+            ) : (
+              <div
+                className={`rounded px-2 py-0.5 font-medium text-xs ${labelColor}`}
+              >
+                {label}
+              </div>
+            )}
           </div>
         </EdgeLabelRenderer>
       )}

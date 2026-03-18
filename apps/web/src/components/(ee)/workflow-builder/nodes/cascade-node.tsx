@@ -1,11 +1,20 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import type { CascadeChannelConfig } from "@wraps/db";
 import { Handle, Position } from "@xyflow/react";
 import { Layers, Mail, MessageSquare } from "lucide-react";
+import { useMemo } from "react";
+import type { WorkflowNodeStepStats } from "@/actions/workflows";
 import { cn, formatDurationCompact } from "@/lib/utils";
+import {
+  getNodeStats,
+  workflowNodeStatsKeys,
+} from "../hooks/use-workflow-node-stats";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
+import { useWorkflowData } from "../workflow-data-context";
+import { StatsBadge } from "./stats-badge";
 
 type CascadeNodeProps = {
   id: string;
@@ -16,6 +25,26 @@ type CascadeNodeProps = {
 export function CascadeNode({ id, data, selected }: CascadeNodeProps) {
   const channels: CascadeChannelConfig[] = data.cascadeChannels ?? [];
   const { isValid, errorMessage } = useNodeValidation(id);
+  const { showStats, workflowId } = useWorkflowData();
+  const queryClient = useQueryClient();
+  const allStats = queryClient.getQueryData<
+    Record<string, WorkflowNodeStepStats>
+  >(workflowNodeStatsKeys.detail(workflowId));
+
+  const cascadePrimitiveIds = useMemo(() => {
+    const chs = data.cascadeChannels ?? [];
+    const ids: string[] = [];
+    for (let i = 0; i < chs.length; i++) {
+      ids.push(`${id}-send-${i}`);
+      if (i < chs.length - 1) {
+        ids.push(`${id}-cond-${i}`);
+        ids.push(`${id}-wait-${i}`);
+      }
+    }
+    return ids;
+  }, [id, data.cascadeChannels]);
+
+  const stats = getNodeStats(allStats, data.stepId, cascadePrimitiveIds);
 
   return (
     <div
@@ -104,6 +133,12 @@ export function CascadeNode({ id, data, selected }: CascadeNodeProps) {
         style={{ left: "65%" }}
         type="source"
       />
+
+      {showStats && stats && (
+        <div className="border-t px-3 py-1.5">
+          <StatsBadge stats={stats} />
+        </div>
+      )}
 
       {errorMessage && (
         <div className="-bottom-10 -translate-x-1/2 absolute left-1/2 whitespace-nowrap text-destructive text-xs">

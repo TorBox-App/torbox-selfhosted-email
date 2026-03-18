@@ -1,10 +1,18 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Handle, Position } from "@xyflow/react";
 import { GitBranch } from "lucide-react";
+import type { WorkflowNodeStepStats } from "@/actions/workflows";
 import { cn } from "@/lib/utils";
+import {
+  getNodeStats,
+  workflowNodeStatsKeys,
+} from "../hooks/use-workflow-node-stats";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
+import { useWorkflowData } from "../workflow-data-context";
+import { StatsBadge } from "./stats-badge";
 
 type ConditionNodeProps = {
   id: string;
@@ -15,6 +23,12 @@ type ConditionNodeProps = {
 export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
   const config = data.config;
   const { isValid, errorMessage } = useNodeValidation(id);
+  const { showStats, workflowId } = useWorkflowData();
+  const queryClient = useQueryClient();
+  const allStats = queryClient.getQueryData<
+    Record<string, WorkflowNodeStepStats>
+  >(workflowNodeStatsKeys.detail(workflowId));
+  const stats = getNodeStats(allStats, data.stepId);
   let description = "Configure condition";
 
   if (config.type === "condition" && config.field) {
@@ -107,6 +121,12 @@ export function ConditionNode({ id, data, selected }: ConditionNodeProps) {
       {errorMessage && (
         <div className="-bottom-12 -translate-x-1/2 absolute left-1/2 whitespace-nowrap text-destructive text-xs">
           {errorMessage}
+        </div>
+      )}
+
+      {showStats && stats && (
+        <div className="-bottom-16 -translate-x-1/2 absolute left-1/2 whitespace-nowrap">
+          <StatsBadge stats={stats} />
         </div>
       )}
     </div>

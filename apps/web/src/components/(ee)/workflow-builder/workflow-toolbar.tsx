@@ -1,8 +1,11 @@
 "use client";
 
 import type { Workflow } from "@wraps/db";
+import { useReactFlow } from "@xyflow/react";
 import {
   AlertCircle,
+  BarChart3,
+  LayoutGrid,
   ListChecks,
   Loader2,
   Pause,
@@ -38,6 +41,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useRequireAws } from "@/hooks/use-require-aws";
 import { EnableReadinessDialog } from "./enable-readiness-dialog";
+import { getLayoutedNodes } from "./layout/auto-layout";
 import { UnsavedChangesGuard } from "./unsaved-changes-guard";
 import { useBeforeUnload } from "./use-before-unload";
 import {
@@ -50,6 +54,7 @@ import {
   useValidationResult,
   useWorkflowStore,
 } from "./use-workflow-store";
+import { useWorkflowData } from "./workflow-data-context";
 
 type WorkflowToolbarProps = {
   workflow: Workflow;
@@ -91,12 +96,39 @@ export function WorkflowToolbar({
   const toggleSettingsPanel = useWorkflowStore(
     (state) => state.toggleSettingsPanel
   );
+  const { showStats, setShowStats } = useWorkflowData();
 
   // Undo/redo state
   const canUndo = useCanUndo();
   const canRedo = useCanRedo();
   const handleUndo = () => useWorkflowStore.temporal.getState().undo();
   const handleRedo = () => useWorkflowStore.temporal.getState().redo();
+
+  // Auto-layout
+  const { fitView } = useReactFlow();
+  const handleAutoLayout = () => {
+    const { nodes, edges, setNodes } = useWorkflowStore.getState();
+    if (nodes.length < 2) return;
+
+    const flowNodes = document.querySelectorAll(".react-flow__node");
+    for (const el of flowNodes) {
+      el.classList.add("wraps-layout-animating");
+    }
+
+    const layoutedNodes = getLayoutedNodes(nodes, edges);
+    setNodes(layoutedNodes);
+
+    requestAnimationFrame(() => {
+      fitView({ padding: 0.1, maxZoom: 1, duration: 300 });
+    });
+
+    setTimeout(() => {
+      const els = document.querySelectorAll(".react-flow__node");
+      for (const el of els) {
+        el.classList.remove("wraps-layout-animating");
+      }
+    }, 350);
+  };
 
   // Browser tab close guard
   useBeforeUnload();
@@ -371,6 +403,24 @@ export function WorkflowToolbar({
           </div>
         </TooltipProvider>
 
+        {/* Auto-layout button */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="Auto-layout"
+                disabled={nodeCount < 2}
+                onClick={handleAutoLayout}
+                size="icon"
+                variant="ghost"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Auto-layout</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         {/* Executions link */}
         <TooltipProvider>
           <Tooltip>
@@ -389,6 +439,26 @@ export function WorkflowToolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">View executions</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Stats toggle */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="Toggle stats"
+                disabled={currentStatus === "draft"}
+                onClick={() => setShowStats(!showStats)}
+                size="icon"
+                variant={showStats ? "secondary" : "outline"}
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {showStats ? "Hide stats" : "Show stats"}
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
 

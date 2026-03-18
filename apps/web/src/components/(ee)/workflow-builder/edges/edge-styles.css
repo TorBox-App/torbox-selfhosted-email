@@ -1,0 +1,22 @@
+/* Edge drop target highlight during drag-over */
+.react-flow__edge.edge-drop-target path:not(.react-flow__edge-interaction) {
+  stroke: var(--color-orange-500, #f97316) !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 6px var(--color-orange-500, #f97316));
+  transition:
+    stroke 150ms ease-out,
+    stroke-width 150ms ease-out,
+    filter 150ms ease-out;
+}
+
+/* Animate the edge dashes when it's a drop target */
+.react-flow__edge.edge-drop-target path:not(.react-flow__edge-interaction) {
+  stroke-dasharray: 8 4;
+  animation: edge-drop-dash 0.5s linear infinite;
+}
+
+@keyframes edge-drop-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}

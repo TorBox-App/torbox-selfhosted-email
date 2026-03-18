@@ -796,6 +796,422 @@ describe("useWorkflowStore", () => {
       expect(useWorkflowStore.getState().isSaving).toBe(false);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // insertNodeBetweenEdge
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("insertNodeBetweenEdge", () => {
+    it("should create node and two edges for single-output node types", () => {
+      // Setup: trigger -> send_email with an edge
+      useWorkflowStore.setState({
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: {
+              stepId: "trigger-1",
+              type: "trigger",
+              name: "Trigger",
+              config: { type: "trigger", triggerType: "event" },
+              isValid: true,
+            },
+          },
+          {
+            id: "email-1",
+            type: "send_email",
+            position: { x: 0, y: 300 },
+            data: {
+              stepId: "email-1",
+              type: "send_email",
+              name: "Send Email",
+              config: { type: "send_email", templateId: "" },
+              isValid: true,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "edge-1",
+            source: "trigger-1",
+            target: "email-1",
+            sourceHandle: null,
+            data: {},
+          },
+        ],
+      });
+
+      const result = useWorkflowStore
+        .getState()
+        .insertNodeBetweenEdge("delay", "edge-1", { x: 0, y: 150 });
+
+      const state = useWorkflowStore.getState();
+
+      // New node was created
+      expect(result).toBe("test-uuid-1");
+      expect(state.nodes).toHaveLength(3);
+      const newNode = state.nodes.find((n) => n.id === "test-uuid-1");
+      expect(newNode).toBeDefined();
+      expect(newNode!.type).toBe("delay");
+      expect(newNode!.position).toEqual({ x: 0, y: 150 });
+
+      // Old edge removed, two new edges created
+      expect(state.edges).toHaveLength(2);
+      expect(state.edges.find((e) => e.id === "edge-1")).toBeUndefined();
+
+      // Edge 1: trigger -> new node
+      const edge1 = state.edges.find((e) => e.source === "trigger-1");
+      expect(edge1).toBeDefined();
+      expect(edge1!.target).toBe("test-uuid-1");
+
+      // Edge 2: new node -> email
+      const edge2 = state.edges.find((e) => e.source === "test-uuid-1");
+      expect(edge2).toBeDefined();
+      expect(edge2!.target).toBe("email-1");
+
+      // isDirty should be true
+      expect(state.isDirty).toBe(true);
+    });
+
+    it("should preserve sourceHandle from original edge", () => {
+      // Setup: condition --[yes]--> send_email
+      useWorkflowStore.setState({
+        nodes: [
+          {
+            id: "cond-1",
+            type: "condition",
+            position: { x: 0, y: 0 },
+            data: {
+              stepId: "cond-1",
+              type: "condition",
+              name: "Condition",
+              config: {
+                type: "condition",
+                field: "",
+                operator: "equals",
+                value: "",
+              },
+              isValid: true,
+            },
+          },
+          {
+            id: "email-1",
+            type: "send_email",
+            position: { x: 0, y: 300 },
+            data: {
+              stepId: "email-1",
+              type: "send_email",
+              name: "Send Email",
+              config: { type: "send_email", templateId: "" },
+              isValid: true,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "edge-yes",
+            source: "cond-1",
+            target: "email-1",
+            sourceHandle: "yes",
+            data: { label: "yes" },
+          },
+        ],
+      });
+
+      useWorkflowStore
+        .getState()
+        .insertNodeBetweenEdge("delay", "edge-yes", { x: 0, y: 150 });
+
+      const state = useWorkflowStore.getState();
+
+      // Edge from cond-1 -> delay should preserve sourceHandle "yes"
+      const edge1 = state.edges.find((e) => e.source === "cond-1");
+      expect(edge1).toBeDefined();
+      expect(edge1!.target).toBe("test-uuid-1");
+      expect(edge1!.sourceHandle).toBe("yes");
+      expect(edge1!.data?.label).toBe("yes");
+
+      // Edge from delay -> email-1 should have null sourceHandle
+      const edge2 = state.edges.find((e) => e.source === "test-uuid-1");
+      expect(edge2).toBeDefined();
+      expect(edge2!.target).toBe("email-1");
+      expect(edge2!.sourceHandle).toBeNull();
+    });
+
+    it("should create only one edge for multi-output node types (condition)", () => {
+      // Setup: trigger -> send_email
+      useWorkflowStore.setState({
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: {
+              stepId: "trigger-1",
+              type: "trigger",
+              name: "Trigger",
+              config: { type: "trigger", triggerType: "event" },
+              isValid: true,
+            },
+          },
+          {
+            id: "email-1",
+            type: "send_email",
+            position: { x: 0, y: 300 },
+            data: {
+              stepId: "email-1",
+              type: "send_email",
+              name: "Send Email",
+              config: { type: "send_email", templateId: "" },
+              isValid: true,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "edge-1",
+            source: "trigger-1",
+            target: "email-1",
+            sourceHandle: null,
+            data: {},
+          },
+        ],
+      });
+
+      useWorkflowStore
+        .getState()
+        .insertNodeBetweenEdge("condition", "edge-1", { x: 0, y: 150 });
+
+      const state = useWorkflowStore.getState();
+
+      // 3 nodes total
+      expect(state.nodes).toHaveLength(3);
+
+      // Only 1 edge: trigger -> condition (no auto-connect from condition)
+      expect(state.edges).toHaveLength(1);
+      const edge1 = state.edges[0];
+      expect(edge1.source).toBe("trigger-1");
+      expect(edge1.target).toBe("test-uuid-1");
+
+      // No edge from condition to email (user must connect manually)
+      const outgoingFromCondition = state.edges.filter(
+        (e) => e.source === "test-uuid-1"
+      );
+      expect(outgoingFromCondition).toHaveLength(0);
+    });
+
+    it("should reject trigger type insertion", () => {
+      useWorkflowStore.setState({
+        nodes: [
+          {
+            id: "email-1",
+            type: "send_email",
+            position: { x: 0, y: 0 },
+            data: {
+              stepId: "email-1",
+              type: "send_email",
+              name: "Send Email",
+              config: { type: "send_email", templateId: "" },
+              isValid: true,
+            },
+          },
+          {
+            id: "delay-1",
+            type: "delay",
+            position: { x: 0, y: 300 },
+            data: {
+              stepId: "delay-1",
+              type: "delay",
+              name: "Delay",
+              config: { type: "delay", amount: 1, unit: "days" },
+              isValid: true,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "edge-1",
+            source: "email-1",
+            target: "delay-1",
+            sourceHandle: null,
+            data: {},
+          },
+        ],
+        isDirty: false,
+      });
+
+      const result = useWorkflowStore
+        .getState()
+        .insertNodeBetweenEdge("trigger", "edge-1", { x: 0, y: 0 });
+
+      const state = useWorkflowStore.getState();
+
+      expect(result).toBe("");
+      expect(state.nodes).toHaveLength(2);
+      expect(state.edges).toHaveLength(1);
+      expect(state.isDirty).toBe(false);
+    });
+
+    it("should create only incoming edge for exit nodes (no output handle)", () => {
+      useWorkflowStore.setState({
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: {
+              stepId: "trigger-1",
+              type: "trigger",
+              name: "Trigger",
+              config: { type: "trigger", triggerType: "event" },
+              isValid: true,
+            },
+          },
+          {
+            id: "email-1",
+            type: "send_email",
+            position: { x: 0, y: 300 },
+            data: {
+              stepId: "email-1",
+              type: "send_email",
+              name: "Send Email",
+              config: { type: "send_email", templateId: "" },
+              isValid: true,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "edge-1",
+            source: "trigger-1",
+            target: "email-1",
+            sourceHandle: null,
+            data: {},
+          },
+        ],
+      });
+
+      useWorkflowStore
+        .getState()
+        .insertNodeBetweenEdge("exit", "edge-1", { x: 0, y: 150 });
+
+      const state = useWorkflowStore.getState();
+
+      // Only 1 edge: trigger -> exit (no outgoing from exit)
+      expect(state.edges).toHaveLength(1);
+      expect(state.edges[0].source).toBe("trigger-1");
+      expect(state.edges[0].target).toBe("test-uuid-1");
+
+      // No edge from exit to email
+      const outgoingFromExit = state.edges.filter(
+        (e) => e.source === "test-uuid-1"
+      );
+      expect(outgoingFromExit).toHaveLength(0);
+    });
+
+    it("should do nothing for nonexistent edge ID", () => {
+      useWorkflowStore.setState({
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: {
+              stepId: "trigger-1",
+              type: "trigger",
+              name: "Trigger",
+              config: { type: "trigger", triggerType: "event" },
+              isValid: true,
+            },
+          },
+          {
+            id: "email-1",
+            type: "send_email",
+            position: { x: 0, y: 300 },
+            data: {
+              stepId: "email-1",
+              type: "send_email",
+              name: "Send Email",
+              config: { type: "send_email", templateId: "" },
+              isValid: true,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "edge-1",
+            source: "trigger-1",
+            target: "email-1",
+            sourceHandle: null,
+            data: {},
+          },
+        ],
+        isDirty: false,
+      });
+
+      const result = useWorkflowStore
+        .getState()
+        .insertNodeBetweenEdge("delay", "nonexistent-edge", { x: 0, y: 0 });
+
+      const state = useWorkflowStore.getState();
+
+      expect(result).toBe("");
+      expect(state.nodes).toHaveLength(2);
+      expect(state.edges).toHaveLength(1);
+      expect(state.edges[0].id).toBe("edge-1");
+      expect(state.isDirty).toBe(false);
+    });
+
+    it("should auto-select the new node after insertion", () => {
+      useWorkflowStore.setState({
+        nodes: [
+          {
+            id: "trigger-1",
+            type: "trigger",
+            position: { x: 0, y: 0 },
+            data: {
+              stepId: "trigger-1",
+              type: "trigger",
+              name: "Trigger",
+              config: { type: "trigger", triggerType: "event" },
+              isValid: true,
+            },
+          },
+          {
+            id: "email-1",
+            type: "send_email",
+            position: { x: 0, y: 300 },
+            data: {
+              stepId: "email-1",
+              type: "send_email",
+              name: "Send Email",
+              config: { type: "send_email", templateId: "" },
+              isValid: true,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "edge-1",
+            source: "trigger-1",
+            target: "email-1",
+            sourceHandle: null,
+            data: {},
+          },
+        ],
+        selectedNodeId: "trigger-1",
+      });
+
+      const newId = useWorkflowStore
+        .getState()
+        .insertNodeBetweenEdge("delay", "edge-1", { x: 0, y: 150 });
+
+      const state = useWorkflowStore.getState();
+      expect(state.selectedNodeId).toBe(newId);
+      expect(state.selectedNodeId).toBe("test-uuid-1");
+    });
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

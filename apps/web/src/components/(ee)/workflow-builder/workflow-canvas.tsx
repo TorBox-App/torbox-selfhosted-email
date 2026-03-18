@@ -20,6 +20,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useMemo, useRef, useState } from "react";
+import "./edges/edge-styles.css";
 import { LabeledEdge } from "./edges/labeled-edge";
 import type { NodePaletteType } from "./node-palette";
 import { NodePalette } from "./node-palette";
@@ -35,6 +36,7 @@ import { UpdateContactNode } from "./nodes/update-contact-node";
 import { WaitForEmailEngagementNode } from "./nodes/wait-for-email-engagement-node";
 import { WaitForEventNode } from "./nodes/wait-for-event-node";
 import { handleUndoRedo, useWorkflowStore } from "./use-workflow-store";
+import { findEdgeAtPoint } from "./utils/find-edge-at-point";
 
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
@@ -81,11 +83,17 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
     (state) => state.onReconnect
   ) as OnReconnect;
   const addNode = useWorkflowStore((state) => state.addNode);
+  const insertNodeBetweenEdge = useWorkflowStore(
+    (state) => state.insertNodeBetweenEdge
+  );
   const selectNode = useWorkflowStore((state) => state.selectNode);
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId);
   const setCanvasViewport = useWorkflowStore(
     (state) => state.setCanvasViewport
   );
+
+  // Transient drag state -- NOT in Zustand to avoid re-renders during drag (~60fps)
+  const hoveredEdgeRef = useRef<string | null>(null);
 
   const nodesWithSelection = useMemo(
     () =>
@@ -99,6 +107,33 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+
+    const type = event.dataTransfer.types.includes("application/reactflow");
+    if (!type) return;
+
+    // Detect if cursor is over an edge
+    const edgeId = findEdgeAtPoint(event.clientX, event.clientY);
+
+    // Update visual feedback only when hovered edge changes
+    if (edgeId !== hoveredEdgeRef.current) {
+      // Remove highlight from previous edge
+      if (hoveredEdgeRef.current) {
+        const prevEdge = document.querySelector(
+          `.react-flow__edge[data-id="${hoveredEdgeRef.current}"]`
+        );
+        prevEdge?.classList.remove("edge-drop-target");
+      }
+
+      // Add highlight to new edge
+      if (edgeId) {
+        const edgeElement = document.querySelector(
+          `.react-flow__edge[data-id="${edgeId}"]`
+        );
+        edgeElement?.classList.add("edge-drop-target");
+      }
+
+      hoveredEdgeRef.current = edgeId;
+    }
   }, []);
 
   const onDrop = useCallback(
@@ -119,10 +154,39 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
         y: event.clientY - reactFlowBounds.top,
       });
 
-      addNode(type, position);
+      // Clean up visual feedback
+      const edgeId = hoveredEdgeRef.current;
+      if (edgeId) {
+        const edgeElement = document.querySelector(
+          `.react-flow__edge[data-id="${edgeId}"]`
+        );
+        edgeElement?.classList.remove("edge-drop-target");
+        hoveredEdgeRef.current = null;
+      }
+
+      // Insert between edge or add to canvas
+      if (edgeId) {
+        insertNodeBetweenEdge(type, edgeId, position);
+      } else {
+        addNode(type, position);
+      }
     },
-    [reactFlowInstance, addNode]
+    [reactFlowInstance, addNode, insertNodeBetweenEdge]
   );
+
+  const onDragLeave = useCallback((event: React.DragEvent) => {
+    // Only handle if leaving the canvas entirely (not entering a child element)
+    if (event.currentTarget.contains(event.relatedTarget as globalThis.Node))
+      return;
+
+    if (hoveredEdgeRef.current) {
+      const prevEdge = document.querySelector(
+        `.react-flow__edge[data-id="${hoveredEdgeRef.current}"]`
+      );
+      prevEdge?.classList.remove("edge-drop-target");
+      hoveredEdgeRef.current = null;
+    }
+  }, []);
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: { id: string }) => {
@@ -171,6 +235,7 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
         defaultEdgeOptions={{
           type: "labeled",
           animated: true,
+          interactionWidth: 40,
         }}
         deleteKeyCode={["Backspace", "Delete"]}
         edges={edges}
@@ -179,6 +244,7 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
         nodes={nodesWithSelection}
         nodeTypes={nodeTypes}
         onConnect={onConnect}
+        onDragLeave={onDragLeave}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onEdgesChange={onEdgesChange}

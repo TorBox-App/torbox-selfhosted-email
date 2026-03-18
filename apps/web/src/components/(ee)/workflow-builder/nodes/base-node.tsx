@@ -14,6 +14,7 @@ type BaseNodeProps = {
   isValid?: boolean;
   errorMessage?: string;
   selected?: boolean;
+  children?: React.ReactNode;
 };
 
 export function BaseNode({
@@ -27,6 +28,7 @@ export function BaseNode({
   isValid = true,
   errorMessage,
   selected,
+  children,
 }: BaseNodeProps) {
   return (
     <div
@@ -69,6 +71,8 @@ export function BaseNode({
       {!isValid && errorMessage && (
         <div className="mt-2 text-destructive text-xs">{errorMessage}</div>
       )}
+
+      {children}
 
       {hasOutput && !outputs && (
         <Handle

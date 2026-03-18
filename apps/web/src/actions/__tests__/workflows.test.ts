@@ -32,6 +32,7 @@ import {
   enableWorkflow,
   getWorkflow,
   getWorkflowExecution,
+  getWorkflowNodeStats,
   getWorkflowStats,
   listWorkflowExecutions,
   listWorkflows,
@@ -1737,6 +1738,217 @@ describe("Workflows Server Actions", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error).toContain("don't have access");
+      }
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // getWorkflowNodeStats
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  describe("getWorkflowNodeStats", () => {
+    it("should return empty stats for workflow with no executions", async () => {
+      const wfResult = await createWorkflow(testOrganization.id, {
+        name: "Empty Stats Test",
+      });
+      expect(wfResult.success).toBe(true);
+      if (!wfResult.success) return;
+
+      const result = await getWorkflowNodeStats(
+        wfResult.workflow.id,
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.stats).toEqual({});
+    });
+
+    it("should aggregate counts by stepId with branch and engagement data", async () => {
+      const wfResult = await createWorkflow(testOrganization.id, {
+        name: "Node Stats Aggregation Test",
+      });
+      expect(wfResult.success).toBe(true);
+      if (!wfResult.success) return;
+
+      // Create execution 1
+      const [exec1] = await db
+        .insert(workflowExecution)
+        .values({
+          workflowId: wfResult.workflow.id,
+          contactId: testContact.id,
+          organizationId: testOrganization.id,
+          status: "completed",
+          startedAt: new Date("2026-03-01T00:00:00"),
+          completedAt: new Date("2026-03-01T00:01:00"),
+        })
+        .returning();
+
+      // Execution 1 step executions
+      await db.insert(workflowStepExecution).values([
+        {
+          executionId: exec1!.id,
+          stepId: "step-trigger",
+          stepType: "trigger",
+          status: "completed",
+          idempotencyKey: `${exec1!.id}-step-trigger`,
+          startedAt: new Date("2026-03-01T00:00:00"),
+          completedAt: new Date("2026-03-01T00:00:01"),
+        },
+        {
+          executionId: exec1!.id,
+          stepId: "step-send-email",
+          stepType: "send_email",
+          status: "completed",
+          idempotencyKey: `${exec1!.id}-step-send-email`,
+          startedAt: new Date("2026-03-01T00:00:01"),
+          completedAt: new Date("2026-03-01T00:00:02"),
+          result: { messageId: "node-stats-msg-1" },
+        },
+        {
+          executionId: exec1!.id,
+          stepId: "step-condition",
+          stepType: "condition",
+          status: "completed",
+          idempotencyKey: `${exec1!.id}-step-condition`,
+          branch: "yes",
+          startedAt: new Date("2026-03-01T00:00:02"),
+          completedAt: new Date("2026-03-01T00:00:03"),
+        },
+      ]);
+
+      // messageSend for exec1 email
+      await db.insert(messageSend).values({
+        organizationId: testOrganization.id,
+        contactId: testContact.id,
+        awsAccountId: testAwsAccount.id,
+        channel: "email",
+        sourceType: "workflow",
+        workflowExecutionId: exec1!.id,
+        recipient: "contact@example.com",
+        messageId: "node-stats-msg-1",
+        status: "opened",
+        sentAt: new Date("2026-03-01T00:00:02"),
+        deliveredAt: new Date("2026-03-01T00:00:05"),
+        openedAt: new Date("2026-03-01T00:01:00"),
+      });
+
+      // Create execution 2
+      const [exec2] = await db
+        .insert(workflowExecution)
+        .values({
+          workflowId: wfResult.workflow.id,
+          contactId: testContact2.id,
+          organizationId: testOrganization.id,
+          status: "completed",
+          startedAt: new Date("2026-03-02T00:00:00"),
+          completedAt: new Date("2026-03-02T00:01:00"),
+        })
+        .returning();
+
+      // Execution 2 step executions
+      await db.insert(workflowStepExecution).values([
+        {
+          executionId: exec2!.id,
+          stepId: "step-trigger",
+          stepType: "trigger",
+          status: "completed",
+          idempotencyKey: `${exec2!.id}-step-trigger`,
+          startedAt: new Date("2026-03-02T00:00:00"),
+          completedAt: new Date("2026-03-02T00:00:01"),
+        },
+        {
+          executionId: exec2!.id,
+          stepId: "step-send-email",
+          stepType: "send_email",
+          status: "completed",
+          idempotencyKey: `${exec2!.id}-step-send-email`,
+          startedAt: new Date("2026-03-02T00:00:01"),
+          completedAt: new Date("2026-03-02T00:00:02"),
+          result: { messageId: "node-stats-msg-2" },
+        },
+        {
+          executionId: exec2!.id,
+          stepId: "step-condition",
+          stepType: "condition",
+          status: "completed",
+          idempotencyKey: `${exec2!.id}-step-condition`,
+          branch: "no",
+          startedAt: new Date("2026-03-02T00:00:02"),
+          completedAt: new Date("2026-03-02T00:00:03"),
+        },
+      ]);
+
+      // messageSend for exec2 email (sent only, no open/click)
+      await db.insert(messageSend).values({
+        organizationId: testOrganization.id,
+        contactId: testContact2.id,
+        awsAccountId: testAwsAccount.id,
+        channel: "email",
+        sourceType: "workflow",
+        workflowExecutionId: exec2!.id,
+        recipient: "contact2@example.com",
+        messageId: "node-stats-msg-2",
+        status: "sent",
+        sentAt: new Date("2026-03-02T00:00:02"),
+      });
+
+      const result = await getWorkflowNodeStats(
+        wfResult.workflow.id,
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+
+      // Trigger stats
+      expect(result.stats["step-trigger"]).toBeDefined();
+      expect(result.stats["step-trigger"]!.totalCount).toBe(2);
+      expect(result.stats["step-trigger"]!.completedCount).toBe(2);
+
+      // Condition stats with branch counts
+      expect(result.stats["step-condition"]).toBeDefined();
+      expect(result.stats["step-condition"]!.totalCount).toBe(2);
+      expect(result.stats["step-condition"]!.yesBranchCount).toBe(1);
+      expect(result.stats["step-condition"]!.noBranchCount).toBe(1);
+
+      // Send email stats with engagement
+      expect(result.stats["step-send-email"]).toBeDefined();
+      expect(result.stats["step-send-email"]!.totalCount).toBe(2);
+      expect(result.stats["step-send-email"]!.sentCount).toBe(2);
+      expect(result.stats["step-send-email"]!.openedCount).toBe(1);
+      expect(result.stats["step-send-email"]!.clickedCount).toBe(0);
+    });
+
+    it("should reject unauthorized access", async () => {
+      const wfResult = await createWorkflow(testOrganization.id, {
+        name: "Auth Test Node Stats",
+      });
+      expect(wfResult.success).toBe(true);
+      if (!wfResult.success) return;
+
+      currentMockUserId = "non-existent-user";
+
+      const result = await getWorkflowNodeStats(
+        wfResult.workflow.id,
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("don't have access");
+      }
+    });
+
+    it("should return error for non-existent workflow", async () => {
+      const result = await getWorkflowNodeStats(
+        "non-existent-workflow-id",
+        testOrganization.id
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe("Workflow not found");
       }
     });
   });

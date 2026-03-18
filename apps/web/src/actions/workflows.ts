@@ -1612,3 +1612,215 @@ export async function cancelWorkflowExecution(
     return { success: false, error: "Failed to cancel execution" };
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NODE STATS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type WorkflowNodeStepStats = {
+  stepId: string;
+  stepType: string;
+  totalCount: number;
+  completedCount: number;
+  failedCount: number;
+  skippedCount: number;
+  yesBranchCount?: number;
+  noBranchCount?: number;
+  sentCount?: number;
+  deliveredCount?: number;
+  openedCount?: number;
+  clickedCount?: number;
+  bouncedCount?: number;
+};
+
+export type GetWorkflowNodeStatsResult =
+  | { success: true; stats: Record<string, WorkflowNodeStepStats> }
+  | { success: false; error: string };
+
+/**
+ * Get per-node execution stats for a workflow (aggregated by stepId)
+ */
+export async function getWorkflowNodeStats(
+  workflowId: string,
+  organizationId: string
+): Promise<GetWorkflowNodeStatsResult> {
+  try {
+    const access = await verifyOrgAccess(organizationId);
+    if (!access) {
+      return {
+        success: false,
+        error: "You don't have access to this organization",
+      };
+    }
+
+    // Verify workflow ownership (prevents cross-org IDOR)
+    const existing = await db.query.workflow.findFirst({
+      where: and(
+        eq(workflow.id, workflowId),
+        eq(workflow.organizationId, organizationId)
+      ),
+      columns: { id: true },
+    });
+
+    if (!existing) {
+      return { success: false, error: "Workflow not found" };
+    }
+
+    // Aggregate step executions by stepId
+    const stepStats = await db
+      .select({
+        stepId: workflowStepExecution.stepId,
+        stepType: workflowStepExecution.stepType,
+        totalCount: count(),
+        completedCount: count(
+          sql`CASE WHEN ${workflowStepExecution.status} = 'completed' THEN 1 END`
+        ),
+        failedCount: count(
+          sql`CASE WHEN ${workflowStepExecution.status} = 'failed' THEN 1 END`
+        ),
+        skippedCount: count(
+          sql`CASE WHEN ${workflowStepExecution.status} = 'skipped' THEN 1 END`
+        ),
+        yesBranchCount: count(
+          sql`CASE WHEN ${workflowStepExecution.branch} = 'yes' THEN 1 END`
+        ),
+        noBranchCount: count(
+          sql`CASE WHEN ${workflowStepExecution.branch} = 'no' THEN 1 END`
+        ),
+      })
+      .from(workflowStepExecution)
+      .innerJoin(
+        workflowExecution,
+        eq(workflowStepExecution.executionId, workflowExecution.id)
+      )
+      .where(
+        and(
+          eq(workflowExecution.workflowId, workflowId),
+          eq(workflowExecution.organizationId, organizationId)
+        )
+      )
+      .groupBy(workflowStepExecution.stepId, workflowStepExecution.stepType);
+
+    // Build engagement map for send steps
+    const sendStepIds = stepStats
+      .filter((s) => s.stepType === "send_email" || s.stepType === "send_sms")
+      .map((s) => s.stepId);
+
+    const engagementMap: Record<
+      string,
+      {
+        sent: number;
+        delivered: number;
+        opened: number;
+        clicked: number;
+        bounced: number;
+      }
+    > = {};
+
+    if (sendStepIds.length > 0) {
+      const messageRows = await db
+        .select({
+          stepId: workflowStepExecution.stepId,
+          messageId: sql<string>`${workflowStepExecution.result}->>'messageId'`,
+        })
+        .from(workflowStepExecution)
+        .innerJoin(
+          workflowExecution,
+          eq(workflowStepExecution.executionId, workflowExecution.id)
+        )
+        .where(
+          and(
+            eq(workflowExecution.workflowId, workflowId),
+            eq(workflowExecution.organizationId, organizationId),
+            inArray(workflowStepExecution.stepId, sendStepIds),
+            sql`${workflowStepExecution.result}->>'messageId' IS NOT NULL`
+          )
+        );
+
+      const messageIdsByStep = new Map<string, string[]>();
+      for (const row of messageRows) {
+        if (!row.messageId) continue;
+        const existing = messageIdsByStep.get(row.stepId) ?? [];
+        existing.push(row.messageId);
+        messageIdsByStep.set(row.stepId, existing);
+      }
+
+      const allMessageIds = messageRows
+        .map((r) => r.messageId)
+        .filter(Boolean) as string[];
+
+      if (allMessageIds.length > 0) {
+        const sends = await db
+          .select({
+            messageId: messageSend.messageId,
+            sentAt: messageSend.sentAt,
+            deliveredAt: messageSend.deliveredAt,
+            openedAt: messageSend.openedAt,
+            clickedAt: messageSend.clickedAt,
+            bouncedAt: messageSend.bouncedAt,
+          })
+          .from(messageSend)
+          .where(
+            and(
+              inArray(messageSend.messageId, allMessageIds),
+              eq(messageSend.organizationId, organizationId)
+            )
+          );
+
+        const sendLookup = new Map(sends.map((s) => [s.messageId!, s]));
+
+        for (const [stepId, msgIds] of messageIdsByStep) {
+          const stats = {
+            sent: 0,
+            delivered: 0,
+            opened: 0,
+            clicked: 0,
+            bounced: 0,
+          };
+          for (const msgId of msgIds) {
+            const send = sendLookup.get(msgId);
+            if (!send) continue;
+            if (send.sentAt) stats.sent++;
+            if (send.deliveredAt) stats.delivered++;
+            if (send.openedAt) stats.opened++;
+            if (send.clickedAt) stats.clicked++;
+            if (send.bouncedAt) stats.bounced++;
+          }
+          engagementMap[stepId] = stats;
+        }
+      }
+    }
+
+    // Build response map
+    const statsMap: Record<string, WorkflowNodeStepStats> = {};
+    for (const row of stepStats) {
+      const engagement = engagementMap[row.stepId];
+      statsMap[row.stepId] = {
+        stepId: row.stepId,
+        stepType: row.stepType,
+        totalCount: row.totalCount,
+        completedCount: row.completedCount,
+        failedCount: row.failedCount,
+        skippedCount: row.skippedCount,
+        yesBranchCount: row.yesBranchCount || undefined,
+        noBranchCount: row.noBranchCount || undefined,
+        sentCount: engagement?.sent,
+        deliveredCount: engagement?.delivered,
+        openedCount: engagement?.opened,
+        clickedCount: engagement?.clicked,
+        bouncedCount: engagement?.bounced,
+      };
+    }
+
+    return { success: true, stats: statsMap };
+  } catch (error) {
+    const log = createActionLogger("getWorkflowNodeStats", {
+      orgSlug: organizationId,
+    });
+    log.error(
+      { err: serializeError(error), workflowId },
+      "Failed to get node stats"
+    );
+    return { success: false, error: "Failed to get node stats" };
+  }
+}

@@ -4,9 +4,10 @@ import type { Workflow, WorkflowStep, WorkflowTransition } from "@wraps/db";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useRef } from "react";
 import { AIDesignPanel } from "./ai-design-panel";
+import { useWorkflowNodeStats } from "./hooks/use-workflow-node-stats";
 import { useSettingsPanelOpen, useWorkflowStore } from "./use-workflow-store";
 import { WorkflowCanvas } from "./workflow-canvas";
-import { WorkflowDataProvider } from "./workflow-data-context";
+import { useWorkflowData, WorkflowDataProvider } from "./workflow-data-context";
 import { WorkflowPropertiesPanel } from "./workflow-properties-panel";
 import { WorkflowSettingsPanel } from "./workflow-settings-panel";
 import { WorkflowToolbar } from "./workflow-toolbar";
@@ -47,6 +48,28 @@ type WorkflowBuilderProps = {
   userRole: string;
 };
 
+/**
+ * Fetches node stats when the stats toggle is on and executions exist.
+ * Must be rendered inside WorkflowDataProvider.
+ */
+function StatsQueryLoader({
+  workflowId,
+  organizationId,
+  totalExecutions,
+}: {
+  workflowId: string;
+  organizationId: string;
+  totalExecutions: number;
+}) {
+  const { showStats } = useWorkflowData();
+  useWorkflowNodeStats(
+    workflowId,
+    organizationId,
+    showStats && totalExecutions > 0
+  );
+  return null;
+}
+
 export function WorkflowBuilder({
   workflow,
   organizationId,
@@ -80,7 +103,16 @@ export function WorkflowBuilder({
 
   return (
     <ReactFlowProvider>
-      <WorkflowDataProvider segments={segments} topics={topics}>
+      <WorkflowDataProvider
+        segments={segments}
+        topics={topics}
+        workflowId={workflow.id}
+      >
+        <StatsQueryLoader
+          organizationId={organizationId}
+          totalExecutions={workflow.totalExecutions}
+          workflowId={workflow.id}
+        />
         <div className="flex h-full flex-col">
           <WorkflowToolbar
             organizationId={organizationId}

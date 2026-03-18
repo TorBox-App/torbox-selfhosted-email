@@ -109,6 +109,12 @@ type WorkflowStoreState = {
     config: Partial<WorkflowStepConfig>
   ) => void;
   updateNodeName: (nodeId: string, name: string) => void;
+  insertNodeBetweenEdge: (
+    type: NodePaletteType,
+    edgeId: string,
+    position: { x: number; y: number },
+    config?: Partial<WorkflowStepConfig>
+  ) => string;
   deleteNode: (nodeId: string) => void;
 
   // Cascade channel actions
@@ -973,6 +979,103 @@ export const useWorkflowStore = create<WorkflowStoreState>()(
           isDirty: true,
           selectedNodeId: id,
         }));
+
+        return id;
+      },
+
+      insertNodeBetweenEdge: (type, edgeId, position, config) => {
+        const state = get();
+        const targetEdge = state.edges.find((e) => e.id === edgeId);
+        if (!targetEdge) return "";
+
+        // Prevent inserting trigger nodes (no input handle)
+        if (type === "trigger") return "";
+
+        // Create the new node (same logic as addNode)
+        const id = crypto.randomUUID();
+
+        let newNode: WorkflowNode;
+        if (type === "cascade") {
+          newNode = {
+            id,
+            type: "cascade",
+            position,
+            data: {
+              stepId: id,
+              type: "cascade",
+              name: "Cascade",
+              config: { type: "exit" } as WorkflowStepConfig,
+              isValid: true,
+              cascadeChannels: [
+                {
+                  id: crypto.randomUUID(),
+                  type: "email",
+                  templateId: "",
+                  engagement: "opened",
+                  waitDuration: 259_200,
+                },
+                { id: crypto.randomUUID(), type: "sms", body: "" },
+              ],
+            },
+          };
+        } else {
+          const defaultConfig = getDefaultConfig(type);
+          const mergedConfig = config
+            ? { ...defaultConfig, ...config }
+            : defaultConfig;
+          newNode = {
+            id,
+            type,
+            position,
+            data: {
+              stepId: id,
+              type,
+              name: getDefaultName(type),
+              config: mergedConfig as WorkflowStepConfig,
+              isValid: true,
+            },
+          };
+        }
+
+        // Nodes that should NOT get an auto-connected edge2
+        const noAutoConnectTypes: CanvasNodeType[] = [
+          "condition",
+          "wait_for_event",
+          "wait_for_email_engagement",
+          "cascade",
+          "exit",
+        ];
+        const skipEdge2 = noAutoConnectTypes.includes(type);
+
+        // Edge 1: source -> new node (preserves original sourceHandle)
+        const edge1: WorkflowEdge = {
+          id: crypto.randomUUID(),
+          source: targetEdge.source,
+          target: id,
+          sourceHandle: targetEdge.sourceHandle,
+          data: { label: targetEdge.sourceHandle ?? undefined },
+        };
+
+        const newEdges: WorkflowEdge[] = [edge1];
+
+        if (!skipEdge2) {
+          const edge2: WorkflowEdge = {
+            id: crypto.randomUUID(),
+            source: id,
+            target: targetEdge.target,
+            sourceHandle: null,
+            data: {},
+          };
+          newEdges.push(edge2);
+        }
+
+        // Atomic state update
+        set({
+          nodes: [...state.nodes, newNode],
+          edges: [...state.edges.filter((e) => e.id !== edgeId), ...newEdges],
+          isDirty: true,
+          selectedNodeId: id,
+        });
 
         return id;
       },

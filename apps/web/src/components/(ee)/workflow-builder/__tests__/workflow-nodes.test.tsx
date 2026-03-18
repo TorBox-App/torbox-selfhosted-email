@@ -6,6 +6,7 @@
  */
 
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import type { ReactNode } from "react";
@@ -23,6 +24,9 @@ vi.mock("../workflow-data-context", () => ({
     topics: [],
     segments: [],
     templates: [],
+    showStats: false,
+    setShowStats: () => {},
+    workflowId: "test-workflow-id",
   })),
 }));
 
@@ -41,9 +45,17 @@ vi.mock("next/link", () => ({
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
 
-// Wrapper component to provide React Flow context
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+// Wrapper component to provide React Flow and React Query context
 function TestWrapper({ children }: { children: ReactNode }) {
-  return <ReactFlowProvider>{children}</ReactFlowProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ReactFlowProvider>{children}</ReactFlowProvider>
+    </QueryClientProvider>
+  );
 }
 
 // Custom render function that wraps with ReactFlowProvider

@@ -1,10 +1,17 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Zap } from "lucide-react";
+import type { WorkflowNodeStepStats } from "@/actions/workflows";
+import {
+  getNodeStats,
+  workflowNodeStatsKeys,
+} from "../hooks/use-workflow-node-stats";
 import type { WorkflowNodeData } from "../use-workflow-store";
 import { useNodeValidation } from "../use-workflow-store";
 import { useWorkflowData } from "../workflow-data-context";
 import { BaseNode } from "./base-node";
+import { StatsBadge } from "./stats-badge";
 
 type TriggerNodeProps = {
   id: string;
@@ -14,7 +21,12 @@ type TriggerNodeProps = {
 
 export function TriggerNode({ id, data, selected }: TriggerNodeProps) {
   const config = data.config;
-  const { topics, segments } = useWorkflowData();
+  const { topics, segments, showStats, workflowId } = useWorkflowData();
+  const queryClient = useQueryClient();
+  const allStats = queryClient.getQueryData<
+    Record<string, WorkflowNodeStepStats>
+  >(workflowNodeStatsKeys.detail(workflowId));
+  const nodeStats = getNodeStats(allStats, data.stepId);
   const { isValid, errorMessage } = useNodeValidation(id);
   let description = "When triggered";
 
@@ -81,6 +93,8 @@ export function TriggerNode({ id, data, selected }: TriggerNodeProps) {
       isValid={isValid}
       label={data.name}
       selected={selected}
-    />
+    >
+      {showStats && nodeStats && <StatsBadge stats={nodeStats} />}
+    </BaseNode>
   );
 }
