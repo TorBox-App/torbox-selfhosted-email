@@ -98,6 +98,15 @@ type EventBridgeEvent = {
   };
 };
 
+const hasZeroRowCount = (value: unknown): boolean => {
+  if (typeof value !== "object" || value === null || !("rowCount" in value)) {
+    return false;
+  }
+
+  const rowCount = (value as { rowCount?: unknown }).rowCount;
+  return rowCount === 0;
+};
+
 export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
   "/ses/:awsAccountNumber",
   async ({ params, body, headers, set }) => {
@@ -338,7 +347,7 @@ async function processOpen(
     .where(and(eq(messageSend.id, message.id), isNull(messageSend.openedAt)));
 
   // If 0 rows affected, another request already recorded the open
-  if ((result as any)?.rowCount === 0) {
+  if (hasZeroRowCount(result)) {
     log.info("Webhook: duplicate open (race), skipping", {
       messageId: message.id,
     });
@@ -401,7 +410,7 @@ async function processClick(
     .where(and(eq(messageSend.id, message.id), isNull(messageSend.clickedAt)));
 
   // If 0 rows affected, another request already recorded the click
-  if ((result as any)?.rowCount === 0) {
+  if (hasZeroRowCount(result)) {
     log.info("Webhook: duplicate click (race), skipping", {
       messageId: message.id,
     });
