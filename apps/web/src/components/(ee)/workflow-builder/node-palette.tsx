@@ -26,7 +26,7 @@ type NodePaletteItem = {
   accentColor: string;
 };
 
-const paletteItems: NodePaletteItem[] = [
+export const paletteItems: NodePaletteItem[] = [
   {
     type: "trigger",
     label: "Trigger",
@@ -117,11 +117,15 @@ const paletteItems: NodePaletteItem[] = [
 
 type NodePaletteProps = {
   onAddNode: (type: NodePaletteType) => void;
+  onDragStart?: (type: NodePaletteType) => void;
+  onDragEnd?: () => void;
   smsEnabled?: boolean;
 };
 
 export function NodePalette({
   onAddNode,
+  onDragStart: onDragStartProp,
+  onDragEnd: onDragEndProp,
   smsEnabled = false,
 }: NodePaletteProps) {
   // Filter out SMS node if SMS is not enabled
@@ -131,6 +135,7 @@ export function NodePalette({
   const onDragStart = (event: React.DragEvent, nodeType: NodePaletteType) => {
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
+    onDragStartProp?.(nodeType);
   };
 
   return (
@@ -149,6 +154,7 @@ export function NodePalette({
             draggable
             key={item.type}
             onClick={() => onAddNode(item.type)}
+            onDragEnd={onDragEndProp}
             onDragStart={(e) => onDragStart(e, item.type)}
           >
             <div

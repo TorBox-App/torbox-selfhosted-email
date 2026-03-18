@@ -21,28 +21,51 @@ type LayoutOptions = {
   rankdir?: "TB" | "LR";
   nodesep?: number;
   ranksep?: number;
+  showStats?: boolean;
 };
 
-function getNodeDimensions(node: WorkflowNode): {
+// Extra vertical space per node type when stats badges are visible.
+// Condition nodes use absolute positioning (-bottom-16) so need more room.
+const STATS_PADDING_CONDITION = 60;
+const STATS_PADDING_DEFAULT = 28;
+
+function getNodeDimensions(
+  node: WorkflowNode,
+  showStats = false
+): {
   width: number;
   height: number;
 } {
+  let width: number;
+  let height: number;
+
   // Prefer measured dimensions from React Flow (populated after render)
   const measured = (node as Record<string, unknown>).measured as
     | { width?: number; height?: number }
     | undefined;
   if (measured?.width && measured?.height) {
-    return { width: measured.width, height: measured.height };
-  }
-
-  // Dynamic cascade height
-  if (node.type === "cascade") {
+    width = measured.width;
+    height = measured.height;
+  } else if (node.type === "cascade") {
+    // Dynamic cascade height
     const channelCount = node.data.cascadeChannels?.length ?? 2;
-    return { width: 220, height: 56 + 1 + channelCount * 28 + 16 + 12 };
+    width = 220;
+    height = 56 + 1 + channelCount * 28 + 16 + 12;
+  } else {
+    // Static fallback
+    const dims = NODE_DIMENSIONS[node.type ?? ""] ?? { width: 180, height: 80 };
+    width = dims.width;
+    height = dims.height;
   }
 
-  // Static fallback
-  return NODE_DIMENSIONS[node.type ?? ""] ?? { width: 180, height: 80 };
+  if (showStats) {
+    height +=
+      node.type === "condition"
+        ? STATS_PADDING_CONDITION
+        : STATS_PADDING_DEFAULT;
+  }
+
+  return { width, height };
 }
 
 export function getLayoutedNodes(
@@ -62,8 +85,9 @@ export function getLayoutedNodes(
     marginy: 20,
   });
 
+  const showStats = options?.showStats ?? false;
   for (const node of nodes) {
-    const { width, height } = getNodeDimensions(node);
+    const { width, height } = getNodeDimensions(node, showStats);
     g.setNode(node.id, { width, height });
   }
 
@@ -77,7 +101,7 @@ export function getLayoutedNodes(
     const dagreNode = g.node(node.id);
     if (!dagreNode) return node;
 
-    const { width, height } = getNodeDimensions(node);
+    const { width, height } = getNodeDimensions(node, showStats);
     return {
       ...node,
       position: {

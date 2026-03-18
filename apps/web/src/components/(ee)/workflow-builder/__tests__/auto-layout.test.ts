@@ -245,4 +245,47 @@ describe("getLayoutedNodes", () => {
     expect(condY - triggerY).toBeGreaterThanOrEqual(100);
     expect(exitY - condY).toBeGreaterThanOrEqual(100);
   });
+
+  // --- showStats: extra vertical spacing ---
+
+  it("should add extra vertical spacing when showStats is true", () => {
+    const nodes = [
+      makeNode("trigger", "trigger"),
+      makeNode("email", "send_email"),
+      makeNode("exit", "exit"),
+    ];
+    const edges = [makeEdge("trigger", "email"), makeEdge("email", "exit")];
+
+    const withoutStats = getLayoutedNodes(nodes, edges);
+    const withStats = getLayoutedNodes(nodes, edges, { showStats: true });
+
+    const gapWithout = withoutStats[2].position.y - withoutStats[0].position.y;
+    const gapWith = withStats[2].position.y - withStats[0].position.y;
+
+    // Stats padding should increase the total vertical span
+    expect(gapWith).toBeGreaterThan(gapWithout);
+  });
+
+  it("should add more padding for condition nodes with showStats", () => {
+    const nodes = [
+      makeNode("trigger", "trigger"),
+      makeNode("cond", "condition"),
+      makeNode("exit", "exit"),
+    ];
+    const edges = [makeEdge("trigger", "cond"), makeEdge("cond", "exit")];
+
+    const withoutStats = getLayoutedNodes(nodes, edges);
+    const withStats = getLayoutedNodes(nodes, edges, { showStats: true });
+
+    const condWithout = withoutStats.find((n) => n.id === "cond")!;
+    const exitWithout = withoutStats.find((n) => n.id === "exit")!;
+    const condWith = withStats.find((n) => n.id === "cond")!;
+    const exitWith = withStats.find((n) => n.id === "exit")!;
+
+    const gapWithout = exitWithout.position.y - condWithout.position.y;
+    const gapWith = exitWith.position.y - condWith.position.y;
+
+    // Condition nodes get more stats padding (60px) than standard nodes (28px)
+    expect(gapWith - gapWithout).toBeGreaterThanOrEqual(30);
+  });
 });

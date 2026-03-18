@@ -115,7 +115,7 @@ export function WorkflowToolbar({
       el.classList.add("wraps-layout-animating");
     }
 
-    const layoutedNodes = getLayoutedNodes(nodes, edges);
+    const layoutedNodes = getLayoutedNodes(nodes, edges, { showStats });
     setNodes(layoutedNodes);
 
     requestAnimationFrame(() => {

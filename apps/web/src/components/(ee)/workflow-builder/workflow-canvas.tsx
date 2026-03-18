@@ -20,10 +20,11 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import "./edges/edge-styles.css";
 import { LabeledEdge } from "./edges/labeled-edge";
 import type { NodePaletteType } from "./node-palette";
-import { NodePalette } from "./node-palette";
+import { NodePalette, paletteItems } from "./node-palette";
 import { CascadeNode } from "./nodes/cascade-node";
 import { ConditionNode } from "./nodes/condition-node";
 import { DelayNode } from "./nodes/delay-node";
@@ -61,6 +62,11 @@ const edgeTypes: EdgeTypes = {
   labeled: LabeledEdge,
 };
 
+// Lookup for ghost preview rendering during drag-over
+const paletteItemsByType = Object.fromEntries(
+  paletteItems.map((item) => [item.type, item])
+);
+
 type WorkflowCanvasProps = {
   smsEnabled?: boolean;
 };
@@ -94,6 +100,14 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
 
   // Transient drag state -- NOT in Zustand to avoid re-renders during drag (~60fps)
   const hoveredEdgeRef = useRef<string | null>(null);
+  const dragTypeRef = useRef<NodePaletteType | null>(null);
+
+  // Ghost preview shown on the edge midpoint during drag-over
+  const [ghostPreview, setGhostPreview] = useState<{
+    type: NodePaletteType;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const nodesWithSelection = useMemo(
     () =>
@@ -104,37 +118,65 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
     [nodes, selectedNodeId]
   );
 
-  const onDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+  const onDragOver = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
 
-    const type = event.dataTransfer.types.includes("application/reactflow");
-    if (!type) return;
+      const type = event.dataTransfer.types.includes("application/reactflow");
+      if (!type) return;
 
-    // Detect if cursor is over an edge
-    const edgeId = findEdgeAtPoint(event.clientX, event.clientY);
+      // Detect if cursor is over an edge
+      const edgeId = findEdgeAtPoint(event.clientX, event.clientY);
 
-    // Update visual feedback only when hovered edge changes
-    if (edgeId !== hoveredEdgeRef.current) {
-      // Remove highlight from previous edge
-      if (hoveredEdgeRef.current) {
-        const prevEdge = document.querySelector(
-          `.react-flow__edge[data-id="${hoveredEdgeRef.current}"]`
-        );
-        prevEdge?.classList.remove("edge-drop-target");
+      // Update visual feedback only when hovered edge changes
+      if (edgeId !== hoveredEdgeRef.current) {
+        // Remove highlight from previous edge
+        if (hoveredEdgeRef.current) {
+          const prevEdge = document.querySelector(
+            `.react-flow__edge[data-id="${hoveredEdgeRef.current}"]`
+          );
+          prevEdge?.classList.remove("edge-drop-target");
+        }
+
+        // Add highlight to new edge
+        if (edgeId) {
+          const edgeElement = document.querySelector(
+            `.react-flow__edge[data-id="${edgeId}"]`
+          );
+          edgeElement?.classList.add("edge-drop-target");
+        }
+
+        hoveredEdgeRef.current = edgeId;
+
+        // Show/hide ghost preview at edge midpoint
+        if (edgeId && reactFlowInstance && reactFlowWrapper.current) {
+          const state = useWorkflowStore.getState();
+          const edge = state.edges.find((e) => e.id === edgeId);
+          if (edge) {
+            const srcNode = state.nodes.find((n) => n.id === edge.source);
+            const tgtNode = state.nodes.find((n) => n.id === edge.target);
+            if (srcNode && tgtNode) {
+              const midFlow = {
+                x: (srcNode.position.x + tgtNode.position.x) / 2 + 90,
+                y: (srcNode.position.y + tgtNode.position.y) / 2 + 40,
+              };
+              const screenPos = reactFlowInstance.flowToScreenPosition(midFlow);
+              const rect = reactFlowWrapper.current.getBoundingClientRect();
+              setGhostPreview({
+                type: dragTypeRef.current ?? "send_email",
+                x: screenPos.x - rect.left,
+                y: screenPos.y - rect.top,
+              });
+            }
+          }
+        } else {
+          setGhostPreview(null);
+        }
       }
-
-      // Add highlight to new edge
-      if (edgeId) {
-        const edgeElement = document.querySelector(
-          `.react-flow__edge[data-id="${edgeId}"]`
-        );
-        edgeElement?.classList.add("edge-drop-target");
-      }
-
-      hoveredEdgeRef.current = edgeId;
-    }
-  }, []);
+    },
+    [reactFlowInstance]
+  );
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
@@ -148,11 +190,16 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
         return;
       }
 
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
+      const cursorFlow = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
       });
+
+      // Center horizontally on cursor, align top edge to cursor
+      const position = {
+        x: cursorFlow.x - 90,
+        y: cursorFlow.y,
+      };
 
       // Clean up visual feedback
       const edgeId = hoveredEdgeRef.current;
@@ -163,6 +210,8 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
         edgeElement?.classList.remove("edge-drop-target");
         hoveredEdgeRef.current = null;
       }
+      setGhostPreview(null);
+      dragTypeRef.current = null;
 
       // Insert between edge or add to canvas
       if (edgeId) {
@@ -186,6 +235,8 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
       prevEdge?.classList.remove("edge-drop-target");
       hoveredEdgeRef.current = null;
     }
+    setGhostPreview(null);
+    dragTypeRef.current = null;
   }, []);
 
   const onNodeClick = useCallback(
@@ -264,7 +315,43 @@ export function WorkflowCanvas({ smsEnabled = false }: WorkflowCanvasProps) {
           nodeStrokeWidth={3}
         />
       </ReactFlow>
-      <NodePalette onAddNode={handleAddNode} smsEnabled={smsEnabled} />
+      <NodePalette
+        onAddNode={handleAddNode}
+        onDragEnd={() => {
+          dragTypeRef.current = null;
+        }}
+        onDragStart={(type) => {
+          dragTypeRef.current = type;
+        }}
+        smsEnabled={smsEnabled}
+      />
+      {ghostPreview &&
+        (() => {
+          const meta = paletteItemsByType[ghostPreview.type];
+          if (!meta) return null;
+          return (
+            <div
+              className="pointer-events-none absolute z-50 flex items-center gap-2 rounded-lg border-2 border-dashed border-orange-500/50 bg-background/80 px-3 py-2 shadow-lg backdrop-blur-sm ghost-preview-enter"
+              style={{
+                left: ghostPreview.x,
+                top: ghostPreview.y,
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <div
+                className={cn(
+                  "flex h-6 w-6 items-center justify-center rounded text-white",
+                  meta.accentColor
+                )}
+              >
+                {meta.icon}
+              </div>
+              <span className="font-medium text-foreground/70 text-sm">
+                {meta.label}
+              </span>
+            </div>
+          );
+        })()}
     </div>
   );
 }
