@@ -26,8 +26,9 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@better-auth/passkey": "1.4.17",
-    "@better-auth/stripe": "1.4.17",
+    "@better-auth/core": "1.5.5",
+    "@better-auth/passkey": "1.5.5",
+    "@better-auth/stripe": "1.5.5",
     "@wraps.dev/client": "0.4.0",
     "@wraps.dev/email": "^0.5.1",
     "@wraps.dev/sms": "^0.1.1",
