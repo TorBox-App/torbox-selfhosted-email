@@ -778,8 +778,7 @@ export const contactsRoutes = createAuthenticatedRoutes("/v1/contacts")
 
       if (body.properties !== undefined) {
         const patchProperties = JSON.stringify(body.properties);
-        updateValues.properties =
-          sql`(COALESCE(${contact.properties}::jsonb, '{}'::jsonb) || ${patchProperties}::jsonb)::json`;
+        updateValues.properties = sql`(COALESCE(${contact.properties}::jsonb, '{}'::jsonb) || ${patchProperties}::jsonb)::json`;
       }
 
       if (body.firstName !== undefined) {

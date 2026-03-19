@@ -1176,7 +1176,10 @@ describe("Branchless continuation fallbacks", () => {
         {
           id: "step-wait",
           type: "wait_for_event",
-          config: { type: "wait_for_event", eventName: "activation.aws_connected" },
+          config: {
+            type: "wait_for_event",
+            eventName: "activation.aws_connected",
+          },
         },
         {
           id: "step-next",
