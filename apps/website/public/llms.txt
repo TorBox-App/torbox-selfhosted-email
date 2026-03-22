@@ -85,6 +85,7 @@ await email.send({
 ## Reference
 
 - [Error Codes](https://wraps.dev/docs/reference/errors): All CLI and SDK error codes with solutions
+- [Rate Limits](https://wraps.dev/docs/reference/rate-limits): API rate limits by plan, response headers, and 429 handling
 - [Environment Variables](https://wraps.dev/docs/reference/environment-variables): All env vars for CLI, SDKs, and CI/CD
 - [JSON Output](https://wraps.dev/docs/reference/json-output): Machine-readable output format
 - [Telemetry](https://wraps.dev/docs/telemetry): What telemetry is collected and how to opt out

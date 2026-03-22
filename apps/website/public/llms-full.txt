@@ -886,6 +886,7 @@ Install in Claude Code: `claude install-skill https://wraps.dev/.well-known/skil
 - Infrastructure (CDN): https://wraps.dev/docs/infrastructure/cdn
 - Infrastructure (Events): https://wraps.dev/docs/infrastructure/events
 - Error Codes: https://wraps.dev/docs/reference/errors
+- Rate Limits: https://wraps.dev/docs/reference/rate-limits
 - Environment Variables: https://wraps.dev/docs/reference/environment-variables
 - JSON Output: https://wraps.dev/docs/reference/json-output
 - Telemetry: https://wraps.dev/docs/telemetry

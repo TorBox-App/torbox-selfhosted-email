@@ -181,6 +181,11 @@ const navItems: NavSection[] = [
         icon: AlertTriangle,
       },
       {
+        title: "Rate Limits",
+        href: "/docs/reference/rate-limits",
+        icon: ShieldCheck,
+      },
+      {
         title: "JSON Output",
         href: "/docs/reference/json-output",
         icon: FileJson,

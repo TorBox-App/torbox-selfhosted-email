@@ -1,0 +1,91 @@
+{
+  "name": "Wraps",
+  "description": "CLI and TypeScript SDK that deploys email (SES), SMS, and CDN infrastructure to your AWS account. One command, full ownership, AWS pricing. No credentials stored.",
+  "url": "https://wraps.dev",
+  "provider": {
+    "organization": "Wraps",
+    "url": "https://wraps.dev"
+  },
+  "version": "1.0",
+  "documentationUrl": "https://wraps.dev/docs/quickstart/email",
+  "iconUrl": "https://wraps.dev/icon.svg",
+  "api": {
+    "base_url": "https://api.wraps.dev",
+    "docs": "https://wraps.dev/llms.txt",
+    "full_docs": "https://wraps.dev/llms-full.txt",
+    "authentication": "Bearer token via better-auth"
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": true,
+    "features": [
+      "deploy_email_infrastructure",
+      "deploy_sms_infrastructure",
+      "deploy_cdn_infrastructure",
+      "send_email",
+      "send_sms",
+      "manage_templates",
+      "manage_workflows",
+      "domain_verification",
+      "deliverability_audit"
+    ]
+  },
+  "skills": [
+    {
+      "id": "wraps-cli",
+      "name": "Wraps CLI",
+      "description": "Deploy and manage AWS communication infrastructure via CLI",
+      "tags": ["cli", "aws", "ses", "sms", "cdn", "infrastructure"]
+    },
+    {
+      "id": "wraps-email",
+      "name": "Wraps Email SDK",
+      "description": "Send email via AWS SES with TypeScript SDK",
+      "tags": ["email", "ses", "sdk", "typescript"]
+    },
+    {
+      "id": "wraps-sms",
+      "name": "Wraps SMS SDK",
+      "description": "Send SMS via AWS End User Messaging with TypeScript SDK",
+      "tags": ["sms", "sdk", "typescript"]
+    },
+    {
+      "id": "wraps-workflows",
+      "name": "Wraps Workflows",
+      "description": "Automated multi-step email and SMS sequences",
+      "tags": ["workflows", "automation", "sequences"]
+    }
+  ],
+  "protocols": [
+    "llms.txt",
+    "claude-code-skills"
+  ],
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "securitySchemes": {
+    "bearer": {
+      "type": "http",
+      "scheme": "bearer",
+      "description": "API authentication via better-auth bearer token"
+    },
+    "aws_credentials": {
+      "type": "custom",
+      "description": "AWS credentials (env vars, profiles, or OIDC) for SDK and CLI usage"
+    }
+  },
+  "entryPoints": {
+    "llms_txt": "https://wraps.dev/llms.txt",
+    "llms_full_txt": "https://wraps.dev/llms-full.txt",
+    "skills": "https://wraps.dev/.well-known/skills/",
+    "cli_quickstart": "https://wraps.dev/docs/quickstart/email",
+    "sdk_reference": "https://wraps.dev/docs/sdk-reference",
+    "cli_reference": "https://wraps.dev/docs/cli-reference"
+  },
+  "packages": {
+    "cli": "@wraps.dev/cli",
+    "email_sdk": "@wraps.dev/email",
+    "sms_sdk": "@wraps.dev/sms",
+    "platform_sdk": "@wraps.dev/client"
+  },
+  "contact": "support@wraps.dev"
+}
