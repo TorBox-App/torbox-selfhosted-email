@@ -176,6 +176,11 @@ const navItems: NavSection[] = [
     title: "Reference",
     items: [
       {
+        title: "API Reference",
+        href: "/docs/reference/api",
+        icon: FileCode2,
+      },
+      {
         title: "Error Codes",
         href: "/docs/reference/errors",
         icon: AlertTriangle,

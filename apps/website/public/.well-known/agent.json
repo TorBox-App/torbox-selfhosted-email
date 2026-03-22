@@ -11,6 +11,7 @@
   "iconUrl": "https://wraps.dev/icon.svg",
   "api": {
     "base_url": "https://api.wraps.dev",
+    "openapi": "https://api.wraps.dev/swagger/json",
     "docs": "https://wraps.dev/llms.txt",
     "full_docs": "https://wraps.dev/llms-full.txt",
     "authentication": "Bearer token via better-auth"
