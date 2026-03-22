@@ -12,8 +12,7 @@ import { Footer } from "./_components/footer";
 
 // -- Metadata --
 
-export const subject = "you've got {{contactCount}} contacts waiting" as const;
-export const subjectFallback = "your contacts are waiting" as const;
+export const subject = "your contacts are waiting" as const;
 export const emailType = "marketing" as const;
 export const previewText = "You've been building a list. Time to use it.";
 
@@ -21,7 +20,6 @@ export const previewText = "You've been building a list. Time to use it.";
 
 export const testData = {
   firstName: "Jane",
-  contactCount: 847,
   unsubscribeUrl: "https://wraps.dev/unsubscribe",
 };
 
@@ -29,12 +27,10 @@ export const testData = {
 
 type Props = {
   firstName: string;
-  contactCount?: number;
   unsubscribeUrl: string;
 };
 
 export default function NudgeSendBroadcast({
-  contactCount,
   unsubscribeUrl,
 }: Props) {
   return (
@@ -49,11 +45,8 @@ export default function NudgeSendBroadcast({
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
-              You&apos;ve got{" "}
-              {contactCount
-                ? `${contactCount.toLocaleString()} contacts`
-                : "contacts"}{" "}
-              and templates ready to go. A broadcast reaches your whole list at
+              You&apos;ve got contacts and templates ready to go. A broadcast
+              reaches your whole list at
               once &mdash; and it costs $0.10 per 1,000 emails through SES.
             </Text>
 
