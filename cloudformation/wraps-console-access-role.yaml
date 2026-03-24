@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Wraps Console Access Role - Grants Wraps dashboard read-only access to CloudWatch metrics, SES email, and SMS data"
+Description: "Wraps Console Access Role - Grants Wraps dashboard access to send emails/SMS, read CloudWatch metrics, and manage templates"
 
 Parameters:
   ExternalId:
@@ -14,14 +14,6 @@ Parameters:
     Description: "AWS Account ID of Wraps Platform"
     Default: "905130073023"
     AllowedPattern: "^[0-9]{12}$"
-
-  AllowEmailSending:
-    Type: String
-    Description: "Allow Wraps to send emails on your behalf"
-    Default: "true"
-    AllowedValues:
-      - "true"
-      - "false"
 
   EnableEmailArchiving:
     Type: String
@@ -39,14 +31,6 @@ Parameters:
       - "true"
       - "false"
 
-  AllowSMSSending:
-    Type: String
-    Description: "Allow Wraps to send SMS messages on your behalf"
-    Default: "true"
-    AllowedValues:
-      - "true"
-      - "false"
-
   EnableInboundEmail:
     Type: String
     Description: "Enable access to inbound email data in S3"
@@ -56,10 +40,8 @@ Parameters:
       - "false"
 
 Conditions:
-  EnableSending: !Equals [!Ref AllowEmailSending, "true"]
   EnableArchiving: !Equals [!Ref EnableEmailArchiving, "true"]
   EnableSMS: !Equals [!Ref EnableSMSAccess, "true"]
-  EnableSMSSend: !Equals [!Ref AllowSMSSending, "true"]
   EnableInbound: !Equals [!Ref EnableInboundEmail, "true"]
 
 Resources:
@@ -130,19 +112,16 @@ Resources:
                   - "ses:TestRenderTemplate"
                 Resource: "*"
 
-              # SES - Send Access (conditional)
-              - !If
-                - EnableSending
-                - Sid: "SESSendAccess"
-                  Effect: Allow
-                  Action:
-                    - "ses:SendEmail"
-                    - "ses:SendRawEmail"
-                    - "ses:SendTemplatedEmail"
-                    - "ses:SendBulkTemplatedEmail"
-                    - "ses:SendBulkEmail" # SES v2 bulk sending
-                  Resource: "*"
-                - !Ref "AWS::NoValue"
+              # SES - Send Access
+              - Sid: "SESSendAccess"
+                Effect: Allow
+                Action:
+                  - "ses:SendEmail"
+                  - "ses:SendRawEmail"
+                  - "ses:SendTemplatedEmail"
+                  - "ses:SendBulkTemplatedEmail"
+                  - "ses:SendBulkEmail" # SES v2 bulk sending
+                Resource: "*"
 
               # DynamoDB - Read Email Events (if using Wraps email tracking)
               - Sid: "DynamoDBReadEmailEvents"
@@ -201,16 +180,13 @@ Resources:
                   Resource: "*"
                 - !Ref "AWS::NoValue"
 
-              # SMS - Send Access (conditional)
-              - !If
-                - EnableSMSSend
-                - Sid: "SMSSendAccess"
-                  Effect: Allow
-                  Action:
-                    - "sms-voice:SendTextMessage"
-                    - "sms-voice:SendMediaMessage"
-                  Resource: "*"
-                - !Ref "AWS::NoValue"
+              # SMS - Send Access
+              - Sid: "SMSSendAccess"
+                Effect: Allow
+                Action:
+                  - "sms-voice:SendTextMessage"
+                  - "sms-voice:SendMediaMessage"
+                Resource: "*"
 
               # DynamoDB - Read SMS Events (conditional, if using Wraps SMS tracking)
               - !If

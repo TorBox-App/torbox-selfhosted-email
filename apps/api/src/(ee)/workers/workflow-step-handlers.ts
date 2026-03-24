@@ -450,8 +450,8 @@ export async function handleSendEmail(
     if (isSESPermissionError(error)) {
       throw new Error(
         "Your IAM role does not have permission to send emails. " +
-          "Fix: run `wraps platform update-role` in the CLI, or update your " +
-          "CloudFormation stack with AllowEmailSending=true."
+          "Fix: update your CloudFormation stack to the latest version, " +
+          "or run `wraps platform update-role` in the CLI."
       );
     }
     throw error;
