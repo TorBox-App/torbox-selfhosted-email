@@ -32,7 +32,7 @@ function getMaxAwsAccounts(planId: string | null): number {
 }
 
 function generateExternalId(): string {
-  return `wraps-${randomBytes(16).toString("hex")}`;
+  return `wraps_${randomBytes(16).toString("hex")}`;
 }
 
 export const connectionsRoutes = createAuthenticatedRoutes("/v1/connections")

@@ -89,7 +89,7 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
 
     const requestBody = {
       roleArn: "arn:aws:iam::123456789012:role/wraps-console-access",
-      externalId: "unique-external-id-123",
+      externalId: "wraps_01936f4a7b8c7d9eaf12abcdef012345",
     };
 
     const request = new Request(
@@ -130,7 +130,7 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
 
     const requestBody = {
       roleArn: "invalid-arn",
-      externalId: "external-id",
+      externalId: "wraps_01936f4a7b8c7d9eaf12abcdef012345",
     };
 
     const request = new Request(
@@ -163,7 +163,7 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
 
     const requestBody = {
       roleArn: "arn:aws:iam::123456789012:role/wraps-console-access",
-      externalId: "wrong-external-id",
+      externalId: "wraps_aabbccdd11223344aabbccdd11223344",
     };
 
     const request = new Request(
@@ -197,7 +197,7 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
         accountId: "123456789012", // Same account ID as the reconnection
         region: "us-east-1",
         roleArn: "arn:aws:iam::123456789012:role/old-role",
-        externalId: "old-external-id",
+        externalId: "wraps_00000000000000000000000000000001",
         isVerified: false,
         createdBy: testUser.id,
       })
@@ -217,7 +217,7 @@ describe("AWS Validation API - POST /api/[orgSlug]/aws/validate", () => {
 
     const requestBody = {
       roleArn: "arn:aws:iam::123456789012:role/new-role", // Same account, new role
-      externalId: "new-external-id", // New external ID (e.g., after re-deploying CF stack)
+      externalId: "wraps_00000000000000000000000000000002", // New external ID (e.g., after re-deploying CF stack)
     };
 
     const request = new Request(

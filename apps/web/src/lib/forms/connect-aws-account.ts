@@ -12,7 +12,17 @@ export const connectAWSAccountSchema = z.object({
   roleArn: z
     .string()
     .startsWith("arn:aws:iam::", "Must be a valid IAM role ARN"),
-  externalId: z.string().uuid("External ID must be a valid UUID"),
+  externalId: z
+    .string()
+    .min(1, "External ID is required")
+    .refine(
+      (s) =>
+        /^wraps[_-][a-f0-9-]{32,36}$/.test(s) ||
+        /^arn:aws:cloudformation:[a-z0-9-]+:\d{12}:stack\/[a-zA-Z0-9-]+\/[a-f0-9-]+$/.test(
+          s
+        ),
+      "External ID must be a Wraps ID (wraps_<uuid>) or CloudFormation stack ID"
+    ),
 });
 
 export type ConnectAWSAccountInput = z.infer<typeof connectAWSAccountSchema>;

@@ -71,6 +71,19 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    // Validate external ID format: wraps_<uuid/hex> or CloudFormation stack ARN
+    const isWrapsId = /^wraps[_-][a-f0-9-]{32,36}$/.test(externalId);
+    const isCfnStackId =
+      /^arn:aws:cloudformation:[a-z0-9-]+:\d{12}:stack\/[a-zA-Z0-9-]+\/[a-f0-9-]+$/.test(
+        externalId
+      );
+    if (!(isWrapsId || isCfnStackId)) {
+      return NextResponse.json(
+        { error: "Invalid External ID format" },
+        { status: 400 }
+      );
+    }
+
     // Validate role ARN format
     const roleArnRegex = /^arn:aws:iam::(\d{12}):role\/(.+)$/;
     const match = roleArn.match(roleArnRegex);

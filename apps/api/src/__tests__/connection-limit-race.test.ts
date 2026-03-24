@@ -167,7 +167,7 @@ describe("Connection plan limit race condition", () => {
       mockTx.select
         .mockReturnValueOnce(chain([{ count: 1 }])) // count: at limit
         .mockReturnValueOnce(
-          chain([{ id: "existing-conn-id", externalId: "wraps-abc123" }])
+          chain([{ id: "existing-conn-id", externalId: "wraps_abc123" }])
         ); // existing match found
       const updateChain = chain(undefined);
       mockTx.update.mockReturnValue(updateChain);
@@ -178,7 +178,7 @@ describe("Connection plan limit race condition", () => {
       const body = await response.json();
       expect(body.success).toBe(true);
       expect(body.connectionId).toBe("existing-conn-id");
-      expect(body.externalId).toBe("wraps-abc123");
+      expect(body.externalId).toBe("wraps_abc123");
       // Update, not insert
       expect(mockTx.update).toHaveBeenCalled();
       expect(mockTx.insert).not.toHaveBeenCalled();

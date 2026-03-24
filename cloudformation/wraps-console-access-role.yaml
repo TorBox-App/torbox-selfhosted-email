@@ -5,7 +5,8 @@ Parameters:
   ExternalId:
     Type: String
     Description: "External ID for secure role assumption (provided by Wraps)"
-    MinLength: 1
+    AllowedPattern: "^wraps[_-][a-f0-9-]{32,36}$"
+    ConstraintDescription: "External ID must start with wraps_ followed by a UUID or hex string (e.g., wraps_01936f4a-7b8c-7d9e-af12-abcdef012345)"
     NoEcho: true
 
   WrapsBackendAccountId:
