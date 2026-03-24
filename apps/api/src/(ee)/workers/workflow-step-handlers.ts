@@ -20,6 +20,7 @@ import {
   eq,
   messageSend,
   organization,
+  organizationExtension,
   type PreferredChannel,
   template,
   type WorkflowDefinitionSnapshot,
@@ -55,6 +56,18 @@ import {
   substituteVariables,
   validateWebhookUrl,
 } from "./workflow-utils";
+
+function isSESPermissionError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message || "";
+  const name = error.name || "";
+  return (
+    name === "AccessDeniedException" ||
+    name === "AccessDenied" ||
+    msg.includes("is not authorized to perform") ||
+    msg.includes("AccessDenied")
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SEND EMAIL
@@ -252,12 +265,42 @@ export async function handleSendEmail(
   replacementData.unsubscribeUrl = unsubscribeUrl;
   replacementData.preferencesUrl = preferencesUrl;
 
-  // Build from address (step config > workflow default > fallback)
-  const fromAddress =
-    config.from ||
-    wf.defaultFrom ||
-    `noreply@${process.env.DEFAULT_DOMAIN || "wraps.dev"}`;
-  const fromName = config.fromName || wf.defaultFromName;
+  // Build from address (step config > workflow default > org default > owner domain > fail)
+  let fromAddress: string | null | undefined = config.from || wf.defaultFrom;
+  let fromName: string | null | undefined =
+    config.fromName || wf.defaultFromName;
+
+  if (!fromAddress) {
+    const [orgExt] = await db
+      .select({
+        defaultFrom: organizationExtension.defaultFrom,
+        defaultFromName: organizationExtension.defaultFromName,
+      })
+      .from(organizationExtension)
+      .where(eq(organizationExtension.organizationId, organizationId))
+      .limit(1);
+    fromAddress = orgExt?.defaultFrom ?? null;
+    if (!fromName) {
+      fromName = orgExt?.defaultFromName ?? null;
+    }
+  }
+
+  if (!fromAddress) {
+    log.error("Workflow: no sender address configured", {
+      workflowId: execution.workflowId,
+      organizationId,
+    });
+    return {
+      action: "next",
+      data: {
+        skipped: true,
+        reason: "no_sender_configured",
+        error:
+          "No sender email configured. Set a default sender in Settings > Sender Defaults.",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
   const fromDisplay = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
   const replyTo = config.replyTo || wf.defaultReplyTo;
 
@@ -302,103 +345,116 @@ export async function handleSendEmail(
   let result: { MessageId?: string };
   let subject: string;
 
-  if (sesTemplateName && !config.subject) {
-    // Use SES template - let SES handle variable substitution
-    // (SES templates have their own subject baked in, so only use this path
-    // when there's no step-level override)
-    subject = sanitizeEmailSubject(tmpl.subject || "Message");
+  try {
+    if (sesTemplateName && !config.subject) {
+      // Use SES template - let SES handle variable substitution
+      // (SES templates have their own subject baked in, so only use this path
+      // when there's no step-level override)
+      subject = sanitizeEmailSubject(tmpl.subject || "Message");
 
-    result = await sesClient.send(
-      new SendEmailCommand({
-        FromEmailAddress: fromDisplay,
-        ReplyToAddresses: replyTo ? [replyTo] : undefined,
-        Destination: {
-          ToAddresses: [contactRecord.email],
-        },
-        Content: {
-          Template: {
-            TemplateName: sesTemplateName,
-            TemplateData: JSON.stringify(replacementData),
-            Headers: headers.length > 0 ? headers : undefined,
+      result = await sesClient.send(
+        new SendEmailCommand({
+          FromEmailAddress: fromDisplay,
+          ReplyToAddresses: replyTo ? [replyTo] : undefined,
+          Destination: {
+            ToAddresses: [contactRecord.email],
           },
-        },
-        ConfigurationSetName: "wraps-email-tracking",
-        EmailTags: emailTags,
-      })
-    );
-
-    log.info("Workflow: email sent via SES template", {
-      template: sesTemplateName,
-      to: contactRecord.email,
-    });
-  } else if (sesTemplateName && config.subject) {
-    // SES template exists but step has a subject override — send as raw HTML
-    // so we can apply the overridden subject
-    const html = substituteVariables(tmpl.compiledHtml, replacementData, {
-      escapeHtml: true,
-    });
-
-    const rawSubject = substituteVariables(baseSubject, replacementData);
-    subject = sanitizeEmailSubject(rawSubject);
-
-    result = await sesClient.send(
-      new SendEmailCommand({
-        FromEmailAddress: fromDisplay,
-        ReplyToAddresses: replyTo ? [replyTo] : undefined,
-        Destination: {
-          ToAddresses: [contactRecord.email],
-        },
-        Content: {
-          Simple: {
-            Subject: { Data: subject },
-            Body: {
-              Html: { Data: html },
-              Text: { Data: htmlToPlainText(html) },
+          Content: {
+            Template: {
+              TemplateName: sesTemplateName,
+              TemplateData: JSON.stringify(replacementData),
+              Headers: headers.length > 0 ? headers : undefined,
             },
-            Headers: headers.length > 0 ? headers : undefined,
           },
-        },
-        ConfigurationSetName: "wraps-email-tracking",
-        EmailTags: emailTags,
-      })
-    );
+          ConfigurationSetName: "wraps-email-tracking",
+          EmailTags: emailTags,
+        })
+      );
 
-    log.info("Workflow: email sent via raw HTML (subject override)", {
-      to: contactRecord.email,
-    });
-  } else {
-    // Fallback: Apply variable substitution locally and send raw HTML
-    const html = substituteVariables(tmpl.compiledHtml, replacementData, {
-      escapeHtml: true,
-    });
+      log.info("Workflow: email sent via SES template", {
+        template: sesTemplateName,
+        to: contactRecord.email,
+      });
+    } else if (sesTemplateName && config.subject) {
+      // SES template exists but step has a subject override — send as raw HTML
+      // so we can apply the overridden subject
+      const html = substituteVariables(tmpl.compiledHtml, replacementData, {
+        escapeHtml: true,
+      });
 
-    // Build subject with variable substitution
-    const rawSubject = substituteVariables(baseSubject, replacementData);
-    subject = sanitizeEmailSubject(rawSubject);
+      const rawSubject = substituteVariables(baseSubject, replacementData);
+      subject = sanitizeEmailSubject(rawSubject);
 
-    result = await sesClient.send(
-      new SendEmailCommand({
-        FromEmailAddress: fromDisplay,
-        ReplyToAddresses: replyTo ? [replyTo] : undefined,
-        Destination: {
-          ToAddresses: [contactRecord.email],
-        },
-        Content: {
-          Simple: {
-            Subject: { Data: subject },
-            Body: {
-              Html: { Data: html },
-              Text: { Data: htmlToPlainText(html) },
+      result = await sesClient.send(
+        new SendEmailCommand({
+          FromEmailAddress: fromDisplay,
+          ReplyToAddresses: replyTo ? [replyTo] : undefined,
+          Destination: {
+            ToAddresses: [contactRecord.email],
+          },
+          Content: {
+            Simple: {
+              Subject: { Data: subject },
+              Body: {
+                Html: { Data: html },
+                Text: { Data: htmlToPlainText(html) },
+              },
+              Headers: headers.length > 0 ? headers : undefined,
             },
-            Headers: headers.length > 0 ? headers : undefined,
           },
-        },
-        ConfigurationSetName: "wraps-email-tracking",
-        EmailTags: emailTags,
-      })
-    );
+          ConfigurationSetName: "wraps-email-tracking",
+          EmailTags: emailTags,
+        })
+      );
 
-    log.info("Workflow: email sent via raw HTML", { to: contactRecord.email });
+      log.info("Workflow: email sent via raw HTML (subject override)", {
+        to: contactRecord.email,
+      });
+    } else {
+      // Fallback: Apply variable substitution locally and send raw HTML
+      const html = substituteVariables(tmpl.compiledHtml, replacementData, {
+        escapeHtml: true,
+      });
+
+      // Build subject with variable substitution
+      const rawSubject = substituteVariables(baseSubject, replacementData);
+      subject = sanitizeEmailSubject(rawSubject);
+
+      result = await sesClient.send(
+        new SendEmailCommand({
+          FromEmailAddress: fromDisplay,
+          ReplyToAddresses: replyTo ? [replyTo] : undefined,
+          Destination: {
+            ToAddresses: [contactRecord.email],
+          },
+          Content: {
+            Simple: {
+              Subject: { Data: subject },
+              Body: {
+                Html: { Data: html },
+                Text: { Data: htmlToPlainText(html) },
+              },
+              Headers: headers.length > 0 ? headers : undefined,
+            },
+          },
+          ConfigurationSetName: "wraps-email-tracking",
+          EmailTags: emailTags,
+        })
+      );
+
+      log.info("Workflow: email sent via raw HTML", {
+        to: contactRecord.email,
+      });
+    }
+  } catch (error) {
+    if (isSESPermissionError(error)) {
+      throw new Error(
+        "Your IAM role does not have permission to send emails. " +
+          "Fix: run `wraps platform update-role` in the CLI, or update your " +
+          "CloudFormation stack with AllowEmailSending=true."
+      );
+    }
+    throw error;
   }
 
   const messageId = result.MessageId ?? crypto.randomUUID();

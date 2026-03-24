@@ -157,10 +157,13 @@ mockDbTransaction.mockImplementation(async (callback: Function) =>
   })
 );
 
+let sesSendOverride: (() => Promise<unknown>) | null = null;
+
 vi.mock("@aws-sdk/client-sesv2", () => {
   class MockSESv2Client {
     send(...args: unknown[]) {
       sesSendCalls.push(args);
+      if (sesSendOverride) return sesSendOverride();
       return Promise.resolve({ MessageId: "ses-msg-1" });
     }
   }
@@ -369,6 +372,7 @@ beforeEach(() => {
   mockFetch.mockReset();
   sesSendCalls.length = 0;
   smsSendCalls.length = 0;
+  sesSendOverride = null;
   mockDbTransaction.mockImplementation(async (callback: Function) =>
     callback({
       select: mockDbSelect,
@@ -917,6 +921,100 @@ describe("handleSendEmail", () => {
       { channel: "email", source: "workflow" },
       "workflow-user@example.com"
     );
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // From address resolution fallback chain
+  // ─────────────────────────────────────────────────────────────────────────
+
+  it("falls back to org defaultFrom when workflow and step have no from", async () => {
+    setupEmailTest({
+      workflow: { defaultFrom: null, defaultFromName: null },
+    });
+
+    // The org extension query is select #7 (after the 6 existing selects).
+    // Override the mock to return org defaults on call 7.
+    const origImpl = mockDbSelect.getMockImplementation()!;
+    let count = 0;
+    mockDbSelect.mockImplementation((...args: unknown[]) => {
+      count++;
+      if (count === 7) {
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([
+                {
+                  defaultFrom: "orgdefault@example.com",
+                  defaultFromName: "Org Sender",
+                },
+              ]),
+            }),
+          }),
+        };
+      }
+      return origImpl(...args);
+    });
+
+    await handler(makeSQSEvent(emailJob));
+    expect(sesSendCalls).toHaveLength(1);
+    const sendInput = sesSendCalls[0][0] as Record<string, string>;
+    expect(sendInput.FromEmailAddress).toBe(
+      "Org Sender <orgdefault@example.com>"
+    );
+  });
+
+  it("skips email with no_sender_configured when no from address anywhere", async () => {
+    setupEmailTest({
+      workflow: { defaultFrom: null, defaultFromName: null },
+    });
+
+    // select #7 (org extension) returns empty — no defaults configured
+    // The default case in setupEmailTest already returns [] for calls > 6
+
+    await handler(makeSQSEvent(emailJob));
+
+    // Should NOT attempt to send via SES
+    expect(sesSendCalls).toHaveLength(0);
+
+    // Step execution should still be updated (the processor always updates)
+    expect(mockDbUpdate).toHaveBeenCalled();
+  });
+
+  it("throws actionable error on IAM permission denial", async () => {
+    setupEmailTest();
+
+    const accessDenied = new Error(
+      "is not authorized to perform `ses:SendEmail`"
+    );
+    accessDenied.name = "AccessDeniedException";
+    sesSendOverride = () => Promise.reject(accessDenied);
+
+    await handler(makeSQSEvent(emailJob));
+
+    // Step execution should be marked failed with the helpful message
+    const updateCalls = mockDbUpdate.mock.calls;
+    const setCalls = updateCalls.flatMap((call: unknown[]) => {
+      const result = (mockDbUpdate as ReturnType<typeof vi.fn>).mock.results;
+      return result.map(
+        (r: { type: string; value: { set: ReturnType<typeof vi.fn> } }) =>
+          r.value?.set?.mock?.calls
+      );
+    });
+    // The error should contain the helpful message (checked via the update set call)
+    const failedUpdate = mockDbUpdate.mock.results.find(
+      (r: { type: string; value: { set: ReturnType<typeof vi.fn> } }) => {
+        const setCalls = r.value?.set?.mock?.calls;
+        return setCalls?.some((c: unknown[]) => {
+          const arg = c[0] as Record<string, unknown>;
+          return (
+            arg?.status === "failed" &&
+            typeof arg?.error === "string" &&
+            (arg.error as string).includes("wraps platform update-role")
+          );
+        });
+      }
+    );
+    expect(failedUpdate).toBeDefined();
   });
 });
 
