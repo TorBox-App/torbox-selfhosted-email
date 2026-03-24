@@ -434,8 +434,8 @@ export function ConnectAWSAccountForm({
                       value={field.state.value ?? ""}
                     />
                     <FieldDescription>
-                      Find this in the CloudFormation stack outputs after
-                      deployment.
+                      In CloudFormation, go to the Outputs tab and copy the{" "}
+                      <strong>RoleArn</strong> value.
                     </FieldDescription>
                     {isInvalid && <FieldError errors={errors} />}
                   </Field>

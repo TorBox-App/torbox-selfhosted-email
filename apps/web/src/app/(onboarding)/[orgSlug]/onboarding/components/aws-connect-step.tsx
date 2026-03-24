@@ -161,10 +161,16 @@ export function AwsConnectStep({
 
         {/* Step 2: Copy Outputs */}
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm">2. Copy the Role ARN</h3>
+          <h3 className="font-semibold text-sm">
+            2. Copy the Role ARN from Outputs
+          </h3>
           <p className="text-muted-foreground text-sm">
-            After the stack is created, go to the <strong>Outputs</strong> tab
-            and copy the <strong>RoleArn</strong> value.
+            After CloudFormation shows{" "}
+            <strong className="text-green-600 dark:text-green-400">
+              CREATE_COMPLETE
+            </strong>
+            , click the <strong>Outputs</strong> tab and copy the{" "}
+            <strong>RoleArn</strong> value below.
           </p>
         </div>
 

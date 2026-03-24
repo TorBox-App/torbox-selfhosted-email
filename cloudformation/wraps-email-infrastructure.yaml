@@ -1239,13 +1239,13 @@ Outputs:
 
   # Console Access Outputs (for Wraps Dashboard)
   ConsoleRoleArn:
-    Description: "IAM role ARN for Wraps dashboard access (copy this to Wraps)"
+    Description: "Paste this into the 'Console Role ARN' field in the Wraps dashboard"
     Value: !GetAtt WrapsConsoleAccessRole.Arn
     Export:
       Name: "WrapsConsoleAccessRoleArn"
 
   ExternalId:
-    Description: "External ID for dashboard role (copy this to Wraps)"
+    Description: "Paste this into the 'External ID' field in the Wraps dashboard (this is your CloudFormation stack ID — it will look like an ARN, that's expected)"
     Value: !Sub "${AWS::StackId}"
 
   ConfigSetName:

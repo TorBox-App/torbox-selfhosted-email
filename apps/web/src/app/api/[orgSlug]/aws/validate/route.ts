@@ -62,7 +62,10 @@ export async function POST(request: Request, context: RouteContext) {
       );
     if (!(isWrapsId || isCfnStackId)) {
       return NextResponse.json(
-        { error: "Invalid External ID format" },
+        {
+          error:
+            "Invalid External ID format. Expected a Wraps ID (wraps_...) or CloudFormation stack ARN.",
+        },
         { status: 400 }
       );
     }

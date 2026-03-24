@@ -279,13 +279,13 @@ Resources:
 
 Outputs:
   RoleArn:
-    Description: "ARN of the Wraps Console Access Role"
+    Description: "Paste this into the 'Role ARN' field in the Wraps dashboard"
     Value: !GetAtt WrapsConsoleAccessRole.Arn
     Export:
       Name: "WrapsConsoleAccessRoleArn"
 
   ExternalId:
-    Description: "External ID for this role (keep this secret)"
+    Description: "Keep this secret — it was pre-filled from the Wraps dashboard"
     Value: !Ref ExternalId
 
   AccountId:

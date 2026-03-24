@@ -912,15 +912,17 @@ function DeployConnectGuide({ organizationId }: { organizationId: string }) {
               </div>
 
               <p className="text-muted-foreground text-sm">
-                Once CloudFormation finishes, copy the{" "}
-                <strong>ConsoleRoleArn</strong> and <strong>ExternalId</strong>{" "}
-                from the Outputs tab:
+                Once CloudFormation finishes, go to the <strong>Outputs</strong>{" "}
+                tab and copy these two values:
               </p>
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs" htmlFor="cfn-role-arn">
                     Console Role ARN
+                    <span className="ml-1.5 text-muted-foreground font-normal">
+                      — output key: ConsoleRoleArn
+                    </span>
                   </Label>
                   <Input
                     id="cfn-role-arn"
@@ -932,13 +934,19 @@ function DeployConnectGuide({ organizationId }: { organizationId: string }) {
                 <div className="space-y-1.5">
                   <Label className="text-xs" htmlFor="cfn-external-id">
                     External ID
+                    <span className="ml-1.5 text-muted-foreground font-normal">
+                      — output key: ExternalId
+                    </span>
                   </Label>
                   <Input
                     id="cfn-external-id"
                     onChange={(e) => setExternalId(e.target.value)}
-                    placeholder="wraps-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    placeholder="arn:aws:cloudformation:us-east-1:123456789012:stack/wraps-email-infrastructure/..."
                     value={externalId}
                   />
+                  <p className="text-muted-foreground text-[11px]">
+                    This will look like a CloudFormation ARN — that's expected.
+                  </p>
                 </div>
                 {validationError && (
                   <ResultMessage message={validationError} success={false} />

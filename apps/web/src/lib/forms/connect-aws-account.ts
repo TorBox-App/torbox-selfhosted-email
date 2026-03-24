@@ -21,7 +21,7 @@ export const connectAWSAccountSchema = z.object({
         /^arn:aws:cloudformation:[a-z0-9-]+:\d{12}:stack\/[a-zA-Z0-9-]+\/[a-f0-9-]+$/.test(
           s
         ),
-      "External ID must be a Wraps ID (wraps_<uuid>) or CloudFormation stack ID"
+      "Paste the External ID from your CloudFormation stack Outputs tab. It starts with wraps_ or arn:aws:cloudformation:"
     ),
 });
 
