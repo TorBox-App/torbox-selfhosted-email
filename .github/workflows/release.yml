@@ -228,18 +228,16 @@ jobs:
           [[ "$DIST_TAG" != "latest" ]] && PRERELEASE_FLAG="--prerelease"
 
           if gh release view "$TAG" --repo "${{ github.repository }}" &>/dev/null; then
-            echo "Release $TAG already exists — uploading assets"
-            gh release upload "$TAG" wraps-*.tar.gz CHECKSUMS.sha256 \
-              --repo "${{ github.repository }}" \
-              --clobber
-          else
-            gh release create "$TAG" wraps-*.tar.gz CHECKSUMS.sha256 \
-              --repo "${{ github.repository }}" \
-              --title "CLI v$VERSION" \
-              --generate-notes \
-              --verify-tag \
-              $PRERELEASE_FLAG
+            echo "Release $TAG already exists — deleting and recreating with assets"
+            gh release delete "$TAG" --repo "${{ github.repository }}" --yes
           fi
+
+          gh release create "$TAG" wraps-*.tar.gz CHECKSUMS.sha256 \
+            --repo "${{ github.repository }}" \
+            --title "CLI v$VERSION" \
+            --generate-notes \
+            --verify-tag \
+            $PRERELEASE_FLAG
 
       - name: Summary
         run: |
