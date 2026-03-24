@@ -17,40 +17,40 @@ Parameters:
 
   AllowEmailSending:
     Type: String
-    Description: "Allow Wraps to send emails on your behalf (default: false)"
-    Default: "false"
+    Description: "Allow Wraps to send emails on your behalf"
+    Default: "true"
     AllowedValues:
       - "true"
       - "false"
 
   EnableEmailArchiving:
     Type: String
-    Description: "Enable access to email archives (requires Wraps email archiving feature)"
-    Default: "false"
+    Description: "Enable access to email archives"
+    Default: "true"
     AllowedValues:
       - "true"
       - "false"
 
   EnableSMSAccess:
     Type: String
-    Description: "Enable access to SMS data and metrics (requires Wraps SMS feature)"
-    Default: "false"
+    Description: "Enable access to SMS data and metrics"
+    Default: "true"
     AllowedValues:
       - "true"
       - "false"
 
   AllowSMSSending:
     Type: String
-    Description: "Allow Wraps to send SMS messages on your behalf (default: false)"
-    Default: "false"
+    Description: "Allow Wraps to send SMS messages on your behalf"
+    Default: "true"
     AllowedValues:
       - "true"
       - "false"
 
   EnableInboundEmail:
     Type: String
-    Description: "Enable access to inbound email data in S3 (requires Wraps inbound email feature)"
-    Default: "false"
+    Description: "Enable access to inbound email data in S3"
+    Default: "true"
     AllowedValues:
       - "true"
       - "false"
