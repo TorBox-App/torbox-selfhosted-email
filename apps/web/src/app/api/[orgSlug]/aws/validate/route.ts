@@ -45,7 +45,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     // Parse request body
     const body = await request.json();
-    const { roleArn, externalId } = body;
+    const { roleArn, externalId, region = "us-east-1" } = body;
 
     if (!(roleArn && externalId)) {
       return NextResponse.json(
@@ -148,7 +148,7 @@ export async function POST(request: Request, context: RouteContext) {
           organizationId: orgWithMembership.id,
           name: `AWS Account ${accountId}`,
           accountId,
-          region: "us-east-1", // Default region
+          region,
           roleArn,
           externalId,
           isVerified: true,

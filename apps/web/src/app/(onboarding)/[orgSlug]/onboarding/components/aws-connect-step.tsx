@@ -65,7 +65,11 @@ export function AwsConnectStep({
 
   // TanStack Query mutation for AWS validation
   const validateAwsMutation = useMutation({
-    mutationFn: async (data: { roleArn: string; externalId: string }) => {
+    mutationFn: async (data: {
+      roleArn: string;
+      externalId: string;
+      region: string;
+    }) => {
       const response = await fetch(`/api/${organizationId}/aws/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,7 +118,7 @@ export function AwsConnectStep({
     },
     onSubmit: async ({ value }) => {
       // Include the generated externalId with the form submission
-      validateAwsMutation.mutate({ ...value, externalId });
+      validateAwsMutation.mutate({ ...value, externalId, region: "us-east-1" });
     },
     validators: {
       onSubmit: z.object({

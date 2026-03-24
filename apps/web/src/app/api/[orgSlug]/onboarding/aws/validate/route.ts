@@ -18,7 +18,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const { orgSlug } = await context.params;
     const body = await request.json();
-    const { roleArn, externalId } = body;
+    const { roleArn, externalId, region = "us-east-1" } = body;
 
     if (!(roleArn && externalId)) {
       return NextResponse.json(
@@ -102,7 +102,7 @@ export async function POST(request: Request, context: RouteContext) {
             accountId,
             roleArn,
             externalId,
-            region: "us-east-1", // Defaulting to us-east-1 for now
+            region,
             isVerified: true,
             lastVerifiedAt: new Date(),
             updatedAt: new Date(),
@@ -115,7 +115,7 @@ export async function POST(request: Request, context: RouteContext) {
           accountId,
           roleArn,
           externalId,
-          region: "us-east-1",
+          region,
           isVerified: true,
           lastVerifiedAt: new Date(),
           createdBy: session.user.id,
@@ -124,7 +124,7 @@ export async function POST(request: Request, context: RouteContext) {
 
       // Activation tracking (awaited to ensure events emit before response)
       await trackAwsConnected(session.user.email, orgWithMembership.id, {
-        region: "us-east-1",
+        region,
         accountId,
       });
 
