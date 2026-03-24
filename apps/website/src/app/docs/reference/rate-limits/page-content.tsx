@@ -13,8 +13,8 @@ import {
   CodeBlockBody,
   CodeBlockContent,
   CodeBlockCopyButton,
-  CodeBlockFiles,
   CodeBlockFilename,
+  CodeBlockFiles,
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
@@ -176,9 +176,7 @@ export default function PageContent() {
                     <th className="px-4 py-2 text-left font-medium">
                       Per Minute
                     </th>
-                    <th className="px-4 py-2 text-left font-medium">
-                      Per Day
-                    </th>
+                    <th className="px-4 py-2 text-left font-medium">Per Day</th>
                   </tr>
                 </thead>
                 <tbody className="text-muted-foreground">
@@ -364,10 +362,7 @@ export default function PageContent() {
         </div>
 
         <div>
-          <h3
-            className="mb-3 font-medium text-lg"
-            id="rate-limited-response"
-          >
+          <h3 className="mb-3 font-medium text-lg" id="rate-limited-response">
             Rate limited response (429)
           </h3>
           <CodeBlock

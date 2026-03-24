@@ -30,9 +30,7 @@ type Props = {
   unsubscribeUrl: string;
 };
 
-export default function NudgeSendBroadcast({
-  unsubscribeUrl,
-}: Props) {
+export default function NudgeSendBroadcast({ unsubscribeUrl }: Props) {
   return (
     <Html>
       <Head />
@@ -46,8 +44,8 @@ export default function NudgeSendBroadcast({
 
             <Text className="text-[15px] leading-relaxed text-gray-800">
               You&apos;ve got contacts and templates ready to go. A broadcast
-              reaches your whole list at
-              once &mdash; and it costs $0.10 per 1,000 emails through SES.
+              reaches your whole list at once &mdash; and it costs $0.10 per
+              1,000 emails through SES.
             </Text>
 
             <Text className="text-[15px] leading-relaxed text-gray-800">

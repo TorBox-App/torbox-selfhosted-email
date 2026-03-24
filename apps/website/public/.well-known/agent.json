@@ -57,10 +57,7 @@
       "tags": ["workflows", "automation", "sequences"]
     }
   ],
-  "protocols": [
-    "llms.txt",
-    "claude-code-skills"
-  ],
+  "protocols": ["llms.txt", "claude-code-skills"],
   "defaultInputModes": ["application/json"],
   "defaultOutputModes": ["application/json"],
   "securitySchemes": {

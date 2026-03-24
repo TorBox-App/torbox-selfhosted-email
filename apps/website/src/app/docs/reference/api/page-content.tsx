@@ -13,8 +13,8 @@ import {
   CodeBlockBody,
   CodeBlockContent,
   CodeBlockCopyButton,
-  CodeBlockFiles,
   CodeBlockFilename,
+  CodeBlockFiles,
   CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
@@ -206,7 +206,13 @@ export default function PageContent() {
         </p>
         <CodeBlock
           className="h-auto"
-          data={[{ language: "text", filename: "base url", code: "https://api.wraps.dev" }]}
+          data={[
+            {
+              language: "text",
+              filename: "base url",
+              code: "https://api.wraps.dev",
+            },
+          ]}
         >
           <CodeBlockHeader>
             <CodeBlockFiles>
@@ -282,7 +288,9 @@ export default function PageContent() {
 
         <CodeBlock
           className="h-auto"
-          data={[{ language: "bash", filename: "curl examples", code: curlExample }]}
+          data={[
+            { language: "bash", filename: "curl examples", code: curlExample },
+          ]}
         >
           <CodeBlockHeader>
             <CodeBlockFiles>
@@ -369,7 +377,9 @@ export default function PageContent() {
         </p>
         <CodeBlock
           className="h-auto"
-          data={[{ language: "typescript", filename: "client.ts", code: sdkExample }]}
+          data={[
+            { language: "typescript", filename: "client.ts", code: sdkExample },
+          ]}
         >
           <CodeBlockHeader>
             <CodeBlockFiles>
