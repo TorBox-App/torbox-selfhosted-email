@@ -23,6 +23,7 @@ import { check } from "./commands/email/check.js";
 import { config } from "./commands/email/config.js";
 import { connect } from "./commands/email/connect.js";
 import { emailDestroy } from "./commands/email/destroy.js";
+import { emailDoctor } from "./commands/email/doctor.js";
 import {
   addDomain,
   getDkim,
@@ -159,6 +160,9 @@ function showHelp() {
   );
   console.log(
     `  ${pc.cyan("email destroy")}        Remove email infrastructure`
+  );
+  console.log(
+    `  ${pc.cyan("email doctor")}         Diagnose and clean up email infrastructure`
   );
   console.log(`  ${pc.cyan("email domains add")}    Add a domain to SES`);
   console.log(`  ${pc.cyan("email domains list")}   List all domains`);
@@ -516,6 +520,11 @@ args.options([
   {
     name: "root",
     description: "Use root domain for inbound email (no subdomain)",
+    defaultValue: false,
+  },
+  {
+    name: "cleanup",
+    description: "Delete orphaned resources (used with email doctor)",
     defaultValue: false,
   },
 ]);
@@ -1083,6 +1092,14 @@ async function run() {
             region: flags.region,
             preview: flags.preview,
             json: flags.json,
+          });
+          break;
+
+        case "doctor":
+          await emailDoctor({
+            region: flags.region,
+            json: flags.json,
+            cleanup: flags.cleanup,
           });
           break;
 

@@ -131,6 +131,8 @@ export function parsePulumiError(error: Error): {
   code: string;
   iamAction?: string;
   service?: string;
+  resourceName?: string;
+  resourceType?: string;
 } {
   const message = error.message || "";
 
@@ -170,6 +172,27 @@ export function parsePulumiError(error: Error): {
     }
 
     return { code: "IAM_PERMISSION_DENIED" };
+  }
+
+  // Check for resource conflict (already exists)
+  if (
+    message.includes("AlreadyExists") ||
+    message.includes("already exists") ||
+    message.includes("already exist") ||
+    message.includes("ResourceConflictException") ||
+    message.includes("ResourceInUse") ||
+    message.includes("EntityAlreadyExists")
+  ) {
+    // Extract resource name from "error creating 'name'" pattern
+    const nameMatch = message.match(/error creating '([^']+)'/);
+    // Extract resource type from "(aws:service/type:Type)" pattern
+    const typeMatch = message.match(/\((aws:[^)]+)\)/);
+
+    return {
+      code: "RESOURCE_CONFLICT",
+      resourceName: nameMatch?.[1],
+      resourceType: typeMatch?.[1],
+    };
   }
 
   // Check for stack locked
@@ -270,7 +293,9 @@ export function handleCLIError(error: unknown, command?: string): never {
       const wrapsErr = pulumiErrorToWrapsError(
         parsed.code,
         parsed.iamAction,
-        parsed.service
+        parsed.service,
+        parsed.resourceName,
+        parsed.resourceType
       );
       message = wrapsErr.message;
       suggestion = wrapsErr.suggestion;
@@ -340,14 +365,21 @@ export function handleCLIError(error: unknown, command?: string): never {
 
   // Check for Pulumi errors
   if (isPulumiError(error)) {
-    const { code, iamAction, service } = parsePulumiError(error as Error);
+    const { code, iamAction, service, resourceName, resourceType } =
+      parsePulumiError(error as Error);
     trackError(`PULUMI_${code}`, cmdContext, {
       iamAction,
       service,
       errorType: (error as Error)?.constructor?.name,
     });
 
-    const wrapsError = pulumiErrorToWrapsError(code, iamAction, service);
+    const wrapsError = pulumiErrorToWrapsError(
+      code,
+      iamAction,
+      service,
+      resourceName,
+      resourceType
+    );
 
     clack.log.error(wrapsError.message);
     if (wrapsError.suggestion) {
@@ -416,9 +448,16 @@ function awsErrorToWrapsError(code: string, action?: string): WrapsError {
 function pulumiErrorToWrapsError(
   code: string,
   iamAction?: string,
-  service?: string
+  service?: string,
+  resourceName?: string,
+  resourceType?: string
 ): WrapsError {
   switch (code) {
+    case "RESOURCE_CONFLICT":
+      return errors.resourceConflict(
+        resourceName || "unknown resource",
+        resourceType
+      );
     case "STACK_LOCKED":
       return errors.stackLocked();
     case "SES_PERMISSION_DENIED":
@@ -718,6 +757,14 @@ export const errors = {
       "STATE_MIGRATION_FAILED",
       "The migration from local to S3 state storage failed.\nYour local state is still intact.\n\nTo skip migration and use local-only state:\n  export WRAPS_LOCAL_ONLY=1",
       "https://wraps.dev/docs/guides/aws-setup/permissions"
+    ),
+
+  resourceConflict: (resourceName: string, resourceType?: string) =>
+    new WrapsError(
+      `Resource already exists: ${resourceName}${resourceType ? ` (${resourceType})` : ""}`,
+      "RESOURCE_CONFLICT",
+      "Existing Wraps resources were found in your AWS account.\n\nTo diagnose and clean up:\n  wraps email doctor --cleanup\n\nThen retry your deployment.",
+      "https://wraps.dev/docs/guides/aws-setup/troubleshooting"
     ),
 
   // Templates-as-code errors

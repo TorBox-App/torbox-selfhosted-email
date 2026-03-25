@@ -636,6 +636,30 @@ describe("error factory functions", () => {
   });
 });
 
+describe("resourceConflict error factory", () => {
+  it("should create error with resource name and type", () => {
+    const error = errors.resourceConflict(
+      "wraps-email-config-set",
+      "aws:ses/configurationSet:ConfigurationSet"
+    );
+
+    expect(error).toBeInstanceOf(WrapsError);
+    expect(error.code).toBe("RESOURCE_CONFLICT");
+    expect(error.message).toContain("wraps-email-config-set");
+    expect(error.message).toContain("already exists");
+    expect(error.suggestion).toContain("wraps email doctor --cleanup");
+  });
+
+  it("should handle missing resource type", () => {
+    const error = errors.resourceConflict("wraps-email-role");
+
+    expect(error).toBeInstanceOf(WrapsError);
+    expect(error.code).toBe("RESOURCE_CONFLICT");
+    expect(error.message).toContain("wraps-email-role");
+    expect(error.suggestion).toContain("wraps email doctor --cleanup");
+  });
+});
+
 describe("isAWSError", () => {
   it("should return true for known AWS error names", () => {
     const awsErrorNames = [
@@ -832,6 +856,62 @@ describe("parsePulumiError", () => {
     const result = parsePulumiError(error);
 
     expect(result.code).toBe("PULUMI_ERROR");
+  });
+
+  it("should detect RESOURCE_CONFLICT when message contains AlreadyExists", () => {
+    const error = new Error(
+      "error creating 'wraps-email-config-set' (aws:ses/configurationSet:ConfigurationSet): EntityAlreadyExists: Configuration set wraps-email-config-set already exists"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("RESOURCE_CONFLICT");
+  });
+
+  it("should detect RESOURCE_CONFLICT for ResourceInUse patterns", () => {
+    const error = new Error(
+      "error creating 'wraps-email-lambda' (aws:lambda/function:Function): ResourceConflictException: Function already exist: wraps-email-lambda"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("RESOURCE_CONFLICT");
+  });
+
+  it("should detect RESOURCE_CONFLICT for generic already exists", () => {
+    const error = new Error(
+      "creating resource: InvalidParameter: IAM role wraps-email-role already exists in this account"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("RESOURCE_CONFLICT");
+  });
+
+  it("should extract resource name and type from Pulumi error format", () => {
+    const error = new Error(
+      "error creating 'wraps-email-config-set' (aws:ses/configurationSet:ConfigurationSet): EntityAlreadyExists: Configuration set wraps-email-config-set already exists"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("RESOURCE_CONFLICT");
+    expect(result.resourceName).toBe("wraps-email-config-set");
+    expect(result.resourceType).toBe(
+      "aws:ses/configurationSet:ConfigurationSet"
+    );
+  });
+
+  it("should return undefined resourceName/Type when not in Pulumi format", () => {
+    const error = new Error(
+      "creating resource: InvalidParameter: IAM role wraps-email-role already exists in this account"
+    );
+
+    const result = parsePulumiError(error);
+
+    expect(result.code).toBe("RESOURCE_CONFLICT");
+    expect(result.resourceName).toBeUndefined();
+    expect(result.resourceType).toBeUndefined();
   });
 });
 

@@ -248,6 +248,22 @@ export async function init(options: InitOptions): Promise<void> {
     }
   }
 
+  // 7b. Pre-flight resource scan (non-blocking)
+  if (!options.preview) {
+    const { runPreflightScan } = await import(
+      "../../utils/shared/preflight.js"
+    );
+    const preflight = await progress.execute(
+      "Scanning for existing resources",
+      async () => runPreflightScan(region, domain)
+    );
+
+    if (!preflight.shouldContinue) {
+      clack.cancel("Deployment cancelled.");
+      process.exit(0);
+    }
+  }
+
   // 8. Build stack configuration
   // Fresh deployment — no existing metadata to preserve.
   // For redeployments of existing infrastructure, always use
@@ -454,7 +470,8 @@ export async function init(options: InitOptions): Promise<void> {
 
     // Check for IAM permission errors in Pulumi deployment
     if (isPulumiError(error)) {
-      const { code, iamAction, service } = parsePulumiError(error as Error);
+      const { code, iamAction, service, resourceName, resourceType } =
+        parsePulumiError(error as Error);
 
       trackError(`PULUMI_${code}`, "email:init", {
         step: "deploy",
@@ -464,6 +481,11 @@ export async function init(options: InitOptions): Promise<void> {
 
       // Throw specific errors based on the service that failed
       switch (code) {
+        case "RESOURCE_CONFLICT":
+          throw errors.resourceConflict(
+            resourceName || "unknown resource",
+            resourceType
+          );
         case "SES_PERMISSION_DENIED":
           throw errors.sesPermissionDenied(iamAction || "unknown");
         case "DYNAMODB_PERMISSION_DENIED":

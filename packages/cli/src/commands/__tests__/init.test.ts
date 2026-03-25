@@ -37,6 +37,11 @@ vi.mock("../../utils/shared/prompts.js");
 vi.mock("../../utils/dns/index.js");
 vi.mock("../../infrastructure/email-stack.js");
 vi.mock("../email/test.js");
+vi.mock("../../utils/shared/preflight.js", () => ({
+  runPreflightScan: vi
+    .fn()
+    .mockResolvedValue({ shouldContinue: true, scan: {} }),
+}));
 
 import * as fs from "node:fs";
 import * as path from "node:path";
