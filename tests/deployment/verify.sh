@@ -65,9 +65,13 @@ verify_base() {
   if role_output=$(aws_check iam get-role --role-name wraps-email-role); then
     pass "IAM role wraps-email-role exists"
 
-    # Check ManagedBy tag
-    if echo "$role_output" | jq -e '.Role.Tags[] | select(.Key=="ManagedBy")' &>/dev/null; then
-      pass "IAM role has ManagedBy tag"
+    # Check ManagedBy tag (value varies by method: wraps-cli, wraps-cdk, wraps-pulumi, wraps-cloudformation)
+    local managed_by
+    managed_by=$(echo "$role_output" | jq -r '.Role.Tags[] | select(.Key=="ManagedBy") | .Value // ""')
+    if [[ "$managed_by" == wraps-* ]]; then
+      pass "IAM role ManagedBy tag: $managed_by"
+    elif [[ -n "$managed_by" ]]; then
+      fail "IAM role ManagedBy tag unexpected value: $managed_by (expected wraps-*)"
     else
       fail "IAM role missing ManagedBy tag"
     fi
@@ -325,6 +329,32 @@ verify_iam_no_events_policy() {
     fi
   else
     fail "Could not list IAM role policies" "$policies_list"
+  fi
+}
+
+# ─── Console Access Role Verification ─────────────────────────────────
+
+verify_console_access_role() {
+  section "Console Access Role"
+
+  local role_output
+  if role_output=$(aws_check iam get-role --role-name wraps-console-access-role); then
+    pass "IAM role wraps-console-access-role exists"
+
+    # Check trust policy allows Wraps Platform account with ExternalId
+    if echo "$role_output" | jq -e '.Role.AssumeRolePolicyDocument.Statement[] | select(.Principal.AWS | tostring | contains("905130073023"))' &>/dev/null; then
+      pass "Console role trusts Wraps Platform account 905130073023"
+    else
+      fail "Console role missing Wraps Platform trust"
+    fi
+
+    if echo "$role_output" | jq -e '.Role.AssumeRolePolicyDocument.Statement[] | select(.Condition.StringEquals["sts:ExternalId"])' &>/dev/null; then
+      pass "Console role requires ExternalId condition"
+    else
+      fail "Console role missing ExternalId condition"
+    fi
+  else
+    fail "IAM role wraps-console-access-role not found" "$role_output"
   fi
 }
 
@@ -622,8 +652,12 @@ verify_events() {
     # Tags
     local lambda_tags
     lambda_tags=$(echo "$lambda_output" | jq -r '.Tags // {}')
-    if echo "$lambda_tags" | jq -e '.ManagedBy' &>/dev/null; then
-      pass "Lambda has ManagedBy tag"
+    local lambda_managed_by
+    lambda_managed_by=$(echo "$lambda_tags" | jq -r '.ManagedBy // ""')
+    if [[ "$lambda_managed_by" == wraps-* ]]; then
+      pass "Lambda ManagedBy tag: $lambda_managed_by"
+    elif [[ -n "$lambda_managed_by" ]]; then
+      fail "Lambda ManagedBy tag unexpected value: $lambda_managed_by (expected wraps-*)"
     else
       fail "Lambda missing ManagedBy tag"
     fi
@@ -810,8 +844,12 @@ verify_smtp() {
     pass "IAM user wraps-email-smtp-user exists"
 
     # Check tags
-    if echo "$user_output" | jq -e '.User.Tags[] | select(.Key=="ManagedBy")' &>/dev/null; then
-      pass "IAM SMTP user has ManagedBy tag"
+    local smtp_managed_by
+    smtp_managed_by=$(echo "$user_output" | jq -r '.User.Tags[] | select(.Key=="ManagedBy") | .Value // ""')
+    if [[ "$smtp_managed_by" == wraps-* ]]; then
+      pass "IAM SMTP user ManagedBy tag: $smtp_managed_by"
+    elif [[ -n "$smtp_managed_by" ]]; then
+      fail "IAM SMTP user ManagedBy tag unexpected value: $smtp_managed_by (expected wraps-*)"
     else
       fail "IAM SMTP user missing ManagedBy tag"
     fi
@@ -942,6 +980,50 @@ verify_webhook() {
   fi
 }
 
+# ─── Archiving Verification ──────────────────────────────────────────
+
+verify_archiving() {
+  section "Email Archiving"
+
+  local archive_output
+  if archive_output=$(aws mailmanager list-archives --query "Archives[?ArchiveName=='wraps-email-archive']" --output json 2>/dev/null); then
+    local archive_count
+    archive_count=$(echo "$archive_output" | jq 'length')
+    if (( archive_count > 0 )); then
+      local archive_state
+      archive_state=$(echo "$archive_output" | jq -r '.[0].ArchiveState // "UNKNOWN"')
+      if [[ "$archive_state" == "ACTIVE" ]]; then
+        pass "MailManager archive wraps-email-archive exists (ACTIVE)"
+      else
+        fail "MailManager archive wraps-email-archive state: $archive_state (expected ACTIVE)"
+      fi
+    else
+      fail "MailManager archive wraps-email-archive not found"
+    fi
+  else
+    fail "Could not list MailManager archives" "$archive_output"
+  fi
+}
+
+# ─── Pre-Teardown ─────────────────────────────────────────────────────
+
+# Rename the MailManager archive before deleting so the name is freed immediately.
+# Without this, PENDING_DELETION archives block re-creation for days/weeks.
+pre_teardown_rename_archive() {
+  local archive_output
+  archive_output=$(aws mailmanager list-archives --query "Archives[?ArchiveName=='wraps-email-archive' && ArchiveState=='ACTIVE']" --output json 2>/dev/null)
+  local archive_count
+  archive_count=$(echo "$archive_output" | jq 'length' 2>/dev/null || echo "0")
+  if (( archive_count > 0 )); then
+    local archive_id
+    archive_id=$(echo "$archive_output" | jq -r '.[0].ArchiveId')
+    local new_name="wraps-email-archive-deleted-$(date +%s)"
+    if aws mailmanager update-archive --archive-id "$archive_id" --archive-name "$new_name" &>/dev/null; then
+      printf "${CYAN}  Renamed archive %s → %s${NC}\n" "$archive_id" "$new_name"
+    fi
+  fi
+}
+
 # ─── Teardown Verification ───────────────────────────────────────────
 
 verify_teardown() {
@@ -957,15 +1039,15 @@ verify_teardown() {
     pass "IAM role wraps-email-role removed"
   fi
 
-  # Lambda role (name may have auto-generated suffix)
+  # Lambda role (name varies: wraps-email-lambda-role* for CLI/CDK/Pulumi, wraps-email-processor-role for CFN)
   local lambda_roles
-  lambda_roles=$(aws iam list-roles --query "Roles[?starts_with(RoleName, 'wraps-email-lambda-role')].RoleName" --output json 2>/dev/null)
+  lambda_roles=$(aws iam list-roles --query "Roles[?starts_with(RoleName, 'wraps-email-lambda-role') || starts_with(RoleName, 'wraps-email-processor-role')].RoleName" --output json 2>/dev/null)
   local lambda_role_count
   lambda_role_count=$(echo "$lambda_roles" | jq 'length')
   if (( lambda_role_count > 0 )); then
     fail "Lambda role still exists: $(echo "$lambda_roles" | jq -r '.[0]')"
   else
-    pass "Lambda role wraps-email-lambda-role* removed"
+    pass "Lambda role wraps-email-*-role removed"
   fi
 
   # SES config set
@@ -1053,5 +1135,29 @@ verify_teardown() {
     fail "API destination wraps-webhook-destination still exists"
   else
     pass "API destination wraps-webhook-destination removed"
+  fi
+
+  # Console access role
+  if aws iam get-role --role-name wraps-console-access-role &>/dev/null; then
+    fail "IAM role wraps-console-access-role still exists"
+  else
+    pass "IAM role wraps-console-access-role removed"
+  fi
+
+  # MailManager archive (accepts PENDING_DELETION as removed — archives take time to purge)
+  local archive_output
+  archive_output=$(aws mailmanager list-archives --query "Archives[?ArchiveName=='wraps-email-archive']" --output json 2>/dev/null)
+  local archive_count
+  archive_count=$(echo "$archive_output" | jq 'length' 2>/dev/null || echo "0")
+  if (( archive_count > 0 )); then
+    local archive_state
+    archive_state=$(echo "$archive_output" | jq -r '.[0].ArchiveState // "UNKNOWN"')
+    if [[ "$archive_state" == "PENDING_DELETION" ]]; then
+      pass "MailManager archive wraps-email-archive pending deletion"
+    else
+      fail "MailManager archive wraps-email-archive still exists (state: $archive_state)"
+    fi
+  else
+    pass "MailManager archive wraps-email-archive removed"
   fi
 }

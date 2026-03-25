@@ -94,6 +94,8 @@ create_dkim_records "$DOMAIN" "$REGION"
 
 reset_counters
 verify_base "$DOMAIN" "$REGION"
+verify_iam_no_events_policy
+verify_console_access_role
 
 # Verify events are NOT deployed in starter
 section "Phase 1: Verify no event resources"
@@ -195,6 +197,8 @@ wraps email upgrade \
 reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
+verify_iam_events_policy
+verify_console_access_role
 
 # Verify SMTP still not deployed
 section "Phase 2: Verify no SMTP"
@@ -236,6 +240,8 @@ fi
 # Verify resources still intact after sync
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
+verify_iam_events_policy
+verify_console_access_role
 
 summary || { printf "${RED}Phase 2b FAILED${NC}\n"; exit 1; }
 
@@ -252,7 +258,9 @@ wraps email upgrade \
 reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
+verify_iam_events_policy
 verify_smtp
+verify_console_access_role
 
 summary || { printf "${RED}Phase 3 FAILED${NC}\n"; exit 1; }
 
@@ -330,13 +338,17 @@ wraps email upgrade \
 reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
+verify_iam_events_policy
 verify_smtp
+verify_console_access_role
 
 summary || { printf "${RED}Phase 4 FAILED${NC}\n"; exit 1; }
 
 # ─── Teardown ─────────────────────────────────────────────────────────
 
 printf "\n${YELLOW}Teardown: Destroying all resources${NC}\n"
+
+pre_teardown_rename_archive
 
 wraps email destroy \
   --region "$REGION" \

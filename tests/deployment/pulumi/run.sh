@@ -46,6 +46,8 @@ printf "${YELLOW}Phase 1: Base deploy (domain only)${NC}\n"
 
 reset_counters
 verify_base "$DOMAIN" "$REGION"
+verify_iam_no_events_policy
+verify_console_access_role
 
 section "Phase 1: Verify no event resources"
 if aws dynamodb describe-table --table-name wraps-email-history --region "$REGION" &>/dev/null; then
@@ -71,6 +73,8 @@ printf "\n${YELLOW}Phase 2: Add events${NC}\n"
 reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
+verify_iam_events_policy
+verify_console_access_role
 
 section "Phase 2: Verify no SMTP"
 if aws iam get-user --user-name wraps-email-smtp-user &>/dev/null; then
@@ -91,13 +95,52 @@ printf "\n${YELLOW}Phase 3: Add SMTP${NC}\n"
 reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
+verify_iam_events_policy
 verify_smtp
+verify_console_access_role
 
 summary || { printf "${RED}Phase 3 FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 4: Add webhook ────────────────────────────────────────────
+
+printf "\n${YELLOW}Phase 4: Add webhook${NC}\n"
+
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+(cd "$APP_DIR" && pulumi config set webhookSecret test-webhook-secret-key)
+(cd "$APP_DIR" && pulumi config set webhookAccountId "$AWS_ACCOUNT_ID")
+(cd "$APP_DIR" && pulumi up --yes)
+
+reset_counters
+verify_base "$DOMAIN" "$REGION"
+verify_events "$REGION"
+verify_iam_events_policy
+verify_smtp
+verify_webhook "$REGION"
+verify_console_access_role
+
+summary || { printf "${RED}Phase 4 FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 5: Idempotent re-deploy ───────────────────────────────────
+
+printf "\n${YELLOW}Phase 5: Idempotent re-deploy (same config)${NC}\n"
+
+(cd "$APP_DIR" && pulumi up --yes)
+
+reset_counters
+verify_base "$DOMAIN" "$REGION"
+verify_events "$REGION"
+verify_iam_events_policy
+verify_smtp
+verify_webhook "$REGION"
+verify_console_access_role
+
+summary || { printf "${RED}Phase 5 FAILED${NC}\n"; exit 1; }
 
 # ─── Teardown ─────────────────────────────────────────────────────────
 
 printf "\n${YELLOW}Teardown: Destroying all resources${NC}\n"
+
+pre_teardown_rename_archive
 
 (cd "$APP_DIR" && pulumi destroy --yes)
 (cd "$APP_DIR" && pulumi stack rm "$STACK_NAME" --yes)

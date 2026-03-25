@@ -52,6 +52,7 @@ write_config "{
 reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_iam_no_events_policy
+verify_console_access_role
 
 section "Phase 1: Verify no event resources"
 if aws dynamodb describe-table --table-name wraps-email-history --region "$REGION" &>/dev/null; then
@@ -85,6 +86,7 @@ reset_counters
 verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
 verify_iam_events_policy
+verify_console_access_role
 
 section "Phase 2: Verify no SMTP"
 if aws iam get-user --user-name wraps-email-smtp-user &>/dev/null; then
@@ -117,6 +119,7 @@ verify_base "$DOMAIN" "$REGION"
 verify_events "$REGION"
 verify_iam_events_policy
 verify_smtp
+verify_console_access_role
 
 summary || { printf "${RED}Phase 3 FAILED${NC}\n"; exit 1; }
 
@@ -148,12 +151,69 @@ verify_events "$REGION"
 verify_iam_events_policy
 verify_smtp
 verify_webhook "$REGION"
+verify_console_access_role
 
 summary || { printf "${RED}Phase 4 FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 5: Add archiving ──────────────────────────────────────────
+
+printf "\n${YELLOW}Phase 5: Add archiving${NC}\n"
+
+write_config "{
+  \"domain\": \"$DOMAIN\",
+  \"events\": {
+    \"storeHistory\": true,
+    \"retention\": \"90days\"
+  },
+  \"smtp\": {
+    \"enabled\": true
+  },
+  \"webhook\": {
+    \"awsAccountNumber\": \"886375649429\",
+    \"webhookSecret\": \"test-webhook-secret-key\",
+    \"webhookUrl\": \"https://api.wraps.dev\"
+  },
+  \"archiving\": {
+    \"enabled\": true,
+    \"retention\": \"90days\"
+  }
+}"
+
+(cd "$APP_DIR" && npx cdk deploy --require-approval never)
+
+reset_counters
+verify_base "$DOMAIN" "$REGION"
+verify_events "$REGION"
+verify_iam_events_policy
+verify_smtp
+verify_webhook "$REGION"
+verify_archiving
+verify_console_access_role
+
+summary || { printf "${RED}Phase 5 FAILED${NC}\n"; exit 1; }
+
+# ─── Phase 6: Idempotent re-deploy ───────────────────────────────────
+
+printf "\n${YELLOW}Phase 6: Idempotent re-deploy (same config)${NC}\n"
+
+(cd "$APP_DIR" && npx cdk deploy --require-approval never)
+
+reset_counters
+verify_base "$DOMAIN" "$REGION"
+verify_events "$REGION"
+verify_iam_events_policy
+verify_smtp
+verify_webhook "$REGION"
+verify_archiving
+verify_console_access_role
+
+summary || { printf "${RED}Phase 6 FAILED${NC}\n"; exit 1; }
 
 # ─── Teardown ─────────────────────────────────────────────────────────
 
 printf "\n${YELLOW}Teardown: Destroying all resources${NC}\n"
+
+pre_teardown_rename_archive
 
 (cd "$APP_DIR" && npx cdk destroy --force)
 

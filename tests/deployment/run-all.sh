@@ -22,7 +22,7 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 printf "\n${CYAN}============================================${NC}\n"
 printf "  Wraps Deployment Verification Suite\n"
 printf "  Domain: %s  Region: %s\n" "$WRAPS_TEST_DOMAIN" "$WRAPS_TEST_REGION"
-printf "  Profiles: CLI=%s  CDK=%s  Pulumi=%s\n" "$AWS_PROFILE_CLI" "$AWS_PROFILE_CDK" "$AWS_PROFILE_PULUMI"
+printf "  Profiles: CLI=%s  CDK=%s  Pulumi=%s  CFN=%s\n" "$AWS_PROFILE_CLI" "$AWS_PROFILE_CDK" "$AWS_PROFILE_PULUMI" "$AWS_PROFILE_CFN"
 printf "${CYAN}============================================${NC}\n\n"
 
 # Parse flags
@@ -31,14 +31,14 @@ METHODS=()
 for arg in "$@"; do
   case "$arg" in
     --sequential) SEQUENTIAL=true ;;
-    cli|cdk|pulumi) METHODS+=("$arg") ;;
-    *) printf "Unknown arg: %s\nUsage: run-all.sh [--sequential] [cli] [cdk] [pulumi]\n" "$arg"; exit 1 ;;
+    cli|cdk|pulumi|cfn) METHODS+=("$arg") ;;
+    *) printf "Unknown arg: %s\nUsage: run-all.sh [--sequential] [cli] [cdk] [pulumi] [cfn]\n" "$arg"; exit 1 ;;
   esac
 done
 
 # Default: all methods
 if (( ${#METHODS[@]} == 0 )); then
-  METHODS=(cli cdk pulumi)
+  METHODS=(cli cdk pulumi cfn)
 fi
 
 typeset -A PIDS

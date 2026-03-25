@@ -70,30 +70,6 @@ verify_iam_events_policy_cfn() {
   fi
 }
 
-verify_console_access_role() {
-  section "CFN: Console Access Role"
-
-  local role_output
-  if role_output=$(aws_check iam get-role --role-name wraps-console-access-role); then
-    pass "IAM role wraps-console-access-role exists"
-
-    # Check trust policy allows Wraps Platform account with ExternalId
-    if echo "$role_output" | jq -e '.Role.AssumeRolePolicyDocument.Statement[] | select(.Principal.AWS | tostring | contains("905130073023"))' &>/dev/null; then
-      pass "Console role trusts Wraps Platform account 905130073023"
-    else
-      fail "Console role missing Wraps Platform trust"
-    fi
-
-    if echo "$role_output" | jq -e '.Role.AssumeRolePolicyDocument.Statement[] | select(.Condition.StringEquals["sts:ExternalId"])' &>/dev/null; then
-      pass "Console role requires ExternalId condition"
-    else
-      fail "Console role missing ExternalId condition"
-    fi
-  else
-    fail "IAM role wraps-console-access-role not found" "$role_output"
-  fi
-}
-
 verify_webhook_cfn() {
   local region="${1:-us-east-1}"
 
@@ -261,23 +237,6 @@ verify_alerting() {
   fi
 }
 
-verify_archiving() {
-  section "CFN: Email Archiving"
-
-  local archive_output
-  if archive_output=$(aws mailmanager list-archives --query "Archives[?ArchiveName=='wraps-email-archive']" --output json 2>/dev/null); then
-    local archive_count
-    archive_count=$(echo "$archive_output" | jq 'length')
-    if (( archive_count > 0 )); then
-      pass "MailManager archive wraps-email-archive exists"
-    else
-      fail "MailManager archive wraps-email-archive not found"
-    fi
-  else
-    fail "Could not list MailManager archives" "$archive_output"
-  fi
-}
-
 # ─── Phase 1: Base deploy (domain + events disabled) ────────────────
 
 printf "${YELLOW}Phase 1: Base deploy (domain only, no events)${NC}\n"
@@ -409,9 +368,37 @@ verify_archiving
 
 summary || { printf "${RED}Phase 5 FAILED${NC}\n"; exit 1; }
 
+# ─── Phase 6: Idempotent re-deploy ──────────────────────────────────
+
+printf "\n${YELLOW}Phase 6: Idempotent re-deploy (same config)${NC}\n"
+
+cfn_deploy \
+  "Domain=$DOMAIN" \
+  "EnableEventTracking=true" \
+  "EnableHistoryStorage=true" \
+  "HistoryRetentionDays=90" \
+  "EnableSMTP=true" \
+  "WrapsWebhookSecret=test-webhook-secret-key" \
+  "EnableAlerting=true" \
+  "EnableEmailArchiving=true"
+
+reset_counters
+verify_base "$DOMAIN" "$REGION"
+verify_events "$REGION"
+verify_iam_events_policy_cfn
+verify_smtp
+verify_webhook_cfn "$REGION"
+verify_console_access_role
+verify_alerting "$REGION" "true"
+verify_archiving
+
+summary || { printf "${RED}Phase 6 FAILED${NC}\n"; exit 1; }
+
 # ─── Teardown ────────────────────────────────────────────────────────
 
 printf "\n${YELLOW}Teardown: Destroying all resources${NC}\n"
+
+pre_teardown_rename_archive
 
 aws cloudformation delete-stack \
   --stack-name "$STACK_NAME" \
@@ -431,20 +418,6 @@ if aws iam get-role --role-name wraps-email-webhook-role &>/dev/null; then
   fail "IAM role wraps-email-webhook-role still exists"
 else
   pass "IAM role wraps-email-webhook-role removed"
-fi
-
-# Console access role
-if aws iam get-role --role-name wraps-console-access-role &>/dev/null; then
-  fail "IAM role wraps-console-access-role still exists"
-else
-  pass "IAM role wraps-console-access-role removed"
-fi
-
-# Lambda processor role (CFN uses explicit name)
-if aws iam get-role --role-name wraps-email-processor-role &>/dev/null; then
-  fail "IAM role wraps-email-processor-role still exists"
-else
-  pass "IAM role wraps-email-processor-role removed"
 fi
 
 # SNS topic
@@ -467,23 +440,6 @@ for alarm_name in wraps-email-bounce-rate-warning wraps-email-complaint-rate-war
     pass "CloudWatch alarm $alarm_name removed"
   fi
 done
-
-# MailManager archive (accepts PENDING_DELETION as removed — archives take time to purge)
-typeset archive_output
-archive_output=$(aws mailmanager list-archives --query "Archives[?ArchiveName=='wraps-email-archive']" --output json 2>/dev/null)
-typeset archive_count
-archive_count=$(echo "$archive_output" | jq 'length' 2>/dev/null || echo "0")
-if (( archive_count > 0 )); then
-  typeset archive_state
-  archive_state=$(echo "$archive_output" | jq -r '.[0].ArchiveState // "UNKNOWN"')
-  if [[ "$archive_state" == "PENDING_DELETION" ]]; then
-    pass "MailManager archive wraps-email-archive pending deletion"
-  else
-    fail "MailManager archive wraps-email-archive still exists (state: $archive_state)"
-  fi
-else
-  pass "MailManager archive wraps-email-archive removed"
-fi
 
 # Webhook EventBridge rule (CFN-specific separate rule)
 if aws events describe-rule \

@@ -17,6 +17,10 @@ type TestConfig = {
     webhookSecret: string;
     webhookUrl?: string;
   };
+  archiving?: {
+    enabled?: boolean;
+    retention?: string;
+  };
 };
 
 const configPath = path.join(__dirname, "..", "config.json");
@@ -35,5 +39,6 @@ new WrapsEmail(stack, "Email", {
   events: config.events,
   smtp: config.smtp,
   webhook: config.webhook,
+  archiving: config.archiving,
   removalPolicy: cdk.RemovalPolicy.DESTROY,
 });

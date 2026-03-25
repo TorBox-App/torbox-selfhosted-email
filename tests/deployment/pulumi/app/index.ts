@@ -5,6 +5,8 @@ const config = new pulumi.Config();
 const domain = config.require("domain");
 const enableEvents = config.getBoolean("events") ?? false;
 const enableSmtp = config.getBoolean("smtp") ?? false;
+const webhookSecret = config.get("webhookSecret");
+const webhookAccountId = config.get("webhookAccountId");
 
 const email = new WrapsEmail("test", {
   domain,
@@ -15,6 +17,13 @@ const email = new WrapsEmail("test", {
       }
     : undefined,
   smtp: enableSmtp ? { enabled: true } : undefined,
+  webhook:
+    webhookSecret && webhookAccountId
+      ? {
+          awsAccountNumber: webhookAccountId,
+          webhookSecret,
+        }
+      : undefined,
 });
 
 export const roleArn = email.roleArn;
