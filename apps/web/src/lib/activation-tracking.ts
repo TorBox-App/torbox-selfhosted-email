@@ -35,11 +35,17 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
 function capture(
   distinctId: string,
   event: string,
-  properties: Record<string, unknown>
+  properties: Record<string, unknown>,
+  personProperties?: Record<string, unknown>
 ) {
   try {
     const posthog = getPostHogClient();
-    posthog.capture({ distinctId, event, properties });
+    posthog.capture({
+      distinctId,
+      event,
+      properties,
+      ...(personProperties && { $set: personProperties }),
+    });
   } catch {
     // intentionally swallowed - tracking should never break the app
   }
@@ -219,7 +225,9 @@ export async function trackAwsConnected(
     capture(userId, "aws_account_connected", props);
     await emit(userId, "aws_account.connected", props);
     if (existing === 1) {
-      capture(userId, "activation_aws_connected", props);
+      capture(userId, "activation_aws_connected", props, {
+        activation_aws_connected: true,
+      });
       await emit(userId, "activation.aws_connected", props);
     }
     await updateActivationScore(
@@ -248,7 +256,9 @@ export async function trackDomainVerified(
     capture(userId, "domain_verified", props);
     await emit(userId, "domain.verified", props);
     if (properties.isFirstDomain) {
-      capture(userId, "activation_domain_verified", props);
+      capture(userId, "activation_domain_verified", props, {
+        activation_domain_verified: true,
+      });
       await emit(userId, "activation.domain_verified", props);
     }
     await updateActivationScore(
@@ -277,7 +287,9 @@ export async function trackFirstEmailSent(
         channel: properties.channel,
         source: properties.source,
       };
-      capture(userId, "activation_first_email_sent", props);
+      capture(userId, "activation_first_email_sent", props, {
+        activation_first_email_sent: true,
+      });
       await emit(userId, "activation.first_email_sent", props);
     }
     await updateActivationScore(
@@ -570,6 +582,13 @@ async function updateActivationScore(
         target: organizationExtension.organizationId,
         set: { activationScore: score, updatedAt: new Date() },
       });
+
+    capture(
+      userEmail,
+      "activation_score_updated",
+      { organization_id: organizationId, activation_score: score },
+      { activation_score: score }
+    );
 
     await setContactProperties(userEmail, {
       ...extraContactProps,

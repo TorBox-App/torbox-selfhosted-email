@@ -67,7 +67,11 @@ export async function GET(request: Request, context: RouteContext) {
         try {
           return await getCloudWatchMetricsBatch({
             awsAccountId: account.id,
-            metrics: [SES_METRICS.SEND, SES_METRICS.DELIVERY, SES_METRICS.BOUNCE],
+            metrics: [
+              SES_METRICS.SEND,
+              SES_METRICS.DELIVERY,
+              SES_METRICS.BOUNCE,
+            ],
             period,
             startTime,
             endTime,

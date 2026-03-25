@@ -131,7 +131,14 @@ export async function getCloudWatchMetricsBatch(params: {
   endTime: Date;
   stat?: "Sum" | "Average" | "Maximum" | "Minimum" | "SampleCount";
 }): Promise<Record<string, MetricDataResult[]>> {
-  const { awsAccountId, metrics, period, startTime, endTime, stat = "Sum" } = params;
+  const {
+    awsAccountId,
+    metrics,
+    period,
+    startTime,
+    endTime,
+    stat = "Sum",
+  } = params;
 
   const account = await db.query.awsAccount.findFirst({
     where: (a, { eq }) => eq(a.id, awsAccountId),
@@ -199,7 +206,12 @@ export async function getSESMetricsSummary(params: {
 
   const results = await getCloudWatchMetricsBatch({
     awsAccountId,
-    metrics: [SES_METRICS.SEND, SES_METRICS.DELIVERY, SES_METRICS.BOUNCE, SES_METRICS.COMPLAINT],
+    metrics: [
+      SES_METRICS.SEND,
+      SES_METRICS.DELIVERY,
+      SES_METRICS.BOUNCE,
+      SES_METRICS.COMPLAINT,
+    ],
     period,
     startTime,
     endTime,

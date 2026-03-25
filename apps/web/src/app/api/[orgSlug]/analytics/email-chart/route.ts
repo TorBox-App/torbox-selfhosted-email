@@ -104,8 +104,18 @@ export async function GET(request: Request, context: RouteContext) {
     );
 
     // Aggregate all metrics by date in a single pass
-    const allKeys = ["sent", "delivered", "bounced", "complaints", "opens", "clicks"] as const;
-    const dailyMap = new Map<string, Record<(typeof allKeys)[number], number>>();
+    const allKeys = [
+      "sent",
+      "delivered",
+      "bounced",
+      "complaints",
+      "opens",
+      "clicks",
+    ] as const;
+    const dailyMap = new Map<
+      string,
+      Record<(typeof allKeys)[number], number>
+    >();
 
     for (const metrics of metricsResults) {
       if (!metrics) continue;
@@ -125,7 +135,14 @@ export async function GET(request: Request, context: RouteContext) {
       );
 
       for (const [dateStr, values] of perAccount) {
-        const existing = dailyMap.get(dateStr) || { sent: 0, delivered: 0, bounced: 0, complaints: 0, opens: 0, clicks: 0 };
+        const existing = dailyMap.get(dateStr) || {
+          sent: 0,
+          delivered: 0,
+          bounced: 0,
+          complaints: 0,
+          opens: 0,
+          clicks: 0,
+        };
         dailyMap.set(dateStr, {
           sent: existing.sent + values.sent,
           delivered: existing.delivered + values.delivered,
@@ -151,10 +168,18 @@ export async function GET(request: Request, context: RouteContext) {
 
     const deliveryRate = totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0;
     const bounceRate = totalSent > 0 ? (totalBounced / totalSent) * 100 : 0;
-    const complaintRate = totalSent > 0 ? (totalComplaints / totalSent) * 100 : 0;
+    const complaintRate =
+      totalSent > 0 ? (totalComplaints / totalSent) * 100 : 0;
 
     const dateRange = generateDateRange(startTime, endTime);
-    const defaults = { sent: 0, delivered: 0, bounced: 0, complaints: 0, opens: 0, clicks: 0 };
+    const defaults = {
+      sent: 0,
+      delivered: 0,
+      bounced: 0,
+      complaints: 0,
+      opens: 0,
+      clicks: 0,
+    };
     const filled = gapFillDates(dateRange, dailyMap, defaults);
 
     const volume = filled.map((d) => ({
