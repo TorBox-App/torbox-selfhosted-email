@@ -1,7 +1,7 @@
 import { DotPattern } from "@wraps/ui/components/dot-pattern";
-import { WrapsMotifLayers } from "@/components/wraps-motif-layers";
 import { Github } from "lucide-react";
 import Image from "next/image";
+import { WrapsMotifLayers } from "@/components/wraps-motif-layers";
 import { HeroAnimatedCTA } from "./hero-cta";
 
 // Static content - server rendered, visible immediately
@@ -10,7 +10,11 @@ export function HeroSection() {
     <section className="relative pt-20 pb-16 md:pt-24 lg:pt-32">
       {/* Background Pattern — extends past section to blend into principles */}
       <div className="absolute inset-0 -bottom-80">
-        <DotPattern className="opacity-100 dark:opacity-65" fadeStyle="ellipse" size="md" />
+        <DotPattern
+          className="opacity-100 dark:opacity-65"
+          fadeStyle="ellipse"
+          size="md"
+        />
       </div>
 
       {/* Noise grain texture — extends to match */}

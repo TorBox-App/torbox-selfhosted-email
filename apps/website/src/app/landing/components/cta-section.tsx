@@ -1,4 +1,4 @@
-import { CreditCard, Server, Code } from "lucide-react";
+import { Code, CreditCard, Server } from "lucide-react";
 import { CTAButtons } from "./cta-buttons";
 
 export function CTASection() {

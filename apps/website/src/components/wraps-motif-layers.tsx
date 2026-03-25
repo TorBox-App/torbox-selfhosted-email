@@ -17,11 +17,7 @@ export function WrapsMotifLayers({
   strokeColor?: string;
 }) {
   return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="-1 -11 348 311"
-    >
+    <svg aria-hidden="true" className={className} viewBox="-1 -11 348 311">
       {LAYERS.map((layer, i) => (
         <g
           fill={fillColor}

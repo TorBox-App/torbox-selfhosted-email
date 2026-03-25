@@ -32,11 +32,7 @@ export function TrackedEventsExplainer() {
       </p>
 
       <div className="mx-auto max-w-2xl">
-        <CodeBlock
-          className="h-auto"
-          data={codeData}
-          defaultValue="typescript"
-        >
+        <CodeBlock className="h-auto" data={codeData} defaultValue="typescript">
           <CodeBlockHeader>
             <CodeBlockFiles>
               {(item) => (
