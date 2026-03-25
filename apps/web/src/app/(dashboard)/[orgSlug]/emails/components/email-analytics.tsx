@@ -27,11 +27,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  useAnalyticsOverview,
-  useEngagementData,
-  useVolumeData,
-} from "../analytics/hooks/use-analytics";
+import { useEmailChartData } from "../analytics/hooks/use-analytics";
 
 const chartConfig = {
   sent: {
@@ -98,31 +94,22 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
   }, [isMobile]);
 
   const days = timeRange === "30d" ? 30 : 7;
-  const { data: volumeData, isLoading: volumeLoading } = useVolumeData(
-    orgSlug,
-    days
-  );
-  const { data: engagementData, isLoading: engagementLoading } =
-    useEngagementData(orgSlug, days);
-  const { data: overview, isLoading: overviewLoading } = useAnalyticsOverview(
-    orgSlug,
-    days
-  );
+  const { data, isLoading } = useEmailChartData(orgSlug, days);
 
-  const isLoading = volumeLoading || overviewLoading || engagementLoading;
+  const overview = data?.overview;
 
   // Merge volume and engagement data by date, estimate opens/clicks from rates
   const chartData = React.useMemo(() => {
-    if (!volumeData) {
+    if (!data?.volume) {
       return [];
     }
 
     // Build a lookup map for engagement data by date
     const engagementByDate = new Map(
-      engagementData?.map((e) => [e.date, e]) ?? []
+      data.engagement?.map((e) => [e.date, e]) ?? []
     );
 
-    return volumeData.map((v) => {
+    return data.volume.map((v) => {
       const engagement = engagementByDate.get(v.date);
       // Estimate opens and clicks from delivered count and rates
       const opened = engagement
@@ -138,7 +125,7 @@ export function EmailAnalytics({ orgSlug }: EmailAnalyticsProps) {
         clicked,
       };
     });
-  }, [volumeData, engagementData]);
+  }, [data]);
 
   const maxValue = Math.max(
     ...chartData.map((d) => Math.max(d.sent || 0, d.delivered || 0))

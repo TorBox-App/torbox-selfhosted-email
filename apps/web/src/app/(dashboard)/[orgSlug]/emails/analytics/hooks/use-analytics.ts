@@ -76,6 +76,28 @@ type SuppressionDataPoint = {
   suppressionRate: number;
 };
 
+type EmailChartData = {
+  overview: AnalyticsOverview;
+  volume: VolumeDataPoint[];
+  engagement: EngagementDataPoint[];
+};
+
+export function useEmailChartData(orgSlug: string, days = 30) {
+  return useQuery<EmailChartData>({
+    queryKey: ["analytics", "email-chart", orgSlug, days],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/${orgSlug}/analytics/email-chart?days=${days}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch email chart data");
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useAnalyticsOverview(orgSlug: string, days = 30) {
   return useQuery<AnalyticsOverview>({
     queryKey: ["analytics", "overview", orgSlug, days],

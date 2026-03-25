@@ -8,7 +8,7 @@ import {
   gapFillDates,
   generateDateRange,
 } from "@/lib/analytics-utils";
-import { getCloudWatchMetrics, SES_METRICS } from "@/lib/aws/cloudwatch";
+import { getCloudWatchMetricsBatch, SES_METRICS } from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
 
@@ -65,31 +65,13 @@ export async function GET(request: Request, context: RouteContext) {
     const metricsResults = await Promise.all(
       accounts.map(async (account) => {
         try {
-          const [sent, delivered, bounced] = await Promise.all([
-            getCloudWatchMetrics({
-              awsAccountId: account.id,
-              metric: SES_METRICS.SEND,
-              period,
-              startTime,
-              endTime,
-            }),
-            getCloudWatchMetrics({
-              awsAccountId: account.id,
-              metric: SES_METRICS.DELIVERY,
-              period,
-              startTime,
-              endTime,
-            }),
-            getCloudWatchMetrics({
-              awsAccountId: account.id,
-              metric: SES_METRICS.BOUNCE,
-              period,
-              startTime,
-              endTime,
-            }),
-          ]);
-
-          return { sent, delivered, bounced };
+          return await getCloudWatchMetricsBatch({
+            awsAccountId: account.id,
+            metrics: [SES_METRICS.SEND, SES_METRICS.DELIVERY, SES_METRICS.BOUNCE],
+            period,
+            startTime,
+            endTime,
+          });
         } catch (error) {
           log.error(
             { err: serializeError(error), accountId: account.id },
@@ -108,13 +90,13 @@ export async function GET(request: Request, context: RouteContext) {
         continue;
       }
 
-      const timestamps = metrics.sent[0]?.Timestamps || [];
+      const timestamps = metrics[SES_METRICS.SEND]?.[0]?.Timestamps || [];
       const perAccount = aggregateByDate(
         timestamps,
         [
-          metrics.sent[0]?.Values || [],
-          metrics.delivered[0]?.Values || [],
-          metrics.bounced[0]?.Values || [],
+          metrics[SES_METRICS.SEND]?.[0]?.Values || [],
+          metrics[SES_METRICS.DELIVERY]?.[0]?.Values || [],
+          metrics[SES_METRICS.BOUNCE]?.[0]?.Values || [],
         ],
         [...keys]
       );

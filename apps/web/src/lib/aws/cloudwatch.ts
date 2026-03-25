@@ -119,6 +119,74 @@ export const SES_METRICS = {
 } as const;
 
 /**
+ * Fetches multiple CloudWatch metrics in a single API call.
+ * Much more efficient than calling getCloudWatchMetrics multiple times —
+ * one DB lookup, one client, one API call instead of N of each.
+ */
+export async function getCloudWatchMetricsBatch(params: {
+  awsAccountId: string;
+  metrics: string[];
+  period: number;
+  startTime: Date;
+  endTime: Date;
+  stat?: "Sum" | "Average" | "Maximum" | "Minimum" | "SampleCount";
+}): Promise<Record<string, MetricDataResult[]>> {
+  const { awsAccountId, metrics, period, startTime, endTime, stat = "Sum" } = params;
+
+  const account = await db.query.awsAccount.findFirst({
+    where: (a, { eq }) => eq(a.id, awsAccountId),
+  });
+
+  if (!account) {
+    throw new Error("AWS account not found");
+  }
+
+  const credentials = await getOrAssumeRole({
+    roleArn: account.roleArn,
+    externalId: account.externalId,
+    region: account.region,
+  });
+
+  const cloudwatch = new CloudWatchClient({
+    region: account.region,
+    credentials: {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken,
+    },
+  });
+
+  const queries: MetricDataQuery[] = metrics.map((metric, i) => ({
+    Id: `m${i}`,
+    MetricStat: {
+      Metric: {
+        Namespace: "AWS/SES",
+        MetricName: metric,
+      },
+      Period: period,
+      Stat: stat,
+    },
+  }));
+
+  const command = new GetMetricDataCommand({
+    MetricDataQueries: queries,
+    StartTime: startTime,
+    EndTime: endTime,
+  });
+
+  const response = await cloudwatch.send(command);
+  const results = response.MetricDataResults || [];
+
+  const out: Record<string, MetricDataResult[]> = {};
+  for (let i = 0; i < metrics.length; i++) {
+    const result = results.find((r) => r.Id === `m${i}`);
+    out[metrics[i]] = result ? [result] : [];
+  }
+
+  return out;
+}
+
+/**
  * Gets multiple SES metrics at once for dashboard display
  */
 export async function getSESMetricsSummary(params: {
@@ -129,42 +197,18 @@ export async function getSESMetricsSummary(params: {
 }): Promise<Record<string, MetricDataResult[]>> {
   const { awsAccountId, startTime, endTime, period = 3600 } = params;
 
-  // Fetch all key metrics in parallel
-  const [sends, deliveries, bounces, complaints] = await Promise.all([
-    getCloudWatchMetrics({
-      awsAccountId,
-      metric: SES_METRICS.SEND,
-      period,
-      startTime,
-      endTime,
-    }),
-    getCloudWatchMetrics({
-      awsAccountId,
-      metric: SES_METRICS.DELIVERY,
-      period,
-      startTime,
-      endTime,
-    }),
-    getCloudWatchMetrics({
-      awsAccountId,
-      metric: SES_METRICS.BOUNCE,
-      period,
-      startTime,
-      endTime,
-    }),
-    getCloudWatchMetrics({
-      awsAccountId,
-      metric: SES_METRICS.COMPLAINT,
-      period,
-      startTime,
-      endTime,
-    }),
-  ]);
+  const results = await getCloudWatchMetricsBatch({
+    awsAccountId,
+    metrics: [SES_METRICS.SEND, SES_METRICS.DELIVERY, SES_METRICS.BOUNCE, SES_METRICS.COMPLAINT],
+    period,
+    startTime,
+    endTime,
+  });
 
   return {
-    sends,
-    deliveries,
-    bounces,
-    complaints,
+    sends: results[SES_METRICS.SEND] || [],
+    deliveries: results[SES_METRICS.DELIVERY] || [],
+    bounces: results[SES_METRICS.BOUNCE] || [],
+    complaints: results[SES_METRICS.COMPLAINT] || [],
   };
 }
