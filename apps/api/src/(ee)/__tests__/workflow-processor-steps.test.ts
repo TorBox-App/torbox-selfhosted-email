@@ -995,25 +995,20 @@ describe("handleSendEmail", () => {
     const updateCalls = mockDbUpdate.mock.calls;
     const setCalls = updateCalls.flatMap((call: unknown[]) => {
       const result = (mockDbUpdate as ReturnType<typeof vi.fn>).mock.results;
-      return result.map(
-        (r: { type: string; value: { set: ReturnType<typeof vi.fn> } }) =>
-          r.value?.set?.mock?.calls
-      );
+      return result.map((r: any) => r.value?.set?.mock?.calls);
     });
     // The error should contain the helpful message (checked via the update set call)
-    const failedUpdate = mockDbUpdate.mock.results.find(
-      (r: { type: string; value: { set: ReturnType<typeof vi.fn> } }) => {
-        const setCalls = r.value?.set?.mock?.calls;
-        return setCalls?.some((c: unknown[]) => {
-          const arg = c[0] as Record<string, unknown>;
-          return (
-            arg?.status === "failed" &&
-            typeof arg?.error === "string" &&
-            (arg.error as string).includes("wraps platform update-role")
-          );
-        });
-      }
-    );
+    const failedUpdate = mockDbUpdate.mock.results.find((r: any) => {
+      const setCalls = r.value?.set?.mock?.calls;
+      return setCalls?.some((c: unknown[]) => {
+        const arg = c[0] as Record<string, unknown>;
+        return (
+          arg?.status === "failed" &&
+          typeof arg?.error === "string" &&
+          (arg.error as string).includes("wraps platform update-role")
+        );
+      });
+    });
     expect(failedUpdate).toBeDefined();
   });
 });
