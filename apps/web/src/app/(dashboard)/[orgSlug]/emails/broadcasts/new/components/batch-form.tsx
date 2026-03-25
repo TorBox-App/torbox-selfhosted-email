@@ -763,7 +763,7 @@ function SetupStep({
               <div className="rounded-lg border border-dashed p-4 text-center">
                 <p className="text-muted-foreground text-sm">
                   {domainsLoading
-                    ? "Loading domains\u2026"
+                    ? "Loading domains..."
                     : "No verified domains found"}
                 </p>
                 <p className="mt-1 text-muted-foreground text-xs">
@@ -1010,7 +1010,7 @@ function ContentStep({
               className="resize-none"
               id="previewText"
               onChange={(e) => onChange({ previewText: e.target.value })}
-              placeholder="Text shown in email preview\u2026"
+              placeholder="Text shown in email preview..."
               rows={2}
               value={data.previewText}
             />
@@ -1248,7 +1248,7 @@ function AudienceStep({
               </p>
               <p className="font-semibold text-2xl">
                 {loadingCount
-                  ? "\u2026"
+                  ? "..."
                   : (recipientCount?.toLocaleString() ?? "0")}
               </p>
             </div>
@@ -1434,7 +1434,7 @@ function ReviewStep({
                 </p>
                 <p className="font-semibold text-2xl">
                   {loadingCount
-                    ? "\u2026"
+                    ? "..."
                     : `${recipientCount?.toLocaleString() ?? "0"} recipients`}
                 </p>
               </div>
@@ -1462,9 +1462,9 @@ function ReviewStep({
         >
           {isPending ? (
             data.scheduleType === "later" ? (
-              "Scheduling\u2026"
+              "Scheduling..."
             ) : (
-              "Sending\u2026"
+              "Sending..."
             )
           ) : data.scheduleType === "later" ? (
             <>

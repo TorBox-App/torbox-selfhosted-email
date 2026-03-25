@@ -47,7 +47,7 @@ export const columns: ColumnDef<InboundEmailListItem>[] = [
     ),
     meta: {
       label: "From",
-      placeholder: "Search sender\u2026",
+      placeholder: "Search sender...",
       variant: "text",
     },
     enableColumnFilter: true,
@@ -65,7 +65,7 @@ export const columns: ColumnDef<InboundEmailListItem>[] = [
     ),
     meta: {
       label: "Subject",
-      placeholder: "Search subjects\u2026",
+      placeholder: "Search subjects...",
       variant: "text",
     },
     enableColumnFilter: true,

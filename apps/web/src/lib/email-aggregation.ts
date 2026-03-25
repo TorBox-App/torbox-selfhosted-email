@@ -35,16 +35,17 @@ type DynamoEmailEvent = {
 };
 
 const STATUS_PRIORITY: EmailStatus[] = [
-  "clicked",
   "complained",
+  "rendering_failure",
+  "rejected",
+  "failed",
   "bounced",
+  "suppressed",
+  "clicked",
   "opened",
+  "delivery_delay",
   "delivered",
   "sent",
-  "failed",
-  "rejected",
-  "rendering_failure",
-  "delivery_delay",
 ];
 
 export function aggregateEmailEvents(

@@ -134,17 +134,17 @@ async function fetchEmail(
 
     // Determine the final status based on most significant event
     const statusPriority: EmailStatus[] = [
-      "clicked",
       "complained",
+      "rendering_failure",
+      "rejected",
+      "failed",
       "bounced",
       "suppressed",
+      "clicked",
       "opened",
+      "delivery_delay",
       "delivered",
       "sent",
-      "failed",
-      "rejected",
-      "rendering_failure",
-      "delivery_delay",
     ];
 
     let finalStatus: EmailStatus = "sent";
