@@ -296,6 +296,9 @@ async function compileTemplate(
   }
 
   // Create proxy props that produce {{handlebars}} placeholders
+  // Track all property accesses — props used only in conditionals (e.g. url.startsWith("http"))
+  // won't appear in the rendered HTML, but the Proxy still sees them during destructuring
+  const accessedProps = new Set<string>();
   const props = new Proxy(
     {},
     {
@@ -303,7 +306,9 @@ async function compileTemplate(
         if (typeof prop === "symbol") {
           return;
         }
-        return `{{${prop}}}`;
+        const name = String(prop);
+        accessedProps.add(name);
+        return `{{${name}}}`;
       },
     }
   );
@@ -318,8 +323,10 @@ async function compileTemplate(
   const html = await render(element);
   const text = await render(element, { plainText: true });
 
-  // Extract variables from rendered output
-  const variables = extractVariables(html);
+  // Extract variables from both rendered HTML and Proxy-tracked accesses
+  // HTML extraction catches fallback syntax ({{var|default}}); Proxy catches
+  // props used only in conditionals that never make it into the rendered output
+  const variables = mergeVariables(extractVariables(html), accessedProps);
   const sesSubject = transformVariablesForSes(subject);
   const sesHtml = transformVariablesForSes(html);
   const sesText = transformVariablesForSes(text);
@@ -364,6 +371,60 @@ function extractVariables(
   }
 
   return vars;
+}
+
+// Props accessed by React internals or JS runtime — not user template variables
+const INTERNAL_PROPS = new Set([
+  "$$typeof",
+  "_owner",
+  "_store",
+  "_self",
+  "_source",
+  "key",
+  "ref",
+  "children",
+  "type",
+  "props",
+  "__esModule",
+  "default",
+  "toString",
+  "valueOf",
+  "toJSON",
+  "then",
+  "constructor",
+  "prototype",
+  "__proto__",
+  "hasOwnProperty",
+  "isPrototypeOf",
+  "propertyIsEnumerable",
+  "toLocaleString",
+  "nodeType",
+  "tagName",
+]);
+
+/**
+ * Merge regex-extracted variables (from rendered HTML) with Proxy-tracked
+ * property accesses. HTML extraction provides fallback values; Proxy tracking
+ * catches props used only in conditionals that never appear in the output.
+ */
+function mergeVariables(
+  htmlVars: Array<{ name: string; fallback?: string }>,
+  accessedProps: Set<string>
+): Array<{ name: string; fallback?: string }> {
+  const seen = new Set(htmlVars.map((v) => v.name));
+  const merged = [...htmlVars];
+
+  for (const prop of accessedProps) {
+    if (
+      !(seen.has(prop) || INTERNAL_PROPS.has(prop)) &&
+      /^[a-zA-Z]/.test(prop)
+    ) {
+      seen.add(prop);
+      merged.push({ name: prop });
+    }
+  }
+
+  return merged;
 }
 
 function transformVariablesForSes(content: string): string {
