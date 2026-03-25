@@ -4,16 +4,17 @@ import {
   CodeBlock,
   CodeBlockBody,
   CodeBlockContent,
+  CodeBlockCopyButton,
+  CodeBlockFilename,
+  CodeBlockFiles,
+  CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
 import { PRICING_COPY } from "@/config/pricing";
 
-const EVENT_CODE = `await wraps.POST('/v1/events/', {
-  body: {
-    name: 'order.completed',
-    contactEmail: 'jane@acme.co',
-    properties: { orderId: '123', plan: 'growth' },
-  },
+const EVENT_CODE = `await wraps.track('order.completed', {
+  contactEmail: 'jane@acme.co',
+  properties: { orderId: '123', plan: 'growth' },
 })`;
 
 const codeData = [
@@ -32,10 +33,20 @@ export function TrackedEventsExplainer() {
 
       <div className="mx-auto max-w-2xl">
         <CodeBlock
-          className="rounded-lg"
+          className="h-auto"
           data={codeData}
           defaultValue="typescript"
         >
+          <CodeBlockHeader>
+            <CodeBlockFiles>
+              {(item) => (
+                <CodeBlockFilename key={item.language} value={item.language}>
+                  {item.filename}
+                </CodeBlockFilename>
+              )}
+            </CodeBlockFiles>
+            <CodeBlockCopyButton />
+          </CodeBlockHeader>
           <CodeBlockBody>
             {(item) => (
               <CodeBlockItem

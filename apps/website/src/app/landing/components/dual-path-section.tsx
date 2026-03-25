@@ -7,6 +7,9 @@ import {
   CodeBlockBody,
   CodeBlockContent,
   CodeBlockCopyButton,
+  CodeBlockFilename,
+  CodeBlockFiles,
+  CodeBlockHeader,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
 import { assetUrl } from "@/lib/utils";
@@ -88,20 +91,35 @@ function ComparisonRow({
       <div className="grid gap-4 md:gap-6 md:grid-cols-2">
         {/* Code side */}
         <div className="flex min-w-0 flex-col">
-          <div className="flex-1 overflow-hidden rounded-lg md:rounded-xl border bg-card">
-            <CodeBlock data={codeData} defaultValue={codeLang}>
-              <CodeBlockBody>
+          <CodeBlock
+            className="h-auto flex-1"
+            data={codeData}
+            defaultValue={codeLang}
+          >
+            <CodeBlockHeader>
+              <CodeBlockFiles>
                 {(item) => (
-                  <CodeBlockItem key={item.language} value={item.language}>
-                    <CodeBlockContent language={item.language}>
-                      {item.code}
-                    </CodeBlockContent>
-                    <CodeBlockCopyButton />
-                  </CodeBlockItem>
+                  <CodeBlockFilename key={item.language} value={item.language}>
+                    {item.filename}
+                  </CodeBlockFilename>
                 )}
-              </CodeBlockBody>
-            </CodeBlock>
-          </div>
+              </CodeBlockFiles>
+              <CodeBlockCopyButton />
+            </CodeBlockHeader>
+            <CodeBlockBody>
+              {(item) => (
+                <CodeBlockItem
+                  key={item.language}
+                  lineNumbers={false}
+                  value={item.language}
+                >
+                  <CodeBlockContent language={item.language}>
+                    {item.code}
+                  </CodeBlockContent>
+                </CodeBlockItem>
+              )}
+            </CodeBlockBody>
+          </CodeBlock>
           <p className="mt-3 text-sm text-foreground/50">{codeCaption}</p>
         </div>
 

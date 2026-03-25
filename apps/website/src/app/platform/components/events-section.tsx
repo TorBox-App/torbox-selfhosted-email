@@ -28,12 +28,9 @@ const eventTypes = [
   },
 ];
 
-const customEventCode = `await client.POST('/v1/events/', {
-  body: {
-    name: 'order.completed',
-    contactEmail: 'jane@acme.co',
-    properties: { orderId: '123' }
-  }
+const customEventCode = `await wraps.track('order.completed', {
+  contactEmail: 'jane@acme.co',
+  properties: { orderId: '123' },
 })`;
 
 const benefits = [

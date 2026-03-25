@@ -641,16 +641,15 @@ await wraps.batch.send({
     },
     events: {
       label: "Track Events",
-      code: `import { Wraps } from '@wraps.dev/email';
+      code: `import { createPlatformClient } from '@wraps.dev/client';
 
-const wraps = new Wraps();
+const wraps = createPlatformClient({ apiKey: 'sk_...' });
 
-await wraps.events.track({
-  event: 'order.completed',
-  email: 'user@example.com',
+await wraps.track('order.completed', {
+  contactEmail: 'user@example.com',
   properties: {
     orderId: 'ord_123',
-    total: 99.99
+    total: 99.99,
   },
 });`,
     },
