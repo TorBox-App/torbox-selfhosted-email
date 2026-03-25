@@ -26,7 +26,6 @@ import {
   SheetHeader,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { WrapsMotif } from "@/components/wraps-motif";
 import { trackEvent } from "@/utils/analytics";
 
 const navigationItems: {
@@ -289,7 +288,6 @@ export function LandingNavbar() {
               target="_blank"
             >
               Start for free
-              <WrapsMotif className="ml-1.5 size-2.5 text-white/70" />
             </a>
           </Button>
         </div>

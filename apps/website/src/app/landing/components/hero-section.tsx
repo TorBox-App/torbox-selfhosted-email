@@ -1,4 +1,5 @@
 import { DotPattern } from "@wraps/ui/components/dot-pattern";
+import { WrapsMotifLayers } from "@/components/wraps-motif-layers";
 import { Github } from "lucide-react";
 import Image from "next/image";
 import { HeroAnimatedCTA } from "./hero-cta";
@@ -6,16 +7,16 @@ import { HeroAnimatedCTA } from "./hero-cta";
 // Static content - server rendered, visible immediately
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden pt-20 pb-16 md:pt-24 lg:pt-32">
-      {/* Background Pattern */}
-      <div className="absolute inset-0">
-        <DotPattern className="opacity-100" fadeStyle="ellipse" size="md" />
+    <section className="relative pt-20 pb-16 md:pt-24 lg:pt-32">
+      {/* Background Pattern — extends past section to blend into principles */}
+      <div className="absolute inset-0 -bottom-80">
+        <DotPattern className="opacity-100 dark:opacity-65" fadeStyle="ellipse" size="md" />
       </div>
 
-      {/* Noise grain texture */}
+      {/* Noise grain texture — extends to match */}
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.06]"
+        className="pointer-events-none absolute inset-0 -bottom-80 h-[calc(100%+20rem)] w-full opacity-[0.06]"
       >
         <filter id="hero-noise">
           <feTurbulence
@@ -29,6 +30,11 @@ export function HeroSection() {
       </svg>
 
       <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
+        <WrapsMotifLayers
+          className="pointer-events-none absolute bottom-0 right-4 hidden h-[100px] w-[110px] sm:block md:h-[120px] md:w-[133px] lg:right-8"
+          fillColor="none"
+          strokeColor="#ff6600"
+        />
         <div className="flex flex-col items-start">
           {/* Badge - static, visible immediately */}
           <div className="mb-6 animate-fade-in-down">

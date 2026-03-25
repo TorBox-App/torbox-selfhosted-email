@@ -1,4 +1,4 @@
-import { WrapsMotif } from "@/components/wraps-motif";
+import { CreditCard, Server, Code } from "lucide-react";
 import { CTAButtons } from "./cta-buttons";
 
 export function CTASection() {
@@ -24,15 +24,15 @@ export function CTASection() {
           {/* Trust signals - static */}
           <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-muted-foreground text-sm">
             <span className="inline-flex items-center gap-1.5">
-              <WrapsMotif className="size-2.5 text-orange-500/70" />
+              <CreditCard className="size-3.5" />
               No credit card
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <WrapsMotif className="size-2.5 text-orange-500/70" />
+              <Server className="size-3.5" />
               Infrastructure stays if you cancel
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <WrapsMotif className="size-2.5 text-orange-500/70" />
+              <Code className="size-3.5" />
               Open source
             </span>
           </div>

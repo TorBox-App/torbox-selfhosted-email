@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { WrapsMotif } from "@/components/wraps-motif";
 import { trackEvent } from "@/utils/analytics";
 
 export function HeroAnimatedCTA() {
@@ -22,7 +21,6 @@ export function HeroAnimatedCTA() {
             }
           >
             Send your first email
-            <WrapsMotif className="ml-2 size-3.5 text-white/70" />
           </a>
         </Button>
         <Button

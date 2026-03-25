@@ -9,7 +9,6 @@ import {
   CodeBlockCopyButton,
   CodeBlockItem,
 } from "@/components/ui/shadcn-io/code-block";
-import { WrapsMotif } from "@/components/wraps-motif";
 import { assetUrl } from "@/lib/utils";
 
 const workflowCode = `import { defineWorkflow, sendEmail, delay, condition } from '@wraps.dev/client';
@@ -192,13 +191,11 @@ export function DualPathSection() {
         {/* Convergence */}
         <div className="mt-16 text-center animate-fade-in-up animation-delay-200">
           <div className="mx-auto mb-6 flex max-w-md items-center gap-3">
-            <WrapsMotif className="size-2.5 text-orange-500/70" />
             <div className="h-px flex-1 bg-border" />
             <span className="text-sm font-medium text-foreground/50">
               Same output
             </span>
             <div className="h-px flex-1 bg-border" />
-            <WrapsMotif className="size-2.5 text-orange-500/70" />
           </div>
           <p className="text-lg text-foreground/70">
             Same execution engine. Same git history. Same deploy pipeline. Code

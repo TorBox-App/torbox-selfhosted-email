@@ -5,6 +5,7 @@ import { XLogo } from "@/components/icons/x-logo";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { WrapsMotifLayers } from "@/components/wraps-motif-layers";
 
 const footerLinks = {
   product: [
@@ -56,8 +57,13 @@ const footerLinks = {
 
 export function LandingFooter() {
   return (
-    <footer className="border-t bg-background">
-      <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
+    <footer className="relative overflow-hidden border-t bg-background">
+      <WrapsMotifLayers
+        className="pointer-events-none absolute bottom-4 right-4 h-[280px] w-[310px] md:h-[340px] md:w-[375px]"
+        strokeColor="#ff6600"
+      />
+
+      <div className="relative container mx-auto px-4 py-16 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
         <div className="grid grid-cols-4 gap-8 lg:grid-cols-7">
           {/* Brand Column */}
