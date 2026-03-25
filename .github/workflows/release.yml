@@ -109,14 +109,12 @@ jobs:
           PRERELEASE_FLAG=""
           [[ "$DIST_TAG" != "latest" ]] && PRERELEASE_FLAG="--prerelease"
 
-          if ! gh release view "$TAG" --repo "${{ github.repository }}" &>/dev/null; then
-            gh release create "$TAG" \
-              --repo "${{ github.repository }}" \
-              --title "$TAG" \
-              --generate-notes \
-              --verify-tag \
-              $PRERELEASE_FLAG
-          fi
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "$TAG" \
+            --generate-notes \
+            --verify-tag \
+            $PRERELEASE_FLAG
 
       - name: Summary
         run: |
@@ -217,7 +215,7 @@ jobs:
       - name: Generate checksums
         run: sha256sum wraps-*.tar.gz > CHECKSUMS.sha256
 
-      - name: Create or update GitHub release
+      - name: Create GitHub release with assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -226,11 +224,6 @@ jobs:
           DIST_TAG="${{ needs.parse.outputs.dist_tag }}"
           PRERELEASE_FLAG=""
           [[ "$DIST_TAG" != "latest" ]] && PRERELEASE_FLAG="--prerelease"
-
-          if gh release view "$TAG" --repo "${{ github.repository }}" &>/dev/null; then
-            echo "Release $TAG already exists — deleting and recreating with assets"
-            gh release delete "$TAG" --repo "${{ github.repository }}" --yes
-          fi
 
           gh release create "$TAG" wraps-*.tar.gz CHECKSUMS.sha256 \
             --repo "${{ github.repository }}" \
