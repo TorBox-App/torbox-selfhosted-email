@@ -1,4 +1,10 @@
-import { db, messageSend, organizationExtension } from "@wraps/db";
+import {
+  db,
+  messageSend,
+  organizationExtension,
+  template,
+  workflow,
+} from "@wraps/db";
 import { createPlatformClient } from "@wraps.dev/client";
 import { and, count, eq } from "drizzle-orm";
 import { log } from "./logger";
@@ -145,6 +151,70 @@ export async function trackFirstEmailDelivered(
 
     log.info("Activation: first email delivery tracked from webhook", {
       organizationId,
+      source,
+    });
+  } catch {
+    // never throw from tracking
+  }
+}
+
+/**
+ * Track first resource creation for an organization.
+ * Catches CLI pushes that bypass web-side activation tracking.
+ * MUST be awaited in Lambda.
+ */
+export async function trackFirstResourceCreated(
+  organizationId: string,
+  resource: "template" | "workflow",
+  source: "cli" | "dashboard"
+) {
+  try {
+    const table = resource === "template" ? template : workflow;
+    const [r] = await db
+      .select({ count: count() })
+      .from(table)
+      .where(eq(table.organizationId, organizationId));
+
+    // Only fire on the actual first resource
+    if ((r?.count ?? 0) !== 1) return;
+
+    const eventName =
+      resource === "template"
+        ? "activation_first_template"
+        : "activation_first_automation";
+    const platformEvent =
+      resource === "template"
+        ? "activation.first_template"
+        : "activation.first_automation";
+
+    const props = {
+      organization_id: organizationId,
+      resource,
+      source,
+    };
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: organizationId,
+      event: eventName,
+      properties: props,
+      groups: { organization: organizationId },
+    });
+    posthog.groupIdentify({
+      groupType: "organization",
+      groupKey: organizationId,
+      properties: {
+        [eventName]: true,
+        [`${eventName}_source`]: source,
+      },
+    });
+
+    // Emit to platform so activation workflows can react
+    await emit(organizationId, platformEvent, props);
+
+    log.info("Activation: first resource created", {
+      organizationId,
+      resource,
       source,
     });
   } catch {

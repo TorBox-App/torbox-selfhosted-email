@@ -10,6 +10,7 @@
 
 import { and, db, eq, template } from "@wraps/db";
 import { t } from "elysia";
+import { trackFirstResourceCreated } from "../lib/activation-tracking";
 import type { AuthContext } from "../middleware/auth";
 import { createAuthenticatedRoutes } from "../middleware/auth";
 
@@ -35,6 +36,14 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
           lastEditedFrom: "dashboard",
           updatedAt: result.updatedAt,
         };
+      }
+
+      if (result.created) {
+        await trackFirstResourceCreated(
+          authContext.organizationId,
+          "template",
+          "cli"
+        );
       }
 
       ctx.set.status = result.created ? 201 : 200;
@@ -147,6 +156,14 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
               status: "PUBLISHED" as const,
             })),
         };
+      }
+
+      if (results.some((r) => r.created)) {
+        await trackFirstResourceCreated(
+          authContext.organizationId,
+          "template",
+          "cli"
+        );
       }
 
       return {

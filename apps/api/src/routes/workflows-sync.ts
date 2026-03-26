@@ -22,6 +22,7 @@ import {
 } from "@wraps/db";
 import { inArray, sql } from "drizzle-orm";
 import { t } from "elysia";
+import { trackFirstResourceCreated } from "../lib/activation-tracking";
 import type { AuthContext } from "../middleware/auth";
 import { createAuthenticatedRoutes } from "../middleware/auth";
 
@@ -62,6 +63,14 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
           lastEditedFrom: "dashboard",
           updatedAt: result.updatedAt,
         };
+      }
+
+      if (result.created) {
+        await trackFirstResourceCreated(
+          authContext.organizationId,
+          "workflow",
+          "cli"
+        );
       }
 
       ctx.set.status = result.created ? 201 : 200;
@@ -210,6 +219,14 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
               status: r.status,
             })),
         };
+      }
+
+      if (results.some((r) => r.created)) {
+        await trackFirstResourceCreated(
+          authContext.organizationId,
+          "workflow",
+          "cli"
+        );
       }
 
       return {
