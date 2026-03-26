@@ -200,12 +200,11 @@ export function DualPathSection() {
             </Link>
           </div>
           <h2 className="mb-4 text-center font-bold text-3xl tracking-tight font-heading md:text-4xl">
-            One platform. Two ways to work.
+            One platform. No more handoffs.
           </h2>
-          <p className="mx-auto max-w-3xl text-center text-lg text-foreground/70">
-            Define automations in TypeScript or drag nodes on a canvas. Write
-            templates as React or prompt AI. Both paths produce the same output,
-            deployed the same way.
+          <p className="mx-auto max-w-3xl text-center text-lg text-foreground/70 text-pretty">
+            Engineers define automations in TypeScript. Marketers drag nodes on
+            a canvas. Same result, different tools — nobody waits on anyone.
           </p>
         </div>
 

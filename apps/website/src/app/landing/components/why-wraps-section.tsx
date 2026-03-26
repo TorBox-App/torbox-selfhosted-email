@@ -44,8 +44,8 @@ export function WhyWrapsSection() {
               <p className="text-lg leading-relaxed text-muted-foreground md:text-xl">
                 I spent years at SendGrid watching companies pay hundreds a
                 month to send emails through infrastructure they didn&rsquo;t
-                own. When vendors change pricing, get acquired, or suspend your
-                account&mdash;you&rsquo;re stuck.
+                own. When they change pricing or get acquired, your sending
+                history, reputation, and templates go with them.
               </p>
 
               <p className="text-lg leading-relaxed text-muted-foreground md:text-xl">
@@ -59,6 +59,7 @@ export function WhyWrapsSection() {
                 None of them deploy to your AWS account. You&rsquo;re always
                 renting.
               </p>
+
             </div>
 
             {/* Turning point */}

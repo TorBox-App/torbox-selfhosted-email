@@ -1,4 +1,4 @@
-import { Cloud, GitPullRequest, ShieldCheck, Sparkles } from "lucide-react";
+import { Cloud, GitPullRequest, ShieldCheck, Users } from "lucide-react";
 
 const principles = [
   {
@@ -16,10 +16,10 @@ const principles = [
     delay: "animation-delay-100",
   },
   {
-    icon: Sparkles,
-    title: "AI When You Want It",
+    icon: Users,
+    title: "No More Tickets",
     description:
-      "Don't want to write code? AI generates templates and workflows from a prompt. You review the output, not a GUI.",
+      "Engineers own the code. Marketers own the content. Both deploy through the same pipeline. Nobody waits on a Jira ticket to change a button color.",
     delay: "animation-delay-200",
   },
   {
