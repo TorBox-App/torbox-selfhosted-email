@@ -28,12 +28,11 @@ export function DashboardCtaSection() {
             </div>
 
             <h2 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl">
-              Build. Send. Automate.
+              Create. Reach. Scale.
             </h2>
             <p className="mx-auto mb-8 max-w-xl text-background/70">
               Your AWS handles sending. We handle the DX. Unlimited contacts,
-              infrastructure you own. Start free or $19/mo for the Wraps
-              Platform.
+              infrastructure you own.
             </p>
 
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
@@ -55,15 +54,6 @@ export function DashboardCtaSection() {
               >
                 <a href="#pricing">View Pricing</a>
               </Button>
-            </div>
-
-            {/* Journey reminder */}
-            <div className="mt-8 flex items-center justify-center gap-6 text-background/50 text-xs">
-              <span>1. Build templates</span>
-              <span className="text-background/30">→</span>
-              <span>2. Send broadcasts</span>
-              <span className="text-background/30">→</span>
-              <span>3. Automate workflows</span>
             </div>
           </div>
         </motion.div>

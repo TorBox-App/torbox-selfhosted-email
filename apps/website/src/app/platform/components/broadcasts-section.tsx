@@ -68,7 +68,7 @@ export function DashboardBroadcastsSection() {
             2
           </div>
           <div>
-            <p className="font-medium text-orange-500 text-sm">Chapter Two</p>
+            <p className="font-medium text-orange-500 text-sm">Reach</p>
             <h2 className="font-bold text-2xl tracking-tight sm:text-3xl">
               Reach Your Audience
             </h2>
@@ -117,10 +117,7 @@ export function DashboardBroadcastsSection() {
             {/* Features as list */}
             <div className="space-y-4">
               {features.map((feature) => (
-                <div
-                  className="flex items-start gap-3"
-                  key={feature.title}
-                >
+                <div className="flex items-start gap-3" key={feature.title}>
                   <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
                     <feature.icon className="size-4 text-orange-500" />
                   </div>

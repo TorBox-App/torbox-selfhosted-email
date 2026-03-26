@@ -1,14 +1,7 @@
 "use client";
 
 import { useTheme } from "@wraps/ui/hooks/use-theme";
-import {
-  ChevronDown,
-  Github,
-  Menu,
-  Moon,
-  Sun,
-  X,
-} from "lucide-react";
+import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -358,9 +351,11 @@ export function LandingNavbar() {
                             <ChevronDown
                               aria-hidden="true"
                               className={`h-4 w-4 transition-transform ${
-                                (item.submenuType === "products"
-                                  ? productsOpen
-                                  : resourcesOpen)
+                                (
+                                  item.submenuType === "products"
+                                    ? productsOpen
+                                    : resourcesOpen
+                                )
                                   ? "rotate-180"
                                   : ""
                               }`}

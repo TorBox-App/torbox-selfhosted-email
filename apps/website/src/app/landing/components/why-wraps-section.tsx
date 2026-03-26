@@ -53,13 +53,12 @@ export function WhyWrapsSection() {
                   className="text-foreground underline underline-offset-2 hover:text-orange-500 transition-colors"
                   href="/compare"
                 >
-                  Postmark charges per email. Resend charges per email. Mailchimp
-                  charges per contact.
+                  Postmark charges per email. Resend charges per email.
+                  Mailchimp charges per contact.
                 </Link>{" "}
                 None of them deploy to your AWS account. You&rsquo;re always
                 renting.
               </p>
-
             </div>
 
             {/* Turning point */}

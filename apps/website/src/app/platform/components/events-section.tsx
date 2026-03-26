@@ -155,10 +155,7 @@ export function DashboardEventsSection() {
             {benefits.map((benefit) => {
               const Icon = benefit.icon;
               return (
-                <div
-                  className="text-center"
-                  key={benefit.title}
-                >
+                <div className="text-center" key={benefit.title}>
                   <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-orange-500/10">
                     <Icon className="size-6 text-orange-500" />
                   </div>

@@ -6,10 +6,10 @@ import { LandingNavbar } from "@/app/landing/components/navbar";
 import { DashboardAutomationsSection } from "./components/automations-section";
 import { DashboardBroadcastsSection } from "./components/broadcasts-section";
 import { DashboardCtaSection } from "./components/cta-section";
-import { DashboardEventsSection } from "./components/events-section";
 import { DashboardFeaturesSection } from "./components/features-section";
 import { DashboardHeroSection } from "./components/hero-section";
-import { DashboardPricingSection } from "./components/pricing-section";
+import { HowItWorksSection } from "./components/how-it-works-section";
+import { SlantTransition } from "./components/slant-transition";
 import { DashboardTemplatesSection } from "./components/templates-section";
 
 export default function DashboardPageContent() {
@@ -56,12 +56,12 @@ export default function DashboardPageContent() {
       <LandingNavbar />
       <main>
         <DashboardHeroSection />
+        <HowItWorksSection />
         <DashboardTemplatesSection />
         <DashboardBroadcastsSection />
         <DashboardAutomationsSection />
         <DashboardFeaturesSection />
-        <DashboardPricingSection />
-        <DashboardEventsSection />
+        <SlantTransition />
         <DashboardCtaSection />
       </main>
       <LandingFooter />

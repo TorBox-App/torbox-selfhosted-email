@@ -13,7 +13,6 @@ import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/utils";
 
-
 const features = [
   {
     icon: Sparkles,
@@ -70,7 +69,7 @@ export function DashboardTemplatesSection() {
             1
           </div>
           <div>
-            <p className="font-medium text-orange-500 text-sm">Chapter One</p>
+            <p className="font-medium text-orange-500 text-sm">Create</p>
             <h2 className="font-bold text-2xl tracking-tight sm:text-3xl">
               Build Templates
             </h2>
