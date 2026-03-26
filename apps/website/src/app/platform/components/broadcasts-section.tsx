@@ -108,12 +108,7 @@ export function DashboardBroadcastsSection() {
           </motion.div>
 
           {/* Content */}
-          <motion.div
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 40 }}
-            className="space-y-8"
-            initial={{ opacity: 0, x: 40 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
+          <div className="space-y-8">
             <p className="text-lg text-muted-foreground">
               Send newsletters, announcements, and marketing campaigns.
               Segments, topics, and scheduling included in Starter.
@@ -121,15 +116,10 @@ export function DashboardBroadcastsSection() {
 
             {/* Features as list */}
             <div className="space-y-4">
-              {features.map((feature, index) => (
-                <motion.div
-                  animate={
-                    isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
-                  }
+              {features.map((feature) => (
+                <div
                   className="flex items-start gap-3"
-                  initial={{ opacity: 0, y: 10 }}
                   key={feature.title}
-                  transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
                 >
                   <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
                     <feature.icon className="size-4 text-orange-500" />
@@ -150,17 +140,12 @@ export function DashboardBroadcastsSection() {
                       {feature.description}
                     </p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
 
             {/* Upgrade hint */}
-            <motion.div
-              animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4"
-              initial={{ opacity: 0 }}
-              transition={{ duration: 0.5, delay: 0.8 }}
-            >
+            <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4">
               <p className="text-sm">
                 <span className="font-medium text-orange-600 dark:text-orange-400">
                   Starter ($19/mo):
@@ -177,8 +162,8 @@ export function DashboardBroadcastsSection() {
                   Everything in Starter plus AI workflows and 3 AWS accounts
                 </span>
               </p>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

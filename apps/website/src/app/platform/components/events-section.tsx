@@ -82,21 +82,16 @@ export function DashboardEventsSection() {
 
         {/* Event Types Comparison */}
         <div className="mb-16 grid gap-6 md:grid-cols-2">
-          {eventTypes.map((type, index) => {
+          {eventTypes.map((type) => {
             const Icon = type.icon;
             return (
-              <motion.div
-                animate={
-                  isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
-                }
+              <div
                 className={`relative overflow-hidden rounded-2xl border-2 p-6 ${
                   type.counted
                     ? "border-orange-500 bg-orange-500/5"
                     : "border-green-500 bg-green-500/5"
                 }`}
-                initial={{ opacity: 0, y: 20 }}
                 key={type.title}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
               >
                 {/* Badge */}
                 <div className="absolute top-4 right-4">
@@ -146,33 +141,23 @@ export function DashboardEventsSection() {
                     </code>
                   )}
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
 
         {/* Benefits Grid */}
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="rounded-2xl border bg-muted/30 p-8"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
+        <div className="rounded-2xl border bg-muted/30 p-8">
           <h3 className="mb-6 text-center font-semibold text-lg">
             Why event-based pricing?
           </h3>
           <div className="grid gap-6 md:grid-cols-3">
-            {benefits.map((benefit, index) => {
+            {benefits.map((benefit) => {
               const Icon = benefit.icon;
               return (
-                <motion.div
-                  animate={
-                    isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
-                  }
+                <div
                   className="text-center"
-                  initial={{ opacity: 0, y: 10 }}
                   key={benefit.title}
-                  transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
                 >
                   <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-orange-500/10">
                     <Icon className="size-6 text-orange-500" />
@@ -181,22 +166,17 @@ export function DashboardEventsSection() {
                   <p className="text-muted-foreground text-sm">
                     {benefit.description}
                   </p>
-                </motion.div>
+                </div>
               );
             })}
           </div>
-        </motion.div>
+        </div>
 
         {/* Comparison note */}
-        <motion.p
-          animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-          className="mt-8 text-center text-muted-foreground text-sm"
-          initial={{ opacity: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-        >
+        <p className="mt-8 text-center text-muted-foreground text-sm">
           Compare: Customer.io charges $150+/mo for 12K contacts. Wraps gives
           you unlimited contacts on every plan—even the free tier.
-        </motion.p>
+        </p>
       </div>
     </section>
   );

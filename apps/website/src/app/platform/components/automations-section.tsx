@@ -73,12 +73,7 @@ export function DashboardAutomationsSection() {
         {/* Split layout: Content left, screenshot right (flipped from Ch. 2) */}
         <div className="grid items-center gap-12 lg:grid-cols-2">
           {/* Content */}
-          <motion.div
-            animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -40 }}
-            className="order-2 space-y-8 lg:order-1"
-            initial={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
+          <div className="order-2 space-y-8 lg:order-1">
             <p className="text-lg text-muted-foreground">
               Build automated email sequences triggered by events, time delays,
               or conditions. Define in TypeScript or generate with AI.
@@ -86,15 +81,10 @@ export function DashboardAutomationsSection() {
 
             {/* Features as list */}
             <div className="space-y-4">
-              {features.map((feature, index) => (
-                <motion.div
-                  animate={
-                    isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
-                  }
+              {features.map((feature) => (
+                <div
                   className="flex items-start gap-3"
-                  initial={{ opacity: 0, y: 10 }}
                   key={feature.title}
-                  transition={{ duration: 0.3, delay: 0.3 + index * 0.1 }}
                 >
                   <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
                     <feature.icon className="size-4 text-orange-500" />
@@ -115,17 +105,12 @@ export function DashboardAutomationsSection() {
                       {feature.description}
                     </p>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
 
             {/* Tier hints */}
-            <motion.div
-              animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4 space-y-1"
-              initial={{ opacity: 0 }}
-              transition={{ duration: 0.5, delay: 0.8 }}
-            >
+            <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4 space-y-1">
               <p className="text-sm">
                 <span className="font-medium text-orange-600 dark:text-orange-400">
                   Free:
@@ -142,8 +127,8 @@ export function DashboardAutomationsSection() {
                   Unlimited workflows
                 </span>
               </p>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
           {/* Screenshot - overflows right */}
           <motion.div

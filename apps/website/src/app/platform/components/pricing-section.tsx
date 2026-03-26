@@ -68,19 +68,14 @@ export function DashboardPricingSection() {
 
         {/* Pricing cards */}
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {allTiers.map((tier, index) => {
+          {allTiers.map((tier) => {
             const overage = OVERAGE_RATES[tier.id];
             return (
-              <motion.div
-                animate={
-                  isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }
-                }
+              <div
                 className={`relative flex flex-col overflow-hidden rounded-2xl border-2 bg-background ${
                   tier.highlight ? "border-orange-500" : "border-border"
                 }`}
-                initial={{ opacity: 0, y: 30 }}
                 key={tier.name}
-                transition={{ duration: 0.5, delay: 0.1 + index * 0.1 }}
               >
                 {/* Header */}
                 <div
@@ -178,18 +173,13 @@ export function DashboardPricingSection() {
                     </a>
                   </Button>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
 
         {/* Founding Member Program */}
-        <motion.div
-          animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-          className="mt-10 rounded-xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-900 dark:bg-orange-950"
-          initial={{ opacity: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
+        <div className="mt-10 rounded-xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-900 dark:bg-orange-950">
           <div className="flex items-center justify-center gap-2 mb-3">
             <span className="text-xl">🚀</span>
             <p className="font-semibold text-orange-800 dark:text-orange-200">
@@ -204,18 +194,13 @@ export function DashboardPricingSection() {
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Footer note */}
-        <motion.p
-          animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-          className="mt-6 text-center text-muted-foreground text-sm"
-          initial={{ opacity: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-        >
+        <p className="mt-6 text-center text-muted-foreground text-sm">
           AWS costs billed separately by AWS (~$0.10 per 1,000 emails). Free
           tier available with 5,000 tracked events/month.
-        </motion.p>
+        </p>
       </div>
     </section>
   );

@@ -13,6 +13,7 @@ import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/utils";
 
+
 const features = [
   {
     icon: Sparkles,
@@ -114,33 +115,18 @@ export function DashboardTemplatesSection() {
 
       {/* Content below screenshot */}
       <div className="mx-auto max-w-5xl px-4 pt-12 sm:px-6 lg:px-8">
-        <motion.p
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="mx-auto mb-10 max-w-2xl text-center text-lg text-muted-foreground"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
+        <p className="mx-auto mb-10 max-w-2xl text-center text-lg text-muted-foreground">
           AI-first editor with raw code access. Built on React Email for
           pixel-perfect rendering across Gmail, Outlook, Apple Mail, and every
           other client.
-        </motion.p>
+        </p>
 
         {/* Feature Pills */}
-        <motion.div
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          className="flex flex-wrap justify-center gap-3"
-          initial={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
-          {features.map((feature, index) => (
-            <motion.div
-              animate={
-                isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }
-              }
+        <div className="flex flex-wrap justify-center gap-3">
+          {features.map((feature) => (
+            <div
               className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 transition-colors hover:border-orange-500/50"
-              initial={{ opacity: 0, scale: 0.9 }}
               key={feature.title}
-              transition={{ duration: 0.3, delay: 0.5 + index * 0.05 }}
             >
               <feature.icon className="size-4 text-orange-500" />
               <span className="font-medium text-sm">{feature.title}</span>
@@ -152,18 +138,13 @@ export function DashboardTemplatesSection() {
                   {feature.badge}
                 </Badge>
               )}
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
 
-        <motion.p
-          animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-          className="mt-8 text-center text-muted-foreground text-sm"
-          initial={{ opacity: 0 }}
-          transition={{ duration: 0.5, delay: 0.7 }}
-        >
+        <p className="mt-8 text-center text-muted-foreground text-sm">
           Included in all plans — even Free
-        </motion.p>
+        </p>
       </div>
     </section>
   );

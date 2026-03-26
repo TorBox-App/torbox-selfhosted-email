@@ -63,17 +63,12 @@ export function DashboardFeaturesSection() {
 
         {/* Compact feature grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature, index) => {
+          {features.map((feature) => {
             const Icon = feature.icon;
             return (
-              <motion.div
-                animate={
-                  isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }
-                }
+              <div
                 className="flex items-start gap-3 rounded-lg border bg-background/50 p-4"
-                initial={{ opacity: 0, y: 10 }}
                 key={feature.title}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
               >
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10">
                   <Icon className="size-4 text-orange-500" />
@@ -84,7 +79,7 @@ export function DashboardFeaturesSection() {
                     {feature.description}
                   </p>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>

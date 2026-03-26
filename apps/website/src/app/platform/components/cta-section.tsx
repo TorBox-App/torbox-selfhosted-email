@@ -21,12 +21,7 @@ export function DashboardCtaSection() {
           {/* Background glow */}
           <div className="absolute -top-24 left-1/2 h-48 w-96 -translate-x-1/2 rounded-full bg-orange-500/20 blur-3xl" />
 
-          <motion.div
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            className="relative"
-            initial={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
+          <div className="relative">
             <div className="mb-4 flex items-center justify-center gap-2 text-orange-400">
               <Sparkles className="size-4" />
               <span className="font-medium text-sm">Start Your Journey</span>
@@ -63,19 +58,14 @@ export function DashboardCtaSection() {
             </div>
 
             {/* Journey reminder */}
-            <motion.div
-              animate={isInView ? { opacity: 1 } : { opacity: 0 }}
-              className="mt-8 flex items-center justify-center gap-6 text-background/50 text-xs"
-              initial={{ opacity: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-            >
+            <div className="mt-8 flex items-center justify-center gap-6 text-background/50 text-xs">
               <span>1. Build templates</span>
               <span className="text-background/30">→</span>
               <span>2. Send broadcasts</span>
               <span className="text-background/30">→</span>
               <span>3. Automate workflows</span>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </motion.div>
       </div>
     </section>
