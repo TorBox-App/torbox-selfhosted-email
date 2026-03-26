@@ -33,9 +33,12 @@ export default function SignUpForm({
   const redirectTo = searchParams.get("redirect");
   const plan = searchParams.get("plan");
   const interval = searchParams.get("interval") || "monthly";
-  const { isPending } = authClient.useSession();
+  const { isPending, data: session } = authClient.useSession();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
+
+  const isAuthInProgress = isRedirecting || isGoogleLoading || isGitHubLoading;
 
   const isSpecialRedirect =
     redirectTo?.startsWith("/invitations/") ||
@@ -122,6 +125,7 @@ export default function SignUpForm({
       });
 
       // Step 4: Redirect to special page or onboarding
+      setIsRedirecting(true);
       toast.success("Account created successfully!");
       if (isSpecialRedirect && redirectTo) {
         router.push(redirectTo);
@@ -148,6 +152,12 @@ export default function SignUpForm({
       }),
     },
   });
+
+  // Redirect already-authenticated users away from the signup page
+  if (!isPending && session) {
+    router.replace(callbackUrl);
+    return <Loader />;
+  }
 
   // Only show loader on initial page load, not during/after form submission
   if (isPending && !form.state.isSubmitting && !form.state.isSubmitted) {
@@ -253,8 +263,8 @@ export default function SignUpForm({
                   {(state) => (
                     <Button
                       className="w-full cursor-pointer"
-                      disabled={!state.canSubmit}
-                      loading={state.isSubmitting}
+                      disabled={!state.canSubmit || isAuthInProgress}
+                      loading={state.isSubmitting || isRedirecting}
                       type="submit"
                     >
                       Create Account
@@ -276,6 +286,7 @@ export default function SignUpForm({
 
               <Button
                 className="w-full"
+                disabled={isAuthInProgress}
                 loading={isGoogleLoading}
                 onClick={async () => {
                   setIsGoogleLoading(true);
@@ -318,6 +329,7 @@ export default function SignUpForm({
 
               <Button
                 className="w-full"
+                disabled={isAuthInProgress}
                 loading={isGitHubLoading}
                 onClick={async () => {
                   setIsGitHubLoading(true);

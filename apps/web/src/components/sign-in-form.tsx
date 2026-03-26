@@ -32,14 +32,18 @@ export default function SignInForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/";
-  const { isPending } = authClient.useSession();
+  const { isPending, data: session } = authClient.useSession();
   const [show2FA, setShow2FA] = useState(false);
   const [twoFactorEmail, setTwoFactorEmail] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [is2FALoading, setIs2FALoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGitHubLoading, setIsGitHubLoading] = useState(false);
+
+  const isAuthInProgress =
+    isRedirecting || isPasskeyLoading || isGoogleLoading || isGitHubLoading;
 
   // Get the last used login method
   const lastMethod = authClient.getLastUsedLoginMethod();
@@ -65,6 +69,8 @@ export default function SignInForm({
               return;
             }
 
+            setIsRedirecting(true);
+
             // Identify user and capture sign-in event in PostHog
             posthog.identify(value.email, {
               email: value.email,
@@ -74,8 +80,8 @@ export default function SignInForm({
               method: "email",
             });
 
-            router.push(redirectTo);
             toast.success("Sign in successful");
+            router.push(redirectTo);
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);
@@ -108,6 +114,8 @@ export default function SignInForm({
         return;
       }
 
+      setIsRedirecting(true);
+
       // Identify user and capture sign-in event in PostHog
       posthog.identify(twoFactorEmail, {
         email: twoFactorEmail,
@@ -117,14 +125,20 @@ export default function SignInForm({
         method: "email_2fa",
       });
 
-      router.push(redirectTo);
       toast.success("Sign in successful");
+      router.push(redirectTo);
     } catch (_error) {
       toast.error("Failed to verify 2FA code");
     } finally {
       setIs2FALoading(false);
     }
   };
+
+  // Redirect already-authenticated users away from the login page
+  if (!isPending && session) {
+    router.replace(redirectTo);
+    return <Loader />;
+  }
 
   // Only show loader on initial page load, not during/after form submission
   if (isPending && !form.state.isSubmitting && !form.state.isSubmitted) {
@@ -273,19 +287,21 @@ export default function SignInForm({
                   {(state) => (
                     <Button
                       className="relative w-full cursor-pointer"
-                      disabled={!state.canSubmit}
-                      loading={state.isSubmitting}
+                      disabled={!state.canSubmit || isAuthInProgress}
+                      loading={state.isSubmitting || isRedirecting}
                       type="submit"
                     >
                       Login
-                      {lastMethod === "email" && (
-                        <Badge
-                          className="-translate-y-1/2 absolute top-1/2 right-2 ml-auto"
-                          variant="secondary"
-                        >
-                          Last used
-                        </Badge>
-                      )}
+                      {lastMethod === "email" &&
+                        !state.isSubmitting &&
+                        !isRedirecting && (
+                          <Badge
+                            className="-translate-y-1/2 absolute top-1/2 right-2 ml-auto"
+                            variant="secondary"
+                          >
+                            Last used
+                          </Badge>
+                        )}
                     </Button>
                   )}
                 </form.Subscribe>
@@ -304,6 +320,7 @@ export default function SignInForm({
 
               <Button
                 className="relative w-full"
+                disabled={isAuthInProgress}
                 loading={isPasskeyLoading}
                 onClick={async () => {
                   setIsPasskeyLoading(true);
@@ -317,6 +334,8 @@ export default function SignInForm({
                       return;
                     }
 
+                    setIsRedirecting(true);
+
                     // Identify user and capture passkey sign-in event in PostHog
                     if (result.data?.user) {
                       posthog.identify(result.data.user.email, {
@@ -329,8 +348,8 @@ export default function SignInForm({
                       method: "passkey",
                     });
 
-                    router.push(redirectTo);
                     toast.success("Signed in with passkey");
+                    router.push(redirectTo);
                   } catch (error: any) {
                     console.error("Passkey error:", error);
                     toast.error(
@@ -368,6 +387,7 @@ export default function SignInForm({
 
               <Button
                 className="relative w-full"
+                disabled={isAuthInProgress}
                 loading={isGoogleLoading}
                 onClick={async () => {
                   setIsGoogleLoading(true);
@@ -422,6 +442,7 @@ export default function SignInForm({
 
               <Button
                 className="relative w-full"
+                disabled={isAuthInProgress}
                 loading={isGitHubLoading}
                 onClick={async () => {
                   setIsGitHubLoading(true);

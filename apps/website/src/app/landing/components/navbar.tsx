@@ -2,7 +2,7 @@
 
 import { ModeToggle } from "@wraps/ui/components/mode-toggle";
 import { useTheme } from "@wraps/ui/hooks/use-theme";
-import { ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
+import { BookOpen, ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
@@ -269,8 +269,18 @@ export function LandingNavbar() {
               <Github aria-hidden="true" className="h-5 w-5" />
             </a>
           </Button>
-          <Button asChild className="cursor-pointer" variant="outline">
-            <Link href="/docs">Documentation</Link>
+          <Button
+            asChild
+            className="cursor-pointer"
+            size="icon"
+            variant="ghost"
+          >
+            <Link aria-label="Documentation" href="/docs">
+              <BookOpen aria-hidden="true" className="h-5 w-5" />
+            </Link>
+          </Button>
+          <Button asChild className="cursor-pointer" variant="ghost">
+            <a href="https://app.wraps.dev/auth?mode=signin">Log in</a>
           </Button>
           <Button
             asChild
@@ -281,13 +291,11 @@ export function LandingNavbar() {
               onClick={() =>
                 trackEvent("cta_click", {
                   location: "navbar_desktop",
-                  cta_text: "Start for free",
+                  cta_text: "Sign up",
                 })
               }
-              rel="noopener noreferrer"
-              target="_blank"
             >
-              Start for free
+              Sign up
             </a>
           </Button>
         </div>
@@ -490,18 +498,16 @@ export function LandingNavbar() {
                     size="lg"
                   >
                     <a
-                      href="https://app.wraps.dev/auth?mode=signup&plan=starter"
+                      href="https://app.wraps.dev/auth?mode=signup"
                       onClick={() => {
                         trackEvent("cta_click", {
                           location: "navbar_mobile",
-                          cta_text: "Get Platform",
+                          cta_text: "Sign up",
                         });
                         setIsOpen(false);
                       }}
-                      rel="noopener noreferrer"
-                      target="_blank"
                     >
-                      Get Platform
+                      Sign up
                     </a>
                   </Button>
 
@@ -511,7 +517,12 @@ export function LandingNavbar() {
                     size="lg"
                     variant="outline"
                   >
-                    <Link href="/docs">Documentation</Link>
+                    <a
+                      href="https://app.wraps.dev/auth?mode=signin"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Log in
+                    </a>
                   </Button>
                 </div>
               </div>
