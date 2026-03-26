@@ -13,41 +13,22 @@ import { SlantTransition } from "./components/slant-transition";
 import { DashboardTemplatesSection } from "./components/templates-section";
 
 export default function DashboardPageContent() {
-  // Handle hash scrolling on page load
+  // Handle hash scrolling after page layout settles
   useEffect(() => {
     const hash = window.location.hash;
     if (hash) {
+      const element = document.querySelector(hash);
+      if (!element) return;
+
+      // Jump to approximate position immediately to avoid blank viewport
+      element.scrollIntoView({ behavior: "instant" as ScrollBehavior });
+
+      // Once images above the anchor load and layout is stable, smooth-scroll
+      // to the final position (it may have shifted)
       const timeoutId = setTimeout(() => {
-        const element = document.querySelector(hash);
-        if (element) {
-          const targetPosition =
-            element.getBoundingClientRect().top + window.scrollY;
-          const startPosition = window.scrollY;
-          const distance = targetPosition - startPosition;
-          const duration = 1200; // ms - slower scroll
-          let startTime: number | null = null;
+        element.scrollIntoView({ behavior: "smooth" });
+      }, 300);
 
-          const easeInOutCubic = (t: number) =>
-            t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
-
-          const animateScroll = (currentTime: number) => {
-            if (startTime === null) {
-              startTime = currentTime;
-            }
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const easeProgress = easeInOutCubic(progress);
-
-            window.scrollTo(0, startPosition + distance * easeProgress);
-
-            if (elapsed < duration) {
-              requestAnimationFrame(animateScroll);
-            }
-          };
-
-          requestAnimationFrame(animateScroll);
-        }
-      }, 100);
       return () => clearTimeout(timeoutId);
     }
   }, []);
