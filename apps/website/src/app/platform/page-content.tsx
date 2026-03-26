@@ -59,9 +59,9 @@ export default function DashboardPageContent() {
         <HowItWorksSection />
         <DashboardTemplatesSection />
         <DashboardBroadcastsSection />
+        <SlantTransition />
         <DashboardAutomationsSection />
         <DashboardFeaturesSection />
-        <SlantTransition />
         <DashboardCtaSection />
       </main>
       <LandingFooter />
