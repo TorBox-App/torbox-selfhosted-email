@@ -17,6 +17,7 @@ import {
 } from "@wraps/db";
 import { and, inArray, isNull, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
+import { trackFirstEmailDelivered } from "../lib/activation-tracking";
 import { log } from "../lib/logger";
 import {
   deleteScheduledStep,
@@ -166,7 +167,16 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       .limit(1);
 
     if (!message) {
-      // Message not found - might be from a different source (transactional SDK)
+      // Message not found — likely sent via SDK (direct SES).
+      // Still track activation so we know this org has sent emails.
+      if (eventType === "Delivery" || eventType === "Send") {
+        await trackFirstEmailDelivered(account.organizationId, "sdk").catch(
+          (err) =>
+            log.error("Activation tracking failed (SDK send)", err, {
+              organizationId: account.organizationId,
+            })
+        );
+      }
       log.info("Webhook: message not found", { messageId });
       return { status: "ignored", reason: "message not found" };
     }
@@ -176,6 +186,14 @@ export const webhooksRoutes = new Elysia({ prefix: "/webhooks" }).post(
       switch (eventType) {
         case "Delivery":
           await processDelivery(message, event.detail.delivery?.timestamp);
+          await trackFirstEmailDelivered(
+            account.organizationId,
+            "platform"
+          ).catch((err) =>
+            log.error("Activation tracking failed", err, {
+              organizationId: account.organizationId,
+            })
+          );
           break;
 
         case "Open":

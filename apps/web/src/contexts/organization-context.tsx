@@ -3,6 +3,7 @@
 import type { organization } from "@wraps/db";
 import type { InferSelectModel } from "drizzle-orm";
 import { useParams, useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import {
   createContext,
   type ReactNode,
@@ -55,6 +56,18 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
     fetchOrganizations();
   }, []);
+
+  // Identify organization group in PostHog when active org changes
+  useEffect(() => {
+    if (!activeOrgData) return;
+    const orgData = (activeOrgData as any).organization || activeOrgData;
+    if (orgData?.id) {
+      posthog.group("organization", orgData.id, {
+        name: orgData.name,
+        slug: orgData.slug,
+      });
+    }
+  }, [activeOrgData]);
 
   // Auto-set active org from URL when session has no active org
   // (e.g., after deleting the previously active org)

@@ -1,35 +1,8 @@
-import { db, messageSend } from "@wraps/db";
+import { db, messageSend, organizationExtension } from "@wraps/db";
 import { createPlatformClient } from "@wraps.dev/client";
 import { and, count, eq } from "drizzle-orm";
-import { PostHog } from "posthog-node";
 import { log } from "./logger";
-
-let posthogClient: PostHog | null = null;
-
-const noopClient = {
-  capture: () => {},
-  flush: async () => {},
-  shutdown: async () => {},
-} as unknown as PostHog;
-
-function getPostHogClient(): PostHog {
-  if (process.env.NODE_ENV === "test" || process.env.CI === "true") {
-    return noopClient;
-  }
-
-  if (!posthogClient) {
-    const apiKey = process.env.POSTHOG_KEY;
-    if (!apiKey) {
-      return noopClient;
-    }
-    posthogClient = new PostHog(apiKey, {
-      host: "https://us.i.posthog.com",
-      flushAt: 1,
-      flushInterval: 0,
-    });
-  }
-  return posthogClient;
-}
+import { getPostHogClient } from "./posthog";
 
 /** Platform event emission. Never throws, but logs failures. */
 async function emit(
@@ -90,6 +63,14 @@ export async function trackFirstEmailSent(
         distinctId: organizationId,
         event: "activation_first_email_sent",
         properties: props,
+        groups: { organization: organizationId },
+      });
+      posthog.groupIdentify({
+        groupType: "organization",
+        groupKey: organizationId,
+        properties: {
+          activation_first_email_sent: true,
+        },
       });
 
       // Also emit to Wraps platform for workflow triggers
@@ -97,6 +78,75 @@ export async function trackFirstEmailSent(
         await emit(contactEmail, "activation.first_email_sent", props);
       }
     }
+  } catch {
+    // never throw from tracking
+  }
+}
+
+/**
+ * Track first email delivery for an organization from SES webhook events.
+ * Catches SDK sends that bypass batch-sender (no messageSend records).
+ * Uses organizationExtension as a cheap check to avoid repeated DB queries.
+ * MUST be awaited in Lambda.
+ */
+export async function trackFirstEmailDelivered(
+  organizationId: string,
+  source: "sdk" | "platform"
+) {
+  try {
+    // Fast path: check if org already has activation score > 0 with email tracked
+    const [ext] = await db
+      .select({ activationScore: organizationExtension.activationScore })
+      .from(organizationExtension)
+      .where(eq(organizationExtension.organizationId, organizationId))
+      .limit(1);
+
+    // If activation score >= 7, the org is already well-activated — skip
+    if (ext && ext.activationScore >= 7) return;
+
+    // Check whether we've already tracked this activation via messageSend records
+    const [r] = await db
+      .select({ count: count() })
+      .from(messageSend)
+      .where(
+        and(
+          eq(messageSend.organizationId, organizationId),
+          eq(messageSend.status, "sent")
+        )
+      );
+
+    // For platform sends, trackFirstEmailSent already handles this path
+    // Only fire here if there are zero messageSend records (pure SDK send)
+    // or if we've never fired the activation event before
+    const hasPlatformSends = (r?.count ?? 0) > 0;
+    if (source === "platform" && hasPlatformSends) return;
+
+    const props = {
+      organization_id: organizationId,
+      channel: "email",
+      source,
+    };
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: organizationId,
+      event: "activation_first_email_sent",
+      properties: props,
+      groups: { organization: organizationId },
+    });
+    posthog.groupIdentify({
+      groupType: "organization",
+      groupKey: organizationId,
+      properties: {
+        activation_first_email_sent: true,
+        activation_email_source: source,
+      },
+    });
+
+    log.info("Activation: first email delivery tracked from webhook", {
+      organizationId,
+      source,
+    });
   } catch {
     // never throw from tracking
   }

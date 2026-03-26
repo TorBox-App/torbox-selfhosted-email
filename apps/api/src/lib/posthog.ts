@@ -22,7 +22,7 @@ export function getPostHogClient(): PostHog {
   if (shouldDisableTracking()) return noopClient;
 
   if (!posthogClient) {
-    const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const apiKey = process.env.POSTHOG_KEY;
     if (!apiKey) return noopClient;
 
     posthogClient = new PostHog(apiKey, {

@@ -39,12 +39,16 @@ function capture(
   personProperties?: Record<string, unknown>
 ) {
   try {
+    const organizationId = properties.organization_id;
     const posthog = getPostHogClient();
     posthog.capture({
       distinctId,
       event,
       properties,
       ...(personProperties && { $set: personProperties }),
+      ...(typeof organizationId === "string" && {
+        groups: { organization: organizationId },
+      }),
     });
   } catch {
     // intentionally swallowed - tracking should never break the app
