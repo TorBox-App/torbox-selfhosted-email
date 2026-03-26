@@ -72,6 +72,7 @@ function ComparisonRow({
   imageLightSrc,
   imageDarkSrc,
   imageAlt,
+  imageLink,
   visualCaption,
 }: {
   label: string;
@@ -81,6 +82,7 @@ function ComparisonRow({
   imageLightSrc: string;
   imageDarkSrc: string;
   imageAlt: string;
+  imageLink?: string;
   visualCaption: string;
 }) {
   return (
@@ -125,22 +127,44 @@ function ComparisonRow({
 
         {/* Visual side */}
         <div className="flex min-w-0 flex-col">
-          <div className="flex-1 overflow-hidden rounded-lg md:rounded-xl border bg-card shadow-sm">
-            <Image
-              alt={imageAlt}
-              className="block w-full object-cover dark:hidden"
-              height={400}
-              src={imageLightSrc}
-              width={600}
-            />
-            <Image
-              alt={imageAlt}
-              className="hidden w-full object-cover dark:block"
-              height={400}
-              src={imageDarkSrc}
-              width={600}
-            />
-          </div>
+          {imageLink ? (
+            <Link
+              className="group/img flex-1 overflow-hidden rounded-lg md:rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md"
+              href={imageLink}
+            >
+              <Image
+                alt={imageAlt}
+                className="block w-full object-cover transition-transform duration-300 group-hover/img:scale-[1.02] dark:hidden"
+                height={400}
+                src={imageLightSrc}
+                width={600}
+              />
+              <Image
+                alt={imageAlt}
+                className="hidden w-full object-cover transition-transform duration-300 group-hover/img:scale-[1.02] dark:block"
+                height={400}
+                src={imageDarkSrc}
+                width={600}
+              />
+            </Link>
+          ) : (
+            <div className="flex-1 overflow-hidden rounded-lg md:rounded-xl border bg-card shadow-sm">
+              <Image
+                alt={imageAlt}
+                className="block w-full object-cover dark:hidden"
+                height={400}
+                src={imageLightSrc}
+                width={600}
+              />
+              <Image
+                alt={imageAlt}
+                className="hidden w-full object-cover dark:block"
+                height={400}
+                src={imageDarkSrc}
+                width={600}
+              />
+            </div>
+          )}
           <p className="mt-3 text-sm text-foreground/50">{visualCaption}</p>
         </div>
       </div>
@@ -155,19 +179,25 @@ export function DualPathSection() {
         {/* Header */}
         <div className="mb-12 animate-fade-in-up">
           <div className="mb-8 flex flex-wrap items-center justify-center gap-3 sm:gap-6">
-            <div className="flex items-center gap-2">
+            <Link
+              className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-emerald-500/5"
+              href="/cli"
+            >
               <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 Code
               </span>
               <span className="text-sm text-foreground/50">for engineers</span>
-            </div>
+            </Link>
             <span className="text-sm text-foreground/50">+</span>
-            <div className="flex items-center gap-2">
+            <Link
+              className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-orange-500/5"
+              href="/platform"
+            >
               <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-400">
                 Visual
               </span>
               <span className="text-sm text-foreground/50">for marketers</span>
-            </div>
+            </Link>
           </div>
           <h2 className="mb-4 text-center font-bold text-3xl tracking-tight font-heading md:text-4xl">
             One platform. Two ways to work.
@@ -189,6 +219,7 @@ export function DualPathSection() {
             imageAlt="Visual workflow builder canvas with drag-and-drop nodes for delays, conditions, and email sends"
             imageDarkSrc="/automations-builder-dark.webp"
             imageLightSrc="/automations-builder-light.webp"
+            imageLink="/platform#automations"
             label="Automations"
             visualCaption="Drag nodes onto a canvas. Connect triggers, delays, and conditions. No code required — same workflow under the hood."
           />
@@ -201,6 +232,7 @@ export function DualPathSection() {
             imageAlt="Template editor with AI chat panel generating a welcome email"
             imageDarkSrc={assetUrl("template-editor-full-dark.webp")}
             imageLightSrc={assetUrl("template-editor-full-light.webp")}
+            imageLink="/platform#templates"
             label="Templates"
             visualCaption="Describe what you want. AI generates the template. Edit visually or switch to code. No ticket required."
           />

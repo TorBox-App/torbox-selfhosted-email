@@ -56,7 +56,12 @@ export function HeroSection() {
           {/* Main Headline - server rendered, CSS animation */}
           <h1 className="max-w-[864px] text-left text-[32px] font-semibold leading-[36px] animate-fade-in-up font-heading md:text-[42px] md:leading-[48px] lg:text-[60px] lg:leading-[68px]">
             The email platform that sends through{" "}
-            <span className="text-orange-500">your AWS.</span>
+            <a
+              className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60 transition-colors"
+              href="/docs/quickstart/email"
+            >
+              your AWS.
+            </a>
           </h1>
 
           {/* Subheadline - server rendered, CSS animation */}

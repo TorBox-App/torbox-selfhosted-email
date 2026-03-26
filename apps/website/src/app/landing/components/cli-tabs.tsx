@@ -492,7 +492,7 @@ function GlowingTabBar({ activeIndex, onTabClick }: GlowingTabProps) {
                 <span className="relative hidden sm:inline">{tab.label}</span>
                 {!isActive && (
                   <div
-                    className="absolute inset-0 -translate-x-full animate-[shimmer_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-orange-500/10 to-transparent"
+                    className="pointer-events-none absolute inset-0 -translate-x-full animate-[shimmer_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-orange-500/10 to-transparent"
                     style={{ animationDelay: `${index * 0.3}s` }}
                   />
                 )}

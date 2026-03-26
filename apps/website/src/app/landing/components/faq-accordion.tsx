@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -7,10 +8,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+const faqLink =
+  "text-foreground underline underline-offset-2 hover:text-orange-500";
+const faqCode =
+  "rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground";
+
 type FaqItem = {
   value: string;
   question: string;
   answer: string;
+  richAnswer?: ReactNode;
 };
 
 const faqItems: FaqItem[] = [
@@ -19,24 +26,82 @@ const faqItems: FaqItem[] = [
     question: "Why is email SaaS so expensive?",
     answer:
       "Email providers like Postmark, Mailgun, and others charge $2-4+ per 1,000 emails because they're running infrastructure for you. AWS SES charges $0.10/1K because you're running it yourself. Wraps bridges this gap—you get AWS pricing with modern DX.",
+    richAnswer: (
+      <>
+        Email providers like{" "}
+        <a className={faqLink} href="/compare">
+          Postmark, Mailgun, and others
+        </a>{" "}
+        charge $2-4+ per 1,000 emails because they&rsquo;re running
+        infrastructure for you. AWS SES charges{" "}
+        <a className={faqLink} href="/tools/ses-calculator">
+          $0.10/1K
+        </a>{" "}
+        because you&rsquo;re running it yourself. Wraps bridges this
+        gap&mdash;you get AWS pricing with modern DX.
+      </>
+    ),
   },
   {
     value: "item-0b",
     question: "Why is AWS SES so hard to set up?",
     answer:
       "SES requires configuring IAM roles, EventBridge rules, DynamoDB tables, Lambda functions, and SQS queues for proper email tracking. That's 2+ hours of clicking through the AWS Console. Wraps does this in one command.",
+    richAnswer: (
+      <>
+        SES requires configuring IAM roles, EventBridge rules, DynamoDB tables,
+        Lambda functions, and SQS queues for proper email tracking. That&rsquo;s
+        2+ hours of clicking through the AWS Console. Wraps does this in{" "}
+        <a className={faqLink} href="/docs/quickstart/email">
+          one command
+        </a>
+        .
+      </>
+    ),
   },
   {
     value: "item-1",
     question: "How is this different from using AWS SES directly?",
     answer:
       "Wraps deploys all the infrastructure AWS SES needs (IAM roles, EventBridge, DynamoDB, Lambda, SQS) in one command instead of 2+ hours of manual setup. You get event tracking, analytics, and a dashboard out of the box. The TypeScript SDK is just `wraps.emails.send()` - no boilerplate.",
+    richAnswer: (
+      <>
+        Wraps deploys all the infrastructure AWS SES needs (IAM roles,
+        EventBridge, DynamoDB, Lambda, SQS) in{" "}
+        <a className={faqLink} href="/docs/quickstart/email">
+          one command
+        </a>{" "}
+        instead of 2+ hours of manual setup. You get event tracking, analytics,
+        and a{" "}
+        <a className={faqLink} href="/platform">
+          dashboard
+        </a>{" "}
+        out of the box. The{" "}
+        <a className={faqLink} href="/docs/sdk-reference">
+          TypeScript SDK
+        </a>{" "}
+        is just <code className={faqCode}>wraps.emails.send()</code> &mdash; no
+        boilerplate.
+      </>
+    ),
   },
   {
     value: "item-2",
     question: "What are the costs for running Wraps?",
     answer:
       "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs ~$5 to AWS. There's a free tier with 5,000 tracked events/month included. Paid plans start at $19/month. The infrastructure is yours forever—no vendor lock-in, no surprise bills.",
+    richAnswer: (
+      <>
+        With Wraps, you pay AWS directly at{" "}
+        <a className={faqLink} href="/tools/ses-calculator">
+          $0.10 per 1,000 emails
+        </a>{" "}
+        with no markup. For example, 50,000 emails/month costs ~$5 to AWS.
+        There&rsquo;s a free tier with 5,000 tracked events/month included. Paid
+        plans start at $19/month. The infrastructure is yours forever&mdash;no
+        vendor lock-in, no surprise bills.
+      </>
+    ),
   },
   {
     value: "item-2b",
@@ -49,6 +114,18 @@ const faqItems: FaqItem[] = [
     question: "Do you store my AWS credentials?",
     answer:
       "No! We use OIDC (OpenID Connect) for Vercel deployments or IAM roles for AWS-native deployments. The CLI uses your local AWS credentials for the initial deployment, then creates IAM roles that your app can assume. We never see or store your AWS access keys.",
+    richAnswer: (
+      <>
+        No! We use OIDC (OpenID Connect) for Vercel deployments or IAM roles for
+        AWS-native deployments. The{" "}
+        <a className={faqLink} href="/docs/cli-reference">
+          CLI
+        </a>{" "}
+        uses your local AWS credentials for the initial deployment, then creates
+        IAM roles that your app can assume. We never see or store your AWS
+        access keys.
+      </>
+    ),
   },
   {
     value: "item-4",
@@ -61,18 +138,65 @@ const faqItems: FaqItem[] = [
     question: "Can I customize the infrastructure deployment?",
     answer:
       "Yes! The CLI offers infrastructure presets for different needs—from minimal tracking to full analytics with dedicated IPs. You can also use 'npx @wraps.dev/cli email upgrade' to add features incrementally. For full customization, all infrastructure is deployed as open-source Pulumi code you can fork and modify.",
+    richAnswer: (
+      <>
+        Yes! The CLI offers infrastructure presets for different
+        needs&mdash;from minimal tracking to full analytics with dedicated IPs.
+        You can also use{" "}
+        <code className={faqCode}>npx @wraps.dev/cli email upgrade</code> to add
+        features incrementally. For full customization, all infrastructure is
+        deployed as{" "}
+        <a
+          className={faqLink}
+          href="https://github.com/wraps-team/wraps"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          open-source Pulumi code
+        </a>{" "}
+        you can fork and modify.
+      </>
+    ),
   },
   {
     value: "item-6",
     question: "Does this work with my existing SES setup?",
     answer:
       "Yes! Use 'npx @wraps.dev/cli email connect' to scan your existing SES resources and add Wraps features non-destructively. We never modify existing resources—all our infrastructure uses the 'wraps-email-' prefix. You can also use 'npx @wraps.dev/cli email init' for a completely fresh deployment.",
+    richAnswer: (
+      <>
+        Yes! Use{" "}
+        <code className={faqCode}>npx @wraps.dev/cli email connect</code> to
+        scan your existing SES resources and add Wraps features
+        non-destructively. We never modify existing resources&mdash;all our
+        infrastructure uses the <code className={faqCode}>wraps-email-</code>{" "}
+        prefix. You can also use{" "}
+        <code className={faqCode}>npx @wraps.dev/cli email init</code> for a
+        completely fresh deployment.
+      </>
+    ),
   },
   {
     value: "item-7",
     question: "Can I receive emails too?",
     answer:
       "Yes! Wraps supports inbound email receiving. Run 'npx @wraps.dev/cli email inbound init' to deploy the infrastructure, then use the SDK to list, read, reply, and forward emails. EventBridge triggers let you build webhooks for real-time processing.",
+    richAnswer: (
+      <>
+        Yes! Wraps supports{" "}
+        <a className={faqLink} href="/inbound">
+          inbound email receiving
+        </a>
+        . Run{" "}
+        <code className={faqCode}>npx @wraps.dev/cli email inbound init</code>{" "}
+        to deploy the infrastructure, then use the{" "}
+        <a className={faqLink} href="/docs/sdk-reference">
+          SDK
+        </a>{" "}
+        to list, read, reply, and forward emails. EventBridge triggers let you
+        build webhooks for real-time processing.
+      </>
+    ),
   },
 ];
 
@@ -89,7 +213,7 @@ export function FaqAccordion() {
             <span className="font-medium">{item.question}</span>
           </AccordionTrigger>
           <AccordionContent className="pb-4 text-muted-foreground">
-            {item.answer}
+            {item.richAnswer ?? item.answer}
           </AccordionContent>
         </AccordionItem>
       ))}

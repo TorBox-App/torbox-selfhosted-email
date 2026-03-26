@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export function WhyWrapsSection() {
   return (
@@ -48,9 +49,15 @@ export function WhyWrapsSection() {
               </p>
 
               <p className="text-lg leading-relaxed text-muted-foreground md:text-xl">
-                Postmark charges per email. Resend charges per email. SendGrid
-                charges per contact. None of them deploy to your AWS account.
-                You&rsquo;re always renting.
+                <Link
+                  className="text-foreground underline underline-offset-2 hover:text-orange-500 transition-colors"
+                  href="/compare"
+                >
+                  Postmark charges per email. Resend charges per email. SendGrid
+                  charges per contact.
+                </Link>{" "}
+                None of them deploy to your AWS account. You&rsquo;re always
+                renting.
               </p>
             </div>
 
@@ -65,8 +72,15 @@ export function WhyWrapsSection() {
             </p>
 
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-foreground/80 md:text-xl">
-              Deploy to your AWS and use the platform when you need to send
-              broadcasts, manage templates with a team, or create automations.
+              Deploy to your AWS and use the{" "}
+              <Link
+                className="text-foreground underline underline-offset-2 hover:text-orange-500 transition-colors"
+                href="/platform"
+              >
+                platform
+              </Link>{" "}
+              when you need to send broadcasts, manage templates with a team, or
+              create automations.
             </p>
           </div>
 

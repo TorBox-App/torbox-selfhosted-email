@@ -7,7 +7,7 @@ const freeTier = PRICING_TIERS[0];
 export function FreeHero() {
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="relative overflow-hidden rounded-2xl border-2 border-orange-500 bg-background p-8">
+      <div className="group relative overflow-hidden rounded-2xl border-2 border-orange-500 bg-background p-8 transition-shadow hover:shadow-lg hover:shadow-orange-500/10">
         <span className="mb-4 inline-block rounded-full bg-orange-500/10 px-3 py-1 font-semibold text-orange-600 text-xs dark:text-orange-400">
           Free Forever
         </span>
@@ -29,7 +29,7 @@ export function FreeHero() {
 
         <Button
           asChild
-          className="cursor-pointer bg-orange-500 hover:bg-orange-600"
+          className="relative z-10 cursor-pointer bg-orange-500 hover:bg-orange-600 after:absolute after:-inset-[2000px] after:z-[-1]"
           size="lg"
         >
           <a href={freeTier.ctaLink}>{freeTier.cta}</a>
