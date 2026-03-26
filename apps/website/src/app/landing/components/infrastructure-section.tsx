@@ -1,4 +1,5 @@
 import { DollarSign, HardDrive, LogOut, Users } from "lucide-react";
+import { StaggerContainer, StaggerItem } from "./animations";
 
 const proofPoints = [
   {
@@ -23,7 +24,7 @@ export function InfrastructureSection() {
   return (
     <section className="py-24" id="infrastructure">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div className="animate-fade-in-up">
+        <div>
           <h2 className="mb-4 font-bold text-3xl tracking-tight font-heading md:text-4xl">
             Sending infrastructure you actually own.
           </h2>
@@ -34,22 +35,21 @@ export function InfrastructureSection() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 animate-fade-in-up animation-delay-100">
+        <StaggerContainer className="grid gap-4 sm:grid-cols-2">
           {proofPoints.map((point) => {
             const Icon = point.icon;
             return (
-              <div
-                className="flex items-start gap-4 rounded-lg border p-5 transition-colors hover:border-orange-500/50"
-                key={point.text}
-              >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-orange-500/10">
-                  <Icon className="size-5 text-orange-500" />
+              <StaggerItem key={point.text}>
+                <div className="flex items-start gap-4 rounded-lg border p-5 transition-colors hover:border-orange-500/50">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-orange-500/10">
+                    <Icon className="size-5 text-orange-500" />
+                  </div>
+                  <p className="text-foreground">{point.text}</p>
                 </div>
-                <p className="text-foreground">{point.text}</p>
-              </div>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       </div>
     </section>
   );

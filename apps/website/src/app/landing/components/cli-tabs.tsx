@@ -286,7 +286,7 @@ function ReceiveContent() {
         <div className="flex items-center gap-3">
           <IconBox highlighted icon={Inbox} />
           <div>
-            <h3 className="font-semibold text-cyan-500">Receive Emails</h3>
+            <h3 className="font-semibold text-orange-500">Receive Emails</h3>
             <p className="text-muted-foreground text-sm">
               Deploy inbound infrastructure to your AWS
             </p>
@@ -361,7 +361,7 @@ function ReceiveContent() {
           </CodeBlockBody>
         </CodeBlock>
 
-        <div className="grid gap-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-4 sm:grid-cols-2">
+        <div className="grid gap-2 rounded-lg bg-muted/50 p-4 sm:grid-cols-2">
           {[
             "SES → S3 → Lambda → EventBridge",
             "Parse headers & attachments",
@@ -369,7 +369,7 @@ function ReceiveContent() {
             "Reply with threading",
           ].map((item) => (
             <div className="flex items-center gap-2" key={item}>
-              <Check className="size-4 text-cyan-500" />
+              <Check className="size-4 text-orange-500" />
               <span className="text-sm">{item}</span>
             </div>
           ))}
@@ -490,12 +490,6 @@ function GlowingTabBar({ activeIndex, onTabClick }: GlowingTabProps) {
                   )}
                 />
                 <span className="relative hidden sm:inline">{tab.label}</span>
-                {!isActive && (
-                  <div
-                    className="pointer-events-none absolute inset-0 -translate-x-full animate-[shimmer_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-orange-500/10 to-transparent"
-                    style={{ animationDelay: `${index * 0.3}s` }}
-                  />
-                )}
               </button>
             );
           })}

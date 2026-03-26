@@ -35,7 +35,7 @@ export function WhyWrapsSection() {
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 md:grid-cols-[1fr_auto] md:gap-16 lg:gap-24">
           {/* Left column — narrative */}
-          <div className="animate-fade-in-up">
+          <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-500">
               Why Wraps
             </p>
@@ -86,7 +86,7 @@ export function WhyWrapsSection() {
           </div>
 
           {/* Right column — founder photo */}
-          <div className="flex flex-col items-center animate-fade-in-up animation-delay-100">
+          <div className="flex flex-col items-center">
             <Image
               alt="Jarod, founder of Wraps"
               className="rounded-full"

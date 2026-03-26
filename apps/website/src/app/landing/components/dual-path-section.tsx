@@ -177,7 +177,7 @@ export function DualPathSection() {
     <section className="py-16 md:py-24" id="dual-path">
       <div className="mx-auto max-w-[1600px] px-2 sm:px-4">
         {/* Header */}
-        <div className="mb-12 animate-fade-in-up">
+        <div className="mb-12">
           <div className="mb-8 flex flex-wrap items-center justify-center gap-3 sm:gap-6">
             <Link
               className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-emerald-500/5"
@@ -209,7 +209,7 @@ export function DualPathSection() {
         </div>
 
         {/* Comparison rows */}
-        <div className="space-y-10 md:space-y-16 animate-fade-in-up animation-delay-100">
+        <div className="space-y-10 md:space-y-16">
           {/* Automations */}
           <ComparisonRow
             codeCaption="Delays, conditions, branching — all type-safe. Ship your onboarding sequence in the same PR as your signup flow."
@@ -238,7 +238,7 @@ export function DualPathSection() {
         </div>
 
         {/* Convergence */}
-        <div className="mt-16 text-center animate-fade-in-up animation-delay-200">
+        <div className="mt-16 text-center">
           <div className="mx-auto mb-6 flex max-w-md items-center gap-3">
             <div className="h-px flex-1 bg-border" />
             <span className="text-sm font-medium text-foreground/50">

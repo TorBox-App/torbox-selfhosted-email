@@ -40,8 +40,8 @@ export function HeroSection() {
           strokeColor="var(--muted-foreground)"
         />
         <div className="flex flex-col items-start">
-          {/* Badge - static, visible immediately */}
-          <div className="mb-6 animate-fade-in-down">
+          {/* Badge */}
+          <div className="mb-6">
             <a
               className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-orange-500 transition-colors hover:border-orange-500/50"
               href="https://github.com/wraps-team/wraps"
@@ -53,8 +53,8 @@ export function HeroSection() {
             </a>
           </div>
 
-          {/* Main Headline - server rendered, CSS animation */}
-          <h1 className="max-w-[864px] text-left text-[32px] font-semibold leading-[36px] animate-fade-in-up font-heading md:text-[42px] md:leading-[48px] lg:text-[60px] lg:leading-[68px]">
+          {/* Main Headline */}
+          <h1 className="max-w-[864px] text-left text-[32px] font-semibold leading-[36px] font-heading md:text-[42px] md:leading-[48px] lg:text-[60px] lg:leading-[68px]">
             The email platform that sends through{" "}
             <a
               className="text-orange-500 underline decoration-orange-500/30 underline-offset-4 hover:decoration-orange-500/60 transition-colors"
@@ -64,14 +64,14 @@ export function HeroSection() {
             </a>
           </h1>
 
-          {/* Subheadline - server rendered, CSS animation */}
-          <p className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-foreground/70 animate-fade-in-up animation-delay-100 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
+          {/* Subheadline */}
+          <p className="mt-4 max-w-[750px] text-left text-[16px] leading-[24px] text-foreground/70 md:text-[18px] md:leading-[26px] lg:text-[20px] lg:leading-[28px]">
             Automate on user behavior. Design templates. Schedule broadcasts.
             Transparent pricing. Sending infrastructure you own.
           </p>
 
           {/* Founder credibility */}
-          <div className="mt-4 flex items-center gap-2.5 animate-fade-in-up animation-delay-100">
+          <div className="mt-4 flex items-center gap-2.5">
             <Image
               alt="Jarod, founder of Wraps"
               className="shrink-0 rounded-full"

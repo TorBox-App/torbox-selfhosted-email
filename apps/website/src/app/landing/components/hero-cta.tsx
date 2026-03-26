@@ -5,7 +5,7 @@ import { trackEvent } from "@/utils/analytics";
 
 export function HeroAnimatedCTA() {
   return (
-    <div className="mt-8 animate-fade-in-up animation-delay-200">
+    <div className="mt-8">
       <div className="flex items-center gap-3">
         <Button
           asChild

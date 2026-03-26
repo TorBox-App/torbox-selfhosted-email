@@ -1,4 +1,5 @@
 import { Cloud, GitPullRequest, ShieldCheck, Users } from "lucide-react";
+import { FadeIn } from "./animations";
 
 const principles = [
   {
@@ -6,28 +7,24 @@ const principles = [
     title: "Code You Can Review",
     description:
       "Templates and workflows live in your repo. Review in PRs. Roll back bad deploys. No more 'don't edit while I'm editing.'",
-    delay: "animation-delay-0",
   },
   {
     icon: ShieldCheck,
     title: "Type-Safe Everything",
     description:
       "TypeScript SDK. Typed template variables. Typed workflow definitions. Catch errors before they reach an inbox.",
-    delay: "animation-delay-100",
   },
   {
     icon: Users,
     title: "No More Tickets",
     description:
       "Engineers own the code. Marketers own the content. Both deploy through the same pipeline. Nobody waits on a Jira ticket to change a button color.",
-    delay: "animation-delay-200",
   },
   {
     icon: Cloud,
     title: "Sends Through Your AWS",
     description:
       "Your SES. Your DynamoDB. Your domain reputation. Pay AWS directly. Leave anytime, keep everything.",
-    delay: "animation-delay-300",
   },
 ];
 
@@ -88,15 +85,13 @@ export function PrinciplesSection() {
 
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Principles Grid */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          {principles.map((principle) => {
-            const Icon = principle.icon;
-            return (
-              <div
-                className={`animate-fade-in-up ${principle.delay}`}
-                key={principle.title}
-              >
-                <div className="group relative h-full overflow-hidden rounded-lg border border-black/[0.06] bg-black/[0.03] p-4 pt-12 backdrop-blur-xl transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-white/[0.08] dark:bg-white/[0.04]">
+        <FadeIn>
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            {principles.map((principle) => {
+              const Icon = principle.icon;
+              return (
+                <div key={principle.title}>
+                  <div className="group relative h-full overflow-hidden rounded-lg border border-black/[0.06] bg-black/[0.03] p-4 pt-12 backdrop-blur-xl transition-all hover:border-orange-500/50 hover:shadow-lg dark:border-white/[0.08] dark:bg-white/[0.04]">
                   {/* Large background icon */}
                   <div className="absolute -right-3 -top-3 opacity-[0.07] transition-opacity group-hover:opacity-[0.12]">
                     <Icon className="size-24 text-orange-500" />
@@ -113,11 +108,12 @@ export function PrinciplesSection() {
                   <p className="relative text-foreground/70 text-xs leading-relaxed">
                     {principle.description}
                   </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </FadeIn>
       </div>
     </section>
   );

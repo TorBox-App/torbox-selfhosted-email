@@ -13,7 +13,7 @@ export function PricingSection() {
     <section className="py-24" id="pricing">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Section header */}
-        <div className="mb-12 text-center animate-fade-in-up">
+        <div className="mb-12 text-center">
           <span className="mb-4 inline-block rounded-full border px-3 py-1 font-medium text-xs bg-background text-muted-foreground border-border">
             Pricing
           </span>
