@@ -35,7 +35,7 @@ export function PricingSection() {
 
         {/* Paid tiers sub-header */}
         <div className="mb-8 text-center">
-          <h3 className="mb-2 font-bold text-2xl tracking-tight">
+          <h3 className="mb-2 font-bold text-2xl tracking-tight font-heading">
             {PRICING_COPY.paidTiersHeadline}
           </h3>
           <p className="text-muted-foreground">
