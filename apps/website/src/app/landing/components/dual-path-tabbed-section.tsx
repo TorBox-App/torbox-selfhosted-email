@@ -82,8 +82,8 @@ function TabBar({
                 className={cn(
                   "group relative flex items-center gap-2 overflow-hidden rounded-full px-5 py-2.5 font-medium text-sm transition-all duration-300",
                   isActive
-                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-105"
-                    : "text-muted-foreground hover:bg-orange-500/10 hover:text-foreground dark:hover:bg-orange-500/20",
+                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                    : "text-muted-foreground hover:bg-orange-500/10 hover:text-foreground dark:hover:bg-orange-500/20"
                 )}
                 key={tab.key}
                 onClick={() => onTabClick(index)}
@@ -97,7 +97,7 @@ function TabBar({
                     "relative size-4 transition-transform duration-300",
                     isActive
                       ? "scale-110"
-                      : "group-hover:scale-110 group-hover:text-orange-500",
+                      : "group-hover:scale-110 group-hover:text-orange-500"
                   )}
                 />
                 <span className="relative">{tab.label}</span>
@@ -183,7 +183,7 @@ function ComparisonPanel({
           <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:text-orange-400">
             Visual
           </span>
-          <span className="text-sm text-foreground/50">for marketers</span>
+          <span className="text-sm text-foreground/50">for your team</span>
         </Link>
         {imageLink ? (
           <Link
@@ -238,12 +238,14 @@ export function DualPathTabbedSection() {
       <div className="mx-auto max-w-[1600px] px-2 sm:px-4">
         {/* Header */}
         <div className="mb-12 text-center">
-          <h2 className="mb-4 font-bold text-3xl tracking-tight font-heading md:text-4xl">
-            One platform. No more handoffs.
+          <h2 className="mb-4 font-bold text-3xl tracking-tight font-heading md:text-4xl text-balance">
+            Write it in TypeScript. Or drag it onto a canvas. Nobody files a
+            ticket.
           </h2>
           <p className="mx-auto max-w-3xl text-lg text-foreground/70 text-pretty">
-            Engineers define automations in TypeScript. Marketers drag nodes on a
-            canvas. Same result, different tools — nobody waits on anyone.
+            Automations and templates that your whole team can own. Engineers
+            get TypeScript, everyone else gets a visual editor. Same result
+            either way.
           </p>
         </div>
 
@@ -254,7 +256,7 @@ export function DualPathTabbedSection() {
         <div>
           <div className={activeTab === "automations" ? "" : "hidden"}>
             <ComparisonPanel
-              codeCaption="Delays, conditions, branching — all type-safe. Ship your onboarding sequence in the same PR as your signup flow."
+              codeCaption="Define your welcome series next to the code that triggers it. Delays, conditions, branching, all type-safe."
               codeData={[
                 {
                   language: "typescript",
@@ -267,12 +269,12 @@ export function DualPathTabbedSection() {
               imageDarkSrc="/automations-builder-dark.webp"
               imageLightSrc="/automations-builder-light.webp"
               imageLink="/platform#automations"
-              visualCaption="Drag nodes onto a canvas. Connect triggers, delays, and conditions. No code required — same workflow under the hood."
+              visualCaption="Drag nodes onto a canvas. Triggers, delays, conditions — change the workflow without opening a PR."
             />
           </div>
           <div className={activeTab === "templates" ? "" : "hidden"}>
             <ComparisonPanel
-              codeCaption="Typed props. Component composition. Reviewed in the same PR as the feature it supports."
+              codeCaption="Your template is a React component. It lives in your repo and ships in the same PR as the feature."
               codeData={[
                 {
                   language: "tsx",
@@ -285,7 +287,7 @@ export function DualPathTabbedSection() {
               imageDarkSrc={assetUrl("template-editor-full-dark.webp")}
               imageLightSrc={assetUrl("template-editor-full-light.webp")}
               imageLink="/platform#templates"
-              visualCaption="Describe what you want. AI generates the template. Edit visually or switch to code. No ticket required."
+              visualCaption="Chat with the AI, edit the result visually, or eject to code. No ticket required."
             />
           </div>
         </div>
@@ -300,21 +302,21 @@ export function DualPathTabbedSection() {
             <div className="h-px flex-1 bg-border" />
           </div>
           <p className="text-lg text-foreground/70">
-            Same execution engine. Same git history. Same deploy pipeline. Code
-            or visual — your choice, every time.
+            Same execution engine, same git history, same deploy pipeline.
+            Switch whenever you want.
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
               className="inline-flex items-center text-sm font-medium text-orange-500 hover:text-orange-600"
               href="/docs/quickstart/email"
             >
-              Read the docs →
+              Start with code →
             </Link>
             <Link
               className="inline-flex items-center text-sm font-medium text-foreground/70 hover:text-foreground"
               href="/platform#automations"
             >
-              Try the builder →
+              See the visual builder →
             </Link>
           </div>
         </div>

@@ -1,9 +1,9 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { memo, useState } from "react";
 import { TrackedEventTooltip } from "@/components/tracked-event-tooltip";
 import { Button } from "@/components/ui/button";
-import { WrapsMotif } from "@/components/wraps-motif";
 import {
   type BillingInterval,
   getCtaLink,
@@ -13,23 +13,20 @@ import {
 } from "@/config/pricing";
 import { BillingToggle } from "./billing-toggle";
 
-/**
- * Renders a feature string, replacing only "tracked events" with a tooltip
- * while keeping surrounding text (numbers, "/month", etc.) as regular text
- */
+const TRACKED_EVENTS_RE = /(tracked events)/i;
+
 function FeatureText({ text }: { text: string }) {
   if (!text.toLowerCase().includes("tracked events")) {
     return <>{text}</>;
   }
 
-  // Split on "tracked events" (case-insensitive) and reassemble with tooltip
-  const parts = text.split(/(tracked events)/i);
+  const parts = text.split(TRACKED_EVENTS_RE);
 
   return (
     <>
-      {parts.map((part, i) =>
+      {parts.map((part) =>
         part.toLowerCase() === "tracked events" ? (
-          <TrackedEventTooltip key={i}>{part}</TrackedEventTooltip>
+          <TrackedEventTooltip key={part}>{part}</TrackedEventTooltip>
         ) : (
           part
         )
@@ -38,7 +35,78 @@ function FeatureText({ text }: { text: string }) {
   );
 }
 
-export const PricingCards = memo(function PricingCards({
+function PricingCard({
+  plan,
+  billingInterval,
+}: {
+  plan: PricingTier;
+  billingInterval: BillingInterval;
+}) {
+  const isFree = plan.id === "free";
+  return (
+    <div
+      className={`relative flex flex-col overflow-hidden rounded-2xl border bg-background ${isFree ? "border-2 border-orange-500" : ""}`}
+    >
+      <div className="flex flex-1 flex-col p-6">
+        <div className="mb-4">
+          <div className="mb-2 flex items-center gap-2">
+            <h3 className="font-bold text-lg">{plan.name}</h3>
+            {isFree && (
+              <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-600 text-[10px] dark:text-orange-400">
+                Free Forever
+              </span>
+            )}
+          </div>
+          <p className="text-muted-foreground text-sm">{plan.description}</p>
+        </div>
+
+        <div className="mb-4">
+          <span className="font-bold text-3xl">
+            {isFree ? "Free" : `$${getDisplayPrice(plan, billingInterval)}`}
+          </span>
+          {!isFree && (
+            <span className="text-muted-foreground">{plan.period}</span>
+          )}
+        </div>
+
+        <ul className="mb-6 flex-1 space-y-2">
+          {plan.features.map((feature) => (
+            <li className="flex items-start gap-2" key={feature}>
+              <Check className="mt-0.5 size-3 shrink-0 text-orange-500/70" />
+              <span className="text-sm">
+                <FeatureText text={feature} />
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {plan.ctaLink ? (
+          <Button
+            asChild
+            className={`w-full cursor-pointer ${isFree ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+            size="default"
+            variant={isFree ? "default" : "outline"}
+          >
+            <a href={getCtaLink(plan, billingInterval)}>
+              {isFree ? "Get Started Free" : plan.cta}
+            </a>
+          </Button>
+        ) : (
+          <Button
+            className="w-full cursor-not-allowed opacity-60"
+            disabled
+            size="default"
+            variant="outline"
+          >
+            {plan.cta}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export const PricingCards = memo(function PricingCardsInner({
   tiers,
 }: {
   tiers?: PricingTier[];
@@ -49,79 +117,19 @@ export const PricingCards = memo(function PricingCards({
 
   return (
     <>
-      {/* Billing Toggle */}
       <div className="mb-8 flex justify-center">
         <BillingToggle onChange={setBillingInterval} value={billingInterval} />
       </div>
 
-      {/* Pricing Cards */}
       <div
         className={`mb-12 grid gap-6 md:grid-cols-2 ${plans.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}
       >
         {plans.map((plan) => (
-          <div
-            className={`relative overflow-hidden rounded-2xl border bg-background ${plan.highlight ? "border-2 border-orange-500" : ""}`}
+          <PricingCard
+            billingInterval={billingInterval}
             key={plan.name}
-          >
-            <div className="p-6">
-              <div className="mb-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <h3 className="font-bold text-lg">{plan.name}</h3>
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  {plan.description}
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <span className="font-bold text-3xl">
-                  ${getDisplayPrice(plan, billingInterval)}
-                </span>
-                <span className="text-muted-foreground">{plan.period}</span>
-                {plan.annualPrice &&
-                  (billingInterval === "annual" ? (
-                    <div className="mt-1 text-green-600 text-sm">
-                      ${plan.annualPrice} billed annually{" "}
-                    </div>
-                  ) : (
-                    <div className="mt-1 text-muted-foreground text-sm">
-                      or ${plan.annualPrice}/yr{" "}
-                    </div>
-                  ))}
-              </div>
-
-              {plan.ctaLink ? (
-                <Button
-                  asChild
-                  className={`mb-6 w-full cursor-pointer ${plan.highlight ? "bg-orange-500 hover:bg-orange-600" : ""}`}
-                  size="default"
-                  variant={plan.highlight ? "default" : "outline"}
-                >
-                  <a href={getCtaLink(plan, billingInterval)}>{plan.cta}</a>
-                </Button>
-              ) : (
-                <Button
-                  className="mb-6 w-full cursor-not-allowed opacity-60"
-                  disabled
-                  size="default"
-                  variant="outline"
-                >
-                  {plan.cta}
-                </Button>
-              )}
-
-              <ul className="space-y-2">
-                {plan.features.map((feature) => (
-                  <li className="flex items-start gap-2" key={feature}>
-                    <WrapsMotif className="mt-0.5 size-3 shrink-0 text-orange-500/70" />
-                    <span className="text-sm">
-                      <FeatureText text={feature} />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+            plan={plan}
+          />
         ))}
       </div>
     </>

@@ -13,7 +13,7 @@ export function CTASection() {
           </p>
 
           <p className="mb-8 text-muted-foreground">
-            Deploy in one command. Cancel anytime — everything keeps running.
+            Deploy in one command. Cancel anytime.
           </p>
 
           <CTAButtons />

@@ -59,7 +59,8 @@ export function TrackedEventsExplainer() {
         </CodeBlock>
 
         <p className="mt-4 text-muted-foreground text-xs">
-          Emails, contacts, opens, clicks, and deliveries never count.
+          Sending emails and storing contacts is always free. Opens, clicks, and
+          deliveries don't count either.
         </p>
       </div>
     </div>

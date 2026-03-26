@@ -12,7 +12,7 @@ export function HeroAnimatedCTA() {
           className="cursor-pointer rounded bg-orange-500 px-4 py-2 text-sm font-semibold hover:bg-orange-600"
         >
           <a
-            href="/docs/quickstart/email"
+            href="https://app.wraps.dev/auth?mode=signup"
             onClick={() =>
               trackEvent("cta_click", {
                 location: "hero",

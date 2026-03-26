@@ -511,11 +511,11 @@ export const FEATURE_COMPARISON: FeatureComparison[] = [
 // =============================================================================
 
 export const PRICING_COPY = {
-  headline: "Platform pricing. AWS sending costs. No surprises.",
+  headline: "You pay for the platform. AWS handles the sending.",
   subheadline:
-    "Start free. Scale when you're ready. You pay us for the platform. You pay AWS directly for sending — $0.10/1K emails.",
+    "Free to start, no credit card. Sending costs go straight to AWS at $0.10/1K emails.",
   awsNote:
-    "AWS costs are separate. You pay AWS directly for sending at $0.10 per 1,000 emails. Your sending infrastructure stays in your account — leave anytime, keep everything.",
+    "AWS costs are separate. You pay AWS directly for sending at $0.10 per 1,000 emails. The infrastructure lives in your account, so you can leave anytime and keep everything.",
   enterpriseNote:
     "Need custom limits or on-prem deployment? Contact us for Enterprise.",
   foundingMemberTitle: "Founding Member Program — First 50 Customers",
@@ -528,9 +528,9 @@ export const PRICING_COPY = {
   freeHeroHeadline: "Start Free. Deploy in 60 Seconds.",
   freeHeroSubline:
     "No credit card. No time limit. Your AWS account, your data.",
-  trackedEventsHeadline: "Powered by Tracked Events",
+  trackedEventsHeadline: "What are tracked events?",
   trackedEventsSubline:
-    "One event triggers the workflows you wrote. Builds the segments your marketers target. Drives the automations that run on your AWS.",
+    "You emit an event, and Wraps does the rest: triggers workflows, builds segments, runs automations on your AWS.",
   paidTiersHeadline: "Outgrowing the free tier?",
   paidTiersSubline:
     "Event tracking, segments, broadcasts, unlimited workflows, and team access — starting at $19/mo.",

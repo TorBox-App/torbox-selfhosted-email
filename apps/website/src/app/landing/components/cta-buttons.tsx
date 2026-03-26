@@ -2,7 +2,6 @@
 
 import { ArrowRight, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WrapsMotif } from "@/components/wraps-motif";
 import { trackEvent } from "@/utils/analytics";
 
 export function CTAButtons() {
@@ -14,7 +13,7 @@ export function CTAButtons() {
         size="lg"
       >
         <a
-          href="/docs/quickstart"
+          href="https://app.wraps.dev/auth?mode=signup"
           onClick={() =>
             trackEvent("cta_click", {
               location: "footer_cta",
@@ -22,8 +21,7 @@ export function CTAButtons() {
             })
           }
         >
-          Free CLI Quickstart
-          <WrapsMotif className="ml-2 size-3.5 text-white/70" />
+          Sign up
         </a>
       </Button>
       <Button

@@ -30,10 +30,12 @@ export function TrackedEventTooltip({
     <HoverCard openDelay={200}>
       <HoverCardTrigger asChild>
         <button
-          className={`inline cursor-help border-b border-dashed border-current bg-transparent p-0 font-inherit text-inherit hover:border-solid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm ${className}`}
+          className={`inline cursor-help bg-transparent p-0 font-inherit text-inherit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${className}`}
           type="button"
         >
-          {children}
+          <span className="border-b border-dashed border-current hover:border-solid">
+            {children}
+          </span>
           <Info
             aria-hidden="true"
             className="ml-0.5 inline size-3 align-middle"
