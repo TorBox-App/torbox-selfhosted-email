@@ -2,7 +2,15 @@
 
 import { ModeToggle } from "@wraps/ui/components/mode-toggle";
 import { useTheme } from "@wraps/ui/hooks/use-theme";
-import { BookOpen, ChevronDown, Github, Menu, Moon, Sun, X } from "lucide-react";
+import {
+  BookOpen,
+  ChevronDown,
+  Github,
+  Menu,
+  Moon,
+  Sun,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";

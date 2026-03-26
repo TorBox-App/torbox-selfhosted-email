@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let selectCallCount = 0;
-const updateSetCalls: Array<Record<string, unknown>> = [];
+const updateSetCalls: Record<string, unknown>[] = [];
 
 const batchRow = {
   id: "batch-sms-1",

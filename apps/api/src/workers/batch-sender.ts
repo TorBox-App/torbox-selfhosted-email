@@ -110,7 +110,11 @@ async function processJob(job: BatchJob): Promise<void> {
 
   // Reject unsupported channels before any state mutation
   if (channel !== "email") {
-    log.error("Unsupported batch channel", undefined, { batchId, channel, organizationId });
+    log.error("Unsupported batch channel", undefined, {
+      batchId,
+      channel,
+      organizationId,
+    });
     await db
       .update(batchSend)
       .set({
