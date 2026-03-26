@@ -36,8 +36,8 @@ export function HeroSection() {
       <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
         <WrapsMotifLayers
           className="pointer-events-none absolute bottom-0 right-4 hidden h-[100px] w-[110px] sm:block md:h-[120px] md:w-[133px] lg:right-8"
-          fillColor="none"
-          strokeColor="#ff6600"
+          fillColor="var(--motif-fill)"
+          strokeColor="var(--muted-foreground)"
         />
         <div className="flex flex-col items-start">
           {/* Badge - static, visible immediately */}

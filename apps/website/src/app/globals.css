@@ -103,6 +103,7 @@
   --warning-foreground: oklch(0.205 0 0);
   --info: oklch(0.62 0.15 250);
   --info-foreground: oklch(0.985 0 0);
+  --motif-fill: #fdfdfc;
 }
 
 .dark {
@@ -143,6 +144,7 @@
   --warning-foreground: oklch(0.205 0 0);
   --info: oklch(0.68 0.15 250);
   --info-foreground: oklch(0.985 0 0);
+  --motif-fill: #0f100f;
 }
 
 @layer base {
