@@ -181,7 +181,7 @@ export function DualPathSection() {
           <div className="mb-8 flex flex-wrap items-center justify-center gap-3 sm:gap-6">
             <Link
               className="flex items-center gap-2 rounded-full px-3 py-1 transition-colors hover:bg-emerald-500/5"
-              href="/cli"
+              href="/sdk"
             >
               <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 Code

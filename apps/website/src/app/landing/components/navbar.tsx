@@ -50,9 +50,14 @@ const navigationItems: {
 
 const productItems = [
   {
-    name: "CLI & SDK",
+    name: "CLI",
     href: "/cli",
     description: "Free tools to deploy and send emails",
+  },
+  {
+    name: "SDK",
+    href: "/sdk",
+    description: "TypeScript SDKs for email, SMS, and workflows",
   },
   {
     name: "Inbound Email",
