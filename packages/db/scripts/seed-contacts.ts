@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import dotenv from "dotenv";
 import { drizzle } from "drizzle-orm/neon-http";
+// biome-ignore lint/performance/noNamespaceImport: drizzle relational query builder needs full schema
 import * as schema from "../src/schema";
 import type { EmailStatus, SmsStatus } from "../src/schema/contacts";
 
@@ -386,9 +387,10 @@ function randomEngagement(status: EmailStatus) {
 
 function randomProperties(): Record<string, unknown> {
   const props: Record<string, unknown> = {};
-  if (Math.random() < 0.4)
+  if (Math.random() < 0.4) {
     props.plan = randomChoice(["free", "starter", "pro", "enterprise"]);
-  if (Math.random() < 0.3)
+  }
+  if (Math.random() < 0.3) {
     props.source = randomChoice([
       "website",
       "import",
@@ -396,7 +398,8 @@ function randomProperties(): Record<string, unknown> {
       "referral",
       "event",
     ]);
-  if (Math.random() < 0.2)
+  }
+  if (Math.random() < 0.2) {
     props.city = randomChoice([
       "San Francisco",
       "New York",
@@ -405,12 +408,23 @@ function randomProperties(): Record<string, unknown> {
       "Berlin",
       "Tokyo",
     ]);
-  if (Math.random() < 0.15) props.lifetime_value = randomInt(0, 5000);
+  }
+  if (Math.random() < 0.15) {
+    props.lifetime_value = randomInt(0, 5000);
+  }
   return props;
+}
+
+function getPreferredChannel(hasEmail: boolean, hasSms: boolean) {
+  if (hasEmail && hasSms) {
+    return randomChoice(["email", "sms"] as const);
+  }
+  return hasEmail ? ("email" as const) : ("sms" as const);
 }
 
 // --- Main ---
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: seed script
 async function main() {
   console.log("Seeding demo contacts...\n");
 
@@ -435,7 +449,7 @@ async function main() {
   const batchSize = 50;
 
   for (let i = 0; i < contactCount; i += batchSize) {
-    const batch = [];
+    const batch: (typeof schema.contact.$inferInsert)[] = [];
     const end = Math.min(i + batchSize, contactCount);
 
     for (let j = i; j < end; j++) {
@@ -448,9 +462,13 @@ async function main() {
       const hasEmail = channelRoll < 0.85; // 60% email-only + 25% both
       const hasSms = channelRoll >= 0.6; // 15% SMS-only + 25% both
 
-      if (hasEmail && hasSms) stats.both++;
-      else if (hasEmail) stats.email++;
-      else stats.sms++;
+      if (hasEmail && hasSms) {
+        stats.both += 1;
+      } else if (hasEmail) {
+        stats.email += 1;
+      } else {
+        stats.sms += 1;
+      }
 
       const email = hasEmail ? generateEmail(firstName, lastName, j) : null;
       const emailResult = hasEmail ? randomEmailStatus() : null;
@@ -479,12 +497,7 @@ async function main() {
         lastName,
         company: randomChoice(companies),
         jobTitle: randomChoice(jobTitles),
-        preferredChannel:
-          hasEmail && hasSms
-            ? randomChoice(["email", "sms"] as const)
-            : hasEmail
-              ? ("email" as const)
-              : ("sms" as const),
+        preferredChannel: getPreferredChannel(hasEmail, hasSms),
         properties: randomProperties(),
         lastActivityAt: randomDate(30),
         createdAt,
@@ -512,7 +525,7 @@ async function main() {
       });
     }
 
-    await db.insert(schema.contact).values(batch);
+    await db.insert(schema.contact).values(batch).onConflictDoNothing();
     process.stdout.write(`\r  Progress: ${end}/${contactCount} contacts`);
   }
 
