@@ -1,5 +1,6 @@
 "use client";
 
+import { ModeToggle } from "@wraps/ui/components/mode-toggle";
 import { Github, Heart } from "lucide-react";
 import { XLogo } from "@/components/icons/x-logo";
 import { Logo } from "@/components/logo";
@@ -107,6 +108,7 @@ export function LandingFooter() {
                   <XLogo aria-hidden="true" className="h-4 w-4" />
                 </a>
               </Button>
+              <ModeToggle variant="ghost" />
             </div>
           </div>
 

@@ -1,9 +1,7 @@
 "use client";
 
-import { ModeToggle } from "@wraps/ui/components/mode-toggle";
 import { useTheme } from "@wraps/ui/hooks/use-theme";
 import {
-  BookOpen,
   ChevronDown,
   Github,
   Menu,
@@ -11,7 +9,6 @@ import {
   Sun,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
@@ -47,16 +44,18 @@ const navigationItems: {
     name: "Products",
     href: "/#features",
     hasSubmenu: true,
-    submenuType: "features",
+    submenuType: "products",
   },
-  { name: "Docs", href: "/docs", hasSubmenu: true, submenuType: "docs" },
-  { name: "Blog", href: "/blog" },
+  {
+    name: "Resources",
+    href: "/docs",
+    hasSubmenu: true,
+    submenuType: "resources",
+  },
   { name: "Pricing", href: "/#pricing" },
-  { name: "SMS", href: "/sms" },
 ];
 
-// Features menu items
-const featuresItems = [
+const productItems = [
   {
     name: "CLI & SDK",
     href: "/cli",
@@ -73,6 +72,24 @@ const featuresItems = [
     description: "Wraps Platform for templates & broadcasts",
   },
   {
+    name: "SMS",
+    href: "/sms",
+    description: "Send texts via AWS End User Messaging",
+  },
+];
+
+const resourceItems = [
+  {
+    name: "Documentation",
+    href: "/docs",
+    description: "Guides, references, and quickstarts",
+  },
+  {
+    name: "Blog",
+    href: "/blog",
+    description: "Tutorials, deep dives, and updates",
+  },
+  {
     name: "Compare",
     href: "/compare",
     description: "Honest comparisons with Resend, SendGrid & more",
@@ -87,24 +104,10 @@ const featuresItems = [
     href: "/tools/ses-calculator",
     description: "Estimate your AWS SES email costs",
   },
-];
-
-// Docs menu items for mobile
-const docsItems = [
-  { title: "Getting Started" },
-  { name: "Quickstart", href: "/docs/quickstart" },
-  { name: "CLI Reference", href: "/docs/cli-reference" },
-  { name: "SDK Reference", href: "/docs/sdk-reference" },
-  { title: "Infrastructure as Code" },
-  { name: "CDK Reference", href: "/docs/cdk-reference" },
-  { name: "Pulumi Reference", href: "/docs/pulumi-reference" },
-  { title: "Resources" },
-  { name: "Changelog", href: "/changelog" },
-  { name: "GitHub Repository", href: "https://github.com/wraps-team/wraps" },
-  { name: "TypeScript SDK", href: "https://github.com/wraps-team/wraps-js" },
   {
-    name: "npm Package",
-    href: "https://www.npmjs.com/package/@wraps.dev/email",
+    name: "Changelog",
+    href: "/changelog",
+    description: "Latest releases and updates",
   },
 ];
 
@@ -130,8 +133,8 @@ const isHashLink = (href: string) =>
 
 export function LandingNavbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [docsOpen, setDocsOpen] = useState(false);
-  const [featuresOpen, setFeaturesOpen] = useState(false);
+  const [productsOpen, setProductsOpen] = useState(false);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
   const { setTheme, theme } = useTheme();
 
   // Handle hash scrolling on page load (for navigation from other pages)
@@ -177,59 +180,26 @@ export function LandingNavbar() {
                       {item.name}
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
-                      {item.submenuType === "features" ? (
-                        <div className="grid w-[320px] gap-2 p-4">
-                          {featuresItems.map((featureItem) => (
-                            <NavigationMenuLink asChild key={featureItem.name}>
-                              <a
-                                className="block cursor-pointer select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                                href={featureItem.href}
-                              >
-                                <div className="mb-1 font-medium text-sm leading-none">
-                                  {featureItem.name}
-                                </div>
-                                <p className="text-muted-foreground text-xs leading-snug">
-                                  {featureItem.description}
-                                </p>
-                              </a>
-                            </NavigationMenuLink>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="grid w-[400px] gap-3 p-4">
-                          {docsItems.map((docItem) =>
-                            docItem.title ? (
-                              <div
-                                className="px-2 py-1 font-semibold text-muted-foreground text-xs uppercase tracking-wider"
-                                key={`title-${docItem.title}`}
-                              >
-                                {docItem.title}
+                      <div className="grid w-[320px] gap-2 p-4">
+                        {(item.submenuType === "products"
+                          ? productItems
+                          : resourceItems
+                        ).map((subItem) => (
+                          <NavigationMenuLink asChild key={subItem.name}>
+                            <a
+                              className="block cursor-pointer select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                              href={subItem.href}
+                            >
+                              <div className="mb-1 font-medium text-sm leading-none">
+                                {subItem.name}
                               </div>
-                            ) : (
-                              <NavigationMenuLink asChild key={docItem.name}>
-                                <a
-                                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                                  href={docItem.href || "#"}
-                                  rel={
-                                    docItem.href?.startsWith("http")
-                                      ? "noopener noreferrer"
-                                      : undefined
-                                  }
-                                  target={
-                                    docItem.href?.startsWith("http")
-                                      ? "_blank"
-                                      : undefined
-                                  }
-                                >
-                                  <div className="font-medium text-sm leading-none">
-                                    {docItem.name}
-                                  </div>
-                                </a>
-                              </NavigationMenuLink>
-                            )
-                          )}
-                        </div>
-                      )}
+                              <p className="text-muted-foreground text-xs leading-snug">
+                                {subItem.description}
+                              </p>
+                            </a>
+                          </NavigationMenuLink>
+                        ))}
+                      </div>
                     </NavigationMenuContent>
                   </>
                 ) : (
@@ -261,7 +231,6 @@ export function LandingNavbar() {
 
         {/* Desktop CTA */}
         <div className="hidden items-center space-x-2 xl:flex">
-          <ModeToggle variant="ghost" />
           <Button
             asChild
             className="cursor-pointer"
@@ -276,16 +245,6 @@ export function LandingNavbar() {
             >
               <Github aria-hidden="true" className="h-5 w-5" />
             </a>
-          </Button>
-          <Button
-            asChild
-            className="cursor-pointer"
-            size="icon"
-            variant="ghost"
-          >
-            <Link aria-label="Documentation" href="/docs">
-              <BookOpen aria-hidden="true" className="h-5 w-5" />
-            </Link>
           </Button>
           <Button asChild className="cursor-pointer" variant="ghost">
             <a href="https://app.wraps.dev/auth?mode=signin">Log in</a>
@@ -382,83 +341,52 @@ export function LandingNavbar() {
                   {navigationItems.map((item) => (
                     <div key={item.name}>
                       {item.hasSubmenu ? (
-                        item.submenuType === "features" ? (
-                          <Collapsible
-                            onOpenChange={setFeaturesOpen}
-                            open={featuresOpen}
-                          >
-                            <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground">
-                              {item.name}
-                              <ChevronDown
-                                aria-hidden="true"
-                                className={`h-4 w-4 transition-transform ${featuresOpen ? "rotate-180" : ""}`}
-                              />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="space-y-1 pl-4">
-                              {featuresItems.map((featureItem) => (
-                                <a
-                                  className="flex cursor-pointer flex-col rounded-lg px-4 py-2 transition-colors hover:bg-accent hover:text-accent-foreground"
-                                  href={featureItem.href}
-                                  key={featureItem.name}
-                                  onClick={() => setIsOpen(false)}
-                                >
-                                  <span className="font-medium text-sm">
-                                    {featureItem.name}
-                                  </span>
-                                  <span className="text-muted-foreground text-xs">
-                                    {featureItem.description}
-                                  </span>
-                                </a>
-                              ))}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        ) : (
-                          <Collapsible
-                            onOpenChange={setDocsOpen}
-                            open={docsOpen}
-                          >
-                            <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground">
-                              {item.name}
-                              <ChevronDown
-                                aria-hidden="true"
-                                className={`h-4 w-4 transition-transform ${docsOpen ? "rotate-180" : ""}`}
-                              />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="space-y-1 pl-4">
-                              {docsItems.map((docItem) =>
-                                docItem.title ? (
-                                  <div
-                                    className="mt-5 px-4 py-2 font-semibold text-muted-foreground/50 text-xs uppercase tracking-wider"
-                                    key={`title-${docItem.title}`}
-                                  >
-                                    {docItem.title}
-                                  </div>
-                                ) : (
-                                  <a
-                                    className="flex cursor-pointer items-center rounded-lg px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-                                    href={docItem.href || "#"}
-                                    key={docItem.name}
-                                    onClick={() => {
-                                      setIsOpen(false);
-                                    }}
-                                    rel={
-                                      docItem.href?.startsWith("http")
-                                        ? "noopener noreferrer"
-                                        : undefined
-                                    }
-                                    target={
-                                      docItem.href?.startsWith("http")
-                                        ? "_blank"
-                                        : undefined
-                                    }
-                                  >
-                                    {docItem.name}
-                                  </a>
-                                )
-                              )}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        )
+                        <Collapsible
+                          onOpenChange={
+                            item.submenuType === "products"
+                              ? setProductsOpen
+                              : setResourcesOpen
+                          }
+                          open={
+                            item.submenuType === "products"
+                              ? productsOpen
+                              : resourcesOpen
+                          }
+                        >
+                          <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground">
+                            {item.name}
+                            <ChevronDown
+                              aria-hidden="true"
+                              className={`h-4 w-4 transition-transform ${
+                                (item.submenuType === "products"
+                                  ? productsOpen
+                                  : resourcesOpen)
+                                  ? "rotate-180"
+                                  : ""
+                              }`}
+                            />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="space-y-1 pl-4">
+                            {(item.submenuType === "products"
+                              ? productItems
+                              : resourceItems
+                            ).map((subItem) => (
+                              <a
+                                className="flex cursor-pointer flex-col rounded-lg px-4 py-2 transition-colors hover:bg-accent hover:text-accent-foreground"
+                                href={subItem.href}
+                                key={subItem.name}
+                                onClick={() => setIsOpen(false)}
+                              >
+                                <span className="font-medium text-sm">
+                                  {subItem.name}
+                                </span>
+                                <span className="text-muted-foreground text-xs">
+                                  {subItem.description}
+                                </span>
+                              </a>
+                            ))}
+                          </CollapsibleContent>
+                        </Collapsible>
                       ) : (
                         <a
                           className="flex cursor-pointer items-center gap-2 rounded-lg px-4 py-3 font-medium text-base transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -466,20 +394,17 @@ export function LandingNavbar() {
                           onClick={(e) => {
                             setIsOpen(false);
                             if (isHashLink(item.href)) {
-                              // Check if element exists on current page
                               const hash = item.href.startsWith("/#")
                                 ? item.href.slice(1)
                                 : item.href;
                               const element = document.querySelector(hash);
                               if (element) {
-                                // Element exists, smooth scroll after menu closes
                                 e.preventDefault();
                                 setTimeout(
                                   () => smoothScrollTo(item.href),
                                   100
                                 );
                               }
-                              // Otherwise let browser navigate to /#hash
                             }
                           }}
                         >
