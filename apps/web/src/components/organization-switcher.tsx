@@ -26,6 +26,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveOrganization } from "@/contexts/organization-context";
 
 export function OrganizationSwitcher() {
@@ -44,14 +45,13 @@ export function OrganizationSwitcher() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton
-            className="h-auto py-2"
+            className="pointer-events-none h-auto py-2"
             size="lg"
-            tooltip="Loading..."
           >
-            <div className="flex aspect-square size-8 animate-pulse items-center justify-center rounded-lg bg-muted" />
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="h-4 w-24 animate-pulse rounded bg-muted" />
-              <span className="mt-1 h-3 w-16 animate-pulse rounded bg-muted" />
+            <Skeleton className="size-8 rounded-lg" />
+            <div className="grid flex-1 gap-1 text-left">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3 w-16" />
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>

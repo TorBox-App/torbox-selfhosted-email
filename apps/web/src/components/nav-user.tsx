@@ -36,6 +36,7 @@ import {
 import { useSession } from "@/contexts/session-context";
 import { authClient } from "@/lib/auth-client";
 import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Skeleton } from "./ui/skeleton";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -43,6 +44,22 @@ export function NavUser() {
   const session = useSession();
   const { theme, setTheme } = useTheme();
   const user = session.data?.user;
+
+  if (session.isPending) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton className="pointer-events-none" size="lg">
+            <Skeleton className="size-8 rounded-full" />
+            <div className="grid flex-1 gap-1 text-left">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
   if (!user) {
     return null;
