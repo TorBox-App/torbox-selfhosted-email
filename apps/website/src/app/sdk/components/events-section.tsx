@@ -6,12 +6,12 @@ import { useRef } from "react";
 import {
   CodeBlock,
   CodeBlockBody,
+  CodeBlockContent,
   CodeBlockCopyButton,
   CodeBlockFilename,
+  CodeBlockFiles,
   CodeBlockHeader,
   CodeBlockItem,
-  CodeBlockContent,
-  CodeBlockFiles,
   CodeBlockSelect,
   CodeBlockSelectContent,
   CodeBlockSelectItem,
@@ -62,7 +62,11 @@ export default defineWorkflow({
 const codeData = [
   { language: "track", filename: "app/checkout.ts", code: trackCode },
   { language: "batch", filename: "app/analytics.ts", code: batchCode },
-  { language: "workflow", filename: "wraps/workflows/post-purchase.ts", code: workflowCode },
+  {
+    language: "workflow",
+    filename: "wraps/workflows/post-purchase.ts",
+    code: workflowCode,
+  },
 ];
 
 export function SdkEventsSection() {
@@ -106,7 +110,9 @@ export function SdkEventsSection() {
                 <p className="text-sm">
                   <span className="font-medium">Any event name</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; <code className="font-mono text-xs">user.signed_up</code>,{" "}
+                    {" "}
+                    &mdash;{" "}
+                    <code className="font-mono text-xs">user.signed_up</code>,{" "}
                     <code className="font-mono text-xs">order.completed</code>,{" "}
                     <code className="font-mono text-xs">trial.expiring</code>
                   </span>
@@ -117,7 +123,9 @@ export function SdkEventsSection() {
                 <p className="text-sm">
                   <span className="font-medium">Typed properties</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; attach any JSON payload, available in templates and conditions
+                    {" "}
+                    &mdash; attach any JSON payload, available in templates and
+                    conditions
                   </span>
                 </p>
               </div>
@@ -126,16 +134,20 @@ export function SdkEventsSection() {
                 <p className="text-sm">
                   <span className="font-medium">Batch support</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; send multiple events in a single API call
+                    {" "}
+                    &mdash; send multiple events in a single API call
                   </span>
                 </p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex size-2 shrink-0 rounded-full bg-orange-500" />
                 <p className="text-sm">
-                  <span className="font-medium">Automatic contact resolution</span>
+                  <span className="font-medium">
+                    Automatic contact resolution
+                  </span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; match events to contacts by email or ID
+                    {" "}
+                    &mdash; match events to contacts by email or ID
                   </span>
                 </p>
               </div>
@@ -147,7 +159,9 @@ export function SdkEventsSection() {
                   How it works:
                 </span>{" "}
                 Call{" "}
-                <code className="font-mono text-xs">wraps.track("order.completed")</code>{" "}
+                <code className="font-mono text-xs">
+                  wraps.track("order.completed")
+                </code>{" "}
                 from your checkout flow. Any workflow with{" "}
                 <code className="font-mono text-xs">
                   trigger: {"{"} eventName: "order.completed" {"}"}
@@ -174,7 +188,10 @@ export function SdkEventsSection() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}

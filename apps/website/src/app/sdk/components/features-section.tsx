@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Box,
-  KeyRound,
-  Layers,
-  Lock,
-  Package,
-  Zap,
-} from "lucide-react";
+import { Box, KeyRound, Layers, Lock, Package, Zap } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
 

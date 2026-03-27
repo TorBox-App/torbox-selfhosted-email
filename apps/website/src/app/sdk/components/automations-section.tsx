@@ -6,12 +6,12 @@ import { useRef } from "react";
 import {
   CodeBlock,
   CodeBlockBody,
+  CodeBlockContent,
   CodeBlockCopyButton,
   CodeBlockFilename,
+  CodeBlockFiles,
   CodeBlockHeader,
   CodeBlockItem,
-  CodeBlockContent,
-  CodeBlockFiles,
   CodeBlockSelect,
   CodeBlockSelectContent,
   CodeBlockSelectItem,
@@ -64,7 +64,11 @@ const pushCode = `$ wraps automations push
   ◆  Deployed 2 workflows`;
 
 const codeData = [
-  { language: "ts", filename: "wraps/workflows/onboarding.ts", code: workflowCode },
+  {
+    language: "ts",
+    filename: "wraps/workflows/onboarding.ts",
+    code: workflowCode,
+  },
   { language: "bash", filename: "Terminal", code: pushCode },
 ];
 
@@ -106,7 +110,10 @@ export function SdkAutomationsSection() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}
@@ -131,7 +138,11 @@ export function SdkAutomationsSection() {
               <CodeBlockBody>
                 {(item) => (
                   <CodeBlockItem key={item.language} value={item.language}>
-                    <CodeBlockContent language={item.language === "bash" ? "bash" : "typescript"}>
+                    <CodeBlockContent
+                      language={
+                        item.language === "bash" ? "bash" : "typescript"
+                      }
+                    >
                       {item.code}
                     </CodeBlockContent>
                   </CodeBlockItem>
@@ -146,7 +157,8 @@ export function SdkAutomationsSection() {
               branching &mdash; all type-checked. Deploy with{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
                 wraps automations push
-              </code>.
+              </code>
+              .
             </p>
 
             <div className="space-y-3">
@@ -155,7 +167,9 @@ export function SdkAutomationsSection() {
                 <p className="text-sm">
                   <span className="font-medium">Event triggers</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; start workflows from signups, purchases, or any custom event
+                    {" "}
+                    &mdash; start workflows from signups, purchases, or any
+                    custom event
                   </span>
                 </p>
               </div>
@@ -164,7 +178,9 @@ export function SdkAutomationsSection() {
                 <p className="text-sm">
                   <span className="font-medium">Wait for events</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; pause until a specific action happens, with configurable timeouts
+                    {" "}
+                    &mdash; pause until a specific action happens, with
+                    configurable timeouts
                   </span>
                 </p>
               </div>
@@ -173,7 +189,9 @@ export function SdkAutomationsSection() {
                 <p className="text-sm">
                   <span className="font-medium">Conditional branching</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; route contacts based on properties, behavior, or event data
+                    {" "}
+                    &mdash; route contacts based on properties, behavior, or
+                    event data
                   </span>
                 </p>
               </div>
@@ -182,7 +200,9 @@ export function SdkAutomationsSection() {
                 <p className="text-sm">
                   <span className="font-medium">Multi-channel</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; send email, SMS, or fire webhooks in the same workflow
+                    {" "}
+                    &mdash; send email, SMS, or fire webhooks in the same
+                    workflow
                   </span>
                 </p>
               </div>

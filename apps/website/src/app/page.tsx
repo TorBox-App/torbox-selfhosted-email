@@ -9,107 +9,106 @@ import { LandingNavbar } from "./landing/components/navbar";
 import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
 import { ProblemContrastSection } from "./landing/components/problem-contrast-section";
-import { WhyWrapsSection } from "./landing/components/why-wraps-section";
 
 export const metadata: Metadata = {
-	alternates: {
-		canonical: "https://wraps.dev",
-	},
+  alternates: {
+    canonical: "https://wraps.dev",
+  },
 };
 
 // FAQ structured data for rich results
 const faqSchema = {
-	"@context": "https://schema.org",
-	"@type": "FAQPage",
-	mainEntity: [
-		{
-			"@type": "Question",
-			name: "How is this different from using AWS SES directly?",
-			acceptedAnswer: {
-				"@type": "Answer",
-				text: "Wraps deploys all the infrastructure AWS SES needs (IAM roles, EventBridge, DynamoDB, Lambda, SQS) in one command instead of 2+ hours of manual setup. You get event tracking, analytics, and a dashboard out of the box. The TypeScript SDK is just wraps.emails.send() - no boilerplate.",
-			},
-		},
-		{
-			"@type": "Question",
-			name: "What are the costs for running Wraps?",
-			acceptedAnswer: {
-				"@type": "Answer",
-				text: "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs ~$5 to AWS. There's a free tier with 5,000 tracked events/month included. Paid plans start at $19/month.",
-			},
-		},
-		{
-			"@type": "Question",
-			name: "Do you store my AWS credentials?",
-			acceptedAnswer: {
-				"@type": "Answer",
-				text: "No! We use OIDC (OpenID Connect) for Vercel deployments or IAM roles for AWS-native deployments. The CLI uses your local AWS credentials for the initial deployment, then creates IAM roles that your app can assume. We never see or store your AWS access keys.",
-			},
-		},
-		{
-			"@type": "Question",
-			name: "What happens if I stop paying for Wraps?",
-			acceptedAnswer: {
-				"@type": "Answer",
-				text: "Your infrastructure keeps running! All resources are in your AWS account. You lose access to the Wraps Platform but can still use the free local console. Your SDK code keeps working, emails keep sending, and you keep paying AWS directly. Zero vendor lock-in.",
-			},
-		},
-		{
-			"@type": "Question",
-			name: "Can I customize the infrastructure deployment?",
-			acceptedAnswer: {
-				"@type": "Answer",
-				text: "Yes! The CLI offers infrastructure presets for different needs—from minimal tracking to full analytics with dedicated IPs. You can also use 'npx @wraps.dev/cli email upgrade' to add features incrementally. For full customization, all infrastructure is deployed as open-source Pulumi code you can fork and modify.",
-			},
-		},
-		{
-			"@type": "Question",
-			name: "Does this work with my existing SES setup?",
-			acceptedAnswer: {
-				"@type": "Answer",
-				text: "Yes! Use 'npx @wraps.dev/cli email connect' to scan your existing SES resources and add Wraps features non-destructively. We never modify existing resources—all our infrastructure uses the 'wraps-email-' prefix.",
-			},
-		},
-		{
-			"@type": "Question",
-			name: "Can I receive emails too?",
-			acceptedAnswer: {
-				"@type": "Answer",
-				text: "Yes! Wraps supports inbound email receiving. Run 'npx @wraps.dev/cli email inbound init' to deploy the infrastructure, then use the SDK to list, read, reply, and forward emails. EventBridge triggers let you build webhooks for real-time processing.",
-			},
-		},
-	],
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "How is this different from using AWS SES directly?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Wraps deploys all the infrastructure AWS SES needs (IAM roles, EventBridge, DynamoDB, Lambda, SQS) in one command instead of 2+ hours of manual setup. You get event tracking, analytics, and a dashboard out of the box. The TypeScript SDK is just wraps.emails.send() - no boilerplate.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What are the costs for running Wraps?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "With Wraps, you pay AWS directly at $0.10 per 1,000 emails with no markup. For example, 50,000 emails/month costs ~$5 to AWS. There's a free tier with 5,000 tracked events/month included. Paid plans start at $19/month.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Do you store my AWS credentials?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No! We use OIDC (OpenID Connect) for Vercel deployments or IAM roles for AWS-native deployments. The CLI uses your local AWS credentials for the initial deployment, then creates IAM roles that your app can assume. We never see or store your AWS access keys.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What happens if I stop paying for Wraps?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Your infrastructure keeps running! All resources are in your AWS account. You lose access to the Wraps Platform but can still use the free local console. Your SDK code keeps working, emails keep sending, and you keep paying AWS directly. Zero vendor lock-in.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I customize the infrastructure deployment?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes! The CLI offers infrastructure presets for different needs—from minimal tracking to full analytics with dedicated IPs. You can also use 'npx @wraps.dev/cli email upgrade' to add features incrementally. For full customization, all infrastructure is deployed as open-source Pulumi code you can fork and modify.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Does this work with my existing SES setup?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes! Use 'npx @wraps.dev/cli email connect' to scan your existing SES resources and add Wraps features non-destructively. We never modify existing resources—all our infrastructure uses the 'wraps-email-' prefix.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I receive emails too?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes! Wraps supports inbound email receiving. Run 'npx @wraps.dev/cli email inbound init' to deploy the infrastructure, then use the SDK to list, read, reply, and forward emails. EventBridge triggers let you build webhooks for real-time processing.",
+      },
+    },
+  ],
 };
 
 export default function LandingPage() {
-	return (
-		<>
-			<JsonLd data={faqSchema} />
-			<div className="min-h-screen bg-background">
-				{/* Navigation */}
-				<LandingNavbar />
+  return (
+    <>
+      <JsonLd data={faqSchema} />
+      <div className="min-h-screen bg-background">
+        {/* Navigation */}
+        <LandingNavbar />
 
-				{/* Main Content */}
-				<main>
-					<HeroSection />
-					<PrinciplesSection />
+        {/* Main Content */}
+        <main>
+          <HeroSection />
+          <PrinciplesSection />
 
-					<ProblemContrastSection />
-					{/*<InfrastructureSection />*/}
+          <ProblemContrastSection />
+          {/*<InfrastructureSection />*/}
 
-					{/*<CliTabbedSection />*/}
-					<DualPathTabbedSection />
+          {/*<CliTabbedSection />*/}
+          <DualPathTabbedSection />
 
-					<PricingSection />
+          <PricingSection />
 
-					{/*<WhyWrapsSection />*/}
-					<FaqSection />
-					<CTASection />
-				</main>
+          {/*<WhyWrapsSection />*/}
+          <FaqSection />
+          <CTASection />
+        </main>
 
-				{/* Footer */}
-				<LandingFooter />
-			</div>
-		</>
-	);
+        {/* Footer */}
+        <LandingFooter />
+      </div>
+    </>
+  );
 }

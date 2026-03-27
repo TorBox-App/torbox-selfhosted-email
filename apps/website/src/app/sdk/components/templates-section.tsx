@@ -6,12 +6,12 @@ import { useRef } from "react";
 import {
   CodeBlock,
   CodeBlockBody,
+  CodeBlockContent,
   CodeBlockCopyButton,
   CodeBlockFilename,
+  CodeBlockFiles,
   CodeBlockHeader,
   CodeBlockItem,
-  CodeBlockContent,
-  CodeBlockFiles,
   CodeBlockSelect,
   CodeBlockSelectContent,
   CodeBlockSelectItem,
@@ -65,7 +65,11 @@ const pushCode = `$ wraps templates push
   ◆  Pushed 3 templates to SES`;
 
 const codeData = [
-  { language: "tsx", filename: "wraps/templates/welcome.tsx", code: templateCode },
+  {
+    language: "tsx",
+    filename: "wraps/templates/welcome.tsx",
+    code: templateCode,
+  },
   { language: "ts", filename: "wraps/wraps.config.ts", code: configCode },
   { language: "bash", filename: "Terminal", code: pushCode },
 ];
@@ -107,7 +111,8 @@ export function SdkTemplatesSection() {
                 <p className="text-sm">
                   <span className="font-medium">React Email components</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; renders correctly in Gmail, Outlook, Apple Mail
+                    {" "}
+                    &mdash; renders correctly in Gmail, Outlook, Apple Mail
                   </span>
                 </p>
               </div>
@@ -116,7 +121,9 @@ export function SdkTemplatesSection() {
                 <p className="text-sm">
                   <span className="font-medium">Typed variables</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; catch missing data at compile time, not in production
+                    {" "}
+                    &mdash; catch missing data at compile time, not in
+                    production
                   </span>
                 </p>
               </div>
@@ -124,10 +131,13 @@ export function SdkTemplatesSection() {
                 <div className="mt-0.5 flex size-2 shrink-0 rounded-full bg-orange-500" />
                 <p className="text-sm">
                   <span className="font-medium">
-                    <code className="font-mono text-xs">wraps templates push</code>
+                    <code className="font-mono text-xs">
+                      wraps templates push
+                    </code>
                   </span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; compiles, validates, and deploys to SES
+                    {" "}
+                    &mdash; compiles, validates, and deploys to SES
                   </span>
                 </p>
               </div>
@@ -136,7 +146,8 @@ export function SdkTemplatesSection() {
                 <p className="text-sm">
                   <span className="font-medium">Brand kits</span>
                   <span className="text-muted-foreground">
-                    {" "}&mdash; shared colors, fonts, and logo across all templates
+                    {" "}
+                    &mdash; shared colors, fonts, and logo across all templates
                   </span>
                 </p>
               </div>
@@ -160,7 +171,10 @@ export function SdkTemplatesSection() {
               <CodeBlockHeader>
                 <CodeBlockFiles>
                   {(item) => (
-                    <CodeBlockFilename key={item.language} value={item.language}>
+                    <CodeBlockFilename
+                      key={item.language}
+                      value={item.language}
+                    >
                       {item.filename}
                     </CodeBlockFilename>
                   )}
@@ -185,7 +199,15 @@ export function SdkTemplatesSection() {
               <CodeBlockBody>
                 {(item) => (
                   <CodeBlockItem key={item.language} value={item.language}>
-                    <CodeBlockContent language={item.language === "tsx" ? "tsx" : item.language === "bash" ? "bash" : "typescript"}>
+                    <CodeBlockContent
+                      language={
+                        item.language === "tsx"
+                          ? "tsx"
+                          : item.language === "bash"
+                            ? "bash"
+                            : "typescript"
+                      }
+                    >
                       {item.code}
                     </CodeBlockContent>
                   </CodeBlockItem>
