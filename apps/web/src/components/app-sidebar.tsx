@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BookOpen,
   LayoutDashboardIcon,
   Mail,
   MessageSquare,
@@ -12,6 +13,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import type * as React from "react";
 import { Logo } from "@/components/logo";
+import { NavHelp } from "@/components/nav-help";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
@@ -200,6 +202,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         <SidebarUpgrade />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a
+                href="https://wraps.dev/docs"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <BookOpen className="size-4" />
+                <span>Docs</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <NavHelp />
         <NavUser />
       </SidebarFooter>
       <SidebarRail />
