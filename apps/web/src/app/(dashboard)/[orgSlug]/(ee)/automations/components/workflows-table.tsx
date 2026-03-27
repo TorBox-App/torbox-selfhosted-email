@@ -517,7 +517,9 @@ export function WorkflowsTable({
                     className="cursor-pointer hover:bg-muted/50"
                     key={row.id}
                     onClick={() =>
-                      router.push(`/${orgSlug}/automations/${row.original.id}`)
+                      router.push(
+                        `/${orgSlug}/automations/${row.original.id}/executions`
+                      )
                     }
                   >
                     {row.getVisibleCells().map((cell) => (

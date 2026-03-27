@@ -1,6 +1,9 @@
 import { auth } from "@wraps/auth";
+import { Pencil } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getWorkflow, listWorkflowExecutions } from "@/actions/workflows";
+import { Button } from "@/components/ui/button";
 import { getOrganizationWithMembership } from "@/lib/organization";
 import { ExecutionsTable } from "./components/executions-table";
 
@@ -67,13 +70,21 @@ export default async function ExecutionsPage({
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-bold text-2xl tracking-tight">
-          {workflowResult.workflow.name} — Executions
-        </h1>
-        <p className="text-muted-foreground">
-          View execution history and step-by-step traces
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="font-bold text-2xl tracking-tight">
+            {workflowResult.workflow.name} — Executions
+          </h1>
+          <p className="text-muted-foreground">
+            View execution history and step-by-step traces
+          </p>
+        </div>
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/${orgSlug}/automations/${workflowId}`}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit workflow
+          </Link>
+        </Button>
       </div>
 
       <ExecutionsTable
