@@ -3,6 +3,7 @@ import {
   messageSend,
   organizationExtension,
   template,
+  user,
   workflow,
 } from "@wraps/db";
 import { createPlatformClient } from "@wraps.dev/client";
@@ -158,15 +159,68 @@ export async function trackFirstEmailDelivered(
   }
 }
 
+/** Look up a user's email by ID. Returns null if not found. */
+async function getUserEmail(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return row?.email ?? null;
+}
+
+/** Set properties on a contact record via platform API. Best-effort, never throws. */
+async function setContactProperties(
+  userEmail: string,
+  props: Record<string, unknown>
+) {
+  try {
+    const key = process.env.WRAPS_API_KEY;
+    if (!key) return;
+    const client = createPlatformClient({ apiKey: key });
+    const searchResult = await client.GET("/v1/contacts/", {
+      params: { query: { search: userEmail, pageSize: "10" } },
+    });
+
+    const contacts = (
+      searchResult.data as { contacts?: { id: string; email: string | null; properties: Record<string, unknown> | null }[] } | undefined
+    )?.contacts ?? [];
+
+    const normalizedEmail = userEmail.toLowerCase().trim();
+    const matched = contacts.find(
+      (c) => typeof c.email === "string" && c.email.toLowerCase().trim() === normalizedEmail
+    );
+
+    if (matched) {
+      await client.PATCH("/v1/contacts/{id}", {
+        params: { path: { id: matched.id } },
+        body: {
+          properties: {
+            ...(typeof matched.properties === "object" && matched.properties !== null
+              ? matched.properties
+              : {}),
+            ...props,
+          },
+        },
+      });
+    }
+  } catch {
+    // best-effort
+  }
+}
+
 /**
  * Track first resource creation for an organization.
  * Catches CLI pushes that bypass web-side activation tracking.
+ * Sets contact properties so activation workflows don't send
+ * redundant nudge emails to users who already created resources.
  * MUST be awaited in Lambda.
  */
 export async function trackFirstResourceCreated(
   organizationId: string,
   resource: "template" | "workflow",
-  source: "cli" | "dashboard"
+  source: "cli" | "dashboard",
+  userId?: string | null
 ) {
   try {
     const table = resource === "template" ? template : workflow;
@@ -175,7 +229,20 @@ export async function trackFirstResourceCreated(
       .from(table)
       .where(eq(table.organizationId, organizationId));
 
-    // Only fire on the actual first resource
+    // Resolve user email for contact property updates and event emission
+    const userEmail = userId ? await getUserEmail(userId) : null;
+
+    // Always set contact properties so workflows know the user has created
+    // this resource, even if it's not their first one
+    if (userEmail) {
+      const contactProp =
+        resource === "template"
+          ? { hasCreatedTemplate: true }
+          : { hasCreatedWorkflow: true };
+      await setContactProperties(userEmail, contactProp);
+    }
+
+    // Only fire "first" activation events when count === 1
     if ((r?.count ?? 0) !== 1) return;
 
     const eventName =
@@ -195,7 +262,7 @@ export async function trackFirstResourceCreated(
 
     const posthog = getPostHogClient();
     posthog.capture({
-      distinctId: organizationId,
+      distinctId: userEmail ?? organizationId,
       event: eventName,
       properties: props,
       groups: { organization: organizationId },
@@ -210,7 +277,9 @@ export async function trackFirstResourceCreated(
     });
 
     // Emit to platform so activation workflows can react
-    await emit(organizationId, platformEvent, props);
+    if (userEmail) {
+      await emit(userEmail, platformEvent, props);
+    }
 
     log.info("Activation: first resource created", {
       organizationId,

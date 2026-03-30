@@ -69,7 +69,8 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
         await trackFirstResourceCreated(
           authContext.organizationId,
           "workflow",
-          "cli"
+          "cli",
+          authContext.userId
         );
       }
 
@@ -225,7 +226,8 @@ export const workflowsSyncRoutes = createAuthenticatedRoutes("/v1/workflows")
         await trackFirstResourceCreated(
           authContext.organizationId,
           "workflow",
-          "cli"
+          "cli",
+          authContext.userId
         );
       }
 

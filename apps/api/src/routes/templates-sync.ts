@@ -42,7 +42,8 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
         await trackFirstResourceCreated(
           authContext.organizationId,
           "template",
-          "cli"
+          "cli",
+          authContext.userId
         );
       }
 
@@ -162,7 +163,8 @@ export const templatesSyncRoutes = createAuthenticatedRoutes("/v1/templates")
         await trackFirstResourceCreated(
           authContext.organizationId,
           "template",
-          "cli"
+          "cli",
+          authContext.userId
         );
       }
 
