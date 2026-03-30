@@ -91,11 +91,15 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
           stdio: "inherit",
           env,
         });
-        execSync(`npx @sentry/cli sourcemaps upload --filesToDeleteAfterUpload '*.map' ${buildDir}`, {
+        execSync(`npx @sentry/cli sourcemaps upload ${buildDir}`, {
           stdio: "inherit",
           env,
         });
         console.log("Sentry source maps uploaded for API");
+        // Delete .map files so they don't ship to Lambda
+        execSync(`find ${buildDir} -name '*.map' -delete`, {
+          stdio: "inherit",
+        });
       } catch (err) {
         console.error("Sentry source map upload failed:", err);
       }
