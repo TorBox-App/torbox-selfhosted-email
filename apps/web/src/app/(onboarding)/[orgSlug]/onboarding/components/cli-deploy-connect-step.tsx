@@ -5,11 +5,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarIcon,
   CheckCircle2Icon,
+  ChevronDownIcon,
   CloudIcon,
   CopyIcon,
   ExternalLinkIcon,
+  GlobeIcon,
   RefreshCwIcon,
+  ShieldCheckIcon,
   TerminalIcon,
+  ZapIcon,
 } from "lucide-react";
 import posthog from "posthog-js";
 import { useMemo, useState } from "react";
@@ -24,9 +28,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type CliDeployConnectStepProps = {
   onNext: () => void;
@@ -259,6 +267,15 @@ export function CliDeployConnectStep({
     onSkip();
   };
 
+  const handleCliExpanded = () => {
+    posthog.capture("onboarding_deployment_method_selected", {
+      step: 4,
+      step_name: "Deploy & Connect",
+      organization_id: organizationId,
+      method: "cli",
+    });
+  };
+
   const handleCloudFormationDeploy = () => {
     posthog.capture("onboarding_deployment_started", {
       step: 4,
@@ -275,7 +292,7 @@ export function CliDeployConnectStep({
       <CardHeader>
         <div className="mb-2 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <TerminalIcon className="h-5 w-5 text-primary" />
+            <CloudIcon className="h-5 w-5 text-primary" />
           </div>
           <div>
             <CardTitle>Deploy & Connect</CardTitle>
@@ -288,271 +305,293 @@ export function CliDeployConnectStep({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <Tabs defaultValue="cli">
-          <TabsList className="w-full">
-            <TabsTrigger value="cli">
-              <TerminalIcon className="h-4 w-4" />
-              CLI Setup
-            </TabsTrigger>
-            <TabsTrigger value="cloudformation">
-              <CloudIcon className="h-4 w-4" />
-              CloudFormation
-            </TabsTrigger>
-          </TabsList>
+        {/* CloudFormation — primary path */}
+        {cfnDeployed ? (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 rounded-lg bg-green-500/10 p-3 text-green-600">
+              <CheckCircle2Icon className="h-5 w-5" />
+              <span className="font-medium text-sm">
+                CloudFormation deployment started
+              </span>
+            </div>
 
-          {/* CLI Tab */}
-          <TabsContent className="space-y-6 pt-4" value="cli">
-            {/* Prerequisites */}
-            <div className="space-y-2 rounded-lg bg-muted/50 p-4">
-              <h4 className="font-semibold text-sm">Prerequisites</h4>
-              <div className="space-y-1.5">
-                {PREREQUISITES.map((prereq) => (
-                  <div key={prereq.label}>
-                    <label className="flex items-center gap-2">
-                      <input
-                        className="h-4 w-4 rounded border-muted-foreground/25"
-                        type="checkbox"
-                      />
-                      <span className="text-sm">{prereq.label}</span>
-                      <a
-                        className="text-primary text-xs underline underline-offset-4"
-                        href={prereq.href}
-                        rel="noopener noreferrer"
-                        target="_blank"
+            <div className="space-y-3">
+              <h3 className="font-semibold text-sm">
+                Waiting for deployment to complete...
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Once CloudFormation finishes, copy the{" "}
+                <strong>ConsoleRoleArn</strong> and{" "}
+                <strong>ExternalId</strong> from the Outputs tab and paste them
+                below.
+              </p>
+            </div>
+
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.handleSubmit();
+              }}
+            >
+              <form.Field name="roleArn">
+                {(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor={field.name}>Console Role ARN</Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="arn:aws:iam::123456789012:role/wraps-console-access-role"
+                      value={field.state.value}
+                    />
+                    {field.state.meta.errors.map((error) => (
+                      <p
+                        className="text-destructive text-sm"
+                        key={error?.message}
                       >
-                        Guide
-                      </a>
-                    </label>
-                    {"hint" in prereq && (
-                      <p className="ml-6 mt-0.5 text-muted-foreground text-xs">
-                        Run{" "}
-                        <code className="rounded bg-muted px-1 py-0.5">
-                          aws configure
-                        </code>{" "}
-                        or{" "}
-                        <code className="rounded bg-muted px-1 py-0.5">
-                          aws sso login
-                        </code>
-                        , then{" "}
-                        <code className="rounded bg-muted px-1 py-0.5">
-                          wraps aws doctor
-                        </code>{" "}
-                        to verify
+                        {error?.message}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </form.Field>
+
+              <form.Field name="externalId">
+                {(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor={field.name}>External ID</Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="wraps-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      value={field.state.value}
+                    />
+                    {field.state.meta.errors.map((error) => (
+                      <p
+                        className="text-destructive text-sm"
+                        key={error?.message}
+                      >
+                        {error?.message}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </form.Field>
+
+              <form.Subscribe>
+                {(state) => (
+                  <Button
+                    className="w-full"
+                    disabled={
+                      !state.canSubmit || validateAwsMutation.isPending
+                    }
+                    loading={
+                      state.isSubmitting || validateAwsMutation.isPending
+                    }
+                    type="submit"
+                  >
+                    Validate Connection
+                  </Button>
+                )}
+              </form.Subscribe>
+            </form>
+
+            <Button asChild className="w-full" variant="outline">
+              <a
+                href={quickCreateUrl}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <CloudIcon className="mr-2 h-4 w-4" />
+                Open AWS Console
+              </a>
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {/* Why CloudFormation */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col items-center gap-1.5 rounded-lg bg-muted/50 p-3 text-center">
+                <GlobeIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-xs">Browser-based</span>
+                <span className="text-muted-foreground text-xs">
+                  No CLI or local tooling needed
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5 rounded-lg bg-muted/50 p-3 text-center">
+                <ZapIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-xs">One-click deploy</span>
+                <span className="text-muted-foreground text-xs">
+                  Pre-configured and ready to go
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5 rounded-lg bg-muted/50 p-3 text-center">
+                <ShieldCheckIcon className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-xs">
+                  Review before deploy
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  See every resource in the AWS Console
+                </span>
+              </div>
+            </div>
+
+            {/* What Gets Deployed */}
+            <div className="space-y-2 rounded-lg bg-muted/50 p-4">
+              <h4 className="font-semibold text-sm">What gets deployed?</h4>
+              <ul className="list-inside list-disc space-y-1 text-muted-foreground text-sm">
+                <li>Vercel OIDC provider for secure authentication</li>
+                <li>IAM role with minimal required permissions</li>
+                <li>SES configuration set with open/click tracking</li>
+                <li>EventBridge for real-time event routing</li>
+                <li>DynamoDB table for email history</li>
+                <li>Lambda function for event processing</li>
+              </ul>
+            </div>
+
+            <Button className="w-full" onClick={handleCloudFormationDeploy}>
+              <ExternalLinkIcon className="mr-2 h-4 w-4" />
+              Deploy with CloudFormation
+            </Button>
+          </div>
+        )}
+
+        {/* CLI — collapsible secondary path */}
+        {!cfnDeployed && (
+          <Collapsible onOpenChange={(open) => open && handleCliExpanded()}>
+            <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg border border-dashed p-3 text-muted-foreground text-sm hover:bg-muted/50 hover:text-foreground transition-colors [&[data-state=open]>svg:last-child]:rotate-180">
+              <TerminalIcon className="h-4 w-4" />
+              <span className="font-medium">Need more control over your deployment?</span>
+              <ChevronDownIcon className="ml-auto h-4 w-4 transition-transform" />
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="space-y-6 pt-4">
+              <p className="text-muted-foreground text-sm">
+                If you have Node.js and the AWS CLI configured locally, you can
+                deploy and connect with four commands.
+              </p>
+
+              {/* Prerequisites */}
+              <div className="space-y-2 rounded-lg bg-muted/50 p-4">
+                <h4 className="font-semibold text-sm">Prerequisites</h4>
+                <div className="space-y-1.5">
+                  {PREREQUISITES.map((prereq) => (
+                    <div key={prereq.label}>
+                      <label className="flex items-center gap-2">
+                        <input
+                          className="h-4 w-4 rounded border-muted-foreground/25"
+                          type="checkbox"
+                        />
+                        <span className="text-sm">{prereq.label}</span>
+                        <a
+                          className="text-primary text-xs underline underline-offset-4"
+                          href={prereq.href}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          Guide
+                        </a>
+                      </label>
+                      {"hint" in prereq && (
+                        <p className="ml-6 mt-0.5 text-muted-foreground text-xs">
+                          Run{" "}
+                          <code className="rounded bg-muted px-1 py-0.5">
+                            aws configure
+                          </code>{" "}
+                          or{" "}
+                          <code className="rounded bg-muted px-1 py-0.5">
+                            aws sso login
+                          </code>
+                          , then{" "}
+                          <code className="rounded bg-muted px-1 py-0.5">
+                            wraps aws doctor
+                          </code>{" "}
+                          to verify
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CLI Commands */}
+              <div className="space-y-3">
+                {CLI_STEPS.map((item, index) => (
+                  <div className="space-y-1.5" key={item.command}>
+                    <h3 className="flex items-center gap-2 font-semibold text-sm">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                        {index + 1}
+                      </span>
+                      {item.label}
+                      <span className="font-normal text-muted-foreground text-xs">
+                        {item.time}
+                      </span>
+                    </h3>
+                    <div className="relative">
+                      <pre className="overflow-x-auto rounded-lg bg-secondary p-4 pr-12">
+                        <code className="text-sm">{item.command}</code>
+                      </pre>
+                      <Button
+                        aria-label={
+                          copiedIndex === index
+                            ? "Copied"
+                            : `Copy ${item.label} command`
+                        }
+                        className="absolute top-2 right-2"
+                        onClick={() => handleCopy(item.command, index)}
+                        size="icon"
+                        variant="ghost"
+                      >
+                        {copiedIndex === index ? (
+                          <CheckCircle2Icon className="size-4 text-green-500" />
+                        ) : (
+                          <CopyIcon className="size-4" />
+                        )}
+                      </Button>
+                    </div>
+                    {"altCommand" in item && item.altCommand && (
+                      <p className="text-muted-foreground text-xs">
+                        Or via npm:{" "}
+                        <button
+                          className="font-mono underline underline-offset-2"
+                          onClick={() =>
+                            handleCopy(item.altCommand as string, index)
+                          }
+                          type="button"
+                        >
+                          {item.altCommand}
+                        </button>
                       </p>
                     )}
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* CLI Commands */}
-            <div className="space-y-3">
-              {CLI_STEPS.map((item, index) => (
-                <div className="space-y-1.5" key={item.command}>
-                  <h3 className="flex items-center gap-2 font-semibold text-sm">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                      {index + 1}
-                    </span>
-                    {item.label}
-                    <span className="font-normal text-muted-foreground text-xs">
-                      {item.time}
-                    </span>
-                  </h3>
-                  <div className="relative">
-                    <pre className="overflow-x-auto rounded-lg bg-secondary p-4 pr-12">
-                      <code className="text-sm">{item.command}</code>
-                    </pre>
-                    <Button
-                      aria-label={
-                        copiedIndex === index
-                          ? "Copied"
-                          : `Copy ${item.label} command`
-                      }
-                      className="absolute top-2 right-2"
-                      onClick={() => handleCopy(item.command, index)}
-                      size="icon"
-                      variant="ghost"
-                    >
-                      {copiedIndex === index ? (
-                        <CheckCircle2Icon className="size-4 text-green-500" />
-                      ) : (
-                        <CopyIcon className="size-4" />
-                      )}
-                    </Button>
-                  </div>
-                  {"altCommand" in item && item.altCommand && (
-                    <p className="text-muted-foreground text-xs">
-                      Or via npm:{" "}
-                      <button
-                        className="font-mono underline underline-offset-2"
-                        onClick={() =>
-                          handleCopy(item.altCommand as string, index)
-                        }
-                        type="button"
-                      >
-                        {item.altCommand}
-                      </button>
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Check Connection */}
-            <div className="space-y-3">
-              <Button
-                className="w-full"
-                loading={isChecking}
-                onClick={handleCheckConnection}
-              >
-                <RefreshCwIcon className="mr-2 h-4 w-4" />
-                I&apos;ve finished — check connection
-              </Button>
-              {checkFailed && (
-                <p className="text-center text-muted-foreground text-sm">
-                  No connection found. Make sure you&apos;ve run all 4 commands
-                  above, then try again.
-                </p>
-              )}
-            </div>
-          </TabsContent>
-
-          {/* CloudFormation Tab */}
-          <TabsContent className="space-y-6 pt-4" value="cloudformation">
-            <p className="text-muted-foreground text-sm">
-              Don&apos;t have Node.js? Deploy from your browser using AWS
-              CloudFormation instead.
-            </p>
-
-            {cfnDeployed ? (
-              <>
-                <div className="flex items-center gap-2 rounded-lg bg-green-500/10 p-3 text-green-600">
-                  <CheckCircle2Icon className="h-5 w-5" />
-                  <span className="font-medium text-sm">
-                    CloudFormation deployment started
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-sm">
-                    Waiting for deployment to complete...
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    Once CloudFormation finishes, copy the{" "}
-                    <strong>ConsoleRoleArn</strong> and{" "}
-                    <strong>ExternalId</strong> from the Outputs tab and paste
-                    them below.
-                  </p>
-                </div>
-
-                <form
-                  className="space-y-4"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    form.handleSubmit();
-                  }}
+              {/* Check Connection */}
+              <div className="space-y-3">
+                <Button
+                  className="w-full"
+                  loading={isChecking}
+                  onClick={handleCheckConnection}
                 >
-                  <form.Field name="roleArn">
-                    {(field) => (
-                      <div className="space-y-2">
-                        <Label htmlFor={field.name}>Console Role ARN</Label>
-                        <Input
-                          id={field.name}
-                          name={field.name}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="arn:aws:iam::123456789012:role/wraps-console-access-role"
-                          value={field.state.value}
-                        />
-                        {field.state.meta.errors.map((error) => (
-                          <p
-                            className="text-destructive text-sm"
-                            key={error?.message}
-                          >
-                            {error?.message}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </form.Field>
-
-                  <form.Field name="externalId">
-                    {(field) => (
-                      <div className="space-y-2">
-                        <Label htmlFor={field.name}>External ID</Label>
-                        <Input
-                          id={field.name}
-                          name={field.name}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="wraps-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                          value={field.state.value}
-                        />
-                        {field.state.meta.errors.map((error) => (
-                          <p
-                            className="text-destructive text-sm"
-                            key={error?.message}
-                          >
-                            {error?.message}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </form.Field>
-
-                  <form.Subscribe>
-                    {(state) => (
-                      <Button
-                        className="w-full"
-                        disabled={
-                          !state.canSubmit || validateAwsMutation.isPending
-                        }
-                        loading={
-                          state.isSubmitting || validateAwsMutation.isPending
-                        }
-                        type="submit"
-                      >
-                        Validate Connection
-                      </Button>
-                    )}
-                  </form.Subscribe>
-                </form>
-
-                <Button asChild className="w-full" variant="outline">
-                  <a
-                    href={quickCreateUrl}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    <CloudIcon className="mr-2 h-4 w-4" />
-                    Open AWS Console
-                  </a>
+                  <RefreshCwIcon className="mr-2 h-4 w-4" />
+                  I&apos;ve finished — check connection
                 </Button>
-              </>
-            ) : (
-              <>
-                {/* What Gets Deployed */}
-                <div className="space-y-2 rounded-lg bg-muted/50 p-4">
-                  <h4 className="font-semibold text-sm">What gets deployed?</h4>
-                  <ul className="list-inside list-disc space-y-1 text-muted-foreground text-sm">
-                    <li>Vercel OIDC provider for secure authentication</li>
-                    <li>IAM role with minimal required permissions</li>
-                    <li>SES configuration set with open/click tracking</li>
-                    <li>EventBridge for real-time event routing</li>
-                    <li>DynamoDB table for email history</li>
-                    <li>Lambda function for event processing</li>
-                  </ul>
-                </div>
-
-                <Button className="w-full" onClick={handleCloudFormationDeploy}>
-                  <ExternalLinkIcon className="mr-2 h-4 w-4" />
-                  Deploy to AWS Console
-                </Button>
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
+                {checkFailed && (
+                  <p className="text-center text-muted-foreground text-sm">
+                    No connection found. Make sure you&apos;ve run all 4
+                    commands above, then try again.
+                  </p>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Need help? */}
         <div className="rounded-lg border border-dashed p-4">
