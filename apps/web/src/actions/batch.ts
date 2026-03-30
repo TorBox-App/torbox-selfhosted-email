@@ -351,11 +351,14 @@ export async function createBatchSend(
         return { success: false, error: "Template not found" };
       }
 
-      // Re-publish only if template has never been pushed to SES,
-      // or was edited in the dashboard after last publish
+      // Re-publish only if:
+      // 1. Never pushed to SES (no sesTemplateName)
+      // 2. Edited after last publish (dashboard edits update updatedAt)
+      // CLI-pushed templates have sesTemplateName but null publishedAt —
+      // dashboard edits to those will re-publish since publishedAt is null.
       const needsPublish =
         !tmpl.sesTemplateName ||
-        (tmpl.publishedAt && tmpl.updatedAt && tmpl.updatedAt > tmpl.publishedAt);
+        (tmpl.updatedAt && (!tmpl.publishedAt || tmpl.updatedAt > tmpl.publishedAt));
 
       if (needsPublish) {
         const publishResult = await publishTemplateToSES(

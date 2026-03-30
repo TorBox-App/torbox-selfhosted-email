@@ -190,7 +190,9 @@ export async function templatesPush(options: TemplatesPushOptions) {
     ? await pushToAPI(sesSucceeded, token, progress, options.force)
     : [];
 
-  // Only update lockfile for templates that succeeded in at least one target
+  // Only update lockfile for templates that succeeded in at least one target.
+  // SES-failed templates won't appear in apiResults (skipped above),
+  // so both sesOk and apiOk will be false — lockfile stays unchanged.
   for (const t of compiled) {
     const sesOk = sesResults.find((r) => r.slug === t.slug)?.success;
     const apiResult = apiResults.find((r) => r.slug === t.slug);
