@@ -167,29 +167,32 @@ export const app = new Elysia()
       }
     );
 
-    Sentry.captureException(
-      error instanceof Error ? error : new Error(String(error)),
-      {
-        extra: {
-          requestId,
+    // Only report unexpected errors to Sentry/PostHog (skip 404s and validation errors)
+    if (code !== "NOT_FOUND" && code !== "VALIDATION") {
+      Sentry.captureException(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          extra: {
+            requestId,
+            url: request.url,
+            method: request.method,
+            path: url.pathname,
+            status,
+            organizationId: auth?.organizationId,
+          },
+        }
+      );
+
+      const posthog = getPostHogClient();
+      posthog.captureException(
+        error instanceof Error ? error : new Error(String(error)),
+        "api-error",
+        {
           url: request.url,
           method: request.method,
-          path: url.pathname,
-          status,
-          organizationId: auth?.organizationId,
-        },
-      }
-    );
-
-    const posthog = getPostHogClient();
-    posthog.captureException(
-      error instanceof Error ? error : new Error(String(error)),
-      "api-error",
-      {
-        url: request.url,
-        method: request.method,
-      }
-    );
+        }
+      );
+    }
     if (code === "NOT_FOUND") {
       return { error: "Not found" };
     }
