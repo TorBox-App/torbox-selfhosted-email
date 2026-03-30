@@ -1,5 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, createWriteStream, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  createWriteStream,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
