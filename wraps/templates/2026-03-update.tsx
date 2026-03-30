@@ -95,10 +95,10 @@ export default function MarchUpdateEmail({
 
             {/* Intro */}
             <Text className="my-8 text-[15px] leading-relaxed text-gray-700">
-              March was our biggest month yet — 291 commits, 16 CLI
-              releases, and a ground-up rebuild of the onboarding flow. The
-              theme: making Wraps more reliable, more observable, and easier
-              to get started with.
+              March was our biggest month yet — 291 commits, 16 CLI releases,
+              and a ground-up rebuild of the onboarding flow. The theme: making
+              Wraps more reliable, more observable, and easier to get started
+              with.
             </Text>
 
             {/* ── Broadcast Engagement Analytics ── */}
@@ -111,11 +111,11 @@ export default function MarchUpdateEmail({
             </Heading>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
-              Broadcasts now show a full engagement funnel — sent,
-              delivered, opened, clicked — rendered as a Sankey diagram.
-              Per-link click tracking lets you see which URLs drive engagement,
-              and bot opens are filtered from all metrics so the numbers reflect
-              real human engagement.
+              Broadcasts now show a full engagement funnel — sent, delivered,
+              opened, clicked — rendered as a Sankey diagram. Per-link click
+              tracking lets you see which URLs drive engagement, and bot opens
+              are filtered from all metrics so the numbers reflect real human
+              engagement.
             </Text>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
@@ -145,18 +145,16 @@ export default function MarchUpdateEmail({
             </Heading>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
-              We rebuilt the onboarding flow from scratch. A new "Choose
-              Your Path" step lets you pick between deploying from the
-              CLI or connecting via CloudFormation. Billing moves to the first
-              step so you're never blocked mid-setup. A go-live banner
-              with AWS action gates keeps you on track until everything is
-              connected.
+              We rebuilt the onboarding flow from scratch. A new "Choose Your
+              Path" step lets you pick between deploying from the CLI or
+              connecting via CloudFormation. Billing moves to the first step so
+              you're never blocked mid-setup. A go-live banner with AWS action
+              gates keeps you on track until everything is connected.
             </Text>
 
             <Section className="mb-4">
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
-                •&ensp;Activation score tracking across onboarding
-                milestones
+                •&ensp;Activation score tracking across onboarding milestones
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
                 •&ensp;Dedicated{" "}
@@ -169,8 +167,7 @@ export default function MarchUpdateEmail({
                 •&ensp;6 starter templates available at project creation
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
-                •&ensp;Mobile signup rescue gate for better mobile
-                conversion
+                •&ensp;Mobile signup rescue gate for better mobile conversion
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
                 •&ensp;Invite team members step with activation loop
@@ -190,8 +187,7 @@ export default function MarchUpdateEmail({
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
               16 releases this month. The headline: the CLI now ships as a
-              standalone binary with bundled Node.js — install with a
-              single{" "}
+              standalone binary with bundled Node.js — install with a single{" "}
               <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
                 curl
               </code>{" "}
@@ -213,16 +209,15 @@ export default function MarchUpdateEmail({
               validates your entire SES setup end-to-end
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Metadata deep-merge preserves inbound, alerts, and
-              webhook config on partial updates
+              •&ensp;Metadata deep-merge preserves inbound, alerts, and webhook
+              config on partial updates
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Unified release workflows across core, CDK, and
-              Pulumi packages
+              •&ensp;Unified release workflows across core, CDK, and Pulumi
+              packages
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Email failure statuses now surfaced during template
-              push
+              •&ensp;Email failure statuses now surfaced during template push
             </Text>
 
             {/* ── AI Template Editor ── */}
@@ -240,8 +235,8 @@ export default function MarchUpdateEmail({
               The AI code editor gained three big capabilities: conversation
               history now persists across sessions so you can resume where you
               left off, brand kit support lets the AI apply your colors and
-              fonts automatically, and a version history panel lets you diff
-              and restore past iterations.
+              fonts automatically, and a version history panel lets you diff and
+              restore past iterations.
             </Text>
 
             {/* ── Dashboard ── */}
@@ -262,27 +257,25 @@ export default function MarchUpdateEmail({
               •&ensp;Subject line override on workflow send-email steps
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Workflow builder ghost preview on drag-over with
-              improved drop positioning
+              •&ensp;Workflow builder ghost preview on drag-over with improved
+              drop positioning
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Subject and preview text columns in the templates
-              table
+              •&ensp;Subject and preview text columns in the templates table
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
               •&ensp;Skeleton loaders for sidebar navigation
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Docs link and "Need Help" dropdown in
-              sidebar footer
+              •&ensp;Docs link and "Need Help" dropdown in sidebar footer
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Pino structured logging shipped to Axiom with
-              request ID correlation
+              •&ensp;Pino structured logging shipped to Axiom with request ID
+              correlation
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Analytics fallback to PostgreSQL when
-              CloudWatch/DynamoDB unavailable
+              •&ensp;Analytics fallback to PostgreSQL when CloudWatch/DynamoDB
+              unavailable
             </Text>
 
             {/* ── SDK ── */}
@@ -311,9 +304,9 @@ export default function MarchUpdateEmail({
             </Text>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
-              All SDK packages were also updated with improved npm
-              descriptions and keywords for better discoverability in AI
-              tooling and agent contexts.
+              All SDK packages were also updated with improved npm descriptions
+              and keywords for better discoverability in AI tooling and agent
+              contexts.
             </Text>
 
             {/* ── Website ── */}
@@ -338,8 +331,8 @@ export default function MarchUpdateEmail({
               page, linked from navbar
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;Landing page reworked with problem-contrast section
-              and simplified pricing
+              •&ensp;Landing page reworked with problem-contrast section and
+              simplified pricing
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
               •&ensp;Navbar reorganized: Products / Resources / Pricing
@@ -356,12 +349,10 @@ export default function MarchUpdateEmail({
               for AI discoverability
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;"How Email Actually Works" interactive
-              blog post
+              •&ensp;"How Email Actually Works" interactive blog post
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              •&ensp;GIFs converted to MP4 — 80% static asset size
-              reduction
+              •&ensp;GIFs converted to MP4 — 80% static asset size reduction
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
               •&ensp;Space Grotesk + JetBrains Mono font pairing
@@ -431,10 +422,10 @@ export default function MarchUpdateEmail({
             {/* Footer */}
             <Section className="pt-10 text-center">
               <Text className="m-0 mb-3 text-left text-[13px] italic leading-normal text-gray-400">
-                You're receiving this email because you have an account
-                with Wraps. If you don't want to receive these updates,
-                unsubscribe below — you'll continue to receive
-                important account-related emails.
+                You're receiving this email because you have an account with
+                Wraps. If you don't want to receive these updates, unsubscribe
+                below — you'll continue to receive important account-related
+                emails.
               </Text>
               <Text className="m-0 mb-1 text-[13px] font-semibold text-gray-400">
                 <Link

@@ -358,7 +358,8 @@ export async function createBatchSend(
       // dashboard edits to those will re-publish since publishedAt is null.
       const needsPublish =
         !tmpl.sesTemplateName ||
-        (tmpl.updatedAt && (!tmpl.publishedAt || tmpl.updatedAt > tmpl.publishedAt));
+        (tmpl.updatedAt &&
+          (!tmpl.publishedAt || tmpl.updatedAt > tmpl.publishedAt));
 
       if (needsPublish) {
         const publishResult = await publishTemplateToSES(

@@ -186,9 +186,10 @@ export async function templatesPush(options: TemplatesPushOptions) {
   const sesSucceeded = compiled.filter((t) => !sesFailed.has(t.slug));
 
   // Push to API (token already resolved above)
-  const apiResults = sesSucceeded.length > 0
-    ? await pushToAPI(sesSucceeded, token, progress, options.force)
-    : [];
+  const apiResults =
+    sesSucceeded.length > 0
+      ? await pushToAPI(sesSucceeded, token, progress, options.force)
+      : [];
 
   // Only update lockfile for templates that succeeded in at least one target.
   // SES-failed templates won't appear in apiResults (skipped above),

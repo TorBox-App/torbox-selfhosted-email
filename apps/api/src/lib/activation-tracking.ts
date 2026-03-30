@@ -182,13 +182,24 @@ async function setContactProperties(
       params: { query: { search: userEmail, pageSize: "10" } },
     });
 
-    const contacts = (
-      searchResult.data as { contacts?: { id: string; email: string | null; properties: Record<string, unknown> | null }[] } | undefined
-    )?.contacts ?? [];
+    const contacts =
+      (
+        searchResult.data as
+          | {
+              contacts?: {
+                id: string;
+                email: string | null;
+                properties: Record<string, unknown> | null;
+              }[];
+            }
+          | undefined
+      )?.contacts ?? [];
 
     const normalizedEmail = userEmail.toLowerCase().trim();
     const matched = contacts.find(
-      (c) => typeof c.email === "string" && c.email.toLowerCase().trim() === normalizedEmail
+      (c) =>
+        typeof c.email === "string" &&
+        c.email.toLowerCase().trim() === normalizedEmail
     );
 
     if (matched) {
@@ -196,7 +207,8 @@ async function setContactProperties(
         params: { path: { id: matched.id } },
         body: {
           properties: {
-            ...(typeof matched.properties === "object" && matched.properties !== null
+            ...(typeof matched.properties === "object" &&
+            matched.properties !== null
               ? matched.properties
               : {}),
             ...props,

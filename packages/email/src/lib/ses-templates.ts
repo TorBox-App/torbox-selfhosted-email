@@ -51,9 +51,7 @@ export async function templateExists(
   const ses = createSESClient(credentials, region);
 
   try {
-    await ses.send(
-      new GetEmailTemplateCommand({ TemplateName: templateName })
-    );
+    await ses.send(new GetEmailTemplateCommand({ TemplateName: templateName }));
     return true;
   } catch (error) {
     const err = error as { name?: string };
@@ -83,29 +81,22 @@ export async function upsertSESTemplate(
 
   // Try create first, fall back to update if it already exists
   try {
-    try {
+    await ses.send(
+      new CreateEmailTemplateCommand({
+        TemplateName: templateName,
+        TemplateContent: templateContent,
+      })
+    );
+  } catch (error) {
+    const err = error as { name?: string; message?: string };
+    if (err.name === "AlreadyExistsException") {
       await ses.send(
-        new CreateEmailTemplateCommand({
+        new UpdateEmailTemplateCommand({
           TemplateName: templateName,
           TemplateContent: templateContent,
         })
       );
-    } catch (error) {
-      const err = error as { name?: string };
-      if (err.name === "AlreadyExistsException") {
-        await ses.send(
-          new UpdateEmailTemplateCommand({
-            TemplateName: templateName,
-            TemplateContent: templateContent,
-          })
-        );
-      } else {
-        throw error;
-      }
-    }
-  } catch (error) {
-    const err = error as { name?: string; message?: string };
-    if (
+    } else if (
       err.name === "AccessDeniedException" ||
       err.message?.includes("is not authorized to perform")
     ) {
@@ -114,8 +105,9 @@ export async function upsertSESTemplate(
           "Update your role by re-deploying the CloudFormation stack from the Wraps dashboard, " +
           "or run: wraps platform update-role"
       );
+    } else {
+      throw error;
     }
-    throw error;
   }
 }
 

@@ -321,9 +321,8 @@ export function CliDeployConnectStep({
               </h3>
               <p className="text-muted-foreground text-sm">
                 Once CloudFormation finishes, copy the{" "}
-                <strong>ConsoleRoleArn</strong> and{" "}
-                <strong>ExternalId</strong> from the Outputs tab and paste them
-                below.
+                <strong>ConsoleRoleArn</strong> and <strong>ExternalId</strong>{" "}
+                from the Outputs tab and paste them below.
               </p>
             </div>
 
@@ -387,9 +386,7 @@ export function CliDeployConnectStep({
                 {(state) => (
                   <Button
                     className="w-full"
-                    disabled={
-                      !state.canSubmit || validateAwsMutation.isPending
-                    }
+                    disabled={!state.canSubmit || validateAwsMutation.isPending}
                     loading={
                       state.isSubmitting || validateAwsMutation.isPending
                     }
@@ -466,7 +463,9 @@ export function CliDeployConnectStep({
           <Collapsible onOpenChange={(open) => open && handleCliExpanded()}>
             <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg border border-dashed p-3 text-muted-foreground text-sm hover:bg-muted/50 hover:text-foreground transition-colors [&[data-state=open]>svg:last-child]:rotate-180">
               <TerminalIcon className="h-4 w-4" />
-              <span className="font-medium">Need more control over your deployment?</span>
+              <span className="font-medium">
+                Need more control over your deployment?
+              </span>
               <ChevronDownIcon className="ml-auto h-4 w-4 transition-transform" />
             </CollapsibleTrigger>
 
