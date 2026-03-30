@@ -62,7 +62,7 @@ export function ChoosePathStep({
               onClick={() => handlePath("start_building")}
               size="lg"
             >
-              Explore the product
+              Explore Wraps!
             </Button>
           </Card>
 
