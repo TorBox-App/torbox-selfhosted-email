@@ -179,8 +179,16 @@ export async function templatesPush(options: TemplatesPushOptions) {
   // Push to SES
   const sesResults = await pushToSES(compiled, progress);
 
+  // Only sync templates to dashboard that succeeded in SES
+  const sesFailed = new Set(
+    sesResults.filter((r) => !r.success).map((r) => r.slug)
+  );
+  const sesSucceeded = compiled.filter((t) => !sesFailed.has(t.slug));
+
   // Push to API (token already resolved above)
-  const apiResults = await pushToAPI(compiled, token, progress, options.force);
+  const apiResults = sesSucceeded.length > 0
+    ? await pushToAPI(sesSucceeded, token, progress, options.force)
+    : [];
 
   // Only update lockfile for templates that succeeded in at least one target
   for (const t of compiled) {
@@ -480,15 +488,14 @@ async function pushToSES(
     return templates.map((t) => ({ slug: t.slug, success: false }));
   }
 
-  // Use SES client directly — it picks up credentials from the environment
+  // Use SESv2 client (JSON protocol) — avoids XML entity expansion limits in v1
   const {
-    SESClient,
-    GetTemplateCommand,
-    CreateTemplateCommand,
-    UpdateTemplateCommand,
-  } = await import("@aws-sdk/client-ses");
+    SESv2Client,
+    CreateEmailTemplateCommand,
+    UpdateEmailTemplateCommand,
+  } = await import("@aws-sdk/client-sesv2");
 
-  const ses = new SESClient({ region });
+  const ses = new SESv2Client({ region });
 
   try {
     progress.start(
@@ -497,31 +504,32 @@ async function pushToSES(
 
     const settled = await Promise.allSettled(
       templates.map(async (t) => {
-        const templateData = {
-          TemplateName: t.sesTemplateName,
-          SubjectPart: t.subject,
-          HtmlPart: t.compiledHtml,
-          TextPart: t.compiledText,
+        const templateContent = {
+          Subject: t.subject,
+          Html: t.compiledHtml,
+          Text: t.compiledText,
         };
 
-        // Check if template exists
-        let exists = false;
+        // Try create first, fall back to update if it already exists
         try {
           await ses.send(
-            new GetTemplateCommand({ TemplateName: t.sesTemplateName })
+            new CreateEmailTemplateCommand({
+              TemplateName: t.sesTemplateName,
+              TemplateContent: templateContent,
+            })
           );
-          exists = true;
         } catch (err) {
           const e = err as { name?: string };
-          if (e.name !== "TemplateDoesNotExistException") {
+          if (e.name === "AlreadyExistsException") {
+            await ses.send(
+              new UpdateEmailTemplateCommand({
+                TemplateName: t.sesTemplateName,
+                TemplateContent: templateContent,
+              })
+            );
+          } else {
             throw err;
           }
-        }
-
-        if (exists) {
-          await ses.send(new UpdateTemplateCommand({ Template: templateData }));
-        } else {
-          await ses.send(new CreateTemplateCommand({ Template: templateData }));
         }
 
         return { slug: t.slug };

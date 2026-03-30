@@ -90,12 +90,12 @@ export default function MarchUpdateEmail({
 
             {/* Byline */}
             <Text className="mb-6 text-sm text-gray-500">
-              By the Wraps Team &bull; March 2026
+              By the Wraps Team • March 2026
             </Text>
 
             {/* Intro */}
             <Text className="my-8 text-[15px] leading-relaxed text-gray-700">
-              March was our biggest month yet &mdash; 291 commits, 16 CLI
+              March was our biggest month yet — 291 commits, 16 CLI
               releases, and a ground-up rebuild of the onboarding flow. The
               theme: making Wraps more reliable, more observable, and easier
               to get started with.
@@ -111,8 +111,8 @@ export default function MarchUpdateEmail({
             </Heading>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
-              Broadcasts now show a full engagement funnel &mdash; sent,
-              delivered, opened, clicked &mdash; rendered as a Sankey diagram.
+              Broadcasts now show a full engagement funnel — sent,
+              delivered, opened, clicked — rendered as a Sankey diagram.
               Per-link click tracking lets you see which URLs drive engagement,
               and bot opens are filtered from all metrics so the numbers reflect
               real human engagement.
@@ -145,35 +145,35 @@ export default function MarchUpdateEmail({
             </Heading>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
-              We rebuilt the onboarding flow from scratch. A new &ldquo;Choose
-              Your Path&rdquo; step lets you pick between deploying from the
+              We rebuilt the onboarding flow from scratch. A new "Choose
+              Your Path" step lets you pick between deploying from the
               CLI or connecting via CloudFormation. Billing moves to the first
-              step so you&apos;re never blocked mid-setup. A go-live banner
+              step so you're never blocked mid-setup. A go-live banner
               with AWS action gates keeps you on track until everything is
               connected.
             </Text>
 
             <Section className="mb-4">
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
-                &bull;&ensp;Activation score tracking across onboarding
+                •&ensp;Activation score tracking across onboarding
                 milestones
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
-                &bull;&ensp;Dedicated{" "}
+                •&ensp;Dedicated{" "}
                 <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
                   /setup
                 </code>{" "}
                 page with infrastructure checklist
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
-                &bull;&ensp;6 starter templates available at project creation
+                •&ensp;6 starter templates available at project creation
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
-                &bull;&ensp;Mobile signup rescue gate for better mobile
+                •&ensp;Mobile signup rescue gate for better mobile
                 conversion
               </Text>
               <Text className="m-0 mb-1.5 pl-4 text-[15px] leading-normal text-gray-700">
-                &bull;&ensp;Invite team members step with activation loop
+                •&ensp;Invite team members step with activation loop
               </Text>
             </Section>
 
@@ -185,12 +185,12 @@ export default function MarchUpdateEmail({
               as="h2"
               className="m-0 mb-4 text-[22px] font-bold leading-tight text-gray-900"
             >
-              CLI (v2.17.5 &rarr; v2.17.20)
+              CLI (v2.17.5 → v2.17.20)
             </Heading>
 
             <Text className="m-0 mb-4 text-[15px] leading-relaxed text-gray-700">
               16 releases this month. The headline: the CLI now ships as a
-              standalone binary with bundled Node.js &mdash; install with a
+              standalone binary with bundled Node.js — install with a
               single{" "}
               <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
                 curl
@@ -199,29 +199,27 @@ export default function MarchUpdateEmail({
             </Text>
 
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;
-              <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
+              •              <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
                 wraps deploy
               </code>{" "}
               pre-flight scan catches resource conflicts before touching AWS
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;
-              <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
+              •              <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
                 wraps email doctor
               </code>{" "}
               validates your entire SES setup end-to-end
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Metadata deep-merge preserves inbound, alerts, and
+              •&ensp;Metadata deep-merge preserves inbound, alerts, and
               webhook config on partial updates
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Unified release workflows across core, CDK, and
+              •&ensp;Unified release workflows across core, CDK, and
               Pulumi packages
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Email failure statuses now surfaced during template
+              •&ensp;Email failure statuses now surfaced during template
               push
             </Text>
 
@@ -256,32 +254,32 @@ export default function MarchUpdateEmail({
             </Heading>
 
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Cancel and retry buttons for workflow executions
+              •&ensp;Cancel and retry buttons for workflow executions
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Subject line override on workflow send-email steps
+              •&ensp;Subject line override on workflow send-email steps
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Workflow builder ghost preview on drag-over with
+              •&ensp;Workflow builder ghost preview on drag-over with
               improved drop positioning
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Subject and preview text columns in the templates
+              •&ensp;Subject and preview text columns in the templates
               table
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Skeleton loaders for sidebar navigation
+              •&ensp;Skeleton loaders for sidebar navigation
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Docs link and &ldquo;Need Help&rdquo; dropdown in
+              •&ensp;Docs link and "Need Help" dropdown in
               sidebar footer
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Pino structured logging shipped to Axiom with
+              •&ensp;Pino structured logging shipped to Axiom with
               request ID correlation
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Analytics fallback to PostgreSQL when
+              •&ensp;Analytics fallback to PostgreSQL when
               CloudWatch/DynamoDB unavailable
             </Text>
 
@@ -324,11 +322,11 @@ export default function MarchUpdateEmail({
               as="h2"
               className="m-0 mb-4 text-[22px] font-bold leading-tight text-gray-900"
             >
-              Website &amp; Docs
+              Website {"&"} Docs
             </Heading>
 
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;New{" "}
+              •&ensp;New{" "}
               <Link
                 className="text-gray-900 underline"
                 href="https://wraps.dev/sdk"
@@ -338,14 +336,14 @@ export default function MarchUpdateEmail({
               page, linked from navbar
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Landing page reworked with problem-contrast section
+              •&ensp;Landing page reworked with problem-contrast section
               and simplified pricing
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Navbar reorganized: Products / Resources / Pricing
+              •&ensp;Navbar reorganized: Products / Resources / Pricing
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;API reference docs with OpenAPI spec, plus{" "}
+              •&ensp;API reference docs with OpenAPI spec, plus{" "}
               <code className="rounded bg-gray-100 px-1.5 py-0.5 text-sm">
                 agent.json
               </code>{" "}
@@ -356,15 +354,15 @@ export default function MarchUpdateEmail({
               for AI discoverability
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;&ldquo;How Email Actually Works&rdquo; interactive
+              •&ensp;"How Email Actually Works" interactive
               blog post
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;GIFs converted to MP4 &mdash; 80% static asset size
+              •&ensp;GIFs converted to MP4 — 80% static asset size
               reduction
             </Text>
             <Text className="m-0 mb-2 pl-4 text-[15px] leading-relaxed text-gray-700">
-              &bull;&ensp;Space Grotesk + JetBrains Mono font pairing
+              •&ensp;Space Grotesk + JetBrains Mono font pairing
             </Text>
 
             {/* ── By the Numbers ── */}
@@ -419,7 +417,7 @@ export default function MarchUpdateEmail({
             <Hr className="my-8 border-gray-200" />
 
             <Text className="m-0 mb-6 text-[15px] leading-relaxed text-gray-700">
-              Questions or feedback? Reply to this email &mdash; I read every
+              Questions or feedback? Reply to this email — I read every
               response.
             </Text>
 
@@ -431,9 +429,9 @@ export default function MarchUpdateEmail({
             {/* Footer */}
             <Section className="pt-10 text-center">
               <Text className="m-0 mb-3 text-left text-[13px] italic leading-normal text-gray-400">
-                You&apos;re receiving this email because you have an account
-                with Wraps. If you don&apos;t want to receive these updates,
-                unsubscribe below &mdash; you&apos;ll continue to receive
+                You're receiving this email because you have an account
+                with Wraps. If you don't want to receive these updates,
+                unsubscribe below — you'll continue to receive
                 important account-related emails.
               </Text>
               <Text className="m-0 mb-1 text-[13px] font-semibold text-gray-400">
@@ -443,7 +441,7 @@ export default function MarchUpdateEmail({
                 >
                   Wraps
                 </Link>
-                &nbsp;&bull;&nbsp; Boulder, CO
+                {"\u00A0"}•{"\u00A0"} Boulder, CO
               </Text>
               <Text className="m-0 text-xs text-gray-400">
                 <Link
@@ -452,7 +450,7 @@ export default function MarchUpdateEmail({
                 >
                   Unsubscribe
                 </Link>
-                &nbsp;&bull;&nbsp;
+                {"\u00A0"}•{"\u00A0"}
                 <Link
                   className="text-xs text-gray-400 underline"
                   href={preferencesUrl}

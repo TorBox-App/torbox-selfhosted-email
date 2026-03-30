@@ -1,10 +1,10 @@
 import {
-  CreateTemplateCommand,
-  DeleteTemplateCommand,
-  GetTemplateCommand,
-  SESClient,
-  UpdateTemplateCommand,
-} from "@aws-sdk/client-ses";
+  CreateEmailTemplateCommand,
+  DeleteEmailTemplateCommand,
+  GetEmailTemplateCommand,
+  SESv2Client,
+  UpdateEmailTemplateCommand,
+} from "@aws-sdk/client-sesv2";
 
 /**
  * AWS credentials for SES operations
@@ -23,13 +23,14 @@ export type SESTemplateParams = {
 };
 
 /**
- * Creates an SES client using provided credentials
+ * Creates an SESv2 client using provided credentials.
+ * Uses SESv2 (JSON protocol) to avoid XML entity expansion limits in v1.
  */
 function createSESClient(
   credentials: SESCredentials,
   region: string
-): SESClient {
-  return new SESClient({
+): SESv2Client {
+  return new SESv2Client({
     region,
     credentials: {
       accessKeyId: credentials.accessKeyId,
@@ -50,15 +51,13 @@ export async function templateExists(
   const ses = createSESClient(credentials, region);
 
   try {
-    await ses.send(new GetTemplateCommand({ TemplateName: templateName }));
+    await ses.send(
+      new GetEmailTemplateCommand({ TemplateName: templateName })
+    );
     return true;
   } catch (error) {
-    // AWS SDK v3 error codes - check both name and Code properties
-    const err = error as { name?: string; Code?: string };
-    if (
-      err.name === "TemplateDoesNotExist" ||
-      err.Code === "TemplateDoesNotExist"
-    ) {
+    const err = error as { name?: string };
+    if (err.name === "NotFoundException") {
       return false;
     }
     throw error;
@@ -76,30 +75,32 @@ export async function upsertSESTemplate(
   const ses = createSESClient(credentials, region);
   const { templateName, subject, htmlPart, textPart } = params;
 
-  const templateData = {
-    TemplateName: templateName,
-    SubjectPart: subject,
-    HtmlPart: htmlPart,
-    TextPart: textPart,
+  const templateContent = {
+    Subject: subject,
+    Html: htmlPart,
+    Text: textPart,
   };
 
-  // Check if template exists
-  const exists = await templateExists(credentials, region, templateName);
-
-  if (exists) {
-    // Update existing template
+  // Try create first, fall back to update if it already exists
+  try {
     await ses.send(
-      new UpdateTemplateCommand({
-        Template: templateData,
+      new CreateEmailTemplateCommand({
+        TemplateName: templateName,
+        TemplateContent: templateContent,
       })
     );
-  } else {
-    // Create new template
-    await ses.send(
-      new CreateTemplateCommand({
-        Template: templateData,
-      })
-    );
+  } catch (error) {
+    const err = error as { name?: string };
+    if (err.name === "AlreadyExistsException") {
+      await ses.send(
+        new UpdateEmailTemplateCommand({
+          TemplateName: templateName,
+          TemplateContent: templateContent,
+        })
+      );
+    } else {
+      throw error;
+    }
   }
 }
 
@@ -115,17 +116,13 @@ export async function deleteSESTemplate(
 
   try {
     await ses.send(
-      new DeleteTemplateCommand({
+      new DeleteEmailTemplateCommand({
         TemplateName: templateName,
       })
     );
   } catch (error) {
-    // Ignore if template doesn't exist - check both name and Code properties
-    const err = error as { name?: string; Code?: string };
-    if (
-      err.name === "TemplateDoesNotExist" ||
-      err.Code === "TemplateDoesNotExist"
-    ) {
+    const err = error as { name?: string };
+    if (err.name === "NotFoundException") {
       return;
     }
     throw error;
