@@ -14,6 +14,7 @@
  * - Scheduled broadcasts via EventBridge Scheduler
  */
 
+import { execSync } from "node:child_process";
 import { batchQueue, workflowQueue } from "./queues";
 import { schedulerGroup, schedulerRole } from "./scheduler";
 import { axiomToken, sentryDsn } from "./secrets";
@@ -70,6 +71,35 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
   link: [rateLimitTable, batchQueue, workflowQueue],
   nodejs: {
     install: ["pg", "@sentry/profiling-node"], // PostgreSQL driver + Sentry native profiler
+    sourcemap: true,
+  },
+  hook: {
+    postbuild: async (buildDir) => {
+      const authToken = process.env.SENTRY_AUTH_TOKEN;
+      if (!authToken) {
+        console.warn("SENTRY_AUTH_TOKEN not set, skipping source map upload");
+        return;
+      }
+      const env = {
+        ...process.env,
+        SENTRY_AUTH_TOKEN: authToken,
+        SENTRY_ORG: "wraps",
+        SENTRY_PROJECT: "api",
+      };
+      try {
+        execSync(`npx @sentry/cli sourcemaps inject ${buildDir}`, {
+          stdio: "inherit",
+          env,
+        });
+        execSync(`npx @sentry/cli sourcemaps upload --filesToDeleteAfterUpload '*.map' ${buildDir}`, {
+          stdio: "inherit",
+          env,
+        });
+        console.log("Sentry source maps uploaded for API");
+      } catch (err) {
+        console.error("Sentry source map upload failed:", err);
+      }
+    },
   },
   url: false, // We use API Gateway, not function URLs
   permissions: [
