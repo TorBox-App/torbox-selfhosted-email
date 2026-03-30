@@ -83,24 +83,39 @@ export async function upsertSESTemplate(
 
   // Try create first, fall back to update if it already exists
   try {
-    await ses.send(
-      new CreateEmailTemplateCommand({
-        TemplateName: templateName,
-        TemplateContent: templateContent,
-      })
-    );
-  } catch (error) {
-    const err = error as { name?: string };
-    if (err.name === "AlreadyExistsException") {
+    try {
       await ses.send(
-        new UpdateEmailTemplateCommand({
+        new CreateEmailTemplateCommand({
           TemplateName: templateName,
           TemplateContent: templateContent,
         })
       );
-    } else {
-      throw error;
+    } catch (error) {
+      const err = error as { name?: string };
+      if (err.name === "AlreadyExistsException") {
+        await ses.send(
+          new UpdateEmailTemplateCommand({
+            TemplateName: templateName,
+            TemplateContent: templateContent,
+          })
+        );
+      } else {
+        throw error;
+      }
     }
+  } catch (error) {
+    const err = error as { name?: string; message?: string };
+    if (
+      err.name === "AccessDeniedException" ||
+      err.message?.includes("is not authorized to perform")
+    ) {
+      throw new Error(
+        "Your IAM role is missing SESv2 template permissions. " +
+          "Update your role by re-deploying the CloudFormation stack from the Wraps dashboard, " +
+          "or run: wraps platform update-role"
+      );
+    }
+    throw error;
   }
 }
 

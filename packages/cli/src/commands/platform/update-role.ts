@@ -342,6 +342,12 @@ function buildConsolePolicyDocument(
       "ses:UpdateTemplate",
       "ses:DeleteTemplate",
       "ses:TestRenderTemplate",
+      "ses:GetEmailTemplate",
+      "ses:ListEmailTemplates",
+      "ses:CreateEmailTemplate",
+      "ses:UpdateEmailTemplate",
+      "ses:DeleteEmailTemplate",
+      "ses:TestRenderEmailTemplate",
     ],
     Resource: "*",
   });
