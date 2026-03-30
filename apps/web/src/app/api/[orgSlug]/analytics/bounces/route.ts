@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getBounceMetricsFromPostgres } from "@/lib/analytics-fallback";
 import { gapFillDates, generateDateRange } from "@/lib/analytics-utils";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -97,7 +98,7 @@ export async function GET(request: Request, context: RouteContext) {
     const sendEvents = events.filter((event) => event.eventType === "Send");
 
     // Group by date - track both bounces and sends
-    const dataPointsMap = new Map<
+    let dataPointsMap = new Map<
       string,
       {
         permanent: number;
@@ -153,6 +154,15 @@ export async function GET(request: Request, context: RouteContext) {
       }
 
       dataPointsMap.set(date, existing);
+    }
+
+    // Fallback to PostgreSQL message_send when DynamoDB returns no data
+    if (dataPointsMap.size === 0) {
+      dataPointsMap = await getBounceMetricsFromPostgres(
+        orgWithMembership.id,
+        startTime,
+        endTime
+      );
     }
 
     // Gap-fill every day in the range including today, then compute rates

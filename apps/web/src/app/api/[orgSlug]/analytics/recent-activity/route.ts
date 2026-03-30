@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getRecentActivityFromPostgres } from "@/lib/analytics-fallback";
 import { getRecentEmailActivity } from "@/lib/aws/dynamodb";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -76,7 +77,7 @@ export async function GET(request: Request, context: RouteContext) {
     );
 
     // Flatten, sort by timestamp, and limit
-    const recentActivity = allActivity
+    let recentActivity = allActivity
       .flat()
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, limit)
@@ -88,6 +89,14 @@ export async function GET(request: Request, context: RouteContext) {
         timestampFormatted: new Date(activity.timestamp).toISOString(),
         metadata: activity.metadata,
       }));
+
+    // Fallback to PostgreSQL message_send when DynamoDB returns no data
+    if (recentActivity.length === 0) {
+      recentActivity = await getRecentActivityFromPostgres(
+        orgWithMembership.id,
+        limit
+      );
+    }
 
     return NextResponse.json(recentActivity);
   } catch (error) {

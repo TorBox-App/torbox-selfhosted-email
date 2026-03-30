@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getTopPerformersFromPostgres } from "@/lib/analytics-fallback";
 import { getEmailEngagementMetrics } from "@/lib/aws/dynamodb";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -108,13 +109,23 @@ export async function GET(request: Request, context: RouteContext) {
     });
 
     // Sort by engagement score (clicks weighted higher than opens)
-    const topPerformers = emailsWithRates
+    let topPerformers = emailsWithRates
       .sort((a, b) => {
         const scoreA = a.clicks * 2 + a.opens;
         const scoreB = b.clicks * 2 + b.opens;
         return scoreB - scoreA;
       })
       .slice(0, limit);
+
+    // Fallback to PostgreSQL message_send when DynamoDB returns no data
+    if (topPerformers.length === 0) {
+      topPerformers = await getTopPerformersFromPostgres(
+        orgWithMembership.id,
+        startTime,
+        endTime,
+        limit
+      );
+    }
 
     return NextResponse.json(topPerformers);
   } catch (error) {

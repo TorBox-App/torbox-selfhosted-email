@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getEmailMetricsFromPostgres } from "@/lib/analytics-fallback";
 import { getSESMetricsSummary } from "@/lib/aws/cloudwatch";
 import { createRequestLogger, serializeError } from "@/lib/logger";
 import { getOrganizationWithMembership } from "@/lib/organization";
@@ -93,10 +94,25 @@ export async function GET(request: Request, context: RouteContext) {
         return total + values.reduce((sum, val) => sum + (val || 0), 0);
       }, 0);
 
-    const totalSent = calculateTotal("sends");
-    const totalDelivered = calculateTotal("deliveries");
-    const totalBounced = calculateTotal("bounces");
-    const totalComplaints = calculateTotal("complaints");
+    let totalSent = calculateTotal("sends");
+    let totalDelivered = calculateTotal("deliveries");
+    let totalBounced = calculateTotal("bounces");
+    let totalComplaints = calculateTotal("complaints");
+
+    // Fallback to PostgreSQL message_send when CloudWatch returns no data
+    if (totalSent === 0) {
+      const pgData = await getEmailMetricsFromPostgres(
+        orgWithMembership.id,
+        startTime,
+        endTime
+      );
+      for (const m of pgData.values()) {
+        totalSent += m.sent;
+        totalDelivered += m.delivered;
+        totalBounced += m.bounced;
+        totalComplaints += m.complaints;
+      }
+    }
 
     const deliveryRate = totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0;
     const bounceRate = totalSent > 0 ? (totalBounced / totalSent) * 100 : 0;

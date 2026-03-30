@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getComplaintMetricsFromPostgres } from "@/lib/analytics-fallback";
 import { gapFillDates, generateDateRange } from "@/lib/analytics-utils";
 import { queryEmailEvents } from "@/lib/aws/dynamodb";
 import { createRequestLogger, serializeError } from "@/lib/logger";
@@ -96,10 +97,7 @@ export async function GET(request: Request, context: RouteContext) {
     const sendEvents = events.filter((event) => event.eventType === "Send");
 
     // Group by date - track both complaints and sends
-    const dataPointsMap = new Map<
-      string,
-      { complaints: number; sent: number }
-    >();
+    let dataPointsMap = new Map<string, { complaints: number; sent: number }>();
 
     // Count sent emails by date
     for (const event of sendEvents) {
@@ -115,6 +113,15 @@ export async function GET(request: Request, context: RouteContext) {
       const existing = dataPointsMap.get(date) || { complaints: 0, sent: 0 };
       existing.complaints++;
       dataPointsMap.set(date, existing);
+    }
+
+    // Fallback to PostgreSQL message_send when DynamoDB returns no data
+    if (dataPointsMap.size === 0) {
+      dataPointsMap = await getComplaintMetricsFromPostgres(
+        orgWithMembership.id,
+        startTime,
+        endTime
+      );
     }
 
     // Gap-fill every day in the range including today, then compute rates

@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getEmailMetricsFromPostgres } from "@/lib/analytics-fallback";
 import {
   aggregateByDate,
   gapFillDates,
@@ -115,6 +116,22 @@ export async function GET(request: Request, context: RouteContext) {
           sent: existing.sent + values.sent,
           delivered: existing.delivered + values.delivered,
           bounced: existing.bounced + values.bounced,
+        });
+      }
+    }
+
+    // Fallback to PostgreSQL message_send when CloudWatch returns no data
+    if (dailyMap.size === 0) {
+      const pgData = await getEmailMetricsFromPostgres(
+        orgWithMembership.id,
+        startTime,
+        endTime
+      );
+      for (const [dateStr, m] of pgData) {
+        dailyMap.set(dateStr, {
+          sent: m.sent,
+          delivered: m.delivered,
+          bounced: m.bounced,
         });
       }
     }

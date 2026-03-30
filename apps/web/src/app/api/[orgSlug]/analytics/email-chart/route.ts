@@ -3,6 +3,7 @@ import { db } from "@wraps/db";
 import { awsAccount } from "@wraps/db/schema/app";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getEmailMetricsFromPostgres } from "@/lib/analytics-fallback";
 import {
   aggregateByDate,
   gapFillDates,
@@ -112,10 +113,7 @@ export async function GET(request: Request, context: RouteContext) {
       "opens",
       "clicks",
     ] as const;
-    const dailyMap = new Map<
-      string,
-      Record<(typeof allKeys)[number], number>
-    >();
+    let dailyMap = new Map<string, Record<(typeof allKeys)[number], number>>();
 
     for (const metrics of metricsResults) {
       if (!metrics) continue;
@@ -152,6 +150,15 @@ export async function GET(request: Request, context: RouteContext) {
           clicks: existing.clicks + values.clicks,
         });
       }
+    }
+
+    // Fallback to PostgreSQL message_send when CloudWatch returns no data
+    if (dailyMap.size === 0) {
+      dailyMap = await getEmailMetricsFromPostgres(
+        orgWithMembership.id,
+        startTime,
+        endTime
+      );
     }
 
     // Compute overview totals from daily aggregates
