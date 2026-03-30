@@ -89,6 +89,8 @@
     "onlyBuiltDependencies": [
       "@posthog/cli",
       "@pulumi/command",
+      "@sentry-internal/node-cpu-profiler",
+      "@sentry/cli",
       "aws-sdk",
       "core-js",
       "es5-ext",

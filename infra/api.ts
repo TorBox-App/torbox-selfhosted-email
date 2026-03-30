@@ -16,7 +16,7 @@
 
 import { batchQueue, workflowQueue } from "./queues";
 import { schedulerGroup, schedulerRole } from "./scheduler";
-import { axiomToken } from "./secrets";
+import { axiomToken, sentryDsn } from "./secrets";
 import { rateLimitTable } from "./tables";
 
 // API Gateway with Elysia Lambda handler
@@ -65,10 +65,11 @@ const apiHandler = new sst.aws.Function("ApiHandler", {
       process.env.NEXT_PUBLIC_APP_URL ?? "https://app.wraps.dev",
     // Anthropic API key for AI workflow generation
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
+    SENTRY_DSN: sentryDsn.value,
   },
   link: [rateLimitTable, batchQueue, workflowQueue],
   nodejs: {
-    install: ["pg"], // PostgreSQL driver for Drizzle
+    install: ["pg", "@sentry/profiling-node"], // PostgreSQL driver + Sentry native profiler
   },
   url: false, // We use API Gateway, not function URLs
   permissions: [

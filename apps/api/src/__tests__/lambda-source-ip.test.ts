@@ -8,6 +8,13 @@
 import type { APIGatewayProxyEventV2, Context } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
 
+// Mock Sentry so wrapHandler is a passthrough
+vi.mock("../lib/sentry", () => ({}));
+vi.mock("@sentry/aws-serverless", () => ({
+  wrapHandler: (fn: Function) => fn,
+  captureException: vi.fn(),
+}));
+
 // Capture the Request passed to app.handle so we can inspect headers
 let capturedRequest: Request | null = null;
 
@@ -65,7 +72,7 @@ describe("Lambda handler x-source-ip injection", () => {
     const { handler } = await import("../lambda");
 
     const event = createMockEvent();
-    await handler(event, mockContext);
+    await handler(event, mockContext, () => {});
 
     expect(capturedRequest).not.toBeNull();
     expect(capturedRequest!.headers.get("x-source-ip")).toBe("203.0.113.42");
@@ -82,7 +89,7 @@ describe("Lambda handler x-source-ip injection", () => {
       },
     });
 
-    await handler(event, mockContext);
+    await handler(event, mockContext, () => {});
 
     expect(capturedRequest).not.toBeNull();
     // Must be the real sourceIp, not the spoofed one

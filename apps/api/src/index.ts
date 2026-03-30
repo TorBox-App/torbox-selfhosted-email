@@ -7,6 +7,7 @@
 
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
+import * as Sentry from "@sentry/aws-serverless";
 import { Elysia } from "elysia";
 import { workflowsRoutes } from "./(ee)/routes/workflows";
 import { log } from "./lib/logger";
@@ -163,6 +164,20 @@ export const app = new Elysia()
         apiKeyId: auth?.apiKeyId,
         userId: auth?.userId,
         authMethod: auth?.apiKeyId ? "api_key" : auth ? "session" : undefined,
+      }
+    );
+
+    Sentry.captureException(
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        extra: {
+          requestId,
+          url: request.url,
+          method: request.method,
+          path: url.pathname,
+          status,
+          organizationId: auth?.organizationId,
+        },
       }
     );
 

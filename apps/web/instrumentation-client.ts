@@ -1,5 +1,25 @@
+import * as Sentry from "@sentry/nextjs";
 import posthog from "posthog-js";
 
+// Sentry client-side initialization
+Sentry.init({
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+
+  sendDefaultPii: true,
+
+  // 100% in dev, 10% in production
+  tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
+
+  // Session Replay: 10% of all sessions, 100% of sessions with errors
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+
+  enableLogs: true,
+
+  integrations: [Sentry.replayIntegration()],
+});
+
+// PostHog client-side initialization
 posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
   api_host: "https://o11y.wraps.dev",
   ui_host: "https://us.posthog.com",
@@ -16,3 +36,6 @@ posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
 // IMPORTANT: Never combine this approach with other client-side PostHog initialization
 // approaches, especially components like a PostHogProvider. instrumentation-client.ts
 // is the correct solution for initializing client-side PostHog in Next.js 15.3+ apps.
+
+// Hook into App Router navigation transitions
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

@@ -12,6 +12,13 @@ import type {
 } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
 
+// Mock Sentry so wrapHandler is a passthrough
+vi.mock("../lib/sentry", () => ({}));
+vi.mock("@sentry/aws-serverless", () => ({
+  wrapHandler: (fn: Function) => fn,
+  captureException: vi.fn(),
+}));
+
 // Mock the Elysia app to return a 401 response
 vi.mock("../index", () => ({
   app: {
@@ -71,7 +78,8 @@ describe("Lambda 401 Response Security", () => {
     const event = createMockEvent();
     const result = (await handler(
       event,
-      mockContext
+      mockContext,
+      () => {}
     )) as APIGatewayProxyStructuredResultV2;
 
     expect(result.statusCode).toBe(401);
@@ -99,7 +107,8 @@ describe("Lambda 401 Response Security", () => {
     const event = createMockEvent();
     const result = (await handler(
       event,
-      mockContext
+      mockContext,
+      () => {}
     )) as APIGatewayProxyStructuredResultV2;
 
     expect(result.statusCode).toBe(401);

@@ -4,6 +4,10 @@
  * Wraps the Elysia app for Lambda execution via API Gateway.
  */
 
+// Initialize Sentry before all other imports
+import "./lib/sentry";
+
+import { wrapHandler } from "@sentry/aws-serverless";
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
@@ -13,7 +17,7 @@ import type {
 import { app } from "./index";
 import { flushLogger } from "./lib/logger";
 
-export async function handler(
+export const handler = wrapHandler(async function handler(
   event: APIGatewayProxyEventV2,
   _context: Context
 ): Promise<APIGatewayProxyResultV2> {
@@ -82,4 +86,4 @@ export async function handler(
   } finally {
     await flushLogger();
   }
-}
+});

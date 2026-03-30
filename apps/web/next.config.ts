@@ -1,4 +1,5 @@
 import { withPostHogConfig } from "@posthog/nextjs-config";
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -60,7 +61,7 @@ const nextConfig: NextConfig = {
 const hasPostHogCredentials =
   process.env.POSTHOG_PERSONAL_API_KEY && process.env.POSTHOG_ENV_ID;
 
-export default hasPostHogCredentials
+const postHogWrapped = hasPostHogCredentials
   ? withPostHogConfig(nextConfig, {
       personalApiKey: process.env.POSTHOG_PERSONAL_API_KEY!,
       envId: process.env.POSTHOG_ENV_ID!,
@@ -72,3 +73,18 @@ export default hasPostHogCredentials
       },
     })
   : nextConfig;
+
+export default withSentryConfig(postHogWrapped, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Upload wider set of client source files for better stack traces
+  widenClientFileUpload: true,
+
+  // Proxy API route to bypass ad-blockers
+  tunnelRoute: "/monitoring",
+
+  // Suppress non-CI output
+  silent: !process.env.CI,
+});
