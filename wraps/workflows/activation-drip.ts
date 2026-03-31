@@ -117,15 +117,34 @@ export default defineWorkflow({
       },
     }),
 
-    // ── Day 4: Activation score gate (non-velocity users) ────────────
-    condition("check-score", {
-      field: "contact.activationScore",
-      operator: "greater_than_or_equals",
-      value: 3,
+    // ── Day 4: Activation gate — all 3 milestones the email claims ────
+    condition("check-sent-email", {
+      field: "contact.hasSentEmail",
+      operator: "is_true",
       branches: {
         yes: [
-          sendEmail("celebration", { template: "activation-crushing-it" }),
-          exit("fully-activated", { markAs: "completed" }),
+          condition("check-has-workflow", {
+            field: "contact.hasCreatedWorkflow",
+            operator: "is_true",
+            branches: {
+              yes: [
+                condition("check-has-broadcast", {
+                  field: "contact.hasSentBroadcast",
+                  operator: "is_true",
+                  branches: {
+                    yes: [
+                      sendEmail("celebration", {
+                        template: "activation-crushing-it",
+                      }),
+                      exit("fully-activated", { markAs: "completed" }),
+                    ],
+                    no: [],
+                  },
+                }),
+              ],
+              no: [],
+            },
+          }),
         ],
         no: [],
       },
