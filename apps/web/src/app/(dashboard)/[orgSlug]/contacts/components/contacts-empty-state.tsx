@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Code2, Plus, Users } from "lucide-react";
+import { BookOpen, Code2, Plus, Upload, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -8,7 +8,9 @@ import { toast } from "sonner";
 import { createContact } from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
 import type { ContactStatus } from "@/lib/contacts";
+import type { TopicWithMeta } from "@/lib/topics";
 import { ContactFormDialog } from "./contact-form-dialog";
+import { ImportContactsDialog } from "./import-contacts-dialog";
 
 const codeSnippet = `import { createClient } from '@wraps.dev/platform';
 
@@ -28,15 +30,18 @@ const { data } = await client.POST('/v1/contacts/', {
 type ContactsEmptyStateProps = {
   organizationId: string;
   orgSlug: string;
+  topics: TopicWithMeta[];
 };
 
 export function ContactsEmptyState({
   organizationId,
   orgSlug,
+  topics,
 }: ContactsEmptyStateProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const handleCreateContact = async (data: {
     email?: string;
@@ -76,7 +81,7 @@ export function ContactsEmptyState({
         </div>
         <h2 className="mb-2 font-semibold text-xl">No contacts yet</h2>
         <p className="mx-auto mb-8 max-w-sm text-muted-foreground text-sm">
-          Add contacts manually or use the Platform SDK to create and manage
+          Add contacts manually, import a CSV, or use the Platform SDK to manage
           contacts programmatically.
         </p>
 
@@ -103,6 +108,10 @@ export function ContactsEmptyState({
               Read the docs
             </Link>
           </Button>
+          <Button onClick={() => setImportDialogOpen(true)} variant="outline">
+            <Upload className="mr-2 h-4 w-4" />
+            Import CSV
+          </Button>
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add contact
@@ -119,6 +128,14 @@ export function ContactsEmptyState({
         orgSlug={orgSlug}
         proFeaturesEnabled={false}
         topics={[]}
+      />
+
+      <ImportContactsDialog
+        onImportComplete={() => router.refresh()}
+        onOpenChange={setImportDialogOpen}
+        open={importDialogOpen}
+        organizationId={organizationId}
+        topics={topics}
       />
     </div>
   );

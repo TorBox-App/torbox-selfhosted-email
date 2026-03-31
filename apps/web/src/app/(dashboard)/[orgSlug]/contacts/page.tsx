@@ -84,6 +84,7 @@ export default async function ContactsPage({
         <ContactsEmptyState
           organizationId={orgWithMembership.id}
           orgSlug={orgSlug}
+          topics={topics}
         />
       </div>
     );
