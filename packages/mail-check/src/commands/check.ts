@@ -218,8 +218,10 @@ export function displayScoreBox(
   quick?: boolean
 ): void {
   const width = 78;
-  const bar = "█".repeat(Math.round((score / 100) * 60));
-  const emptyBar = "░".repeat(60 - bar.length);
+  const innerWidth = width - 2;
+  const barLen = Math.round((score / 100) * 60);
+  const bar = "━".repeat(barLen);
+  const emptyBar = "─".repeat(60 - barLen);
 
   const gradeColor =
     grade === "A" || grade === "B"
@@ -230,43 +232,30 @@ export function displayScoreBox(
           ? pc.magenta
           : pc.red;
 
-  console.log(pc.dim(`╭${"─".repeat(width - 2)}╮`));
-  console.log(pc.dim("│") + " ".repeat(width - 2) + pc.dim("│"));
+  const line = (content: string): string => {
+    const visible = content.replace(/\x1B\[[0-9;]*m/g, "").length;
+    const pad = Math.max(0, innerWidth - visible);
+    return pc.dim("│") + content + " ".repeat(pad) + pc.dim("│");
+  };
+
+  console.log(pc.dim(`╭${"─".repeat(innerWidth)}╮`));
+  console.log(line(""));
+  console.log(line(`   ${pc.bold(`mail-audit${quick ? " --quick" : ""}`)}`));
+  console.log(line(""));
   console.log(
-    pc.dim("│") +
-      "   " +
-      pc.bold(`mail-audit${quick ? " --quick" : ""}`) +
-      " ".repeat(width - 17 - (quick ? 8 : 0)) +
-      pc.dim("│")
+    line(
+      `   Domain: ${pc.cyan(domain.length > 60 ? `${domain.slice(0, 57)}...` : domain)}`
+    )
   );
-  console.log(pc.dim("│") + " ".repeat(width - 2) + pc.dim("│"));
+  console.log(line(""));
   console.log(
-    pc.dim("│") +
-      "   Domain: " +
-      pc.cyan(domain.length > 60 ? `${domain.slice(0, 57)}...` : domain) +
-      " ".repeat(Math.max(1, width - 12 - Math.min(domain.length, 60))) +
-      pc.dim("│")
+    line(
+      `   ${gradeColor(bar)}${pc.dim(emptyBar)}  ${gradeColor(pc.bold(grade))}`
+    )
   );
-  console.log(pc.dim("│") + " ".repeat(width - 2) + pc.dim("│"));
-  console.log(
-    pc.dim("│") +
-      "   " +
-      gradeColor(bar) +
-      pc.dim(emptyBar) +
-      "  " +
-      gradeColor(pc.bold(grade)) +
-      " ".repeat(width - 70) +
-      pc.dim("│")
-  );
-  console.log(
-    pc.dim("│") +
-      "   Score: " +
-      pc.bold(`${score}/100`) +
-      " ".repeat(width - 18 - String(score).length) +
-      pc.dim("│")
-  );
-  console.log(pc.dim("│") + " ".repeat(width - 2) + pc.dim("│"));
-  console.log(pc.dim(`╰${"─".repeat(width - 2)}╯`));
+  console.log(line(`   Score: ${pc.bold(`${score}/100`)}`));
+  console.log(line(""));
+  console.log(pc.dim(`╰${"─".repeat(innerWidth)}╯`));
 }
 
 function displaySpfResult(
