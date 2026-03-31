@@ -1,0 +1,30 @@
+{
+  "name": "@wraps/video",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": ["*.css"],
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render DeployFlow out/deploy-flow.mp4",
+    "render:webm": "remotion render DeployFlow out/deploy-flow.webm --codec vp8",
+    "render:website": "remotion render DeployFlow ../../apps/website/public/videos/deploy-flow.mp4 --codec h264",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.443",
+    "@remotion/tailwind": "4.0.443",
+    "@remotion/transitions": "4.0.443",
+    "@remotion/zod-types": "4.0.443",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "4.0.443",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.1.17",
+    "typescript": "catalog:"
+  }
+}

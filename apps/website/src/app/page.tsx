@@ -8,7 +8,8 @@ import { HeroSection } from "./landing/components/hero-section";
 import { LandingNavbar } from "./landing/components/navbar";
 import { PricingSection } from "./landing/components/pricing-section";
 import { PrinciplesSection } from "./landing/components/principles-section";
-import { ProblemContrastSection } from "./landing/components/problem-contrast-section";
+
+import { ProductShowcaseSection } from "./landing/components/product-showcase-section";
 
 export const metadata: Metadata = {
   alternates: {
@@ -93,7 +94,7 @@ export default function LandingPage() {
           <HeroSection />
           <PrinciplesSection />
 
-          <ProblemContrastSection />
+          <ProductShowcaseSection />
           {/*<InfrastructureSection />*/}
 
           {/*<CliTabbedSection />*/}
