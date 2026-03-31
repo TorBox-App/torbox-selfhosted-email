@@ -115,19 +115,39 @@ export const eventsRoutes = createAuthenticatedRoutes("/v1/events")
       // Auto-create contact if missing and flag is set
       if (!contactRecord && createIfMissing && contactEmail) {
         const normalizedEmail = contactEmail.toLowerCase().trim();
+        const emailHash = hashEmail(normalizedEmail);
         const [newContact] = await db
           .insert(contact)
           .values({
             organizationId: auth.organizationId,
             email: normalizedEmail,
-            emailHash: hashEmail(normalizedEmail),
+            emailHash,
             emailStatus: "active",
             firstName: contactName || null,
             properties: {},
           })
+          .onConflictDoNothing({
+            target: [contact.organizationId, contact.emailHash],
+          })
           .returning();
-        contactRecord = newContact;
-        contactCreated = true;
+
+        if (newContact) {
+          contactRecord = newContact;
+          contactCreated = true;
+        } else {
+          // Concurrent insert won the race — fetch the existing contact
+          const [existing] = await db
+            .select()
+            .from(contact)
+            .where(
+              and(
+                eq(contact.emailHash, emailHash),
+                eq(contact.organizationId, auth.organizationId)
+              )
+            )
+            .limit(1);
+          contactRecord = existing;
+        }
       }
 
       if (!contactRecord) {
